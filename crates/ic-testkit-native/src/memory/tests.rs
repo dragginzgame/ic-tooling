@@ -123,7 +123,7 @@ fn actual_counter_overflow_is_sticky_until_shared_reset() {
         let memory = MeteredMemory::<VectorMemory>::default();
         memory.grow(1);
         memory.write(0, b"X");
-        memory.counts.set(counts);
+        memory.state.counts.set(counts);
         let alias = memory.clone();
         let mut byte = [0];
         match index {
@@ -170,7 +170,7 @@ fn actual_counter_overflow_is_sticky_until_shared_reset() {
 fn zero_deltas_at_counter_limit_do_not_signal_overflow() {
     let memory = MeteredMemory::<VectorMemory>::default();
     memory.grow(1);
-    memory.counts.set(MemoryIoCounts {
+    memory.state.counts.set(MemoryIoCounts {
         read_bytes: u64::MAX,
         unsafe_read_bytes: u64::MAX,
         write_bytes: u64::MAX,

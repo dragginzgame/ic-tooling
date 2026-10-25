@@ -221,17 +221,8 @@ fn fresh_sample(recipe: &Recipe, iteration: usize) -> Result<Sample> {
         acquisition_ms: ms(started.elapsed()),
         ..Phases::default()
     };
-    let body = Instant::now();
-    recipe.exercise(pic.instance(), &ids)?;
-    let body_ms = ms(body.elapsed());
-    let release = Instant::now();
-    drop(pic);
-    Ok(Sample {
-        iteration,
-        phases,
-        body_ms,
-        release_ms: ms(release.elapsed()),
-        total_ms: ms(started.elapsed()),
+    measure_sample(iteration, started, phases, pic, |owned| {
+        recipe.exercise(owned.instance(), &ids)
     })
 }
 
@@ -246,8 +237,22 @@ fn pooled_sample(
         return Err(io::Error::other("measured pooled acquisition was not a warm restore").into());
     }
     let phases = outcome.timings.into();
+    measure_sample(iteration, started, phases, fixture, |owned| {
+        recipe.exercise(owned.pocket_ic(), owned.metadata())
+    })
+}
+
+// Both modes measure the same body and release boundaries. The caller supplies
+// the acquisition phases and retains its distinct fresh/warm admission policy.
+fn measure_sample<T>(
+    iteration: usize,
+    started: Instant,
+    phases: Phases,
+    fixture: T,
+    exercise: impl FnOnce(&T) -> Result<()>,
+) -> Result<Sample> {
     let body = Instant::now();
-    recipe.exercise(fixture.pocket_ic(), fixture.metadata())?;
+    exercise(&fixture)?;
     let body_ms = ms(body.elapsed());
     let release = Instant::now();
     drop(fixture);

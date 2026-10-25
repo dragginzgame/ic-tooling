@@ -14,7 +14,7 @@ pub use workspace::{decode_workspace_root, workspace_root_command};
 pub use cargo_metadata as schema;
 
 use super::selection::{CargoFeatureSelection, graph_arguments};
-use std::{path::Path, process::Command};
+use std::{ffi::OsString, path::Path, process::Command};
 
 /// Decode complete Cargo metadata JSON through Cargo's canonical schema.
 ///
@@ -73,7 +73,10 @@ impl CargoMetadataSpec<'_> {
     /// # Errors
     /// Returns an I/O error if a relative manifest cannot be anchored to the current directory.
     pub fn command(&self, mut command: Command) -> std::io::Result<Command> {
-        command.args(["metadata", "--format-version=1"]);
+        command.args(metadata_arguments(
+            self.include_dependencies,
+            self.filter_platform,
+        ));
         configure(
             &mut command,
             self.manifest_path,
@@ -81,14 +84,24 @@ impl CargoMetadataSpec<'_> {
             self.offline,
             self.features,
         )?;
-        if !self.include_dependencies {
-            command.arg("--no-deps");
-        }
-        if let Some(target) = self.filter_platform {
-            command.arg("--filter-platform").arg(target);
-        }
         Ok(command)
     }
+}
+
+// Command-kind arguments only: internal recipes retain their command factory,
+// working directory, manifest selection, graph flags and process policy.
+pub(crate) fn metadata_arguments(
+    include_dependencies: bool,
+    filter_platform: Option<&str>,
+) -> Vec<OsString> {
+    let mut arguments = vec!["metadata".into(), "--format-version=1".into()];
+    if !include_dependencies {
+        arguments.push("--no-deps".into());
+    }
+    if let Some(target) = filter_platform {
+        arguments.extend(["--filter-platform".into(), target.into()]);
+    }
+    arguments
 }
 
 impl CargoTreeSpec<'_> {

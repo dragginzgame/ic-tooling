@@ -2,9 +2,9 @@
 
 ## Source and ownership
 
-The checkout is based on `c9c5ef7c44e3d0c3b23c8531a5d43c1800656c0a`, the
-0.68.1 release. Local complexity cleanup is prepared for the compatible
-[0.68.2 draft](../changelog/0.68.md#0682---unreleased). Own package versions,
+The checkout is based on `4357e0ab8b9678e21ee5bb3b396ba1e81549b34e`, the
+0.68.2 release. Further local complexity cleanup is prepared for the compatible
+[0.68.3 draft](../changelog/0.68.md#0683---unreleased). Own package versions,
 Git refs and the index are unchanged. The incoming Cargo.lock selects Wire/derive
 0.7.5 and remains byte-for-byte preserved; manifest minimums remain 0.7.2.
 
@@ -17,17 +17,24 @@ MSRV 1.91 and Linux/native macOS 15 Intel and Apple Silicon remain required.
 
 ## Current local work
 
-Build uses one shared-target acquisition path after locking, preserving ordinary
-miss re-resolution, prepared leases, cache rechecks and scheduled maintenance.
-Release rendering admits saved/live context before selecting dependency edits;
-process qualification shares its existing two-worker handshake.
+Build shares metadata arguments, lexical Cargo-name admission and the single/batch
+tool/metadata probe sequence. Shared-target locks use one path with silent or
+observed progress. Boundary caches and batch keys borrow their input keys;
+lock-package decoding and input-evidence errors retain their failure contracts.
+Discovery keeps its manual error source projection so callers still downcast the
+boxed TOML cause directly. File adapters reuse durable stream/byte helpers.
 
-Testkit projects spawn settings once and shares startup-deadline admission.
-Reply fixtures share catalog budgets, pools share timed recipe-stage attribution,
-and benchmark validation/summaries share named phase values. Public APIs,
-feature boundaries, report formats and lifecycle/recovery policy are unchanged.
+Testkit pool acquisition matches its existing slot state directly, and metered
+memory shares backing storage and counters through one allocation. Fresh and
+pooled benchmarks share body/release timing boundaries. Public APIs, feature
+boundaries, report formats and lifecycle/recovery policy are unchanged.
+The benchmark CLI uses Clap derive while retaining help, repeated selections and
+native paths. Cases retain their measurements; report maps are serialization
+projections. Private statistics produce the existing count/mean/p50/p95 fields.
 
-Graph profiles select parser exclusions explicitly. The earlier
+Publication reuses admitted package paths; the combined Tools graph profile
+selects all features through Cargo. Development/MSRV Wasm checks share one
+package/feature selection with explicit compiler selection. The earlier
 [#250 — Host/Build layering](https://github.com/dragginzgame/ic-tooling/issues/250)
 guards are already in the base commit; this cleanup retains their coverage.
 The accepted [#249 tradeoff](https://github.com/dragginzgame/ic-tooling/issues/249)
@@ -35,16 +42,22 @@ remains: keep the existing native graph instead of adding a published crate.
 
 ## Qualification and evidence
 
-Current focused evidence is under `/tmp/ic-tooling-complexity-20261025/`.
-Build's 75 cache cases, real two-worker coordination and saved/live release
-context regressions pass on Linux. Prepared PocketIC 16.1.0 qualifies startup,
-async cancellation, baseline recovery and immediate/held/cycle reply fixtures.
-Initial sandbox listener refusals remain in the logs; native permission reruns pass.
+Current focused evidence is under `/tmp/ic-tooling-complexity-3-20261025/`, including
+the incoming dirty source archive and patch. Build's cache, batch, transaction,
+input-evidence and discovery tests pass on Linux, along with real shared-target
+coordination/maintenance and all 17 Wasm acquisition cases. Benchmark contract
+tests and exact CLI help comparison pass. Prepared PocketIC 16.1.0 completes fresh
+and pooled smoke runs with two repeats and four samples per run. Rotation, report
+shape, p50/p95 and phase/body/release accounting are checked; this supplies
+correctness evidence, not a performance comparison.
 
-Dependency profiles pass for Linux and both macOS target selections, and the
-six-case layering rejection fixture passes. Changed-owner Clippy and Rust 1.91
-checks pass for all targets/features, as do report/error regressions, formatting
-and shell checks.
+Changed-owner Clippy and Rust 1.91 checks pass for all targets/features. The actual
+development/MSRV Wasm profiles pass. Make routing is qualified with substituted
+Cargo, tool and release effects; no real release runs in that fixture.
+Formatting, shell and documentation-link checks pass. Earlier pool/memory/file,
+publication-fixture and Linux/macOS-target graph evidence remains under
+`/tmp/ic-tooling-complexity-2-20261025/` for its own source identity; earlier 0.68.2
+evidence remains at `/tmp/ic-tooling-complexity-20261025/`.
 Native macOS 15 Intel and Apple Silicon execution remains outstanding; named-target
 graph observations do not qualify native hosts. No full release gate, release,
 publication or new setup/download was run. Earlier adoption evidence remains

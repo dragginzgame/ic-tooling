@@ -4,7 +4,7 @@ use ic_host_process::tool::{OutputLimit, OutputLimits};
 use std::{ffi::OsString, num::NonZeroUsize, path::PathBuf};
 
 use crate::fixture_reuse_protocol::Mode;
-use clap::{Arg, Command, error::ErrorKind, value_parser};
+use clap::{CommandFactory, Parser, error::ErrorKind};
 
 pub(super) const RSS_COMMAND_LIMITS: OutputLimits = OutputLimits {
     stdout: OutputLimit::Terminate(16 * 1024 * 1024),
@@ -12,17 +12,43 @@ pub(super) const RSS_COMMAND_LIMITS: OutputLimits = OutputLimits {
     timeout: None,
 };
 
+#[derive(Parser)]
+#[command(
+    name = "fixture_reuse_benchmark_driver",
+    about = "Fixture reuse benchmark for Linux/macOS",
+    after_help = "Builds use the selected lockfile and prepared offline caches; no server download.",
+    version,
+    no_binary_name = true,
+    args_override_self = true
+)]
 pub(super) struct Options {
+    #[arg(
+        long,
+        value_name = "server",
+        help = "Exact PocketIC server binary",
+        allow_hyphen_values = true
+    )]
     pub(super) server: PathBuf,
+    #[arg(long, value_name = "iterations", default_value = "100")]
     pub(super) iterations: NonZeroUsize,
+    #[arg(long, value_name = "workers", default_value = "2")]
     pub(super) workers: NonZeroUsize,
+    #[arg(long, value_name = "repeats", default_value = "3")]
     pub(super) repeats: NonZeroUsize,
+    #[arg(long, value_name = "modes", action = clap::ArgAction::Set, num_args = 1.., default_values = ["fresh", "pooled"])]
     pub(super) modes: Vec<Mode>,
+    #[arg(long, value_name = "capacities", action = clap::ArgAction::Set, num_args = 1.., default_values = ["1", "2"])]
     pub(super) capacities: Vec<NonZeroUsize>,
+    #[arg(long, value_name = "state-bytes", default_value = "1048576")]
     pub(super) state_bytes: u32,
+    #[arg(long, value_name = "profile", default_value = "release", value_parser = ["release", "dev"])]
     pub(super) profile: String,
+    #[arg(long, value_name = "output", allow_hyphen_values = true)]
     pub(super) output: Option<PathBuf>,
-    pub(super) rss_limits: OutputLimits,
+    #[arg(long, value_name = "rss-stdout-bytes", default_value = RSS_COMMAND_LIMITS.stdout.retained_bytes().to_string())]
+    rss_stdout_bytes: NonZeroUsize,
+    #[arg(long, value_name = "rss-stderr-bytes", default_value = RSS_COMMAND_LIMITS.stderr.retained_bytes().to_string())]
+    rss_stderr_bytes: NonZeroUsize,
 }
 
 pub(super) struct Case {
@@ -32,6 +58,14 @@ pub(super) struct Case {
 }
 
 impl Options {
+    pub(super) const fn rss_limits(&self) -> OutputLimits {
+        OutputLimits {
+            stdout: OutputLimit::Terminate(self.rss_stdout_bytes.get()),
+            stderr: OutputLimit::Terminate(self.rss_stderr_bytes.get()),
+            timeout: RSS_COMMAND_LIMITS.timeout,
+        }
+    }
+
     pub(super) fn benchmark_cases(&self) -> Vec<Case> {
         self.modes
             .iter()
@@ -55,132 +89,11 @@ impl Options {
     }
 }
 
-fn cli() -> Command {
-    Command::new("fixture_reuse_benchmark_driver")
-        .about("Fixture reuse benchmark for Linux/macOS")
-        .after_help(
-            "Builds use the selected lockfile and prepared offline caches; no server download.",
-        )
-        .version(env!("CARGO_PKG_VERSION"))
-        .no_binary_name(true)
-        .args_override_self(true)
-        .arg(
-            Arg::new("server")
-                .long("server")
-                .required(true)
-                .help("Exact PocketIC server binary")
-                .value_parser(value_parser!(PathBuf))
-                .allow_hyphen_values(true),
-        )
-        .args(
-            [("iterations", "100"), ("workers", "2"), ("repeats", "3")].map(|(name, default)| {
-                Arg::new(name)
-                    .long(name)
-                    .default_value(default)
-                    .value_parser(value_parser!(NonZeroUsize))
-            }),
-        )
-        .arg(
-            Arg::new("modes")
-                .long("modes")
-                .num_args(1..)
-                .default_values(["fresh", "pooled"])
-                .value_parser(value_parser!(Mode)),
-        )
-        .arg(
-            Arg::new("capacities")
-                .long("capacities")
-                .num_args(1..)
-                .default_values(["1", "2"])
-                .value_parser(value_parser!(NonZeroUsize)),
-        )
-        .arg(
-            Arg::new("state-bytes")
-                .long("state-bytes")
-                .default_value("1048576")
-                .value_parser(value_parser!(u32)),
-        )
-        .arg(
-            Arg::new("profile")
-                .long("profile")
-                .default_value("release")
-                .value_parser(["release", "dev"]),
-        )
-        .arg(
-            Arg::new("output")
-                .long("output")
-                .value_parser(value_parser!(PathBuf))
-                .allow_hyphen_values(true),
-        )
-        .args(
-            [
-                (
-                    "rss-stdout-bytes",
-                    RSS_COMMAND_LIMITS.stdout.retained_bytes(),
-                ),
-                (
-                    "rss-stderr-bytes",
-                    RSS_COMMAND_LIMITS.stderr.retained_bytes(),
-                ),
-            ]
-            .map(|(name, default)| {
-                Arg::new(name)
-                    .long(name)
-                    .default_value(default.to_string())
-                    .value_parser(value_parser!(NonZeroUsize))
-            }),
-        )
-}
-
 pub(super) fn parse_arguments(
     args: impl IntoIterator<Item = OsString>,
 ) -> Result<Options, clap::Error> {
-    let mut command = cli();
-    let mut matches = command.try_get_matches_from_mut(args)?;
-    let options = Options {
-        server: matches
-            .remove_one::<PathBuf>("server")
-            .expect("server required"),
-        iterations: matches
-            .remove_one::<NonZeroUsize>("iterations")
-            .expect("default iterations"),
-        workers: matches
-            .remove_one::<NonZeroUsize>("workers")
-            .expect("default workers"),
-        repeats: matches
-            .remove_one::<NonZeroUsize>("repeats")
-            .expect("default repeats"),
-        modes: matches
-            .remove_many::<Mode>("modes")
-            .expect("default modes")
-            .collect(),
-        capacities: matches
-            .remove_many::<NonZeroUsize>("capacities")
-            .expect("default capacities")
-            .collect(),
-        state_bytes: matches
-            .remove_one::<u32>("state-bytes")
-            .expect("default state bytes"),
-        profile: matches
-            .remove_one::<String>("profile")
-            .expect("default profile"),
-        output: matches.remove_one::<PathBuf>("output"),
-        rss_limits: OutputLimits {
-            stdout: OutputLimit::Terminate(
-                matches
-                    .remove_one::<NonZeroUsize>("rss-stdout-bytes")
-                    .expect("default stdout limit")
-                    .get(),
-            ),
-            stderr: OutputLimit::Terminate(
-                matches
-                    .remove_one::<NonZeroUsize>("rss-stderr-bytes")
-                    .expect("default stderr limit")
-                    .get(),
-            ),
-            timeout: RSS_COMMAND_LIMITS.timeout,
-        },
-    };
+    let options = Options::try_parse_from(args)?;
+    let mut command = Options::command();
     // Clap owns parsing and individual value constraints. These relationships
     // compare independently typed values and select a unique workload matrix.
     if options.workers > options.iterations {
@@ -236,11 +149,28 @@ mod tests {
             "3".into(),
             "--workers".into(),
             "2".into(),
+            "--modes".into(),
+            "fresh".into(),
+            "--modes".into(),
+            "pooled".into(),
+            "--capacities".into(),
+            "1".into(),
+            "--capacities".into(),
+            "2".into(),
         ];
         let options = parse_arguments(args).unwrap();
         assert_eq!(options.server.as_os_str(), &server);
         assert_eq!(options.output.unwrap().as_os_str(), &output);
         assert_eq!(options.workers.get(), 2);
+        assert_eq!(options.modes, [crate::fixture_reuse_protocol::Mode::Pooled]);
+        assert_eq!(
+            options
+                .capacities
+                .iter()
+                .map(|value| value.get())
+                .collect::<Vec<_>>(),
+            [2]
+        );
     }
 
     #[test]
@@ -285,7 +215,7 @@ mod tests {
     #[test]
     fn default_and_fresh_only_selection() {
         let options = parse_arguments(["--server", "/unused/pocket-ic"].map(Into::into)).unwrap();
-        assert_eq!(options.rss_limits, super::RSS_COMMAND_LIMITS);
+        assert_eq!(options.rss_limits(), super::RSS_COMMAND_LIMITS);
         assert_eq!(
             options
                 .benchmark_cases()
@@ -325,14 +255,14 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            options.rss_limits.stdout,
+            options.rss_limits().stdout,
             ic_host_process::tool::OutputLimit::Terminate(1024)
         );
         assert_eq!(
-            options.rss_limits.stderr,
+            options.rss_limits().stderr,
             ic_host_process::tool::OutputLimit::Terminate(128)
         );
-        assert_eq!(options.rss_limits.timeout, None);
+        assert_eq!(options.rss_limits().timeout, None);
     }
 
     #[test]

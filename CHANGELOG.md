@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.68.3] - Unreleased
+
+- Simplify Build input resolution and coordination, Testkit pool state and shared
+  memory accounting, and benchmark CLI, measurements and reporting. Public APIs,
+  CLI behavior and report formats are unchanged.
+- Reuse durable file helpers and admitted publication paths; let Cargo select
+  all features in the combined dependency guard, and share development/MSRV Wasm
+  profile selections. [Details](docs/changelog/0.68.md#0683---unreleased).
+
 ## [0.68.2] - 2026-10-25
 
 - Consolidate Build cache acquisition and Testkit startup while preserving

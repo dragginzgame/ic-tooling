@@ -22,7 +22,7 @@ struct Coordinator {
     next_ticket: u64,
 }
 
-enum Slot<T, R> {
+pub(super) enum Slot<T, R> {
     Empty,
     Reusable(T),
     Invalidated { value: T, reason: R },
@@ -145,30 +145,11 @@ impl<T, R> BoundedSlotLease<'_, T, R> {
         self.wait
     }
 
-    pub(super) fn is_reusable(&self) -> bool {
-        matches!(self.slot(), Slot::Reusable(_))
-    }
-
-    pub(super) fn is_populated(&self) -> bool {
-        self.get().is_some()
-    }
-
-    pub(super) fn invalidated_by_unwind(&self) -> bool {
-        matches!(self.slot(), Slot::Unwound(_))
-    }
-
     pub(super) fn get(&self) -> Option<&T> {
-        match self.slot() {
+        match self.state() {
             Slot::Empty => None,
             Slot::Reusable(value) | Slot::Invalidated { value, .. } => Some(value),
             Slot::Unwound(value) => value.as_ref(),
-        }
-    }
-
-    pub(super) fn invalidation_reason(&self) -> Option<&R> {
-        match self.slot() {
-            Slot::Invalidated { reason, .. } => Some(reason),
-            Slot::Empty | Slot::Reusable(_) | Slot::Unwound(_) => None,
         }
     }
 
@@ -191,7 +172,7 @@ impl<T, R> BoundedSlotLease<'_, T, R> {
         };
     }
 
-    fn slot(&self) -> &Slot<T, R> {
+    pub(super) fn state(&self) -> &Slot<T, R> {
         self.slot
             .as_deref()
             .expect("bounded slot lease must retain its slot")
@@ -247,7 +228,7 @@ impl<T, R> Drop for WaitTicket<'_, T, R> {
 
 #[cfg(test)]
 mod tests {
-    use super::{BoundedSlotPool, WaitTicket};
+    use super::{BoundedSlotPool, Slot, WaitTicket};
     use std::{
         num::NonZeroUsize,
         panic::{AssertUnwindSafe, catch_unwind},
@@ -407,13 +388,17 @@ mod tests {
         drop(lease);
 
         let mut lease = pool.acquire();
-        assert!(!lease.is_reusable());
-        assert!(!lease.invalidated_by_unwind());
+        assert!(matches!(
+            lease.state(),
+            Slot::Invalidated {
+                reason: "latest",
+                ..
+            }
+        ));
         assert_eq!(lease.get(), Some(&42));
-        assert_eq!(lease.invalidation_reason(), Some(&"latest"));
         assert_eq!(lease.replace(7), Some(42));
-        assert!(lease.is_reusable());
-        assert_eq!(lease.invalidation_reason(), None);
+        assert!(matches!(lease.state(), Slot::Reusable(7)));
+        drop(lease);
     }
 
     #[test]
@@ -438,17 +423,13 @@ mod tests {
             assert!(panic.is_err());
 
             let mut lease = pool.acquire();
-            assert!(!lease.is_reusable());
-            assert_eq!(lease.is_populated(), value.is_some());
-            assert!(lease.invalidated_by_unwind());
-            assert_eq!(lease.invalidation_reason(), None);
+            assert!(matches!(lease.state(), Slot::Unwound(actual) if *actual == value));
             assert_eq!(lease.get(), value.as_ref());
             assert_eq!(lease.replace(7), value);
             drop(lease);
 
             let lease = pool.acquire();
-            assert!(lease.is_reusable());
-            assert!(!lease.invalidated_by_unwind());
+            assert!(matches!(lease.state(), Slot::Reusable(7)));
             assert_eq!(lease.get(), Some(&7));
         }
     }

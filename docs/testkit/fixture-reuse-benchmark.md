@@ -70,8 +70,8 @@ keeps one typed report for admission and summaries, and borrows it when encoding
 JSON output. Existing retained
 report files are neither reinterpreted nor rewritten by this schema hard cut.
 
-Sample summaries use the private reporter's statistics with an explicit 95/100 nearest-rank
-selection. Count/mean/p50/p95 field names are unchanged. Floating-point
+Sample summaries use the private reporter's fixed 95/100 nearest-rank p95
+projection. Count/mean/p50/p95 field names are unchanged. Floating-point
 projections remain approximate; an even median uses the midpoint of the middle
 samples. Non-finite input, derived rates or rounded means return the original
 typed statistics error before the output file is replaced. No failed summary is

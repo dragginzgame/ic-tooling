@@ -426,7 +426,6 @@ fn hash_path(
         excluded_names: &[],
         visited_directories,
         trace,
-        observe_missing: false,
         reject_links: false,
     };
     traversal.visit(label, path, declared_root, &mut |entry| {
@@ -495,7 +494,6 @@ pub(super) struct InputTreeWalk<'a> {
     excluded_names: &'a [OsString],
     visited_directories: &'a mut BTreeSet<PathBuf>,
     trace: Option<&'a mut HashPathTrace>,
-    observe_missing: bool,
     reject_links: bool,
 }
 
@@ -510,7 +508,6 @@ impl<'a> InputTreeWalk<'a> {
             excluded_names,
             visited_directories,
             trace: None,
-            observe_missing: true,
             reject_links: true,
         }
     }
@@ -542,7 +539,7 @@ impl<'a> InputTreeWalk<'a> {
                     )));
                 }
                 Ok(metadata) => Some(metadata),
-                Err(error) if self.observe_missing && error.kind() == io::ErrorKind::NotFound => {
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
                     let resolved =
                         super::cache_fs::canonicalize_allow_missing(path).map_err(context)?;
                     if self
@@ -632,13 +629,14 @@ impl<'a> InputTreeWalk<'a> {
 pub(super) fn copy_file_atomic(source: &Path, destination: &Path) -> io::Result<u64> {
     let result = (|| {
         let mut source_file = File::open(source)?;
-        ic_host_fs::durable::write_with(
+        ic_host_fs::durable::copy_from(
+            &mut source_file,
             destination,
             ic_host_fs::durable::WriteOptions {
                 mode: ic_host_fs::durable::PublicationMode::Replace,
                 permissions: 0o666,
             },
-            |destination_file| io::copy(&mut source_file, destination_file),
+            None,
         )
         .map_err(io::Error::other)
     })();

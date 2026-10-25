@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use crate::{
     fixture_reuse_report::{Phases, WorkerReport},
-    statistics::summarize_samples,
+    statistics::{SampleStatistics, summarize_samples},
 };
 use serde::Serialize;
 
@@ -19,8 +19,8 @@ use super::{
 pub(super) struct DriverReport<'a> {
     pub(super) format: &'static str,
     pub(super) provenance: &'a serde_json::Value,
-    pub(super) runs: &'a BTreeMap<String, Vec<MeasuredRun>>,
-    pub(super) summary: &'a BTreeMap<String, Summary>,
+    pub(super) runs: BTreeMap<&'a str, &'a [MeasuredRun]>,
+    pub(super) summary: BTreeMap<&'a str, &'a Summary>,
 }
 
 #[derive(Serialize)]
@@ -102,36 +102,21 @@ impl MeasuredRun {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub(super) struct Distribution {
-    pub(super) count: usize,
-    pub(super) mean: f64,
-    pub(super) p50: f64,
-    pub(super) p95: f64,
-}
-
 // Complete floating-point sample statistics belong to this private report owner.
-fn distribution(mut values: Vec<f64>) -> Result<Option<Distribution>, Error> {
-    Ok(summarize_samples(&mut values, 95, 100)
-        .map_err(Error::Statistics)?
-        .map(|statistics| Distribution {
-            count: statistics.count,
-            mean: statistics.mean,
-            p50: statistics.median,
-            p95: statistics.quantile,
-        }))
+fn distribution(mut values: Vec<f64>) -> Result<Option<SampleStatistics>, Error> {
+    summarize_samples(&mut values).map_err(Error::Statistics)
 }
 
 #[derive(Serialize)]
 pub(super) struct Summary {
-    pub(super) phases_ms: BTreeMap<String, Option<Distribution>>,
-    body_ms: Option<Distribution>,
-    release_ms: Option<Distribution>,
-    iteration_ms: Option<Distribution>,
-    pub(super) work_wall_ms: Option<Distribution>,
-    pub(super) fixture_wall_ms: Option<Distribution>,
-    pub(super) iterations_per_second: Option<Distribution>,
-    pub(super) sampled_peak_tree_rss_bytes: Option<Distribution>,
+    pub(super) phases_ms: BTreeMap<String, Option<SampleStatistics>>,
+    body_ms: Option<SampleStatistics>,
+    release_ms: Option<SampleStatistics>,
+    iteration_ms: Option<SampleStatistics>,
+    pub(super) work_wall_ms: Option<SampleStatistics>,
+    pub(super) fixture_wall_ms: Option<SampleStatistics>,
+    pub(super) iterations_per_second: Option<SampleStatistics>,
+    pub(super) sampled_peak_tree_rss_bytes: Option<SampleStatistics>,
 }
 
 #[allow(clippy::cast_precision_loss)]

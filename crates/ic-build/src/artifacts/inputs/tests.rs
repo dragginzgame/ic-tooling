@@ -95,9 +95,13 @@ fn relative_digest_refuses_outside_inputs_and_invalid_roots() {
         use std::{ffi::OsStr, os::unix::ffi::OsStrExt as _};
         let native = root.join(OsStr::from_bytes(b"non-UTF8-\xff"));
         fs::write(&native, "native bytes").unwrap();
+        let error = capture(b"identity", &[native])
+            .digest_relative_to(&root)
+            .unwrap_err();
+        assert!(std::error::Error::source(&error).unwrap().is::<io::Error>());
         assert!(matches!(
-            capture(b"identity", &[native]).digest_relative_to(&root),
-            Err(InputEvidenceError::Io { source, .. })
+            error,
+            InputEvidenceError::Io { source, .. }
                 if source.kind() == io::ErrorKind::InvalidData
         ));
     }

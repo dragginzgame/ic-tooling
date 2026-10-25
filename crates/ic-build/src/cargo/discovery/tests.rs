@@ -29,9 +29,13 @@ fn invalid_and_non_file_manifests_are_not_skipped() {
     let root = unique_temp_directory("declared-workspace-invalid");
     let manifest = root.join("Cargo.toml");
     fs::write(&manifest, "[workspace").unwrap();
+    let error = declared_workspace_root_from(&root).unwrap_err();
     assert!(
-        matches!(declared_workspace_root_from(&root), Err(DiscoveryError::ParseManifest { path, .. }) if path == manifest)
+        std::error::Error::source(&error)
+            .unwrap()
+            .is::<toml::de::Error>()
     );
+    assert!(matches!(error, DiscoveryError::ParseManifest { path, .. } if path == manifest));
     fs::remove_file(&manifest).unwrap();
     fs::create_dir(&manifest).unwrap();
     assert!(

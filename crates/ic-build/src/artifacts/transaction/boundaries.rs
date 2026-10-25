@@ -4,10 +4,10 @@ use super::{ArtifactCacheError, ResolvedCargoBuildInputs, artifact_cache_fs_erro
 use crate::artifacts::inputs::boundaries::CargoInputBoundaries;
 use std::path::Path;
 
-impl CargoInputBoundaries {
+impl<'a> CargoInputBoundaries<'a> {
     pub(super) fn watches(
         &mut self,
-        resolved: &ResolvedCargoBuildInputs,
+        resolved: &'a ResolvedCargoBuildInputs,
         candidate: &Path,
     ) -> Result<bool, ArtifactCacheError> {
         for exclusion in resolved.exclusions() {

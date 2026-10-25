@@ -16,7 +16,7 @@ use sha2::{Digest as _, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
     ffi::OsString,
-    fmt, io,
+    io,
     path::{Component, Path, PathBuf},
 };
 
@@ -57,23 +57,28 @@ pub enum InputEvidenceValue {
 }
 
 /// Failure to capture or validate standalone input authority.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum InputEvidenceError {
     /// The caller's non-file identity changed.
+    #[error("non-file input identity changed")]
     IdentityChanged,
     /// Exclusion policy changed between observations.
+    #[error("input exclusion policy changed")]
     ExclusionsChanged,
     /// Previously observed bytes, absence or membership changed.
+    #[error("input changed: {}", path.display())]
     ChangedInput {
         /// Changed input path.
         path: PathBuf,
     },
     /// An after-inventory path had no pre-build authority.
+    #[error("input was not observed before work: {}", path.display())]
     UnobservedInput {
         /// Newly discovered input path.
         path: PathBuf,
     },
     /// Filesystem or input-admission failure, retaining its original cause.
+    #[error("input evidence failed for {}: {source}", path.display())]
     Io {
         /// Path being inspected.
         path: PathBuf,
@@ -459,34 +464,5 @@ fn input_io(path: &Path, source: io::Error) -> InputEvidenceError {
     InputEvidenceError::Io {
         path: context_path,
         source,
-    }
-}
-
-impl fmt::Display for InputEvidenceError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::IdentityChanged => formatter.write_str("non-file input identity changed"),
-            Self::ExclusionsChanged => formatter.write_str("input exclusion policy changed"),
-            Self::ChangedInput { path } => write!(formatter, "input changed: {}", path.display()),
-            Self::UnobservedInput { path } => write!(
-                formatter,
-                "input was not observed before work: {}",
-                path.display()
-            ),
-            Self::Io { path, source } => write!(
-                formatter,
-                "input evidence failed for {}: {source}",
-                path.display()
-            ),
-        }
-    }
-}
-
-impl std::error::Error for InputEvidenceError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Io { source, .. } => Some(source),
-            _ => None,
-        }
     }
 }

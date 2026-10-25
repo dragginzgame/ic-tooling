@@ -253,10 +253,9 @@ fn text_command(command: &mut Command) -> Result<String, Error> {
         .map_err(|_| Error::InvalidData("tool output is not UTF-8"))
 }
 
-fn print_summary(summaries: &BTreeMap<String, Summary>, labels: &[String]) -> Result<(), Error> {
-    let mut rows = Vec::with_capacity(labels.len());
-    for label in labels {
-        let summary = &summaries[label];
+fn print_summary(summaries: &[(&str, Summary)]) -> Result<(), Error> {
+    let mut rows = Vec::with_capacity(summaries.len());
+    for (label, summary) in summaries {
         let (Some(work), Some(fixture), Some(rate), Some(peak), Some(wait)) = (
             summary.work_wall_ms.as_ref(),
             summary.fixture_wall_ms.as_ref(),
@@ -270,7 +269,7 @@ fn print_summary(summaries: &BTreeMap<String, Summary>, labels: &[String]) -> Re
             .as_ref()
             .map_or_else(|| "-".into(), |restore| format!("{:.2}", restore.mean));
         rows.push([
-            label.clone(),
+            (*label).to_owned(),
             format!("{:.2}", work.p50),
             format!("{:.2}", fixture.p50),
             format!("{:.2}", rate.p50),
@@ -407,7 +406,7 @@ fn prepare(options: &Options) -> Result<Inputs, Error> {
     )
     .map_err(|error| Error::CargoObservation(error))?;
     let target = &native.target_directory;
-    let mut environment: std::collections::BTreeMap<_, _> = std::env::vars_os().collect();
+    let mut environment: BTreeMap<_, _> = std::env::vars_os().collect();
     if let Some(rustc) = &rustc {
         environment.insert("RUSTC".into(), rustc.as_os_str().to_owned());
     }
@@ -531,8 +530,8 @@ fn provenance(
         "working_tree_dirty": git.is_dirty(),
         "host_profile": options.profile, "wasm_profile": facts.selection.profile.as_deref().unwrap_or("dev"), "wasm_sha256": hash_file(wasm, WASM_LIMIT).map_err(Error::Artifact)?.sha256.to_string(),
         "rss_sample_interval_ms": SAMPLE_INTERVAL.as_millis(), "rss_sampler": sampling::source(),
-        "rss_command_stdout_bytes": options.rss_limits.stdout.retained_bytes(),
-        "rss_command_stderr_bytes": options.rss_limits.stderr.retained_bytes(),
+        "rss_command_stdout_bytes": options.rss_limits().stdout.retained_bytes(),
+        "rss_command_stderr_bytes": options.rss_limits().stderr.retained_bytes(),
         "iterations": options.iterations.get(), "workers": options.workers.get(), "repeats": options.repeats.get(),
         "state_bytes_per_canister": options.state_bytes, "modes": options.modes.iter().map(|mode| mode.as_str()).collect::<Vec<_>>(),
         "pool_capacities": if options.modes.contains(&Mode::Pooled) { options.capacities.iter().map(|capacity| capacity.get()).collect::<Vec<_>>() } else { vec![] },
@@ -549,18 +548,15 @@ pub fn run() -> Result<(), Error> {
     #[cfg(unix)]
     let _interrupt_handler = install_interrupt_handler()?;
     let inputs = prepare(&options)?;
-    let cases = options.benchmark_cases();
-    let mut runs: BTreeMap<String, Vec<MeasuredRun>> = cases
-        .iter()
-        .map(|case| (case.label.clone(), Vec::new()))
-        .collect();
+    let mut cases = options
+        .benchmark_cases()
+        .into_iter()
+        .map(|case| (case, Vec::new()))
+        .collect::<Vec<_>>();
     for repeat in 0..options.repeats.get() {
-        for case in cases
-            .iter()
-            .cycle()
-            .skip(repeat % cases.len())
-            .take(cases.len())
-        {
+        let rotation = repeat % cases.len();
+        let (before, after) = cases.split_at_mut(rotation);
+        for (case, runs) in after.iter_mut().chain(before) {
             check_interrupted()?;
             eprintln!("Run {}/{}: {}", repeat + 1, options.repeats, case.label);
             let invocation = WorkerArguments {
@@ -576,25 +572,29 @@ pub fn run() -> Result<(), Error> {
                 Command::new(&inputs.worker)
                     .args(<[OsString; 7]>::from(invocation))
                     .current_dir(&inputs.root),
-                || sampling::snapshot(64 * 1024, options.rss_limits),
+                || sampling::snapshot(64 * 1024, options.rss_limits()),
             )?;
             let measured = MeasuredRun::from_worker(captured.report, &options, case, captured.rss)?;
-            runs.get_mut(&case.label)
-                .expect("case owns run list")
-                .push(measured);
+            runs.push(measured);
         }
     }
-    let summaries = runs
+    let summaries = cases
         .iter()
-        .map(|(label, runs)| Ok((label.clone(), summarize(runs)?)))
-        .collect::<Result<BTreeMap<_, _>, Error>>()?;
+        .map(|(case, runs)| Ok((case.label.as_str(), summarize(runs)?)))
+        .collect::<Result<Vec<_>, Error>>()?;
     check_interrupted()?;
     if let Some(output) = &options.output {
         let document = DriverReport {
             format: "ic-testkit-fixture-benchmark-v1",
             provenance: &inputs.provenance,
-            runs: &runs,
-            summary: &summaries,
+            runs: cases
+                .iter()
+                .map(|(case, runs)| (case.label.as_str(), runs.as_slice()))
+                .collect(),
+            summary: summaries
+                .iter()
+                .map(|(label, summary)| (*label, summary))
+                .collect(),
         };
         publish_report(output, |file| {
             serde_json::to_writer_pretty(&mut *file, &document)?;
@@ -602,13 +602,7 @@ pub fn run() -> Result<(), Error> {
             Ok(())
         })?;
     }
-    print_summary(
-        &summaries,
-        &cases
-            .iter()
-            .map(|case| case.label.clone())
-            .collect::<Vec<_>>(),
-    )
+    print_summary(&summaries)
 }
 
 // This caller admits small configuration trees; libraries do not select this policy.

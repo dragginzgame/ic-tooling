@@ -15,8 +15,7 @@ testkit-wasm-check:
 	+cargo check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures,ic-testkit-native/stable-memory --locked --offline --target wasm32-unknown-unknown
 	+cargo check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 testkit-msrv:
-	+cargo +$(MSRV) check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures,ic-testkit-native/stable-memory --locked --offline --target wasm32-unknown-unknown
-	+cargo +$(MSRV) check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
+	+RUSTUP_TOOLCHAIN="$(MSRV)" $(MAKE) --no-print-directory testkit-wasm-check
 testkit-browser-check:
 	node --test testing/browser/session.test.mjs
 testkit-check: build-server-cli

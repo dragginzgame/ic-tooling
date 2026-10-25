@@ -70,6 +70,7 @@ jq -e '
       and ($packages | any(.name == "ic-host-wasm-inspect" and
           any(.targets[]; .name == "ic-host-wasm-inspect" and (.kind | index("bin")))))
 ' "$attempt/metadata.json" --args "${packages[@]}" > /dev/null || fail 'expected selected synchronized crates.io packages'
+package_directories=()
 for package in "${packages[@]}"; do
     directory="$(package_path "$package")" || fail "invalid package directory for $package"
     physical="$(cd -P -- "$root/$directory" && printf '%s/.' "$PWD")" || fail "missing package directory for $package"
@@ -78,6 +79,7 @@ for package in "${packages[@]}"; do
     notice="$directory/LICENSE"
     [[ -f "$notice" && ! -L "$notice" ]] || fail "expected a regular license notice for $package"
     cmp -s LICENSE "$notice" || fail "license notice differs from the root notice for $package"
+    package_directories+=("$directory")
 done
 repository="$(jq -r '.packages[0].repository' "$attempt/metadata.json")"
 version="$(jq -r '.packages[0].version' "$attempt/metadata.json")"
@@ -99,14 +101,16 @@ if [[ "$mode" == publish ]]; then
     printf '%s\0' "${package_arguments[@]}" > "$attempt/package-arguments"
     cargo "${package_arguments[@]}" > "$attempt/package.log" 2>&1 || fail 'package preparation failed; no upload attempted'
     provenance_arguments=()
-    for package in "${packages[@]}"; do
-        directory="$(package_path "$package")" || fail "invalid package directory for $package"
+    for index in "${!packages[@]}"; do
+        package="${packages[$index]}"
+        directory="${package_directories[$index]}"
         provenance_arguments+=(--package "$package@$version" "$directory")
     done
     bash "$tooling_root/scripts/ci/check-cargo-package-provenance.sh" \
         "$attempt/provenance" "$root/target/package" "$repository" "$source" "${provenance_arguments[@]}"
-    for package in "${packages[@]}"; do
-        directory="$(package_path "$package")" || fail "invalid package directory for $package"
+    for index in "${!packages[@]}"; do
+        package="${packages[$index]}"
+        directory="${package_directories[$index]}"
         perl "$tooling_root/scripts/ci/check-license.pl" --kind mit --file "$root/$directory/LICENSE" \
             --archive "$root/target/package/$package-$version.crate" --member "$package-$version/LICENSE"
     done

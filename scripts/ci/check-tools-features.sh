@@ -42,7 +42,11 @@ check_graph() {
     [[ "$package" == ic-host-tools ]] || arguments+=(--forbid ic-platform)
     local owners=()
     [[ "$defaults" != none ]] || arguments+=(--no-default-features)
-    [[ -z "$features" ]] || arguments+=(--features "$features")
+    case "$features" in
+        --all-features) arguments+=(--all-features) ;;
+        '') ;;
+        *) arguments+=(--features "$features") ;;
+    esac
     arguments+=(--forbid-pattern "${forbidden% }$" --forbid-pattern '^(ciborium|ciborium-io|ciborium-ll)$')
     # Platform's runtime is independently selectable; no Host profile owns it.
     arguments+=(--forbid-pattern '^(ic-cdk|ic-cdk-macros|ic-cdk-executor|ic-platform-macros|ic0)$')
@@ -83,7 +87,7 @@ check_graph "$parser_free" ic-host-tools none candid 'ic-platform candid candid_
 check_graph "$parser_free" ic-host-tools none candid,ic-interface,certificate \
     'ic-platform candid_parser serde_cbor ic-certification ic-host-artifacts wasmparser' \
     '^(ic-host-(fs|process|text)|ic-agent|reqwest|minicbor) '
-check_graph "$yaml_allowed" ic-host-tools none agent,candid,certificate,encoding,ic-interface,icp-project,icp-ledger,ledger-evidence,registry \
+check_graph "$yaml_allowed" ic-host-tools none --all-features \
     'ic-platform candid_parser serde_cbor ic-certification ic-host-artifacts wasmparser ic-agent reqwest icrc-ledger-types ic-host-text serde_yaml unsafe-libyaml prost' \
     '^(ic-host-(fs|process)|ic-stable-structures) '
 check_graph "$parser_free" ic-host-text default '' unicode-width \

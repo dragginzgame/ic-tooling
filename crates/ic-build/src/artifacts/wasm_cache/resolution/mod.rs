@@ -12,13 +12,13 @@ use crate::{
             digest_labeled_paths_composable, os_bytes,
         },
     },
-    cargo::observation::schema,
+    cargo::{observation::schema, selection::is_normal_component},
 };
 use std::{
     collections::{BTreeSet, HashMap, HashSet, VecDeque},
     ffi::{OsStr, OsString},
     fs, io,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 use toml::Value as TomlValue;
 
@@ -121,13 +121,7 @@ pub(super) fn resolve_local_inputs(
                     package.name
                 ));
             };
-            let mut components = Path::new(&target.name).components();
-            if matching.next().is_some()
-                || !matches!(
-                    (components.next(), components.next()),
-                    (Some(Component::Normal(_)), None)
-                )
-            {
+            if matching.next().is_some() || !is_normal_component(Path::new(&target.name)) {
                 return Err(format!(
                     "Cargo package `{}` has an ambiguous or unsafe cdylib target",
                     package.name
@@ -301,46 +295,34 @@ pub(super) fn locked_package_identities(
     let Some(packages) = lock.get("package").and_then(TomlValue::as_array) else {
         return Ok(Vec::new());
     };
-    packages
-        .iter()
-        .filter_map(|package| {
-            let table = match external_package(package) {
-                Ok(Some(table)) => table,
-                Ok(None) => return None,
-                Err(message) => {
-                    return Some(Err(invalid_metadata(&format!("Cargo lockfile {message}"))));
-                }
-            };
-            let text = |field| {
-                required_string(table, field)
-                    .map(str::to_owned)
-                    .map_err(|_| {
-                        invalid_metadata(&format!(
-                            "Cargo lockfile package `{field}` is missing or not a string"
-                        ))
-                    })
-            };
-            let source = required_string(table, "source").map(str::to_owned);
-            Some(
-                source
-                    .map_err(|_| invalid_metadata("Cargo lockfile package source is not a string"))
-                    .and_then(|source| {
-                        Ok(LockedPackageIdentity {
-                            name: text("name")?,
-                            version: text("version")?,
-                            source,
-                            checksum: optional_string(table, "checksum")
-                                .map_err(|_| {
-                                    invalid_metadata(
-                                        "Cargo lockfile package `checksum` is not a string",
-                                    )
-                                })?
-                                .map(str::to_owned),
-                        })
-                    }),
-            )
-        })
-        .collect()
+    let mut identities = Vec::new();
+    for package in packages {
+        let Some(table) = external_package(package)
+            .map_err(|message| invalid_metadata(&format!("Cargo lockfile {message}")))?
+        else {
+            continue;
+        };
+        let text = |field| {
+            required_string(table, field)
+                .map(str::to_owned)
+                .map_err(|_| {
+                    invalid_metadata(&format!(
+                        "Cargo lockfile package `{field}` is missing or not a string"
+                    ))
+                })
+        };
+        let source = required_string(table, "source")
+            .map_err(|_| invalid_metadata("Cargo lockfile package source is not a string"))?;
+        identities.push(LockedPackageIdentity {
+            name: text("name")?,
+            version: text("version")?,
+            source: source.to_owned(),
+            checksum: optional_string(table, "checksum")
+                .map_err(|_| invalid_metadata("Cargo lockfile package `checksum` is not a string"))?
+                .map(str::to_owned),
+        });
+    }
+    Ok(identities)
 }
 
 pub(super) fn semantic_package_identity(

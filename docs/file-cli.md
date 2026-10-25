@@ -40,7 +40,7 @@ fallibly allocated; its size is list bytes plus 65 bytes per path. Read deadline
 and aggregate filesystem work remain caller-owned.
 
 `create-private` reads an admitted source before any destination effects, then
-uses `durable::write_with` with `CreateNew` and permissions `0600` subject to
+uses `durable::write_bytes` with `CreateNew` and permissions `0600` subject to
 umask. An existing destination is preserved. `replace-private` uses the same
 source admission and permissions with `Replace`. Both delegate file sync,
 publication, parent sync and failure/cleanup diagnostics to the canonical writer.

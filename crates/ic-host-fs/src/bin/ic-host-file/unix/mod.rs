@@ -2,7 +2,7 @@
 
 use super::{Operation, batch};
 use ic_host_fs::{
-    durable::{PublicationMode, WriteOptions, write_with},
+    durable::{PublicationMode, WriteOptions, write_bytes},
     read::{hash_file_no_follow, read_file_no_follow},
 };
 use std::{
@@ -39,13 +39,13 @@ pub fn run(operation: Operation) -> Result<(), Box<dyn Error>> {
                 PublicationMode::Replace
             };
             let bytes = read_file_no_follow(&source, max_bytes)?;
-            write_with(
+            write_bytes(
                 &destination,
                 WriteOptions {
                     mode,
                     permissions: 0o600,
                 },
-                |file| file.write_all(&bytes),
+                &bytes,
             )?;
         }
     }

@@ -173,7 +173,7 @@ impl CargoInvocation {
     }
 }
 
-pub fn command_identity<E>(
+fn command_identity<E>(
     program: &OsStr,
     directory: &std::path::Path,
     environment: &BTreeMap<OsString, OsString>,

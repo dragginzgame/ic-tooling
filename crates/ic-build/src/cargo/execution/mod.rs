@@ -20,8 +20,6 @@ use std::{
 mod invocation;
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-pub(crate) use invocation::command_identity;
 pub use invocation::{
     CargoExecution, CargoExecutionPolicy, CargoInvocation, CargoRecipe, execute_cargo,
 };

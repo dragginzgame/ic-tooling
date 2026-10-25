@@ -2,7 +2,7 @@
 
 use super::{
     messages::{MessageDecoder, artifact_matches},
-    observation::schema,
+    observation::{metadata_arguments, schema},
     selection::CargoSelection,
 };
 use ic_host_process::{
@@ -110,7 +110,7 @@ pub fn build_native_executable(
     };
     admit()?;
     let mut command = cargo();
-    command.args(["metadata", "--no-deps", "--format-version", "1"]);
+    command.args(metadata_arguments(false, None));
     command.args(arguments.metadata_arguments());
     let mut bytes = Vec::new();
     execute(

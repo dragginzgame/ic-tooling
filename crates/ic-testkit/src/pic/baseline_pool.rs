@@ -7,7 +7,7 @@ use std::{
 
 use super::{
     CachedPocketIcBaseline, ControllerSnapshotError, SnapshotRestoreFunding,
-    bounded_pool::{BoundedSlotLease, BoundedSlotPool},
+    bounded_pool::{BoundedSlotLease, BoundedSlotPool, Slot},
 };
 
 /// Reset domain whose handling is declared by a pooled baseline recipe.
@@ -610,8 +610,8 @@ where
         };
         let slot_index = slot.slot_index();
 
-        let (rebuild_reason, original) = if slot.is_reusable() {
-            match self.prepare_reused(&slot, &mut timings) {
+        let (rebuild_reason, original) = match slot.state() {
+            Slot::Reusable(_) => match self.prepare_reused(&slot, &mut timings) {
                 Ok(()) => {
                     timings.total = total_started.elapsed();
                     return Ok((
@@ -636,17 +636,13 @@ where
                     }
                     FailureDisposition::Rebuild(reason) => (Some(reason), Some(original)),
                 },
-            }
-        } else {
-            let reason = if slot.invalidated_by_unwind() {
-                Some(RebuildReason::UnwindWhileLeased)
-            } else {
-                slot.invalidation_reason().cloned()
-            };
-            (reason, None)
+            },
+            Slot::Empty => (None, None),
+            Slot::Invalidated { reason, .. } => (Some(reason.clone()), None),
+            Slot::Unwound(_) => (Some(RebuildReason::UnwindWhileLeased), None),
         };
 
-        if slot.is_populated() {
+        if slot.get().is_some() {
             Self::discard_stale_slot(&mut slot, &mut timings);
         }
         let build = self.build_slot(&mut slot, &mut timings);

@@ -44,8 +44,12 @@ pub struct MemoryIoCounts {
 /// The wrapper preserves the backing's specialized unsafe read implementation.
 /// It does not provide transactions, failure injection or IC instruction counts.
 pub struct MeteredMemory<M: Memory = VectorMemory> {
-    memory: Rc<M>,
-    counts: Rc<Cell<MemoryIoCounts>>,
+    state: Rc<MemoryState<M>>,
+}
+
+struct MemoryState<M> {
+    memory: M,
+    counts: Cell<MemoryIoCounts>,
 }
 
 impl<M: Memory> MeteredMemory<M> {
@@ -53,30 +57,32 @@ impl<M: Memory> MeteredMemory<M> {
     #[must_use]
     pub fn new(memory: M) -> Self {
         Self {
-            memory: Rc::new(memory),
-            counts: Rc::default(),
+            state: Rc::new(MemoryState {
+                memory,
+                counts: Cell::default(),
+            }),
         }
     }
 
     /// Inspect the backing directly without accounting; useful for fixture checks.
     #[must_use]
     pub fn backing(&self) -> &M {
-        &self.memory
+        &self.state.memory
     }
 
     /// Clear the counters shared by all clones without changing stored bytes.
     pub fn reset(&self) {
-        self.counts.set(MemoryIoCounts::default());
+        self.state.counts.set(MemoryIoCounts::default());
     }
 
     /// Snapshot the shared counters.
     #[must_use]
     pub fn counts(&self) -> MemoryIoCounts {
-        self.counts.get()
+        self.state.counts.get()
     }
 
     fn record_read(&self, bytes: usize, unsafe_read: bool) {
-        let mut counts = self.counts.get();
+        let mut counts = self.state.counts.get();
         add_count(&mut counts.reads, 1, &mut counts.overflowed);
         add_count(&mut counts.read_bytes, bytes as u64, &mut counts.overflowed);
         if unsafe_read {
@@ -87,15 +93,14 @@ impl<M: Memory> MeteredMemory<M> {
                 &mut counts.overflowed,
             );
         }
-        self.counts.set(counts);
+        self.state.counts.set(counts);
     }
 }
 
 impl<M: Memory> Clone for MeteredMemory<M> {
     fn clone(&self) -> Self {
         Self {
-            memory: Rc::clone(&self.memory),
-            counts: Rc::clone(&self.counts),
+            state: Rc::clone(&self.state),
         }
     }
 }
@@ -108,23 +113,23 @@ impl<M: Memory + Default> Default for MeteredMemory<M> {
 
 impl<M: Memory> Memory for MeteredMemory<M> {
     fn size(&self) -> u64 {
-        self.memory.size()
+        self.state.memory.size()
     }
 
     fn grow(&self, pages: u64) -> i64 {
-        let result = self.memory.grow(pages);
-        let mut counts = self.counts.get();
+        let result = self.state.memory.grow(pages);
+        let mut counts = self.state.counts.get();
         add_count(&mut counts.grows, 1, &mut counts.overflowed);
         if result >= 0 {
             add_count(&mut counts.grown_pages, pages, &mut counts.overflowed);
         }
-        self.counts.set(counts);
+        self.state.counts.set(counts);
         result
     }
 
     fn read(&self, offset: u64, dst: &mut [u8]) {
         self.record_read(dst.len(), false);
-        self.memory.read(offset, dst);
+        self.state.memory.read(offset, dst);
     }
 
     #[expect(
@@ -134,19 +139,19 @@ impl<M: Memory> Memory for MeteredMemory<M> {
     unsafe fn read_unsafe(&self, offset: u64, dst: *mut u8, count: usize) {
         self.record_read(count, true);
         // SAFETY: Forward the caller's valid, nonoverlapping destination unchanged.
-        unsafe { self.memory.read_unsafe(offset, dst, count) }
+        unsafe { self.state.memory.read_unsafe(offset, dst, count) }
     }
 
     fn write(&self, offset: u64, src: &[u8]) {
-        let mut counts = self.counts.get();
+        let mut counts = self.state.counts.get();
         add_count(&mut counts.writes, 1, &mut counts.overflowed);
         add_count(
             &mut counts.write_bytes,
             src.len() as u64,
             &mut counts.overflowed,
         );
-        self.counts.set(counts);
-        self.memory.write(offset, src);
+        self.state.counts.set(counts);
+        self.state.memory.write(offset, src);
     }
 }
 

@@ -5,8 +5,8 @@ use crate::cargo::{
         wasm_artifact_paths,
     },
     messages::artifact_matches,
-    observation::schema,
-    selection::CargoSelection,
+    observation::{metadata_arguments, schema},
+    selection::{CargoSelection, is_normal_component},
 };
 use ic_host_fs::owned_directory::{OwnedDirectory, remove_path_if_present};
 use ic_host_fs::read::directory_logical_size;
@@ -23,7 +23,7 @@ use std::{
     ffi::{OsStr, OsString},
     fs::{self, File},
     io,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
     process::{Command, ExitStatus, Stdio},
     sync::{
         Arc, RwLock,
@@ -337,7 +337,7 @@ struct BatchResolutionKey<'a> {
     cargo_program: &'a OsStr,
     rustc_program: &'a OsStr,
     metadata_arguments: Vec<OsString>,
-    environment: BTreeMap<OsString, OsString>,
+    environment: &'a BTreeMap<OsString, OsString>,
 }
 
 /// Lock-coordinated disk-usage observation for a caller-owned shared Cargo target.
@@ -1824,13 +1824,7 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
         let group = self.group_by_index[active_index];
         let active = self.specs[active_index];
 
-        let (cargo_identity, rustc_identity, tool_identity) =
-            resolve_tool_identity(active, progress)?;
-
-        let metadata_started = Instant::now();
-        let metadata =
-            progress.run_phase(WasmBuildPhase::CargoMetadata, || cargo_metadata(active))?;
-        let cargo_metadata = metadata_started.elapsed();
+        let (facts, metadata, mut timings) = observe_cargo_resolution(active, progress, &mut None)?;
 
         let (discovered, input_discovery) = self.discover_group_inputs(group, &metadata, progress);
 
@@ -1858,13 +1852,9 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
                 .collect::<Vec<_>>()
         });
         let content_hashing = hashing_started.elapsed();
-        let timings = WasmInputResolutionTimings {
-            tool_identity,
-            cargo_metadata,
-            input_discovery,
-            content_hashing,
-            total: total_started.elapsed(),
-        };
+        timings.input_discovery = input_discovery;
+        timings.content_hashing = content_hashing;
+        timings.total = total_started.elapsed();
         let resolved_count = resolved_inputs
             .iter()
             .filter(|(_, result)| result.is_ok())
@@ -1892,7 +1882,7 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
                 input_digest,
                 validation_digest,
                 spec.cargo_invocation()
-                    .facts(cargo_identity.clone(), rustc_identity.clone()),
+                    .facts(facts.cargo_identity.clone(), facts.rustc_identity.clone()),
                 || {
                     if Some(index) == timing_index {
                         timings
@@ -1940,18 +1930,11 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
     }
 }
 
-fn resolve_tool_identity(
-    spec: &WasmBuildSpec,
-    progress: &mut ProgressReporter<'_>,
-) -> Result<(Vec<u8>, Vec<u8>, Duration), WasmBuildError> {
-    resolve_tool_identity_with_policy(spec, progress, &mut None)
-}
-
 fn resolve_tool_identity_with_policy(
     spec: &WasmBuildSpec,
     progress: &mut ProgressReporter<'_>,
     policy: &mut Option<&mut CargoInputProbePolicy<'_>>,
-) -> Result<(Vec<u8>, Vec<u8>, Duration), WasmBuildError> {
+) -> Result<(CargoBuildFacts, Duration), WasmBuildError> {
     let started = Instant::now();
     let facts = spec
         .cargo_invocation()
@@ -1966,10 +1949,36 @@ fn resolve_tool_identity_with_policy(
                 ensure_command_success(phase, output)
             })
         })?;
+    Ok((facts, started.elapsed()))
+}
+
+// The shared probe prefix; discovery and hashing retain their single/batch
+// ownership, independent failures and timing attribution.
+fn observe_cargo_resolution(
+    spec: &WasmBuildSpec,
+    progress: &mut ProgressReporter<'_>,
+    policy: &mut Option<&mut CargoInputProbePolicy<'_>>,
+) -> Result<
+    (
+        CargoBuildFacts,
+        schema::Metadata,
+        WasmInputResolutionTimings,
+    ),
+    WasmBuildError,
+> {
+    let (facts, tool_identity) = resolve_tool_identity_with_policy(spec, progress, policy)?;
+    let started = Instant::now();
+    let metadata = progress.run_phase(WasmBuildPhase::CargoMetadata, || {
+        cargo_metadata_with_policy(spec, policy)
+    })?;
     Ok((
-        facts.cargo_identity,
-        facts.rustc_identity,
-        started.elapsed(),
+        facts,
+        metadata,
+        WasmInputResolutionTimings {
+            tool_identity,
+            cargo_metadata: started.elapsed(),
+            ..WasmInputResolutionTimings::default()
+        },
     ))
 }
 
@@ -1983,7 +1992,7 @@ impl<'a> BatchResolutionKey<'a> {
                 .get(OsStr::new("RUSTC"))
                 .unwrap_or(&spec.rustc_program),
             metadata_arguments: spec.cargo_selection.metadata_arguments(),
-            environment: spec.environment.clone(),
+            environment: &spec.environment,
         }
     }
 }
@@ -3244,7 +3253,7 @@ fn lock_wasm_build_cache_with_progress(
 fn lock_shared_incremental_target(
     spec: &WasmBuildSpec,
 ) -> Result<(File, Duration, PathBuf), WasmBuildError> {
-    lock_shared_incremental_target_internal(spec, None)
+    lock_shared_incremental_target_internal(spec, &mut ProgressReporter::silent())
 }
 
 fn lock_shared_incremental_target_with_progress(
@@ -3254,7 +3263,7 @@ fn lock_shared_incremental_target_with_progress(
     let target_dir = shared_incremental_target(spec)
         .expect("validated shared acquisition must have a shared Cargo target");
     progress.emit(WasmBuildProgressEvent::SharedTargetLockStarted { target_dir });
-    let (lock, wait, canonical) = lock_shared_incremental_target_internal(spec, Some(progress))?;
+    let (lock, wait, canonical) = lock_shared_incremental_target_internal(spec, progress)?;
     progress.emit(WasmBuildProgressEvent::SharedTargetLockAcquired {
         target_dir: canonical.clone(),
         wait,
@@ -3264,11 +3273,9 @@ fn lock_shared_incremental_target_with_progress(
 
 fn lock_shared_incremental_target_internal(
     spec: &WasmBuildSpec,
-    mut progress: Option<&mut ProgressReporter<'_>>,
+    progress: &mut ProgressReporter<'_>,
 ) -> Result<(File, Duration, PathBuf), WasmBuildError> {
-    if let Some(progress) = progress.as_deref_mut() {
-        progress.begin_phase(WasmBuildPhase::SharedTargetCoordination);
-    }
+    progress.begin_phase(WasmBuildPhase::SharedTargetCoordination);
     let target_dir =
         shared_incremental_target(spec).ok_or_else(|| WasmBuildError::InvalidSpec {
             message: "shared incremental target is not configured".to_owned(),
@@ -3286,15 +3293,11 @@ fn lock_shared_incremental_target_internal(
             source,
         })?;
     let lock_path = canonical.join(".ic-testkit/wasm-incremental.lock");
-    let (lock, wait) = if let Some(progress) = progress {
-        lock_cache_file_with_progress(
-            &lock_path,
-            WasmBuildPhase::SharedTargetCoordination,
-            progress,
-        )?
-    } else {
-        lock_cache_file(&lock_path).map_err(wasm_cache_fs_error)?
-    };
+    let (lock, wait) = lock_cache_file_with_progress(
+        &lock_path,
+        WasmBuildPhase::SharedTargetCoordination,
+        progress,
+    )?;
     Ok((lock, wait, canonical))
 }
 
@@ -3402,27 +3405,18 @@ fn validate_spec(spec: &WasmBuildSpec) -> Result<(), WasmBuildError> {
 }
 
 fn validate_cargo_target_selection(spec: &WasmBuildSpec) -> Result<(), WasmBuildError> {
-    if let Some(example) = &spec.example {
-        let mut components = Path::new(example).components();
-        if spec.packages.len() != 1
-            || !matches!(
-                (components.next(), components.next()),
-                (Some(Component::Normal(_)), None)
-            )
-        {
-            return Err(WasmBuildError::InvalidSpec {
-                message: "a named Cargo example requires one package, a normal target name"
-                    .to_owned(),
-            });
-        }
+    if let Some(example) = &spec.example
+        && (spec.packages.len() != 1 || !is_normal_component(Path::new(example)))
+    {
+        return Err(WasmBuildError::InvalidSpec {
+            message: "a named Cargo example requires one package, a normal target name".to_owned(),
+        });
     }
-    if spec.packages.iter().any(|package| {
-        let mut components = Path::new(package).components();
-        !matches!(
-            (components.next(), components.next()),
-            (Some(Component::Normal(_)), None)
-        )
-    }) {
+    if spec
+        .packages
+        .iter()
+        .any(|package| !is_normal_component(Path::new(package)))
+    {
         return Err(WasmBuildError::InvalidSpec {
             message: "Cargo package names must be normal path components".to_owned(),
         });
@@ -3447,14 +3441,7 @@ fn build_fingerprint_with_policy(
     policy: &mut Option<&mut CargoInputProbePolicy<'_>>,
 ) -> Result<ResolvedCargoBuildInputs, WasmBuildError> {
     let total_started = Instant::now();
-    let (cargo_identity, rustc_identity, tool_identity) =
-        resolve_tool_identity_with_policy(spec, progress, policy)?;
-
-    let metadata_started = Instant::now();
-    let metadata = progress.run_phase(WasmBuildPhase::CargoMetadata, || {
-        cargo_metadata_with_policy(spec, policy)
-    })?;
-    let cargo_metadata = metadata_started.elapsed();
+    let (facts, metadata, mut timings) = observe_cargo_resolution(spec, progress, policy)?;
 
     let discovery_started = Instant::now();
     let (inputs, mut exclusions) = progress.run_phase(WasmBuildPhase::InputDiscovery, || {
@@ -3479,20 +3466,19 @@ fn build_fingerprint_with_policy(
         })?;
     let content_hashing = hashing_started.elapsed();
 
+    timings.input_discovery = input_discovery;
+    timings.content_hashing = content_hashing;
+
     Ok(ResolvedCargoBuildInputs::assemble(
         spec,
         inputs,
         exclusions,
         input_digest,
         validation_digest,
-        spec.cargo_invocation()
-            .facts(cargo_identity, rustc_identity),
-        || WasmInputResolutionTimings {
-            tool_identity,
-            cargo_metadata,
-            input_discovery,
-            content_hashing,
-            total: total_started.elapsed(),
+        facts,
+        || {
+            timings.total = total_started.elapsed();
+            timings
         },
     ))
 }
@@ -3541,41 +3527,6 @@ fn finish_build_fingerprint(
     hasher.finish()
 }
 
-#[cfg(test)]
-fn command_identity(
-    spec: &WasmBuildSpec,
-    phase: WasmBuildPhase,
-    program: &OsStr,
-    arguments: &[&str],
-) -> Result<Vec<u8>, WasmBuildError> {
-    command_identity_with_policy(spec, phase, program, arguments, &mut None)
-}
-
-#[cfg(test)]
-fn command_identity_with_policy(
-    spec: &WasmBuildSpec,
-    phase: WasmBuildPhase,
-    program: &OsStr,
-    arguments: &[&str],
-    policy: &mut Option<&mut CargoInputProbePolicy<'_>>,
-) -> Result<Vec<u8>, WasmBuildError> {
-    crate::cargo::execution::command_identity(
-        program,
-        &spec.workspace_root,
-        &spec.environment,
-        arguments,
-        |command| {
-            let output =
-                capture_probe_output_with_policy(command, phase, TOOL_IDENTITY_BYTES, policy)?;
-            ensure_command_success(phase, output)
-        },
-    )
-}
-
-fn cargo_metadata(spec: &WasmBuildSpec) -> Result<schema::Metadata, WasmBuildError> {
-    cargo_metadata_with_policy(spec, &mut None)
-}
-
 fn cargo_metadata_with_policy(
     spec: &WasmBuildSpec,
     policy: &mut Option<&mut CargoInputProbePolicy<'_>>,
@@ -3583,7 +3534,7 @@ fn cargo_metadata_with_policy(
     let mut command = Command::new(&spec.cargo_program);
     command
         .current_dir(&spec.workspace_root)
-        .args(["metadata", "--format-version", "1"]);
+        .args(metadata_arguments(true, None));
     for argument in spec.cargo_selection.metadata_arguments() {
         command.arg(argument);
     }
@@ -3600,15 +3551,6 @@ fn cargo_metadata_with_policy(
             message: format!("Cargo metadata did not match its schema: {error}"),
         }
     })
-}
-
-#[cfg(test)]
-fn capture_probe_output(
-    command: &mut Command,
-    phase: WasmBuildPhase,
-    stdout_bytes: usize,
-) -> Result<CompletedExecution, WasmBuildError> {
-    capture_probe_output_with_policy(command, phase, stdout_bytes, &mut None)
 }
 
 fn capture_probe_output_with_policy(

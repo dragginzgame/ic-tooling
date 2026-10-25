@@ -316,8 +316,8 @@ PATH="$fixture/local:$PATH" HOST_MAKE_ASSERT_MSRV=1 make --no-print-directory -j
     msrv-qualification "MAKE=$(command -v make)" > "$fixture/msrv-qualification.log" 2>&1
 cat > "$fixture/expected" <<'EVENTS'
 +1.91.0 check --workspace --all-targets --all-features --locked --offline
-+1.91.0 check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures,ic-testkit-native/stable-memory --locked --offline --target wasm32-unknown-unknown
-+1.91.0 check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
+check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures,ic-testkit-native/stable-memory --locked --offline --target wasm32-unknown-unknown
+check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 check -p ic-host-fs --lib --bins --test unsupported_lock --all-features --target wasm32-unknown-unknown --locked --offline
 test -p ic-host-tools --no-default-features --features icp-project --all-targets --locked --offline icp_project::
 test -p ic-host-tools --no-default-features --features icp-ledger --all-targets --locked --offline icp_ledger::

@@ -2,7 +2,10 @@
 
 use super::external_lock::admit_lock;
 use super::source_inventory::sources;
-use crate::cargo::observation::schema::{Metadata, Package};
+use crate::cargo::observation::{
+    metadata_arguments,
+    schema::{Metadata, Package},
+};
 use crate::cargo::selection::CargoFeatureSelection;
 use ic_host_artifacts::artifact::Sha256Digest;
 use ic_host_process::tool::{CompletedExecution, capture_command};
@@ -207,14 +210,10 @@ fn qualify(
     let entry_lock = read(&lock, limits.file_bytes)?;
     fs::write(evidence.join("entry-Cargo.lock"), &entry_lock)?;
     let mut command = cargo();
-    command.current_dir(&workspace).args([
-        "metadata",
-        "--offline",
-        "--locked",
-        "--no-deps",
-        "--format-version",
-        "1",
-    ]);
+    command
+        .current_dir(&workspace)
+        .args(metadata_arguments(false, None))
+        .args(["--offline", "--locked"]);
     let metadata = execute(&mut command, &evidence, "entry-metadata", limits.process)?;
     let metadata = serde_json::from_slice(&metadata)?;
     let mut originals = BTreeMap::new();
@@ -276,13 +275,8 @@ fn qualify(
     command
         .current_dir(&evidence)
         .env("CARGO_TARGET_DIR", evidence.join("target"))
-        .args([
-            "metadata",
-            "--offline",
-            "--format-version",
-            "1",
-            "--manifest-path",
-        ])
+        .args(metadata_arguments(true, None))
+        .args(["--offline", "--manifest-path"])
         .arg(&manifest_path)
         .args(features.arguments());
     let metadata = execute(&mut command, &evidence, "metadata", limits.process)?;

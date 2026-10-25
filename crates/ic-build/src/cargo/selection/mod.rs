@@ -83,11 +83,7 @@ impl CargoSelection {
             "bench" => "release",
             custom => custom,
         };
-        let mut components = Path::new(directory).components();
-        if !matches!(
-            (components.next(), components.next()),
-            (Some(Component::Normal(_)), None)
-        ) {
+        if !is_normal_component(Path::new(directory)) {
             return Err("Cargo profile must select one normal output directory component");
         }
         Ok(directory)
@@ -125,4 +121,14 @@ pub(crate) fn graph_arguments(
     }
     arguments.extend(features.arguments());
     arguments
+}
+
+// Shared lexical test only. Callers retain Cargo selection and refusal policy,
+// including their existing treatment of normalized separators/current-dir parts.
+pub(crate) fn is_normal_component(path: &Path) -> bool {
+    let mut components = path.components();
+    matches!(
+        (components.next(), components.next()),
+        (Some(Component::Normal(_)), None)
+    )
 }

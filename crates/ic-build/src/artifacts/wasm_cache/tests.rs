@@ -2741,7 +2741,7 @@ fn controlled_probes_keep_complete_output_bounds_and_spawn_causes() {
 #[cfg(unix)]
 fn complete_probe_limits_preserve_status_spawn_causes_and_refuse_partial_data() {
     use ic_host_process::tool::{ExecutionFailure, ToolError};
-    use std::{io, process::Command};
+    use std::io;
 
     let root = unique_temp_directory("complete-probe-limits");
     let spec = WasmBuildSpec::new(
@@ -2755,24 +2755,25 @@ fn complete_probe_limits_preserve_status_spawn_causes_and_refuse_partial_data() 
     let identity = vec![b'x'; super::TOOL_IDENTITY_BYTES];
     fs::write(root.join("payload"), &identity).unwrap();
     let phase = super::WasmBuildPhase::CargoIdentity;
-    assert_eq!(
-        super::command_identity(
-            &spec,
-            phase,
-            std::ffi::OsStr::new("/bin/sh"),
-            &["-c", "cat payload"]
-        )
-        .unwrap(),
-        identity
-    );
+    let probe = root.join("identity-probe");
+    write_executable_script(&probe, b"#!/bin/sh\ncat payload\n").unwrap();
+    let mut probe_spec = spec.clone().with_cargo_program(&probe);
+    probe_spec
+        .environment
+        .insert("RUSTC".into(), probe.into_os_string());
+    let observe = |spec: &WasmBuildSpec| {
+        super::resolve_tool_identity_with_policy(spec, &mut ProgressReporter::silent(), &mut None)
+    };
+    let (facts, _) = observe(&probe_spec).unwrap();
+    assert_eq!(facts.cargo_identity, identity);
+    assert_eq!(facts.rustc_identity, identity);
     for script in ["cat payload; printf x", "cat payload >&2; printf x >&2"] {
-        let error = super::command_identity(
-            &spec,
-            phase,
-            std::ffi::OsStr::new("/bin/sh"),
-            &["-c", script],
+        write_executable_script(
+            Path::new(&probe_spec.cargo_program),
+            format!("#!/bin/sh\n{script}\n").as_bytes(),
         )
-        .unwrap_err();
+        .unwrap();
+        let error = observe(&probe_spec).unwrap_err();
         let WasmBuildError::Io { source, .. } = error else {
             panic!("overflow must retain Host evidence");
         };
@@ -2786,16 +2787,17 @@ fn complete_probe_limits_preserve_status_spawn_causes_and_refuse_partial_data() 
             ExecutionFailure::OutputLimit { .. }
         ));
     }
-    let mut failed = Command::new("/bin/sh");
-    failed.args(["-c", "printf diagnostic >&2; exit 23"]);
-    let output =
-        super::capture_probe_output(&mut failed, phase, super::TOOL_IDENTITY_BYTES).unwrap();
+    write_executable_script(
+        Path::new(&probe_spec.cargo_program),
+        b"#!/bin/sh\nprintf diagnostic >&2\nexit 23\n",
+    )
+    .unwrap();
     assert!(
-        matches!(super::ensure_command_success(phase, output), Err(WasmBuildError::CommandFailed { status, stderr, .. }) if status.code() == Some(23) && stderr == "diagnostic")
+        matches!(observe(&probe_spec), Err(WasmBuildError::CommandFailed { phase: observed_phase, status, stderr, .. }) if observed_phase == phase && status.code() == Some(23) && stderr == "diagnostic")
     );
-    let mut missing = Command::new(root.join("absent"));
+    let missing = probe_spec.with_cargo_program(root.join("absent"));
     assert!(
-        matches!(super::capture_probe_output(&mut missing, phase, super::TOOL_IDENTITY_BYTES), Err(WasmBuildError::CommandSpawn { source, .. }) if source.kind() == io::ErrorKind::NotFound)
+        matches!(observe(&missing), Err(WasmBuildError::CommandSpawn { source, .. }) if source.kind() == io::ErrorKind::NotFound)
     );
 
     // A valid complete JSON value followed by excess whitespace must not be
@@ -2804,11 +2806,16 @@ fn complete_probe_limits_preserve_status_spawn_causes_and_refuse_partial_data() 
     let mut metadata = br#"{"packages":[],"workspace_members":[],"workspace_root":"/workspace","target_directory":"/target","version":1}"#.to_vec();
     metadata.resize(super::CARGO_METADATA_BYTES, b' ');
     fs::write(root.join("payload"), &metadata).unwrap();
-    assert_eq!(super::cargo_metadata(&spec).unwrap().packages, []);
+    assert_eq!(
+        super::cargo_metadata_with_policy(&spec, &mut None)
+            .unwrap()
+            .packages,
+        []
+    );
     metadata.push(b' ');
     fs::write(root.join("payload"), &metadata).unwrap();
     assert!(matches!(
-        super::cargo_metadata(&spec),
+        super::cargo_metadata_with_policy(&spec, &mut None),
         Err(WasmBuildError::Io { .. })
     ));
     fs::remove_dir_all(root).unwrap();
