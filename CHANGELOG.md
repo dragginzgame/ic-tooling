@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.68.4] - Unreleased
+## [0.68.4] - 2026-10-25
 
 - Adopt IC Platform 0.6.16 and Wire/derive 0.7.10, updating workspace minimums and
   Testkit examples. Existing feature boundaries, endpoint schemas and frame bytes
