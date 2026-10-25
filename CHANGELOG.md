@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.68.2] - Unreleased
+## [0.68.2] - 2026-10-25
 
 - Consolidate Build cache acquisition and Testkit startup while preserving
   coordination, deadlines, cancellation and retained failure evidence.
