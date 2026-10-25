@@ -5,12 +5,10 @@ mod support;
 use ic_build::artifacts::{
     ArtifactCacheOutcome, ArtifactCachePreparation, ArtifactCacheSpec, prepare_artifact_cache,
 };
-use ic_host_process::testing::crash_barrier::{wait_for_child_path, wait_for_path};
 use std::{
     fs::{self, OpenOptions},
     io::Write as _,
-    path::{Path, PathBuf},
-    process::Command,
+    path::PathBuf,
     thread,
     time::Duration,
 };
@@ -23,28 +21,12 @@ const WORKER_ID_ENV: &str = "IC_TESTKIT_ARTIFACT_PROCESS_WORKER";
 fn overlapping_processes_build_one_exact_artifact_set() {
     let root = unique_temp_directory("artifact-process-lock");
     fs::write(root.join("input"), b"input").expect("write process-test input");
-    let executable = std::env::current_exe().expect("resolve current test executable");
-    let mut first = spawn_worker(&executable, &root, "first");
-    let mut second = spawn_worker(&executable, &root, "second");
-
-    wait_for_child_path(
-        &mut first,
-        &root.join("ready-first"),
-        "first worker ready",
-        Duration::from_secs(10),
-    )
-    .expect("wait for first worker");
-    wait_for_child_path(
-        &mut second,
-        &root.join("ready-second"),
-        "second worker ready",
-        Duration::from_secs(10),
-    )
-    .expect("wait for second worker");
-    fs::write(root.join("go"), b"go").expect("release process-test workers");
-
-    assert!(first.wait().expect("wait for first worker").success());
-    assert!(second.wait().expect("wait for second worker").success());
+    support::process::run_workers(
+        &root,
+        "artifact_cache_process_worker",
+        WORKER_ROOT_ENV,
+        WORKER_ID_ENV,
+    );
     let builds = fs::read_to_string(root.join("builds"))
         .expect("read process build count")
         .lines()
@@ -67,13 +49,7 @@ fn artifact_cache_process_worker() {
         std::env::var_os(WORKER_ROOT_ENV).expect("worker root environment must be set"),
     );
     let worker = std::env::var(WORKER_ID_ENV).expect("worker identity environment must be set");
-    fs::write(root.join(format!("ready-{worker}")), b"ready").expect("mark worker ready");
-    wait_for_path(
-        &root.join("go"),
-        "parent start marker",
-        Duration::from_secs(10),
-    )
-    .expect("wait for parent start");
+    support::process::await_parent(&root, &worker);
 
     let spec = ArtifactCacheSpec::new(&root.join("cache"), "process-lock", "recipe/v1")
         .with_coordination_scope(&format!("process-{worker}"))
@@ -112,13 +88,4 @@ fn artifact_cache_process_worker() {
             ));
         }
     }
-}
-
-fn spawn_worker(executable: &Path, root: &Path, worker: &str) -> std::process::Child {
-    Command::new(executable)
-        .args(["--ignored", "--exact", "artifact_cache_process_worker"])
-        .env(WORKER_ROOT_ENV, root)
-        .env(WORKER_ID_ENV, worker)
-        .spawn()
-        .expect("spawn artifact-cache process worker")
 }

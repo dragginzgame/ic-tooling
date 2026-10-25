@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.68.2] - Unreleased
+
+- Consolidate Build cache acquisition and Testkit startup while preserving
+  coordination, deadlines, cancellation and retained failure evidence.
+- Simplify dependency-profile policy, release-context admission, reply-fixture
+  budgets and benchmark reporting. Public APIs, feature boundaries and serialized
+  formats are unchanged. [Details](docs/changelog/0.68.md#0682---unreleased).
+
 ## [0.68.1] - 2026-10-24
 
 - Adopt IC Wire/derive 0.7.2 and Platform 0.6.15 together, preserving existing

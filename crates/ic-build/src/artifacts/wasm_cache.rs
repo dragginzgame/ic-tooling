@@ -2666,8 +2666,10 @@ fn build_wasm_canisters_cached_internal(
     let prepared_invalidation = batch_prepared_invalidation(batch_resolution.as_ref());
     progress.emit(WasmBuildProgressEvent::Started);
     if spec.shared_incremental_maintenance_config.is_some() {
-        let outcome = build_wasm_canisters_cached_with_scheduled_shared_maintenance(
+        let outcome = build_wasm_with_shared_incremental(
             spec,
+            None,
+            prepared_invalidation,
             total_started,
             progress,
             batch_resolution.take(),
@@ -2715,11 +2717,11 @@ fn build_wasm_canisters_cached_internal(
             drop(cache_lock);
             build_wasm_with_shared_incremental(
                 spec,
-                resolved,
-                first_lock_wait,
-                isolated_acquisition,
+                Some((resolved, first_lock_wait)),
+                isolated_acquisition.prepared_invalidation,
                 total_started,
                 progress,
+                None,
                 &mut spawn,
             )
         }
@@ -2730,11 +2732,11 @@ fn build_wasm_canisters_cached_internal(
 
 fn build_wasm_with_shared_incremental(
     spec: &WasmBuildSpec,
-    resolved: ResolvedCargoBuildInputs,
-    first_lock_wait: Duration,
-    source: WasmAcquisitionContext,
+    initial: Option<(ResolvedCargoBuildInputs, Duration)>,
+    prepared_invalidation: Option<Arc<RwLock<bool>>>,
     total_started: Instant,
     progress: &mut ProgressReporter<'_>,
+    batch_resolution: Option<(&mut WasmBuildBatchInputResolver<'_, '_>, usize)>,
     mut spawn: &mut dyn FnMut(&mut Command) -> io::Result<OwnedChild>,
 ) -> Result<WasmBuildOutcome, WasmBuildError> {
     let (shared_lock, shared_lock_wait, shared_target) =
@@ -2743,16 +2745,36 @@ fn build_wasm_with_shared_incremental(
         lock_wasm_build_cache_with_progress(&spec.target_dir, progress)?;
     ensure_cache_directory_tag(&spec.target_dir)?;
 
-    let current = if source.prepared_invalidation.is_some() {
-        resolved
-    } else {
-        let mut current = resolve_initial_inputs(spec, None, progress)?;
-        current.timings.include(resolved.timings);
-        current
+    let emit_cache_miss = initial.is_none();
+    // Scheduled maintenance resolves under both locks. An ordinary miss must
+    // resolve again after changing lock order, unless a prepared lease excludes
+    // source mutation. Retain both observations' timing in that case.
+    let (current, first_lock_wait) = match initial {
+        Some((resolved, wait)) if prepared_invalidation.is_some() => (resolved, wait),
+        Some((resolved, wait)) => {
+            let mut current = resolve_initial_inputs(spec, None, progress)?;
+            current.timings.include(resolved.timings);
+            (current, wait)
+        }
+        None => (
+            resolve_initial_inputs(spec, batch_resolution, progress)?,
+            Duration::ZERO,
+        ),
     };
     let lock_wait = first_lock_wait.saturating_add(second_lock_wait);
+    let maintenance = spec
+        .shared_incremental_maintenance_config
+        .map(|_| {
+            perform_configured_shared_incremental_target_maintenance(
+                spec,
+                &shared_target,
+                shared_lock_wait,
+                progress,
+            )
+        })
+        .transpose()?;
     let shared_incremental =
-        WasmAcquisitionContext::shared(shared_lock_wait, None, source.prepared_invalidation);
+        WasmAcquisitionContext::shared(shared_lock_wait, maintenance, prepared_invalidation);
     if let Some(outcome) = try_reuse_wasm_artifacts(
         spec,
         &current,
@@ -2762,6 +2784,11 @@ fn build_wasm_with_shared_incremental(
         progress,
     )? {
         return Ok(outcome);
+    }
+    if emit_cache_miss {
+        progress.emit(WasmBuildProgressEvent::CacheMiss {
+            fingerprint: current.fingerprint,
+        });
     }
 
     let outcome = build_wasm_cache_miss(
@@ -2776,58 +2803,6 @@ fn build_wasm_with_shared_incremental(
     );
     drop(shared_lock);
     outcome
-}
-
-fn build_wasm_canisters_cached_with_scheduled_shared_maintenance(
-    spec: &WasmBuildSpec,
-    total_started: Instant,
-    progress: &mut ProgressReporter<'_>,
-    batch_resolution: Option<(&mut WasmBuildBatchInputResolver<'_, '_>, usize)>,
-    mut spawn: &mut dyn FnMut(&mut Command) -> io::Result<OwnedChild>,
-) -> Result<WasmBuildOutcome, WasmBuildError> {
-    let prepared_invalidation = batch_prepared_invalidation(batch_resolution.as_ref());
-    let (_shared_lock, shared_lock_wait, shared_target) =
-        lock_shared_incremental_target_with_progress(spec, progress)?;
-    let (_cache_lock, lock_wait) = lock_wasm_build_cache_with_progress(&spec.target_dir, progress)?;
-    ensure_cache_directory_tag(&spec.target_dir)?;
-
-    // Resolution under both locks proves the target boundary once for the
-    // scheduled retention pass and the following exact-cache acquisition.
-    let resolved = resolve_initial_inputs(spec, batch_resolution, progress)?;
-    let shared_maintenance = perform_configured_shared_incremental_target_maintenance(
-        spec,
-        &shared_target,
-        shared_lock_wait,
-        progress,
-    )?;
-    let shared_incremental = WasmAcquisitionContext::shared(
-        shared_lock_wait,
-        Some(shared_maintenance),
-        prepared_invalidation,
-    );
-    if let Some(outcome) = try_reuse_wasm_artifacts(
-        spec,
-        &resolved,
-        lock_wait,
-        &shared_incremental,
-        total_started,
-        progress,
-    )? {
-        return Ok(outcome);
-    }
-    progress.emit(WasmBuildProgressEvent::CacheMiss {
-        fingerprint: resolved.fingerprint,
-    });
-    build_wasm_cache_miss(
-        spec,
-        &resolved,
-        lock_wait,
-        shared_incremental,
-        &shared_target,
-        total_started,
-        progress,
-        &mut spawn,
-    )
 }
 
 fn perform_configured_shared_incremental_target_maintenance(

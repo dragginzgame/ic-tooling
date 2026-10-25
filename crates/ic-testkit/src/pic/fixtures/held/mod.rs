@@ -8,7 +8,7 @@
 //! Drop the whole isolated instance to abandon pending work. This is a trusted
 //! test-control facility, not a deployed service or an authorization boundary.
 
-use super::{RawReplyError, RawReplyLimits, RawReplyMethod, ReplyMode, charge};
+use super::{CatalogBudget, RawReplyError, RawReplyLimits, RawReplyMethod, ReplyMode, charge};
 use crate::pic::{PocketIcOperationError, try_pocket_ic_operation};
 use ic_host_artifacts::wasm_text::{CompileError, CompileLimits, compile};
 use ic_platform::{
@@ -397,28 +397,13 @@ fn admit_catalog<'a>(
 ) -> Result<BTreeMap<&'a str, Vec<usize>>, HeldReplyError> {
     charge(0, methods.len(), limits.methods, "requests")?;
     u32::try_from(methods.len()).map_err(|_| RawReplyError::Wasm32Limits)?;
-    let mut names = 0;
-    let mut replies = 0;
+    let mut budget = CatalogBudget::default();
     let mut exports = BTreeMap::<&str, Vec<usize>>::new();
     for (slot, method) in methods.iter().enumerate() {
         if method.mode != ReplyMode::Update {
             return Err(HeldReplyError::Query { slot });
         }
-        if method.name.is_empty() || method.name.chars().any(char::is_control) {
-            return Err(RawReplyError::InvalidName { index: slot }.into());
-        }
-        names = charge(
-            names,
-            method.name.len(),
-            limits.method_name_bytes,
-            "method names",
-        )?;
-        replies = charge(
-            replies,
-            method.reply.len(),
-            limits.reply_bytes,
-            "reply bytes",
-        )?;
+        budget.admit(slot, method, limits)?;
         exports.entry(method.name).or_default().push(slot);
     }
     Ok(exports)

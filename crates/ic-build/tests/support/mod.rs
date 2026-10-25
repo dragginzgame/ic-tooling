@@ -1,6 +1,8 @@
 // Each integration target uses only the fixtures it needs.
 #![allow(dead_code)]
 
+pub mod process;
+
 #[path = "../../test-support/fs/mod.rs"]
 pub mod fs_fixture;
 

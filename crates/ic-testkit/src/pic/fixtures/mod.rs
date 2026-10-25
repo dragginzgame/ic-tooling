@@ -146,23 +146,14 @@ pub fn raw_reply_canister(
     let count = u32::try_from(methods.len()).map_err(|_| RawReplyError::Wasm32Limits)?;
     count.checked_add(2).ok_or(RawReplyError::Wasm32Limits)?;
     let mut exports = BTreeSet::new();
-    let mut bytes = 0_usize;
-    let mut names = 0_usize;
+    let mut budget = CatalogBudget::default();
     for (index, method) in methods.iter().enumerate() {
-        if method.name.is_empty() || method.name.chars().any(char::is_control) {
-            return Err(RawReplyError::InvalidName { index });
-        }
         if !exports.insert(method.name) {
             return Err(RawReplyError::DuplicateExport { index });
         }
-        names = charge(
-            names,
-            method.name.len(),
-            limits.method_name_bytes,
-            "method names",
-        )?;
-        bytes = charge(bytes, method.reply.len(), limits.reply_bytes, "reply bytes")?;
+        budget.admit(index, method, limits)?;
     }
+    let bytes = budget.replies;
     i32::try_from(bytes).map_err(|_| RawReplyError::Wasm32Limits)?;
     let pages =
         u32::try_from(bytes.div_ceil(65_536).max(1)).map_err(|_| RawReplyError::Wasm32Limits)?;
@@ -226,6 +217,38 @@ pub fn raw_reply_canister(
         usize::MAX,
     )
     .map_err(|_| RawReplyError::Wasm32Limits)
+}
+
+#[derive(Default)]
+struct CatalogBudget {
+    names: usize,
+    replies: usize,
+}
+
+impl CatalogBudget {
+    fn admit(
+        &mut self,
+        index: usize,
+        method: &RawReplyMethod<'_>,
+        limits: RawReplyLimits,
+    ) -> Result<(), RawReplyError> {
+        if method.name.is_empty() || method.name.chars().any(char::is_control) {
+            return Err(RawReplyError::InvalidName { index });
+        }
+        self.names = charge(
+            self.names,
+            method.name.len(),
+            limits.method_name_bytes,
+            "method names",
+        )?;
+        self.replies = charge(
+            self.replies,
+            method.reply.len(),
+            limits.reply_bytes,
+            "reply bytes",
+        )?;
+        Ok(())
+    }
 }
 
 fn charge(

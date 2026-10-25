@@ -1,39 +1,17 @@
 //! Installation projection over successful ICP CLI status JSON.
 
-use std::fmt;
-
 /// Status JSON does not establish an installed or uninstalled canister.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum InstallationStatusError {
     /// The complete input is not valid JSON.
-    Json(serde_json::Error),
+    #[error("parse icp canister status JSON: {0}")]
+    Json(#[source] serde_json::Error),
     /// Successful status output did not include the installation fact.
+    #[error("icp canister status JSON omitted module_hash")]
     MissingModuleHash,
     /// The installation fact is neither null nor a string.
+    #[error("icp canister status JSON has an invalid module_hash")]
     InvalidModuleHash,
-}
-
-impl fmt::Display for InstallationStatusError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Json(source) => write!(formatter, "parse icp canister status JSON: {source}"),
-            Self::MissingModuleHash => {
-                formatter.write_str("icp canister status JSON omitted module_hash")
-            }
-            Self::InvalidModuleHash => {
-                formatter.write_str("icp canister status JSON has an invalid module_hash")
-            }
-        }
-    }
-}
-
-impl std::error::Error for InstallationStatusError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Json(source) => Some(source),
-            Self::MissingModuleHash | Self::InvalidModuleHash => None,
-        }
-    }
 }
 
 /// Project the installation fact from one successful, caller-captured status.

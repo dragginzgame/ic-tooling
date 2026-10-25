@@ -3,6 +3,15 @@
 /// The server selected by this Testkit release's explicit provisioning CLI.
 pub const POCKET_IC_SERVER_VERSION: &str = "16.1.0";
 
+const SUPPORTED_MAJOR: u64 = 16;
+
+pub(super) fn expected_server_version() -> String {
+    format!(
+        "pocket-ic-server >={SUPPORTED_MAJOR}.0.0,<{}.0.0 (stable)",
+        SUPPORTED_MAJOR + 1
+    )
+}
+
 /// Whether a successful server version probe satisfies Testkit's protocol policy.
 ///
 /// Stable 16.x servers are supported, matching the selected `PocketIC` client's
@@ -18,7 +27,7 @@ pub fn supports_pocket_ic_server(output: &[u8]) -> bool {
     };
     let components = version.split('.').collect::<Vec<_>>();
     components.len() == 3
-        && components[0] == "16"
+        && components[0].parse::<u64>() == Ok(SUPPORTED_MAJOR)
         && components.iter().all(|part| {
             !part.is_empty()
                 && (part.len() == 1 || !part.starts_with('0'))

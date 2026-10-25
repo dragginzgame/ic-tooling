@@ -2,11 +2,11 @@
 
 ## Source and ownership
 
-The checkout remains on committed preparation
-`195ec97b99256532a7aae5521f6b628291d7ae51`; its commit label is 0.68.1, while
-Cargo's actual workspace version remains 0.68.0. The latest finalized release
-notes are 0.68.0 at `8f281177faaeee0adc51edc1031d4a7b268b0ce0`. Local changes
-extend the compatible 0.68.1 draft. No own version or Git ref was changed here.
+The checkout is based on `c9c5ef7c44e3d0c3b23c8531a5d43c1800656c0a`, the
+0.68.1 release. Local complexity cleanup is prepared for the compatible
+[0.68.2 draft](../changelog/0.68.md#0682---unreleased). Own package versions,
+Git refs and the index are unchanged. The incoming Cargo.lock selects Wire/derive
+0.7.5 and remains byte-for-byte preserved; manifest minimums remain 0.7.2.
 
 Host, Build and Testkit retain the [extraction boundaries](../extraction.md).
 Consumers own credentials, budgets, targets, retries, installation and recovery.
@@ -17,46 +17,38 @@ MSRV 1.91 and Linux/native macOS 15 Intel and Apple Silicon remain required.
 
 ## Current local work
 
-Manifest minimums and examples select published Wire/derive 0.7.2 and
-Platform/macros 0.6.15. Their supplying releases are Wire
-`a4da015251beb8fa3346fb3780c0b3dc85c0ef32` and Platform
-`6dcf54a229201f85775d218b7a9f41809297878f`. The incoming lockfile already
-selected these versions and is preserved byte-for-byte. Feature selections,
-existing protocol fields, encoder bytes and the 0.7 decoding contract remain.
-See the [0.68.1 notes](../changelog/0.68.md#0681---unreleased).
+Build uses one shared-target acquisition path after locking, preserving ordinary
+miss re-resolution, prepared leases, cache rechecks and scheduled maintenance.
+Release rendering admits saved/live context before selecting dependency edits;
+process qualification shares its existing two-worker handshake.
 
-Shared Tooling adds setup phase diagnostics, safer recovery from manually
-committed candidates and distinct busy-tool admission. The local release adapter
-now preserves editor status 75 instead of dispatching setup for an admitted busy
-slot. Fresh preflight, standalone verification and saved-preparation recovery
-have substituted refusal cases. No implicit retry/wait or real release is added.
+Testkit projects spawn settings once and shares startup-deadline admission.
+Reply fixtures share catalog budgets, pools share timed recipe-stage attribution,
+and benchmark validation/summaries share named phase values. Public APIs,
+feature boundaries, report formats and lifecycle/recovery policy are unchanged.
 
-The pending Host/Build layering repair and its six-case negative fixture remain
-in the working tree; their Make/guard/fixture source matches this task's starting
-snapshot. Its owning
-[#250 — Enforce downward Host and Build dependencies](https://github.com/dragginzgame/ic-tooling/issues/250)
-remains open for delivery and required qualification. The maintainer retired
-[#249 — Held-fixture-only Platform capabilities in default Testkit](https://github.com/dragginzgame/ic-tooling/issues/249)
-in favour of retaining the existing graph rather than adding a published crate.
+Graph profiles select parser exclusions explicitly. The earlier
+[#250 — Host/Build layering](https://github.com/dragginzgame/ic-tooling/issues/250)
+guards are already in the base commit; this cleanup retains their coverage.
+The accepted [#249 tradeoff](https://github.com/dragginzgame/ic-tooling/issues/249)
+remains: keep the existing native graph instead of adding a published crate.
 
 ## Qualification and evidence
 
-Current adoption logs and the task-start snapshot are under
-`/tmp/ic-tooling-adopt-20261024/`. Eight Wire adapter cases, one private protocol
-case and three held-fixture cases pass on Linux. A real PocketIC Wire
-query/update, caller, rejection and trap probe also passes with the prepared
-server; no server download was needed. Changed-caller Clippy, actual
-Rust 1.91 compilation, all-feature Testkit/observer Wasm and probe Wasm checks
-pass. An isolated exact-registry Rust 1.91 consumer confirms that Platform's
-Principal and Account satisfy the same Wire 0.7.2 native metadata trait.
+Current focused evidence is under `/tmp/ic-tooling-complexity-20261025/`.
+Build's 75 cache cases, real two-worker coordination and saved/live release
+context regressions pass on Linux. Prepared PocketIC 16.1.0 qualifies startup,
+async cancellation, baseline recovery and immediate/held/cycle reply fixtures.
+Initial sandbox listener refusals remain in the logs; native permission reruns pass.
 
-Snapshot integrity, prepared Cargo/release-editor admission, dependency/graph
-policy, the pending layering fixture, formatting, shell/workflow lint and local
-doc links pass. Release-runner and consumer adapter fixtures, including busy
-admission, pass with substituted effects. Formatting-hook and Make/jobserver
-fixtures pass. Native
-macOS qualification of this later dependency/snapshot selection has not run.
-Earlier host CI qualifies its own source, not these local changes.
+Dependency profiles pass for Linux and both macOS target selections, and the
+six-case layering rejection fixture passes. Changed-owner Clippy and Rust 1.91
+checks pass for all targets/features, as do report/error regressions, formatting
+and shell checks.
+Native macOS 15 Intel and Apple Silicon execution remains outstanding; named-target
+graph observations do not qualify native hosts. No full release gate, release,
+publication or new setup/download was run. Earlier adoption evidence remains
+at `/tmp/ic-tooling-adopt-20261024/` for its own source identity.
 
 ## Dependency blocker and retained history
 

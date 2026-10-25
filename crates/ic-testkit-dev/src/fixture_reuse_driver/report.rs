@@ -73,18 +73,11 @@ impl MeasuredRun {
             .iter()
             .chain(metrics.samples.iter().map(|sample| &sample.phases))
         {
-            if [
-                Some(phases.wait_ms),
-                phases.build_ms,
-                phases.restore_ms,
-                phases.reset_ms,
-                phases.readiness_ms,
-                phases.validation_ms,
-                Some(phases.acquisition_ms),
-            ]
-            .into_iter()
-            .flatten()
-            .any(|value| !value.is_finite() || value < 0.0)
+            if phases
+                .named_values()
+                .into_iter()
+                .filter_map(|(_, value)| value)
+                .any(|value| !value.is_finite() || value < 0.0)
             {
                 return Err(Error::InvalidData("invalid worker phase duration"));
             }
@@ -144,25 +137,21 @@ pub(super) struct Summary {
 #[allow(clippy::cast_precision_loss)]
 pub(super) fn summarize(runs: &[MeasuredRun]) -> Result<Summary, Error> {
     let samples = || runs.iter().flat_map(|run| &run.metrics.samples);
-    let phase = |select: fn(&Phases) -> Option<f64>| {
-        distribution(
-            samples()
-                .filter_map(|sample| select(&sample.phases))
-                .collect(),
-        )
-    };
-    let phases_ms = [
-        ("wait_ms", phase(|p| Some(p.wait_ms))?),
-        ("build_ms", phase(|p| p.build_ms)?),
-        ("restore_ms", phase(|p| p.restore_ms)?),
-        ("reset_ms", phase(|p| p.reset_ms)?),
-        ("readiness_ms", phase(|p| p.readiness_ms)?),
-        ("validation_ms", phase(|p| p.validation_ms)?),
-        ("acquisition_ms", phase(|p| Some(p.acquisition_ms))?),
-    ]
-    .into_iter()
-    .map(|(name, distribution)| (name.into(), distribution))
-    .collect();
+    let mut phases: BTreeMap<_, Vec<f64>> = Phases::default()
+        .named_values()
+        .into_iter()
+        .map(|(name, _)| (name, Vec::new()))
+        .collect();
+    for sample in samples() {
+        for (name, value) in sample.phases.named_values() {
+            phases.entry(name).or_default().extend(value);
+        }
+    }
+    // Keep every phase, including phases that were absent from every sample.
+    let phases_ms = phases
+        .into_iter()
+        .map(|(name, values)| Ok((name.into(), distribution(values)?)))
+        .collect::<Result<_, Error>>()?;
     Ok(Summary {
         phases_ms,
         body_ms: distribution(samples().map(|sample| sample.body_ms).collect())?,

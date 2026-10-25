@@ -5,10 +5,7 @@
 mod support;
 
 use ic_host_process::child::OwnedChild;
-use ic_host_process::testing::{
-    crash_barrier::{wait_for_child_path, wait_for_path},
-    write_executable_script,
-};
+use ic_host_process::testing::write_executable_script;
 
 use ic_build::artifacts::{
     CacheRetentionLimits, SharedIncrementalTargetMaintenanceOutcome, WasmBuildOutcome,
@@ -18,7 +15,6 @@ use std::{
     ffi::OsString,
     fs,
     path::{Path, PathBuf},
-    process::Command,
     time::Duration,
 };
 use support::fs_fixture::unique_temp_directory;
@@ -31,28 +27,12 @@ fn different_cache_roots_coordinate_one_shared_incremental_target_across_process
     let root = unique_temp_directory("wasm-shared-process-lock");
     support::wasm::write_workspace(&root.join("workspace")).expect("prepare process workspace");
     write_cargo_wrapper(&root.join("cargo-wrapper.sh"));
-    let executable = std::env::current_exe().expect("resolve current process-test executable");
-    let mut first = spawn_worker(&executable, &root, "first");
-    let mut second = spawn_worker(&executable, &root, "second");
-
-    wait_for_child_path(
-        &mut first,
-        &root.join("ready-first"),
-        "first worker ready",
-        Duration::from_secs(10),
-    )
-    .expect("wait for first worker");
-    wait_for_child_path(
-        &mut second,
-        &root.join("ready-second"),
-        "second worker ready",
-        Duration::from_secs(10),
-    )
-    .expect("wait for second worker");
-    fs::write(root.join("go"), b"go").expect("release shared-target workers");
-
-    assert!(first.wait().expect("wait for first worker").success());
-    assert!(second.wait().expect("wait for second worker").success());
+    support::process::run_workers(
+        &root,
+        "shared_incremental_process_worker",
+        WORKER_ROOT_ENV,
+        WORKER_ID_ENV,
+    );
     assert!(
         !root.join("overlap").exists(),
         "Cargo builds using one shared target must not overlap"
@@ -76,28 +56,12 @@ fn scheduled_shared_target_maintenance_runs_once_across_processes() {
         .expect("create shared target for scheduled process test");
     fs::write(root.join("shared-target/debug/deps/state"), b"state")
         .expect("write shared target state for scheduled process test");
-    let executable = std::env::current_exe().expect("resolve current process-test executable");
-    let mut first = spawn_scheduled_maintenance_worker(&executable, &root, "first");
-    let mut second = spawn_scheduled_maintenance_worker(&executable, &root, "second");
-
-    wait_for_child_path(
-        &mut first,
-        &root.join("ready-first"),
-        "first worker ready",
-        Duration::from_secs(10),
-    )
-    .expect("wait for first worker");
-    wait_for_child_path(
-        &mut second,
-        &root.join("ready-second"),
-        "second worker ready",
-        Duration::from_secs(10),
-    )
-    .expect("wait for second worker");
-    fs::write(root.join("go"), b"go").expect("release scheduled-maintenance workers");
-
-    assert!(first.wait().expect("wait for first worker").success());
-    assert!(second.wait().expect("wait for second worker").success());
+    support::process::run_workers(
+        &root,
+        "scheduled_shared_target_maintenance_process_worker",
+        WORKER_ROOT_ENV,
+        WORKER_ID_ENV,
+    );
     let mut outcomes = [
         fs::read_to_string(root.join("maintenance-first")).expect("read first maintenance outcome"),
         fs::read_to_string(root.join("maintenance-second"))
@@ -115,13 +79,7 @@ fn shared_incremental_process_worker() {
         std::env::var_os(WORKER_ROOT_ENV).expect("worker root environment must be set"),
     );
     let worker = std::env::var(WORKER_ID_ENV).expect("worker identity environment must be set");
-    fs::write(root.join(format!("ready-{worker}")), b"ready").expect("mark worker ready");
-    wait_for_path(
-        &root.join("go"),
-        "parent start marker",
-        Duration::from_secs(10),
-    )
-    .expect("wait for parent start");
+    support::process::await_parent(&root, &worker);
 
     let workspace = root.join("workspace");
     let real_cargo = std::env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"));
@@ -166,13 +124,7 @@ fn scheduled_shared_target_maintenance_process_worker() {
         std::env::var_os(WORKER_ROOT_ENV).expect("worker root environment must be set"),
     );
     let worker = std::env::var(WORKER_ID_ENV).expect("worker identity environment must be set");
-    fs::write(root.join(format!("ready-{worker}")), b"ready").expect("mark worker ready");
-    wait_for_path(
-        &root.join("go"),
-        "parent start marker",
-        Duration::from_secs(10),
-    )
-    .expect("wait for parent start");
+    support::process::await_parent(&root, &worker);
 
     let workspace = root.join("workspace");
     let spec = WasmBuildSpec::new(
@@ -219,42 +171,6 @@ fi\n\
 exec \"$REAL_CARGO\" \"$@\"\n",
     )
     .expect("write executable test script");
-}
-
-fn spawn_worker(executable: &Path, root: &Path, worker: &str) -> std::process::Child {
-    spawn_test_worker(
-        executable,
-        root,
-        worker,
-        "shared_incremental_process_worker",
-    )
-}
-
-fn spawn_scheduled_maintenance_worker(
-    executable: &Path,
-    root: &Path,
-    worker: &str,
-) -> std::process::Child {
-    spawn_test_worker(
-        executable,
-        root,
-        worker,
-        "scheduled_shared_target_maintenance_process_worker",
-    )
-}
-
-fn spawn_test_worker(
-    executable: &Path,
-    root: &Path,
-    worker: &str,
-    test_name: &str,
-) -> std::process::Child {
-    Command::new(executable)
-        .args(["--ignored", "--exact", test_name])
-        .env(WORKER_ROOT_ENV, root)
-        .env(WORKER_ID_ENV, worker)
-        .spawn()
-        .expect("spawn shared-target process worker")
 }
 
 // This caller admits small configuration trees; libraries do not select this policy.

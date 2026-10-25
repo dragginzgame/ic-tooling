@@ -701,21 +701,16 @@ where
         add_timing(&mut timings.restore, started.elapsed());
         restore?;
 
-        let started = Instant::now();
-        let reset_result = self.recipe.reset_non_snapshot_state(baseline);
-        add_timing(&mut timings.reset, started.elapsed());
-        let reset = reset_result.map_err(|source| BaselinePoolPreparationError::Recipe {
-            stage: BaselinePreparationStage::ResetNonSnapshotState,
-            source,
-        })?;
-
-        let started = Instant::now();
-        let readiness_result = self.recipe.drive_to_readiness(baseline);
-        add_timing(&mut timings.readiness, started.elapsed());
-        readiness_result.map_err(|source| BaselinePoolPreparationError::Recipe {
-            stage: BaselinePreparationStage::DriveToReadiness,
-            source,
-        })?;
+        let reset = timed_recipe_stage(
+            &mut timings.reset,
+            BaselinePreparationStage::ResetNonSnapshotState,
+            || self.recipe.reset_non_snapshot_state(baseline),
+        )?;
+        timed_recipe_stage(
+            &mut timings.readiness,
+            BaselinePreparationStage::DriveToReadiness,
+            || self.recipe.drive_to_readiness(baseline),
+        )?;
         self.recipe
             .reset_requirements()
             .verify(reset)
@@ -736,13 +731,10 @@ where
         slot: &mut BoundedSlotLease<'_, CachedPocketIcBaseline<R::Metadata>, RebuildReason>,
         timings: &mut BaselinePoolTimings,
     ) -> Result<(), BaselinePoolPreparationError<R::Error>> {
-        let started = Instant::now();
-        let build = self.recipe.build();
-        add_timing(&mut timings.build, started.elapsed());
-        let baseline = build.map_err(|source| BaselinePoolPreparationError::Recipe {
-            stage: BaselinePreparationStage::Build,
-            source,
-        })?;
+        let baseline =
+            timed_recipe_stage(&mut timings.build, BaselinePreparationStage::Build, || {
+                self.recipe.build()
+            })?;
 
         if let Err(error) = self.validate_baseline(
             &baseline,
@@ -765,10 +757,9 @@ where
         stage: BaselinePreparationStage,
         timings: &mut BaselinePoolTimings,
     ) -> Result<(), BaselinePoolPreparationError<R::Error>> {
-        let started = Instant::now();
-        let validation = self.recipe.validate(baseline, preparation);
-        add_timing(&mut timings.validation, started.elapsed());
-        validation.map_err(|source| BaselinePoolPreparationError::Recipe { stage, source })
+        timed_recipe_stage(&mut timings.validation, stage, || {
+            self.recipe.validate(baseline, preparation)
+        })
     }
 
     fn failure_disposition(
@@ -827,6 +818,17 @@ where
             .get()
             .expect("leased baseline pool slot must be populated")
     }
+}
+
+fn timed_recipe_stage<T, E>(
+    timing: &mut Option<Duration>,
+    stage: BaselinePreparationStage,
+    operation: impl FnOnce() -> Result<T, E>,
+) -> Result<T, BaselinePoolPreparationError<E>> {
+    let started = Instant::now();
+    let result = operation();
+    add_timing(timing, started.elapsed());
+    result.map_err(|source| BaselinePoolPreparationError::Recipe { stage, source })
 }
 
 const fn add_timing(total: &mut Option<Duration>, elapsed: Duration) {

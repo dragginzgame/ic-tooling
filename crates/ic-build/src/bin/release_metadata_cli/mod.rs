@@ -171,47 +171,86 @@ fn requirement(previous: &str, next: &str) -> Option<String> {
             .join(".")
     ))
 }
+// Live contexts bind existing filesystem identities; saved contexts bind the
+// admitted source projection without requiring its original checkout to exist.
+enum ContextRoot {
+    Live(PathBuf),
+    Saved(PathBuf),
+}
+
+impl ContextRoot {
+    fn owns(&self, path: &str, member: &Path) -> Result<bool> {
+        match self {
+            Self::Live(root) => Ok(root.join(path).join("Cargo.toml").canonicalize()? == member),
+            Self::Saved(root) => {
+                if identity(&root.join(path).join("Cargo.toml"))? != member {
+                    return Err("cannot establish saved dependency ownership".into());
+                }
+                Ok(true)
+            }
+        }
+    }
+}
+
+struct WorkspaceContext<'a> {
+    root: ContextRoot,
+    members: HashMap<&'a str, PathBuf>,
+    dependencies: Option<&'a serde_json::Map<String, Value>>,
+}
+
+impl<'a> WorkspaceContext<'a> {
+    fn admit(source: &Path, input: &str, context: &'a Value) -> Result<Self> {
+        let root = if context.get("source_root").is_some() {
+            ContextRoot::Saved(identity(Path::new(required(context, "source_root")?))?)
+        } else {
+            ContextRoot::Live(
+                source
+                    .canonicalize()?
+                    .parent()
+                    .ok_or("manifest has no parent")?
+                    .to_owned(),
+            )
+        };
+        let mut members = HashMap::new();
+        for member in context
+            .get("members")
+            .and_then(Value::as_array)
+            .ok_or("missing members array")?
+        {
+            let name = required(member, "name")?;
+            let path = identity(Path::new(required(member, "manifest_path")?))?;
+            if members.insert(name, path).is_some() {
+                return Err("duplicate member identity".into());
+            }
+        }
+        let manifest: toml::Value = toml::from_str(input)?;
+        let actual = manifest
+            .get("workspace")
+            .and_then(|value| value.get("dependencies"));
+        let expected = context
+            .get("manifest")
+            .and_then(|value| value.get("workspace"))
+            .and_then(|value| value.get("dependencies"));
+        if serde_json::to_value(actual)? != expected.cloned().unwrap_or(Value::Null) {
+            return Err("saved dependency declarations differ from source".into());
+        }
+        Ok(Self {
+            root,
+            members,
+            dependencies: expected.and_then(Value::as_object),
+        })
+    }
+}
+
 fn dependency_versions(
     source: &Path,
     input: &str,
     next: &str,
     context: &Value,
 ) -> Result<Vec<(String, String, String)>> {
-    let saved = context.get("source_root").is_some();
-    let root = if saved {
-        identity(Path::new(required(context, "source_root")?))?
-    } else {
-        source
-            .canonicalize()?
-            .parent()
-            .ok_or("manifest has no parent")?
-            .to_owned()
-    };
-    let mut members = HashMap::new();
-    for member in context
-        .get("members")
-        .and_then(Value::as_array)
-        .ok_or("missing members array")?
-    {
-        let name = required(member, "name")?;
-        let path = identity(Path::new(required(member, "manifest_path")?))?;
-        if members.insert(name, path).is_some() {
-            return Err("duplicate member identity".into());
-        }
-    }
-    let manifest: toml::Value = toml::from_str(input)?;
-    let actual = manifest
-        .get("workspace")
-        .and_then(|value| value.get("dependencies"));
-    let expected = context
-        .get("manifest")
-        .and_then(|value| value.get("workspace"))
-        .and_then(|value| value.get("dependencies"));
-    if serde_json::to_value(actual)? != expected.cloned().unwrap_or(Value::Null) {
-        return Err("saved dependency declarations differ from source".into());
-    }
+    let context = WorkspaceContext::admit(source, input, context)?;
     let mut selected = Vec::new();
-    if let Some(dependencies) = expected.and_then(Value::as_object) {
+    if let Some(dependencies) = context.dependencies {
         for (alias, dependency) in dependencies {
             let (Some(path), Some(previous)) = (
                 dependency.get("path").and_then(Value::as_str),
@@ -223,19 +262,12 @@ fn dependency_versions(
                 .get("package")
                 .and_then(Value::as_str)
                 .unwrap_or(alias);
-            let Some(member) = members.get(package) else {
+            let Some(member) = context.members.get(package) else {
                 continue;
             };
-            let selected_path = root.join(path).join("Cargo.toml");
-            let owned = if saved {
-                if identity(&selected_path)? != *member {
-                    return Err("cannot establish saved dependency ownership".into());
-                }
-                true
-            } else {
-                selected_path.canonicalize()? == *member
-            };
-            if owned && let Some(candidate) = requirement(previous, next) {
+            if context.root.owns(path, member)?
+                && let Some(candidate) = requirement(previous, next)
+            {
                 selected.push((alias.clone(), previous.to_owned(), candidate));
             }
         }

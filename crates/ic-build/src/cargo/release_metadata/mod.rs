@@ -7,7 +7,7 @@
 use super::lock_projection::{
     LockProjectionError, WorkspaceVersionProjection, verify_workspace_release_projection,
 };
-use std::{collections::HashSet, fmt, ops::Range};
+use std::{collections::HashSet, ops::Range};
 use toml_edit::{Document, Item, Value};
 
 /// One explicitly admitted workspace dependency alias and its exact requirements.
@@ -22,32 +22,17 @@ pub struct DependencyVersionProjection<'a> {
 }
 
 /// A candidate could not be rendered; no caller input is changed.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum ReleaseMetadataError {
     /// Missing, ambiguous or conflicting selected literals.
+    #[error("{0}")]
     InvalidSelection(&'static str),
     /// Complete TOML parsing failed.
-    Parse(toml_edit::TomlError),
+    #[error("{0}")]
+    Parse(#[source] toml_edit::TomlError),
     /// The independent semantic lock projection refused the candidate.
-    Projection(LockProjectionError),
-}
-impl fmt::Display for ReleaseMetadataError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidSelection(reason) => f.write_str(reason),
-            Self::Parse(error) => error.fmt(f),
-            Self::Projection(error) => error.fmt(f),
-        }
-    }
-}
-impl std::error::Error for ReleaseMetadataError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::InvalidSelection(_) => None,
-            Self::Parse(error) => Some(error),
-            Self::Projection(error) => Some(error),
-        }
-    }
+    #[error("{0}")]
+    Projection(#[source] LockProjectionError),
 }
 
 const fn refuse(reason: &'static str) -> ReleaseMetadataError {
