@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.68.5] - Unreleased
+## [0.68.5] - 2026-10-25
 
 - Simplify startup deadline handling, baseline validation, cache completion and
   maintenance timing while preserving lifecycle, progress and failure contracts.
