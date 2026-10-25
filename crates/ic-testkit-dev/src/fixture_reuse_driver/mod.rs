@@ -177,7 +177,7 @@ fn publish_report(
 
 struct CapturedRun {
     report: crate::fixture_reuse_report::WorkerReport,
-    rss: (u64, usize, usize),
+    rss: report::RssMeasurements,
 }
 
 fn measure(
@@ -196,17 +196,15 @@ fn measure(
     command.process_group(0);
     let mut child = command.spawn()?;
     let observed = (|| -> Result<_, Error> {
-        let mut peak_rss = 0;
-        let mut peak_processes = 0;
-        let mut count = 0;
+        let mut rss = report::RssMeasurements::default();
         while child.try_wait()?.is_none() && !INTERRUPTED.load(Ordering::Relaxed) {
             let (resident, processes) = sampling::tree_rss(child.id(), &snapshot()?)?;
-            peak_rss = peak_rss.max(resident);
-            peak_processes = peak_processes.max(processes);
-            count += 1;
+            rss.sampled_peak_tree_rss_bytes = rss.sampled_peak_tree_rss_bytes.max(resident);
+            rss.peak_tree_process_count = rss.peak_tree_process_count.max(processes);
+            rss.rss_samples += 1;
             thread::sleep(SAMPLE_INTERVAL);
         }
-        Ok((peak_rss, peak_processes, count))
+        Ok(rss)
     })();
     // Even sampling failure or Ctrl-C waits for the worker's RAII server
     // cleanup. Killing the workload here would strand its owned process group.
@@ -688,22 +686,8 @@ mod tests {
         );
     }
 
-    #[test]
     #[cfg(unix)]
-    fn git_observations_preserve_dirty_path_bytes_and_typed_failures() {
-        use ic_host_process::{
-            provenance::GitQuery,
-            tool::{OutputLimit, OutputLimits},
-        };
-        use std::{error::Error as _, os::unix::ffi::OsStringExt as _};
-
-        let scratch = fixture_directory();
-        let root = scratch.path().canonicalize().unwrap();
-        let limits = OutputLimits {
-            stdout: OutputLimit::Terminate(64 * 1024),
-            stderr: OutputLimit::Terminate(64 * 1024),
-            timeout: None,
-        };
+    fn init_git_fixture(root: &Path) {
         for args in [
             vec!["init", "-q"],
             vec![
@@ -721,12 +705,31 @@ mod tests {
             assert!(
                 Command::new("git")
                     .args(args)
-                    .current_dir(&root)
+                    .current_dir(root)
                     .status()
                     .unwrap()
                     .success()
             );
         }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn git_observations_preserve_dirty_path_bytes_and_typed_failures() {
+        use ic_host_process::{
+            provenance::GitQuery,
+            tool::{OutputLimit, OutputLimits},
+        };
+        use std::{error::Error as _, os::unix::ffi::OsStringExt as _};
+
+        let scratch = fixture_directory();
+        let root = scratch.path().canonicalize().unwrap();
+        let limits = OutputLimits {
+            stdout: OutputLimit::Terminate(64 * 1024),
+            stderr: OutputLimit::Terminate(64 * 1024),
+            timeout: None,
+        };
+        init_git_fixture(&root);
         let clean = super::git_provenance(&root, limits).unwrap();
         assert!(!clean.is_dirty());
         // macOS filesystems reject arbitrary invalid UTF-8 names before Git runs.
@@ -805,6 +808,7 @@ mod tests {
             ));
         } else {
             let inputs = prepare(&options).unwrap();
+            assert_eq!(inputs.root, root.join("workspace"));
             assert_eq!(inputs.provenance["rustc"], "fixture rustc");
             assert_eq!(
                 inputs.worker,
@@ -878,9 +882,32 @@ mod tests {
 
     #[cfg(unix)]
     fn prepare_cargo_fixture(root: &Path, target: &Path) {
+        let workspace = root.join("workspace");
+        fs::create_dir(&workspace).unwrap();
+        fs::write(workspace.join("Cargo.toml"), "[workspace]\nmembers = ['crates/ic-testkit-dev', 'crates/ic-testkit-perf-probe']\nresolver = '3'\n").unwrap();
+        for (name, target) in [
+            (
+                "ic-testkit-dev",
+                "[[bin]]\nname = 'fixture_reuse_benchmark'\npath = 'src/lib.rs'\n",
+            ),
+            ("ic-testkit-perf-probe", "[lib]\ncrate-type = ['cdylib']\n"),
+        ] {
+            let directory = workspace.join("crates").join(name);
+            fs::create_dir_all(directory.join("src")).unwrap();
+            fs::write(
+                directory.join("Cargo.toml"),
+                format!(
+                    "[package]\nname = '{name}'\nversion = '0.0.0'\nedition = '2024'\n{target}"
+                ),
+            )
+            .unwrap();
+            fs::write(directory.join("src/lib.rs"), "").unwrap();
+        }
+        init_git_fixture(&workspace);
         let metadata = Command::new(env!("CARGO"))
-            .current_dir(env!("CARGO_MANIFEST_DIR"))
-            .args(["metadata", "--locked", "--offline", "--format-version", "1"])
+            .current_dir(&workspace)
+            .env("RUSTUP_AUTO_INSTALL", "0")
+            .args(["metadata", "--offline", "--format-version", "1"])
             .output()
             .unwrap();
         assert!(
@@ -943,14 +970,6 @@ mod tests {
         )
         .unwrap();
         fs::write(root.join("probe.wasm"), b"\0asm\x01\0\0\0").unwrap();
-        let mut workspace =
-            super::workspace_root_command(env!("CARGO_MANIFEST_DIR"), Command::new(env!("CARGO")))
-                .unwrap();
-        let workspace = super::capture_command(&mut workspace, super::WORKSPACE_DISCOVERY_LIMITS)
-            .and_then(super::CompletedExecution::require_success)
-            .and_then(super::CompletedExecution::require_complete)
-            .unwrap();
-        let workspace = super::decode_workspace_root(&workspace.stdout).unwrap();
         fs::write(
             root.join("workspace.json"),
             serde_json::to_vec(&json!({"root": workspace.join("Cargo.toml")})).unwrap(),
@@ -1281,8 +1300,8 @@ esac
         )
         .unwrap();
         assert_eq!(captured.report.samples.len(), 1024);
-        assert!(captured.rss.2 > 0);
-        assert!(captured.rss.0 > 0);
+        assert!(captured.rss.rss_samples > 0);
+        assert!(captured.rss.sampled_peak_tree_rss_bytes > 0);
         assert!(
             matches!(measure(Command::new("/bin/sh").args(["-c", "exit 23"]), snapshot), Err(Error::CommandFailed { status, .. }) if status.code() == Some(23))
         );

@@ -465,7 +465,7 @@ impl PocketIcStartupConfig {
                 (Some(server), url)
             }
         };
-        build_bounded(builder, &url, startup.deadline, startup.timeout, server)
+        build_bounded(builder, &url, &startup, server)
     }
 
     /// Construct an upstream nonblocking instance on the caller's Tokio runtime.
@@ -509,18 +509,17 @@ impl PocketIcStartupConfig {
     ) -> Result<PocketIcInstance<ic_platform::pocket_ic::nonblocking::PocketIc>, PocketIcStartupError>
     {
         let startup = StartupDeadline::new(&self)?;
-        let deadline = startup.deadline;
-        let timeout = startup.timeout;
         let (server, server_url) = match self {
             Self::Connect { server_url, .. } => (None, server_url),
             spawn @ Self::Spawn { .. } => {
                 let mut server = spawn.spawn_server(startup.started)?;
                 let server_url = loop {
-                    match server.poll_ready(deadline, timeout) {
+                    match server.poll_ready(&startup) {
                         Ok(Some(url)) => break url,
                         Ok(None) => {
                             tokio::time::sleep(
-                                deadline
+                                startup
+                                    .deadline
                                     .saturating_duration_since(Instant::now())
                                     .min(STARTUP_POLL_INTERVAL),
                             )
@@ -532,7 +531,7 @@ impl PocketIcStartupConfig {
                 (Some(server), server_url)
             }
         };
-        build_async_bounded(builder, &server_url, deadline, timeout, server).await
+        build_async_bounded(builder, &server_url, &startup, server).await
     }
 
     /// Start a caller-owned managed server without constructing an instance.
@@ -802,8 +801,7 @@ fn startup_deadline(started: Instant, timeout: Duration) -> Result<Instant, Pock
 fn build_bounded(
     builder: PocketIcBuilder,
     server_url: &str,
-    deadline: Instant,
-    timeout: Duration,
+    startup: &StartupDeadline,
     mut server: Option<ManagedServer>,
 ) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
     let builder = configured_builder(builder, server_url)
@@ -822,7 +820,7 @@ fn build_bounded(
             server,
         ));
     }
-    await_builder(receiver, server_url, deadline, timeout, &mut server)
+    await_builder(receiver, server_url, startup, &mut server)
 }
 
 #[expect(
@@ -832,22 +830,21 @@ fn build_bounded(
 fn await_builder(
     receiver: mpsc::Receiver<Result<PocketIc, super::PocketIcOperationError>>,
     server_url: &str,
-    deadline: Instant,
-    timeout: Duration,
+    startup: &StartupDeadline,
     server: &mut Option<ManagedServer>,
 ) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
     loop {
         let now = Instant::now();
-        if now >= deadline {
+        if now >= startup.deadline {
             return Err(finalize_failure(
                 PocketIcStartupError::new(PocketIcStartupFailure::InstanceCreationTimeout {
-                    timeout,
+                    timeout: startup.timeout,
                 }),
                 None,
                 server.take(),
             ));
         }
-        let remaining = deadline.saturating_duration_since(now);
+        let remaining = startup.deadline.saturating_duration_since(now);
         let wait = if server.is_some() {
             remaining.min(STARTUP_POLL_INTERVAL)
         } else {
@@ -917,8 +914,7 @@ fn check_server(server: &mut Option<ManagedServer>) -> Result<(), PocketIcStartu
 async fn build_async_bounded(
     builder: PocketIcBuilder,
     server_url: &str,
-    deadline: Instant,
-    timeout: Duration,
+    startup: &StartupDeadline,
     mut server: Option<ManagedServer>,
 ) -> Result<PocketIcInstance<ic_platform::pocket_ic::nonblocking::PocketIc>, PocketIcStartupError> {
     let builder = configured_builder(builder, server_url)
@@ -936,10 +932,10 @@ async fn build_async_bounded(
     let mut server = server;
     loop {
         let now = Instant::now();
-        if now >= deadline {
+        if now >= startup.deadline {
             return Err(finalize_failure(
                 PocketIcStartupError::new(PocketIcStartupFailure::InstanceCreationTimeout {
-                    timeout,
+                    timeout: startup.timeout,
                 }),
                 None,
                 server,
@@ -947,18 +943,21 @@ async fn build_async_bounded(
         }
         check_server(&mut server)?;
         let next_check = if server.is_some() {
-            now + deadline
+            now + startup
+                .deadline
                 .saturating_duration_since(now)
                 .min(STARTUP_POLL_INTERVAL)
         } else {
-            deadline
+            startup.deadline
         };
         match tokio::time::timeout_at(next_check.into(), construction.as_mut()).await {
             Ok(Ok(instance)) => {
-                if Instant::now() >= deadline {
+                if Instant::now() >= startup.deadline {
                     return Err(finalize_failure(
                         PocketIcStartupError::new(
-                            PocketIcStartupFailure::InstanceCreationTimeout { timeout },
+                            PocketIcStartupFailure::InstanceCreationTimeout {
+                                timeout: startup.timeout,
+                            },
                         ),
                         None,
                         server,
@@ -1010,7 +1009,7 @@ impl ManagedServer {
         startup: &StartupDeadline,
     ) -> Result<(Self, String), PocketIcStartupError> {
         loop {
-            match self.poll_ready(startup.deadline, startup.timeout) {
+            match self.poll_ready(startup) {
                 Ok(Some(url)) => return Ok((self, url)),
                 Ok(None) => thread::sleep(
                     startup
@@ -1062,17 +1061,16 @@ impl ManagedServer {
 
     fn poll_ready(
         &mut self,
-        deadline: Instant,
-        timeout: Duration,
+        startup: &StartupDeadline,
     ) -> Result<Option<String>, PocketIcStartupError> {
         if let Some(status) = self.try_wait()? {
             return Err(self.exit_failure(status));
         }
-        if Instant::now() >= deadline {
+        if Instant::now() >= startup.deadline {
             return Err(PocketIcStartupError::new(
                 PocketIcStartupFailure::ReadinessTimeout {
                     server_binary: self.binary.clone(),
-                    timeout,
+                    timeout: startup.timeout,
                 },
             ));
         }
@@ -1433,8 +1431,11 @@ mod tests {
             let error = super::await_builder(
                 receiver,
                 "http://127.0.0.1:34567/",
-                Instant::now() + Duration::from_secs(2),
-                Duration::from_secs(2),
+                &super::StartupDeadline {
+                    started: Instant::now(),
+                    deadline: Instant::now() + Duration::from_secs(2),
+                    timeout: Duration::from_secs(2),
+                },
                 &mut Some(managed.server),
             )
             .err()

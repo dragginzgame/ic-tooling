@@ -27,6 +27,12 @@ pub(super) struct DriverReport<'a> {
 pub(super) struct MeasuredRun {
     #[serde(flatten)]
     metrics: WorkerReport,
+    #[serde(flatten)]
+    pub(super) rss: RssMeasurements,
+}
+
+#[derive(Default, Serialize)]
+pub(super) struct RssMeasurements {
     pub(super) sampled_peak_tree_rss_bytes: u64,
     pub(super) peak_tree_process_count: usize,
     pub(super) rss_samples: usize,
@@ -37,7 +43,7 @@ impl MeasuredRun {
         metrics: WorkerReport,
         options: &Options,
         case: &Case,
-        rss: (u64, usize, usize),
+        rss: RssMeasurements,
     ) -> Result<Self, Error> {
         if metrics.mode != case.mode
             || metrics.capacity != case.capacity.get()
@@ -93,12 +99,7 @@ impl MeasuredRun {
                 ));
             }
         }
-        Ok(Self {
-            metrics,
-            sampled_peak_tree_rss_bytes: rss.0,
-            peak_tree_process_count: rss.1,
-            rss_samples: rss.2,
-        })
+        Ok(Self { metrics, rss })
     }
 }
 
@@ -122,14 +123,12 @@ pub(super) struct Summary {
 #[allow(clippy::cast_precision_loss)]
 pub(super) fn summarize(runs: &[MeasuredRun]) -> Result<Summary, Error> {
     let samples = || runs.iter().flat_map(|run| &run.metrics.samples);
-    let mut phases: BTreeMap<_, Vec<f64>> = Phases::default()
+    let mut phases = Phases::default()
         .named_values()
-        .into_iter()
-        .map(|(name, _)| (name, Vec::new()))
-        .collect();
+        .map(|(name, _)| (name, Vec::new()));
     for sample in samples() {
-        for (name, value) in sample.phases.named_values() {
-            phases.entry(name).or_default().extend(value);
+        for ((_, values), (_, value)) in phases.iter_mut().zip(sample.phases.named_values()) {
+            values.extend(value);
         }
     }
     // Keep every phase, including phases that were absent from every sample.
@@ -153,7 +152,7 @@ pub(super) fn summarize(runs: &[MeasuredRun]) -> Result<Summary, Error> {
         )?,
         sampled_peak_tree_rss_bytes: distribution(
             runs.iter()
-                .map(|run| run.sampled_peak_tree_rss_bytes as f64)
+                .map(|run| run.rss.sampled_peak_tree_rss_bytes as f64)
                 .collect(),
         )?,
     })
@@ -161,7 +160,7 @@ pub(super) fn summarize(runs: &[MeasuredRun]) -> Result<Summary, Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::{MeasuredRun, distribution, summarize};
+    use super::{MeasuredRun, RssMeasurements, distribution, summarize};
     use crate::fixture_reuse_driver::{Error, arguments::parse_arguments};
     use serde_json::{Map, Value, json};
 
@@ -199,7 +198,11 @@ mod tests {
             serde_json::from_value(Value::Object(worker_report())).unwrap(),
             &options,
             &options.benchmark_cases()[0],
-            (1024, 2, 3),
+            RssMeasurements {
+                sampled_peak_tree_rss_bytes: 1024,
+                peak_tree_process_count: 2,
+                rss_samples: 3,
+            },
         )
         .unwrap();
         let encoded = serde_json::to_value(&run).unwrap();
@@ -217,7 +220,11 @@ mod tests {
             second,
             &options,
             &options.benchmark_cases()[0],
-            (2048, 2, 3),
+            RssMeasurements {
+                sampled_peak_tree_rss_bytes: 2048,
+                peak_tree_process_count: 2,
+                rss_samples: 3,
+            },
         )
         .unwrap();
         let summary = summarize(&[run, second]).unwrap();
@@ -266,9 +273,13 @@ mod tests {
         let mut metrics: crate::fixture_reuse_report::WorkerReport =
             serde_json::from_value(Value::Object(worker_report())).unwrap();
         metrics.wall_ms = f64::from_bits(1);
-        let run =
-            MeasuredRun::from_worker(metrics, &options, &options.benchmark_cases()[0], (1, 1, 1))
-                .unwrap();
+        let run = MeasuredRun::from_worker(
+            metrics,
+            &options,
+            &options.benchmark_cases()[0],
+            RssMeasurements::default(),
+        )
+        .unwrap();
         let Err(error) = summarize(&[run]) else {
             panic!("infinite derived rate must refuse");
         };
@@ -310,7 +321,7 @@ mod tests {
         let case = options.benchmark_cases().remove(0);
         let admit = |raw| {
             let metrics = serde_json::from_value(Value::Object(raw))?;
-            MeasuredRun::from_worker(metrics, &options, &case, (1, 1, 1))
+            MeasuredRun::from_worker(metrics, &options, &case, RssMeasurements::default())
         };
         let mut raw = worker_report();
         raw.insert("mode".into(), json!("pooled"));

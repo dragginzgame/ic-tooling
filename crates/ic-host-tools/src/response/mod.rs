@@ -157,19 +157,17 @@ fn decode_hex(hex: &[u8], whitespace: bool, limit: usize) -> Result<Vec<u8>, Res
     bytes
         .try_reserve_exact(digits / 2)
         .map_err(ResponseError::Allocation)?;
-    let mut high = None;
-    for byte in hex.iter().copied().filter(u8::is_ascii_hexdigit) {
+    let mut digits = hex.iter().copied().filter(u8::is_ascii_hexdigit);
+    let nibble = |byte: u8| {
         // The validation pass admits only these digit ranges.
-        let nibble = if byte <= b'9' {
+        if byte <= b'9' {
             byte - b'0'
         } else {
             byte.to_ascii_lowercase() - b'a' + 10
-        };
-        if let Some(previous) = high.take() {
-            bytes.push((previous << 4) | nibble);
-        } else {
-            high = Some(nibble);
         }
+    };
+    while let (Some(high), Some(low)) = (digits.next(), digits.next()) {
+        bytes.push((nibble(high) << 4) | nibble(low));
     }
     Ok(bytes)
 }

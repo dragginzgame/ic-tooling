@@ -403,17 +403,17 @@ pub(super) fn perform_scheduled_cache_maintenance(
     minimum_interval: Duration,
     maintenance_identity: &str,
     maintenance: impl FnOnce() -> Result<ArtifactCachePruneReport, String>,
-) -> (Option<ArtifactCacheMaintenance>, Option<Duration>) {
+) -> (Option<ArtifactCacheMaintenance>, Duration) {
     let started = Instant::now();
     match cache_maintenance_due(path, minimum_interval, maintenance_identity) {
-        Ok(false) => return (None, Some(started.elapsed())),
+        Ok(false) => return (None, started.elapsed()),
         Ok(true) => {}
         Err(error) => {
             return (
                 Some(ArtifactCacheMaintenance::PruneFailed {
                     message: error.to_string(),
                 }),
-                Some(started.elapsed()),
+                started.elapsed(),
             );
         }
     }
@@ -432,7 +432,7 @@ pub(super) fn perform_scheduled_cache_maintenance(
             ),
         },
     };
-    (Some(outcome), Some(started.elapsed()))
+    (Some(outcome), started.elapsed())
 }
 
 pub(super) fn write_last_used(path: &Path, last_used: SystemTime) -> Result<(), CacheFsError> {

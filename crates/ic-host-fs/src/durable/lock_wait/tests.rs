@@ -90,23 +90,8 @@ fn direct_descriptor_operations_refuse_nonregular_files() {
 #[test]
 fn descriptor_contention_reports_and_preserves_returned_ownership() {
     const DRIVER: &str = "IC_HOST_FS_DESCRIPTOR_LOCK_DRIVER";
-    if std::env::var_os(DRIVER).is_none() {
-        // A parallel subprocess test can inherit our locked descriptor until
-        // exec, keeping the lock alive after Drop. Run the close/reacquisition
-        // assertion alone, without weakening its immediate-release contract.
-        let thread = std::thread::current();
-        let test_name = thread.name().expect("libtest names each test thread");
-        let output = std::process::Command::new(std::env::current_exe().unwrap())
-            .args(["--exact", test_name, "--test-threads=1"])
-            .env(DRIVER, "1")
-            .output()
-            .unwrap();
-        assert!(
-            output.status.success(),
-            "isolated descriptor lock test failed:\n{}\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
+    // Re-exec before opening descriptors so unrelated test forks cannot retain them.
+    if crate::test_support::run_isolated(DRIVER, "descriptor lock test") {
         return;
     }
     let fixture = fixture();

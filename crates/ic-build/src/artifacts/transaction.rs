@@ -1708,15 +1708,17 @@ fn perform_maintenance_locked(
 ) -> (Option<ArtifactCacheMaintenance>, Option<Duration>) {
     spec.pruning.map_or((None, None), |(policy, interval)| {
         let identity = policy.maintenance_identity();
-        perform_scheduled_cache_maintenance(namespace, interval, &identity, || {
-            prune_artifact_namespace_locked(
-                &spec.cache_root,
-                namespace,
-                policy,
-                Some(protected_entry),
-            )
-            .map_err(|error| error.to_string())
-        })
+        let (outcome, elapsed) =
+            perform_scheduled_cache_maintenance(namespace, interval, &identity, || {
+                prune_artifact_namespace_locked(
+                    &spec.cache_root,
+                    namespace,
+                    policy,
+                    Some(protected_entry),
+                )
+                .map_err(|error| error.to_string())
+            });
+        (outcome, Some(elapsed))
     })
 }
 

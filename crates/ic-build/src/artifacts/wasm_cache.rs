@@ -2693,7 +2693,7 @@ fn build_wasm_canisters_cached_internal(
 
     let resolved = resolve_initial_inputs(spec, batch_resolution.take(), progress)?;
     let isolated_acquisition = WasmAcquisitionContext::isolated(prepared_invalidation);
-    if let Some(outcome) = try_reuse_wasm_artifacts(
+    let outcome = if let Some(outcome) = try_reuse_wasm_artifacts(
         spec,
         &resolved,
         first_lock_wait,
@@ -2701,38 +2701,38 @@ fn build_wasm_canisters_cached_internal(
         total_started,
         progress,
     )? {
-        emit_finished_progress(&outcome, progress);
-        return Ok(outcome);
-    }
-    progress.emit(WasmBuildProgressEvent::CacheMiss {
-        fingerprint: resolved.fingerprint,
-    });
+        Ok(outcome)
+    } else {
+        progress.emit(WasmBuildProgressEvent::CacheMiss {
+            fingerprint: resolved.fingerprint,
+        });
 
-    let outcome = match &spec.cache_mode {
-        WasmBuildCacheMode::Isolated => {
-            let cache_entry = cache_entry_directory(spec, resolved.fingerprint);
-            build_wasm_cache_miss(
-                spec,
-                &resolved,
-                first_lock_wait,
-                isolated_acquisition,
-                &cache_entry,
-                total_started,
-                progress,
-                &mut spawn,
-            )
-        }
-        WasmBuildCacheMode::SharedIncremental { .. } => {
-            drop(cache_lock);
-            build_wasm_with_shared_incremental(
-                spec,
-                Some((resolved, first_lock_wait)),
-                isolated_acquisition.prepared_invalidation,
-                total_started,
-                progress,
-                None,
-                &mut spawn,
-            )
+        match &spec.cache_mode {
+            WasmBuildCacheMode::Isolated => {
+                let cache_entry = cache_entry_directory(spec, resolved.fingerprint);
+                build_wasm_cache_miss(
+                    spec,
+                    &resolved,
+                    first_lock_wait,
+                    isolated_acquisition,
+                    &cache_entry,
+                    total_started,
+                    progress,
+                    &mut spawn,
+                )
+            }
+            WasmBuildCacheMode::SharedIncremental { .. } => {
+                drop(cache_lock);
+                build_wasm_with_shared_incremental(
+                    spec,
+                    Some((resolved, first_lock_wait)),
+                    isolated_acquisition.prepared_invalidation,
+                    total_started,
+                    progress,
+                    None,
+                    &mut spawn,
+                )
+            }
         }
     }?;
     emit_finished_progress(&outcome, progress);
@@ -3150,18 +3150,20 @@ fn complete_build_record(
     })?;
     let (maintenance, cache_maintenance) =
         spec.pruning.map_or((None, None), |(policy, interval)| {
-            progress.run_phase(WasmBuildPhase::ExactCacheMaintenance, || {
-                let cache_root = spec.target_dir.join(".ic-testkit/wasm-targets");
-                let identity = policy.maintenance_identity();
-                perform_scheduled_cache_maintenance(&cache_root, interval, &identity, || {
-                    prune_wasm_build_cache_locked(
-                        &spec.target_dir,
-                        policy,
-                        Some(input.active_entry),
-                    )
-                    .map_err(|error| error.to_string())
-                })
-            })
+            let (outcome, elapsed) =
+                progress.run_phase(WasmBuildPhase::ExactCacheMaintenance, || {
+                    let cache_root = spec.target_dir.join(".ic-testkit/wasm-targets");
+                    let identity = policy.maintenance_identity();
+                    perform_scheduled_cache_maintenance(&cache_root, interval, &identity, || {
+                        prune_wasm_build_cache_locked(
+                            &spec.target_dir,
+                            policy,
+                            Some(input.active_entry),
+                        )
+                        .map_err(|error| error.to_string())
+                    })
+                });
+            (outcome, Some(elapsed))
         });
     Ok(WasmBuildRecord {
         facts: input.resolved.facts.clone(),

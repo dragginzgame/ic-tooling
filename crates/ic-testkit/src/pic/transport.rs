@@ -6,7 +6,8 @@ use std::{
 use ic_platform::pocket_ic::RejectResponse;
 
 /// Captured `PocketIC` operation failure, retaining transport classification.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[error("{message}")]
 pub struct PocketIcOperationError {
     message: String,
     transport: bool,
@@ -42,14 +43,6 @@ pub(super) fn capture_operation<T>(
     catch_unwind(AssertUnwindSafe(operation))
         .map_err(|payload| PocketIcOperationError::new(panic_payload_to_string(payload.as_ref())))
 }
-
-impl std::fmt::Display for PocketIcOperationError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for PocketIcOperationError {}
 
 /// Execute one synchronous `PocketIC` operation, returning recognized transport panics.
 ///

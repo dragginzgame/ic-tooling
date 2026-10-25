@@ -126,14 +126,16 @@ pub struct ResetReceipt {
 
 /// Contract failure while verifying recipe reset evidence.
 #[non_exhaustive]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum BaselinePoolContractError {
     /// A required reset domain had no matching achievement.
+    #[error("required reset domain {domain:?} was not achieved")]
     MissingResetDomain {
         /// Reset domain that did not satisfy the contract.
         domain: ResetDomainKind,
     },
     /// The first mismatched domain, with both complete policy sets for inspection.
+    #[error("reset achievement {achievement:?} does not satisfy {requirement:?} for {domain:?}")]
     ResetPolicyMismatch {
         /// Reset domain that did not satisfy the contract.
         domain: ResetDomainKind,
@@ -713,12 +715,7 @@ where
             .map_err(BaselinePoolPreparationError::Contract)?;
 
         let preparation = PreparedBaseline::Restored { reset };
-        self.validate_baseline(
-            baseline,
-            &preparation,
-            BaselinePreparationStage::ValidateRestored,
-            timings,
-        )?;
+        self.validate_baseline(baseline, &preparation, timings)?;
         Ok(())
     }
 
@@ -732,12 +729,7 @@ where
                 self.recipe.build()
             })?;
 
-        if let Err(error) = self.validate_baseline(
-            &baseline,
-            &PreparedBaseline::Built,
-            BaselinePreparationStage::ValidateBuilt,
-            timings,
-        ) {
+        if let Err(error) = self.validate_baseline(&baseline, &PreparedBaseline::Built, timings) {
             drop_baseline_safely(baseline);
             return Err(error);
         }
@@ -750,9 +742,12 @@ where
         &self,
         baseline: &CachedPocketIcBaseline<R::Metadata>,
         preparation: &PreparedBaseline,
-        stage: BaselinePreparationStage,
         timings: &mut BaselinePoolTimings,
     ) -> Result<(), BaselinePoolPreparationError<R::Error>> {
+        let stage = match preparation {
+            PreparedBaseline::Built => BaselinePreparationStage::ValidateBuilt,
+            PreparedBaseline::Restored { .. } => BaselinePreparationStage::ValidateRestored,
+        };
         timed_recipe_stage(&mut timings.validation, stage, || {
             self.recipe.validate(baseline, preparation)
         })
@@ -850,29 +845,6 @@ impl std::fmt::Display for BaselinePreparationStage {
         })
     }
 }
-
-impl std::fmt::Display for BaselinePoolContractError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::MissingResetDomain { domain } => {
-                write!(
-                    formatter,
-                    "required reset domain {domain:?} was not achieved"
-                )
-            }
-            Self::ResetPolicyMismatch {
-                domain,
-                requirement,
-                achievement,
-            } => write!(
-                formatter,
-                "reset achievement {achievement:?} does not satisfy {requirement:?} for {domain:?}",
-            ),
-        }
-    }
-}
-
-impl std::error::Error for BaselinePoolContractError {}
 
 impl<E> std::fmt::Display for BaselinePoolPreparationError<E>
 where

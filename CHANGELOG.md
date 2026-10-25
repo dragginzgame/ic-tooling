@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.68.5] - Unreleased
+
+- Simplify startup deadline handling, baseline validation, cache completion and
+  maintenance timing while preserving lifecycle, progress and failure contracts.
+- Reduce benchmark reporting state and fixture coupling, consolidate isolated
+  filesystem tests, and simplify admitted hex decoding. Public APIs, feature
+  boundaries and report formats remain unchanged.
+  [Details](docs/changelog/0.68.md#0685---unreleased).
+
 ## [0.68.4] - 2026-10-25
 
 - Adopt IC Platform 0.6.16 and Wire/derive 0.7.10, updating workspace minimums and
