@@ -261,7 +261,8 @@ impl ArtifactCacheMaintenance {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
+#[error("failed to {operation} at {}: {source}", path.display())]
 pub(super) struct CacheFsError {
     pub(super) operation: &'static str,
     pub(super) path: PathBuf,
@@ -540,24 +541,6 @@ struct CacheEntry {
     bytes: u64,
     last_used: SystemTime,
     removed: bool,
-}
-
-impl std::fmt::Display for CacheFsError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            formatter,
-            "failed to {} at {}: {}",
-            self.operation,
-            self.path.display(),
-            self.source
-        )
-    }
-}
-
-impl std::error::Error for CacheFsError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.source)
-    }
 }
 
 fn cache_entries(

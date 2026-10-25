@@ -170,6 +170,11 @@ fn malformed_context_and_conflicting_ownership_never_publish_partial_candidates(
         .unwrap()
         .push(original["members"][0].clone());
     invalids.push(duplicate);
+    for root in [serde_json::Value::Null, serde_json::json!(16)] {
+        let mut invalid = original.clone();
+        invalid["source_root"] = root;
+        invalids.push(invalid);
+    }
     for root in ["relative", "/saved\nroot", "/../escaped"] {
         let mut invalid = original.clone();
         invalid["source_root"] = root.into();

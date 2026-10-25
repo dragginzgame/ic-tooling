@@ -407,9 +407,7 @@ impl FileEntry {
 }
 
 fn validate_name(name: &OsStr) -> Result<(), CapabilityError> {
-    let mut parts = Path::new(name).components();
-    if !matches!((parts.next(), parts.next()), (Some(Component::Normal(part)), None) if part == name)
-    {
+    if !crate::path::is_exact_normal_component(name) {
         return Err(refused(Path::new(name), Refusal::InvalidPath));
     }
     Ok(())

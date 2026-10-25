@@ -599,39 +599,43 @@ fn run_wasm_batch(
                 },
             )?;
     let mut report = build_wasm_batch(specs, batch_config, |spec, index| {
-        let Some((progress_config, observer)) = observation.as_mut() else {
-            return build_wasm_canisters_cached_in_batch(
-                spec,
-                index,
-                &mut resolver,
-                None,
-                &mut spawn,
-            );
-        };
-        let label = specs[index].label.clone();
-        observer(WasmBuildBatchProgressEvent::BuildStarted {
-            index,
-            label: label.clone(),
-            total: count,
-        });
-        let mut forward = |event| {
-            observer(WasmBuildBatchProgressEvent::BuildProgress {
+        let label = &specs[index].label;
+        if let Some((_, observer)) = observation.as_mut() {
+            observer(WasmBuildBatchProgressEvent::BuildStarted {
                 index,
                 label: label.clone(),
-                event,
+                total: count,
             });
+        }
+        let progress_config = observation.as_ref().map(|(config, _)| *config);
+        let mut forward = |event| {
+            if let Some((_, observer)) = observation.as_mut() {
+                observer(WasmBuildBatchProgressEvent::BuildProgress {
+                    index,
+                    label: label.clone(),
+                    event,
+                });
+            }
         };
         let attempt = build_wasm_canisters_cached_in_batch(
             spec,
             index,
             &mut resolver,
-            Some((*progress_config, &mut forward)),
+            progress_config.map(|config| (config, &mut forward as &mut dyn FnMut(_))),
             &mut spawn,
         );
-        observer(match &attempt {
-            Ok(_) => WasmBuildBatchProgressEvent::BuildFinished { index, label },
-            Err(_) => WasmBuildBatchProgressEvent::BuildFailed { index, label },
-        });
+        if let Some((_, observer)) = observation.as_mut() {
+            observer(match &attempt {
+                Ok(_) => WasmBuildBatchProgressEvent::BuildFinished {
+                    index,
+                    label: label.clone(),
+                },
+                Err(_) => WasmBuildBatchProgressEvent::BuildFailed {
+                    index,
+                    label: label.clone(),
+                },
+            });
+        }
         attempt
     });
     report.input_resolution = resolver.metrics();

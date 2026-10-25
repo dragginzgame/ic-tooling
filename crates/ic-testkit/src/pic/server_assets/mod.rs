@@ -38,6 +38,18 @@ struct Asset {
     digest: Sha256Digest,
 }
 
+fn write_evidence(path: &Path, bytes: &[u8]) -> Result<()> {
+    durable::write_bytes(
+        path,
+        durable::WriteOptions {
+            mode: durable::PublicationMode::Replace,
+            permissions: 0o666,
+        },
+        bytes,
+    )?;
+    Ok(())
+}
+
 fn selected_asset() -> Result<Asset> {
     // Official GitHub release asset digests, reviewed 2026-10-09.
     let (host, digest) = match (std::env::consts::OS, std::env::consts::ARCH) {
@@ -208,20 +220,16 @@ pub fn setup(directory: &Path, mut interrupted: impl FnMut() -> bool) -> Result<
                     .and_then(|error| error.evidence())
                     .map(|evidence| &evidence.stderr)
             })
-            && let Err(record_error) = durable::write_bytes(
+            && let Err(record_error) = write_evidence(
                 &archive
                     .parent()
                     .ok_or("missing archive parent")?
                     .join("download.stderr"),
-                durable::WriteOptions {
-                    mode: durable::PublicationMode::Replace,
-                    permissions: 0o666,
-                },
                 stderr,
             )
         {
             if outcome.is_ok() {
-                return Err(record_error.into());
+                return Err(record_error);
             }
             // Recording evidence must not replace the failed download's cause.
             eprintln!("could not record download stderr: {record_error}");
@@ -256,14 +264,9 @@ fn setup_with(
             let held = durable::create_private_directory(&attempt)?;
             eprintln!("PocketIC setup evidence: {}", attempt.display());
             if let Err(error) = install(&attempt, asset, download) {
-                if let Err(record_error) = durable::write_bytes(
-                    &attempt.join("failure.txt"),
-                    durable::WriteOptions {
-                        mode: durable::PublicationMode::Replace,
-                        permissions: 0o666,
-                    },
-                    error.to_string().as_bytes(),
-                ) {
+                if let Err(record_error) =
+                    write_evidence(&attempt.join("failure.txt"), error.to_string().as_bytes())
+                {
                     eprintln!("could not record setup failure: {record_error}");
                 }
                 return Err(error);
@@ -321,14 +324,7 @@ fn install(
                 ("version.stdout", &evidence.stdout),
                 ("version.stderr", &evidence.stderr),
             ] {
-                if let Err(record_error) = durable::write_bytes(
-                    &attempt.join(name),
-                    durable::WriteOptions {
-                        mode: durable::PublicationMode::Replace,
-                        permissions: 0o666,
-                    },
-                    bytes,
-                ) {
+                if let Err(record_error) = write_evidence(&attempt.join(name), bytes) {
                     eprintln!("could not record version evidence: {record_error}");
                 }
             }

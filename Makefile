@@ -174,7 +174,7 @@ ci:
 	+$(MAKE) --no-print-directory test-tools-registry
 	+$(MAKE) --no-print-directory test-wasm-inspection
 	+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --locked --offline --no-deps
-	+@server="$$("target/debug/ic-testkit-server" check)" && POCKET_IC_BIN="$$server" cargo test --workspace --all-targets --all-features --locked --offline
+	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --workspace --all-targets --all-features --locked --offline
 release-version:
 	+@bash scripts/release/adapter.sh version
 release-preflight:

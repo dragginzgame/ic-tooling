@@ -130,13 +130,8 @@ fn create_with_sequence(
 
 #[cfg(unix)]
 fn validate_prefix(prefix: &str) -> io::Result<()> {
-    use std::path::Component;
-    let mut components = Path::new(prefix).components();
     if prefix.contains(['\0', '\r', '\n'])
-        || !matches!(
-            (components.next(), components.next()),
-            (Some(Component::Normal(name)), None) if name == std::ffi::OsStr::new(prefix)
-        )
+        || !crate::path::is_exact_normal_component(std::ffi::OsStr::new(prefix))
     {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,

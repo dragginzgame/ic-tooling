@@ -20,7 +20,7 @@ required-features = ["cli"]
 
 [features]
 default = []
-cli = ["dep:clap"]
+cli = ["dep:clap", "clap/derive"]
 reply-fixtures = ["ic-host-artifacts/wasm-encoding"]
 held-reply-fixtures = ["reply-fixtures", "ic-host-artifacts/wasm-text"]
 wire = ["dep:ic-wire", "dep:serde"]

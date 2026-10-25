@@ -145,24 +145,23 @@ fn verify_projection(
         }
     }
     if references {
+        let mut replacements = HashMap::with_capacity(projections.len());
+        for item in projections {
+            // Version syntax is caller-owned here; retain the first exact match
+            // even when distinct opaque selections form the same reference.
+            replacements
+                .entry(format!("{} {}", item.package, item.previous))
+                .or_insert_with(|| format!("{} {}", item.package, item.next));
+        }
         for package in packages {
             if let Some(dependencies) = package
                 .get_mut("dependencies")
                 .and_then(toml::Value::as_array_mut)
             {
                 for dependency in dependencies {
-                    for projection in projections {
-                        if dependency.as_str()
-                            == Some(
-                                format!("{} {}", projection.package, projection.previous).as_str(),
-                            )
-                        {
-                            *dependency = toml::Value::String(format!(
-                                "{} {}",
-                                projection.package, projection.next
-                            ));
-                            break;
-                        }
+                    if let Some(next) = dependency.as_str().and_then(|name| replacements.get(name))
+                    {
+                        *dependency = toml::Value::String(next.clone());
                     }
                 }
             }

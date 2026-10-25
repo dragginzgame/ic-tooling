@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.68.4] - Unreleased
+
+- Adopt IC Platform 0.6.16 and Wire/derive 0.7.10, updating workspace minimums and
+  Testkit examples. Existing feature boundaries, endpoint schemas and frame bytes
+  are unchanged. [Details](docs/changelog/0.68.md#0684---unreleased).
+- Simplify CLI admission, Build orchestration and release editing, filesystem
+  checks, and Testkit provisioning and benchmark dispatch. Command behavior,
+  independent release validation and benchmark report formats are preserved.
+
 ## [0.68.3] - 2026-10-25
 
 - Simplify Build input resolution and coordination, Testkit pool state and shared

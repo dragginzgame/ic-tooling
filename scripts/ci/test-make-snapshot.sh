@@ -210,6 +210,21 @@ cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
 # Exercise the actual Make shell/environment handoff, including a space in the admitted path.
 PATH="$fixture/local:$PATH" HOST_MAKE_ASSERT_POCKET_IC=1 make --no-print-directory \
     "MAKE=$(command -v make)" testkit-installed-check > "$fixture/server-environment.log" 2>&1
+# Exercise CI's final recipe with its selected CLI outside the default target path.
+# All server/Cargo effects remain substituted; the command and quoting are real.
+{
+    printf 'ci-server-selection:\n'
+    sed -n '/^[[:space:]][+]@server=.*cargo test --workspace/p' "$root/Makefile"
+} > "$fixture/ci-server.mk"
+mv "$fixture/local/target/debug/ic-testkit-server" "$fixture/server cli"
+: > "$HOST_MAKE_EVENTS"
+PATH="$fixture/local:$PATH" HOST_MAKE_ASSERT_POCKET_IC=1 make --no-print-directory \
+    -f "$fixture/ci-server.mk" ci-server-selection "SERVER_CLI=$fixture/server cli" \
+    > "$fixture/ci-server-selection.log" 2>&1
+printf '%s\n' 'install-server-tools.sh check' \
+    'test --workspace --all-targets --all-features --locked --offline' > "$fixture/expected"
+cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
+mv "$fixture/server cli" "$fixture/local/target/debug/ic-testkit-server"
 # Keep the actual Host LOC caller, argument selection and failure propagation
 # qualified without replaying Shared's synthetic workspace/parser matrix.
 cat > "$fixture/local/scripts/dev/cloc.sh" <<'STUB'

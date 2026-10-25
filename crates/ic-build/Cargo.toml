@@ -17,7 +17,7 @@ required-features = ["cli"]
 
 [features]
 default = []
-cli = ["dep:clap"]
+cli = ["dep:clap", "clap/derive", "serde/derive"]
 
 [target.'cfg(unix)'.dependencies]
 # Production dependencies

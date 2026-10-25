@@ -157,6 +157,29 @@ fn projection_refusals_preserve_caller_order_and_prior_version_precedence() {
             Err(LockProjectionError::InvalidSelection)
         ));
     }
+    // Syntax policy belongs to the caller; opaque names/versions can form the
+    // same reference, whose first selected replacement must still win.
+    let before = "[[package]]\nname='one two'\nversion='three'\ndependencies=['one two three']\n[[package]]\nname='one'\nversion='two three'\n";
+    let first = WorkspaceVersionProjection {
+        package: "one two",
+        previous: "three",
+        next: "four",
+    };
+    let second = WorkspaceVersionProjection {
+        package: "one",
+        previous: "two three",
+        next: "five",
+    };
+    for (changes, reference) in [
+        ([first, second], "one two four"),
+        ([second, first], "one five"),
+    ] {
+        let after = before
+            .replace("version='three'", "version='four'")
+            .replace("version='two three'", "version='five'")
+            .replace("['one two three']", &format!("['{reference}']"));
+        verify_workspace_release_projection(before, &after, &changes).unwrap();
+    }
 }
 
 #[test]

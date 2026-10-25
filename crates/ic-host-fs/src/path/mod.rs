@@ -9,6 +9,11 @@ use std::{
 #[cfg(all(test, unix))]
 mod tests;
 
+pub(crate) fn is_exact_normal_component(name: &std::ffi::OsStr) -> bool {
+    let mut components = Path::new(name).components();
+    matches!((components.next(), components.next()), (Some(Component::Normal(part)), None) if part == name)
+}
+
 enum ResolutionStep {
     Component(PathBuf),
     EndSymlink(PathBuf),

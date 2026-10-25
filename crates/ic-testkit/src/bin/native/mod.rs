@@ -6,9 +6,7 @@ use std::{
     time::Duration,
 };
 
-use clap::{
-    Arg, Command as CliCommand, builder::OsStringValueParser, error::ErrorKind, value_parser,
-};
+use clap::{CommandFactory, Parser, builder::TypedValueParser as _, error::ErrorKind};
 
 use ic_host_process::{
     signal::{SignalActionError, SignalActions},
@@ -18,19 +16,52 @@ use ic_testkit::pic::{PocketIcStartupConfig, server_assets};
 
 static INTERRUPTED: AtomicI32 = AtomicI32::new(0);
 
+#[derive(Parser)]
+#[command(
+    name = "ic-testkit-server",
+    about = "Explicit PocketIC setup, offline admission and command-scoped ownership",
+    version,
+    arg_required_else_help = true,
+    no_binary_name = true
+)]
 enum Arguments {
-    Setup(PathBuf),
-    Check(PathBuf),
+    Setup {
+        #[arg(long, value_name = "DIRECTORY", default_value = server_assets::DEFAULT_DIRECTORY, allow_hyphen_values = true)]
+        directory: PathBuf,
+    },
+    Check {
+        #[arg(long, value_name = "DIRECTORY", default_value = server_assets::DEFAULT_DIRECTORY, allow_hyphen_values = true)]
+        directory: PathBuf,
+    },
     Run(Box<RunArguments>),
 }
 
+#[derive(clap::Args)]
 struct RunArguments {
+    #[arg(long, value_name = "DIRECTORY", allow_hyphen_values = true)]
     directory: Option<PathBuf>,
-    timeout: Duration,
+    #[arg(long, value_name = "SECONDS", value_parser = clap::value_parser!(u64).range(1..).map(Duration::from_secs))]
     ttl: Option<Duration>,
+    #[arg(long, value_name = "SECONDS", value_parser = clap::value_parser!(u64).range(1..).map(Duration::from_secs))]
     idle_ttl: Option<Duration>,
-    output_files: Option<(PathBuf, PathBuf)>,
-    command: Command,
+    #[arg(long = "startup-timeout", value_name = "SECONDS", default_value = "30", value_parser = clap::value_parser!(u64).range(1..).map(Duration::from_secs))]
+    timeout: Duration,
+    #[arg(
+        long,
+        value_name = "NEW-FILE",
+        allow_hyphen_values = true,
+        requires = "server_stderr"
+    )]
+    server_stdout: Option<PathBuf>,
+    #[arg(
+        long,
+        value_name = "NEW-FILE",
+        allow_hyphen_values = true,
+        requires = "server_stdout"
+    )]
+    server_stderr: Option<PathBuf>,
+    #[arg(last = true, required = true, num_args = 1.., value_name = "COMMAND")]
+    command: Vec<OsString>,
 }
 
 extern "C" fn interrupted(signal: libc::c_int) {
@@ -47,107 +78,18 @@ fn install_signals() -> Result<SignalActions, SignalActionError> {
     unsafe { SignalActions::install(&[libc::SIGINT, libc::SIGTERM, libc::SIGHUP], interrupted) }
 }
 
-fn cli() -> CliCommand {
-    let directory = Arg::new("directory")
-        .long("directory")
-        .value_name("DIRECTORY")
-        .value_parser(value_parser!(PathBuf))
-        .allow_hyphen_values(true);
-    CliCommand::new("ic-testkit-server")
-        .about("Explicit PocketIC setup, offline admission and command-scoped ownership")
-        .version(env!("CARGO_PKG_VERSION"))
-        .subcommand_required(true)
-        .arg_required_else_help(true)
-        .subcommands(["setup", "check"].map(|name| {
-            CliCommand::new(name).arg(
-                directory
-                    .clone()
-                    .default_value(server_assets::DEFAULT_DIRECTORY),
-            )
-        }))
-        .subcommand(
-            CliCommand::new("run")
-                .arg(directory)
-                .args(["ttl", "idle-ttl", "startup-timeout"].map(|name| {
-                    let arg = Arg::new(name)
-                        .long(name)
-                        .value_name("SECONDS")
-                        .value_parser(value_parser!(u64).range(1..));
-                    if name == "startup-timeout" {
-                        arg.default_value("30")
-                    } else {
-                        arg
-                    }
-                }))
-                .arg(
-                    Arg::new("server-stdout")
-                        .long("server-stdout")
-                        .value_name("NEW-FILE")
-                        .value_parser(value_parser!(PathBuf))
-                        .allow_hyphen_values(true)
-                        .requires("server-stderr"),
-                )
-                .arg(
-                    Arg::new("server-stderr")
-                        .long("server-stderr")
-                        .value_name("NEW-FILE")
-                        .value_parser(value_parser!(PathBuf))
-                        .allow_hyphen_values(true)
-                        .requires("server-stdout"),
-                )
-                .arg(
-                    Arg::new("command")
-                        .last(true)
-                        .required(true)
-                        .num_args(1..)
-                        .value_name("COMMAND")
-                        .value_parser(OsStringValueParser::new()),
-                ),
-        )
-}
-
 fn parse(arguments: impl Iterator<Item = OsString>) -> Result<Arguments, clap::Error> {
-    let mut cli = cli().no_binary_name(true);
-    let mut matches = cli.try_get_matches_from_mut(arguments)?;
-    let (name, mut matches) = matches.remove_subcommand().expect("subcommand required");
-    let directory = matches.remove_one::<PathBuf>("directory");
-    match name.as_str() {
-        "setup" => Ok(Arguments::Setup(directory.expect("default directory"))),
-        "check" => Ok(Arguments::Check(directory.expect("default directory"))),
-        "run" => {
-            let mut values = matches
-                .remove_many::<OsString>("command")
-                .expect("command required");
-            let executable = values.next().expect("command has at least one value");
-            // Clap captures one variadic argument so empty child arguments survive.
-            // Only the executable, rather than every child argument, must be nonempty.
-            if executable.is_empty() {
-                return Err(cli.error(
-                    ErrorKind::ValueValidation,
-                    "command executable must not be empty",
-                ));
-            }
-            let mut command = Command::new(executable);
-            command.args(values);
-            let stdout = matches.remove_one::<PathBuf>("server-stdout");
-            let stderr = matches.remove_one::<PathBuf>("server-stderr");
-            Ok(Arguments::Run(Box::new(RunArguments {
-                directory,
-                timeout: Duration::from_secs(
-                    matches
-                        .remove_one::<u64>("startup-timeout")
-                        .expect("default timeout"),
-                ),
-                ttl: matches.remove_one::<u64>("ttl").map(Duration::from_secs),
-                idle_ttl: matches
-                    .remove_one::<u64>("idle-ttl")
-                    .map(Duration::from_secs),
-                output_files: stdout.zip(stderr),
-                command,
-            })))
-        }
-        _ => unreachable!("Clap admits only declared subcommands"),
+    let arguments = Arguments::try_parse_from(arguments)?;
+    // Only the executable, rather than every child argument, must be nonempty.
+    if let Arguments::Run(run) = &arguments
+        && run.command[0].is_empty()
+    {
+        return Err(Arguments::command().error(
+            ErrorKind::ValueValidation,
+            "command executable must not be empty",
+        ));
     }
+    Ok(arguments)
 }
 
 pub fn main() -> ExitCode {
@@ -159,7 +101,7 @@ pub fn main() -> ExitCode {
         }
     };
     let arguments = match arguments {
-        Arguments::Setup(directory) => {
+        Arguments::Setup { directory } => {
             return match install_signals() {
                 Ok(_signals) => report_provisioning(server_assets::setup(&directory, || {
                     INTERRUPTED.load(Ordering::Relaxed) != 0
@@ -167,7 +109,7 @@ pub fn main() -> ExitCode {
                 Err(error) => report_provisioning(Err(error.into())),
             };
         }
-        Arguments::Check(directory) => {
+        Arguments::Check { directory } => {
             return report_provisioning(server_assets::check(&directory));
         }
         Arguments::Run(arguments) => arguments,
@@ -177,9 +119,14 @@ pub fn main() -> ExitCode {
         timeout,
         ttl,
         idle_ttl,
-        output_files,
-        mut command,
+        server_stdout,
+        server_stderr,
+        command,
     } = *arguments;
+    let output_files = server_stdout.zip(server_stderr);
+    let mut values = command.into_iter();
+    let mut command = Command::new(values.next().expect("Clap requires a child command"));
+    command.args(values);
     let result = (|| {
         let _signals = install_signals()?;
         let environment_selected = std::env::var_os("IC_TESTKIT_POCKET_IC_URL").is_some()
@@ -320,9 +267,12 @@ mod tests {
         let super::Arguments::Run(arguments) = super::parse(arguments.into_iter()).unwrap() else {
             panic!("run arguments required");
         };
-        assert_eq!(arguments.command.get_program(), &executable);
+        assert_eq!(arguments.command[0].as_os_str(), &executable);
         assert_eq!(
-            arguments.command.get_args().collect::<Vec<_>>(),
+            arguments.command[1..]
+                .iter()
+                .map(OsString::as_os_str)
+                .collect::<Vec<_>>(),
             [
                 std::ffi::OsStr::new("--help"),
                 std::ffi::OsStr::new(""),
@@ -333,7 +283,7 @@ mod tests {
         assert_eq!(arguments.ttl, Some(Duration::from_secs(90)));
         assert_eq!(arguments.idle_ttl, Some(Duration::from_secs(10)));
         assert_eq!(
-            arguments.output_files,
+            arguments.server_stdout.zip(arguments.server_stderr),
             Some(("stdout path".into(), "stderr path".into()))
         );
     }
@@ -364,7 +314,7 @@ mod tests {
                 .expect("display request");
             assert_eq!(error.exit_code(), 0);
         }
-        let super::Arguments::Check(directory) = super::parse(
+        let super::Arguments::Check { directory } = super::parse(
             ["check", "--directory", "-store"]
                 .map(Into::into)
                 .into_iter(),
@@ -373,7 +323,7 @@ mod tests {
             panic!("check arguments required");
         };
         assert_eq!(directory, std::path::Path::new("-store"));
-        let super::Arguments::Check(directory) =
+        let super::Arguments::Check { directory } =
             super::parse(["check"].map(Into::into).into_iter()).unwrap()
         else {
             panic!("check arguments required");
@@ -392,7 +342,8 @@ mod tests {
             arguments.directory.is_none()
                 && arguments.ttl.is_none()
                 && arguments.idle_ttl.is_none()
-                && arguments.output_files.is_none()
+                && arguments.server_stdout.is_none()
+                && arguments.server_stderr.is_none()
         );
     }
 

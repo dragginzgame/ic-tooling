@@ -1,10 +1,11 @@
-use clap::{Arg, Command, value_parser};
+use clap::Parser;
 use ic_build::cargo::{
     lock_projection::WorkspaceVersionProjection,
     release_metadata::{
         DependencyVersionProjection, render_workspace_lock, render_workspace_manifest,
     },
 };
+use serde::Deserialize;
 use serde_json::Value;
 use std::{
     collections::HashMap,
@@ -16,57 +17,69 @@ use std::{
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
+#[derive(Parser)]
+#[command(
+    name = "ic-build-release-metadata",
+    about = "Render read-only Cargo release candidates",
+    version
+)]
+struct Arguments {
+    /// Positive input byte allowance per document
+    #[arg(long, value_name = "max-input-bytes")]
+    max_input_bytes: NonZeroUsize,
+    #[command(subcommand)]
+    operation: Operation,
+}
+
+#[derive(clap::Args)]
+struct Selection {
+    #[arg(value_name = "source")]
+    source: PathBuf,
+    #[arg(value_name = "previous")]
+    previous: String,
+    #[arg(value_name = "next")]
+    next: String,
+}
+
+#[derive(clap::Subcommand)]
+enum Operation {
+    /// Render a workspace manifest candidate
+    Manifest {
+        #[command(flatten)]
+        selection: Selection,
+        #[arg(value_name = "workspace-input-json")]
+        context: Option<PathBuf>,
+    },
+    /// Render a lockfile candidate for the selected local packages
+    Lock {
+        #[command(flatten)]
+        selection: Selection,
+        #[arg(value_name = "package", required = true, num_args = 1..)]
+        packages: Vec<String>,
+    },
+}
+
 pub fn run() -> Result<()> {
-    let common = [
-        Arg::new("source")
-            .required(true)
-            .value_parser(value_parser!(PathBuf)),
-        Arg::new("previous").required(true),
-        Arg::new("next").required(true),
-    ];
-    let arguments = Command::new("ic-build-release-metadata")
-        .about("Render read-only Cargo release candidates")
-        .version(env!("CARGO_PKG_VERSION"))
-        .arg(
-            Arg::new("max-input-bytes")
-                .long("max-input-bytes")
-                .required(true)
-                .help("Positive input byte allowance per document")
-                .value_parser(value_parser!(NonZeroUsize)),
-        )
-        .subcommand_required(true)
-        .subcommand(
-            Command::new("manifest")
-                .about("Render a workspace manifest candidate")
-                .args(common.clone())
-                .arg(Arg::new("workspace-input-json").value_parser(value_parser!(PathBuf))),
-        )
-        .subcommand(
-            Command::new("lock")
-                .about("Render a lockfile candidate for the selected local packages")
-                .args(common)
-                .arg(Arg::new("package").required(true).num_args(1..)),
-        )
-        .get_matches();
-    let limit = arguments
-        .get_one::<NonZeroUsize>("max-input-bytes")
-        .unwrap()
-        .get();
-    let (operation, selected) = arguments.subcommand().unwrap();
-    let source = selected.get_one::<PathBuf>("source").unwrap();
+    let arguments = Arguments::parse();
+    let limit = arguments.max_input_bytes.get();
+    let selection = match &arguments.operation {
+        Operation::Manifest { selection, .. } | Operation::Lock { selection, .. } => selection,
+    };
+    let Selection {
+        source,
+        previous,
+        next,
+    } = selection;
     check_path(source)?;
     let input = read(source, limit)?;
-    let previous = selected.get_one::<String>("previous").unwrap().as_str();
-    let next = selected.get_one::<String>("next").unwrap().as_str();
-    let output = match operation {
-        "manifest" => {
-            let dependencies =
-                if let Some(context) = selected.get_one::<PathBuf>("workspace-input-json") {
-                    let context: Value = serde_json::from_str(&read(context, limit)?)?;
-                    dependency_versions(source, &input, next, &context)?
-                } else {
-                    Vec::new()
-                };
+    let output = match &arguments.operation {
+        Operation::Manifest { context, .. } => {
+            let dependencies = if let Some(context) = context {
+                let context = serde_json::from_str(&read(context, limit)?)?;
+                dependency_versions(source, &input, next, &context)?
+            } else {
+                Vec::new()
+            };
             let projections: Vec<_> = dependencies
                 .iter()
                 .map(|(alias, previous, next)| DependencyVersionProjection {
@@ -77,10 +90,9 @@ pub fn run() -> Result<()> {
                 .collect();
             render_workspace_manifest(&input, previous, next, &projections)?
         }
-        "lock" => {
-            let projections = selected
-                .get_many::<String>("package")
-                .unwrap()
+        Operation::Lock { packages, .. } => {
+            let projections = packages
+                .iter()
                 .map(|name| WorkspaceVersionProjection {
                     package: name,
                     previous,
@@ -89,11 +101,11 @@ pub fn run() -> Result<()> {
                 .collect::<Vec<_>>();
             render_workspace_lock(&input, &projections)?
         }
-        _ => unreachable!("Clap admits only the declared subcommands"),
     };
     std::io::stdout().lock().write_all(output.as_bytes())?;
     Ok(())
 }
+
 fn check_path(path: &Path) -> Result<()> {
     if path
         .as_os_str()
@@ -145,12 +157,6 @@ fn identity(path: &Path) -> Result<PathBuf> {
     }
     Ok(result)
 }
-fn required<'a>(value: &'a Value, key: &str) -> Result<&'a str> {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .ok_or_else(|| format!("missing string {key}").into())
-}
 fn requirement(previous: &str, next: &str) -> Option<String> {
     let offset = usize::from(previous.starts_with(['~', '^', '=']));
     let version = previous[offset..].trim_start_matches([' ', '\t']);
@@ -192,6 +198,28 @@ impl ContextRoot {
     }
 }
 
+#[derive(Deserialize)]
+struct SourceContext {
+    // Absence selects live custody; an explicit null is never a live context.
+    #[serde(default, deserialize_with = "source_root")]
+    source_root: Option<String>,
+    members: Vec<ContextMember>,
+    #[serde(default)]
+    manifest: Value,
+}
+
+#[derive(Deserialize)]
+struct ContextMember {
+    name: String,
+    manifest_path: String,
+}
+
+fn source_root<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<Option<String>, D::Error> {
+    String::deserialize(deserializer).map(Some)
+}
+
 struct WorkspaceContext<'a> {
     root: ContextRoot,
     members: HashMap<&'a str, PathBuf>,
@@ -199,9 +227,9 @@ struct WorkspaceContext<'a> {
 }
 
 impl<'a> WorkspaceContext<'a> {
-    fn admit(source: &Path, input: &str, context: &'a Value) -> Result<Self> {
-        let root = if context.get("source_root").is_some() {
-            ContextRoot::Saved(identity(Path::new(required(context, "source_root")?))?)
+    fn admit(source: &Path, input: &str, context: &'a SourceContext) -> Result<Self> {
+        let root = if let Some(root) = &context.source_root {
+            ContextRoot::Saved(identity(Path::new(root))?)
         } else {
             ContextRoot::Live(
                 source
@@ -212,13 +240,9 @@ impl<'a> WorkspaceContext<'a> {
             )
         };
         let mut members = HashMap::new();
-        for member in context
-            .get("members")
-            .and_then(Value::as_array)
-            .ok_or("missing members array")?
-        {
-            let name = required(member, "name")?;
-            let path = identity(Path::new(required(member, "manifest_path")?))?;
+        for member in &context.members {
+            let name = member.name.as_str();
+            let path = identity(Path::new(&member.manifest_path))?;
             if members.insert(name, path).is_some() {
                 return Err("duplicate member identity".into());
             }
@@ -228,8 +252,8 @@ impl<'a> WorkspaceContext<'a> {
             .get("workspace")
             .and_then(|value| value.get("dependencies"));
         let expected = context
-            .get("manifest")
-            .and_then(|value| value.get("workspace"))
+            .manifest
+            .get("workspace")
             .and_then(|value| value.get("dependencies"));
         if serde_json::to_value(actual)? != expected.cloned().unwrap_or(Value::Null) {
             return Err("saved dependency declarations differ from source".into());
@@ -246,7 +270,7 @@ fn dependency_versions(
     source: &Path,
     input: &str,
     next: &str,
-    context: &Value,
+    context: &SourceContext,
 ) -> Result<Vec<(String, String, String)>> {
     let context = WorkspaceContext::admit(source, input, context)?;
     let mut selected = Vec::new();

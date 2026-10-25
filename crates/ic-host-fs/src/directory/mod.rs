@@ -3,7 +3,7 @@
 use std::{
     fs, io,
     num::NonZeroUsize,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -71,12 +71,8 @@ fn create_unique_directory_with_sequence(
 }
 
 pub(crate) fn validate_options(prefix: &str, permissions: u32) -> io::Result<()> {
-    let mut components = Path::new(prefix).components();
     if prefix.contains(['\r', '\n'])
-        || !matches!(
-            (components.next(), components.next()),
-            (Some(Component::Normal(name)), None) if name == std::ffi::OsStr::new(prefix)
-        )
+        || !crate::path::is_exact_normal_component(std::ffi::OsStr::new(prefix))
         || permissions & !0o777 != 0
     {
         return Err(io::Error::new(

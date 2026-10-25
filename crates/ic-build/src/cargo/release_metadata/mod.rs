@@ -166,12 +166,26 @@ pub fn render_workspace_lock(
         .get("package")
         .and_then(Item::as_array_of_tables)
         .ok_or_else(|| refuse("missing lock packages"))?;
+    let selected: std::collections::HashMap<_, _> = projections
+        .iter()
+        .map(|item| (item.package, item))
+        .collect();
+    let replacements: std::collections::HashMap<_, _> = projections
+        .iter()
+        .map(|item| {
+            (
+                format!("{} {}", item.package, item.previous),
+                format!("{} {}", item.package, item.next),
+            )
+        })
+        .collect();
     let mut edits = Vec::new();
     for package in packages {
         if package.get("source").is_none()
-            && let Some(projection) = projections
-                .iter()
-                .find(|item| package.get("name").and_then(Item::as_str) == Some(item.package))
+            && let Some(projection) = package
+                .get("name")
+                .and_then(Item::as_str)
+                .and_then(|name| selected.get(name))
         {
             let value = package
                 .get("version")
@@ -181,15 +195,11 @@ pub fn render_workspace_lock(
         }
         if let Some(dependencies) = package.get("dependencies").and_then(Item::as_array) {
             for dependency in dependencies {
-                for projection in projections {
-                    let previous = format!("{} {}", projection.package, projection.previous);
-                    if dependency.as_str() == Some(previous.as_str()) {
-                        edits.push(edit(
-                            dependency,
-                            &previous,
-                            &format!("{} {}", projection.package, projection.next),
-                        )?);
-                    }
+                if let Some((previous, next)) = dependency
+                    .as_str()
+                    .and_then(|name| replacements.get_key_value(name))
+                {
+                    edits.push(edit(dependency, previous, next)?);
                 }
             }
         }

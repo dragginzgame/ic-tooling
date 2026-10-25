@@ -14,29 +14,12 @@ use std::os::unix::{ffi::OsStrExt as _, fs::MetadataExt as _};
 #[cfg(windows)]
 use std::os::windows::ffi::OsStrExt as _;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
+#[error("failed to atomically copy {} to {}: {source}", source_path.display(), destination_path.display())]
 struct AtomicCopyErrorContext {
     source_path: PathBuf,
     destination_path: PathBuf,
     source: io::Error,
-}
-
-impl std::fmt::Display for AtomicCopyErrorContext {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            formatter,
-            "failed to atomically copy {} to {}: {}",
-            self.source_path.display(),
-            self.destination_path.display(),
-            self.source
-        )
-    }
-}
-
-impl std::error::Error for AtomicCopyErrorContext {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.source)
-    }
 }
 
 /// SHA-256 digest of one deterministic artifact-input set.

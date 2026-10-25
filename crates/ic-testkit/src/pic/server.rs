@@ -25,15 +25,25 @@ pub fn supports_pocket_ic_server(output: &[u8]) -> bool {
     let Some(version) = text.trim().strip_prefix("pocket-ic-server ") else {
         return false;
     };
-    let components = version.split('.').collect::<Vec<_>>();
-    components.len() == 3
-        && components[0].parse::<u64>() == Ok(SUPPORTED_MAJOR)
-        && components.iter().all(|part| {
-            !part.is_empty()
-                && (part.len() == 1 || !part.starts_with('0'))
-                && part.bytes().all(|byte| byte.is_ascii_digit())
-                && part.parse::<u64>().is_ok()
-        })
+    let mut components = version.split('.');
+    for index in 0..3 {
+        let Some(part) = components.next() else {
+            return false;
+        };
+        if part.is_empty()
+            || (part.len() > 1 && part.starts_with('0'))
+            || !part.bytes().all(|byte| byte.is_ascii_digit())
+        {
+            return false;
+        }
+        let Ok(value) = part.parse::<u64>() else {
+            return false;
+        };
+        if index == 0 && value != SUPPORTED_MAJOR {
+            return false;
+        }
+    }
+    components.next().is_none()
 }
 
 #[cfg(test)]
@@ -49,7 +59,9 @@ mod tests {
             "pocket-ic-server 15.0.0",
             "pocket-ic-server 17.0.0",
             "pocket-ic-server 16.0",
+            "pocket-ic-server 16.1.0.0",
             "pocket-ic-server 16.01.0",
+            "pocket-ic-server 16.1.00",
             "pocket-ic-server 16.1.0-extra",
             "pocket-ic-server 16.18446744073709551616.0",
             "other 16.1.0",

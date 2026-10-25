@@ -266,28 +266,21 @@ fn measure_sample<T>(
 }
 
 fn run_tasks(
-    pool: &CachedPocketIcBaselinePool<Recipe>,
-    recipe: &Recipe,
-    mode: Mode,
     iterations: NonZeroUsize,
     workers: NonZeroUsize,
+    sample: impl Fn(usize) -> Result<Sample> + Sync,
 ) -> Result<(Vec<Sample>, f64)> {
     let barrier = Barrier::new(workers.get() + 1);
     thread::scope(|scope| -> Result<_> {
         let handles = (0..workers.get())
             .map(|worker| {
                 let barrier = &barrier;
+                let sample = &sample;
                 scope.spawn(move || -> Result<Vec<Sample>> {
                     barrier.wait();
                     (worker..iterations.get())
                         .step_by(workers.get())
-                        .map(|iteration| {
-                            if mode == Mode::Fresh {
-                                fresh_sample(recipe, iteration)
-                            } else {
-                                pooled_sample(pool, recipe, iteration)
-                            }
-                        })
+                        .map(sample)
                         .collect()
                 })
             })
@@ -356,7 +349,14 @@ pub fn run(arguments: WorkerArguments) -> Result<()> {
         drop(held);
     }
     let preparation_wall_ms = ms(preparation.elapsed());
-    let (mut samples, wall_ms) = run_tasks(&pool, &recipe, mode, iterations, workers)?;
+    let (mut samples, wall_ms) = match mode {
+        Mode::Fresh => run_tasks(iterations, workers, |iteration| {
+            fresh_sample(&recipe, iteration)
+        }),
+        Mode::Pooled => run_tasks(iterations, workers, |iteration| {
+            pooled_sample(&pool, &recipe, iteration)
+        }),
+    }?;
     samples.sort_by_key(|sample| sample.iteration);
     let teardown = Instant::now();
     drop(pool);
