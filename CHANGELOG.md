@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.68.3] - Unreleased
+## [0.68.3] - 2026-10-25
 
 - Simplify Build input resolution and coordination, Testkit pool state and shared
   memory accounting, and benchmark CLI, measurements and reporting. Public APIs,
