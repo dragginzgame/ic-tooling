@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.68.7] - Unreleased
+## [0.68.7] - 2026-10-26
 
 - Adopt IC Platform 0.6.18 and Wire 0.7.16 as workspace minimums, keeping
   existing feature selections, protocols and the already-selected lockfile.
