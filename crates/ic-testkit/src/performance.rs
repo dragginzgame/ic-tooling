@@ -1,6 +1,8 @@
 //! Canister-side benchmark marker emission using IC execution counters.
 
-use crate::benchmark::{BenchmarkCounters, DEFAULT_PREFIX, format_marker};
+use crate::benchmark::{
+    BenchmarkCounters, BenchmarkMarkerError, DEFAULT_PREFIX, format_marker, try_format_marker,
+};
 
 const WASM_PAGE_BYTES: u128 = 65_536;
 
@@ -9,6 +11,16 @@ const WASM_PAGE_BYTES: u128 = 65_536;
 /// Pair labels ending in `:start` and `:end` for host-side span analysis.
 pub fn measure(label: &str) {
     ic_platform::ic0::debug_print(format_marker(DEFAULT_PREFIX, label, counters()).as_bytes());
+}
+
+/// Admit a start/end label, then print one complete `ICTK` marker.
+///
+/// # Errors
+/// Returns the marker grammar refusal before printing any bytes.
+pub fn try_measure(label: &str) -> Result<(), BenchmarkMarkerError> {
+    let marker = try_format_marker(DEFAULT_PREFIX, label, counters())?;
+    ic_platform::ic0::debug_print(marker.as_bytes());
+    Ok(())
 }
 
 /// Read the instruction, Wasm heap, and stable-memory counters.

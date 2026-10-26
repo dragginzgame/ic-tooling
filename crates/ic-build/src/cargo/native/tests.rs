@@ -203,6 +203,7 @@ fn message(
         package,
         spec,
         executable,
+        &mut None,
         diagnostics,
     )
 }
@@ -224,8 +225,16 @@ fn caller_spawn_and_cancellation_cover_metadata_and_build() {
     let root = crate::fs_fixture::unique_temp_directory("native-cancellation");
     let metadata_path = root.join("metadata.json");
     fs::write(&metadata_path, serde_json::to_vec(&metadata()).unwrap()).unwrap();
-    for phase in ["metadata", "build"] {
+    for (phase, incomplete) in [
+        ("metadata", b"".as_slice()),
+        ("metadata", b"ar"),
+        ("build", b""),
+        ("build", b"ar"),
+    ] {
         let ready = root.join(phase);
+        // Creation and an incomplete payload must not arm cancellation, even
+        // before the child reaches the selected metadata/build phase.
+        fs::write(&ready, incomplete).unwrap();
         let spawned = Cell::new(0);
         let started = Instant::now();
         let error = build_native_executable(
@@ -256,7 +265,10 @@ cat "$METADATA"
                 spawned.set(spawned.get() + 1);
                 OwnedChild::spawn(command, CleanupPolicy::KillAndWait)
             },
-            || ready.is_file() || started.elapsed() > Duration::from_secs(20),
+            || {
+                fs::read(&ready).is_ok_and(|bytes| bytes == b"armed")
+                    || started.elapsed() > Duration::from_secs(20)
+            },
         )
         .unwrap_err();
         assert_eq!(fs::read(&ready).unwrap(), b"armed");
@@ -272,6 +284,67 @@ cat "$METADATA"
             execution.evidence.status.unwrap().signal(),
             Some(rustix::process::Signal::KILL.as_raw())
         );
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn native_admission_requires_one_successful_completion_even_with_an_artifact() {
+    use std::fs;
+    let root = crate::fs_fixture::unique_temp_directory("native-completion");
+    fs::write(
+        root.join("metadata.json"),
+        serde_json::to_vec(&metadata()).unwrap(),
+    )
+    .unwrap();
+    let target = serde_json::to_value(&metadata().packages[0].targets[0]).unwrap();
+    let artifact = json!({
+        "reason":"compiler-artifact", "package_id":metadata().packages[0].id,
+        "target":target, "profile":{"opt_level":"0","debug_assertions":true,"overflow_checks":true,"test":false},
+        "features":[], "filenames":[], "fresh":false, "executable":"/selected-target/worker"
+    });
+    let success = "{\"reason\":\"build-finished\",\"success\":true}";
+    let failure = "{\"reason\":\"build-finished\",\"success\":false}";
+    for (tail, status, admitted) in [
+        (String::new(), 0, false),
+        (success.into(), 0, true),
+        (failure.into(), 0, false),
+        (format!("{success}\n{success}"), 0, false),
+        (failure.into(), 23, false),
+    ] {
+        fs::write(root.join("messages"), format!("{artifact}\n{tail}")).unwrap();
+        let result = build_native_executable(
+            &spec(),
+            || {
+                let mut command = Command::new("/bin/sh");
+                command.current_dir(&root).args([
+                    "-c",
+                    "if [ \"$1\" = metadata ]; then cat metadata.json; else cat messages; exit \"$BUILD_STATUS\"; fi",
+                    "cargo-fixture",
+                ]);
+                command.env("BUILD_STATUS", status.to_string());
+                command
+            },
+            Vec::new(),
+            || Ok(()),
+            OwnedChild::spawn_direct,
+            || false,
+        );
+        assert_eq!(result.is_ok(), admitted, "completion {tail:?}");
+        if status != 0 {
+            let error = result.unwrap_err();
+            let execution = error
+                .downcast_ref::<ic_host_process::tool::ToolError>()
+                .unwrap()
+                .execution_error()
+                .unwrap();
+            assert!(matches!(
+                execution.failure,
+                ic_host_process::tool::ExecutionFailure::ExitStatus
+            ));
+            assert_eq!(execution.evidence.status.unwrap().code(), Some(status));
+        }
     }
     fs::remove_dir_all(root).unwrap();
 }

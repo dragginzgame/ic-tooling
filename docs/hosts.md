@@ -13,6 +13,13 @@ workspace, deployed Testkit Wasm profiles and unsupported-filesystem compilation
 sequentially on Rust 1.91. Prepare that toolchain and its Wasm target first.
 
 Required hosts are Linux x86-64 and macOS 15 on Intel and Apple Silicon.
+Successful native and MSRV jobs retain small `*-qualification-*` artifacts with
+the clean source revision, exact Cargo.lock, compiler/Cargo identities, actual
+OS/architecture/version, selected profile and completion marker. These are
+produced after the job gates pass and retained for 14 days; cache restoration
+does not itself qualify a source or host. MSRV caches use a separate key and
+exclude attempt-specific archive targets. Hosted uploads/cache effectiveness
+remain distinct from local script qualification.
 Native CI explicitly adds `wasm32-unknown-unknown` to the declared development
 compiler after preparing it, before running the deployed Testkit profile checks.
 The FS package also owns the [native file CLI](file-cli.md). Its actual-executable

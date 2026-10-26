@@ -5,7 +5,7 @@ mod output;
 
 use ic_testkit::benchmark::{
     BenchmarkParserConfig, aggregate_benchmark_spans, compare_benchmark_aggregates,
-    pair_benchmark_spans, parse_benchmark_events,
+    pair_benchmark_spans_by_origin, parse_benchmark_events,
 };
 use output::BenchmarkRunReport;
 use std::{
@@ -59,7 +59,7 @@ fn read_measurements(path: &Path) -> Result<BenchmarkRunReport, Box<dyn Error>> 
         &fs::read_to_string(path)?,
         &BenchmarkParserConfig::default(),
     );
-    let spans = pair_benchmark_spans(&parse.events);
+    let spans = pair_benchmark_spans_by_origin(&parse.events);
     let aggregates = aggregate_benchmark_spans(&spans.spans)?;
     Ok(BenchmarkRunReport {
         parse,

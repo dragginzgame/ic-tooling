@@ -97,9 +97,12 @@ permit overlap up to the worker count. Each case/repeat has a separate worker
 process and one explicit managed PocketIC server. Instances share that server
 within the run. Repeat order rotates over all selected cases.
 
-On Ctrl-C, the driver waits for the current worker to finish so its owned server
-can be torn down normally; it does not start another mode or write a partial
-report. Sampling errors also wait for worker cleanup before returning failure.
+On Ctrl-C, the driver asks the current worker to stop scheduling new iterations.
+Active operations finish, then the worker drops its fixtures and owned server.
+The driver waits for that cleanup; it does not start another mode or write a
+partial report. Sampling errors request the same cooperative stop and retain
+their original cause. There is no forced-kill fallback or teardown deadline;
+an active PocketIC call can still delay shutdown.
 Host 0.19 requires complete RSS observations. Linux stat records retain their
 64 KiB allowance. On macOS, process-table stdout is bounded to 16 MiB (room for
 hundreds of thousands of short PID/PPID/RSS rows), and diagnostics to 64 KiB.

@@ -703,3 +703,97 @@ fn comparisons_preserve_order_missing_rows_and_refuse_duplicates() {
         [] as [ic_testkit::benchmark::BenchmarkComparisonRow; 0],
     );
 }
+
+#[test]
+fn checked_markers_round_trip_and_refuse_ambiguous_fields_before_emission() {
+    use ic_testkit::benchmark::{BenchmarkMarkerError, try_format_marker};
+    let counters = BenchmarkCounters {
+        instructions: u128::MAX,
+        heap_bytes: 0,
+        memory_bytes: 42,
+    };
+    for prefix in ["", "bad|prefix", "bad\nprefix", "bad\rprefix"] {
+        assert_eq!(
+            try_format_marker(prefix, "suite/run:start", counters),
+            Err(BenchmarkMarkerError::InvalidPrefix)
+        );
+    }
+    for label in [
+        "",
+        ":start",
+        "suite/run",
+        "suite/run:other",
+        "suite|run:start",
+        "suite\nrun:end",
+        "suite\rrun:end",
+    ] {
+        assert_eq!(
+            try_format_marker("ICTK", label, counters),
+            Err(BenchmarkMarkerError::InvalidLabel)
+        );
+    }
+    for label in ["suite/界:start", "suite/with spaces:end"] {
+        let marker = try_format_marker(DEFAULT_PREFIX, label, counters).unwrap();
+        assert_eq!(marker, format_marker(DEFAULT_PREFIX, label, counters));
+        let parsed = parse_benchmark_events(&marker, &BenchmarkParserConfig::default());
+        assert_eq!(
+            parsed.malformed_markers,
+            [] as [ic_testkit::benchmark::MalformedBenchmarkMarker; 0]
+        );
+        assert_eq!(parsed.events.len(), 1);
+        assert_eq!(parsed.events[0].counters, counters);
+    }
+}
+
+#[test]
+fn origin_pairing_preserves_legacy_pairing_and_separates_prefixes_and_streams() {
+    use ic_testkit::benchmark::pair_benchmark_spans_by_origin;
+    let config = BenchmarkParserConfig {
+        prefixes: vec!["A".into(), "B".into()],
+        ..BenchmarkParserConfig::default()
+    };
+    for (prefix, source) in [
+        ("B", BenchmarkEventSource::Stdout),
+        ("A", BenchmarkEventSource::Stderr),
+    ] {
+        let mut events = parse_benchmark_events_from_source(
+            "A|suite/run:start|1|2|3",
+            &config,
+            BenchmarkEventSource::Stdout,
+        )
+        .events;
+        events.extend(
+            parse_benchmark_events_from_source(
+                &format!("{prefix}|suite/run:end|4|5|6"),
+                &config,
+                source,
+            )
+            .events,
+        );
+        assert_eq!(pair_benchmark_spans(&events).spans.len(), 1);
+        let strict = pair_benchmark_spans_by_origin(&events);
+        assert_eq!(
+            strict.spans,
+            [] as [ic_testkit::benchmark::BenchmarkSpan; 0]
+        );
+        assert_eq!(strict.unpaired_markers.len(), 2);
+    }
+    let events = parse_benchmark_events_from_source("A|suite/run:start|1|2|3\nB|suite/run:start|10|20|30\nA|suite/run:end|4|5|6\nB|suite/run:end|14|25|36", &config, BenchmarkEventSource::FetchedLog).events;
+    let strict = pair_benchmark_spans_by_origin(&events);
+    assert_eq!(
+        strict.unpaired_markers,
+        [] as [ic_testkit::benchmark::RawBenchmarkEvent; 0]
+    );
+    assert_eq!(
+        strict.invalid_spans,
+        [] as [ic_testkit::benchmark::InvalidBenchmarkSpan; 0]
+    );
+    assert_eq!(
+        strict
+            .spans
+            .iter()
+            .map(|span| span.delta.instructions)
+            .collect::<Vec<_>>(),
+        [3, 4]
+    );
+}

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.68.6] - Unreleased
+
+- Require one successful Cargo completion record before admitting a native
+  executable, preserving command-failure evidence.
+- Retry interrupted diagnostic input reads and refuse invalid reader byte counts
+  without panicking.
+- Wait for complete readiness in native cancellation tests, removing the macOS
+  file-creation race ([#251 — Qualify native cancellation readiness on macOS Intel](https://github.com/dragginzgame/ic-tooling/issues/251)).
+- Add checked benchmark emission and pairing by prefix/stream. The benchmark
+  driver now requests cooperative cancellation so active work and server cleanup
+  finish before interruption is reported.
+- Align CI checkout settings, cache MSRV compilation separately and retain small
+  successful qualification records. [Details](docs/changelog/0.68.md#0686---unreleased).
+
 ## [0.68.5] - 2026-10-25
 
 - Simplify startup deadline handling, baseline validation, cache completion and

@@ -91,6 +91,8 @@ pub struct NativeExecutable {
 /// # Errors
 /// Refuses invalid selection before command effects, missing/ambiguous metadata
 /// or artifacts, malformed/oversized messages, sink failures and command failures.
+/// A selected artifact also requires exactly one successful `build-finished`
+/// message. Synthetic Cargo launchers must retain that completion record.
 /// Original Host execution/status/cleanup causes remain downcastable.
 pub fn build_native_executable(
     spec: &NativeExecutableSpec<'_>,
@@ -136,6 +138,7 @@ pub fn build_native_executable(
     command.args(arguments.build_arguments());
     let mut decoder = MessageDecoder::new(spec.max_message_bytes, false);
     let mut executable = None;
+    let mut finished = None;
     execute(
         &mut command,
         &mut spawn,
@@ -150,6 +153,7 @@ pub fn build_native_executable(
                     &package_id,
                     spec,
                     &mut executable,
+                    &mut finished,
                     &mut diagnostics,
                 )
             })
@@ -161,9 +165,15 @@ pub fn build_native_executable(
             &package_id,
             spec,
             &mut executable,
+            &mut finished,
             &mut diagnostics,
         )
     })?;
+    match finished {
+        Some(true) => {}
+        Some(false) => return Err(protocol("invalid Cargo build completion").into()),
+        None => return Err(protocol("Cargo omitted successful build completion").into()),
+    }
     Ok(NativeExecutable {
         executable: executable.ok_or_else(|| protocol("Cargo omitted the selected executable"))?,
         target_directory,
@@ -214,9 +224,15 @@ fn selected_message(
     package_id: &str,
     spec: &NativeExecutableSpec<'_>,
     executable: &mut Option<PathBuf>,
+    finished: &mut Option<bool>,
     diagnostics: &mut impl Write,
 ) -> io::Result<()> {
     match message {
+        schema::Message::BuildFinished(result) => {
+            // Keep invalid completion sticky, but let execution/status failure
+            // remain primary before admitting the successful command's protocol.
+            *finished = Some(finished.is_none() && result.success);
+        }
         schema::Message::CompilerMessage(message) => {
             if let Some(rendered) = message.message.rendered {
                 diagnostics.write_all(rendered.as_bytes())?;

@@ -19,6 +19,7 @@ export TMPDIR="${fixture%/*}"
 mkdir -p "$fixture/exit-source/scripts/ci"
 cp "$root/scripts/ci/fixture-retention-probes.sh" "$fixture/exit-source/scripts/ci/"
 for input in scripts/ci/test-make-snapshot.sh scripts/release/test-adapter.sh \
+    scripts/ci/test-qualification-record.sh \
     scripts/publish/test-workspace.sh \
     scripts/ci/test-host-fixture-retention.sh scripts/ci/check-host-formatting.sh; do
     name="${input##*/}"
@@ -32,7 +33,7 @@ done
 mkdir "$fixture/relative-parent"
 ln -s "$fixture/relative-parent" "$fixture/relative-alias"
 for input in scripts/ci/test-make-snapshot.sh scripts/release/test-adapter.sh \
-    scripts/publish/test-workspace.sh; do
+    scripts/publish/test-workspace.sh scripts/ci/test-qualification-record.sh; do
     log="$fixture/relative-${input##*/}.log"
     (cd "$fixture"; TMPDIR=relative-alias bash "$root/$input") \
         > "$log" 2>&1 || {

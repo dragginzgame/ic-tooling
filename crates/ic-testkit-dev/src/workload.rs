@@ -9,7 +9,10 @@ use std::{
     error::Error,
     fmt, fs, io,
     num::NonZeroUsize,
-    sync::{Arc, Barrier},
+    sync::{
+        Arc, Barrier,
+        atomic::{AtomicBool, Ordering},
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -27,6 +30,36 @@ use ic_testkit_perf_probe::protocol::{InspectState, MutateState, SeedState, Stat
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 const TIMEOUT: Duration = Duration::from_secs(30);
+static SHUTDOWN: AtomicBool = AtomicBool::new(false);
+
+#[cfg(unix)]
+extern "C" fn request_shutdown(_signal: libc::c_int) {
+    SHUTDOWN.store(true, Ordering::Relaxed);
+}
+
+#[cfg(unix)]
+#[expect(
+    unsafe_code,
+    reason = "scoped standalone-worker dispositions with a lock-free handler"
+)]
+fn install_shutdown_handler() -> Result<ic_host_process::signal::SignalActions> {
+    // SAFETY: the standalone worker owns these dispositions until after its
+    // server and in-flight work are dropped. The handler only updates an atomic.
+    Ok(unsafe {
+        ic_host_process::signal::SignalActions::install(
+            &[libc::SIGINT, libc::SIGTERM, libc::SIGHUP],
+            request_shutdown,
+        )
+    }?)
+}
+
+fn check_shutdown() -> io::Result<()> {
+    if SHUTDOWN.load(Ordering::Relaxed) {
+        Err(io::Error::from(io::ErrorKind::Interrupted))
+    } else {
+        Ok(())
+    }
+}
 
 #[derive(Clone)]
 struct Recipe {
@@ -280,7 +313,10 @@ fn run_tasks(
                     barrier.wait();
                     (worker..iterations.get())
                         .step_by(workers.get())
-                        .map(sample)
+                        .map(|iteration| {
+                            check_shutdown()?;
+                            sample(iteration)
+                        })
                         .collect()
                 })
             })
@@ -300,6 +336,11 @@ fn run_tasks(
 }
 
 pub fn run(arguments: WorkerArguments) -> Result<()> {
+    // Install before creating any owned server. A stop arriving earlier may
+    // terminate this resource-free process; later stops must unwind ownership.
+    #[cfg(unix)]
+    let _shutdown_handler = install_shutdown_handler()?;
+    check_shutdown()?;
     let WorkerArguments {
         mode,
         capacity,
@@ -337,6 +378,7 @@ pub fn run(arguments: WorkerArguments) -> Result<()> {
         // an initial cold build as a warm acquisition.
         let mut held = Vec::new();
         for _ in 0..capacity.get() {
+            check_shutdown()?;
             let (fixture, outcome) = pool.acquire()?;
             if !matches!(outcome.disposition, BaselinePoolDisposition::Built) {
                 return Err(io::Error::other("initial slot was not built").into());
@@ -357,6 +399,7 @@ pub fn run(arguments: WorkerArguments) -> Result<()> {
             pooled_sample(&pool, &recipe, iteration)
         }),
     }?;
+    check_shutdown()?;
     samples.sort_by_key(|sample| sample.iteration);
     let teardown = Instant::now();
     drop(pool);

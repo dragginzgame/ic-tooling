@@ -64,14 +64,14 @@ fn ping() -> Text<4> {
     encode_with = "encode::<u64, {BenchmarkOnce::ID}>"
 )]
 fn benchmark_once() -> u64 {
-    performance::measure("probe/benchmark_once:start");
+    performance::try_measure("probe/benchmark_once:start").expect("static benchmark label");
 
     let mut acc = 0_u64;
     for n in 0..1_000 {
         acc = acc.wrapping_add(n * 3);
     }
 
-    performance::measure("probe/benchmark_once:end");
+    performance::try_measure("probe/benchmark_once:end").expect("static benchmark label");
     acc
 }
 
@@ -81,7 +81,8 @@ fn benchmark_once() -> u64 {
     encode_with = "encode_unit::<{BenchmarkTrap::ID}>"
 )]
 fn benchmark_start_then_trap() {
-    performance::measure("probe/benchmark_start_then_trap:start");
+    performance::try_measure("probe/benchmark_start_then_trap:start")
+        .expect("static benchmark label");
     ic_platform::ic0::trap(b"intentional perf probe trap");
 }
 

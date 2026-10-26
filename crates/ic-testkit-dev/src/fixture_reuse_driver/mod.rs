@@ -206,8 +206,13 @@ fn measure(
         }
         Ok(rss)
     })();
-    // Even sampling failure or Ctrl-C waits for the worker's RAII server
-    // cleanup. Killing the workload here would strand its owned process group.
+    if (observed.is_err() || INTERRUPTED.load(Ordering::Relaxed))
+        && let Err(error) = request_worker_shutdown(&mut child)
+    {
+        eprintln!("could not request worker shutdown: {error}");
+    }
+    // Ask the worker to stop scheduling, then wait for in-flight work and its
+    // RAII server cleanup. Never kill its group or impose a teardown deadline.
     let status = child.wait()?;
     check_interrupted()?;
     let rss = observed?;
@@ -225,6 +230,37 @@ fn measure(
     .map_err(Error::Artifact)?;
     let report = serde_json::from_slice(&bytes)?;
     Ok(CapturedRun { report, rss })
+}
+
+fn request_worker_shutdown(child: &mut std::process::Child) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        if child.try_wait()?.is_some() {
+            return Ok(());
+        }
+        let pid = libc::pid_t::try_from(child.id()).map_err(io::Error::other)?;
+        #[expect(
+            unsafe_code,
+            reason = "signal only this still-owned, unreaped direct child"
+        )]
+        // SAFETY: after try_wait returns None this owned child has not been reaped,
+        // so its PID cannot be reused before wait. Signal its handler, not its group.
+        let sent = unsafe { libc::kill(pid, libc::SIGTERM) } == 0;
+        if sent {
+            return Ok(());
+        }
+        let error = io::Error::last_os_error();
+        if error.raw_os_error() == Some(libc::ESRCH) {
+            Ok(())
+        } else {
+            Err(error)
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = child;
+        Err(io::Error::from(io::ErrorKind::Unsupported))
+    }
 }
 
 fn execute_command(command: &mut Command) -> Result<CompletedExecution, Error> {
@@ -957,7 +993,7 @@ mod tests {
         native_artifact["executable"] = json!(native_executable);
         fs::write(
             root.join("native-artifact-message.json"),
-            format!("{native_artifact}\n"),
+            format!("{native_artifact}\n{{\"reason\":\"build-finished\",\"success\":true}}\n"),
         )
         .unwrap();
         fs::write(root.join("artifact-message.json"), format!("{artifact}\n")).unwrap();
@@ -1235,15 +1271,23 @@ esac
     fn sampling_failure_waits_for_worker_completion() {
         let scratch = fixture_directory();
         let finished = scratch.path().join("finished");
+        let ready = scratch.path().join("ready");
         let result = measure(
             Command::new("/bin/sh")
                 .args([
                     "-c",
-                    "sleep 0.1; printf done > \"$1\"",
+                    "trap 'printf done > \"$1\"; exit 0' TERM; printf ready > \"$2\"; while :; do sleep 0.01; done",
                     "sampling-failure-worker",
                 ])
-                .arg(&finished),
+                .arg(&finished).arg(&ready),
             || {
+                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+                while !ready.is_file() {
+                    if std::time::Instant::now() >= deadline {
+                        return Err(ic_host_process::sampling::SamplingError::InvalidData("worker readiness timeout"));
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(1));
+                }
                 ic_host_process::sampling::snapshot(
                     0,
                     ic_host_process::tool::OutputLimits {
@@ -1438,7 +1482,7 @@ esac
             Command::new("/bin/sh")
                 .args([
                     "-c",
-                    "kill -INT \"$1\"; sleep 0.1; printf done > \"$2\"",
+                    "trap 'printf done > \"$2\"; exit 0' TERM; kill -INT \"$1\"; while :; do sleep 0.01; done",
                     "interrupted-worker",
                 ])
                 .arg(std::process::id().to_string())

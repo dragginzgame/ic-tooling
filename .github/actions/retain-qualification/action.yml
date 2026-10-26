@@ -1,0 +1,26 @@
+name: Retain successful IC Tooling qualification
+description: Record the exact clean source, lockfile, compiler and native host after the caller's job gates pass.
+inputs:
+  profile:
+    description: Native workspace qualification or the Rust 1.91 MSRV profile.
+    required: true
+  name:
+    description: Artifact identity including host and attempt.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Record qualification
+      shell: bash
+      env:
+        QUALIFICATION_PROFILE: ${{ inputs.profile }}
+      run: |
+        bash "$GITHUB_WORKSPACE/scripts/ci/record-qualification.sh" \
+          "$GITHUB_WORKSPACE" "$RUNNER_TEMP/qualification-$QUALIFICATION_PROFILE" \
+          "$QUALIFICATION_PROFILE"
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ runner.temp }}/qualification-${{ inputs.profile }}
+        if-no-files-found: error
+        retention-days: 14

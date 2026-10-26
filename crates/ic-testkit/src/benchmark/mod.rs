@@ -436,12 +436,57 @@ impl BenchmarkAggregateRow {
 }
 
 /// Format one marker using the supplied prefix, label and counters.
+///
+/// This raw formatter does not admit marker grammar. Use [`try_format_marker`]
+/// to refuse invalid fields before emission.
 #[must_use]
 pub fn format_marker(prefix: &str, label: &str, counters: BenchmarkCounters) -> String {
     format!(
         "{}|{}|{}|{}|{}",
         prefix, label, counters.instructions, counters.heap_bytes, counters.memory_bytes
     )
+}
+
+/// A marker field cannot be represented in the line-oriented marker grammar.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BenchmarkMarkerError {
+    /// Prefix is empty or contains a pipe, CR or LF.
+    InvalidPrefix,
+    /// Label contains a pipe/line break or lacks a nonempty span and start/end suffix.
+    InvalidLabel,
+}
+
+impl std::fmt::Display for BenchmarkMarkerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::InvalidPrefix => "invalid benchmark marker prefix",
+            Self::InvalidLabel => "invalid benchmark marker label",
+        })
+    }
+}
+
+impl std::error::Error for BenchmarkMarkerError {}
+
+/// Format one complete marker after admitting its prefix and start/end label.
+///
+/// Printable Unicode and spaces remain literal. No fields are escaped or trimmed.
+/// The parser must separately be configured to accept this prefix.
+///
+/// # Errors
+/// Refuses empty prefixes, pipe/CR/LF delimiters and labels without a nonempty
+/// span followed by `:start` or `:end`. Errors do not include the rejected text.
+pub fn try_format_marker(
+    prefix: &str,
+    label: &str,
+    counters: BenchmarkCounters,
+) -> Result<String, BenchmarkMarkerError> {
+    if prefix.is_empty() || prefix.contains(['|', '\r', '\n']) {
+        return Err(BenchmarkMarkerError::InvalidPrefix);
+    }
+    if label.contains(['|', '\r', '\n']) || split_label_kind(label).is_none() {
+        return Err(BenchmarkMarkerError::InvalidLabel);
+    }
+    Ok(format_marker(prefix, label, counters))
 }
 
 /// Parse markers without assigning a stream identity.
@@ -510,16 +555,38 @@ pub fn parse_benchmark_events_from_captured_output(
 
 /// Pair markers by suite and label, using the most recent unmatched start.
 #[must_use]
-#[expect(
-    clippy::missing_panics_doc,
-    reason = "only an internal nonempty-stack invariant can panic"
-)]
 pub fn pair_benchmark_spans(events: &[RawBenchmarkEvent]) -> BenchmarkSpanReport {
+    pair_spans(events, |event| (&event.suite, &event.span_label))
+}
+
+/// Pair only markers with the same prefix, stream, suite and span label.
+///
+/// This prevents a start from one prefix/stream consuming another's end. Order
+/// within each origin remains caller-supplied and nesting remains last-start-first.
+/// Prefix/stream are grouping facts, not authenticated producer identities;
+/// callers must keep independent producers with otherwise equal fields separate.
+/// Returned spans and subsequent aggregation retain their existing suite/label shape.
+#[must_use]
+pub fn pair_benchmark_spans_by_origin(events: &[RawBenchmarkEvent]) -> BenchmarkSpanReport {
+    pair_spans(events, |event| {
+        (
+            &event.prefix,
+            event.source.as_str(),
+            &event.suite,
+            &event.span_label,
+        )
+    })
+}
+
+fn pair_spans<'a, K: Ord>(
+    events: &'a [RawBenchmarkEvent],
+    key: impl Fn(&'a RawBenchmarkEvent) -> K,
+) -> BenchmarkSpanReport {
     let mut report = BenchmarkSpanReport::default();
-    let mut open_starts: BTreeMap<(&str, &str), Vec<&RawBenchmarkEvent>> = BTreeMap::new();
+    let mut open_starts = BTreeMap::<_, Vec<&RawBenchmarkEvent>>::new();
 
     for event in events {
-        let key = (event.suite.as_str(), event.span_label.as_str());
+        let key = key(event);
         match event.kind {
             BenchmarkEventKind::Start => open_starts.entry(key).or_default().push(event),
             BenchmarkEventKind::End => match open_starts.entry(key) {

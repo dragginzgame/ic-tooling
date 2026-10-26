@@ -946,15 +946,15 @@ directory; existing reports remain historical evidence and are not converted.
 
 
 The Wasm-only `performance` module uses Platform's raw counters and marker logging. Native
-producers use `benchmark::format_marker` with their own counters. Canister code
+producers use `benchmark::try_format_marker` with their own counters. Canister code
 emits compact markers around the measured region:
 
 ```rust,no_run
 use ic_testkit::performance;
 
-performance::measure("storage/write:start");
+performance::try_measure("storage/write:start").expect("static benchmark label");
 // measured work
-performance::measure("storage/write:end");
+performance::try_measure("storage/write:end").expect("static benchmark label");
 ```
 
 The default line format is:
@@ -962,6 +962,14 @@ The default line format is:
 ```text
 ICTK|<label>:<start-or-end>|<instructions>|<heap_bytes>|<memory_bytes>
 ```
+
+Checked emission refuses empty prefixes, pipe/CR/LF fields and missing or empty
+start/end span labels before printing. Raw `format_marker` and `measure` remain
+available with their existing behavior. For separately captured streams or multiple
+prefixes, use `pair_benchmark_spans_by_origin` to keep starts/ends within the same
+prefix and stream. The original pairing function continues grouping by suite and
+label. Origins do not authenticate producers or distinguish independent canisters
+that share all those fields; callers retain that separation and aggregation policy.
 
 For benchmarks, fetch the measured canister's logs and select
 `BenchmarkEventSource::FetchedLog`. Confirm that the capture contains the complete

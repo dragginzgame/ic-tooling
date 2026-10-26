@@ -17,6 +17,7 @@ mod tests;
 /// Target name and kind must identify exactly one artifact. Callers own the
 /// build command, lockfile, host target and custody of the resulting files.
 /// `maximum` bounds each JSON message before allocation.
+/// Interrupted reads are retried; impossible reader counts refuse as invalid data.
 ///
 /// # Errors
 /// Rejects malformed, oversized, unsuccessful, missing or ambiguous evidence,
@@ -63,11 +64,21 @@ pub fn library_artifact(
     let mut decoder = MessageDecoder::new(maximum, false);
     let mut buffer = [0; 8192];
     loop {
-        let count = input.read(&mut buffer)?;
+        let count = match input.read(&mut buffer) {
+            Ok(count) => count,
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+            Err(error) => return Err(error),
+        };
         if count == 0 {
             break;
         }
-        decoder.feed(&buffer[..count], &mut receive)?;
+        let bytes = buffer.get(..count).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "reader returned more bytes than its buffer can hold",
+            )
+        })?;
+        decoder.feed(bytes, &mut receive)?;
     }
     decoder.finish(&mut receive)?;
     let path = selected

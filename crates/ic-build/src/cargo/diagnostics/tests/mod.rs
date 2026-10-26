@@ -2,6 +2,30 @@ use super::*;
 use crate::fs_fixture::unique_temp_directory;
 use serde_json::json;
 
+struct InterruptedReader<'a> {
+    input: &'a [u8],
+    interrupt: bool,
+}
+
+impl Read for InterruptedReader<'_> {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        self.interrupt = !self.interrupt;
+        if !self.interrupt {
+            return Err(io::ErrorKind::Interrupted.into());
+        }
+        let count = buffer.len().min(7);
+        self.input.read(&mut buffer[..count])
+    }
+}
+
+struct InvalidReader;
+
+impl Read for InvalidReader {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        Ok(buffer.len() + 1)
+    }
+}
+
 #[test]
 fn exact_library_selection_rejects_incomplete_ambiguous_and_oversized_evidence() {
     let root = unique_temp_directory("diagnostic-artifacts");
@@ -21,6 +45,19 @@ fn exact_library_selection_rejects_incomplete_ambiguous_and_oversized_evidence()
         library_artifact(stream.as_bytes(), "fixture", &schema::TargetKind::Lib, 4096).unwrap(),
         path
     );
+    assert_eq!(
+        library_artifact(
+            InterruptedReader {
+                input: stream.as_bytes(),
+                interrupt: true,
+            },
+            "fixture",
+            &schema::TargetKind::Lib,
+            4096,
+        )
+        .unwrap(),
+        path
+    );
     for input in [
         artifact.clone(),
         format!("{artifact}{artifact}{finished}"),
@@ -35,6 +72,16 @@ fn exact_library_selection_rejects_incomplete_ambiguous_and_oversized_evidence()
     );
     assert!(library_artifact(stream.as_bytes(), "fixture", &schema::TargetKind::Lib, 3).is_err());
     fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn impossible_reader_count_refuses_without_panicking() {
+    assert_eq!(
+        library_artifact(InvalidReader, "fixture", &schema::TargetKind::Lib, 4096)
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::InvalidData
+    );
 }
 
 #[test]
