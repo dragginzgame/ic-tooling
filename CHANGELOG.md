@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.68.6] - Unreleased
+## [0.68.6] - 2026-10-26
 
 - Require one successful Cargo completion record before admitting a native
   executable, preserving command-failure evidence.
