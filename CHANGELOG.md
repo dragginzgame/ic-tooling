@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.68.8] - Unreleased
+
+- Refresh Shared Tooling to 0.26.20. Normal release commands start from current
+  committed metadata; recovering a saved attempt uses `release-resume VERSION=X.Y.Z`.
+  Retention probes explain unsupported fixture layouts without leaving partial
+  generated scripts. [Details](docs/changelog/0.68.md#0688---unreleased).
+
 ## [0.68.7] - 2026-10-26
 
 - Adopt IC Platform 0.6.18 and Wire 0.7.16 as workspace minimums, keeping

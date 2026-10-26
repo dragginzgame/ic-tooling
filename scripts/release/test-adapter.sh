@@ -490,8 +490,8 @@ for scenario in unnumbered misplaced-unnumbered duplicate duplicate-whitespace c
         unnumbered)
             printf '# Changelog\n\n## [Draft]\n\n- Candidate without identity.\n' > CHANGELOG.md ;;
         misplaced-unnumbered)
-            cp source/CHANGELOG.md CHANGELOG.md
-            printf '\n## [Draft]\n\n- Candidate without identity.\n' >> CHANGELOG.md ;;
+            printf '# Changelog\n\n## [%s]\n\n- Candidate notes.\n\n## [Draft]\n\n- Candidate without identity.\n\n## [%s]\n\n- History.\n' \
+                "$RELEASE_VERSION" "$RELEASE_PREVIOUS" > CHANGELOG.md ;;
         duplicate)
             cp source/CHANGELOG.md CHANGELOG.md
             printf '\n## [%s]\n\n- Duplicate.\n' "$RELEASE_VERSION" >> CHANGELOG.md ;;
@@ -748,16 +748,16 @@ if bash "$adapter" committed-check > rejected-receipt.log 2>&1; then
     echo 'Committed check accepted conflicting validation evidence' >&2; exit 1
 fi
 
-# With no pending section, the previous undated entry remains history and the
-# shared finalizer inserts exactly one candidate during preparation.
+# With no pending section, the previous undated entry and its archived Draft
+# remain history; preparation inserts exactly one candidate without altering them.
 cp source/Cargo.toml source/Cargo.lock .
-printf '# Changelog\n\n## [%s]\n\n- Undated imported history.\n' "$RELEASE_PREVIOUS" > CHANGELOG.md
+printf '# Changelog\n\n## [%s]\n\n- Undated imported history.\n\n## [Draft]\n\n- Archived label.\n' "$RELEASE_PREVIOUS" > CHANGELOG.md
 : > "$ADAPTER_EVENTS"
 bash "$adapter" preflight > history-only-preflight.log 2>&1
 cmp accepted-events "$ADAPTER_EVENTS"
 bash "$adapter" verify > history-only-verify.log 2>&1
 bash "$adapter" prepare > history-only-prepare.log 2>&1
-printf '# Changelog\n\n## [%s] - %s\n\n## [%s]\n\n- Undated imported history.\n' "$RELEASE_VERSION" "$RELEASE_DATE" "$RELEASE_PREVIOUS" > expected-notes
+printf '# Changelog\n\n## [%s] - %s\n\n## [%s]\n\n- Undated imported history.\n\n## [Draft]\n\n- Archived label.\n' "$RELEASE_VERSION" "$RELEASE_DATE" "$RELEASE_PREVIOUS" > expected-notes
 cmp expected-notes CHANGELOG.md
 
 # Both pending spellings and horizontal whitespace finalize through the actual

@@ -2,7 +2,7 @@
 
 Host profiles below remain independent. Build and Testkit share the root
 workspace and release matrix, with separate optimizer, browser-session and
-PocketIC lifecycle workflow jobs. `make testkit-check` runs focused Testkit
+PocketIC lifecycle workflow jobs. `make testkit-check` runs aggregate Testkit
 qualification using the prepared server; `make testkit-wasm-check` and
 `make testkit-msrv` qualify deployed profiles. `make testkit-package-check`
 qualifies all ten public archives through Build. Private packages remain
@@ -46,6 +46,12 @@ Select one changed crate with `PACKAGE=<crate>` for `make check`, `make clippy`,
 `make docs-check` or `make test`. Artifact checks use its actual enabled gzip,
 and Wasm features; production filesystem dependencies select none of them.
 Check target-directory ownership before compilation. Preserve failure logs and artifacts.
+The Testkit, feature-graph and MSRV qualification targets above are aggregates;
+select the affected Cargo test or profile below for ordinary development.
+Tooling changes use the affected consumer check: `make release-adapter-check`,
+`bash scripts/ci/test-make-snapshot.sh` or
+`bash scripts/ci/test-host-fixture-retention.sh`. The shared
+[validation policy](../DRAGGINZGAME.md#validation-and-evidence) owns execution cadence.
 
 `make clippy-workspace` is the existing full-workspace, all-target/all-feature
 warning-denied lint gate. CI/release validation runs it before expensive tests

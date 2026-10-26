@@ -1,20 +1,8 @@
 # IC Tooling Agent Rules
 
 Read docs/status/current.md first, then [DRAGGINZGAME.md](DRAGGINZGAME.md).
-The baseline is Shared Tooling 0.26.14 revision e14050bcc0c627f9c8a9064051699cac44fd7ab3,
+The baseline is Shared Tooling 0.26.20 revision a7f85d45d4212d4c39225f58597580560a333550,
 recorded with exact file digests in [.shared-tooling.snapshot](.shared-tooling.snapshot).
-
-## Maintainer-approved flow exception — 2026-10-26
-
-To reduce repeated agent work while the pinned baseline is awaiting adoption:
-read its adoption, scope, ownership, complete-change, validation and handoff
-sections at startup; read specialist sections and linked guides when relevant.
-Finish a coherent edit batch, then run selected checks once. During development,
-check to answer a specific question; reuse passing evidence for unchanged inputs.
-Detailed line metrics and symbol inventories are opt-in, including for inspections.
-This scoped exception changes reading, cadence and reporting only. Product,
-recovery and release requirements remain. Retire it when adopting a reviewed
-Shared baseline with these rules; do not patch the current snapshot in place.
 
 ## Local rules
 
