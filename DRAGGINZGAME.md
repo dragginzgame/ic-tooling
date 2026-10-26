@@ -149,7 +149,8 @@ specific-attempt recovery uses `release-resume`. Preserve required full validati
 
 ## Changelogs and artifact preservation
 
-Read [changelog rules](rules/changelogs.md) when updating notes. Preserve build and
+Use IcyDB-style emoji category sections in root release notes; read the
+[changelog rules](rules/changelogs.md) when updating them. Preserve build and
 recovery evidence on success, failure and retry; no implicit cleanup. See
 [artifact preservation](rules/engineering-details.md#changelogs-and-artifact-preservation).
 

@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.26.20
+# version	0.26.21
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	a7f85d45d4212d4c39225f58597580560a333550
+revision	66c91c4412856baa147482e648fc80428db8b179
 # entrypoint	.githooks/pre-commit
 # entrypoint	.github/actions/prepare-common-tools/action.yml
 # entrypoint	.github/actions/retain-failure-evidence/action.yml
@@ -119,7 +119,7 @@ revision	a7f85d45d4212d4c39225f58597580560a333550
 file	0a24db6fb954511ecd0885c263309fd973817613483ce05bfb5473bf1f951511	x	.githooks/pre-commit
 file	4f8004bdbb5052394b8f313a6f65d30e8230a12a019c666c6d412cd3779b8df0	-	.github/actions/prepare-common-tools/action.yml
 file	26a269c0e63125e8bd939578a64a6a67dbc5280cd3fbfd7da8b9c8e4d44cc6d5	-	.github/actions/retain-failure-evidence/action.yml
-file	6cfb92f17d07c051fbd2f2f000176b7eede69f412596943fd3616285f724bb09	-	DRAGGINZGAME.md
+file	6bbddc6caf450fbc987dcef66c8756eee1d7571e74b49529ff05708aaff206bf	-	DRAGGINZGAME.md
 file	d5933681ed28d3a4cc34c1d5a6cc5701261f5f947f167863e76178b474861f6e	-	audits/README.md
 file	bf4d6e18b578aa84b9f96a7c6c0794852636bce48b28bff4664e531dd79eaf21	-	audits/code-hygiene.md
 file	ffdca09602c44c8aff8fc2a17588b20eb6a56e2e71fb6d42ad75087fdd65819b	-	audits/complexity-and-technical-debt.md
@@ -154,7 +154,7 @@ file	1c1712e19d3c8328a4664776dc4faf6d4b081ee7e4010a57e46f0a93829f4c17	-	make/too
 file	32582e5d76c9e6988f4431a96554ba298e52ddb8a424945c7ea4b98815ec0889	-	rules/agent-maintenance.md
 file	2f30364bf420a76ba27579b3942cb6657fc456695ccd5d0fb47c97600963c07b	-	rules/cargo-dependencies.md
 file	6c25fe09f631d92a88d8ebb62cc20279f57f43a753d3a19dc254bb6ff0433b76	-	rules/change-reporting.md
-file	3c88853136d4ad9962b8c01caacd9607192164c2d4aeb901e36b4e3da81fdf99	-	rules/changelogs.md
+file	f5b493200ef3aaa2f08b27b4a644345005d5e86431dc4cb33fd27844056f5ff0	-	rules/changelogs.md
 file	a662981d8f9e6da91314d06ba6ae6272f1cd48f7e98b0bbd258abf614367a118	-	rules/contributions.md
 file	74fe8a45d5235ca4126b2ba9f7db1082d4f3414d0294ad8d5f3ddaf279d2f9c0	-	rules/dependency-pinning.md
 file	ea61b8d4e501011f73729ed56613c365b14a947c8ca18d66dced4990cbdb40ea	-	rules/git-hooks.md

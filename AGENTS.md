@@ -1,7 +1,7 @@
 # IC Tooling Agent Rules
 
 Read docs/status/current.md first, then [DRAGGINZGAME.md](DRAGGINZGAME.md).
-The baseline is Shared Tooling 0.26.20 revision a7f85d45d4212d4c39225f58597580560a333550,
+The baseline is Shared Tooling 0.26.21 revision 66c91c4412856baa147482e648fc80428db8b179,
 recorded with exact file digests in [.shared-tooling.snapshot](.shared-tooling.snapshot).
 
 ## Local rules

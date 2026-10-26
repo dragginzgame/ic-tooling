@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.68.9] - Unreleased
+
+### 📝 Summary
+
+- Adopt Shared Tooling 0.26.21 and its current-release changelog sections.
+- Raise IC Platform and Wire minimums to 0.6.19 and 0.7.17, and refresh compatible
+  locked dependencies while preserving Rust 1.91 and existing feature boundaries.
+  [Details](docs/changelog/0.68.md#0689---unreleased).
+
 ## [0.68.8] - 2026-10-26
 
 ### 📝 Summary

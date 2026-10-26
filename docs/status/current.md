@@ -2,50 +2,55 @@
 
 ## Source and ownership
 
-This checkout starts at `ae80ee173250848087b8da3322b68a1ed6e2feba`: version
-0.68.7 plus the merged agent-flow clarification in PR #253. Shared Tooling
-adoption is prepared locally in the [0.68.8 draft](../changelog/0.68.md#0688---unreleased).
-Own package versions remain 0.68.7; the index, Git refs and Cargo.lock are unchanged.
-Platform 0.6.18 and Wire/derive 0.7.16 remain selected.
+This checkout starts at `e0ce26f933187eea1c45d8cb3dfb4173704105b5`: version
+0.68.8 plus merged [PR #254 — Changelog emoji sections](https://github.com/dragginzgame/ic-tooling/pull/254).
+Shared Tooling and dependency adoption are prepared locally in the
+[0.68.9 draft](../changelog/0.68.md#0689---unreleased). Own package versions
+remain 0.68.8 and the index is unchanged. Platform/macros 0.6.19, Wire/derive
+0.7.17 and openssl-probe 0.2.2 are selected in the updated lock.
 
 Host, Build and Testkit retain the [extraction boundaries](../extraction.md).
 Consumers own credentials, budgets, targets, retries, installation and recovery.
-Shared Tooling is now 0.26.20 at `a7f85d45d4212d4c39225f58597580560a333550`,
+Shared Tooling is now 0.26.21 at `66c91c4412856baa147482e648fc80428db8b179`,
 recorded in [the snapshot](../../.shared-tooling.snapshot). Rust edition 2024,
 MSRV 1.91 and native Linux/macOS 15 Intel and Apple Silicon remain required.
 
 ## Current local changes
 
-The canonical exporter refreshed the existing entrypoint selection and added
-its required engineering-details and RPC-budget companions. The compact core
-now owns task-specific reading, batched focused checks, evidence reuse and
-optional accounting; the temporary local flow exception is retired. Existing
-executable-tool pins and workflow selections remain unchanged.
+The canonical exporter refreshed the existing snapshot selection to the reviewed
+0.26.21 commit. Only the compact baseline and changelog rules changed; the
+shared executable payloads retain their prior qualification. Root notes use the
+new emoji sections; older release bullets, links, versions and dates are preserved.
+Existing executable-tool pins and workflow selections remain unchanged.
 
-Normal release commands start fresh from current committed metadata. Recovery
-of a specific saved attempt uses `make release-resume VERSION=X.Y.Z`. A fresh
-attempt replaces that candidate's stale plan, staging roster and PR receipt;
-other historical attempts and build/validation evidence remain retained.
-Current dirty source, locks, candidate tags and destination conflicts still refuse.
-No release command or state cleanup was executed during this adoption.
+Platform and Wire minimums and native examples match the selected releases.
+Their four runtime/macro source directories are unchanged from the previous
+releases. The openssl-probe patch adds a Solaris certificate-file location;
+Linux/macOS probing is unchanged. Cargo selected the compatible updates under
+Rust 1.91; upstream exact requirements such as PocketIC 16.1.0 on thiserror
+2.0.18 remain intact. No override or new feature selection was added.
 
-Retention helpers diagnose unsupported initialization, EXIT-trap and assertion
-layouts without leaving executable partial probes. The consumer release fixture
-now distinguishes a current unnumbered candidate from an archived Draft label:
-it retains the former refusal and verifies the latter's exact preservation.
+Normal increments and exact-attempt recovery retain the delivered
+[release contract](../releases.md). No release command or state cleanup was
+executed during this adoption.
 
 ## Qualification and evidence
 
-Adoption evidence is under `/tmp/ic-tooling-shared-02620.1xOqGH/`, including the
-starting tree, isolated committed producer, impact preview and exporter results.
-The unchanged tool catalogs need no installation. Changed shell sources pass
-existing ShellCheck 0.11.0. Consumer retention qualification passes, including
-Make routing and release/publication fixtures with substituted external effects,
-failure retention and relative-path execution. Snapshot and documentation-link
-checks pass. An outdated archived-Draft refusal was corrected; its original
-failed fixture remains at `/tmp/host-fixture-retention.8AIbwe/`.
-Native macOS execution of this adoption remains outstanding.
-No full workspace/release gate, commit, push, release or publication was run.
+Current evidence is under `/tmp/ic-tooling-adopt-02621.fYXFtb/`: starting source,
+registry observations, resolver previews, selected lock and source review.
+PR #254 was reviewed and merged normally, and the clean local checkout was
+fast-forwarded before adoption edits. Removing its sole added section restores
+the earlier changelog byte-for-byte. On actual Rust 1.91, nine Wire tests, five
+Agent tests, deployed Wasm compilation and the live Linux PocketIC probe pass.
+Native/Wasm graph policies, snapshot integrity, dependency declarations,
+manifest ordering and documentation-link checks also pass. Native macOS
+execution of the new selections remains outstanding. No full workspace/release
+gate or release/publication command was run; adoption edits remain uncommitted.
+
+Earlier Shared 0.26.20 adoption evidence remains under
+`/tmp/ic-tooling-shared-02620.1xOqGH/`, including the consumer Make, release and
+retention checks. Preserve its original failed archived-Draft fixture at
+`/tmp/host-fixture-retention.8AIbwe/`.
 
 The earlier cleanup and Platform/Wire adoption evidence remains under
 `/tmp/ic-tooling-cleanup-0687-20261026/` and `/tmp/ic-tooling-adopt-20261026/`.
