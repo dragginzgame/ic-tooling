@@ -9,20 +9,20 @@ Small canisters used by `ic-testkit` to test its own PocketIC harness behavior.
 The fixture package lives under `crates/ic-testkit-perf-probe` in the root
 workspace. It is a test canister, not an application example.
 
-The probe selects published `ic-platform` 0.5.0's `cdk` feature for entrypoint
+The probe selects published `ic-platform` 0.6.18's `cdk` feature for entrypoint
 generation and Platform's maintained runtime. Probe methods use bounded IC Wire controls shared
 with the native callers; rebuild the probe and callers together when changing
 that private protocol. Its Wasm normal/build graph contains neither Candid nor
 full `ic-cdk`; Platform retains the shared executor 2.0.0 and raw ic0 1.2.0.
 The published Testkit Wasm library independently selects only Platform's raw
 system boundary; the probe's executor/runtime features belong to this test canister.
-Platform 0.5 rejects the former no-op `hidden` option; the probe omits it while
-retaining its guards, explicit codecs and existing exported method names.
+Entry points omit the unsupported no-op `hidden` option while
+retaining their guards, explicit codecs and existing exported method names.
 
 ## Current Fixtures
 
 - `ic-testkit-perf-probe`: emits compact `ICTK|...` benchmark markers via
-  `ic_testkit::performance::measure`. It exposes `ping`,
+  `ic_testkit::performance::try_measure`. It exposes `ping`,
   `benchmark_once`, and `benchmark_start_then_trap` to exercise successful
   spans and unmatched start markers after a trap.
 

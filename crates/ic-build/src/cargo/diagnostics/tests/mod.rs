@@ -31,14 +31,16 @@ fn exact_library_selection_rejects_incomplete_ambiguous_and_oversized_evidence()
     let root = unique_temp_directory("diagnostic-artifacts");
     let path = root.join("fixture.rlib");
     fs::write(&path, []).unwrap();
-    let artifact = json!({
-        "reason":"compiler-artifact", "package_id":"path+file:///fixture#0.1.0",
-        "manifest_path":"/fixture/Cargo.toml",
-        "target":{"kind":["lib"],"crate_types":["lib"],"name":"fixture",
-            "src_path":"/fixture/src/lib.rs","edition":"2024","doc":true,"doctest":true,"test":true},
-        "profile":{"opt_level":"0","debuginfo":0,"debug_assertions":true,"overflow_checks":true,"test":false},
-        "features":[],"filenames":[path],"executable":null,"fresh":false
-    }).to_string() + "\n";
+    let target = json!({"kind":["lib"],"crate_types":["lib"],"name":"fixture",
+        "src_path":"/fixture/src/lib.rs","edition":"2024","doc":true,"doctest":true,"test":true});
+    let artifact = crate::cargo_fixture::artifact_message(
+        "path+file:///fixture#0.1.0",
+        &target,
+        &[path.as_path()],
+        None,
+    )
+    .to_string()
+        + "\n";
     let finished = "{\"reason\":\"build-finished\",\"success\":true}\n";
     let stream = format!("{artifact}{finished}");
     assert_eq!(

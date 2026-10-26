@@ -45,6 +45,7 @@ impl MeasuredRun {
         case: &Case,
         rss: RssMeasurements,
     ) -> Result<Self, Error> {
+        let invalid_duration = |value: f64| !value.is_finite() || value < 0.0;
         if metrics.mode != case.mode
             || metrics.capacity != case.capacity.get()
             || metrics.iterations != options.iterations.get()
@@ -70,7 +71,7 @@ impl MeasuredRun {
             metrics.pool_teardown_ms,
             metrics.server_teardown_ms,
         ] {
-            if !value.is_finite() || value < 0.0 {
+            if invalid_duration(value) {
                 return Err(Error::InvalidData("invalid worker lifecycle duration"));
             }
         }
@@ -83,7 +84,7 @@ impl MeasuredRun {
                 .named_values()
                 .into_iter()
                 .filter_map(|(_, value)| value)
-                .any(|value| !value.is_finite() || value < 0.0)
+                .any(invalid_duration)
             {
                 return Err(Error::InvalidData("invalid worker phase duration"));
             }
@@ -92,7 +93,7 @@ impl MeasuredRun {
             if sample.iteration != iteration
                 || [sample.body_ms, sample.release_ms, sample.total_ms]
                     .into_iter()
-                    .any(|value| !value.is_finite() || value < 0.0)
+                    .any(invalid_duration)
             {
                 return Err(Error::InvalidData(
                     "invalid worker task identity, phases or durations",

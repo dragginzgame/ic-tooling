@@ -14,15 +14,19 @@ mod test_support;
 mod tests;
 
 /// A Candid extraction failed, retaining process bytes where invocation occurred.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum ExtractionError {
     /// The source path was relative; no tool was invoked.
+    #[error("Candid source path must be absolute")]
     SourcePath,
     /// Source inspection failed before invocation.
-    Input(ArtifactError),
+    #[error("Candid source inspection failed: {0}")]
+    Input(#[source] ArtifactError),
     /// Tool verification or execution failed; execution failures retain evidence.
-    Tool(ToolError),
+    #[error("{0}")]
+    Tool(#[source] ToolError),
     /// Source could not be re-inspected after successful execution.
+    #[error("Candid source re-inspection failed")]
     SourceInspection {
         /// Inspection failure.
         source: ArtifactError,
@@ -30,6 +34,7 @@ pub enum ExtractionError {
         evidence: Box<CompletedExecution>,
     },
     /// Source bytes changed between preflight and post-extraction observation.
+    #[error("Candid source changed during extraction")]
     SourceChanged {
         /// Identity observed before invocation.
         before: ArtifactIdentity,
@@ -38,27 +43,6 @@ pub enum ExtractionError {
         /// Bounded process output that must not be published as valid extraction.
         evidence: Box<CompletedExecution>,
     },
-}
-
-impl fmt::Display for ExtractionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::SourcePath => f.write_str("Candid source path must be absolute"),
-            Self::Input(source) => write!(f, "Candid source inspection failed: {source}"),
-            Self::Tool(source) => source.fmt(f),
-            Self::SourceInspection { .. } => f.write_str("Candid source re-inspection failed"),
-            Self::SourceChanged { .. } => f.write_str("Candid source changed during extraction"),
-        }
-    }
-}
-impl std::error::Error for ExtractionError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Input(source) | Self::SourceInspection { source, .. } => Some(source),
-            Self::Tool(source) => Some(source),
-            _ => None,
-        }
-    }
 }
 
 /// Source/tool identities and exact bounded process evidence, without text conversion.

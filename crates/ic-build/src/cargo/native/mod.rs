@@ -1,7 +1,7 @@
 //! Selected native executables from Cargo's own package and artifact messages.
 
 use super::{
-    messages::{MessageDecoder, artifact_matches},
+    messages::{BuildCompletion, MessageDecoder, artifact_matches},
     observation::{metadata_arguments, schema},
     selection::CargoSelection,
 };
@@ -138,7 +138,7 @@ pub fn build_native_executable(
     command.args(arguments.build_arguments());
     let mut decoder = MessageDecoder::new(spec.max_message_bytes, false);
     let mut executable = None;
-    let mut finished = None;
+    let mut finished = BuildCompletion::default();
     execute(
         &mut command,
         &mut spawn,
@@ -169,11 +169,7 @@ pub fn build_native_executable(
             &mut diagnostics,
         )
     })?;
-    match finished {
-        Some(true) => {}
-        Some(false) => return Err(protocol("invalid Cargo build completion").into()),
-        None => return Err(protocol("Cargo omitted successful build completion").into()),
-    }
+    finished.require_success()?;
     Ok(NativeExecutable {
         executable: executable.ok_or_else(|| protocol("Cargo omitted the selected executable"))?,
         target_directory,
@@ -224,14 +220,14 @@ fn selected_message(
     package_id: &str,
     spec: &NativeExecutableSpec<'_>,
     executable: &mut Option<PathBuf>,
-    finished: &mut Option<bool>,
+    finished: &mut BuildCompletion,
     diagnostics: &mut impl Write,
 ) -> io::Result<()> {
     match message {
         schema::Message::BuildFinished(result) => {
             // Keep invalid completion sticky, but let execution/status failure
             // remain primary before admitting the successful command's protocol.
-            *finished = Some(finished.is_none() && result.success);
+            finished.record(result.success);
         }
         schema::Message::CompilerMessage(message) => {
             if let Some(rendered) = message.message.rendered {

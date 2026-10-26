@@ -204,6 +204,44 @@ fn invalid_responses_preserve_typed_refusal_and_context_without_payload_logs() {
 }
 
 #[test]
+fn sixteen_bit_responses_preserve_boundaries_and_malformed_refusals() {
+    for (payload, expected) in [
+        ([0xff, 0xff, 0x03].as_slice(), Some((u16::MAX, i16::MIN))),
+        (
+            [0xfe, 0xff, 0x03].as_slice(),
+            Some((u16::MAX - 1, i16::MAX)),
+        ),
+        ([0].as_slice(), Some((0, 0))),
+        ([0x80, 0].as_slice(), None),
+        ([0xff, 0xff, 0x04].as_slice(), None),
+        ([0xff, 0xff].as_slice(), None),
+    ] {
+        // Start with an empty response frame, then append independently chosen
+        // unsigned/zigzag integer bytes rather than asking the encoder for them.
+        let mut reply = native::encode_response(SAMPLE.method_id, &(), LIMITS).unwrap();
+        reply.extend_from_slice(payload);
+        let ctx = context(
+            "query_call",
+            SAMPLE,
+            Principal::anonymous(),
+            Principal::anonymous(),
+        );
+        let unsigned = call_wire::<(), u16>(ctx.clone(), SAMPLE, &(), |_| Ok(reply.clone()));
+        let signed = call_wire::<(), i16>(ctx, SAMPLE, &(), |_| Ok(reply.clone()));
+        if let Some(expected) = expected {
+            assert_eq!((unsigned.unwrap(), signed.unwrap()), expected);
+        } else {
+            for result in [unsigned.map(i32::from), signed.map(i32::from)] {
+                let Err(WireCallError::Decode { source, .. }) = result else {
+                    panic!("malformed 16-bit response must retain its codec refusal");
+                };
+                assert_eq!(source, ic_wire::Error::Malformed);
+            }
+        }
+    }
+}
+
+#[test]
 fn declared_decoder_work_budget_is_not_replaced_with_a_default() {
     let reply = native::encode_response(SAMPLE.method_id, &Ok::<u64, ()>(1), LIMITS).unwrap();
     // Native decoding owns both work-budget and oversized-frame admission.

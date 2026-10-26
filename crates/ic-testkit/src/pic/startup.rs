@@ -788,6 +788,40 @@ impl StartupDeadline {
             deadline: startup_deadline(started, timeout)?,
         })
     }
+
+    fn check_instance_deadline(
+        &self,
+        server: &mut Option<ManagedServer>,
+    ) -> Result<Instant, PocketIcStartupError> {
+        let now = Instant::now();
+        if now >= self.deadline {
+            return Err(finalize_failure(
+                PocketIcStartupError::new(PocketIcStartupFailure::InstanceCreationTimeout {
+                    timeout: self.timeout,
+                }),
+                None,
+                server.take(),
+            ));
+        }
+        Ok(now)
+    }
+
+    fn admit_instance<T>(
+        &self,
+        instance: T,
+        server_url: &str,
+        server: &mut Option<ManagedServer>,
+    ) -> Result<PocketIcInstance<T>, PocketIcStartupError> {
+        self.check_instance_deadline(server)?;
+        check_server(server)?;
+        Ok(PocketIcInstance {
+            instance,
+            server: server.take().map(|server| PocketIcManagedServer {
+                server,
+                url: server_url.to_owned(),
+            }),
+        })
+    }
 }
 
 fn startup_deadline(started: Instant, timeout: Duration) -> Result<Instant, PocketIcStartupError> {
@@ -834,16 +868,7 @@ fn await_builder(
     server: &mut Option<ManagedServer>,
 ) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
     loop {
-        let now = Instant::now();
-        if now >= startup.deadline {
-            return Err(finalize_failure(
-                PocketIcStartupError::new(PocketIcStartupFailure::InstanceCreationTimeout {
-                    timeout: startup.timeout,
-                }),
-                None,
-                server.take(),
-            ));
-        }
+        let now = startup.check_instance_deadline(server)?;
         let remaining = startup.deadline.saturating_duration_since(now);
         let wait = if server.is_some() {
             remaining.min(STARTUP_POLL_INTERVAL)
@@ -852,14 +877,7 @@ fn await_builder(
         };
         match receiver.recv_timeout(wait) {
             Ok(Ok(pocket_ic)) => {
-                check_server(server)?;
-                return Ok(PocketIcInstance {
-                    instance: pocket_ic,
-                    server: server.take().map(|server| PocketIcManagedServer {
-                        server,
-                        url: server_url.to_owned(),
-                    }),
-                });
+                return startup.admit_instance(pocket_ic, server_url, server);
             }
             Ok(Err(source)) => {
                 return Err(finalize_failure(
@@ -931,16 +949,7 @@ async fn build_async_bounded(
     // Drop this local before the pending upstream future on cancellation.
     let mut server = server;
     loop {
-        let now = Instant::now();
-        if now >= startup.deadline {
-            return Err(finalize_failure(
-                PocketIcStartupError::new(PocketIcStartupFailure::InstanceCreationTimeout {
-                    timeout: startup.timeout,
-                }),
-                None,
-                server,
-            ));
-        }
+        let now = startup.check_instance_deadline(&mut server)?;
         check_server(&mut server)?;
         let next_check = if server.is_some() {
             now + startup
@@ -952,25 +961,7 @@ async fn build_async_bounded(
         };
         match tokio::time::timeout_at(next_check.into(), construction.as_mut()).await {
             Ok(Ok(instance)) => {
-                if Instant::now() >= startup.deadline {
-                    return Err(finalize_failure(
-                        PocketIcStartupError::new(
-                            PocketIcStartupFailure::InstanceCreationTimeout {
-                                timeout: startup.timeout,
-                            },
-                        ),
-                        None,
-                        server,
-                    ));
-                }
-                check_server(&mut server)?;
-                return Ok(PocketIcInstance {
-                    instance,
-                    server: server.map(|server| PocketIcManagedServer {
-                        server,
-                        url: server_url.to_owned(),
-                    }),
-                });
+                return startup.admit_instance(instance, server_url, &mut server);
             }
             Ok(Err(error)) => return Err(finalize_failure(error, None, server)),
             Err(_) => {}
@@ -1300,6 +1291,34 @@ mod tests {
         process::Command,
         sync::mpsc,
     };
+
+    #[test]
+    fn completed_instances_must_still_meet_the_startup_deadline() {
+        let started = Instant::now();
+        let startup = super::StartupDeadline {
+            started,
+            timeout: Duration::from_secs(60),
+            deadline: started + Duration::from_secs(60),
+        };
+        let mut server = None;
+        let instance = startup
+            .admit_instance(7_u8, "http://localhost/", &mut server)
+            .unwrap();
+        assert_eq!(*instance.instance(), 7);
+        assert!(server.is_none());
+        let expired = super::StartupDeadline {
+            deadline: started,
+            ..startup
+        };
+        let error = expired
+            .admit_instance(7_u8, "http://localhost/", &mut server)
+            .err()
+            .expect("completed instance after the deadline must refuse admission");
+        assert!(
+            matches!(error.failure(), PocketIcStartupFailure::InstanceCreationTimeout { timeout } if *timeout == Duration::from_secs(60))
+        );
+        assert!(server.is_none());
+    }
 
     #[test]
     fn original_failure_output_and_both_typed_cleanup_reports_survive_projection() {

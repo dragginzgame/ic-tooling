@@ -252,9 +252,10 @@ pub enum BaselinePoolDisposition {
 
 /// One failed recipe or contract stage while preparing a baseline slot.
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum BaselinePoolPreparationError<E> {
     /// Caller-owned recipe logic returned an error.
+    #[error("baseline {stage} failed: {source}")]
     Recipe {
         /// Failed lifecycle stage.
         stage: BaselinePreparationStage,
@@ -262,9 +263,11 @@ pub enum BaselinePoolPreparationError<E> {
         source: E,
     },
     /// Canonical restoration of the captured snapshot set failed.
-    Restore(ControllerSnapshotError),
+    #[error("baseline canister restore failed: {0}")]
+    Restore(#[source] ControllerSnapshotError),
     /// Typed non-snapshot reset evidence violated the pool contract.
-    Contract(BaselinePoolContractError),
+    #[error("baseline pool contract failed: {0}")]
+    Contract(#[source] BaselinePoolContractError),
 }
 
 /// Failure to acquire a validated baseline-pool lease.
@@ -846,36 +849,6 @@ impl std::fmt::Display for BaselinePreparationStage {
     }
 }
 
-impl<E> std::fmt::Display for BaselinePoolPreparationError<E>
-where
-    E: std::fmt::Display,
-{
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Recipe { stage, source } => {
-                write!(formatter, "baseline {stage} failed: {source}")
-            }
-            Self::Restore(source) => {
-                write!(formatter, "baseline canister restore failed: {source}")
-            }
-            Self::Contract(error) => write!(formatter, "baseline pool contract failed: {error}"),
-        }
-    }
-}
-
-impl<E> std::error::Error for BaselinePoolPreparationError<E>
-where
-    E: std::error::Error + 'static,
-{
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Recipe { source, .. } => Some(source),
-            Self::Restore(source) => Some(source),
-            Self::Contract(error) => Some(error),
-        }
-    }
-}
-
 impl<E> std::fmt::Display for BaselinePoolError<E>
 where
     E: std::fmt::Display,
@@ -913,6 +886,33 @@ mod tests {
         TimeResetPolicy, add_timing,
     };
     use std::time::Duration;
+
+    #[test]
+    fn preparation_and_recovery_keep_display_and_unboxed_primary_sources() {
+        use std::{error::Error as _, io};
+        let preparation = |message| super::BaselinePoolPreparationError::Recipe {
+            stage: super::BaselinePreparationStage::Build,
+            source: io::Error::other(message),
+        };
+        let original = preparation("original");
+        assert_eq!(original.to_string(), "baseline build failed: original");
+        assert!(original.source().unwrap().is::<io::Error>());
+        let error = super::BaselinePoolError::RecoveryFailed {
+            original: Box::new(original),
+            rebuild: Box::new(preparation("replacement")),
+            timings: Box::default(),
+        };
+        assert_eq!(
+            error.to_string(),
+            "baseline preparation failed (baseline build failed: original); rebuilding the slot also failed: baseline build failed: replacement"
+        );
+        assert!(
+            error
+                .source()
+                .unwrap()
+                .is::<super::BaselinePoolPreparationError<io::Error>>()
+        );
+    }
 
     #[test]
     fn phase_timing_preserves_absence_zero_and_saturation() {

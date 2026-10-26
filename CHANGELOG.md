@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.68.7] - Unreleased
+
+- Adopt IC Platform 0.6.18 and Wire 0.7.16 as workspace minimums, keeping
+  existing feature selections, protocols and the already-selected lockfile.
+- Share final startup deadline and server admission across synchronous and async
+  Testkit construction, preserving ownership and cleanup behavior.
+- Consolidate Cargo completion tracking, native error projection and test
+  scaffolding while retaining public APIs, error sources and artifact formats.
+- Use one tooling-check roster for command execution and fixture selection, and
+  simplify existing dependency-profile declarations.
+  [Details](docs/changelog/0.68.md#0687---unreleased).
+
 ## [0.68.6] - 2026-10-26
 
 - Require one successful Cargo completion record before admitting a native

@@ -149,6 +149,9 @@ helpers. Their synthetic failure matrices stay with Shared; Host's adapter fixtu
 checks the real rendering, source and committed-payload contracts with substituted
 qualification commands and Git effects. Rendering, gates and recovery decisions
 remain local; see [release custody](releases.md#reusing-metadata-preparation-and-evidence-custody).
+The consumer's [tooling-check roster](../ci/tooling-checks.tsv) selects ordinary
+command checks and the appropriate Make/retention fixtures. Keep behavioral
+assertions independent of that roster when extending a selected check.
 Shared owns the synthetic Make-consumer, host/IC/Rust installer and LOC parser
 matrices in `shared-tooling/scripts/ci/test-portable-tools.sh`. Host retains its actual
 Make routing, aggregate failure ordering, LOC arguments/status and pipe-jobserver

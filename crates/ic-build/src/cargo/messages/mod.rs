@@ -2,6 +2,32 @@
 use super::observation::schema;
 use ic_host_process::framing::{FrameReadError, LineFramer};
 use std::io;
+
+/// Record terminal evidence independently of each caller's process/error policy.
+#[derive(Default)]
+pub(super) struct BuildCompletion(Option<bool>);
+
+impl BuildCompletion {
+    pub(super) fn record(&mut self, success: bool) -> bool {
+        self.0 = Some(self.0.is_none() && success);
+        self.0 == Some(true)
+    }
+
+    pub(super) fn require_success(&self) -> io::Result<()> {
+        match self.0 {
+            Some(true) => Ok(()),
+            Some(false) => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "invalid Cargo build completion",
+            )),
+            None => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Cargo omitted successful build completion",
+            )),
+        }
+    }
+}
+
 pub fn artifact_matches(
     artifact: &schema::Artifact,
     package: &str,

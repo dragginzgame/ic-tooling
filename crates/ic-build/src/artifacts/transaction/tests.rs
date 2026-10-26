@@ -1751,3 +1751,18 @@ const CONFIGURATION_LIMITS: crate::cargo::environment::ConfigurationLimits =
         files: 128,
         depth: 32,
     };
+#[test]
+fn revalidation_preserves_the_original_source_identity() {
+    use std::error::Error as _;
+    let error = super::ArtifactCacheError::CargoBuildInputRevalidation {
+        label: "selected".into(),
+        source: super::WasmBuildError::InvalidSpec {
+            message: "original".into(),
+        },
+    };
+    assert!(error.source().unwrap().is::<super::WasmBuildError>());
+    assert_eq!(
+        error.to_string(),
+        "failed to revalidate resolved Cargo build inputs `selected`: invalid Wasm build spec: original"
+    );
+}

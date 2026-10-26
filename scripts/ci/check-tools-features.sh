@@ -31,6 +31,10 @@ perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --for
 perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid ic-platform --forbid-pattern "$upper_layers" \
     --target "$target" --features cli --require clap=1
 # Each profile selects its parser exclusions explicitly; labels carry no policy.
+# Repeated dependency families remain local profile vocabulary.
+codec='candid|candid_parser'
+agent='ic-agent|reqwest|url'
+serialization='serde_cbor|minicbor'
 parser_free='^(serde_yaml|unsafe-libyaml|wat|wast)$'
 yaml_allowed='^(wat|wast)$'
 wat_allowed='^(serde_yaml|unsafe-libyaml)$'
@@ -47,7 +51,7 @@ check_graph() {
         '') ;;
         *) arguments+=(--features "$features") ;;
     esac
-    arguments+=(--forbid-pattern "${forbidden% }$" --forbid-pattern '^(ciborium|ciborium-io|ciborium-ll)$')
+    arguments+=(--forbid-pattern "$forbidden" --forbid-pattern '^(ciborium|ciborium-io|ciborium-ll)$')
     # Platform's runtime is independently selectable; no Host profile owns it.
     arguments+=(--forbid-pattern '^(ic-cdk|ic-cdk-macros|ic-cdk-executor|ic-platform-macros|ic0)$')
     arguments+=(--forbid-pattern '^(serde_yaml_ng|serde_yml|serde-saphyr|granit-parser)$')
@@ -60,46 +64,46 @@ check_graph() {
 }
 
 check_graph "$parser_free" ic-host-tools default '' '' \
-    '^(ic-platform|candid|candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|url|serde_cbor|minicbor) '
+    "^(ic-platform|${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|${agent}|${serialization})$"
 check_graph "$parser_free" ic-host-tools none '' '' \
-    '^(ic-platform|candid|candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|url|serde_cbor|minicbor) '
+    "^(ic-platform|${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|${agent}|${serialization})$"
 check_graph "$parser_free" ic-host-tools none encoding '' \
-    '^(ic-platform|candid|candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|serde_cbor|minicbor) '
+    "^(ic-platform|${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$"
 check_graph "$yaml_allowed" ic-host-tools none icp-project 'ic-host-text serde_yaml unsafe-libyaml' \
-    '^(ic-platform|candid|candid_parser|ic-host-(artifacts|fs|process)|wasmparser|ic-certification|ic-agent|reqwest|serde_cbor|minicbor) '
+    "^(ic-platform|${codec}|ic-host-(artifacts|fs|process)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$"
 check_graph "$parser_free" ic-host-tools none ledger-evidence 'ic-platform candid icrc-ledger-types' \
-    '^(candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-agent|reqwest|ic-stable-structures) '
+    '^(candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-agent|reqwest|ic-stable-structures)$'
 check_graph "$parser_free" ic-host-tools none icp-ledger prost \
-    '^(ic-platform|candid|candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|serde_cbor|minicbor) '
+    "^(ic-platform|${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$"
 check_graph "$parser_free" ic-host-tools none registry 'ic-platform prost' \
-    '^(candid|candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest) '
+    "^(${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest)$"
 check_graph "$parser_free" ic-host-tools none ic-interface \
-    'ic-host-artifacts wasmparser' '^(ic-platform|candid|candid_parser|ic-host-(fs|process|text)|serde_cbor|minicbor|wasm-encoder) '
+    'ic-host-artifacts wasmparser' "^(ic-platform|${codec}|ic-host-(fs|process|text)|${serialization}|wasm-encoder)$"
 check_graph "$parser_free" ic-host-wasm-inspect default '' 'ic-host-artifacts ic-host-fs' \
-    '^(ic-host-process|ic-platform|candid_parser|serde_cbor|minicbor|wasm-encoder|cap-std|cap-fs-ext|tempfile) '
+    "^(ic-host-process|ic-platform|candid_parser|${serialization}|wasm-encoder|cap-std|cap-fs-ext|tempfile)$"
 check_graph "$parser_free" ic-host-tools none certificate 'ic-platform serde_cbor ic-certification' \
-    '^(candid|candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-agent|reqwest|minicbor) '
+    "^(${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-agent|reqwest|minicbor)$"
 check_graph "$parser_free" ic-host-tools none ic-interface,certificate \
     'ic-platform serde_cbor ic-certification ic-host-artifacts wasmparser' \
-    '^(candid|candid_parser|ic-host-(fs|process|text)|ic-agent|reqwest|minicbor) '
+    "^(${codec}|ic-host-(fs|process|text)|ic-agent|reqwest|minicbor)$"
 check_graph "$parser_free" ic-host-tools none candid 'ic-platform candid candid_parser' \
-    '^(ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|serde_cbor|minicbor) '
+    "^(ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$"
 check_graph "$parser_free" ic-host-tools none candid,ic-interface,certificate \
     'ic-platform candid_parser serde_cbor ic-certification ic-host-artifacts wasmparser' \
-    '^(ic-host-(fs|process|text)|ic-agent|reqwest|minicbor) '
+    '^(ic-host-(fs|process|text)|ic-agent|reqwest|minicbor)$'
 check_graph "$yaml_allowed" ic-host-tools none --all-features \
     'ic-platform candid_parser serde_cbor ic-certification ic-host-artifacts wasmparser ic-agent reqwest icrc-ledger-types ic-host-text serde_yaml unsafe-libyaml prost' \
-    '^(ic-host-(fs|process)|ic-stable-structures) '
+    '^(ic-host-(fs|process)|ic-stable-structures)$'
 check_graph "$parser_free" ic-host-text default '' unicode-width \
-    '^(ic-host-(artifacts|fs|process|tools)|ic-platform|candid_parser|ic-agent|ic-certification|serde_cbor|minicbor|serde) '
+    "^(ic-host-(artifacts|fs|process|tools)|ic-platform|candid_parser|ic-agent|ic-certification|${serialization}|serde)$"
 check_graph "$yaml_allowed" ic-host-text none yaml 'unicode-width serde serde_yaml unsafe-libyaml' \
-    '^(ic-host-(artifacts|fs|process|tools)|ic-platform|candid|candid_parser|ic-agent|ic-certification|serde_cbor|minicbor) '
-check_graph "$parser_free" ic-host-artifacts default '' '' '^(ic-host-process|wasm-encoder|wasmparser|clap) '
-check_graph "$parser_free" ic-host-artifacts none wasm wasmparser '^wasm-encoder '
+    "^(ic-host-(artifacts|fs|process|tools)|ic-platform|${codec}|ic-agent|ic-certification|${serialization})$"
+check_graph "$parser_free" ic-host-artifacts default '' '' '^(ic-host-process|wasm-encoder|wasmparser|clap)$'
+check_graph "$parser_free" ic-host-artifacts none wasm wasmparser '^wasm-encoder$'
 check_graph "$parser_free" ic-host-artifacts none wasm-encoding wasm-encoder \
-    '^(ic-host-(fs|process|text|tools)|ic-platform|candid|candid_parser|wasmparser) '
+    "^(ic-host-(fs|process|text|tools)|ic-platform|${codec}|wasmparser)$"
 check_graph "$wat_allowed" ic-host-artifacts none wasm-text 'wat wast wasm-encoder' \
-    '^(ic-host-(fs|process|text|tools)|ic-platform|candid|candid_parser|wasmparser) '
+    "^(ic-host-(fs|process|text|tools)|ic-platform|${codec}|wasmparser)$"
 for profile in wasm wasm-validation wasm-encoding wasm-text wasm-encoding,wasm-validation wasm-text,wasm-validation; do
     feature_graph="$(cargo tree -p ic-host-artifacts --no-default-features --features "$profile" \
         --target "$target" --edges normal,build --prefix none --format '{p} features={f}' --locked --offline)" || exit
@@ -121,20 +125,20 @@ for profile in wasm wasm-validation wasm-encoding wasm-text wasm-encoding,wasm-v
     esac
 done
 check_graph "$parser_free" ic-host-fs default '' ic-host-artifacts \
-    '^(ic-host-(process|tools|text)|ic-platform|candid|candid_parser|ic-agent|ic-certification|reqwest|serde_cbor|minicbor|clap|cap-std|cap-fs-ext|tempfile) '
+    "^(ic-host-(process|tools|text)|ic-platform|${codec}|ic-agent|ic-certification|reqwest|${serialization}|clap|cap-std|cap-fs-ext|tempfile)$"
 check_graph "$parser_free" ic-host-fs none capability 'ic-host-artifacts cap-std cap-fs-ext' \
-    '^(tempfile|clap|ic-host-process|ic-platform|wasmparser|wasm-encoder) '
+    '^(tempfile|clap|ic-host-process|ic-platform|wasmparser|wasm-encoder)$'
 check_graph "$parser_free" ic-host-fs none temporary-file 'ic-host-artifacts tempfile' \
-    '^(cap-std|cap-fs-ext|clap|ic-host-process|ic-platform|wasmparser|wasm-encoder) '
+    '^(cap-std|cap-fs-ext|clap|ic-host-process|ic-platform|wasmparser|wasm-encoder)$'
 check_graph "$parser_free" ic-host-fs none capability,temporary-file 'ic-host-artifacts cap-std cap-fs-ext tempfile' \
-    '^(clap|ic-host-process|ic-platform|wasmparser|wasm-encoder) '
+    '^(clap|ic-host-process|ic-platform|wasmparser|wasm-encoder)$'
 check_graph "$parser_free" ic-host-fs none cli 'clap ic-host-artifacts' \
-    '^(ic-host-process|ic-platform|wasmparser|wasm-encoder|cap-std|cap-fs-ext|tempfile) '
-check_graph "$parser_free" ic-host-process default '' 'ic-host-fs' '^(clap|ic-platform|wasmparser|wasm-encoder|cap-std|cap-fs-ext|tempfile) '
+    '^(ic-host-process|ic-platform|wasmparser|wasm-encoder|cap-std|cap-fs-ext|tempfile)$'
+check_graph "$parser_free" ic-host-process default '' 'ic-host-fs' '^(clap|ic-platform|wasmparser|wasm-encoder|cap-std|cap-fs-ext|tempfile)$'
 check_graph "$parser_free" ic-host-fs none capability,temporary-file ic-host-artifacts \
-    '^(cap-std|cap-fs-ext|tempfile|rustix|ic-host-process|ic-platform) ' wasm32-unknown-unknown
+    '^(cap-std|cap-fs-ext|tempfile|rustix|ic-host-process|ic-platform)$' wasm32-unknown-unknown
 check_graph "$parser_free" ic-host-tools none agent 'ic-platform candid ic-agent reqwest url serde_cbor' \
-    '^(candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser) '
+    '^(candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser)$'
 check_graph "$parser_free" ic-host-tools none agent 'ic-platform' \
-    '^(ic-host-(artifacts|fs|process|text)|wasmparser|candid|candid_parser|ic-agent|reqwest|url|serde_cbor|minicbor) ' wasm32-unknown-unknown
+    "^(ic-host-(artifacts|fs|process|text)|wasmparser|${codec}|${agent}|${serialization})$" wasm32-unknown-unknown
 printf 'tools/text feature dependency graphs passed for %s (normal/build)\n' "$target"

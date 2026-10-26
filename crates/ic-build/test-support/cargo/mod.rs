@@ -2,6 +2,21 @@
 
 use std::{fs, io, path::Path};
 
+/// Valid protocol scaffold; individual tests retain their own invalid mutations.
+pub fn artifact_message(
+    package: &str,
+    target: &serde_json::Value,
+    filenames: &[&Path],
+    executable: Option<&Path>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "reason": "compiler-artifact", "package_id": package, "target": target,
+        "profile": {"opt_level": "0", "debuginfo": 0, "debug_assertions": true,
+            "overflow_checks": true, "test": false},
+        "features": [], "filenames": filenames, "executable": executable, "fresh": false
+    })
+}
+
 pub fn write_workspace(root: &Path, members: &[&str]) -> io::Result<()> {
     fs::create_dir_all(root)?;
     let members = toml::Value::Array(
@@ -103,12 +118,15 @@ pub fn wasm_artifact_message_script(root: &Path, variable: &str) -> String {
                 .any(|kind| kind == "cdylib")
         })
         .unwrap();
-    let message = serde_json::json!({
-        "reason": "compiler-artifact", "package_id": package["id"], "target": target,
-        "profile": {"opt_level": "0", "debug_assertions": true, "overflow_checks": true, "test": false},
-        "features": [], "fresh": false, "executable": null,
-        "filenames": ["@TARGET@/wasm32-unknown-unknown/debug/fixture.wasm"]
-    }).to_string();
+    let message = artifact_message(
+        package["id"].as_str().unwrap(),
+        target,
+        &[Path::new(
+            "@TARGET@/wasm32-unknown-unknown/debug/fixture.wasm",
+        )],
+        None,
+    )
+    .to_string();
     let quoted = format!("'{}'", message.replace('\'', "'\"'\"'"));
     let quoted = quoted.replace("@TARGET@", &format!("'\"${variable}\"'"));
     format!("printf '%s\\n' {quoted}\n")

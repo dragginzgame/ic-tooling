@@ -20,7 +20,8 @@ export TMPDIR="${fixture%/*}"
 mkdir -p "$fixture/local"
 bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/local" \
     make/consumer.mk scripts/ci/check-pipe-jobserver.pl scripts/release/editor.sh
-for input in Makefile make/testkit.mk ci/tool-versions.env ci/release-delivery.txt scripts/ci/check-format-tools.sh; do
+for input in Makefile make/testkit.mk ci/tool-versions.env ci/release-delivery.txt scripts/ci/check-format-tools.sh \
+    ci/tooling-checks.tsv scripts/ci/select-tooling-checks.sh; do
     parent=.
     [[ "$input" != */* ]] || parent="${input%/*}"
     mkdir -p "$fixture/local/$parent"
@@ -50,6 +51,7 @@ case "$*" in
     'fmt --version') echo rustfmt ;;
     *)
         printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
+        if [[ "$1" == fixture ]]; then exit "${HOST_MAKE_FIXTURE_STATUS:-0}"; fi
         if [[ "$1" == fetch ]]; then exit "${HOST_MAKE_FETCH_STATUS:-0}"; fi
         if [[ "${HOST_MAKE_ASSERT_MSRV:-0}" == 1 && "$1" == check ]]; then
             [[ "${RUSTUP_TOOLCHAIN:-}" == 1.91.0 ]] || exit 92
@@ -263,15 +265,11 @@ printf '%s\n' 'install-rust-tools.sh preflight' > "$fixture/expected"
 cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
 [[ ! -e "$HOST_MAKE_EXTERNAL" ]] || exit 1
 # Real pipe-descriptor admission in substituted Cargo, without compiling.
-for helper in scripts/ci/check-dependency-pins.sh \
-    scripts/release/test-adapter.sh scripts/publish/test-workspace.sh \
-    scripts/ci/test-host-fixture-retention.sh scripts/ci/test-product-evidence.sh scripts/ci/test-make-snapshot.sh \
-    scripts/ci/test-tools-layering.sh \
-    scripts/ci/test-qualification-record.sh \
-    scripts/ci/check-release-commands.sh; do
+helpers="$(bash "$root/scripts/ci/select-tooling-checks.sh" make-stub)"
+while IFS= read -r helper; do
     mkdir -p "$fixture/local/${helper%/*}"
-    printf '#!/usr/bin/env bash\nexec cargo fixture "$@"\n' > "$fixture/local/$helper"
-done
+    printf '#!/usr/bin/env bash\nexec cargo fixture %s "$@"\n' "$helper" > "$fixture/local/$helper"
+done <<< "$helpers"
 mkdir -p "$fixture/local/scripts/publish"
 cat > "$fixture/local/scripts/publish/workspace.sh" <<'STUB'
 #!/usr/bin/env bash
@@ -279,6 +277,26 @@ set -euo pipefail
 [[ "$1" == publish || "$1" == check ]] || exit 1
 exec cargo "$1"
 STUB
+# Membership/order expectations are independent of the discovery roster.
+: > "$HOST_MAKE_EVENTS"
+PATH="$fixture/local:$PATH" make --no-print-directory tooling-command-check > "$fixture/tooling-order.log" 2>&1
+awk '{ print $1, $2 }' "$HOST_MAKE_EVENTS" > "$fixture/tooling-observed"
+cat > "$fixture/expected" <<'EVENTS'
+fixture scripts/ci/test-qualification-record.sh
+fixture scripts/ci/test-tools-layering.sh
+fixture scripts/ci/test-product-evidence.sh
+fixture scripts/ci/test-host-fixture-retention.sh
+fixture scripts/ci/test-make-snapshot.sh
+fixture scripts/ci/check-release-commands.sh
+EVENTS
+cmp "$fixture/expected" "$fixture/tooling-observed"
+: > "$HOST_MAKE_EVENTS"
+status=0
+PATH="$fixture/local:$PATH" HOST_MAKE_FIXTURE_STATUS=23 make --no-print-directory tooling-command-check \
+    > "$fixture/tooling-failure.log" 2>&1 || status=$?
+[[ "$status" == 2 ]] || exit 1
+printf '%s\n' 'fixture scripts/ci/test-qualification-record.sh' > "$fixture/expected"
+cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
 jobserver_options=(--no-print-directory -j4)
 if make --help | grep -q -- --jobserver-style; then
     jobserver_options+=(--jobserver-style=pipe)

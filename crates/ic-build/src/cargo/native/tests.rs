@@ -64,12 +64,14 @@ fn messages_keep_exact_package_target_diagnostics_and_ambiguity() {
     let spec = spec();
     let (id, _) = selection(metadata(), &spec).unwrap();
     let target = serde_json::to_value(&metadata().packages[0].targets[0]).unwrap();
-    let artifact = json!({
-        "reason": "compiler-artifact", "package_id": id, "target": target,
-        "profile": {"opt_level": "0", "debug_assertions": true, "overflow_checks": true, "test": false},
-        "features": [], "filenames": [], "fresh": false,
-        "executable": "/custom-target/custom-profile/examples/worker"
-    });
+    let artifact = crate::cargo_fixture::artifact_message(
+        &id,
+        &target,
+        &[],
+        Some(std::path::Path::new(
+            "/custom-target/custom-profile/examples/worker",
+        )),
+    );
     let mut output = Vec::new();
     let mut selected = None;
     let mut unrelated = artifact.clone();
@@ -203,7 +205,7 @@ fn message(
         package,
         spec,
         executable,
-        &mut None,
+        &mut BuildCompletion::default(),
         diagnostics,
     )
 }
@@ -299,11 +301,12 @@ fn native_admission_requires_one_successful_completion_even_with_an_artifact() {
     )
     .unwrap();
     let target = serde_json::to_value(&metadata().packages[0].targets[0]).unwrap();
-    let artifact = json!({
-        "reason":"compiler-artifact", "package_id":metadata().packages[0].id,
-        "target":target, "profile":{"opt_level":"0","debug_assertions":true,"overflow_checks":true,"test":false},
-        "features":[], "filenames":[], "fresh":false, "executable":"/selected-target/worker"
-    });
+    let artifact = crate::cargo_fixture::artifact_message(
+        &metadata().packages[0].id.repr,
+        &target,
+        &[],
+        Some(std::path::Path::new("/selected-target/worker")),
+    );
     let success = "{\"reason\":\"build-finished\",\"success\":true}";
     let failure = "{\"reason\":\"build-finished\",\"success\":false}";
     for (tail, status, admitted) in [

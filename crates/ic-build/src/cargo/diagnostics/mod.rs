@@ -1,6 +1,9 @@
 //! Compile-diagnostic mechanics; callers retain sources, compiler recipes and messages.
 
-use super::{messages::MessageDecoder, observation::schema};
+use super::{
+    messages::{BuildCompletion, MessageDecoder},
+    observation::schema,
+};
 use ic_host_process::tool::{OutputLimit, OutputLimits, capture_command};
 use std::{
     fs,
@@ -35,7 +38,7 @@ pub fn library_artifact(
         return Err(io::Error::other("expected lib or proc-macro target"));
     }
     let mut selected = None;
-    let mut finished = false;
+    let mut finished = BuildCompletion::default();
     let mut receive = |message| {
         match message {
             schema::Message::CompilerArtifact(artifact)
@@ -51,11 +54,8 @@ pub fn library_artifact(
                     }
                 }
             }
-            schema::Message::BuildFinished(result) => {
-                if finished || !result.success {
-                    return Err(io::Error::other("invalid Cargo build completion"));
-                }
-                finished = true;
+            schema::Message::BuildFinished(result) if !finished.record(result.success) => {
+                return Err(io::Error::other("invalid Cargo build completion"));
             }
             _ => {}
         }
@@ -82,7 +82,7 @@ pub fn library_artifact(
     }
     decoder.finish(&mut receive)?;
     let path = selected
-        .filter(|path| finished && path.is_file())
+        .filter(|path| finished.require_success().is_ok() && path.is_file())
         .ok_or_else(|| io::Error::other("missing successful host library artifact"))?;
     Ok(path)
 }

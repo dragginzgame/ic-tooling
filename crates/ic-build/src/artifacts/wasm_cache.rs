@@ -34,8 +34,6 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 
-mod acquisition;
-use acquisition::prepare_exact_cache_entry;
 mod resolution;
 mod source_inputs;
 use resolution::{ParsedCargoMetadata, digest_resolved_local_inputs, resolve_local_inputs};
@@ -746,7 +744,7 @@ fn classify_unobserved_failure(error: &WasmBuildError) -> WasmBuildPhase {
 
 /// Structured failure from a cacheable Wasm build.
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum WasmBuildError {
     /// The caller supplied an incomplete or inconsistent specification.
     InvalidSpec {
@@ -3042,7 +3040,14 @@ fn build_wasm_cache_miss(
     let cache_entry = cache_entry_directory(spec, fingerprint);
     let preparation_started = Instant::now();
     progress.begin_phase(WasmBuildPhase::ArtifactPublication);
-    let preparation_result = prepare_exact_cache_entry(&cache_entry);
+    let preparation_result = (|| {
+        remove_unretained_entry(&cache_entry).map_err(wasm_cache_fs_error)?;
+        create_dir_all(
+            &cache_entry,
+            "create content-addressed Cargo target directory",
+        )?;
+        Ok::<_, WasmBuildError>(OwnedDirectory::new(cache_entry.clone()))
+    })();
     progress.record_phase(
         WasmBuildPhase::ArtifactPublication,
         preparation_started.elapsed(),
@@ -4190,17 +4195,6 @@ impl std::fmt::Display for WasmBuildError {
                 "Wasm build failed ({build_error}) and its incomplete target directory at {} could not be removed: {source}",
                 path.display(),
             ),
-        }
-    }
-}
-
-impl std::error::Error for WasmBuildError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Io { source, .. }
-            | Self::CommandSpawn { source, .. }
-            | Self::FailedBuildCleanup { source, .. } => Some(source),
-            _ => None,
         }
     }
 }

@@ -142,7 +142,7 @@ pub struct ArtifactBuildTransaction {
 
 /// Structured failure from transactional artifact caching.
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum ArtifactCacheError {
     /// The caller supplied an incomplete, ambiguous, or unsafe specification.
     InvalidSpec {
@@ -2013,16 +2013,6 @@ impl std::fmt::Display for ArtifactCacheError {
                 "artifact transaction failed ({transaction_error}) and staging cleanup at {} also failed: {source}",
                 path.display(),
             ),
-        }
-    }
-}
-
-impl std::error::Error for ArtifactCacheError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Io { source, .. } | Self::FailedTransactionCleanup { source, .. } => Some(source),
-            Self::CargoBuildInputRevalidation { source, .. } => Some(source),
-            _ => None,
         }
     }
 }
