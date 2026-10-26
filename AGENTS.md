@@ -4,7 +4,24 @@ Read docs/status/current.md first, then [DRAGGINZGAME.md](DRAGGINZGAME.md).
 The baseline is Shared Tooling 0.26.14 revision e14050bcc0c627f9c8a9064051699cac44fd7ab3,
 recorded with exact file digests in [.shared-tooling.snapshot](.shared-tooling.snapshot).
 
-- Mutate only this repository. Existing sibling repositories remain read-only.
+## Maintainer-approved flow exception — 2026-10-26
+
+To reduce repeated agent work while the pinned baseline is awaiting adoption:
+read its adoption, scope, ownership, complete-change, validation and handoff
+sections at startup; read specialist sections and linked guides when relevant.
+Finish a coherent edit batch, then run selected checks once. During development,
+check to answer a specific question; reuse passing evidence for unchanged inputs.
+Detailed line metrics and symbol inventories are opt-in, including for inspections.
+This scoped exception changes reading, cadence and reporting only. Product,
+recovery and release requirements remain. Retire it when adopting a reviewed
+Shared baseline with these rules; do not patch the current snapshot in place.
+
+## Local rules
+
+- Preserve sibling working checkouts. Task-relevant inspection is authorized;
+  relevant cross-repository fixes use the standing
+  [isolated PR workflow](rules/contributions.md#cross-repository-pull-requests),
+  including its exclusions. No repeated per-step permission is needed.
 - Follow [the contribution rules](rules/contributions.md). Ordinary fixes remain
   local; an explicit commit or PR request authorizes its scoped Git workflow.
   Merges, direct integration-branch pushes, releases, publication, tool downloads
