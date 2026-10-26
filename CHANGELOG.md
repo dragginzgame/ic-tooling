@@ -2,6 +2,8 @@
 
 ## [0.68.8] - 2026-10-26
 
+### 📝 Summary
+
 - Refresh Shared Tooling to 0.26.20. Normal release commands start from current
   committed metadata; recovering a saved attempt uses `release-resume VERSION=X.Y.Z`.
   Retention probes explain unsupported fixture layouts without leaving partial
