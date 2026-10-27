@@ -4,6 +4,11 @@
 
 ### ➕ Added
 
+- Inspect a bounded gzip source through a pull reader, with mandatory footer
+  validation and single-member completion even when the consumer stops early.
+  Keep native source, integrity, limit and consumer errors distinct
+  ([#260](https://github.com/dragginzgame/ic-tooling/issues/260)).
+
 - Borrow a Testkit instance mutably without splitting its managed-server owner,
   allowing native clients to start a live gateway while retaining teardown order.
   [#257 — Expose mutable client access while retaining PocketIcInstance server custody](https://github.com/dragginzgame/ic-tooling/issues/257).

@@ -1,7 +1,10 @@
 //! Bounded single-member gzip encoding and decoding for host artifacts.
 
+mod reader;
 #[cfg(test)]
 mod tests;
+
+pub use reader::{GzipReadError, with_gzip_reader};
 
 use super::{
     ArtifactError, ArtifactIdentity, BoundedWriter, CopyError, MatchingWriter, copy_reader,
@@ -182,10 +185,10 @@ pub fn gzip_matches(
     expected: &[u8],
     max_compressed_bytes: usize,
 ) -> Result<bool, GzipError> {
-    with_decoder(bytes, max_compressed_bytes, |decoder| {
+    with_decoder(bytes, max_compressed_bytes, |mut decoder| {
         let mut matching = MatchingWriter::new(expected);
         visit_reader::<ArtifactError>(
-            decoder,
+            &mut decoder,
             &mut [0; 16 * 1024],
             expected.len() as u64,
             |chunk| matching.write_all(chunk).map_err(ArtifactError::Io),
@@ -204,18 +207,28 @@ const fn check_input_limit(bytes: &[u8], max_compressed_bytes: usize) -> Result<
     Ok(())
 }
 
-// Every operation must consume through EOF (or fail) using the shared bounded
-// traversal. One owner admits input and enforces exact single-member framing.
+// Slice APIs retain their eager compressed-input admission and error contracts,
+// then share the reader's mandatory single-member completion engine.
 fn with_decoder<T>(
     bytes: &[u8],
     max_compressed_bytes: usize,
-    consume: impl FnOnce(&mut flate2::bufread::GzDecoder<&[u8]>) -> Result<T, ArtifactError>,
+    consume: impl FnOnce(&mut dyn io::Read) -> Result<T, ArtifactError>,
 ) -> Result<T, GzipError> {
     check_input_limit(bytes, max_compressed_bytes)?;
-    let mut decoder = flate2::bufread::GzDecoder::new(bytes);
-    let payload = consume(&mut decoder).map_err(GzipError::Decode)?;
-    if !decoder.into_inner().is_empty() {
-        return Err(GzipError::TrailingData);
-    }
-    Ok(payload)
+    with_gzip_reader(bytes, max_compressed_bytes as u64, u64::MAX, consume).map_err(|error| {
+        match error {
+            GzipReadError::Input(source) | GzipReadError::Decode(source) => {
+                GzipError::Decode(ArtifactError::Io(source))
+            }
+            GzipReadError::InputLimit { .. } => GzipError::InputLimit {
+                actual: bytes.len(),
+                limit: max_compressed_bytes,
+            },
+            GzipReadError::DecodedLimit { limit } => {
+                GzipError::Decode(ArtifactError::LimitExceeded { limit })
+            }
+            GzipReadError::TrailingData => GzipError::TrailingData,
+            GzipReadError::Consumer(source) => GzipError::Decode(source),
+        }
+    })
 }
