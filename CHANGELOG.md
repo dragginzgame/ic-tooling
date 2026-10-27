@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.69.1]
+
+### 🧹 Cleanup
+
+- Reuse the bounded artifact gzip encoder in ordinary artifact and HTTP fixtures,
+  preserving their compression settings and retaining independent backend/header
+  controls. Confine direct compression dependencies to the artifact owner.
+  [Details](docs/changelog/0.69.md#0691).
+
 ## [0.69.0] - 2026-10-27
 
 ### ⚠️ Breaking
