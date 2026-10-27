@@ -34,8 +34,10 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 
+mod outputs;
 mod resolution;
 mod source_inputs;
+use outputs::{ResolvedWasmOutputs, WasmArtifactTarget};
 use resolution::{ParsedCargoMetadata, digest_resolved_local_inputs, resolve_local_inputs};
 
 use super::{
@@ -281,19 +283,6 @@ struct HashedBatchInputs {
     exclusions: Vec<PathBuf>,
     input_digest: InputDigest,
     validation_digest: InputDigest,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct WasmArtifactTarget {
-    package_id: String,
-    name: String,
-    kind: schema::TargetKind,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct ResolvedWasmOutputs {
-    targets: Arc<[WasmArtifactTarget]>,
-    artifact_paths: Arc<[PathBuf]>,
 }
 
 struct ResolvedLocalInputs {
@@ -1474,10 +1463,9 @@ impl ResolvedCargoBuildInputs {
             base_exclusions: inputs.base_exclusions.into(),
             declared_package_files: inputs.declared_package_files.into(),
             exclusions: exclusions.into(),
-            wasm_outputs: inputs.wasm_targets.map(|targets| ResolvedWasmOutputs {
-                artifact_paths: expected_artifacts(spec, &spec.target_dir, &targets).into(),
-                targets: targets.into(),
-            }),
+            wasm_outputs: inputs
+                .wasm_targets
+                .map(|targets| ResolvedWasmOutputs::new(spec, targets)),
             // Fresh-resolution totals include path conversion and assembly.
             timings: timings(),
         }

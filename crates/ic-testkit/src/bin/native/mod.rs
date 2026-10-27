@@ -131,25 +131,26 @@ pub fn main() -> ExitCode {
         let _signals = install_signals()?;
         let environment_selected = std::env::var_os("IC_TESTKIT_POCKET_IC_URL").is_some()
             || std::env::var_os("POCKET_IC_BIN").is_some();
-        let mut config = if directory.is_some() || !environment_selected {
-            if environment_selected {
+        let mut config = match (directory, environment_selected) {
+            (Some(_), true) => {
                 return Err(
                     "--directory conflicts with an explicit server URL or POCKET_IC_BIN".into(),
                 );
             }
-            let binary = server_assets::check(
-                &directory.unwrap_or_else(|| PathBuf::from(server_assets::DEFAULT_DIRECTORY)),
-            )?;
-            command.env("POCKET_IC_BIN", &binary);
-            PocketIcStartupConfig::Spawn {
-                server_binary: binary,
-                timeout,
-                server_hard_ttl: None,
-                server_idle_ttl: None,
-                server_output_files: None,
+            (None, true) => PocketIcStartupConfig::from_env(timeout)?,
+            (directory, false) => {
+                let binary = server_assets::check(
+                    &directory.unwrap_or_else(|| PathBuf::from(server_assets::DEFAULT_DIRECTORY)),
+                )?;
+                command.env("POCKET_IC_BIN", &binary);
+                PocketIcStartupConfig::Spawn {
+                    server_binary: binary,
+                    timeout,
+                    server_hard_ttl: None,
+                    server_idle_ttl: None,
+                    server_output_files: None,
+                }
             }
-        } else {
-            PocketIcStartupConfig::from_env(timeout)?
         };
         match &mut config {
             PocketIcStartupConfig::Spawn {

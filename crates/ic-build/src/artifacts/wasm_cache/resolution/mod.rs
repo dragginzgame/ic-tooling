@@ -1,8 +1,8 @@
 //! Cargo metadata closure selection, configuration discovery and input hashing.
 
 use super::{
-    ResolvedLocalInputs, WasmArtifactTarget, WasmBuildError, WasmBuildSpec, add_if_present,
-    invalid_metadata, shared_incremental_target, source_inputs, wasm_cache_fs_error,
+    ResolvedLocalInputs, WasmBuildError, WasmBuildSpec, add_if_present, invalid_metadata,
+    shared_incremental_target, source_inputs, wasm_cache_fs_error,
 };
 use crate::{
     artifacts::{
@@ -12,7 +12,7 @@ use crate::{
             digest_labeled_paths_composable, os_bytes,
         },
     },
-    cargo::{observation::schema, selection::is_normal_component},
+    cargo::observation::schema,
 };
 use std::{
     collections::{BTreeSet, HashMap, HashSet, VecDeque},
@@ -101,49 +101,10 @@ pub(super) fn resolve_local_inputs(
     metadata: &ParsedCargoMetadata<'_>,
 ) -> Result<(ResolvedLocalInputs, Vec<PathBuf>), WasmBuildError> {
     let mut selected_ids = selected_package_ids(spec, metadata)?;
-    // Cargo snapshots also serve generic transactions; defer this acquisition
-    // constraint until the resolved snapshot is used to acquire Wasm artifacts.
-    let mut artifact_names = BTreeSet::new();
-    let wasm_targets = selected_ids
-        .iter()
-        .map(|id| {
-            let package = metadata.packages[id];
-            let mut matching = package.targets.iter().filter(|target| {
-                target.crate_types.contains(&schema::CrateType::CDyLib)
-                    && spec.example.as_ref().map_or_else(
-                        || target.is_cdylib(),
-                        |example| target.name == *example && target.is_example(),
-                    )
-            });
-            let Some(target) = matching.next() else {
-                return Err(format!(
-                    "Cargo package `{}` must declare the selected cdylib target",
-                    package.name
-                ));
-            };
-            if matching.next().is_some() || !is_normal_component(Path::new(&target.name)) {
-                return Err(format!(
-                    "Cargo package `{}` has an ambiguous or unsafe cdylib target",
-                    package.name
-                ));
-            }
-            let cache_name = target.name.replace('-', "_");
-            if !artifact_names.insert(cache_name.clone()) {
-                return Err(format!(
-                    "selected Cargo packages share the Wasm artifact name `{cache_name}`"
-                ));
-            }
-            Ok(WasmArtifactTarget {
-                package_id: package.id.repr.clone(),
-                name: target.name.clone(),
-                kind: if spec.example.is_some() {
-                    schema::TargetKind::Example
-                } else {
-                    schema::TargetKind::CDyLib
-                },
-            })
-        })
-        .collect();
+    let wasm_targets = super::outputs::select_targets(
+        selected_ids.iter().map(|id| metadata.packages[id]),
+        spec.example.as_deref(),
+    );
     let mut closure = BTreeSet::new();
     while let Some(id) = selected_ids.pop_front() {
         if !closure.insert(id) {

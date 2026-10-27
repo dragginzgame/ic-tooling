@@ -132,7 +132,6 @@ pub struct ArtifactBuildTransaction {
     // Drop the owned staging child before releasing either process lock below.
     staging_directory: OwnedDirectory,
     entry_directory: PathBuf,
-    namespace_directory: PathBuf,
     _coordination_lock: File,
     _content_lock: File,
     timings: ArtifactCacheTimings,
@@ -844,20 +843,11 @@ impl ArtifactBuildTransaction {
         let materialization_started = Instant::now();
         materialize_outputs(&self.entry_directory, &output_info, false)?;
         self.timings.materialization = materialization_started.elapsed();
-        record_cache_entry_use(&self.entry_directory).map_err(artifact_cache_fs_error)?;
-        let (maintenance, maintenance_timing) = perform_maintenance_locked(
-            &self.spec,
-            &self.namespace_directory,
-            &self.entry_directory,
-        );
-        self.timings.maintenance = maintenance_timing;
-        self.timings.total = self.total_started.elapsed();
-
-        Ok(ArtifactCacheOutcome::Built(cache_record(
+        Ok(ArtifactCacheOutcome::Built(complete_cache_record(
             &self.spec,
             self.resolved,
             self.timings,
-            maintenance,
+            self.total_started,
         )?))
     }
 }
@@ -949,16 +939,11 @@ pub fn prepare_artifact_cache(
                 after: after.input_digest,
             });
         }
-        record_cache_entry_use(&entry_directory).map_err(artifact_cache_fs_error)?;
-        let (maintenance, maintenance_timing) =
-            perform_maintenance_locked(spec, &namespace_directory, &entry_directory);
-        timings.maintenance = maintenance_timing;
-        timings.total = total_started.elapsed();
-        return Ok(ArtifactCachePreparation::Reused(cache_record(
+        return Ok(ArtifactCachePreparation::Reused(complete_cache_record(
             spec,
             resolved,
             timings,
-            maintenance,
+            total_started,
         )?));
     }
 
@@ -970,7 +955,6 @@ pub fn prepare_artifact_cache(
         resolved,
         staging_directory: OwnedDirectory::new(staging_directory),
         entry_directory,
-        namespace_directory,
         _coordination_lock: coordination_lock,
         _content_lock: content_lock,
         timings,
@@ -1821,13 +1805,18 @@ fn staging_content_key(name: &OsStr) -> Option<&str> {
         .then_some(key)
 }
 
-fn cache_record(
+fn complete_cache_record(
     spec: &ArtifactCacheSpec,
     resolved: ResolvedKey,
-    timings: ArtifactCacheTimings,
-    maintenance: Option<ArtifactCacheMaintenance>,
+    mut timings: ArtifactCacheTimings,
+    total_started: Instant,
 ) -> Result<ArtifactCacheRecord, ArtifactCacheError> {
-    let entry = entry_directory(&namespace_directory(spec), resolved.key);
+    let namespace = namespace_directory(spec);
+    let entry = entry_directory(&namespace, resolved.key);
+    record_cache_entry_use(&entry).map_err(artifact_cache_fs_error)?;
+    let (maintenance, maintenance_timing) = perform_maintenance_locked(spec, &namespace, &entry);
+    timings.maintenance = maintenance_timing;
+    timings.total = total_started.elapsed();
     let retention = RetainedCacheEntry::acquire(&entry).map_err(artifact_cache_fs_error)?;
     Ok(ArtifactCacheRecord {
         key: resolved.key,

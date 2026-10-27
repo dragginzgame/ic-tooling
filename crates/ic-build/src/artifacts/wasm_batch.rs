@@ -664,21 +664,12 @@ where
     for (index, labeled) in specs.iter().enumerate() {
         let entry_started = Instant::now();
         let spec = &labeled.spec;
-        let result = if config.shared_incremental_maintenance.is_some()
-            && spec.shared_incremental_target_maintenance().is_some()
-        {
-            Err((
-                batch_maintenance_ownership_error(),
+        let result = match maintenance.prepare_spec(spec) {
+            Ok(configured) => build(configured.as_ref().unwrap_or(spec), index),
+            Err(error) => Err((
+                error,
                 WasmBuildFailureDetails::specification(entry_started.elapsed()),
-            ))
-        } else {
-            match maintenance.prepare_spec(spec) {
-                Ok(configured) => build(configured.as_ref().unwrap_or(spec), index),
-                Err(error) => Err((
-                    error,
-                    WasmBuildFailureDetails::specification(entry_started.elapsed()),
-                )),
-            }
+            )),
         };
         entries.push(WasmBuildBatchEntry {
             index,
@@ -724,7 +715,9 @@ impl BatchMaintenanceTracker {
         let Some(config) = self.config else {
             return Ok(None);
         };
-        debug_assert!(spec.shared_incremental_target_maintenance().is_none());
+        if spec.shared_incremental_target_maintenance().is_some() {
+            return Err(batch_maintenance_ownership_error());
+        }
         let Some(target_dir) = shared_incremental_target(spec) else {
             return Ok(None);
         };

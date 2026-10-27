@@ -532,13 +532,7 @@ impl PocketIcStartupConfig {
                     match server.poll_ready(&startup) {
                         Ok(Some(url)) => break url,
                         Ok(None) => {
-                            tokio::time::sleep(
-                                startup
-                                    .deadline
-                                    .saturating_duration_since(Instant::now())
-                                    .min(STARTUP_POLL_INTERVAL),
-                            )
-                            .await;
+                            tokio::time::sleep(startup.wait_interval(Instant::now(), true)).await;
                         }
                         Err(error) => return Err(finalize_failure(error, None, Some(server))),
                     }
@@ -821,6 +815,15 @@ impl StartupDeadline {
         Ok(now)
     }
 
+    fn wait_interval(&self, now: Instant, monitor_server: bool) -> Duration {
+        let remaining = self.deadline.saturating_duration_since(now);
+        if monitor_server {
+            remaining.min(STARTUP_POLL_INTERVAL)
+        } else {
+            remaining
+        }
+    }
+
     fn admit_instance<T>(
         &self,
         instance: T,
@@ -884,12 +887,7 @@ fn await_builder(
 ) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
     loop {
         let now = startup.check_instance_deadline(server)?;
-        let remaining = startup.deadline.saturating_duration_since(now);
-        let wait = if server.is_some() {
-            remaining.min(STARTUP_POLL_INTERVAL)
-        } else {
-            remaining
-        };
+        let wait = startup.wait_interval(now, server.is_some());
         match receiver.recv_timeout(wait) {
             Ok(Ok(pocket_ic)) => {
                 return startup.admit_instance(pocket_ic, server_url, server);
@@ -966,14 +964,7 @@ async fn build_async_bounded(
     loop {
         let now = startup.check_instance_deadline(&mut server)?;
         check_server(&mut server)?;
-        let next_check = if server.is_some() {
-            now + startup
-                .deadline
-                .saturating_duration_since(now)
-                .min(STARTUP_POLL_INTERVAL)
-        } else {
-            startup.deadline
-        };
+        let next_check = now + startup.wait_interval(now, server.is_some());
         match tokio::time::timeout_at(next_check.into(), construction.as_mut()).await {
             Ok(Ok(instance)) => {
                 return startup.admit_instance(instance, server_url, &mut server);
@@ -1017,12 +1008,7 @@ impl ManagedServer {
         loop {
             match self.poll_ready(startup) {
                 Ok(Some(url)) => return Ok((self, url)),
-                Ok(None) => thread::sleep(
-                    startup
-                        .deadline
-                        .saturating_duration_since(Instant::now())
-                        .min(STARTUP_POLL_INTERVAL),
-                ),
+                Ok(None) => thread::sleep(startup.wait_interval(Instant::now(), true)),
                 Err(error) => return Err(finalize_failure(error, None, Some(self))),
             }
         }

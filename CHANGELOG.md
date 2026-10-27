@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.69.3] - Unreleased
+
+### 🧹 Cleanup
+
+- Centralize startup polling, artifact-cache completion and batch maintenance
+  admission. Simplify CLI server selection and separate Wasm output projection
+  from input-discovery logic, preserving snapshot APIs and cache identities.
+  [Details](docs/changelog/0.69.md#0693---unreleased).
+
 ## [0.69.2] - 2026-10-27
 
 ### 🧹 Cleanup
