@@ -6,6 +6,20 @@ const LIMITS: ServiceLimits = ServiceLimits {
 };
 
 #[test]
+fn service_error_contract_retains_the_local_parser_boundary() {
+    let error = inspect("service : {", LIMITS).unwrap_err();
+    let source = std::error::Error::source(&error).unwrap();
+    let wrapper = source.downcast_ref::<ParseError>().unwrap();
+    let ServiceError::Parse(original) = &error else {
+        panic!("expected parser refusal")
+    };
+    assert!(std::ptr::eq(wrapper, original));
+    assert_eq!(error.to_string(), wrapper.to_string());
+    // The local ParseError intentionally terminates the public source chain.
+    assert!(source.source().is_none());
+}
+
+#[test]
 fn aliases_constructors_comments_and_escaped_names_preserve_modes() {
     let source = r#"
         /* braces { and service : inside comments are not declarations */

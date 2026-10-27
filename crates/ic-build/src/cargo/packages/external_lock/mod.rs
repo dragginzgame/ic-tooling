@@ -2,15 +2,16 @@
 
 use crate::cargo::lockfile::{external_package, optional_string, required_string};
 use ic_host_artifacts::artifact::Sha256Digest;
-use std::{collections::BTreeMap, error::Error, fmt};
+use std::{collections::BTreeMap, error::Error};
 
 type ExternalRows = BTreeMap<(String, String, String), Option<String>>;
 
 /// External lockfile comparison failed without changing either input.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum ExternalLockError {
     /// An input exceeds the caller's per-document byte allowance.
+    #[error("{input} lockfile exceeds {limit} bytes")]
     LimitExceeded {
         /// `original` or `candidate` input role.
         input: &'static str,
@@ -18,6 +19,7 @@ pub enum ExternalLockError {
         limit: usize,
     },
     /// An input is not UTF-8.
+    #[error("invalid {input} lockfile UTF-8: {source}")]
     Utf8 {
         /// Input role.
         input: &'static str,
@@ -25,6 +27,7 @@ pub enum ExternalLockError {
         source: std::str::Utf8Error,
     },
     /// An input is not valid TOML.
+    #[error("invalid {input} lockfile: {source}")]
     Parse {
         /// Input role.
         input: &'static str,
@@ -32,11 +35,13 @@ pub enum ExternalLockError {
         source: toml::de::Error,
     },
     /// An input has no package array.
+    #[error("missing {input} lock packages")]
     MissingPackages {
         /// Input role.
         input: &'static str,
     },
     /// A package record or external identity field is malformed.
+    #[error("{input} lock package {index}: {reason}")]
     InvalidPackage {
         /// Input role.
         input: &'static str,
@@ -46,6 +51,7 @@ pub enum ExternalLockError {
         reason: &'static str,
     },
     /// An external name/version/source identity appears more than once.
+    #[error("duplicate {input} package selection: {package}@{version}")]
     DuplicateSelection {
         /// Input role.
         input: &'static str,
@@ -55,58 +61,13 @@ pub enum ExternalLockError {
         version: String,
     },
     /// A candidate identity or checksum does not match the original.
+    #[error("packaging changed external selection: {package}@{version}")]
     SelectionChanged {
         /// Candidate package name.
         package: String,
         /// Candidate package version.
         version: String,
     },
-}
-
-impl fmt::Display for ExternalLockError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::LimitExceeded { input, limit } => {
-                write!(f, "{input} lockfile exceeds {limit} bytes")
-            }
-            Self::Utf8 { input, source } => write!(f, "invalid {input} lockfile UTF-8: {source}"),
-            Self::Parse { input, source } => write!(f, "invalid {input} lockfile: {source}"),
-            Self::MissingPackages { input } => write!(f, "missing {input} lock packages"),
-            Self::InvalidPackage {
-                input,
-                index,
-                reason,
-            } => {
-                write!(f, "{input} lock package {index}: {reason}")
-            }
-            Self::DuplicateSelection {
-                input,
-                package,
-                version,
-            } => {
-                write!(
-                    f,
-                    "duplicate {input} package selection: {package}@{version}"
-                )
-            }
-            Self::SelectionChanged { package, version } => {
-                write!(
-                    f,
-                    "packaging changed external selection: {package}@{version}"
-                )
-            }
-        }
-    }
-}
-
-impl Error for ExternalLockError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::Utf8 { source, .. } => Some(source),
-            Self::Parse { source, .. } => Some(source),
-            _ => None,
-        }
-    }
 }
 
 /// Require every candidate external package to match an original selection.

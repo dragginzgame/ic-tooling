@@ -35,8 +35,11 @@ pub enum CanisterInstallError {
 }
 
 /// Failed standalone install retaining the caller-created instance and optional server.
+#[derive(thiserror::Error)]
+#[error("{install_error}")]
 pub struct StandaloneCanisterInstallError {
     instance: Box<PocketIcInstance<PocketIc>>,
+    #[source]
     install_error: CanisterInstallError,
 }
 
@@ -109,18 +112,6 @@ impl std::fmt::Debug for StandaloneCanisterInstallError {
         f.debug_struct("StandaloneCanisterInstallError")
             .field("install_error", &self.install_error)
             .finish_non_exhaustive()
-    }
-}
-
-impl std::fmt::Display for StandaloneCanisterInstallError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.install_error.fmt(f)
-    }
-}
-
-impl std::error::Error for StandaloneCanisterInstallError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.install_error)
     }
 }
 

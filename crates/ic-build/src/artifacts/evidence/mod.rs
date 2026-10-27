@@ -1,6 +1,6 @@
 //! Retained Wasm acquisition and bounded evidence export for host consumers.
 use super::{
-    CapturedArtifact, ResolvedCargoBuildInputs, WasmBuildOutcome, WasmBuildSpec,
+    CapturedArtifact, ResolvedCargoBuildInputs, WasmBuildOutcome, WasmBuildRecord, WasmBuildSpec,
     build_wasm_canisters_cached, resolve_cargo_build_inputs,
 };
 use ic_host_process::child::OwnedChild;
@@ -54,6 +54,16 @@ impl WasmBuildEvidence {
         };
         evidence.verify_current()?;
         Ok(evidence)
+    }
+
+    /// Borrow the retained artifact roster, tool facts and recipe identity.
+    ///
+    /// Reading the record performs no I/O or freshness check. Keep this evidence
+    /// owner alive throughout measurement and call [`Self::verify_current`]
+    /// before accepting results. Copied artifact paths carry no retention lease.
+    #[must_use]
+    pub const fn record(&self) -> &WasmBuildRecord {
+        self.build.record()
     }
 
     /// Refuse changed source or a build not matching the retained input identity.

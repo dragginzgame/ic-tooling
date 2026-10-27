@@ -10,6 +10,27 @@ use std::{
 };
 
 #[test]
+fn retained_error_contract_preserves_unbounded_display_and_typed_sources() {
+    // Formatting remains available even when the producer has no formatting
+    // or Error implementations. Only Error::source requires an Error producer.
+    struct Opaque;
+    assert_eq!(
+        RetainedWriteError::Produce(Opaque).to_string(),
+        "retained file production failed"
+    );
+    let error = RetainedWriteError::Produce(io::Error::new(io::ErrorKind::BrokenPipe, "producer"));
+    let source = std::error::Error::source(&error)
+        .unwrap()
+        .downcast_ref::<io::Error>()
+        .unwrap();
+    let RetainedWriteError::Produce(original) = &error else {
+        unreachable!()
+    };
+    assert!(std::ptr::eq(source, original));
+    assert_eq!(source.kind(), io::ErrorKind::BrokenPipe);
+}
+
+#[test]
 fn retained_write_uses_held_parent_and_refuses_existing_names_before_production() {
     let fixture = fixture();
     let original = fixture.path().join("parent");

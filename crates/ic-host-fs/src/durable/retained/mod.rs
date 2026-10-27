@@ -1,39 +1,23 @@
 //! Caller-named staging retained across failed or interrupted production.
 use super::NamedWriteError;
-use std::{convert::Infallible, ffi::OsStr, fmt, fs::File, io, os::fd::BorrowedFd};
+use std::{convert::Infallible, ffi::OsStr, fs::File, io, os::fd::BorrowedFd};
 
 /// A retained write failed; an error never authorizes deleting or retrying its name.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum RetainedWriteError<E> {
     /// Admission, exclusive creation or the initial directory sync failed.
     /// A newly created entry can remain even when this phase fails.
-    Create(io::Error),
+    #[error("retained file creation failed")]
+    Create(#[source] io::Error),
     /// The producer failed; its original error and any partial entry are retained.
-    Produce(E),
+    #[error("retained file production failed")]
+    Produce(#[source] E),
     /// Production completed but file durability is unconfirmed.
-    SyncFile(io::Error),
+    #[error("retained file synchronization failed")]
+    SyncFile(#[source] io::Error),
     /// File synchronization completed but final directory durability is unconfirmed.
-    SyncDirectory(io::Error),
-}
-
-impl<E> fmt::Display for RetainedWriteError<E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(match self {
-            Self::Create(_) => "retained file creation failed",
-            Self::Produce(_) => "retained file production failed",
-            Self::SyncFile(_) => "retained file synchronization failed",
-            Self::SyncDirectory(_) => "retained directory synchronization failed",
-        })
-    }
-}
-
-impl<E: std::error::Error + 'static> std::error::Error for RetainedWriteError<E> {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(match self {
-            Self::Create(source) | Self::SyncFile(source) | Self::SyncDirectory(source) => source,
-            Self::Produce(source) => source,
-        })
-    }
+    #[error("retained directory synchronization failed")]
+    SyncDirectory(#[source] io::Error),
 }
 
 /// Write one caller-named entry that must survive incomplete production.

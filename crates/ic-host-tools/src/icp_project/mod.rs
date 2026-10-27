@@ -10,9 +10,10 @@ use ic_host_text::yaml::{self, DecodePolicy};
 use serde::Deserialize;
 
 /// Refusal to interpret one effective ICP project document.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum ProjectParseError {
     /// The caller's complete input-byte allowance was exceeded before parsing.
+    #[error("ICP project input is {actual} bytes; maximum is {maximum}")]
     InputTooLarge {
         /// Bytes provided by the caller.
         actual: usize,
@@ -20,39 +21,14 @@ pub enum ProjectParseError {
         maximum: usize,
     },
     /// YAML syntax or the required environment field types were invalid.
-    InvalidYaml(yaml::DecodeError),
+    #[error("invalid effective ICP project YAML: {0}")]
+    InvalidYaml(#[source] yaml::DecodeError),
     /// An environment name or network name was empty.
+    #[error("ICP environment {index} has an empty name or network")]
     EmptyEnvironmentField {
         /// Zero-based environment position in the effective document.
         index: usize,
     },
-}
-
-impl fmt::Display for ProjectParseError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InputTooLarge { actual, maximum } => write!(
-                formatter,
-                "ICP project input is {actual} bytes; maximum is {maximum}"
-            ),
-            Self::InvalidYaml(error) => {
-                write!(formatter, "invalid effective ICP project YAML: {error}")
-            }
-            Self::EmptyEnvironmentField { index } => write!(
-                formatter,
-                "ICP environment {index} has an empty name or network"
-            ),
-        }
-    }
-}
-
-impl std::error::Error for ProjectParseError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::InvalidYaml(error) => Some(error),
-            _ => None,
-        }
-    }
 }
 
 #[derive(Deserialize)]

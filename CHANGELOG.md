@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.68.11] - Unreleased
+
+### ➕ Added
+
+- Expose the retained Wasm build record through `WasmBuildEvidence::record()`
+  so qualification consumers can inspect artifacts, tool facts and recipe identity
+  while retaining the evidence owner
+  ([#255 — Expose retained Wasm build evidence](https://github.com/dragginzgame/ic-tooling/issues/255)).
+  [Details](docs/changelog/0.68.md#06811---unreleased).
+
+### 🧹 Cleanup
+
+- Use existing error derives for mechanical diagnostics while preserving typed
+  causes, retained recovery evidence and generic formatting bounds
+  ([#256 — Use existing thiserror derives for native errors](https://github.com/dragginzgame/ic-tooling/issues/256)).
+
+### 📊 Audit
+
+- Evaluate private cache output hashing and retain SHA-256: median output
+  verification costs are under 1% of ordinary warm acquisitions for the tested artifacts.
+  Prepared-reader results and measurement limits are recorded in
+  [the evaluation](docs/design/wasm-cache-hashing.md)
+  ([#252 — Evaluate Platform BLAKE3 for private Wasm cache verification](https://github.com/dragginzgame/ic-tooling/issues/252)).
+
 ## [0.68.10] - 2026-10-27
 
 ### 🧹 Cleanup

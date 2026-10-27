@@ -1,35 +1,24 @@
 //! Pure wire encodings, independent of transport, trust and application fields.
 
-use std::fmt;
-
 #[cfg(test)]
 mod tests;
 
 /// A complete canonical unsigned `u64` LEB128 value could not be admitted.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum UnsignedLeb128Error {
     /// Input ended before a terminating byte.
+    #[error("truncated unsigned LEB128")]
     Truncated,
     /// The value or continuation exceeds the ten-byte `u64` representation.
+    #[error("unsigned LEB128 exceeds u64")]
     Overflow,
     /// Bytes follow the first terminating byte.
+    #[error("bytes follow unsigned LEB128")]
     TrailingData,
     /// The representation contains an unnecessary leading zero group.
+    #[error("noncanonical unsigned LEB128")]
     NonCanonical,
 }
-
-impl fmt::Display for UnsignedLeb128Error {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(match self {
-            Self::Truncated => "truncated unsigned LEB128",
-            Self::Overflow => "unsigned LEB128 exceeds u64",
-            Self::TrailingData => "bytes follow unsigned LEB128",
-            Self::NonCanonical => "noncanonical unsigned LEB128",
-        })
-    }
-}
-
-impl std::error::Error for UnsignedLeb128Error {}
 
 /// Decode exactly one minimally encoded unsigned `u64` LEB128 value.
 ///

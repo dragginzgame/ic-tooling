@@ -96,22 +96,14 @@ impl Error for PackageCommandError {
 }
 
 /// Failed qualification retains its original cause and evidence directory.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
+#[error("{cause}")]
 pub struct PackageQualificationError {
     /// The caller-selected directory, retained even on failure.
     pub evidence: PathBuf,
     /// Original I/O, encoding, process or admission failure.
+    #[source]
     pub cause: Cause,
-}
-impl fmt::Display for PackageQualificationError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.cause.fmt(f)
-    }
-}
-impl Error for PackageQualificationError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(self.cause.as_ref())
-    }
 }
 
 /// Package a selection and test its exact extracted graph with frozen external selections.

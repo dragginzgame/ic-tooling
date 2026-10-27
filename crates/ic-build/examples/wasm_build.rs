@@ -6,7 +6,7 @@
 
 use clap::{Arg, Command, value_parser};
 use ic_build::{
-    artifacts::{WasmBuildSpec, build_wasm_canisters_cached},
+    artifacts::{WasmBuildEvidence, WasmBuildSpec},
     cargo::selection::CargoSelection,
 };
 use ic_host_process::child::OwnedChild;
@@ -41,8 +41,21 @@ fn main() -> Result<(), Box<dyn Error>> {
         locked: true,
         ..Default::default()
     });
-    let outcome = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)?;
-    let bytes = std::fs::read(&outcome.record().artifacts()[0])?;
+    let evidence = WasmBuildEvidence::acquire(spec, OwnedChild::spawn_direct)?;
+    let record = evidence.record();
+    let [artifact] = record.artifacts() else {
+        return Err("expected exactly one Wasm artifact".into());
+    };
+    let facts = record.facts();
+    println!(
+        "target {}; recipe {}; Cargo {}; compiler {}",
+        facts.target,
+        record.recipe_identity(),
+        String::from_utf8_lossy(&facts.cargo_identity).trim(),
+        String::from_utf8_lossy(&facts.rustc_identity).trim(),
+    );
+    let bytes = std::fs::read(artifact)?;
+    evidence.verify_current()?;
     println!("read {} retained Wasm bytes", bytes.len());
     Ok(())
 }

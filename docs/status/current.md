@@ -2,12 +2,11 @@
 
 ## Source and ownership
 
-This checkout starts at `a748463715f77d83029c22654ffad8c75a585187`, release
-0.68.9. Compatible internal cleanup is prepared in the
-[0.68.10 draft](../changelog/0.68.md#06810---unreleased); own package versions
-remain 0.68.9. The incoming Cargo.lock edit selects Wire/derive 0.7.18 and
-rustix 1.1.6. It is preserved byte-for-byte, separate from this cleanup.
-The index and Git refs remain unchanged.
+This checkout starts clean at `12d8acb7d61ae9aea83bdd855113ce513273428d`, release
+0.68.10. The earlier cleanup and Wire/derive 0.7.18/rustix 1.1.6 lock selections
+are committed there. Compatible issue work is prepared in the
+[0.68.11 draft](../changelog/0.68.md#06811---unreleased); own package versions
+remain 0.68.10. Cargo.lock, the index and Git refs remain unchanged.
 
 Host, Build and Testkit retain the [extraction boundaries](../extraction.md).
 Consumers own credentials, budgets, targets, retries, installation and recovery.
@@ -17,19 +16,23 @@ MSRV 1.91 and native Linux/macOS 15 Intel and Apple Silicon remain required.
 
 ## Current local changes
 
-Build keeps each batch specification, group and pending result in one entry.
-Prepared admission, error/timing attribution and source-lease invalidation keep
-their existing behavior. Cache records derive target selection from resolved
-inputs. Contextual I/O errors retain operation, path and original typed causes.
-Package naming has one owner, and extracted-workspace commands share directory
-setup while retaining their own offline/lock/feature selections.
+`WasmBuildEvidence::record()` borrows the existing retained record for artifact
+rosters, tool facts and recipe comparison. The public example checks exact
+cardinality and consumes retained bytes before final freshness verification.
+Source custody and final acceptance remain consumer-owned. This is the local
+implementation of [#255 — Expose retained Wasm build evidence](https://github.com/dragginzgame/ic-tooling/issues/255),
+not a published supplier or completed Timers adoption.
 
-The private benchmark driver validates against the exact worker arguments it
-rendered. Its flat JSON schema, unknown-field refusals, positional arguments and
-workload checks are unchanged. Valid report fixtures share one test-only owner;
-malformed cases retain independently chosen perturbations and assertions.
-Summary phase lookups and Clap exit projection stay with their existing owners.
-Public APIs, cache/report formats, crate boundaries and tool pins are unchanged.
+The [#256 — Use existing thiserror derives for native errors](https://github.com/dragginzgame/ic-tooling/issues/256)
+cleanup replaces the eleven confirmed mechanical implementations. Existing
+dependency selections suffice, including the private benchmark's existing
+thiserror dependency. Conditional recovery errors and deliberate source-chain
+projections outside that roster remain manual. No new Wasm dependency is added.
+
+The [private cache hash evaluation](../design/wasm-cache-hashing.md) records the
+measured no-go decision for [#252 — Evaluate Platform BLAKE3 for private Wasm cache verification](https://github.com/dragginzgame/ic-tooling/issues/252).
+Keep SHA-256 and current cache formats. Its temporary instrumentation and probe
+remain isolated evaluation artifacts; no production dependency was added.
 
 Normal increments and exact-attempt recovery retain the delivered
 [release contract](../releases.md). No release command or state cleanup was
@@ -37,19 +40,38 @@ executed during this work.
 
 ## Qualification and evidence
 
-Current source and incoming-lock evidence are under
-`/tmp/ic-tooling-cleanup-06810.l2W3fI/`. On actual Rust 1.91, 88 cache/batch
-tests, 12 package-admission tests and 29 private benchmark tests pass. Both
-benchmark binaries preserve help on stdout with exit 0 and invalid arguments on
-stderr with exit 2. Affected-owner all-target/all-feature Clippy passes, as do
-formatting and documentation links. Earlier lint failures remain in the evidence
-directory. The incoming lock is unchanged. Native macOS execution of this
-cleanup remains outstanding. No full workspace/release gate, commit, push,
-release or publication was run.
+Current baseline, lock, focused logs and evaluation source/data are under
+`/tmp/ic-tooling-open-issues.fOTL8a/`. On actual Rust 1.91 the two evidence tests
+pass, covering retention during pruning, release after the last owner drops,
+source/configuration freshness refusal, typed retention recovery and exact
+exported bytes. The public example runs both cold and warm with real Rust 1.91
+Wasm compilation. Build's all-target/all-feature Clippy passes on the declared
+development compiler. An additional Rust 1.91 Clippy attempt refused an existing
+unfulfilled `result_large_err` expectation in `wasm_batch.rs`; its log is retained
+and it is not reported as a pass. Native macOS execution of this addition remains
+outstanding. No full workspace/release gate, commit, push, release or publication
+was run.
+
+The error-derive batch passes affected-owner all-target Clippy with the changed
+Tools profiles (`candid`, `encoding`, `icp-project`), plus four Rust 1.91 contract
+tests covering unbounded generic formatting, boxed-cause identity and the local
+parser wrapper. The affected staging, package, retained-write, encoding, project,
+service, statistics and install-message module tests pass on Rust 1.91, as does
+the changed Tools encoding Wasm library check. The evidence tests also pass
+after the error-owner changes. Initial mechanical-edit
+and test-module placement failures are retained alongside corrected passing
+evidence. This remains local implementation, with delivery and native macOS
+qualification separate.
+
+Earlier cleanup evidence remains under `/tmp/ic-tooling-cleanup-06810.l2W3fI/`:
+88 cache/batch tests, 12 package-admission tests, 29 private benchmark tests and
+CLI stream/exit projections on Rust 1.91, plus affected-owner Clippy. These
+observations describe that earlier source and are not new qualification of the
+evidence accessor.
 
 The delivered Shared/Platform/Wire adoption evidence remains under
 `/tmp/ic-tooling-adopt-02621.fYXFtb/`, tied to its own source and dependency
-selections. Its prior Linux and Rust 1.91 results do not qualify this cleanup.
+selections. Its prior Linux and Rust 1.91 results do not qualify this addition.
 
 Earlier Shared 0.26.20 adoption evidence remains under
 `/tmp/ic-tooling-shared-02620.1xOqGH/`, including the consumer Make, release and
@@ -69,6 +91,11 @@ remains separate, with the supplying correction at
 [Platform #50](https://github.com/dragginzgame/ic-platform/issues/50). The selected
 graph still contains crypto-bigint 0.5.5. Actual ECDSA signing prevents an
 unused-code exemption; no local crypto fork, override or exemption was added.
+The 2026-10-27 primary registry recheck still finds Agent 0.49.3 and
+ic-secp256k1 0.3.0 constrained to the older curve families. Current consumer
+inverse graphs and frozen registry records are in the current evidence
+directory's `crypto/` subdirectory. This is a dependency-constraint review,
+not a fresh advisory audit or constant-time execution proof.
 
 Earlier .6 evidence remains under `/tmp/ic-tooling-improvements-20261026/`,
 `/tmp/ic-tooling-0686-followup-20261026/` and `/tmp/ic-tooling-251-20261026/`.

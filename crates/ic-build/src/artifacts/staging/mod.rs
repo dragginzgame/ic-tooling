@@ -6,7 +6,7 @@
 //! It never prunes existing artifacts or publishes a product release.
 
 use std::{
-    fmt, fs, io,
+    fs, io,
     num::NonZeroUsize,
     path::{Path, PathBuf},
 };
@@ -47,7 +47,8 @@ pub struct CapturedArtifact {
 ///
 /// The exact bytes remain at [`Self::retained_path`]. If rename succeeded but
 /// cleanup failed, that path is the destination; otherwise it is the staging file.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
+#[error("capture retained at {} (staging {}): {source}", .retained_path.display(), .staging_directory.display())]
 pub struct CaptureRetentionError {
     /// Filesystem operation that failed.
     pub source: io::Error,
@@ -55,24 +56,6 @@ pub struct CaptureRetentionError {
     pub retained_path: PathBuf,
     /// Owned staging child still requiring caller disposition.
     pub staging_directory: PathBuf,
-}
-
-impl fmt::Display for CaptureRetentionError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            formatter,
-            "capture retained at {} (staging {}): {}",
-            self.retained_path.display(),
-            self.staging_directory.display(),
-            self.source
-        )
-    }
-}
-
-impl std::error::Error for CaptureRetentionError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.source)
-    }
 }
 
 impl CapturedArtifact {

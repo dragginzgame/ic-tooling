@@ -7,7 +7,7 @@ use crate::{
 };
 use std::{
     error::Error,
-    fmt, fs, io,
+    fs, io,
     num::NonZeroUsize,
     sync::{
         Arc, Barrier,
@@ -69,20 +69,9 @@ struct Recipe {
     state_bytes: u32,
 }
 
-#[derive(Debug)]
-struct RecipeError(Box<dyn Error + Send + Sync>);
-
-impl fmt::Display for RecipeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Error for RecipeError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(self.0.as_ref())
-    }
-}
+#[derive(Debug, thiserror::Error)]
+#[error("{0}")]
+struct RecipeError(#[source] Box<dyn Error + Send + Sync>);
 
 fn recipe_error(error: impl Error + Send + Sync + 'static) -> RecipeError {
     RecipeError(Box::new(error))
@@ -429,4 +418,18 @@ pub fn run(arguments: WorkerArguments) -> Result<()> {
     };
     println!("{}", serde_json::to_string(&report)?);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recipe_error_contract_preserves_the_erased_producer() {
+        let error = recipe_error(io::Error::new(io::ErrorKind::InvalidData, "recipe"));
+        assert_eq!(error.to_string(), "recipe");
+        let source = error.source().unwrap().downcast_ref::<io::Error>().unwrap();
+        assert!(std::ptr::eq(source, error.0.downcast_ref().unwrap()));
+        assert_eq!(source.kind(), io::ErrorKind::InvalidData);
+    }
 }

@@ -296,6 +296,11 @@ Since 0.17.3, `WasmBuildEvidence::acquire(spec, spawn)` supports consumers that
 retain a compiled artifact through measurement and export bounded copies. It
 composes the existing resolved snapshot, retained build record and capture owner;
 there is no second cache, recovery lifecycle or automatic report publication.
+`record()` borrows the retained `WasmBuildRecord` for artifact roster/cardinality,
+tool facts and source-independent recipe comparisons without reacquiring a build.
+The [compiled example](../../crates/ic-build/examples/wasm_build.rs) inspects these
+observations and reads the selected artifact while keeping the evidence alive.
+Reading the record does not check freshness; copied paths carry no lease.
 `verify_current` requires the acquired build's exact fingerprint to match the
 snapshot and rechecks both semantic identity and conservative raw input identity.
 Call it after measurement before accepting a report. Source custody remains the

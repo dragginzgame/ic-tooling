@@ -1,7 +1,5 @@
 //! Private finite-sample projections for the fixture report.
 
-use core::fmt;
-
 #[cfg(test)]
 mod tests;
 
@@ -22,27 +20,18 @@ pub struct SampleStatistics {
 }
 
 /// Why a complete sample slice cannot supply the requested projection.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum SampleStatisticsError {
     /// A sample is NaN or infinite; admission fails before sorting.
+    #[error("sample {index} is not finite")]
     NonFiniteSample {
         /// Original zero-based position of the first invalid sample.
         index: usize,
     },
     /// Floating-point summation overflowed; the sample slice remains sorted.
+    #[error("sample mean is not finite")]
     NonFiniteMean,
 }
-
-impl fmt::Display for SampleStatisticsError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::NonFiniteSample { index } => write!(formatter, "sample {index} is not finite"),
-            Self::NonFiniteMean => formatter.write_str("sample mean is not finite"),
-        }
-    }
-}
-
-impl core::error::Error for SampleStatisticsError {}
 
 /// Sort finite samples in place and project the report's mean, p50 and nearest-rank p95.
 ///

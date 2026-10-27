@@ -4,6 +4,25 @@ use crate::fs_fixture::unique_temp_directory;
 use ic_host_process::tool::{ExecutionFailure, OutputLimit};
 use std::{process::Stdio, time::Duration};
 
+#[test]
+fn qualification_error_contract_preserves_erased_cause_and_evidence() {
+    let error = PackageQualificationError {
+        evidence: PathBuf::from("retained-attempt"),
+        cause: Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "admission",
+        )),
+    };
+    assert_eq!(error.to_string(), "admission");
+    assert_eq!(error.evidence, PathBuf::from("retained-attempt"));
+    let source = std::error::Error::source(&error)
+        .unwrap()
+        .downcast_ref::<std::io::Error>()
+        .unwrap();
+    assert!(std::ptr::eq(source, error.cause.downcast_ref().unwrap()));
+    assert_eq!(source.kind(), std::io::ErrorKind::InvalidData);
+}
+
 const fn limits() -> PackageQualificationLimits {
     PackageQualificationLimits {
         process: OutputLimits {

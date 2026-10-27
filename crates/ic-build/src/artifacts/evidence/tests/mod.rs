@@ -10,6 +10,19 @@ fn export_preserves_exact_bytes_and_refuses_limits_and_changed_source() {
         ic_host_process::child::OwnedChild::spawn_direct,
     )
     .unwrap();
+    let record = evidence.record();
+    assert_eq!(record.artifacts().len(), 1);
+    assert_eq!(record.fingerprint(), evidence.inputs.fingerprint());
+    assert_eq!(record.recipe_identity(), evidence.inputs.recipe_identity());
+    assert_eq!(record.facts(), evidence.inputs.facts());
+    let retained_path = record.artifacts()[0].clone();
+    let pruned = crate::artifacts::prune_wasm_build_cache(
+        spec.target_dir(),
+        crate::artifacts::CacheRetentionLimits::new().with_max_size_bytes(0),
+    )
+    .unwrap();
+    assert_eq!(pruned.entries_removed(), 0);
+    assert_eq!(fs::read(&retained_path).unwrap(), b"\0asm\x01\0\0\0");
     let destination = root.join("evidence.wasm");
     fs::write(&destination, b"previous").unwrap();
     assert!(evidence.export_artifact(0, &destination, 7).is_err());
@@ -26,11 +39,14 @@ fn export_preserves_exact_bytes_and_refuses_limits_and_changed_source() {
     );
     assert!(
         evidence
-            .export_artifact(0, &evidence.build.record().artifacts()[0], 8)
+            .export_artifact(0, &evidence.record().artifacts()[0], 8)
             .is_err()
     );
-    let reused =
-        WasmBuildEvidence::acquire(spec, ic_host_process::child::OwnedChild::spawn_direct).unwrap();
+    let reused = WasmBuildEvidence::acquire(
+        spec.clone(),
+        ic_host_process::child::OwnedChild::spawn_direct,
+    )
+    .unwrap();
     let second = reused.export_artifact(0, &destination, 8).unwrap();
     assert_eq!(receipt.build_fingerprint, second.build_fingerprint);
     let blocked = root.join("blocked");
@@ -47,10 +63,20 @@ fn export_preserves_exact_bytes_and_refuses_limits_and_changed_source() {
     );
     drop(reused);
     fs::write(root.join("fixture/src/lib.rs"), "pub fn changed() {}\n").unwrap();
-    assert!(evidence.verify_current().is_err());
+    assert_eq!(
+        evidence.verify_current().unwrap_err().kind(),
+        io::ErrorKind::InvalidData
+    );
     assert!(evidence.export_artifact(0, &destination, 8).is_err());
     assert_eq!(fs::read(&destination).unwrap(), b"\0asm\x01\0\0\0");
     drop(evidence);
+    let pruned = crate::artifacts::prune_wasm_build_cache(
+        spec.target_dir(),
+        crate::artifacts::CacheRetentionLimits::new().with_max_size_bytes(0),
+    )
+    .unwrap();
+    assert_eq!(pruned.entries_removed(), 1);
+    assert!(!retained_path.exists());
     fs::remove_dir_all(root).unwrap();
 }
 
@@ -74,6 +100,15 @@ fn raw_input_changes_and_mismatched_recipe_fingerprints_refuse_evidence() {
     );
     assert!(evidence.verify_current().is_err());
     fs::write(root.join("Cargo.toml"), original).unwrap();
+    fs::create_dir_all(root.join(".cargo")).unwrap();
+    let config = root.join(".cargo/config.toml");
+    fs::write(&config, "[build]\njobs = 1\n").unwrap();
+    assert_eq!(
+        evidence.verify_current().unwrap_err().kind(),
+        io::ErrorKind::InvalidData
+    );
+    fs::remove_file(config).unwrap();
+    evidence.verify_current().unwrap();
     let alternate = spec.with_environment(crate::cargo_fixture::environment_with([(
         "RECIPE_MARKER",
         "changed",

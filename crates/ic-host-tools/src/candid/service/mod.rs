@@ -59,9 +59,10 @@ impl fmt::Display for ParseError {
 impl std::error::Error for ParseError {}
 
 /// Failure to produce a complete service inventory.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum ServiceError {
     /// Source exceeds the caller's byte allowance before parsing.
+    #[error("Candid source has {actual} bytes, exceeding {limit}")]
     InputLimit {
         /// Observed bytes.
         actual: usize,
@@ -69,6 +70,7 @@ pub enum ServiceError {
         limit: usize,
     },
     /// Service exceeds the caller's method allowance before result allocation.
+    #[error("Candid service has {actual} methods, exceeding {limit}")]
     MethodLimit {
         /// Observed methods.
         actual: usize,
@@ -76,44 +78,17 @@ pub enum ServiceError {
         limit: usize,
     },
     /// Import declarations require an external resolution policy and are refused.
+    #[error("Candid imports require caller resolution")]
     ImportsUnsupported,
     /// The document has no service actor.
+    #[error("Candid document has no service")]
     MissingService,
     /// Grammar, duplicate definitions or type checking failed.
-    Parse(ParseError),
+    #[error("{0}")]
+    Parse(#[source] ParseError),
     /// The result inventory could not be allocated.
-    Allocation(std::collections::TryReserveError),
-}
-
-impl fmt::Display for ServiceError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InputLimit { actual, limit } => write!(
-                formatter,
-                "Candid source has {actual} bytes, exceeding {limit}"
-            ),
-            Self::MethodLimit { actual, limit } => write!(
-                formatter,
-                "Candid service has {actual} methods, exceeding {limit}"
-            ),
-            Self::ImportsUnsupported => {
-                formatter.write_str("Candid imports require caller resolution")
-            }
-            Self::MissingService => formatter.write_str("Candid document has no service"),
-            Self::Parse(source) => source.fmt(formatter),
-            Self::Allocation(_) => formatter.write_str("Candid inventory allocation failed"),
-        }
-    }
-}
-
-impl std::error::Error for ServiceError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Parse(source) => Some(source),
-            Self::Allocation(source) => Some(source),
-            _ => None,
-        }
-    }
+    #[error("Candid inventory allocation failed")]
+    Allocation(#[source] std::collections::TryReserveError),
 }
 
 const fn parse_error(source: candid_parser::Error) -> ServiceError {

@@ -453,22 +453,11 @@ pub(super) enum InputTreeEntry<'a> {
 }
 
 /// Path context shared by fingerprint and standalone-evidence failures.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
+#[error("{}: {source}", .path.display())]
 pub(super) struct InputPathError {
     pub(super) path: PathBuf,
     pub(super) source: io::Error,
-}
-
-impl std::fmt::Display for InputPathError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "{}: {}", self.path.display(), self.source)
-    }
-}
-
-impl std::error::Error for InputPathError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.source)
-    }
 }
 
 /// One traversal owner; cache fingerprints retain their original follow-link policy.
