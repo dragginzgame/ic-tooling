@@ -1,5 +1,33 @@
 # Current handoff — 2026-10-27
 
+## Bounded gzip reader contribution
+
+The isolated contribution for [#260](https://github.com/dragginzgame/ic-tooling/issues/260)
+starts at main `a30251d9f2d83f3eea179ed42b15849c5370124f`. Normal sibling
+checkouts and incoming adoption work remain untouched. Package versions remain
+0.69.0 with compatible pending 0.69.1 notes; no release/publication is performed.
+
+`artifact::with_gzip_reader` lends a bounded decoded `Read` interface to a
+synchronous consumer of a buffered source. It owns completion, CRC/length and
+single-member refusal even after early consumer success, with distinct native
+source, integrity, compressed/expanded limit and typed consumer errors. Observed
+stream errors cannot be swallowed by the consumer. Existing slice APIs share
+the same framing/completion owner and retain eager input admission/error types.
+Callers retain read-ahead/deadlines, parser semantics, staging and publication.
+
+Rust 1.91 passes all 22 gzip tests, including six reader cases; changed-package
+all-target Clippy passes with warnings denied. A separate explicit development
+probe projects IC Crates' actual file/tar upload inspector through the new API:
+the existing archive refusal case and multi-leaf fixture construction pass.
+It is a candidate integration proof, not adoption by a default/released consumer,
+SDK/browser/provider execution or installed application qualification.
+Evidence is retained in this checkout's `target/gzip-reader-260` and the IC Crates
+consumer's `target/adoption-followthrough-20261027`. Native macOS and full
+workspace/release qualification remain unrun. No new dependency is introduced.
+
+The following accessor handoff is earlier contribution provenance; its source
+and checks retain their original identities.
+
 ## Scope and source
 
 The isolated contribution starts at release 0.69.0,

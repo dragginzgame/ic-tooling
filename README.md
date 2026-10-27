@@ -481,6 +481,14 @@ retained hashes require explicit review rather than automatic regeneration.
 Independent backend and optional-header controls remain isolated at the codec
 owner. The dependency policy confines direct `flate2` declarations to Artifacts.
 
+`with_gzip_reader` lets a pull parser inspect a caller-owned buffered source
+without allocating the complete compressed or expanded payload. Caller-selected
+limits cover both streams. Successful callback results are admitted only after
+bounded footer validation and single-member completion, including when the
+parser stops early. Typed errors distinguish native source IO, gzip integrity,
+both limits and consumer failures. Buffered read-ahead, deadlines, parser policy
+and provisional callback effects remain caller-owned.
+
 `copy_gzip` streams a single member into a
 caller-owned sink and returns its decoded identity. Partial output can remain
 after integrity, limit or sink failures; callers own staging and publication.
