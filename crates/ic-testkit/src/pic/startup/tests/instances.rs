@@ -25,9 +25,11 @@ fn client_drops_before_its_managed_server() {
     struct ClientDrop<'a> {
         pid: u32,
         observed: &'a Cell<bool>,
+        mutated: bool,
     }
     impl Drop for ClientDrop<'_> {
         fn drop(&mut self) {
+            assert!(self.mutated, "mutation must affect the retained client");
             assert!(
                 process_state(self.pid).is_some(),
                 "server stopped before client drop"
@@ -51,13 +53,15 @@ fn client_drops_before_its_managed_server() {
     .unwrap();
     let pid = server.process_id();
     let observed = Cell::new(false);
-    let owned = PocketIcInstance {
+    let mut owned = PocketIcInstance {
         instance: ClientDrop {
             pid,
             observed: &observed,
+            mutated: false,
         },
         server: Some(server),
     };
+    owned.instance_mut().mutated = true;
     assert_eq!(owned.instance().pid, pid);
     assert_eq!(owned.server().unwrap().process_id(), pid);
     assert!(!observed.get());

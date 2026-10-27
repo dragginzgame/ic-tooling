@@ -120,6 +120,21 @@ impl<T> PocketIcInstance<T> {
         &self.instance
     }
 
+    /// Mutably borrow the client while retaining managed-server ownership.
+    /// Supports client setup such as `PocketIc::make_live` without splitting the
+    /// owner. Replacing the client transfers responsibility for the old client's
+    /// server lifetime to the caller, just as with [`Self::into_parts`].
+    ///
+    /// The borrow cannot outlive the owner:
+    /// ```compile_fail
+    /// use ic_testkit::pic::PocketIcInstance;
+    /// let client = PocketIcInstance::from_borrowed_server(String::new()).instance_mut();
+    /// client.push_str("gateway");
+    /// ```
+    pub const fn instance_mut(&mut self) -> &mut T {
+        &mut self.instance
+    }
+
     /// Borrow the exact managed server, or `None` for an externally owned server.
     #[must_use]
     pub const fn server(&self) -> Option<&PocketIcManagedServer> {
