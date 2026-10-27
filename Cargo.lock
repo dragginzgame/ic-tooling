@@ -1514,7 +1514,7 @@ dependencies = [
 
 [[package]]
 name = "ic-build"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "cargo_metadata",
  "clap",
@@ -1572,7 +1572,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "clap",
  "flate2",
@@ -1587,7 +1587,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "cap-fs-ext",
  "cap-std",
@@ -1602,7 +1602,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-http"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "ic-host-artifacts",
  "reqwest",
@@ -1611,7 +1611,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "clap",
  "command-fds",
@@ -1623,7 +1623,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-text"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "serde",
  "serde_yaml",
@@ -1632,7 +1632,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-tools"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "clap",
  "ic-host-artifacts",
@@ -1652,7 +1652,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-wasm-inspect"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "clap",
  "ic-host-artifacts",
@@ -1728,7 +1728,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "clap",
  "ic-host-artifacts",
@@ -1745,7 +1745,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit-dev"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "clap",
  "ic-build",
@@ -1765,14 +1765,14 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit-native"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "ic-platform",
 ]
 
 [[package]]
 name = "ic-testkit-perf-probe"
-version = "0.69.1"
+version = "0.69.2"
 dependencies = [
  "ic-platform",
  "ic-testkit",
