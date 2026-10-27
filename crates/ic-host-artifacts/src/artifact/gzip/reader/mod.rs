@@ -71,7 +71,10 @@ impl<E: std::error::Error + 'static> std::error::Error for GzipReadError<E> {
 /// allocated: decoding and completion use fixed-size traversal storage plus the
 /// backend's working memory. Only interrupted reads are retried.
 ///
-/// Supply a finite source or caller-owned read deadlines. This function opens
+/// The supplied reader defines the complete logical compressed input. A
+/// caller-created truncated view cannot establish EOF of its underlying file
+/// or transport. Supply that complete source and caller-owned read deadlines.
+/// This function opens
 /// no paths and chooses no staging, publication, rollback or digest policy.
 /// Consumer observations/effects remain provisional until completion succeeds;
 /// earlier effects cannot be rolled back by this library.
