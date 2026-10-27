@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.69.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt IC Platform 0.7.0. Registry-feature consumers exchanging Platform-owned
+  `Principal` values with Host Tools must update their direct Platform dependency
+  to the 0.7 line as well. Principal bytes and external protocol encodings are
+  unchanged. [Migration details](docs/changelog/0.69.md#0690---unreleased).
+
+### 📝 Summary
+
+- Adopt Shared Tooling 0.26.22, clarifying external Candid boundaries, native
+  error derives and strict source/output inspection rules.
+  [Details](docs/changelog/0.69.md#0690---unreleased).
+
 ## [0.68.12] - 2026-10-27
 
 ### 🩹 Fixed

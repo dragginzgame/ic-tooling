@@ -1684,9 +1684,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform"
-version = "0.6.19"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9d5eea342cfe485766ede1ac89475590b76da4c6749607602e57b016ef9543b"
+checksum = "677aad73f8b1339cbe1cd7c851f4140bdcdc91c3838fda425bb82549dcd7c35d"
 dependencies = [
  "candid",
  "candid_parser",
@@ -1709,9 +1709,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-macros"
-version = "0.6.19"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "201e090837b4a4f0727fdd96a4de4c3b247893b44efcbc657d0cfd255b5bafa3"
+checksum = "55473c96a300e051643ded29e5904e2efb131f531c322e2b1610619f3052648f"
 dependencies = [
  "proc-macro2",
  "quote",
