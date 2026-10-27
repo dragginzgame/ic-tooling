@@ -52,7 +52,7 @@ use ic_host_process::{
 use ic_host_text::table::{self, Alignment};
 use serde_json::{Value, json};
 
-use crate::fixture_reuse_protocol::{Mode, WorkerArguments};
+use crate::fixture_reuse_protocol::Mode;
 use arguments::{Options, parse_arguments};
 use report::{DriverReport, MeasuredRun, Summary, summarize};
 
@@ -295,12 +295,12 @@ fn print_summary(summaries: &[(&str, Summary)]) -> Result<(), Error> {
             summary.fixture_wall_ms.as_ref(),
             summary.iterations_per_second.as_ref(),
             summary.sampled_peak_tree_rss_bytes.as_ref(),
-            summary.phases_ms["wait_ms"].as_ref(),
+            summary.wait(),
         ) else {
             return Err(Error::InvalidData("summary lacks required measurements"));
         };
-        let restore = summary.phases_ms["restore_ms"]
-            .as_ref()
+        let restore = summary
+            .restore()
             .map_or_else(|| "-".into(), |restore| format!("{:.2}", restore.mean));
         rows.push([
             (*label).to_owned(),
@@ -593,22 +593,18 @@ pub fn run() -> Result<(), Error> {
         for (case, runs) in after.iter_mut().chain(before) {
             check_interrupted()?;
             eprintln!("Run {}/{}: {}", repeat + 1, options.repeats, case.label);
-            let invocation = WorkerArguments {
-                mode: case.mode,
-                capacity: case.capacity,
-                iterations: options.iterations,
-                workers: options.workers,
-                state_bytes: options.state_bytes,
-                wasm: inputs.wasm.record().artifacts()[0].clone(),
-                server: inputs.server.clone(),
-            };
+            let invocation = case.worker_arguments(
+                &options,
+                inputs.wasm.record().artifacts()[0].clone(),
+                inputs.server.clone(),
+            );
             let captured = measure(
                 Command::new(&inputs.worker)
-                    .args(<[OsString; 7]>::from(invocation))
+                    .args(<[OsString; 7]>::from(&invocation))
                     .current_dir(&inputs.root),
                 || sampling::snapshot(64 * 1024, options.rss_limits()),
             )?;
-            let measured = MeasuredRun::from_worker(captured.report, &options, case, captured.rss)?;
+            let measured = MeasuredRun::from_worker(captured.report, &invocation, captured.rss)?;
             runs.push(measured);
         }
     }
@@ -1319,21 +1315,9 @@ esac
     fn native_measurement_keeps_large_reports_and_rejects_failed_workers() {
         let scratch = fixture_directory();
         let input = scratch.path().join("input.json");
-        let samples = (0..1024).map(|iteration| json!({
-            "iteration": iteration,
-            "phases": { "wait_ms": 0.0, "build_ms": 1.0, "restore_ms": null,
-                "reset_ms": null, "readiness_ms": null, "validation_ms": 1.0, "acquisition_ms": 2.0 },
-            "body_ms": 1.0, "release_ms": 1.0, "total_ms": 4.0,
-        })).collect::<Vec<_>>();
         fs::write(
             &input,
-            serde_json::to_vec(&json!({
-                "mode": "fresh", "capacity": 1, "iterations": 1024, "workers": 1,
-                "state_bytes_per_canister": 0, "wall_ms": 4.0, "fixture_wall_ms": 5.0,
-                "server_startup_ms": 1.0, "cold_preparation": [], "preparation_wall_ms": 0.0,
-                "pool_teardown_ms": 0.0, "server_teardown_ms": 0.0, "samples": samples,
-            }))
-            .unwrap(),
+            serde_json::to_vec(&crate::fixture_reuse_report::worker_report_fixture(1024)).unwrap(),
         )
         .unwrap();
         let captured = measure(

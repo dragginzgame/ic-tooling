@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.68.10] - Unreleased
+
+### 🧹 Cleanup
+
+- Simplify Build's batch-resolution state, cache-record plumbing and package
+  qualification setup while preserving cache identities and publication checks.
+- Bind benchmark report validation to the exact worker request, share valid
+  report fixtures and centralize summary and CLI projections.
+  [Details](docs/changelog/0.68.md#06810---unreleased).
+
 ## [0.68.9] - 2026-10-26
 
 ### 📝 Summary

@@ -73,13 +73,18 @@ pub struct WasmBuildBatchEntry {
 
 /// Structural error that prevents a labeled Wasm batch from starting.
 #[non_exhaustive]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum WasmBuildBatchContractError {
     /// Invalid input labels, rejected before source validation or command effects.
-    Labels(BatchLabelError),
+    #[error("Wasm batch {0}")]
+    Labels(#[source] BatchLabelError),
     /// A source mutation invalidated the caller's immutable-source lease.
+    #[error("Wasm build source lease was invalidated by a detected input mutation")]
     SourceLeaseInvalidated,
     /// A prepared snapshot reader requested a specification absent at preparation.
+    #[error(
+        "Wasm batch entry {label:?} at index {index} was not declared when the input snapshot was prepared"
+    )]
     SpecificationNotPrepared {
         /// Zero-based position of the undeclared entry.
         index: usize,
@@ -744,29 +749,6 @@ fn batch_maintenance_ownership_error() -> WasmBuildError {
         message:
             "batch-owned shared-target maintenance cannot be combined with per-spec maintenance"
                 .to_owned(),
-    }
-}
-
-impl std::fmt::Display for WasmBuildBatchContractError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Labels(source) => write!(formatter, "Wasm batch {source}"),
-            Self::SourceLeaseInvalidated => formatter
-                .write_str("Wasm build source lease was invalidated by a detected input mutation"),
-            Self::SpecificationNotPrepared { index, label } => write!(
-                formatter,
-                "Wasm batch entry {label:?} at index {index} was not declared when the input snapshot was prepared",
-            ),
-        }
-    }
-}
-
-impl std::error::Error for WasmBuildBatchContractError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Labels(source) => Some(source),
-            _ => None,
-        }
     }
 }
 

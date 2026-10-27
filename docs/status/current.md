@@ -2,12 +2,12 @@
 
 ## Source and ownership
 
-This checkout starts at `e0ce26f933187eea1c45d8cb3dfb4173704105b5`: version
-0.68.8 plus merged [PR #254 — Changelog emoji sections](https://github.com/dragginzgame/ic-tooling/pull/254).
-Shared Tooling and dependency adoption are prepared locally in the
-[0.68.9 draft](../changelog/0.68.md#0689---unreleased). Own package versions
-remain 0.68.8 and the index is unchanged. Platform/macros 0.6.19, Wire/derive
-0.7.17 and openssl-probe 0.2.2 are selected in the updated lock.
+This checkout starts at `a748463715f77d83029c22654ffad8c75a585187`, release
+0.68.9. Compatible internal cleanup is prepared in the
+[0.68.10 draft](../changelog/0.68.md#06810---unreleased); own package versions
+remain 0.68.9. The incoming Cargo.lock edit selects Wire/derive 0.7.18 and
+rustix 1.1.6. It is preserved byte-for-byte, separate from this cleanup.
+The index and Git refs remain unchanged.
 
 Host, Build and Testkit retain the [extraction boundaries](../extraction.md).
 Consumers own credentials, budgets, targets, retries, installation and recovery.
@@ -17,35 +17,39 @@ MSRV 1.91 and native Linux/macOS 15 Intel and Apple Silicon remain required.
 
 ## Current local changes
 
-The canonical exporter refreshed the existing snapshot selection to the reviewed
-0.26.21 commit. Only the compact baseline and changelog rules changed; the
-shared executable payloads retain their prior qualification. Root notes use the
-new emoji sections; older release bullets, links, versions and dates are preserved.
-Existing executable-tool pins and workflow selections remain unchanged.
+Build keeps each batch specification, group and pending result in one entry.
+Prepared admission, error/timing attribution and source-lease invalidation keep
+their existing behavior. Cache records derive target selection from resolved
+inputs. Contextual I/O errors retain operation, path and original typed causes.
+Package naming has one owner, and extracted-workspace commands share directory
+setup while retaining their own offline/lock/feature selections.
 
-Platform and Wire minimums and native examples match the selected releases.
-Their four runtime/macro source directories are unchanged from the previous
-releases. The openssl-probe patch adds a Solaris certificate-file location;
-Linux/macOS probing is unchanged. Cargo selected the compatible updates under
-Rust 1.91; upstream exact requirements such as PocketIC 16.1.0 on thiserror
-2.0.18 remain intact. No override or new feature selection was added.
+The private benchmark driver validates against the exact worker arguments it
+rendered. Its flat JSON schema, unknown-field refusals, positional arguments and
+workload checks are unchanged. Valid report fixtures share one test-only owner;
+malformed cases retain independently chosen perturbations and assertions.
+Summary phase lookups and Clap exit projection stay with their existing owners.
+Public APIs, cache/report formats, crate boundaries and tool pins are unchanged.
 
 Normal increments and exact-attempt recovery retain the delivered
 [release contract](../releases.md). No release command or state cleanup was
-executed during this adoption.
+executed during this work.
 
 ## Qualification and evidence
 
-Current evidence is under `/tmp/ic-tooling-adopt-02621.fYXFtb/`: starting source,
-registry observations, resolver previews, selected lock and source review.
-PR #254 was reviewed and merged normally, and the clean local checkout was
-fast-forwarded before adoption edits. Removing its sole added section restores
-the earlier changelog byte-for-byte. On actual Rust 1.91, nine Wire tests, five
-Agent tests, deployed Wasm compilation and the live Linux PocketIC probe pass.
-Native/Wasm graph policies, snapshot integrity, dependency declarations,
-manifest ordering and documentation-link checks also pass. Native macOS
-execution of the new selections remains outstanding. No full workspace/release
-gate or release/publication command was run; adoption edits remain uncommitted.
+Current source and incoming-lock evidence are under
+`/tmp/ic-tooling-cleanup-06810.l2W3fI/`. On actual Rust 1.91, 88 cache/batch
+tests, 12 package-admission tests and 29 private benchmark tests pass. Both
+benchmark binaries preserve help on stdout with exit 0 and invalid arguments on
+stderr with exit 2. Affected-owner all-target/all-feature Clippy passes, as do
+formatting and documentation links. Earlier lint failures remain in the evidence
+directory. The incoming lock is unchanged. Native macOS execution of this
+cleanup remains outstanding. No full workspace/release gate, commit, push,
+release or publication was run.
+
+The delivered Shared/Platform/Wire adoption evidence remains under
+`/tmp/ic-tooling-adopt-02621.fYXFtb/`, tied to its own source and dependency
+selections. Its prior Linux and Rust 1.91 results do not qualify this cleanup.
 
 Earlier Shared 0.26.20 adoption evidence remains under
 `/tmp/ic-tooling-shared-02620.1xOqGH/`, including the consumer Make, release and

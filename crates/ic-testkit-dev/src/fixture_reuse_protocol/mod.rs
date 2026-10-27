@@ -60,16 +60,16 @@ impl TryFrom<Vec<OsString>> for WorkerArguments {
     }
 }
 
-impl From<WorkerArguments> for [OsString; 7] {
-    fn from(args: WorkerArguments) -> Self {
+impl From<&WorkerArguments> for [OsString; 7] {
+    fn from(args: &WorkerArguments) -> Self {
         [
             args.mode.as_str().into(),
             args.capacity.to_string().into(),
             args.iterations.to_string().into(),
             args.workers.to_string().into(),
             args.state_bytes.to_string().into(),
-            args.wasm.into_os_string(),
-            args.server.into_os_string(),
+            args.wasm.as_os_str().to_owned(),
+            args.server.as_os_str().to_owned(),
         ]
     }
 }
@@ -98,7 +98,7 @@ mod tests {
             assert_eq!(parsed.iterations.get(), 4);
             assert_eq!(parsed.workers.get(), 2);
             assert_eq!(parsed.state_bytes, 0);
-            assert_eq!(<[OsString; 7]>::from(parsed), args);
+            assert_eq!(<[OsString; 7]>::from(&parsed), args);
         }
     }
 
@@ -130,7 +130,7 @@ mod tests {
         args[5] = OsString::from_vec(vec![b'w', 255]);
         args[6] = OsString::from_vec(vec![b's', 254]);
         assert_eq!(
-            <[OsString; 7]>::from(WorkerArguments::try_from(args.to_vec()).unwrap()),
+            <[OsString; 7]>::from(&WorkerArguments::try_from(args.to_vec()).unwrap()),
             args
         );
     }

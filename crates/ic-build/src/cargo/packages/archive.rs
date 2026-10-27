@@ -33,6 +33,12 @@ pub struct PackageArchiveSpec<'a> {
     pub patch_registry: bool,
 }
 
+impl PackageArchiveSpec<'_> {
+    pub(super) fn directory_name(&self) -> String {
+        format!("{}-{}", self.name, self.version)
+    }
+}
+
 /// Caller-selected bounds for process output and source admission.
 #[derive(Clone, Copy)]
 pub struct PackageQualificationLimits {
@@ -247,7 +253,7 @@ fn qualify(
     execute(&mut command, &evidence, "package", limits.process)?;
     let mut archives = BTreeMap::new();
     for (index, spec) in packages.iter().enumerate() {
-        let path = archive_root.join(format!("{}-{}.crate", spec.name, spec.version));
+        let path = archive_root.join(format!("{}.crate", spec.directory_name()));
         archives.insert(path.clone(), hash(&path, limits.file_bytes)?);
         execute(
             &mut extractor(&path, &evidence),
@@ -271,10 +277,15 @@ fn qualify(
     let payload_lock = evidence.join("Cargo.lock");
     fs::write(&manifest_path, &manifest)?;
     fs::write(&payload_lock, &entry_lock)?;
-    let mut command = cargo();
+    let mut verification_cargo = || {
+        let mut command = cargo();
+        command
+            .current_dir(&evidence)
+            .env("CARGO_TARGET_DIR", evidence.join("target"));
+        command
+    };
+    let mut command = verification_cargo();
     command
-        .current_dir(&evidence)
-        .env("CARGO_TARGET_DIR", evidence.join("target"))
         .args(metadata_arguments(true, None))
         .args(["--offline", "--manifest-path"])
         .arg(&manifest_path)
@@ -286,10 +297,8 @@ fn qualify(
     fs::write(evidence.join("admitted-Cargo.toml"), &manifest)?;
     fs::write(evidence.join("admitted-Cargo.lock"), &admitted_lock)?;
     for (label, selection) in [("test-targets", "--all-targets"), ("test-docs", "--doc")] {
-        let mut command = cargo();
+        let mut command = verification_cargo();
         command
-            .current_dir(&evidence)
-            .env("CARGO_TARGET_DIR", evidence.join("target"))
             .args(["test", "--offline", "--locked", "--manifest-path"])
             .arg(&manifest_path)
             .args(["--workspace", selection])
@@ -328,13 +337,13 @@ fn qualify(
 fn verification_manifest(packages: &[PackageArchiveSpec<'_>]) -> Result<String, toml::ser::Error> {
     let members = packages
         .iter()
-        .map(|p| format!("{}-{}", p.name, p.version))
+        .map(PackageArchiveSpec::directory_name)
         .collect::<Vec<_>>();
     let patches: toml::Table = packages
         .iter()
         .filter(|p| p.patch_registry)
         .map(|p| {
-            let entry = toml::toml! { path = (format!("{}-{}", p.name, p.version)) };
+            let entry = toml::toml! { path = (p.directory_name()) };
             (p.name.to_owned(), toml::Value::Table(entry))
         })
         .collect();

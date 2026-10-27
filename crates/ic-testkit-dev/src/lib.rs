@@ -11,15 +11,17 @@ use std::process::ExitCode;
 
 use fixture_reuse_driver::Error;
 
+fn clap_exit(error: &clap::Error) -> ExitCode {
+    let _ = error.print();
+    ExitCode::from(u8::try_from(error.exit_code()).unwrap_or(2))
+}
+
 /// Run the operator-facing benchmark driver and project its exit status.
 #[must_use]
 pub fn driver_main() -> ExitCode {
     match fixture_reuse_driver::run() {
         Ok(()) => ExitCode::SUCCESS,
-        Err(Error::Arguments(error)) => {
-            let _ = error.print();
-            ExitCode::from(u8::try_from(error.exit_code()).unwrap_or(2))
-        }
+        Err(Error::Arguments(error)) => clap_exit(&error),
         Err(error) => {
             eprintln!("error: {error}");
             match error {
@@ -44,10 +46,7 @@ pub fn worker_main() -> ExitCode {
         std::env::args_os().skip(1).collect::<Vec<_>>(),
     ) {
         Ok(arguments) => arguments,
-        Err(error) => {
-            let _ = error.print();
-            return ExitCode::from(u8::try_from(error.exit_code()).unwrap_or(2));
-        }
+        Err(error) => return clap_exit(&error),
     };
     match workload::run(arguments) {
         Ok(()) => ExitCode::SUCCESS,

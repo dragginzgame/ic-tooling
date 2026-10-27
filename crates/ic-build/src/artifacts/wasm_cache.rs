@@ -280,12 +280,16 @@ pub struct ResolvedCargoBuildInputs {
 }
 
 pub(super) struct WasmBuildBatchInputResolver<'a, 'session> {
-    specs: Vec<&'a WasmBuildSpec>,
+    entries: Vec<BatchResolutionEntry<'a>>,
     groups: Vec<BatchResolutionGroup>,
-    group_by_index: Vec<usize>,
-    resolved: Vec<Option<Result<ResolvedCargoBuildInputs, (WasmBuildPhase, WasmBuildError)>>>,
     reuse: Option<&'session WasmBuildInputSnapshotState>,
     metrics: WasmBuildBatchInputMetrics,
+}
+
+struct BatchResolutionEntry<'a> {
+    spec: &'a WasmBuildSpec,
+    group: usize,
+    resolved: Option<Result<ResolvedCargoBuildInputs, (WasmBuildPhase, WasmBuildError)>>,
 }
 
 pub(super) struct WasmBuildInputSnapshotState {
@@ -1644,13 +1648,14 @@ impl ResolvedCargoBuildInputs {
                 &mut LabeledPathDigestCache::default(),
             )
         };
-        digest().map_err(|source| WasmBuildError::Io {
-            operation: "rehash resolved Cargo build inputs",
-            path: self
-                .inputs
-                .first()
-                .map_or_else(PathBuf::new, |input| input.path.clone()),
-            source,
+        digest().map_err(|source| {
+            WasmBuildError::io(
+                "rehash resolved Cargo build inputs",
+                self.inputs
+                    .first()
+                    .map_or_else(PathBuf::new, |input| input.path.clone()),
+                source,
+            )
         })
     }
 }
@@ -1748,8 +1753,13 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
         };
         let mut groups_by_key = HashMap::new();
         let mut groups = Vec::<BatchResolutionGroup>::new();
-        let mut group_by_index = Vec::with_capacity(specs.len());
-        for (index, spec) in specs.iter().copied().enumerate() {
+        let mut entries = Vec::with_capacity(specs.len());
+        let mut metrics = WasmBuildBatchInputMetrics::default();
+        let mut prepared = prepared.map(|prepared| {
+            metrics.prepared_reuses = prepared.len();
+            prepared.into_iter()
+        });
+        for (index, spec) in specs.into_iter().enumerate() {
             let group = *groups_by_key
                 .entry(BatchResolutionKey::for_spec(spec))
                 .or_insert_with(|| {
@@ -1759,24 +1769,19 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
                     groups.len() - 1
                 });
             groups[group].indexes.push(index);
-            group_by_index.push(group);
+            entries.push(BatchResolutionEntry {
+                spec,
+                group,
+                resolved: prepared.as_mut().map(|snapshots| {
+                    Ok(snapshots
+                        .next()
+                        .expect("admitted snapshot must cover every specification"))
+                }),
+            });
         }
-        let mut metrics = WasmBuildBatchInputMetrics::default();
-        let resolved = prepared.map_or_else(
-            || specs.iter().map(|_| None).collect(),
-            |prepared| {
-                metrics.prepared_reuses = prepared.len();
-                prepared
-                    .into_iter()
-                    .map(|snapshot| Some(Ok(snapshot)))
-                    .collect()
-            },
-        );
         Ok(Self {
-            specs,
+            entries,
             groups,
-            group_by_index,
-            resolved,
             reuse,
             metrics,
         })
@@ -1801,10 +1806,11 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
         index: usize,
         progress: &mut ProgressReporter<'_>,
     ) -> Result<ResolvedCargoBuildInputs, WasmBuildError> {
-        if self.resolved[index].is_none() {
+        if self.entries[index].resolved.is_none() {
             self.resolve_group(index, progress)?;
         }
-        self.resolved[index]
+        self.entries[index]
+            .resolved
             .take()
             .expect("resolved batch input must be populated")
             .map_err(|(phase, error)| {
@@ -1819,8 +1825,8 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
         progress: &mut ProgressReporter<'_>,
     ) -> Result<(), WasmBuildError> {
         let total_started = Instant::now();
-        let group = self.group_by_index[active_index];
-        let active = self.specs[active_index];
+        let group = self.entries[active_index].group;
+        let active = self.entries[active_index].spec;
 
         let (facts, metadata, mut timings) = observe_cargo_resolution(active, progress, &mut None)?;
 
@@ -1868,11 +1874,12 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
             let (inputs, exclusions, input_digest, validation_digest) = match result {
                 Ok(resolved) => resolved,
                 Err(error) => {
-                    self.resolved[index] = Some(Err((WasmBuildPhase::ContentHashing, error)));
+                    self.entries[index].resolved =
+                        Some(Err((WasmBuildPhase::ContentHashing, error)));
                     continue;
                 }
             };
-            let spec = self.specs[index];
+            let spec = self.entries[index].spec;
             let resolved = ResolvedCargoBuildInputs::assemble(
                 spec,
                 inputs,
@@ -1889,7 +1896,7 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
                     }
                 },
             );
-            self.resolved[index] = Some(Ok(resolved));
+            self.entries[index].resolved = Some(Ok(resolved));
         }
         Ok(())
     }
@@ -1902,23 +1909,23 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
     ) -> (Vec<(usize, ResolvedLocalInputs, Vec<PathBuf>)>, Duration) {
         let started = Instant::now();
         let indexes = &self.groups[group].indexes;
-        let specs = &self.specs;
-        let resolved = &mut self.resolved;
+        let entries = &mut self.entries;
         let discovered = progress.run_phase(WasmBuildPhase::InputDiscovery, || {
             let parsed = ParsedCargoMetadata::parse(metadata);
             let mut discovered = Vec::new();
             for &index in indexes {
-                if resolved[index].is_some() || validate_spec(specs[index]).is_err() {
+                let entry = &mut entries[index];
+                if entry.resolved.is_some() || validate_spec(entry.spec).is_err() {
                     continue;
                 }
                 let result = parsed
                     .as_ref()
                     .map_err(|message| invalid_metadata(message))
-                    .and_then(|parsed| resolve_local_inputs(specs[index], parsed));
+                    .and_then(|parsed| resolve_local_inputs(entry.spec, parsed));
                 match result {
                     Ok((inputs, exclusions)) => discovered.push((index, inputs, exclusions)),
                     Err(error) => {
-                        resolved[index] = Some(Err((WasmBuildPhase::InputDiscovery, error)));
+                        entry.resolved = Some(Err((WasmBuildPhase::InputDiscovery, error)));
                     }
                 }
             }
@@ -2296,16 +2303,19 @@ pub fn inspect_shared_incremental_target(
     }
 
     let (_lock, lock_wait, canonical) = lock_shared_incremental_target(spec)?;
-    let logical_size_bytes =
-        directory_logical_size(&canonical).map_err(|source| WasmBuildError::Io {
-            operation: "measure shared incremental Cargo target",
-            path: canonical.clone(),
+    let logical_size_bytes = directory_logical_size(&canonical).map_err(|source| {
+        WasmBuildError::io(
+            "measure shared incremental Cargo target",
+            canonical.clone(),
             source,
-        })?;
-    let last_used = cache_entry_last_used(&canonical).map_err(|source| WasmBuildError::Io {
-        operation: "read shared incremental Cargo target use time",
-        path: canonical.clone(),
-        source,
+        )
+    })?;
+    let last_used = cache_entry_last_used(&canonical).map_err(|source| {
+        WasmBuildError::io(
+            "read shared incremental Cargo target use time",
+            canonical.clone(),
+            source,
+        )
     })?;
     Ok(Some(SharedIncrementalTargetInspection {
         target_dir: canonical,
@@ -2468,18 +2478,20 @@ fn maintain_shared_incremental_target_locked(
     lock_wait: Duration,
 ) -> Result<SharedIncrementalTargetMaintenance, WasmBuildError> {
     let started = Instant::now();
-    let logical_size_bytes_before =
-        directory_logical_size(canonical).map_err(|source| WasmBuildError::Io {
-            operation: "measure shared incremental Cargo target before maintenance",
-            path: canonical.to_owned(),
+    let logical_size_bytes_before = directory_logical_size(canonical).map_err(|source| {
+        WasmBuildError::io(
+            "measure shared incremental Cargo target before maintenance",
+            canonical.to_owned(),
             source,
-        })?;
-    let last_used_before =
-        cache_entry_last_used(canonical).map_err(|source| WasmBuildError::Io {
-            operation: "read shared incremental Cargo target use time before maintenance",
-            path: canonical.to_owned(),
+        )
+    })?;
+    let last_used_before = cache_entry_last_used(canonical).map_err(|source| {
+        WasmBuildError::io(
+            "read shared incremental Cargo target use time before maintenance",
+            canonical.to_owned(),
             source,
-        })?;
+        )
+    })?;
     let expired = policy.max_age().is_some_and(|max_age| {
         SystemTime::now()
             .duration_since(last_used_before)
@@ -2494,10 +2506,12 @@ fn maintain_shared_incremental_target_locked(
         record_cache_entry_use(canonical)?;
     }
     let logical_size_bytes_after = if cleared {
-        directory_logical_size(canonical).map_err(|source| WasmBuildError::Io {
-            operation: "measure shared incremental Cargo target after maintenance",
-            path: canonical.to_owned(),
-            source,
+        directory_logical_size(canonical).map_err(|source| {
+            WasmBuildError::io(
+                "measure shared incremental Cargo target after maintenance",
+                canonical.to_owned(),
+                source,
+            )
         })?
     } else {
         logical_size_bytes_before
@@ -2514,27 +2528,29 @@ fn maintain_shared_incremental_target_locked(
 }
 
 fn clear_shared_incremental_target_contents(target_dir: &Path) -> Result<(), WasmBuildError> {
-    let entries = fs::read_dir(target_dir).map_err(|source| WasmBuildError::Io {
-        operation: "read shared incremental Cargo target for maintenance",
-        path: target_dir.to_owned(),
-        source,
+    let entries = fs::read_dir(target_dir).map_err(|source| {
+        WasmBuildError::io(
+            "read shared incremental Cargo target for maintenance",
+            target_dir.to_owned(),
+            source,
+        )
     })?;
     for entry in entries {
         let path = entry
-            .map_err(|source| WasmBuildError::Io {
-                operation: "read shared incremental Cargo target entry for maintenance",
-                path: target_dir.to_owned(),
-                source,
+            .map_err(|source| {
+                WasmBuildError::io(
+                    "read shared incremental Cargo target entry for maintenance",
+                    target_dir.to_owned(),
+                    source,
+                )
             })?
             .path();
         let preserved = path
             .file_name()
             .is_some_and(|name| name == ".ic-testkit" || name == "CACHEDIR.TAG");
         if !preserved {
-            remove_path_if_present(&path).map_err(|source| WasmBuildError::Io {
-                operation: "clear shared incremental Cargo target entry",
-                path,
-                source,
+            remove_path_if_present(&path).map_err(|source| {
+                WasmBuildError::io("clear shared incremental Cargo target entry", path, source)
             })?;
         }
     }
@@ -2982,7 +2998,6 @@ fn try_reuse_wasm_artifacts(
             input_resolution,
             cargo_build: None,
             active_entry: &cache_entry,
-            targets,
         },
         total_started,
         progress,
@@ -3104,7 +3119,6 @@ fn build_wasm_cache_miss(
                 input_resolution,
                 cargo_build: Some(cargo_build),
                 active_entry: &cache_entry,
-                targets,
             },
             total_started,
             progress,
@@ -3141,7 +3155,6 @@ struct BuildRecordInput<'a> {
     input_resolution: WasmInputResolutionTimings,
     cargo_build: Option<Duration>,
     active_entry: &'a Path,
-    targets: &'a [WasmArtifactTarget],
 }
 
 fn complete_build_record(
@@ -3175,7 +3188,12 @@ fn complete_build_record(
         fingerprint: input.resolved.fingerprint,
         recipe_identity: input.resolved.recipe_identity,
         input_digest: input.resolved.input_digest,
-        artifacts: expected_artifacts(spec, input.active_entry, input.targets).into(),
+        artifacts: expected_artifacts(
+            spec,
+            input.active_entry,
+            &input.resolved.wasm_outputs()?.targets,
+        )
+        .into(),
         retention,
         timings: WasmBuildTimings {
             lock_wait: input.lock_wait,
@@ -3292,13 +3310,13 @@ fn lock_shared_incremental_target_internal(
         "create shared incremental Cargo target directory",
     )?;
     ensure_cache_tag(&target_dir).map_err(wasm_cache_fs_error)?;
-    let canonical = target_dir
-        .canonicalize()
-        .map_err(|source| WasmBuildError::Io {
-            operation: "resolve shared incremental Cargo target directory",
-            path: target_dir.clone(),
+    let canonical = target_dir.canonicalize().map_err(|source| {
+        WasmBuildError::io(
+            "resolve shared incremental Cargo target directory",
+            target_dir.clone(),
             source,
-        })?;
+        )
+    })?;
     let lock_path = canonical.join(".ic-testkit/wasm-incremental.lock");
     let (lock, wait) = lock_cache_file_with_progress(
         &lock_path,
@@ -3340,11 +3358,7 @@ fn record_cache_entry_use(path: &Path) -> Result<(), WasmBuildError> {
 }
 
 fn wasm_cache_fs_error(error: CacheFsError) -> WasmBuildError {
-    WasmBuildError::Io {
-        operation: error.operation,
-        path: error.path,
-        source: error.source,
-    }
+    WasmBuildError::io(error.operation, error.path, error.source)
 }
 
 fn validate_spec(spec: &WasmBuildSpec) -> Result<(), WasmBuildError> {
@@ -3604,15 +3618,15 @@ fn capture_probe_output_with_policy(
             });
         }
         Err(error) => {
-            return Err(WasmBuildError::Io {
-                operation: match phase {
+            return Err(WasmBuildError::io(
+                match phase {
                     WasmBuildPhase::CargoIdentity => "capture complete Cargo identity probe output",
                     WasmBuildPhase::RustcIdentity => "capture complete rustc identity probe output",
                     _ => "capture complete Cargo metadata probe output",
                 },
-                path: PathBuf::from(command.get_program()),
-                source: io::Error::other(error),
-            });
+                PathBuf::from(command.get_program()),
+                io::Error::other(error),
+            ));
         }
     };
     Ok(evidence)
@@ -3646,11 +3660,7 @@ fn shared_incremental_target_exists(
             ),
         }),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
-        Err(source) => Err(WasmBuildError::Io {
-            operation,
-            path: target_dir,
-            source,
-        }),
+        Err(source) => Err(WasmBuildError::io(operation, target_dir, source)),
     }
 }
 
@@ -3700,21 +3710,24 @@ fn cargo_build_command(
     spec: &WasmBuildSpec,
     build_target_dir: &Path,
 ) -> Result<Command, WasmBuildError> {
-    let absolute_target_dir =
-        canonicalize_allow_missing(build_target_dir).map_err(|source| WasmBuildError::Io {
-            operation: "resolve Cargo build target directory",
-            path: build_target_dir.to_owned(),
+    let absolute_target_dir = canonicalize_allow_missing(build_target_dir).map_err(|source| {
+        WasmBuildError::io(
+            "resolve Cargo build target directory",
+            build_target_dir.to_owned(),
             source,
-        })?;
+        )
+    })?;
     let mut invocation = spec.cargo_invocation();
     invocation.environment.insert(
         "CARGO_TARGET_DIR".into(),
         absolute_target_dir.into_os_string(),
     );
-    invocation.command().map_err(|source| WasmBuildError::Io {
-        operation: "render Cargo build invocation",
-        path: spec.workspace_root.clone(),
-        source,
+    invocation.command().map_err(|source| {
+        WasmBuildError::io(
+            "render Cargo build invocation",
+            spec.workspace_root.clone(),
+            source,
+        )
     })
 }
 
@@ -3786,18 +3799,22 @@ fn communicate_cargo_build(
                 elapsed: started.elapsed(),
             });
     }
-    let evidence = result.map_err(|error| WasmBuildError::Io {
-        operation: "communicate with cargo build",
-        path: PathBuf::from(&spec.cargo_program),
-        // Retain typed Host evidence and secondary cleanup failures.
-        source: io::Error::other(error),
+    let evidence = result.map_err(|error| {
+        WasmBuildError::io(
+            "communicate with cargo build",
+            PathBuf::from(&spec.cargo_program),
+            // Retain typed Host evidence and secondary cleanup failures.
+            io::Error::other(error),
+        )
     })?;
     let status = evidence.status;
     if status.success() {
-        observed.messages.map_err(|source| WasmBuildError::Io {
-            operation: "decode Cargo build artifacts",
-            path: PathBuf::from(&spec.cargo_program),
-            source,
+        observed.messages.map_err(|source| {
+            WasmBuildError::io(
+                "decode Cargo build artifacts",
+                PathBuf::from(&spec.cargo_program),
+                source,
+            )
         })?;
         return artifacts
             .into_iter()
@@ -4014,10 +4031,12 @@ fn write_artifact_stamp(
         },
         stamp.as_bytes(),
     )
-    .map_err(|source| WasmBuildError::Io {
-        operation: "publish Wasm build stamp",
-        path: stamp_path,
-        source: io::Error::other(source),
+    .map_err(|source| {
+        WasmBuildError::io(
+            "publish Wasm build stamp",
+            stamp_path,
+            io::Error::other(source),
+        )
     })
 }
 
@@ -4029,11 +4048,7 @@ fn publish_artifact_stamps(
         .into_iter()
         .map(|(cached_path, public_path)| {
             let info = digest_file("wasm-artifact-v1", &cached_path).map_err(|source| {
-                WasmBuildError::Io {
-                    operation: "hash built Wasm artifact",
-                    path: cached_path.clone(),
-                    source,
-                }
+                WasmBuildError::io("hash built Wasm artifact", cached_path.clone(), source)
             })?;
             write_artifact_stamp(&cached_path, fingerprint, &info, false)?;
             Ok(VerifiedWasmArtifact {
@@ -4057,10 +4072,12 @@ fn materialize_artifacts(
             &artifact.public_path,
             preserve_matching.then_some(&artifact.info),
         )
-        .map_err(|source| WasmBuildError::Io {
-            operation: "publish Wasm artifact",
-            path: artifact.public_path.clone(),
-            source,
+        .map_err(|source| {
+            WasmBuildError::io(
+                "publish Wasm artifact",
+                artifact.public_path.clone(),
+                source,
+            )
         })?;
     }
     // Complete every copy before stamping any public output.
@@ -4088,10 +4105,12 @@ fn copy_wasm_artifacts(
     for (index, (cached, _)) in destinations.iter().enumerate() {
         let source = &source_artifacts[index];
         if source != cached {
-            copy_file_atomic(source, cached).map_err(|source_error| WasmBuildError::Io {
-                operation: "cache shared-incremental Wasm artifact",
-                path: cached.clone(),
-                source: source_error,
+            copy_file_atomic(source, cached).map_err(|source| {
+                WasmBuildError::io(
+                    "cache shared-incremental Wasm artifact",
+                    cached.clone(),
+                    source,
+                )
             })?;
         }
     }
@@ -4099,11 +4118,8 @@ fn copy_wasm_artifacts(
 }
 
 fn create_dir_all(path: &Path, operation: &'static str) -> Result<(), WasmBuildError> {
-    fs::create_dir_all(path).map_err(|source| WasmBuildError::Io {
-        operation,
-        path: path.to_owned(),
-        source,
-    })
+    fs::create_dir_all(path)
+        .map_err(|source| WasmBuildError::io(operation, path.to_owned(), source))
 }
 
 fn add_if_present(inputs: &mut Vec<(PathBuf, PathBuf)>, label: &str, path: PathBuf) {
@@ -4119,6 +4135,14 @@ fn invalid_metadata(message: &str) -> WasmBuildError {
 }
 
 impl WasmBuildError {
+    fn io(operation: &'static str, path: impl Into<PathBuf>, source: io::Error) -> Self {
+        Self::Io {
+            operation,
+            path: path.into(),
+            source,
+        }
+    }
+
     fn indicates_input_change(&self) -> bool {
         match self {
             Self::InputsChangedDuringAcquisition { .. } => true,

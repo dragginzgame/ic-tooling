@@ -66,3 +66,35 @@ pub struct WorkerReport {
     pub(super) pool_teardown_ms: f64,
     pub(super) server_teardown_ms: f64,
 }
+
+#[cfg(test)]
+pub fn worker_report_fixture(iterations: usize) -> WorkerReport {
+    WorkerReport {
+        mode: Mode::Fresh,
+        capacity: 1,
+        iterations,
+        workers: 1,
+        state_bytes_per_canister: 0,
+        wall_ms: 4.0,
+        fixture_wall_ms: 5.0,
+        samples: (0..iterations)
+            .map(|iteration| Sample {
+                iteration,
+                phases: Phases {
+                    build_ms: Some(1.0),
+                    validation_ms: Some(1.0),
+                    acquisition_ms: 2.0,
+                    ..Phases::default()
+                },
+                body_ms: 1.0,
+                release_ms: 1.0,
+                total_ms: 4.0,
+            })
+            .collect(),
+        server_startup_ms: 6.0,
+        cold_preparation: Vec::new(),
+        preparation_wall_ms: 1.0,
+        pool_teardown_ms: 0.5,
+        server_teardown_ms: 0.5,
+    }
+}

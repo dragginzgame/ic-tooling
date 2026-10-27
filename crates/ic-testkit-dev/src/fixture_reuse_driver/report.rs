@@ -4,15 +4,13 @@
 use std::collections::BTreeMap;
 
 use crate::{
+    fixture_reuse_protocol::WorkerArguments,
     fixture_reuse_report::{Phases, WorkerReport},
     statistics::{SampleStatistics, summarize_samples},
 };
 use serde::Serialize;
 
-use super::{
-    Error,
-    arguments::{Case, Options},
-};
+use super::Error;
 
 /// Borrow collected measurements when encoding the final report.
 #[derive(Serialize)]
@@ -41,16 +39,15 @@ pub(super) struct RssMeasurements {
 impl MeasuredRun {
     pub(super) fn from_worker(
         metrics: WorkerReport,
-        options: &Options,
-        case: &Case,
+        request: &WorkerArguments,
         rss: RssMeasurements,
     ) -> Result<Self, Error> {
         let invalid_duration = |value: f64| !value.is_finite() || value < 0.0;
-        if metrics.mode != case.mode
-            || metrics.capacity != case.capacity.get()
-            || metrics.iterations != options.iterations.get()
-            || metrics.workers != options.workers.get()
-            || metrics.state_bytes_per_canister != options.state_bytes
+        if metrics.mode != request.mode
+            || metrics.capacity != request.capacity.get()
+            || metrics.iterations != request.iterations.get()
+            || metrics.workers != request.workers.get()
+            || metrics.state_bytes_per_canister != request.state_bytes
         {
             return Err(Error::InvalidData(
                 "worker report does not match requested workload",
@@ -111,7 +108,7 @@ fn distribution(mut values: Vec<f64>) -> Result<Option<SampleStatistics>, Error>
 
 #[derive(Serialize)]
 pub(super) struct Summary {
-    pub(super) phases_ms: BTreeMap<String, Option<SampleStatistics>>,
+    phases_ms: BTreeMap<String, Option<SampleStatistics>>,
     body_ms: Option<SampleStatistics>,
     release_ms: Option<SampleStatistics>,
     iteration_ms: Option<SampleStatistics>,
@@ -119,6 +116,16 @@ pub(super) struct Summary {
     pub(super) fixture_wall_ms: Option<SampleStatistics>,
     pub(super) iterations_per_second: Option<SampleStatistics>,
     pub(super) sampled_peak_tree_rss_bytes: Option<SampleStatistics>,
+}
+
+impl Summary {
+    pub(super) fn wait(&self) -> Option<&SampleStatistics> {
+        self.phases_ms["wait_ms"].as_ref()
+    }
+
+    pub(super) fn restore(&self) -> Option<&SampleStatistics> {
+        self.phases_ms["restore_ms"].as_ref()
+    }
 }
 
 #[allow(clippy::cast_precision_loss)]
@@ -164,17 +171,14 @@ mod tests {
     use super::{MeasuredRun, RssMeasurements, distribution, summarize};
     use crate::fixture_reuse_driver::{Error, arguments::parse_arguments};
     use serde_json::{Map, Value, json};
+    use std::path::PathBuf;
 
     fn worker_report() -> Map<String, Value> {
-        json!({
-            "mode": "fresh", "capacity": 1, "iterations": 1, "workers": 1, "state_bytes_per_canister": 0,
-            "wall_ms": 4.0, "fixture_wall_ms": 5.0, "server_startup_ms": 6.0,
-            "cold_preparation": [], "preparation_wall_ms": 1.0,
-            "pool_teardown_ms": 0.5, "server_teardown_ms": 0.5,
-            "samples": [{"iteration": 0, "phases": {"wait_ms": 0.0, "build_ms": 1.0, "restore_ms": null,
-                "reset_ms": null, "readiness_ms": null, "validation_ms": 1.0, "acquisition_ms": 2.0},
-                "body_ms": 1.0, "release_ms": 1.0, "total_ms": 4.0}],
-        }).as_object().unwrap().clone()
+        serde_json::to_value(crate::fixture_reuse_report::worker_report_fixture(1))
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .clone()
     }
 
     #[test]
@@ -197,8 +201,11 @@ mod tests {
         .unwrap();
         let run = MeasuredRun::from_worker(
             serde_json::from_value(Value::Object(worker_report())).unwrap(),
-            &options,
-            &options.benchmark_cases()[0],
+            &options.benchmark_cases()[0].worker_arguments(
+                &options,
+                PathBuf::new(),
+                PathBuf::new(),
+            ),
             RssMeasurements {
                 sampled_peak_tree_rss_bytes: 1024,
                 peak_tree_process_count: 2,
@@ -219,8 +226,11 @@ mod tests {
         second.fixture_wall_ms = 7.0;
         let second = MeasuredRun::from_worker(
             second,
-            &options,
-            &options.benchmark_cases()[0],
+            &options.benchmark_cases()[0].worker_arguments(
+                &options,
+                PathBuf::new(),
+                PathBuf::new(),
+            ),
             RssMeasurements {
                 sampled_peak_tree_rss_bytes: 2048,
                 peak_tree_process_count: 2,
@@ -276,8 +286,11 @@ mod tests {
         metrics.wall_ms = f64::from_bits(1);
         let run = MeasuredRun::from_worker(
             metrics,
-            &options,
-            &options.benchmark_cases()[0],
+            &options.benchmark_cases()[0].worker_arguments(
+                &options,
+                PathBuf::new(),
+                PathBuf::new(),
+            ),
             RssMeasurements::default(),
         )
         .unwrap();
@@ -320,9 +333,10 @@ mod tests {
         )
         .unwrap();
         let case = options.benchmark_cases().remove(0);
+        let request = case.worker_arguments(&options, PathBuf::new(), PathBuf::new());
         let admit = |raw| {
             let metrics = serde_json::from_value(Value::Object(raw))?;
-            MeasuredRun::from_worker(metrics, &options, &case, RssMeasurements::default())
+            MeasuredRun::from_worker(metrics, &request, RssMeasurements::default())
         };
         let mut raw = worker_report();
         raw.insert("mode".into(), json!("pooled"));

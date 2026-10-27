@@ -3,7 +3,7 @@
 use ic_host_process::tool::{OutputLimit, OutputLimits};
 use std::{ffi::OsString, num::NonZeroUsize, path::PathBuf};
 
-use crate::fixture_reuse_protocol::Mode;
+use crate::fixture_reuse_protocol::{Mode, WorkerArguments};
 use clap::{CommandFactory, Parser, error::ErrorKind};
 
 pub(super) const RSS_COMMAND_LIMITS: OutputLimits = OutputLimits {
@@ -55,6 +55,25 @@ pub(super) struct Case {
     pub(super) label: String,
     pub(super) mode: Mode,
     pub(super) capacity: NonZeroUsize,
+}
+
+impl Case {
+    pub(super) const fn worker_arguments(
+        &self,
+        options: &Options,
+        wasm: PathBuf,
+        server: PathBuf,
+    ) -> WorkerArguments {
+        WorkerArguments {
+            mode: self.mode,
+            capacity: self.capacity,
+            iterations: options.iterations,
+            workers: options.workers,
+            state_bytes: options.state_bytes,
+            wasm,
+            server,
+        }
+    }
 }
 
 impl Options {

@@ -38,7 +38,7 @@ pub(super) fn sources(
     let mut files = BTreeMap::new();
     let mut remaining = limits.source_entries;
     for spec in packages {
-        let path = root.join(format!("{}-{}", spec.name, spec.version));
+        let path = root.join(spec.directory_name());
 
         let fd = open(
             &path,
