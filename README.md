@@ -471,7 +471,17 @@ without creating missing directories. Symlinks, non-directories and `..` reject.
 It shares admission with private-parent preparation; callers retain pathname
 policy and namespace custody through later operations.
 
-With the artifact `gzip` feature, `copy_gzip` streams a single member into a
+With the artifact `gzip` feature, `encode_gzip` is the shared gzip encoding owner
+for production and ordinary fixtures. It emits one zero-timestamp member into a
+caller-owned bounded writer. Consumers select the compression level and allowance
+and retain staging/publication policy. Ordinary fixtures normally use fast level 1;
+tests of exact bytes/hashes, release parity or compression-sensitive limits retain
+the relevant product settings. Compressed bytes can change across backend or dependency versions, so
+retained hashes require explicit review rather than automatic regeneration.
+Independent backend and optional-header controls remain isolated at the codec
+owner. The dependency policy confines direct `flate2` declarations to Artifacts.
+
+`copy_gzip` streams a single member into a
 caller-owned sink and returns its decoded identity. Partial output can remain
 after integrity, limit or sink failures; callers own staging and publication.
 `hash_gzip` identifies decoded payloads

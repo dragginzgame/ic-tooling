@@ -1604,7 +1604,6 @@ dependencies = [
 name = "ic-host-http"
 version = "0.69.0"
 dependencies = [
- "flate2",
  "ic-host-artifacts",
  "reqwest",
  "tokio",

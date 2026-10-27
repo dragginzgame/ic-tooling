@@ -15,7 +15,7 @@ ic-host-artifacts.workspace = true
 reqwest.workspace = true
 
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
-flate2.workspace = true
+ic-host-artifacts = { workspace = true, features = ["gzip"] }
 reqwest = { workspace = true, features = ["gzip"] }
 tokio = { workspace = true, features = ["macros", "net", "rt", "time"] }
 

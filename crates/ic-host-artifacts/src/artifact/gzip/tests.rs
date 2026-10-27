@@ -90,16 +90,16 @@ fn copy_retries_short_interrupted_writes_and_preserves_sink_failures() {
 }
 
 fn gzip(bytes: &[u8]) -> Vec<u8> {
-    let mut encoder = GzBuilder::new()
-        .mtime(0)
-        .write(Vec::new(), Compression::fast());
-    encoder.write_all(bytes).unwrap();
-    encoder.finish().unwrap()
+    let mut encoded = Vec::new();
+    encode_gzip(bytes, &mut encoded, 1, u64::MAX).unwrap();
+    encoded
 }
 
 #[test]
 fn encoded_member_is_repeatable_and_preserves_the_existing_zero_timestamp_format() {
     let input = b"artifact input with repeated bytes repeated bytes repeated bytes";
+    // Independent backend control: prove the public encoder preserves the
+    // existing zero-timestamp representation, rather than comparing it to itself.
     let mut reference = GzBuilder::new()
         .mtime(0)
         .write(Vec::new(), Compression::best());
@@ -144,6 +144,7 @@ fn compressed_budget_includes_header_and_trailer_and_preserves_sink_errors() {
 
 #[test]
 fn compression_levels_preserve_backend_bytes_and_reject_invalid_input_before_writing() {
+    // Independent backend controls cover the full public compression-level range.
     for level in 0..=9 {
         let input = b"same bytes same bytes same bytes";
         let mut expected = GzBuilder::new()
@@ -272,6 +273,8 @@ fn inflation_is_bounded_independently_of_small_compressed_input() {
 
 #[test]
 fn optional_header_fields_count_against_the_complete_input_allowance() {
+    // Deliberate noncanonical input: the normal encoder omits these optional
+    // header fields, whose complete input allowance the decoder must still check.
     let mut encoder = GzBuilder::new()
         .mtime(0)
         .filename("fixture.wasm")
