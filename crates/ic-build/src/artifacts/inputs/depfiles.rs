@@ -17,38 +17,35 @@ use std::{
 /// # Errors
 /// Returns `InvalidData` for malformed or unsupported syntax, or an empty input set.
 pub fn parse_cargo_depfile(text: &str) -> io::Result<Vec<PathBuf>> {
-    let mut paths = BTreeSet::new();
-    let mut has_target = false;
-    let mut token = String::new();
-    let mut separated = false;
+    let mut parser = DepfileParser::default();
     let mut chars = text.chars();
     while let Some(character) = chars.next() {
         match character {
             '\\' => match chars.next() {
-                Some('\n') => flush_token(&mut token, separated, &mut has_target, &mut paths),
+                Some('\n') => parser.flush_token(),
                 Some('\r') if chars.next() == Some('\n') => {
-                    flush_token(&mut token, separated, &mut has_target, &mut paths);
+                    parser.flush_token();
                 }
-                Some(escaped @ (' ' | '\t' | '\\' | '#' | ':')) => token.push(escaped),
+                Some(escaped @ (' ' | '\t' | '\\' | '#' | ':')) => parser.token.push(escaped),
                 _ => return Err(invalid("unsupported depfile escape")),
             },
             '$' => {
                 if chars.next() != Some('$') {
                     return Err(invalid("unsupported depfile expansion"));
                 }
-                token.push('$');
+                parser.token.push('$');
             }
             ':' => {
-                if separated {
+                if parser.separated {
                     return Err(invalid("unescaped colon in depfile dependency"));
                 }
-                flush_token(&mut token, false, &mut has_target, &mut paths);
-                if !has_target {
+                parser.flush_token();
+                if !parser.has_target {
                     return Err(invalid("depfile target is empty"));
                 }
-                separated = true;
+                parser.separated = true;
             }
-            '#' if !separated && !has_target && token.is_empty() => {
+            '#' if !parser.separated && !parser.has_target && parser.token.is_empty() => {
                 for comment in chars.by_ref() {
                     if comment == '\n' {
                         break;
@@ -56,23 +53,23 @@ pub fn parse_cargo_depfile(text: &str) -> io::Result<Vec<PathBuf>> {
                 }
             }
             '\n' => {
-                finish_rule(&mut token, &mut has_target, &mut separated, &mut paths)?;
+                parser.finish_rule()?;
             }
             ' ' | '\t' | '\r' => {
-                flush_token(&mut token, separated, &mut has_target, &mut paths);
+                parser.flush_token();
             }
             '#' | ';' | '|' | '*' | '?' | '[' | ']' | '=' | '%' => {
                 return Err(invalid("unsupported Make depfile syntax"));
             }
             control if control.is_control() => return Err(invalid("control byte in depfile")),
-            ordinary => token.push(ordinary),
+            ordinary => parser.token.push(ordinary),
         }
     }
-    finish_rule(&mut token, &mut has_target, &mut separated, &mut paths)?;
-    if paths.is_empty() {
+    parser.finish_rule()?;
+    if parser.paths.is_empty() {
         return Err(invalid("depfile has no source dependencies"));
     }
-    Ok(paths.into_iter().collect())
+    Ok(parser.paths.into_iter().collect())
 }
 
 /// Read source inputs from one explicitly selected Cargo/rustc depfile.
@@ -149,35 +146,36 @@ fn read_record_inputs(
     Ok(())
 }
 
-fn flush_token(
-    token: &mut String,
+#[derive(Default)]
+struct DepfileParser {
+    token: String,
+    has_target: bool,
     separated: bool,
-    has_target: &mut bool,
-    paths: &mut BTreeSet<PathBuf>,
-) {
-    if !token.is_empty() {
-        if separated {
-            paths.insert(PathBuf::from(std::mem::take(token)));
-        } else {
-            *has_target = true;
-            token.clear();
-        }
-    }
+    paths: BTreeSet<PathBuf>,
 }
 
-fn finish_rule(
-    token: &mut String,
-    has_target: &mut bool,
-    separated: &mut bool,
-    paths: &mut BTreeSet<PathBuf>,
-) -> io::Result<()> {
-    flush_token(token, *separated, has_target, paths);
-    if *has_target && !*separated {
-        return Err(invalid("depfile rule has no target separator"));
+impl DepfileParser {
+    fn flush_token(&mut self) {
+        if !self.token.is_empty() {
+            if self.separated {
+                self.paths
+                    .insert(PathBuf::from(std::mem::take(&mut self.token)));
+            } else {
+                self.has_target = true;
+                self.token.clear();
+            }
+        }
     }
-    *has_target = false;
-    *separated = false;
-    Ok(())
+
+    fn finish_rule(&mut self) -> io::Result<()> {
+        self.flush_token();
+        if self.has_target && !self.separated {
+            return Err(invalid("depfile rule has no target separator"));
+        }
+        self.has_target = false;
+        self.separated = false;
+        Ok(())
+    }
 }
 
 fn invalid(message: &'static str) -> io::Error {

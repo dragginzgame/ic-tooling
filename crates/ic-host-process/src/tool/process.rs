@@ -161,7 +161,7 @@ pub(super) fn drain_output(
 )]
 fn exchange(
     child: &mut OwnedChild,
-    mut stdout: Option<BufReader<ChildStdout>>,
+    stdout: Option<BufReader<ChildStdout>>,
     allow_reaped: bool,
     input: Option<&[u8]>,
     limits: OutputLimits,
@@ -171,9 +171,10 @@ fn exchange(
     mut output: impl FnMut(OutputStream, &[u8]) -> io::Result<()>,
 ) -> Result<CompletedExecution, ExecutionError> {
     let timeout = limits.timeout;
-    let mut evidence = ExecutionEvidence::default();
+    let mut status = None;
     let mut stdin = child.take_stdin();
-    let mut stderr = child.take_stderr();
+    let mut stdout = CapturedStream::new(stdout, limits.stdout, OutputStream::Stdout);
+    let mut stderr = CapturedStream::new(child.take_stderr(), limits.stderr, OutputStream::Stderr);
     // Resume the original panic after closing pipes and attempting cleanup.
     // The borrowed owner can outlive a caller's catch_unwind, so its Drop alone
     // cannot guarantee cleanup here. No callback is reused after unwinding.
@@ -202,10 +203,11 @@ fn exchange(
         }
         stdin.as_ref().map(nonblocking).transpose()?;
         stdout
+            .reader
             .as_ref()
             .map(|reader| nonblocking(reader.get_ref()))
             .transpose()?;
-        stderr.as_ref().map(nonblocking).transpose()?;
+        stderr.reader.as_ref().map(nonblocking).transpose()?;
         loop {
             if cancelled() {
                 return Err(ExecutionFailure::Cancelled);
@@ -222,27 +224,13 @@ fn exchange(
             } else {
                 false
             };
-            let progress_out = read_chunk(
-                &mut stdout,
-                &mut evidence.stdout,
-                limits.stdout,
-                OutputStream::Stdout,
-                &mut evidence.stdout_truncated,
-                &mut output,
-            )?;
-            let progress_err = read_chunk(
-                &mut stderr,
-                &mut evidence.stderr,
-                limits.stderr,
-                OutputStream::Stderr,
-                &mut evidence.stderr_truncated,
-                &mut output,
-            )?;
-            evidence.status = poll_completion(child, successful_exit)
+            let progress_out = stdout.read_chunk(&mut output)?;
+            let progress_err = stderr.read_chunk(&mut output)?;
+            status = poll_completion(child, successful_exit)
                 .map_err(|source| io_failure(ExecutionOperation::Wait, source))?;
-            if let Some(status) = evidence.status
-                && stdout.is_none()
-                && stderr.is_none()
+            if let Some(status) = status
+                && stdout.reader.is_none()
+                && stderr.reader.is_none()
                 && stdin.is_none()
             {
                 if cancelled() {
@@ -267,8 +255,15 @@ fn exchange(
     // Close all pipes before cleanup. A descendant retaining a writer must not
     // cause a blocking drain or leave background reader threads after a timeout.
     drop(stdin);
-    drop(stdout);
-    drop(stderr);
+    drop(stdout.reader.take());
+    drop(stderr.reader.take());
+    let evidence = ExecutionEvidence {
+        status,
+        stdout: stdout.bytes,
+        stderr: stderr.bytes,
+        stdout_truncated: stdout.truncated,
+        stderr_truncated: stderr.truncated,
+    };
     match result {
         Ok(result) => finish_capture(child, evidence, result),
         Err(panic) => {
@@ -364,56 +359,75 @@ fn nonblocking(pipe: &impl AsFd) -> Result<(), ExecutionFailure> {
         .map_err(|source| io_failure(ExecutionOperation::SetPipeFlags, source.into()))
 }
 
-fn read_chunk(
-    reader: &mut Option<impl Read>,
-    bytes: &mut Vec<u8>,
+struct CapturedStream<R> {
+    reader: Option<R>,
+    bytes: Vec<u8>,
     policy: OutputLimit,
     stream: OutputStream,
-    truncated: &mut bool,
-    output: &mut impl FnMut(OutputStream, &[u8]) -> io::Result<()>,
-) -> Result<bool, ExecutionFailure> {
-    let Some(pipe) = reader.as_mut() else {
-        return Ok(false);
-    };
-    let mut buffer = [0; 16 * 1024];
-    let limit = policy.retained_bytes();
-    let terminate = matches!(policy, OutputLimit::Terminate(_));
-    let allowance = if terminate {
-        (limit - bytes.len()).saturating_add(1).min(buffer.len())
-    } else {
-        buffer.len()
-    };
-    let count = match pipe.read(&mut buffer[..allowance]) {
-        Ok(0) => {
-            // A closed pipe is also the completion state; never read it again.
-            drop(reader.take());
-            return Ok(false);
+    truncated: bool,
+}
+
+impl<R: Read> CapturedStream<R> {
+    const fn new(reader: Option<R>, policy: OutputLimit, stream: OutputStream) -> Self {
+        Self {
+            reader,
+            bytes: Vec::new(),
+            policy,
+            stream,
+            truncated: false,
         }
-        Ok(count) => count,
-        Err(source)
-            if matches!(
-                source.kind(),
-                io::ErrorKind::Interrupted | io::ErrorKind::WouldBlock
-            ) =>
-        {
+    }
+
+    fn read_chunk(
+        &mut self,
+        output: &mut impl FnMut(OutputStream, &[u8]) -> io::Result<()>,
+    ) -> Result<bool, ExecutionFailure> {
+        let Some(pipe) = self.reader.as_mut() else {
             return Ok(false);
+        };
+        let mut buffer = [0; 16 * 1024];
+        let limit = self.policy.retained_bytes();
+        let terminate = matches!(self.policy, OutputLimit::Terminate(_));
+        let allowance = if terminate {
+            (limit - self.bytes.len())
+                .saturating_add(1)
+                .min(buffer.len())
+        } else {
+            buffer.len()
+        };
+        let count = match pipe.read(&mut buffer[..allowance]) {
+            Ok(0) => {
+                // A closed pipe is also the completion state; never read it again.
+                drop(self.reader.take());
+                return Ok(false);
+            }
+            Ok(count) => count,
+            Err(source)
+                if matches!(
+                    source.kind(),
+                    io::ErrorKind::Interrupted | io::ErrorKind::WouldBlock
+                ) =>
+            {
+                return Ok(false);
+            }
+            Err(source) => return Err(io_failure(ExecutionOperation::ReadOutput, source)),
+        };
+        let stream = self.stream;
+        let retained = reserve_bounded(&mut self.bytes, count, limit)
+            .map_err(|source| ExecutionFailure::Allocation { stream, source })?;
+        self.bytes.extend_from_slice(&buffer[..retained]);
+        // Preserve observed overflow even when the sink rejects this chunk.
+        self.truncated |= retained != count;
+        let observed = if terminate { retained } else { count };
+        if observed != 0 {
+            output(stream, &buffer[..observed])
+                .map_err(|source| ExecutionFailure::Observer { stream, source })?;
         }
-        Err(source) => return Err(io_failure(ExecutionOperation::ReadOutput, source)),
-    };
-    let retained = reserve_bounded(bytes, count, limit)
-        .map_err(|source| ExecutionFailure::Allocation { stream, source })?;
-    bytes.extend_from_slice(&buffer[..retained]);
-    // Preserve observed overflow even when the sink rejects this chunk.
-    *truncated |= retained != count;
-    let observed = if terminate { retained } else { count };
-    if observed != 0 {
-        output(stream, &buffer[..observed])
-            .map_err(|source| ExecutionFailure::Observer { stream, source })?;
+        if retained != count && terminate {
+            return Err(ExecutionFailure::OutputLimit { stream });
+        }
+        Ok(true)
     }
-    if retained != count && terminate {
-        return Err(ExecutionFailure::OutputLimit { stream });
-    }
-    Ok(true)
 }
 
 const fn io_failure(operation: ExecutionOperation, source: io::Error) -> ExecutionFailure {

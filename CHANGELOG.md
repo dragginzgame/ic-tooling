@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.68.12] - Unreleased
+
+### 🩹 Fixed
+
+- Benchmark sampling panics now request cooperative worker shutdown and wait for
+  cleanup before the original panic continues.
+
+### 🧹 Cleanup
+
+- Simplify artifact verification, process capture and pooled-fixture decisions
+  while preserving cache identities, typed failures and recovery evidence.
+- Simplify depfile and benchmark parsing, filesystem traversal and benchmark
+  case construction. [Details](docs/changelog/0.68.md#06812---unreleased).
+
 ## [0.68.11] - 2026-10-27
 
 ### ➕ Added

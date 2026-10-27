@@ -797,11 +797,17 @@ fn manifest_read_bound_preserves_writer_widths_and_byte_lengths() {
             .collect();
         let maximum = super::maximum_manifest_len(&spec).unwrap();
         for bytes in [0, 9, 10, 99, 100, u64::MAX] {
-            let encoded = super::manifest_contents(
-                key,
-                &spec,
-                std::iter::repeat(FileDigest { bytes, digest: key }),
-            );
+            let outputs = spec
+                .outputs
+                .iter()
+                .enumerate()
+                .map(|(index, output)| super::VerifiedOutput {
+                    index,
+                    output,
+                    info: FileDigest { bytes, digest: key },
+                })
+                .collect::<Vec<_>>();
+            let encoded = super::manifest_contents(key, &outputs);
             assert!(encoded.len() <= maximum, "{count} outputs, {bytes} bytes");
             if bytes == u64::MAX {
                 assert_eq!(encoded.len(), maximum);
@@ -809,16 +815,20 @@ fn manifest_read_bound_preserves_writer_widths_and_byte_lengths() {
         }
     }
     let mut insufficient = &mut [0_u8; 1][..];
-    let error = super::write_manifest(
-        &mut insufficient,
-        key,
-        &spec,
-        std::iter::repeat(FileDigest {
-            bytes: 0,
-            digest: key,
-        }),
-    )
-    .unwrap_err();
+    let outputs = spec
+        .outputs
+        .iter()
+        .enumerate()
+        .map(|(index, output)| super::VerifiedOutput {
+            index,
+            output,
+            info: FileDigest {
+                bytes: 0,
+                digest: key,
+            },
+        })
+        .collect::<Vec<_>>();
+    let error = super::write_manifest(&mut insufficient, key, &outputs).unwrap_err();
     assert_eq!(error.kind(), std::io::ErrorKind::WriteZero);
 }
 

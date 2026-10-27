@@ -21,13 +21,7 @@ pub fn directory_logical_size(path: &Path) -> io::Result<u64> {
         let metadata = fs::symlink_metadata(&current)?;
         if metadata.is_dir() {
             for entry in fs::read_dir(&current)? {
-                let path = entry?.path();
-                let metadata = fs::symlink_metadata(&path)?;
-                if metadata.is_dir() {
-                    pending.push(path);
-                } else {
-                    total = total.saturating_add(metadata.len());
-                }
+                pending.push(entry?.path());
             }
         } else {
             total = total.saturating_add(metadata.len());

@@ -695,6 +695,15 @@ fn parse_marker_line(
     source: BenchmarkEventSource,
     config: &BenchmarkParserConfig,
 ) -> Result<RawBenchmarkEvent, MalformedBenchmarkMarker> {
+    let invalid = |reason: String| malformed(source_line, source, line, reason);
+    let parse_counter = |value: &str, name: &str| {
+        if value.is_empty() {
+            return Err(invalid(format!("{name} counter is empty")));
+        }
+        value
+            .parse::<u128>()
+            .map_err(|_| invalid(format!("{name} counter is not an unsigned integer")))
+    };
     let mut parts = line.split('|');
     // Five fields and an absent sixth establish the complete marker shape
     // without collecting an arbitrary number of columns from malformed logs.
@@ -708,40 +717,24 @@ fn parse_marker_line(
         None,
     ] = columns
     else {
-        return Err(malformed(
-            source_line,
-            source,
-            line,
-            "expected five pipe-separated columns",
-        ));
+        return Err(invalid("expected five pipe-separated columns".into()));
     };
 
     if !config.prefixes.iter().any(|known| known == prefix) {
-        return Err(malformed(
-            source_line,
-            source,
-            line,
-            "prefix is not configured",
-        ));
+        return Err(invalid("prefix is not configured".into()));
     }
 
     if label.is_empty() {
-        return Err(malformed(source_line, source, line, "label is empty"));
+        return Err(invalid("label is empty".into()));
     }
 
-    let (span_label, kind) = split_label_kind(label).ok_or_else(|| {
-        malformed(
-            source_line,
-            source,
-            line,
-            "label must end in :start or :end",
-        )
-    })?;
+    let (span_label, kind) = split_label_kind(label)
+        .ok_or_else(|| invalid("label must end in :start or :end".into()))?;
 
     let counters = BenchmarkCounters {
-        instructions: parse_counter(instructions, source_line, source, line, "instructions")?,
-        heap_bytes: parse_counter(heap_bytes, source_line, source, line, "heap_bytes")?,
-        memory_bytes: parse_counter(memory_bytes, source_line, source, line, "memory_bytes")?,
+        instructions: parse_counter(instructions, "instructions")?,
+        heap_bytes: parse_counter(heap_bytes, "heap_bytes")?,
+        memory_bytes: parse_counter(memory_bytes, "memory_bytes")?,
     };
     let suite = config.suite_derivation.derive_suite(span_label);
 
@@ -753,32 +746,6 @@ fn parse_marker_line(
         counters,
         source_line,
         source,
-    })
-}
-
-fn parse_counter(
-    value: &str,
-    source_line: usize,
-    source: BenchmarkEventSource,
-    line: &str,
-    name: &str,
-) -> Result<u128, MalformedBenchmarkMarker> {
-    if value.is_empty() {
-        return Err(malformed(
-            source_line,
-            source,
-            line,
-            format!("{name} counter is empty"),
-        ));
-    }
-
-    value.parse::<u128>().map_err(|_| {
-        malformed(
-            source_line,
-            source,
-            line,
-            format!("{name} counter is not an unsigned integer"),
-        )
     })
 }
 

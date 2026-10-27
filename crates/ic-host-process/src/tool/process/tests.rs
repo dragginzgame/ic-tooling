@@ -56,39 +56,24 @@ fn fragmented_capture_keeps_capacity_and_overflow_evidence_within_budget() {
     }
     for limit in [0, 1, 3, 37, 257] {
         let input = vec![7; limit + 1];
-        let mut reader = Some(Fragmented(&input));
-        let mut bytes = Vec::new();
-        let mut truncated = false;
+        let mut capture = CapturedStream::new(
+            Some(Fragmented(&input)),
+            OutputLimit::Terminate(limit),
+            OutputStream::Stdout,
+        );
         for _ in 0..limit {
-            assert!(
-                read_chunk(
-                    &mut reader,
-                    &mut bytes,
-                    OutputLimit::Terminate(limit),
-                    OutputStream::Stdout,
-                    &mut truncated,
-                    &mut |_, _| Ok(()),
-                )
-                .unwrap()
-            );
-            assert!(bytes.capacity() <= limit);
+            assert!(capture.read_chunk(&mut |_, _| Ok(())).unwrap());
+            assert!(capture.bytes.capacity() <= limit);
         }
         assert!(matches!(
-            read_chunk(
-                &mut reader,
-                &mut bytes,
-                OutputLimit::Terminate(limit),
-                OutputStream::Stdout,
-                &mut truncated,
-                &mut |_, _| Ok(()),
-            ),
+            capture.read_chunk(&mut |_, _| Ok(())),
             Err(ExecutionFailure::OutputLimit {
                 stream: OutputStream::Stdout
             })
         ));
-        assert_eq!(bytes, input[..limit]);
-        assert!(truncated);
-        assert!(bytes.capacity() <= limit);
+        assert_eq!(capture.bytes, input[..limit]);
+        assert!(capture.truncated);
+        assert!(capture.bytes.capacity() <= limit);
     }
 }
 

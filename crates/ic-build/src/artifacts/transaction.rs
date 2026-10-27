@@ -235,6 +235,12 @@ struct OutputSpec {
     validation: ArtifactOutputValidation,
 }
 
+struct VerifiedOutput<'a> {
+    index: usize,
+    output: &'a OutputSpec,
+    info: FileDigest,
+}
+
 #[derive(Clone, Copy)]
 struct ResolvedKey {
     key: InputDigest,
@@ -803,8 +809,7 @@ impl ArtifactBuildTransaction {
         }
 
         let publication_started = Instant::now();
-        let manifest =
-            manifest_contents(self.resolved.key, &self.spec, output_info.iter().copied());
+        let manifest = manifest_contents(self.resolved.key, &output_info);
         ic_host_fs::durable::write_bytes(
             &self.staging_directory.path().join(MANIFEST_FILE),
             ic_host_fs::durable::WriteOptions {
@@ -837,7 +842,7 @@ impl ArtifactBuildTransaction {
         self.timings.publication = publication_started.elapsed();
 
         let materialization_started = Instant::now();
-        materialize_outputs(&self.spec, &self.entry_directory, None)?;
+        materialize_outputs(&self.entry_directory, &output_info, false)?;
         self.timings.materialization = materialization_started.elapsed();
         record_cache_entry_use(&self.entry_directory).map_err(artifact_cache_fs_error)?;
         let (maintenance, maintenance_timing) = perform_maintenance_locked(
@@ -928,7 +933,7 @@ pub fn prepare_artifact_cache(
 
     if let Some(output_info) = verified_outputs {
         let materialization_started = Instant::now();
-        materialize_outputs(spec, &entry_directory, Some(&output_info))?;
+        materialize_outputs(&entry_directory, &output_info, true)?;
         timings.materialization = timings
             .materialization
             .saturating_add(materialization_started.elapsed());
@@ -1375,11 +1380,11 @@ fn resolve_key(spec: &ArtifactCacheSpec) -> Result<ResolvedKey, ArtifactCacheErr
     })
 }
 
-fn validated_cache_outputs(
-    spec: &ArtifactCacheSpec,
+fn validated_cache_outputs<'a>(
+    spec: &'a ArtifactCacheSpec,
     key: InputDigest,
     entry: &Path,
-) -> Result<Option<Vec<FileDigest>>, ArtifactCacheError> {
+) -> Result<Option<Vec<VerifiedOutput<'a>>>, ArtifactCacheError> {
     let entry_metadata = match fs::symlink_metadata(entry) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
@@ -1431,7 +1436,7 @@ fn validated_cache_outputs(
         return Ok(None);
     };
     let mut comparison = MatchingWriter::new(&manifest);
-    write_manifest(&mut comparison, key, spec, output_info.iter().copied()).map_err(|source| {
+    write_manifest(&mut comparison, key, &output_info).map_err(|source| {
         ArtifactCacheError::Io {
             operation: "compare artifact cache manifest",
             path: entry.join(MANIFEST_FILE),
@@ -1441,10 +1446,10 @@ fn validated_cache_outputs(
     Ok(comparison.is_complete_match().then_some(output_info))
 }
 
-fn inspect_complete_output_set(
-    spec: &ArtifactCacheSpec,
+fn inspect_complete_output_set<'a>(
+    spec: &'a ArtifactCacheSpec,
     root: &Path,
-) -> Result<Vec<FileDigest>, ArtifactCacheError> {
+) -> Result<Vec<VerifiedOutput<'a>>, ArtifactCacheError> {
     let mut info = Vec::new();
     let mut invalid = Vec::new();
     let output_directory = root.join("outputs");
@@ -1459,7 +1464,11 @@ fn inspect_complete_output_set(
     for (index, output) in outputs.iter().enumerate() {
         let path = staged_output_path(root, index);
         match inspect_artifact(&path, output.validation) {
-            Ok(Some(artifact)) => info.push(artifact),
+            Ok(Some(artifact)) => info.push(VerifiedOutput {
+                index,
+                output,
+                info: artifact,
+            }),
             Ok(None) => invalid.push((output.name.clone(), path)),
             Err(source) => {
                 return Err(ArtifactCacheError::Io {
@@ -1486,16 +1495,20 @@ fn inspect_complete_output_set(
     }
 }
 
-fn inspect_cached_output_set(
-    spec: &ArtifactCacheSpec,
+fn inspect_cached_output_set<'a>(
+    spec: &'a ArtifactCacheSpec,
     root: &Path,
-) -> Result<Option<Vec<FileDigest>>, ArtifactCacheError> {
+) -> Result<Option<Vec<VerifiedOutput<'a>>>, ArtifactCacheError> {
     let mut info = Vec::new();
     let outputs = &spec.outputs;
     for (index, output) in outputs.iter().enumerate() {
         let path = staged_output_path(root, index);
         match inspect_artifact(&path, output.validation) {
-            Ok(Some(artifact)) => info.push(artifact),
+            Ok(Some(artifact)) => info.push(VerifiedOutput {
+                index,
+                output,
+                info: artifact,
+            }),
             Ok(None) => return Ok(None),
             Err(source) => {
                 return Err(ArtifactCacheError::Io {
@@ -1646,13 +1659,9 @@ fn maximum_manifest_len(spec: &ArtifactCacheSpec) -> Option<usize> {
         })
 }
 
-fn manifest_contents(
-    key: InputDigest,
-    spec: &ArtifactCacheSpec,
-    output_info: impl IntoIterator<Item = FileDigest>,
-) -> Vec<u8> {
+fn manifest_contents(key: InputDigest, outputs: &[VerifiedOutput<'_>]) -> Vec<u8> {
     let mut manifest = Vec::new();
-    write_manifest(&mut manifest, key, spec, output_info)
+    write_manifest(&mut manifest, key, outputs)
         .expect("writing an artifact manifest to a Vec cannot fail");
     manifest
 }
@@ -1660,11 +1669,15 @@ fn manifest_contents(
 fn write_manifest(
     writer: &mut impl io::Write,
     key: InputDigest,
-    spec: &ArtifactCacheSpec,
-    output_info: impl IntoIterator<Item = FileDigest>,
+    outputs: &[VerifiedOutput<'_>],
 ) -> io::Result<()> {
     writer.write_all(manifest_header(key).as_bytes())?;
-    for ((index, output), info) in spec.outputs.iter().enumerate().zip(output_info) {
+    for VerifiedOutput {
+        index,
+        output,
+        info,
+    } in outputs
+    {
         writeln!(
             writer,
             "output:{index}:{}:{}:{}:{}",
@@ -1678,19 +1691,24 @@ fn write_manifest(
 }
 
 fn materialize_outputs(
-    spec: &ArtifactCacheSpec,
     entry: &Path,
-    verified_outputs: Option<&[FileDigest]>,
+    outputs: &[VerifiedOutput<'_>],
+    preserve_matching: bool,
 ) -> Result<(), ArtifactCacheError> {
-    for (index, output) in spec.outputs.iter().enumerate() {
+    for VerifiedOutput {
+        index,
+        output,
+        info,
+    } in outputs
+    {
         // Only a hit supplies the complete output set checked against its manifest.
         // A cold commit always publishes; a hit may leave matching destinations alone.
-        let cached = staged_output_path(entry, index);
+        let cached = staged_output_path(entry, *index);
         materialize_verified_output(
             "artifact-set-output-v1",
             &cached,
             &output.destination,
-            verified_outputs.map(|info| &info[index]),
+            preserve_matching.then_some(info),
         )
         .map_err(|source| ArtifactCacheError::Io {
             operation: "materialize artifact output",

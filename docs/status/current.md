@@ -2,66 +2,64 @@
 
 ## Source and ownership
 
-This checkout starts clean at `12d8acb7d61ae9aea83bdd855113ce513273428d`, release
-0.68.10. The earlier cleanup and Wire/derive 0.7.18/rustix 1.1.6 lock selections
-are committed there. Compatible issue work is prepared in the
-[0.68.11 draft](../changelog/0.68.md#06811---unreleased); own package versions
-remain 0.68.10. Cargo.lock, the index and Git refs remain unchanged.
+This checkout starts clean at `fdf6ef8466cff741435e78324edadbe7b18dc260`, release
+0.68.11. The retained evidence accessor and mechanical error derives are
+committed in that release; ic-build 0.68.11 is published. Compatible internal
+cleanup is prepared in the [0.68.12 draft](../changelog/0.68.md#06812---unreleased).
+Own package versions remain 0.68.11; Cargo.lock, the index and Git refs are
+unchanged by this work.
 
 Host, Build and Testkit retain the [extraction boundaries](../extraction.md).
 Consumers own credentials, budgets, targets, retries, installation and recovery.
-Shared Tooling is now 0.26.21 at `66c91c4412856baa147482e648fc80428db8b179`,
+Shared Tooling remains 0.26.21 at `66c91c4412856baa147482e648fc80428db8b179`,
 recorded in [the snapshot](../../.shared-tooling.snapshot). Rust edition 2024,
 MSRV 1.91 and native Linux/macOS 15 Intel and Apple Silicon remain required.
 
 ## Current local changes
 
-`WasmBuildEvidence::record()` borrows the existing retained record for artifact
-rosters, tool facts and recipe comparison. The public example checks exact
-cardinality and consumes retained bytes before final freshness verification.
-Source custody and final acceptance remain consumer-owned. This is the local
-implementation of [#255 — Expose retained Wasm build evidence](https://github.com/dragginzgame/ic-tooling/issues/255),
-not a published supplier or completed Timers adoption.
+The ten accepted internal cleanups bind verified transaction outputs to their
+specifications, keep process-stream capture state together and make cooperative
+benchmark-worker completion explicit through normal returns and unwinding.
+Batch resolution uses named intermediate facts, depfile parsing retains its own
+rule state, and pool acquisitions select final dispositions directly. Existing
+phase timing handles publication work. Marker diagnostics retain one source
+context; directory sizing and benchmark case construction use simpler loops.
 
-The [#256 — Use existing thiserror derives for native errors](https://github.com/dragginzgame/ic-tooling/issues/256)
-cleanup replaces the eleven confirmed mechanical implementations. Existing
-dependency selections suffice, including the private benchmark's existing
-thiserror dependency. Conditional recovery errors and deliberate source-chain
-projections outside that roster remain manual. No new Wasm dependency is added.
-
-The [private cache hash evaluation](../design/wasm-cache-hashing.md) records the
-measured no-go decision for [#252 — Evaluate Platform BLAKE3 for private Wasm cache verification](https://github.com/dragginzgame/ic-tooling/issues/252).
-Keep SHA-256 and current cache formats. Its temporary instrumentation and probe
-remain isolated evaluation artifacts; no production dependency was added.
-
+Public APIs, cache/report formats, source-custody checks, independent destination
+verification, feature boundaries and dependency selections are preserved. Worker
+sampling panics now request a cooperative stop and wait before resuming the
+original panic. No group kill, cleanup retry or teardown deadline is introduced.
 Normal increments and exact-attempt recovery retain the delivered
-[release contract](../releases.md). No release command or state cleanup was
-executed during this work.
+[release contract](../releases.md). No release command or state cleanup ran.
 
 ## Qualification and evidence
 
-Current baseline, lock, focused logs and evaluation source/data are under
-`/tmp/ic-tooling-open-issues.fOTL8a/`. On actual Rust 1.91 the two evidence tests
-pass, covering retention during pruning, release after the last owner drops,
-source/configuration freshness refusal, typed retention recovery and exact
-exported bytes. The public example runs both cold and warm with real Rust 1.91
-Wasm compilation. Build's all-target/all-feature Clippy passes on the declared
-development compiler. An additional Rust 1.91 Clippy attempt refused an existing
-unfulfilled `result_large_err` expectation in `wasm_batch.rs`; its log is retained
-and it is not reported as a pass. Native macOS execution of this addition remains
-outstanding. No full workspace/release gate, commit, push, release or publication
-was run.
+Baseline archive, exact lock and focused logs are retained under
+`/tmp/ic-tooling-cleanup-06812.vBhDNi/`. On actual Rust 1.91, 36 transaction,
+20 input/depfile, 88 Wasm cache/batch, 77 process, two directory-size, 21 private
+driver, 21 benchmark-marker and four pool unit tests pass. The driver test covers
+both a sampling error and a sampling panic, preserving the original cause and
+waiting for the worker's completion marker.
 
-The error-derive batch passes affected-owner all-target Clippy with the changed
-Tools profiles (`candid`, `encoding`, `icp-project`), plus four Rust 1.91 contract
-tests covering unbounded generic formatting, boxed-cause identity and the local
-parser wrapper. The affected staging, package, retained-write, encoding, project,
-service, statistics and install-message module tests pass on Rust 1.91, as does
-the changed Tools encoding Wasm library check. The evidence tests also pass
-after the error-owner changes. Initial mechanical-edit
-and test-module placement failures are retained alongside corrected passing
-evidence. This remains local implementation, with delivery and native macOS
-qualification separate.
+Three live Linux PocketIC 16.1 pool cases pass on Rust 1.91: normal build/restore
+and explicit rebuild, failed restore/recovery, and unwind-driven invalidation.
+The existing server bundle passed offline archive/executable/version admission;
+no download occurred. The initial sandbox attempt could not bind loopback and
+remains retained separately from the passing native runs.
+
+Affected-owner all-target/all-feature Clippy passes on the declared development
+compiler. The Testkit Wasm library compiles on Rust 1.91. Formatting, documentation
+links and diff checks pass. Native macOS execution of this cleanup remains
+outstanding. No full workspace/release gate, commit, push, release or publication
+was run for this batch.
+
+The preceding 0.68.11 implementation and evaluation evidence remains under
+`/tmp/ic-tooling-open-issues.fOTL8a/`, including the private cache hashing no-go
+report and primary crypto constraint observations. The supplying accessor is now
+delivered; Timers' separately prepared adoption is consumer-owned. Earlier local
+qualification and failed attempts retain their original source identities and
+host limits. The previous detailed handoff remains in
+[release history](https://github.com/dragginzgame/ic-tooling/blob/fdf6ef8466cff741435e78324edadbe7b18dc260/docs/status/current.md).
 
 Earlier cleanup evidence remains under `/tmp/ic-tooling-cleanup-06810.l2W3fI/`:
 88 cache/batch tests, 12 package-admission tests, 29 private benchmark tests and

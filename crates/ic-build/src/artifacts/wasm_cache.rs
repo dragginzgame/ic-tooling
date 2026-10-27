@@ -304,6 +304,19 @@ struct BatchResolutionGroup {
     indexes: Vec<usize>,
 }
 
+struct DiscoveredBatchInputs {
+    index: usize,
+    inputs: ResolvedLocalInputs,
+    exclusions: Vec<PathBuf>,
+}
+
+struct HashedBatchInputs {
+    inputs: ResolvedLocalInputs,
+    exclusions: Vec<PathBuf>,
+    input_digest: InputDigest,
+    validation_digest: InputDigest,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct WasmArtifactTarget {
     package_id: String,
@@ -1836,25 +1849,29 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
         let mut batch_digest_cache = LabeledPathDigestCache::default();
         let digest_cache = &mut batch_digest_cache;
         let workspace_root = &active.workspace_root;
-        let resolved_inputs = progress.run_phase(WasmBuildPhase::ContentHashing, || {
-            discovered
-                .into_iter()
-                .map(|(index, inputs, mut exclusions)| {
-                    let result = digest_resolved_local_inputs(
-                        &inputs,
-                        &mut exclusions,
-                        digest_cache,
-                        workspace_root,
-                        "hash batched Wasm build inputs",
-                        "hash batched semantic Wasm build inputs",
-                    )
-                    .map(|(input_digest, validation_digest)| {
-                        (inputs, exclusions, input_digest, validation_digest)
-                    });
-                    (index, result)
-                })
-                .collect::<Vec<_>>()
-        });
+        let resolved_inputs =
+            progress.run_phase(WasmBuildPhase::ContentHashing, || {
+                discovered
+                    .into_iter()
+                    .map(|mut discovered| {
+                        let result = digest_resolved_local_inputs(
+                            &discovered.inputs,
+                            &mut discovered.exclusions,
+                            digest_cache,
+                            workspace_root,
+                            "hash batched Wasm build inputs",
+                            "hash batched semantic Wasm build inputs",
+                        )
+                        .map(|(input_digest, validation_digest)| HashedBatchInputs {
+                            inputs: discovered.inputs,
+                            exclusions: discovered.exclusions,
+                            input_digest,
+                            validation_digest,
+                        });
+                        (discovered.index, result)
+                    })
+                    .collect::<Vec<_>>()
+            });
         let content_hashing = hashing_started.elapsed();
         timings.input_discovery = input_discovery;
         timings.content_hashing = content_hashing;
@@ -1871,7 +1888,7 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
             .or_else(|| resolved_inputs.iter().find(|(_, result)| result.is_ok()))
             .map(|(index, _)| *index);
         for (index, result) in resolved_inputs {
-            let (inputs, exclusions, input_digest, validation_digest) = match result {
+            let hashed = match result {
                 Ok(resolved) => resolved,
                 Err(error) => {
                     self.entries[index].resolved =
@@ -1882,10 +1899,10 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
             let spec = self.entries[index].spec;
             let resolved = ResolvedCargoBuildInputs::assemble(
                 spec,
-                inputs,
-                exclusions,
-                input_digest,
-                validation_digest,
+                hashed.inputs,
+                hashed.exclusions,
+                hashed.input_digest,
+                hashed.validation_digest,
                 spec.cargo_invocation()
                     .facts(facts.cargo_identity.clone(), facts.rustc_identity.clone()),
                 || {
@@ -1906,7 +1923,7 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
         group: usize,
         metadata: &schema::Metadata,
         progress: &mut ProgressReporter<'_>,
-    ) -> (Vec<(usize, ResolvedLocalInputs, Vec<PathBuf>)>, Duration) {
+    ) -> (Vec<DiscoveredBatchInputs>, Duration) {
         let started = Instant::now();
         let indexes = &self.groups[group].indexes;
         let entries = &mut self.entries;
@@ -1923,7 +1940,11 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
                     .map_err(|message| invalid_metadata(message))
                     .and_then(|parsed| resolve_local_inputs(entry.spec, parsed));
                 match result {
-                    Ok((inputs, exclusions)) => discovered.push((index, inputs, exclusions)),
+                    Ok((inputs, exclusions)) => discovered.push(DiscoveredBatchInputs {
+                        index,
+                        inputs,
+                        exclusions,
+                    }),
                     Err(error) => {
                         entry.resolved = Some(Err((WasmBuildPhase::InputDiscovery, error)));
                     }
@@ -3053,21 +3074,14 @@ fn build_wasm_cache_miss(
     let fingerprint = resolved.fingerprint;
     let mut input_resolution = resolved.timings;
     let cache_entry = cache_entry_directory(spec, fingerprint);
-    let preparation_started = Instant::now();
-    progress.begin_phase(WasmBuildPhase::ArtifactPublication);
-    let preparation_result = (|| {
+    let incomplete_directory = progress.run_phase(WasmBuildPhase::ArtifactPublication, || {
         remove_unretained_entry(&cache_entry).map_err(wasm_cache_fs_error)?;
         create_dir_all(
             &cache_entry,
             "create content-addressed Cargo target directory",
         )?;
         Ok::<_, WasmBuildError>(OwnedDirectory::new(cache_entry.clone()))
-    })();
-    progress.record_phase(
-        WasmBuildPhase::ArtifactPublication,
-        preparation_started.elapsed(),
-    );
-    let incomplete_directory = preparation_result?;
+    })?;
     let build_result = (|| {
         if matches!(
             spec.cache_mode,
@@ -3081,13 +3095,9 @@ fn build_wasm_cache_miss(
         let cargo_build = build_started.elapsed();
         progress.record_phase(WasmBuildPhase::CargoBuild, cargo_build);
         let built_artifacts = cargo_result?;
-        let validation_started = Instant::now();
-        progress.begin_phase(WasmBuildPhase::ArtifactPublication);
-        let missing = missing_artifacts(&built_artifacts);
-        progress.record_phase(
-            WasmBuildPhase::ArtifactPublication,
-            validation_started.elapsed(),
-        );
+        let missing = progress.run_phase(WasmBuildPhase::ArtifactPublication, || {
+            missing_artifacts(&built_artifacts)
+        });
         if !missing.is_empty() {
             return Err(WasmBuildError::MissingArtifacts { paths: missing });
         }

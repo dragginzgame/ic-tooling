@@ -86,25 +86,22 @@ impl Options {
     }
 
     pub(super) fn benchmark_cases(&self) -> Vec<Case> {
-        self.modes
-            .iter()
-            .flat_map(|mode| match mode {
-                Mode::Fresh => vec![Case {
+        let mut cases = Vec::new();
+        for &mode in &self.modes {
+            match mode {
+                Mode::Fresh => cases.push(Case {
                     label: "fresh".into(),
-                    mode: *mode,
+                    mode,
                     capacity: self.workers,
-                }],
-                Mode::Pooled => self
-                    .capacities
-                    .iter()
-                    .map(|capacity| Case {
-                        label: format!("pooled-{capacity}"),
-                        mode: *mode,
-                        capacity: *capacity,
-                    })
-                    .collect(),
-            })
-            .collect()
+                }),
+                Mode::Pooled => cases.extend(self.capacities.iter().map(|&capacity| Case {
+                    label: format!("pooled-{capacity}"),
+                    mode,
+                    capacity,
+                })),
+            }
+        }
+        cases
     }
 }
 

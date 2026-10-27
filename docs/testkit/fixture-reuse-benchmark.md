@@ -100,8 +100,9 @@ within the run. Repeat order rotates over all selected cases.
 On Ctrl-C, the driver asks the current worker to stop scheduling new iterations.
 Active operations finish, then the worker drops its fixtures and owned server.
 The driver waits for that cleanup; it does not start another mode or write a
-partial report. Sampling errors request the same cooperative stop and retain
-their original cause. There is no forced-kill fallback or teardown deadline;
+partial report. Sampling errors and callback panics request the same cooperative
+stop and wait for completion; the original error or panic is preserved.
+There is no forced-kill fallback or teardown deadline;
 an active PocketIC call can still delay shutdown.
 Host 0.19 requires complete RSS observations. Linux stat records retain their
 64 KiB allowance. On macOS, process-table stdout is bounded to 16 MiB (room for

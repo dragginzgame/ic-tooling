@@ -615,7 +615,7 @@ where
         };
         let slot_index = slot.slot_index();
 
-        let (rebuild_reason, original) = match slot.state() {
+        let (disposition, original) = match slot.state() {
             Slot::Reusable(_) => match self.prepare_reused(&slot, &mut timings) {
                 Ok(()) => {
                     timings.total = total_started.elapsed();
@@ -639,12 +639,19 @@ where
                             timings: Box::new(timings),
                         });
                     }
-                    FailureDisposition::Rebuild(reason) => (Some(reason), Some(original)),
+                    FailureDisposition::Rebuild(reason) => {
+                        (BaselinePoolDisposition::Rebuilt(reason), Some(original))
+                    }
                 },
             },
-            Slot::Empty => (None, None),
-            Slot::Invalidated { reason, .. } => (Some(reason.clone()), None),
-            Slot::Unwound(_) => (Some(RebuildReason::UnwindWhileLeased), None),
+            Slot::Empty => (BaselinePoolDisposition::Built, None),
+            Slot::Invalidated { reason, .. } => {
+                (BaselinePoolDisposition::Rebuilt(reason.clone()), None)
+            }
+            Slot::Unwound(_) => (
+                BaselinePoolDisposition::Rebuilt(RebuildReason::UnwindWhileLeased),
+                None,
+            ),
         };
 
         if slot.get().is_some() {
@@ -669,10 +676,7 @@ where
         let outcome = BaselinePoolOutcome {
             slot: slot_index,
             timings,
-            disposition: rebuild_reason.map_or(
-                BaselinePoolDisposition::Built,
-                BaselinePoolDisposition::Rebuilt,
-            ),
+            disposition,
         };
         Ok((CachedPocketIcBaselinePoolGuard { slot }, outcome))
     }

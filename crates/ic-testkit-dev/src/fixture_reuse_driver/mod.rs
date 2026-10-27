@@ -3,6 +3,7 @@
 
 mod arguments;
 mod report;
+mod worker;
 
 use std::{
     collections::BTreeMap,
@@ -16,9 +17,6 @@ use std::{
     thread,
     time::Duration,
 };
-
-#[cfg(unix)]
-use std::os::unix::process::CommandExt as _;
 
 use ic_build::{
     artifacts::{WasmBuildError, WasmBuildOutcome, WasmBuildSpec, build_wasm_canisters_cached},
@@ -192,13 +190,11 @@ fn measure(
     command
         .stdin(Stdio::null())
         .stdout(Stdio::from(output.try_clone()?));
-    #[cfg(unix)]
-    command.process_group(0);
-    let mut child = command.spawn()?;
+    let mut worker = worker::Worker::spawn(command)?;
     let observed = (|| -> Result<_, Error> {
         let mut rss = report::RssMeasurements::default();
-        while child.try_wait()?.is_none() && !INTERRUPTED.load(Ordering::Relaxed) {
-            let (resident, processes) = sampling::tree_rss(child.id(), &snapshot()?)?;
+        while worker.process().try_wait()?.is_none() && !INTERRUPTED.load(Ordering::Relaxed) {
+            let (resident, processes) = sampling::tree_rss(worker.process().id(), &snapshot()?)?;
             rss.sampled_peak_tree_rss_bytes = rss.sampled_peak_tree_rss_bytes.max(resident);
             rss.peak_tree_process_count = rss.peak_tree_process_count.max(processes);
             rss.rss_samples += 1;
@@ -206,14 +202,7 @@ fn measure(
         }
         Ok(rss)
     })();
-    if (observed.is_err() || INTERRUPTED.load(Ordering::Relaxed))
-        && let Err(error) = request_worker_shutdown(&mut child)
-    {
-        eprintln!("could not request worker shutdown: {error}");
-    }
-    // Ask the worker to stop scheduling, then wait for in-flight work and its
-    // RAII server cleanup. Never kill its group or impose a teardown deadline.
-    let status = child.wait()?;
+    let status = worker.finish(observed.is_err() || INTERRUPTED.load(Ordering::Relaxed))?;
     check_interrupted()?;
     let rss = observed?;
     if !status.success() {
@@ -230,37 +219,6 @@ fn measure(
     .map_err(Error::Artifact)?;
     let report = serde_json::from_slice(&bytes)?;
     Ok(CapturedRun { report, rss })
-}
-
-fn request_worker_shutdown(child: &mut std::process::Child) -> io::Result<()> {
-    #[cfg(unix)]
-    {
-        if child.try_wait()?.is_some() {
-            return Ok(());
-        }
-        let pid = libc::pid_t::try_from(child.id()).map_err(io::Error::other)?;
-        #[expect(
-            unsafe_code,
-            reason = "signal only this still-owned, unreaped direct child"
-        )]
-        // SAFETY: after try_wait returns None this owned child has not been reaped,
-        // so its PID cannot be reused before wait. Signal its handler, not its group.
-        let sent = unsafe { libc::kill(pid, libc::SIGTERM) } == 0;
-        if sent {
-            return Ok(());
-        }
-        let error = io::Error::last_os_error();
-        if error.raw_os_error() == Some(libc::ESRCH) {
-            Ok(())
-        } else {
-            Err(error)
-        }
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = child;
-        Err(io::Error::from(io::ErrorKind::Unsupported))
-    }
 }
 
 fn execute_command(command: &mut Command) -> Result<CompletedExecution, Error> {
@@ -1264,50 +1222,64 @@ esac
 
     #[test]
     #[cfg(any(target_os = "linux", target_os = "macos"))]
-    fn sampling_failure_waits_for_worker_completion() {
-        let scratch = fixture_directory();
-        let finished = scratch.path().join("finished");
-        let ready = scratch.path().join("ready");
-        let result = measure(
-            Command::new("/bin/sh")
-                .args([
-                    "-c",
-                    "trap 'printf done > \"$1\"; exit 0' TERM; printf ready > \"$2\"; while :; do sleep 0.01; done",
-                    "sampling-failure-worker",
-                ])
-                .arg(&finished).arg(&ready),
-            || {
-                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-                while !ready.is_file() {
-                    if std::time::Instant::now() >= deadline {
-                        return Err(ic_host_process::sampling::SamplingError::InvalidData("worker readiness timeout"));
+    fn sampling_failure_or_panic_waits_for_worker_completion() {
+        for panic_in_sample in [false, true] {
+            let scratch = fixture_directory();
+            let finished = scratch.path().join("finished");
+            let ready = scratch.path().join("ready");
+            let mut command = Command::new("/bin/sh");
+            command.args([
+                "-c",
+                "trap 'printf done > \"$1\"; exit 0' TERM; printf ready > \"$2\"; while :; do sleep 0.01; done",
+                "sampling-failure-worker",
+            ]).arg(&finished).arg(&ready);
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                measure(&mut command, || {
+                    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+                    while !ready.is_file() {
+                        if std::time::Instant::now() >= deadline {
+                            return Err(ic_host_process::sampling::SamplingError::InvalidData(
+                                "worker readiness timeout",
+                            ));
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(1));
                     }
-                    std::thread::sleep(std::time::Duration::from_millis(1));
-                }
-                ic_host_process::sampling::snapshot(
-                    0,
-                    ic_host_process::tool::OutputLimits {
-                        stdout: ic_host_process::tool::OutputLimit::Terminate(0),
-                        ..super::arguments::RSS_COMMAND_LIMITS
-                    },
-                )
-            },
-        );
-        assert_eq!(fs::read(finished).unwrap(), b"done");
-        let Err(Error::Sampling(error)) = result else {
-            panic!("sampling must fail with its original cause");
-        };
-        assert!(std::error::Error::source(&error).is_some());
-        #[cfg(target_os = "linux")]
-        assert!(matches!(
-            error,
-            ic_host_process::sampling::SamplingError::Io(_)
-        ));
-        #[cfg(target_os = "macos")]
-        assert!(matches!(
-            error,
-            ic_host_process::sampling::SamplingError::Command(_)
-        ));
+                    if panic_in_sample {
+                        std::panic::panic_any("sampling callback panicked");
+                    }
+                    ic_host_process::sampling::snapshot(
+                        0,
+                        ic_host_process::tool::OutputLimits {
+                            stdout: ic_host_process::tool::OutputLimit::Terminate(0),
+                            ..super::arguments::RSS_COMMAND_LIMITS
+                        },
+                    )
+                })
+            }));
+            assert_eq!(fs::read(finished).unwrap(), b"done");
+            if panic_in_sample {
+                assert_eq!(
+                    *result.err().unwrap().downcast_ref::<&str>().unwrap(),
+                    "sampling callback panicked"
+                );
+                continue;
+            }
+            let result = result.unwrap();
+            let Err(Error::Sampling(error)) = result else {
+                panic!("sampling must fail with its original cause");
+            };
+            assert!(std::error::Error::source(&error).is_some());
+            #[cfg(target_os = "linux")]
+            assert!(matches!(
+                error,
+                ic_host_process::sampling::SamplingError::Io(_)
+            ));
+            #[cfg(target_os = "macos")]
+            assert!(matches!(
+                error,
+                ic_host_process::sampling::SamplingError::Command(_)
+            ));
+        }
     }
 
     #[test]
