@@ -58,10 +58,46 @@ pub enum CleanupPolicy {
 pub struct OwnedChild {
     child: Child,
     group: bool,
-    status: Option<ExitStatus>,
-    owned: bool,
+    state: ChildState,
     cleanup: CleanupPolicy,
-    reap_started: Option<Instant>,
+}
+
+// PID custody, cached exit and escalation progress form one lifecycle.
+// Lost ownership retains the original escalation clock for repeated failures.
+#[derive(Clone, Copy)]
+enum ChildState {
+    Owned { reap_started: Option<Instant> },
+    Reaped(ExitStatus),
+    Lost { reap_started: Option<Instant> },
+}
+
+impl ChildState {
+    const fn status(self) -> Option<ExitStatus> {
+        match self {
+            Self::Reaped(status) => Some(status),
+            _ => None,
+        }
+    }
+
+    const fn owns_pid(self) -> bool {
+        matches!(self, Self::Owned { .. })
+    }
+
+    const fn reap_started(self) -> Option<Instant> {
+        match self {
+            Self::Owned { reap_started } | Self::Lost { reap_started } => reap_started,
+            Self::Reaped(_) => None,
+        }
+    }
+
+    fn start_reaping(&mut self) -> Instant {
+        match self {
+            Self::Owned { reap_started } | Self::Lost { reap_started } => {
+                *reap_started.get_or_insert_with(Instant::now)
+            }
+            Self::Reaped(_) => unreachable!("completed children do not start reaping"),
+        }
+    }
 }
 
 /// Failures observed during one explicit termination attempt.
@@ -169,15 +205,13 @@ impl OwnedChild {
         Self {
             child,
             group: false,
-            status: None,
-            owned: true,
+            state: ChildState::Owned { reap_started: None },
             cleanup: CleanupPolicy::KillAndWait,
-            reap_started: None,
         }
     }
 
     pub(crate) const fn is_owned(&self) -> bool {
-        self.owned && self.reap_started.is_none()
+        self.state.owns_pid() && self.state.reap_started().is_none()
     }
 
     fn spawn_inner(command: &mut Command, group: bool, cleanup: CleanupPolicy) -> io::Result<Self> {
@@ -222,7 +256,7 @@ impl OwnedChild {
     /// # Errors
     /// Returns native inspection errors; external reaping invalidates ownership.
     pub fn poll_exit(&mut self) -> io::Result<Option<ExitStatus>> {
-        if let Some(status) = self.status {
+        if let Some(status) = self.state.status() {
             return Ok(Some(status));
         }
         self.observe_exit(true)?
@@ -274,10 +308,10 @@ impl OwnedChild {
     /// Returns native inspection, group-signal or reap errors. The leader remains
     /// reserved on a group-signal failure, so explicit cleanup can still be attempted.
     pub fn try_wait(&mut self) -> io::Result<Option<ExitStatus>> {
-        if let Some(status) = self.status {
+        if let Some(status) = self.state.status() {
             return Ok(Some(status));
         }
-        if !self.owned {
+        if !self.state.owns_pid() {
             return Err(Errno::CHILD.into());
         }
         if self.group {
@@ -289,8 +323,7 @@ impl OwnedChild {
         } else {
             let result = retry_interrupted(|| self.child.try_wait());
             if let Ok(Some(status)) = result {
-                self.status = Some(status);
-                self.owned = false;
+                self.state = ChildState::Reaped(status);
             }
             self.check_wait_ownership(&result);
             result
@@ -304,7 +337,7 @@ impl OwnedChild {
     /// # Errors
     /// Returns native inspection, group-signal or reap errors.
     pub fn wait(&mut self) -> io::Result<ExitStatus> {
-        if let Some(status) = self.status {
+        if let Some(status) = self.state.status() {
             return Ok(status);
         }
         if self.group {
@@ -333,10 +366,10 @@ impl OwnedChild {
     /// direct-child kill fallback. Drop cannot report errors; call this explicitly
     /// when cleanup evidence matters.
     pub fn terminate(&mut self) -> Result<ExitStatus, CleanupError> {
-        if let Some(status) = self.status {
+        if let Some(status) = self.state.status() {
             return Ok(status);
         }
-        let first_attempt = self.reap_started.is_none();
+        let first_attempt = self.state.reap_started().is_none();
         let term_error =
             if first_attempt && let CleanupPolicy::TermThenKill { grace, .. } = self.cleanup {
                 let error = self.signal_group(Signal::TERM).err();
@@ -359,15 +392,16 @@ impl OwnedChild {
         } else {
             None
         };
-        let kill_error = if first_attempt && self.owned && (!self.group || group_error.is_some()) {
-            retry_interrupted(|| self.child.kill()).err()
-        } else {
-            None
-        };
+        let kill_error =
+            if first_attempt && self.state.owns_pid() && (!self.group || group_error.is_some()) {
+                retry_interrupted(|| self.child.kill()).err()
+            } else {
+                None
+            };
         let waited = match self.cleanup {
             CleanupPolicy::KillAndWait => self.reap(),
             CleanupPolicy::TermThenKill { reap_timeout, .. } => {
-                let started = *self.reap_started.get_or_insert_with(Instant::now);
+                let started = self.state.start_reaping();
                 self.reap_bounded(started, reap_timeout)
             }
         };
@@ -376,7 +410,7 @@ impl OwnedChild {
                 Ok(status)
             }
             other => Err(CleanupError {
-                status: self.status,
+                status: self.state.status(),
                 term_error,
                 group_error,
                 kill_error,
@@ -386,7 +420,7 @@ impl OwnedChild {
     }
 
     fn pid(&self) -> io::Result<Pid> {
-        if !self.owned {
+        if !self.state.owns_pid() {
             return Err(Errno::CHILD.into());
         }
         Pid::from_raw(i32::try_from(self.id()).map_err(io::Error::other)?)
@@ -431,20 +465,19 @@ impl OwnedChild {
     }
 
     fn reap(&mut self) -> io::Result<ExitStatus> {
-        if !self.owned {
+        if !self.state.owns_pid() {
             return Err(Errno::CHILD.into());
         }
         let result = retry_interrupted(|| self.child.wait());
         if let Ok(status) = result {
-            self.status = Some(status);
-            self.owned = false;
+            self.state = ChildState::Reaped(status);
         }
         self.check_wait_ownership(&result);
         result
     }
 
     fn reap_bounded(&mut self, started: Instant, timeout: Duration) -> io::Result<ExitStatus> {
-        if !self.owned {
+        if !self.state.owns_pid() {
             return Err(Errno::CHILD.into());
         }
         loop {
@@ -453,8 +486,7 @@ impl OwnedChild {
             self.check_wait_ownership(&result);
             match result {
                 Ok(Some(status)) => {
-                    self.status = Some(status);
-                    self.owned = false;
+                    self.state = ChildState::Reaped(status);
                     return Ok(status);
                 }
                 Ok(None) => {}
@@ -479,14 +511,16 @@ impl OwnedChild {
         {
             // An external reaper violates exclusive ownership; never signal a
             // potentially reused PID after observing that ownership was lost.
-            self.owned = false;
+            self.state = ChildState::Lost {
+                reap_started: self.state.reap_started(),
+            };
         }
     }
 }
 
 impl Drop for OwnedChild {
     fn drop(&mut self) {
-        if self.owned {
+        if self.state.owns_pid() {
             let _ = self.terminate();
         }
     }

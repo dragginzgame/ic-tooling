@@ -1,8 +1,8 @@
-scripts/ci/test-qualification-record.sh	tooling,make-stub,retention,relative
+scripts/ci/test-qualification-record.sh	make-stub,retention,relative
 scripts/ci/test-tools-layering.sh	tooling,make-stub
 scripts/ci/test-product-evidence.sh	tooling,make-stub
 scripts/ci/test-host-fixture-retention.sh	tooling,make-stub,retention
-scripts/ci/test-make-snapshot.sh	tooling,make-stub,retention,relative
+scripts/ci/test-make-snapshot.sh	make-stub,retention,relative
 scripts/release/test-adapter.sh	make-stub,retention,relative
 scripts/publish/test-workspace.sh	make-stub,retention,relative
 scripts/ci/check-dependency-pins.sh	make-stub

@@ -615,28 +615,43 @@ where
         };
         let slot_index = slot.slot_index();
 
+        let result = self.prepare_slot(&mut slot, &mut timings);
+        timings.total = total_started.elapsed();
+        let disposition = result.map_err(|mut error| {
+            match &mut error {
+                BaselinePoolError::Preparation { timings: saved, .. }
+                | BaselinePoolError::RecoveryFailed { timings: saved, .. } => **saved = timings,
+            }
+            error
+        })?;
+        Ok((
+            CachedPocketIcBaselinePoolGuard { slot },
+            BaselinePoolOutcome {
+                slot: slot_index,
+                timings,
+                disposition,
+            },
+        ))
+    }
+
+    fn prepare_slot(
+        &self,
+        slot: &mut BoundedSlotLease<'_, CachedPocketIcBaseline<R::Metadata>, RebuildReason>,
+        timings: &mut BaselinePoolTimings,
+    ) -> Result<BaselinePoolDisposition, BaselinePoolError<R::Error>> {
         let (disposition, original) = match slot.state() {
-            Slot::Reusable(_) => match self.prepare_reused(&slot, &mut timings) {
+            Slot::Reusable(_) => match self.prepare_reused(slot, timings) {
                 Ok(()) => {
-                    timings.total = total_started.elapsed();
-                    return Ok((
-                        CachedPocketIcBaselinePoolGuard { slot },
-                        BaselinePoolOutcome {
-                            slot: slot_index,
-                            timings,
-                            disposition: BaselinePoolDisposition::Restored,
-                        },
-                    ));
+                    return Ok(BaselinePoolDisposition::Restored);
                 }
                 Err(original) => match self.failure_disposition(&original) {
                     FailureDisposition::Fatal => {
                         // A failed restore may have partially changed the instance.
                         // Discard it without treating a fatal failure as a rebuild.
-                        Self::discard_stale_slot(&mut slot, &mut timings);
-                        timings.total = total_started.elapsed();
+                        Self::discard_stale_slot(slot, timings);
                         return Err(BaselinePoolError::Preparation {
                             error: original,
-                            timings: Box::new(timings),
+                            timings: Box::new(*timings),
                         });
                     }
                     FailureDisposition::Rebuild(reason) => {
@@ -655,30 +670,24 @@ where
         };
 
         if slot.get().is_some() {
-            Self::discard_stale_slot(&mut slot, &mut timings);
+            Self::discard_stale_slot(slot, timings);
         }
-        let build = self.build_slot(&mut slot, &mut timings);
-        timings.total = total_started.elapsed();
+        let build = self.build_slot(slot, timings);
         if let Err(error) = build {
             return Err(match original {
                 Some(original) => BaselinePoolError::RecoveryFailed {
                     original: Box::new(original),
                     rebuild: Box::new(error),
-                    timings: Box::new(timings),
+                    timings: Box::new(*timings),
                 },
                 None => BaselinePoolError::Preparation {
                     error,
-                    timings: Box::new(timings),
+                    timings: Box::new(*timings),
                 },
             });
         }
 
-        let outcome = BaselinePoolOutcome {
-            slot: slot_index,
-            timings,
-            disposition,
-        };
-        Ok((CachedPocketIcBaselinePoolGuard { slot }, outcome))
+        Ok(disposition)
     }
 
     fn prepare_reused(

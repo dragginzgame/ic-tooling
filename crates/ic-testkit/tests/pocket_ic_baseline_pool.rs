@@ -34,6 +34,7 @@ struct RecipeControls {
     restored_validations: Arc<AtomicUsize>,
     fail_next_build: Arc<AtomicBool>,
     fail_next_restore: Arc<AtomicBool>,
+    fatal_restore: Arc<AtomicBool>,
     fail_next_reset: Arc<AtomicBool>,
     omit_next_coverage: Arc<AtomicBool>,
     mismatch_next_coverage: Arc<AtomicBool>,
@@ -318,7 +319,9 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
         stage: BaselinePreparationStage,
         error: &(dyn std::error::Error + 'static),
     ) -> FailureDisposition {
-        if is_dead_pocket_ic_transport_error(error) {
+        if self.controls.fatal_restore.load(Ordering::SeqCst) {
+            FailureDisposition::Fatal
+        } else if is_dead_pocket_ic_transport_error(error) {
             FailureDisposition::Rebuild(RebuildReason::DeadPocketIcTransport)
         } else if let Some(TestRecipeError::DomainMutation(code)) =
             error.downcast_ref::<TestRecipeError>()
@@ -432,6 +435,36 @@ fn cached_baseline_rejects_an_empty_capture() {
         CachedPocketIcBaseline::capture(support::pocket_ic(), [], ()),
         Err(ControllerSnapshotError::EmptyCanisterSet),
     ));
+}
+
+#[test]
+fn fatal_restore_discards_the_slot_and_finalizes_failure_timings() {
+    let controls = RecipeControls::default();
+    let pool = CachedPocketIcBaselinePool::new(
+        NonZeroUsize::new(1).unwrap(),
+        TwoCanisterRecipe::new(controls.clone()),
+    );
+    drop(pool.acquire().expect("first baseline should build").0);
+    controls.fail_next_restore.store(true, Ordering::SeqCst);
+    controls.fatal_restore.store(true, Ordering::SeqCst);
+    let Err(error) = pool.acquire() else {
+        panic!("fatal restore failure must be returned without recovery");
+    };
+    assert!(matches!(&error, BaselinePoolError::Preparation { .. }));
+    let timings = error.timings();
+    assert!(timings.restore().is_some());
+    assert!(timings.stale_teardown().is_some());
+    assert!(timings.build().is_none());
+    assert!(timings.total() >= timings.restore().unwrap());
+    assert_eq!(controls.builds.load(Ordering::SeqCst), 1);
+
+    let (baseline, outcome) = pool.acquire().expect("discarded slot should build fresh");
+    assert!(matches!(
+        outcome.disposition,
+        BaselinePoolDisposition::Built
+    ));
+    assert_eq!(controls.builds.load(Ordering::SeqCst), 2);
+    drop(baseline);
 }
 
 #[test]

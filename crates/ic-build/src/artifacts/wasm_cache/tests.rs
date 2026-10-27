@@ -1998,18 +1998,9 @@ fn best_effort_integrated_maintenance_retains_a_failure_message() {
         Duration::from_secs(60),
     )
     .with_failure_mode(SharedIncrementalTargetMaintenanceFailureMode::BestEffort);
-    let spec = WasmBuildSpec::new(
-        &root,
-        &root.join("exact"),
-        &["fixture"],
-        crate::cargo_fixture::environment(),
-        CONFIGURATION_LIMITS,
-    )
-    .with_shared_incremental_target(&target)
-    .with_shared_incremental_target_maintenance(config);
     let lock_wait = Duration::from_millis(7);
     let outcome = perform_configured_shared_incremental_target_maintenance(
-        &spec,
+        config,
         &target,
         lock_wait,
         &mut ProgressReporter::silent(),
@@ -3626,13 +3617,10 @@ fn observed_cargo_panic_stops_compiler_descendants() {
     for pid in fs::read_to_string(pids).unwrap().split_whitespace() {
         let deadline = std::time::Instant::now() + Duration::from_secs(5);
         loop {
-            let output = std::process::Command::new("/bin/ps")
-                .args(["-p", pid, "-o", "stat="])
-                .output()
-                .unwrap();
-            assert!(output.status.success() || output.status.code() == Some(1));
-            let state = String::from_utf8(output.stdout).unwrap();
-            if state.trim().is_empty() || state.trim().starts_with('Z') {
+            if ic_host_process::testing::process_state(pid.parse().unwrap())
+                .expect("inspect Cargo test process")
+                .is_none_or(|state| state == 'Z')
+            {
                 break;
             }
             assert!(

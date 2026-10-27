@@ -1,4 +1,4 @@
-//! Opt-in synthetic HTTP and Unix executable fixtures for consumer tests.
+//! Opt-in HTTP, Unix executable and process-observation fixtures for tests.
 //!
 //! Callers own fixture content, paths, namespace custody, transport policy and
 //! assertions. Executable helpers own writer-process lifetime; no tool is admitted.
@@ -19,6 +19,40 @@ use crate::child::{CleanupPolicy, OwnedChild};
 pub mod crash_barrier;
 pub mod http;
 pub mod net;
+
+/// Observe one Unix test process through the native `ps` state field.
+///
+/// Missing processes return `None`; zombies retain their `Z` state so callers
+/// can distinguish stopped execution from completed reaping. No PID is owned or
+/// signalled. Output is bounded; callers own polling intervals and deadlines.
+///
+/// # Errors
+/// Preserves process/IO failures and refuses failed or malformed observations.
+#[cfg(unix)]
+pub fn process_state(pid: u32) -> io::Result<Option<char>> {
+    use crate::tool::{OutputLimit, OutputLimits, capture_command};
+    let output = capture_command(
+        Command::new("/bin/ps").args(["-p", &pid.to_string(), "-o", "stat="]),
+        OutputLimits {
+            stdout: OutputLimit::Terminate(4096),
+            stderr: OutputLimit::Terminate(4096),
+            timeout: None,
+        },
+    )
+    .map_err(io::Error::other)?;
+    if output.status.code() == Some(1) && output.stdout.is_empty() && output.stderr.is_empty() {
+        return Ok(None);
+    }
+    if !output.status.success() {
+        return Err(io::Error::other(format!(
+            "process-state inspection failed: {}",
+            output.status
+        )));
+    }
+    let state = std::str::from_utf8(&output.stdout)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    Ok(state.trim().chars().next())
+}
 
 /// Create or replace a caller-owned executable script with mode 0755.
 ///

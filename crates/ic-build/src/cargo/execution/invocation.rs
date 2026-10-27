@@ -1,5 +1,5 @@
 use super::{communicate_cargo, schema};
-use crate::{artifacts::CargoBuildFacts, cargo::selection::CargoSelection};
+use crate::cargo::{observation::facts::CargoBuildFacts, selection::CargoSelection};
 use ic_host_process::{
     child::{CleanupPolicy, OwnedChild},
     tool::{

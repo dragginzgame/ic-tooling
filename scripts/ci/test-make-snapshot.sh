@@ -286,11 +286,9 @@ STUB
 PATH="$fixture/local:$PATH" make --no-print-directory tooling-command-check > "$fixture/tooling-order.log" 2>&1
 awk '{ print $1, $2 }' "$HOST_MAKE_EVENTS" > "$fixture/tooling-observed"
 cat > "$fixture/expected" <<'EVENTS'
-fixture scripts/ci/test-qualification-record.sh
 fixture scripts/ci/test-tools-layering.sh
 fixture scripts/ci/test-product-evidence.sh
 fixture scripts/ci/test-host-fixture-retention.sh
-fixture scripts/ci/test-make-snapshot.sh
 fixture scripts/ci/check-release-commands.sh
 EVENTS
 cmp "$fixture/expected" "$fixture/tooling-observed"
@@ -299,7 +297,7 @@ status=0
 PATH="$fixture/local:$PATH" HOST_MAKE_FIXTURE_STATUS=23 make --no-print-directory tooling-command-check \
     > "$fixture/tooling-failure.log" 2>&1 || status=$?
 [[ "$status" == 2 ]] || exit 1
-printf '%s\n' 'fixture scripts/ci/test-qualification-record.sh' > "$fixture/expected"
+printf '%s\n' 'fixture scripts/ci/test-tools-layering.sh' > "$fixture/expected"
 cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
 jobserver_options=(--no-print-directory -j4)
 if make --help | grep -q -- --jobserver-style; then

@@ -7,6 +7,7 @@
 #[cfg(test)]
 mod tests;
 
+pub(crate) mod facts;
 mod workspace;
 pub use workspace::{decode_workspace_root, workspace_root_command};
 

@@ -432,12 +432,12 @@ fn exhausted_reap_allowance_is_not_restarted_by_return_or_drop() {
     let pid = Pid::from_raw(i32::try_from(child.id()).unwrap()).unwrap();
     // Substitute already-dispatched escalation while the real child is still
     // running. This tests pending reaping without inducing an unkillable OS task.
-    child.reap_started = Some(Instant::now());
+    child.state.start_reaping();
     let started = Instant::now();
     let error = child.terminate().unwrap_err();
     assert_eq!(error.wait_error.unwrap().kind(), io::ErrorKind::TimedOut);
     assert!(started.elapsed() >= Duration::from_millis(30));
-    assert!(child.owned);
+    assert!(child.state.owns_pid());
     assert!(child.handoff().is_err());
     assert_eq!(
         child.terminate().unwrap_err().wait_error.unwrap().kind(),

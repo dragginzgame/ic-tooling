@@ -5,7 +5,7 @@ use crate::cargo::{
         wasm_artifact_paths,
     },
     messages::artifact_matches,
-    observation::{metadata_arguments, schema},
+    observation::{facts::CargoBuildFacts, metadata_arguments, schema},
     selection::{CargoSelection, is_normal_component},
 };
 use ic_host_fs::owned_directory::{OwnedDirectory, remove_path_if_present};
@@ -221,40 +221,6 @@ pub struct WasmBuildFailureDetails {
 pub struct CargoBuildInput {
     label: PathBuf,
     path: PathBuf,
-}
-
-/// Tool and recipe observations from resolved inputs or an observed execution.
-///
-/// These facts alone do not establish successful compilation or bind an external
-/// execution. `cargo::execution::execute_cargo` binds observations to its own
-/// successful invocation. Consumers retain source custody and provenance
-/// redaction. Environment values and probe bytes may contain secrets; Debug
-/// reports only their sizes. Reading these observations performs no I/O.
-#[derive(Clone, Eq, PartialEq)]
-pub struct CargoBuildFacts {
-    /// Selected profile, features and lock/network policy.
-    pub selection: CargoSelection,
-    /// Selected compilation target.
-    pub target: String,
-    /// Complete selected environment. Cache resolution excludes Build's owned
-    /// target-directory override; custom execution retains its exact environment.
-    pub environment: BTreeMap<OsString, OsString>,
-    /// Exact successful Cargo probe stdout followed by stderr, as fingerprinted.
-    pub cargo_identity: Vec<u8>,
-    /// Exact successful compiler probe stdout followed by stderr, as fingerprinted.
-    pub rustc_identity: Vec<u8>,
-}
-
-impl std::fmt::Debug for CargoBuildFacts {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CargoBuildFacts")
-            .field("selection", &self.selection)
-            .field("target", &self.target)
-            .field("environment_entries", &self.environment.len())
-            .field("cargo_identity_bytes", &self.cargo_identity.len())
-            .field("rustc_identity_bytes", &self.rustc_identity.len())
-            .finish()
-    }
 }
 
 /// Resolved exact inputs and identity for one [`WasmBuildSpec`].
@@ -2699,6 +2665,22 @@ fn batch_prepared_invalidation(
     batch_resolution.and_then(|(resolver, _)| resolver.prepared_invalidation())
 }
 
+#[derive(Clone, Copy, Debug)]
+enum CachePlan {
+    Isolated,
+    Shared,
+    MaintainedShared(SharedIncrementalTargetMaintenanceConfig),
+}
+
+#[derive(Clone, Copy)]
+enum SharedAcquisition<'a> {
+    Scheduled(SharedIncrementalTargetMaintenanceConfig),
+    Miss {
+        resolved: &'a ResolvedCargoBuildInputs,
+        first_lock_wait: Duration,
+    },
+}
+
 fn build_wasm_canisters_cached_internal(
     spec: &WasmBuildSpec,
     progress: &mut ProgressReporter<'_>,
@@ -2706,13 +2688,13 @@ fn build_wasm_canisters_cached_internal(
     mut spawn: &mut dyn FnMut(&mut Command) -> io::Result<OwnedChild>,
 ) -> Result<WasmBuildOutcome, WasmBuildError> {
     let total_started = Instant::now();
-    validate_spec(spec)?;
+    let plan = validate_spec(spec)?;
     let prepared_invalidation = batch_prepared_invalidation(batch_resolution.as_ref());
     progress.emit(WasmBuildProgressEvent::Started);
-    if spec.shared_incremental_maintenance_config.is_some() {
+    if let CachePlan::MaintainedShared(config) = plan {
         let outcome = build_wasm_with_shared_incremental(
             spec,
-            None,
+            SharedAcquisition::Scheduled(config),
             prepared_invalidation,
             total_started,
             progress,
@@ -2742,8 +2724,8 @@ fn build_wasm_canisters_cached_internal(
             fingerprint: resolved.fingerprint,
         });
 
-        match &spec.cache_mode {
-            WasmBuildCacheMode::Isolated => {
+        match plan {
+            CachePlan::Isolated => {
                 let cache_entry = cache_entry_directory(spec, resolved.fingerprint);
                 build_wasm_cache_miss(
                     spec,
@@ -2756,11 +2738,14 @@ fn build_wasm_canisters_cached_internal(
                     &mut spawn,
                 )
             }
-            WasmBuildCacheMode::SharedIncremental { .. } => {
+            CachePlan::Shared | CachePlan::MaintainedShared(_) => {
                 drop(cache_lock);
                 build_wasm_with_shared_incremental(
                     spec,
-                    Some((resolved, first_lock_wait)),
+                    SharedAcquisition::Miss {
+                        resolved: &resolved,
+                        first_lock_wait,
+                    },
                     isolated_acquisition.prepared_invalidation,
                     total_started,
                     progress,
@@ -2776,7 +2761,7 @@ fn build_wasm_canisters_cached_internal(
 
 fn build_wasm_with_shared_incremental(
     spec: &WasmBuildSpec,
-    initial: Option<(ResolvedCargoBuildInputs, Duration)>,
+    acquisition: SharedAcquisition<'_>,
     prepared_invalidation: Option<Arc<RwLock<bool>>>,
     total_started: Instant,
     progress: &mut ProgressReporter<'_>,
@@ -2789,28 +2774,34 @@ fn build_wasm_with_shared_incremental(
         lock_wasm_build_cache_with_progress(&spec.target_dir, progress)?;
     ensure_cache_directory_tag(&spec.target_dir)?;
 
-    let emit_cache_miss = initial.is_none();
+    let emit_cache_miss = matches!(&acquisition, SharedAcquisition::Scheduled(_));
     // Scheduled maintenance resolves under both locks. An ordinary miss must
     // resolve again after changing lock order, unless a prepared lease excludes
     // source mutation. Retain both observations' timing in that case.
-    let (current, first_lock_wait) = match initial {
-        Some((resolved, wait)) if prepared_invalidation.is_some() => (resolved, wait),
-        Some((resolved, wait)) => {
-            let mut current = resolve_initial_inputs(spec, None, progress)?;
-            current.timings.include(resolved.timings);
-            (current, wait)
+    let mut refreshed;
+    let (current, first_lock_wait, maintenance_config) = match acquisition {
+        SharedAcquisition::Miss {
+            resolved,
+            first_lock_wait,
+        } if prepared_invalidation.is_some() => (resolved, first_lock_wait, None),
+        SharedAcquisition::Miss {
+            resolved,
+            first_lock_wait,
+        } => {
+            refreshed = resolve_initial_inputs(spec, None, progress)?;
+            refreshed.timings.include(resolved.timings);
+            (&refreshed, first_lock_wait, None)
         }
-        None => (
-            resolve_initial_inputs(spec, batch_resolution, progress)?,
-            Duration::ZERO,
-        ),
+        SharedAcquisition::Scheduled(config) => {
+            refreshed = resolve_initial_inputs(spec, batch_resolution, progress)?;
+            (&refreshed, Duration::ZERO, Some(config))
+        }
     };
     let lock_wait = first_lock_wait.saturating_add(second_lock_wait);
-    let maintenance = spec
-        .shared_incremental_maintenance_config
-        .map(|_| {
+    let maintenance = maintenance_config
+        .map(|config| {
             perform_configured_shared_incremental_target_maintenance(
-                spec,
+                config,
                 &shared_target,
                 shared_lock_wait,
                 progress,
@@ -2821,7 +2812,7 @@ fn build_wasm_with_shared_incremental(
         WasmAcquisitionContext::shared(shared_lock_wait, maintenance, prepared_invalidation);
     if let Some(outcome) = try_reuse_wasm_artifacts(
         spec,
-        &current,
+        current,
         lock_wait,
         &shared_incremental,
         total_started,
@@ -2837,7 +2828,7 @@ fn build_wasm_with_shared_incremental(
 
     let outcome = build_wasm_cache_miss(
         spec,
-        &current,
+        current,
         lock_wait,
         shared_incremental,
         &shared_target,
@@ -2850,14 +2841,11 @@ fn build_wasm_with_shared_incremental(
 }
 
 fn perform_configured_shared_incremental_target_maintenance(
-    spec: &WasmBuildSpec,
+    config: SharedIncrementalTargetMaintenanceConfig,
     shared_target: &Path,
     lock_wait: Duration,
     progress: &mut ProgressReporter<'_>,
 ) -> Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError> {
-    let config = spec
-        .shared_incremental_maintenance_config
-        .expect("configured shared-target maintenance must have settings");
     progress.emit(WasmBuildProgressEvent::SharedTargetMaintenanceStarted {
         target_dir: shared_target.to_owned(),
     });
@@ -3371,7 +3359,7 @@ fn wasm_cache_fs_error(error: CacheFsError) -> WasmBuildError {
     WasmBuildError::io(error.operation, error.path, error.source)
 }
 
-fn validate_spec(spec: &WasmBuildSpec) -> Result<(), WasmBuildError> {
+fn validate_spec(spec: &WasmBuildSpec) -> Result<CachePlan, WasmBuildError> {
     for (key, value) in &spec.environment {
         let key = key.as_encoded_bytes();
         if key.is_empty()
@@ -3420,19 +3408,18 @@ fn validate_spec(spec: &WasmBuildSpec) -> Result<(), WasmBuildError> {
             message: "shared incremental Cargo target directory must not be empty".to_owned(),
         });
     }
-    if spec.shared_incremental_maintenance_config.is_some()
-        && !matches!(
-            spec.cache_mode,
-            WasmBuildCacheMode::SharedIncremental { .. }
-        )
-    {
-        return Err(WasmBuildError::InvalidSpec {
+    match (&spec.cache_mode, spec.shared_incremental_maintenance_config) {
+        (WasmBuildCacheMode::Isolated, None) => Ok(CachePlan::Isolated),
+        (WasmBuildCacheMode::SharedIncremental { .. }, None) => Ok(CachePlan::Shared),
+        (WasmBuildCacheMode::SharedIncremental { .. }, Some(config)) => {
+            Ok(CachePlan::MaintainedShared(config))
+        }
+        (WasmBuildCacheMode::Isolated, Some(_)) => Err(WasmBuildError::InvalidSpec {
             message:
                 "scheduled shared-target maintenance requires a shared incremental Cargo target"
                     .to_owned(),
-        });
+        }),
     }
-    Ok(())
 }
 
 fn validate_cargo_target_selection(spec: &WasmBuildSpec) -> Result<(), WasmBuildError> {

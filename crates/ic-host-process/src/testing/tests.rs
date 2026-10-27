@@ -4,6 +4,18 @@ use super::write_executable_script;
 use crate::test_support::Fixture;
 
 #[test]
+fn process_state_observes_a_live_process_and_a_reaped_child() {
+    assert!(super::process_state(std::process::id()).unwrap().is_some());
+    let mut child = Command::new("/bin/sh")
+        .args(["-c", "exit 0"])
+        .spawn()
+        .unwrap();
+    let pid = child.id();
+    child.wait().unwrap();
+    assert_eq!(super::process_state(pid).unwrap(), None);
+}
+
+#[test]
 fn parallel_writers_return_complete_immediately_executable_scripts() {
     let fixture = Fixture::new();
     thread::scope(|scope| {

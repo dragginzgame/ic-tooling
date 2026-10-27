@@ -1762,26 +1762,7 @@ mod tests {
 
     #[cfg(unix)]
     fn process_state(pid: u32) -> Option<char> {
-        // Both supported Unix hosts provide this ps field. A zombie has stopped
-        // running but may remain visible until its parent reaps it.
-        let output = Command::new("/bin/ps")
-            .args(["-p", &pid.to_string(), "-o", "stat="])
-            .output()
-            .expect("inspect managed test process state");
-        assert!(
-            output.status.success()
-                || (output.status.code() == Some(1)
-                    && output.stdout.is_empty()
-                    && output.stderr.is_empty()),
-            "process-state inspection failed: {}: {}",
-            output.status,
-            String::from_utf8_lossy(&output.stderr),
-        );
-        String::from_utf8(output.stdout)
-            .expect("process state is ASCII")
-            .trim()
-            .chars()
-            .next()
+        ic_host_process::testing::process_state(pid).expect("inspect managed test process state")
     }
 
     #[cfg(unix)]

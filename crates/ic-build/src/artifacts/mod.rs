@@ -77,6 +77,7 @@ pub(crate) mod test_support;
 #[cfg(all(test, unix))]
 mod host_tests;
 
+pub use crate::cargo::observation::facts::CargoBuildFacts;
 pub use cache_fs::{ArtifactCacheMaintenance, ArtifactCachePruneReport, CacheRetentionLimits};
 pub use digest::InputDigest;
 pub use evidence::{WasmArtifactReceipt, WasmBuildEvidence};
@@ -102,7 +103,7 @@ pub use wasm_batch::{
     WasmBuildInputSnapshot, WasmBuildInputSnapshotMetrics, build_wasm_canisters_cached_batch,
 };
 pub use wasm_cache::{
-    CargoBuildFacts, CargoBuildInput, CargoInputProbePolicy, ResolvedCargoBuildInputs,
+    CargoBuildInput, CargoInputProbePolicy, ResolvedCargoBuildInputs,
     SharedIncrementalTargetInspection, SharedIncrementalTargetMaintenance,
     SharedIncrementalTargetMaintenanceConfig, SharedIncrementalTargetMaintenanceFailureMode,
     SharedIncrementalTargetMaintenanceOutcome, WasmBuildCacheMode, WasmBuildError,

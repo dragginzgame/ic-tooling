@@ -196,6 +196,8 @@ This cache does not qualify native macOS behavior or guarantee a setup duration.
 Cargo manifest, Rust input and Make formatters. Generic formatter prerequisite
 and hook implementation matrices remain in Shared Tooling's own CI. Host keeps
 prepared-tool admission and its actual Make failure-propagation checks.
+The caller selects direct roots; the shared fixture copier follows their
+declared companions, including new unstaged helpers.
 Failed Git observations, partial staging, formatting failures and
 unrelated edits are covered in disposable checkouts; the real index, working
 files and hook configuration are preserved. The frontend formatter companion
@@ -213,6 +215,11 @@ admits it offline. The editor's Rust 1.91 floor is separate from Host's 1.91 MSR
 Both native CI cache paths include its tool-store entries; its pin participates
 in the cache key. `make release-adapter-check` exercises actual rendering with
 substituted setup/Git effects, including first-use setup and offline refusal.
+CI runs the release, publication, qualification-record and Make adapter suites
+once through the retention check, using a relative aliased temporary parent.
+Their standalone focused targets remain available; CI does not repeat them in
+the ordinary temporary directory. The retention failure probes still exercise
+each admitted entrypoint before setup or other effects.
 `make check-no-symlinks` checks indexed and tracked/nonignored working paths in CI
 and the release gate. Publication checks complete regular source notices and the
 prepared archive's exact notice bytes before upload.

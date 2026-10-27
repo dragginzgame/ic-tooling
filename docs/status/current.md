@@ -1,88 +1,92 @@
 # Current handoff — 2026-10-27
 
-## Source and ownership
+## Source and scope
 
-Main is at `17e91a6e516719ef1c5874d18f9d04b8b1ff3daf` after normal merge
-commits for [PR #258](https://github.com/dragginzgame/ic-tooling/pull/258),
-[PR #259](https://github.com/dragginzgame/ic-tooling/pull/259) and
-[PR #261](https://github.com/dragginzgame/ic-tooling/pull/261). The merges were
-explicitly authorized. Pending 0.69.1 combines those changes and the local Shared
-Tooling adoption. Package versions remain 0.69.0; no release or publication ran.
-The adoption remains unstaged. Host, Build and Testkit retain their boundaries;
-consumers own targets, budgets, credentials, installation and recovery policy.
+The accepted complexity-cleanup batch is local and unstaged over released 0.69.1,
+HEAD `1c0002df2b856e43010aa1c0ca5c343a95a17112`. Pending notes select 0.69.2:
+this is compatible internal cleanup and contributor tooling; published API paths,
+cache representations and failure/recovery contracts remain intact. Package
+versions, lockfile, product-tool pins and the real index are unchanged. No IC
+Tooling commit, push, release, publication or artifact cleanup ran.
 
-Shared Tooling is 0.26.26 at `5683060a5d8ce79af2fcfedb53b3eb24037fd064`,
-exported from clean committed source. The snapshot owns 144 exact files. Platform
-0.7, Rust 1.91 MSRV, development compiler and product-tool pins remain unchanged.
+The [0.69.1 handoff](https://github.com/dragginzgame/ic-tooling/blob/1c0002df2b856e43010aa1c0ca5c343a95a17112/docs/status/current.md)
+retains integration, release and older adoption evidence. Host, Build and Testkit
+keep their capability boundaries; consumers own installation and recovery policy.
 
-## Gzip integration and preservation
+## Cleanup outcome
 
-PR #261 adds `artifact::with_gzip_reader`: a bounded decoded Read interface over
-caller-owned buffered input. Successful callbacks require bounded completion,
-CRC/length validation and single-member admission. Source IO, integrity, both
-limits and typed consumer errors remain distinct. Existing slice APIs reuse the
-completion engine. Read-ahead, deadlines, parser policy and provisional effects
-remain caller-owned; no dependency or publication policy was added.
+Process custody now records owned/reaped/lost lifecycle states together, retaining
+bounded-reap timing and external-reaper protection. Named private exchange modes
+replace positional behavior flags. Generic Cargo observations live below Wasm
+orchestration while keeping their released public type/path. Cache execution uses
+admitted mode/maintenance combinations and borrows prior observations without an
+extra heap allocation; lock ordering and revalidation are preserved.
 
-The PR records 22 passing gzip tests on actual Rust 1.91, warning-denied Clippy
-and Rustdoc, and an explicit IC Crates file/tar integration probe. The probe is
-not released consumer adoption or SDK/browser/provider qualification. At merge,
-Linux native, native macOS Apple Silicon, MSRV and all other completed checks
-passed; native macOS Intel was still running. No pending result is counted as a
-pass. Follow-up hosted integration runs asynchronously on merged main.
+Pool acquisition finalizes total timing and outcomes in one place, preserving
+fatal discard, one recovery attempt, both recovery causes and unwind invalidation.
+Unix fixture process observations have one bounded owner, retaining zombie versus
+reaped distinctions. Fake server/downloader scripts share their actual repeated
+setup without introducing a generic server-fixture framework.
 
-The uncommitted adoption was archived and stashed before fast-forwarding, then
-restored. Only the handoff conflicted; its current summary preserves both owners.
-Backups, incoming index/patch/source, the retained stash identity and final checks
-are under `/tmp/ic-tooling-merge-261.iblr21/`. The stash remains available. No
-source or artifact was cleaned, and the initial empty index is restored.
-Combined formatting, 144-file snapshot integrity, 668 documentation links and
-diff checks pass. All restored adoption payloads match the incoming archive;
-product source, manifests and lockfile match merged main. Issue #260 auto-closed,
-and the final GitHub inventory has no open IC Tooling PRs.
+CI executes each Make/release/publication/record suite once under the existing
+relative/aliased temporary-parent proof. Standalone targets remain available.
+Retention still probes failures and premature success for every selected entry.
+The source-prefix injector was reassessed and retained: it stops before executable
+setup/publication effects without requiring a larger test-execution mechanism.
 
-## Shared adoption evidence
+## Shared contribution and adoption
 
-Formatting reports pass timings and admits prepared tools offline. Balanced Rust
-attributes are inspected through the exported RustSource.pm companion, including
-in the hook/release fixtures. Real module-path overrides and incomplete metadata
-still select uncached execution; this workspace retains explicit test paths.
-The Node guide completes governance links without enabling setup or a scanner.
+[Shared Tooling PR #318](https://github.com/dragginzgame/shared-tooling/pull/318)
+derives hook-fixture companion closure through the existing admitted copier.
+It preserves opaque gitlinks and supports quoted newline-bearing roots while
+retaining strict relative payload admission. Focused producer fixture/hook and
+source-following ShellCheck evidence passes. The PR is open; its integration and
+release remain separate from local consumer adoption.
 
-The 0.26.26 source, incoming work, exporter logs and Linux results remain at
-`/tmp/ic-tooling-shared-02626.oDCiTD/`: snapshot integrity, actual formatting/hook
-preservation, Make routing/failure evidence, substituted release routing, syntax
-and 668 documentation references pass. These retain their original inputs;
-post-merge checks are recorded separately with the merge evidence. No native
-macOS or full-workspace/release gate ran locally for this adoption.
+The canonical exporter adopted exact committed revision
+`d08cbcafbaff4227e798a890232e2248bf167504` (0.27.1 plus that correction), with
+144 snapshot files. The intervening supplying-owner advisory-tracking guidance
+was reviewed; dependency/security gates are unchanged. The ordinary Shared
+Tooling checkout and its unrelated dirty governance edits were not modified.
 
-Earlier evidence remains under `/tmp/ic-tooling-shared-02625.8thmUs/` (revision-only
-refresh), `/tmp/ic-tooling-shared-02624.gEgnQv/` (hooks/docs), and
-`/tmp/ic-tooling-shared-02623.LIFM9m/` (formatting/release adapters and PR #259 note
-reconciliation). Preserve the initial failed Make fixture at
-`/tmp/host-make-snapshot.VqPuwx/`. No tool download occurred. The earlier release
-adapter proof used substituted setup, qualification and Git effects.
+## Validation and retained evidence
 
-## Other delivery and retained obligations
+Evidence and source preservation are under `/tmp/ic-tooling-cleanup-0692.DCU3sj/`.
+It retains the starting HEAD/archive, incoming patch, failed attempts, isolated
+Shared clone, exporter impact/adoption logs and selected validation logs.
 
-PR #258 supplies mutable Testkit access without splitting managed-server custody;
-[Auth #90 — Simplify client and qualification state](https://github.com/dragginzgame/ic-auth/issues/90)
-owns consumer adoption after publication. Its focused Linux evidence remains in
-`/tmp/ic-tooling-auth-wrapper-20261027/target/auth-instance-access/`.
-PR #259 consolidates ordinary gzip fixtures at the artifact owner; its initial
-Intel runtime job failed before tests on Rust download DNS resolution. That
-failed attempt remains separate from later qualification and the reader PR.
+Actual Rust 1.91 Linux checks pass: 18 child lifecycle tests, 77 final process
+execution tests, the new process-state observation, 75 final Wasm-cache tests,
+seven Cargo execution tests and four pool schema tests. The server-runner suite
+passes 13 tests with four existing ignored cases. Startup passes 26 cases in the
+sandbox; its two socket-dependent failures pass individually with native
+loopback access. Six existing startup cases remain ignored.
 
-[Crypto qualification #240](https://github.com/dragginzgame/ic-tooling/issues/240)
-and [Platform #50](https://github.com/dragginzgame/ic-platform/issues/50) remain
-unresolved: crypto-bigint 0.5.5 is selected through actual ECDSA signing. No fork,
-override or exemption was added; this merge is not a new crypto qualification.
-Issues #255/#256 closed after exact 0.68.11 Linux, native macOS Intel/Apple Silicon,
-MSRV and lint/security passed in [run 40478736900](https://github.com/dragginzgame/ic-tooling/actions/runs/40478736900).
+Four live prepared PocketIC 16.1 Linux pool cases pass: ordinary restore/rebuild,
+fatal discard with finalized timing, failed recovery preserving both causes and
+recipe-panic invalidation. Three-package all-target/all-feature warning-denied
+Clippy and Build/Process warning-denied Rustdoc pass. Actual consumer hook
+preservation, snapshot integrity, source-following consumer ShellCheck and 669
+local documentation links pass. Complete adapter-retention and release-command
+routing checks pass (`consumer-tooling.log`); substituted effects do not qualify
+a real release.
 
-The [0.69.0 handoff](https://github.com/dragginzgame/ic-tooling/blob/f268aef5d205e51811e934648afcd13f026635f1/docs/status/current.md)
-retains earlier Shared/Platform and cleanup evidence. Migration/retirement archives
-at `/tmp/ic-tooling-migration/`, original Host refs and stale-lock evidence at
-`/tmp/ic-tooling-stale-release-lock.qHQFTn/lock` remain preserved. Failed attempts,
-release plans, artifacts and backups are not disposable. Normal releases start
-fresh; exact-attempt recovery uses saved source rather than partial preparation.
+An initial overly broad process-testing filter also selected unrelated HTTP/net
+cases; 12 failed on sandbox socket denial. Those retained failures are not passes;
+the changed process-state contract passed separately. Compilation attempts and
+fixture invocation corrections remain recorded. No full workspace/release gate,
+tool download or native macOS qualification ran. Native macOS Intel and Apple
+Silicon evidence is still required for this changed source.
+
+## Retained obligations
+
+This batch supplies no crypto correction or security exemption. Historical
+[Tooling #240](https://github.com/dragginzgame/ic-tooling/issues/240) and supplying
+[Platform #50](https://github.com/dragginzgame/ic-platform/issues/50) retain the
+crypto/Agent graph evidence and qualification obligations. No consumer migration
+or publication is claimed by these local changes.
+
+Migration/retirement archives remain at `/tmp/ic-tooling-migration/`; original
+Host refs, stale-lock evidence at `/tmp/ic-tooling-stale-release-lock.qHQFTn/lock`,
+release plans, failed attempts and earlier backup/stash evidence remain preserved.
+The linked prior handoff identifies their original evidence locations.

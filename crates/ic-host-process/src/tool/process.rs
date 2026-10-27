@@ -20,6 +20,28 @@ mod tests;
 
 const POLL_INTERVAL: Duration = Duration::from_millis(2);
 
+enum Exchange<'a> {
+    Capture,
+    Communicate {
+        input: Option<&'a [u8]>,
+        successful_exit: SuccessfulExit,
+    },
+    Drain,
+}
+
+impl<'a> Exchange<'a> {
+    const fn parameters(self) -> (bool, Option<&'a [u8]>, SuccessfulExit) {
+        match self {
+            Self::Capture => (false, None, SuccessfulExit::Cleanup),
+            Self::Communicate {
+                input,
+                successful_exit,
+            } => (false, input, successful_exit),
+            Self::Drain => (true, None, SuccessfulExit::Cleanup),
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(super) enum CleanupScope {
     DirectChild,
@@ -103,11 +125,9 @@ pub(super) fn capture_command(
     exchange(
         &mut child,
         stdout,
-        false,
-        None,
+        Exchange::Capture,
         limits,
         started,
-        SuccessfulExit::Cleanup,
         cancelled,
         |_, _| Ok(()),
     )
@@ -125,11 +145,12 @@ pub(super) fn communicate(
     exchange(
         child,
         stdout,
-        false,
-        input,
+        Exchange::Communicate {
+            input,
+            successful_exit,
+        },
         limits,
         Instant::now(),
-        successful_exit,
         cancelled,
         output,
     )
@@ -145,31 +166,24 @@ pub(super) fn drain_output(
     exchange(
         child,
         stdout,
-        true,
-        None,
+        Exchange::Drain,
         limits,
         Instant::now(),
-        SuccessfulExit::Cleanup,
         cancelled,
         |_, _| Ok(()),
     )
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "one capture engine retains caller IO and ownership disposition"
-)]
 fn exchange(
     child: &mut OwnedChild,
     stdout: Option<BufReader<ChildStdout>>,
-    allow_reaped: bool,
-    input: Option<&[u8]>,
+    operation: Exchange<'_>,
     limits: OutputLimits,
     started: Instant,
-    successful_exit: SuccessfulExit,
     mut cancelled: impl FnMut() -> bool,
     mut output: impl FnMut(OutputStream, &[u8]) -> io::Result<()>,
 ) -> Result<CompletedExecution, ExecutionError> {
+    let (allow_reaped, input, successful_exit) = operation.parameters();
     let timeout = limits.timeout;
     let mut status = None;
     let mut stdin = child.take_stdin();

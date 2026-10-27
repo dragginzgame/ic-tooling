@@ -19,15 +19,16 @@ fn communication_without_deadline_accepts_long_elapsed_time() {
         let result = exchange(
             &mut child,
             stdout,
-            false,
-            Some(b"completed"),
+            Exchange::Communicate {
+                input: Some(b"completed"),
+                successful_exit: SuccessfulExit::Cleanup,
+            },
             OutputLimits {
                 stdout: crate::tool::OutputLimit::Terminate(9),
                 stderr: crate::tool::OutputLimit::Terminate(0),
                 timeout,
             },
             Instant::now().checked_sub(Duration::from_hours(3)).unwrap(),
-            SuccessfulExit::Cleanup,
             || watchdog.elapsed() > Duration::from_secs(5),
             |_, _| Ok(()),
         );

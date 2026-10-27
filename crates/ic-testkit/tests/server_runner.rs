@@ -24,10 +24,23 @@ impl Fixture {
         write_executable_script(
             &fixture.0.path().join("server"),
             format!(
-                "#!/bin/sh\nif [ \"$1\" = --version ]; then printf 'pocket-ic-server {}\\n'; exit 0; fi\nprintf '%s\\n' \"$$\" > \"$SERVER_PID_FILE\"\nif [ \"$1\" = --hard-ttl ]; then printf '%s' \"$2\" > \"$TTL_FILE\"; shift 2; fi\nif [ \"$1\" = --ttl ]; then printf '%s' \"$2\" > \"$IDLE_TTL_FILE\"; shift 2; fi\n[ \"$1\" = --port-file ] || exit 99\ndd if=/dev/zero bs=1024 count=20 2>/dev/null\nprintf stdout-end\ndd if=/dev/zero bs=1024 count=20 >&2 2>/dev/null\nprintf stderr-end >&2\nprintf '34567\\n' > \"$2\"\nexec sleep 30\n",
+                r#"#!/bin/sh
+if [ "$1" = --version ]; then printf 'pocket-ic-server {}\n'; exit 0; fi
+printf '%s\n' "$$" > "$SERVER_PID_FILE"
+if [ "$1" = --hard-ttl ]; then printf '%s' "$2" > "$TTL_FILE"; shift 2; fi
+if [ "$1" = --ttl ]; then printf '%s' "$2" > "$IDLE_TTL_FILE"; shift 2; fi
+[ "$1" = --port-file ] || exit 99
+dd if=/dev/zero bs=1024 count=20 2>/dev/null
+printf stdout-end
+dd if=/dev/zero bs=1024 count=20 >&2 2>/dev/null
+printf stderr-end >&2
+printf '34567\n' > "$2"
+exec sleep 30
+"#,
                 ic_testkit::pic::POCKET_IC_SERVER_VERSION
             ),
-        ).expect("write executable test script");
+        )
+        .expect("write executable test script");
         fixture
     }
     fn runner(&self) -> Command {
@@ -40,6 +53,21 @@ impl Fixture {
             .env("IDLE_TTL_FILE", self.0.path().join("idle-ttl"));
         command
     }
+    fn downloader(&self, obstruction: &str, ending: &str) {
+        write_executable_script(
+            &self.0.path().join("curl"),
+            format!(
+                r#"#!/bin/sh
+while [ "$1" != --output ]; do shift; done
+printf partial > "$2"
+{obstruction}
+printf 'download diagnostic' >&2
+{ending}
+"#
+            ),
+        )
+        .expect("write executable downloader fixture");
+    }
     fn pid(&self, file: &str) -> u32 {
         fs::read_to_string(self.0.path().join(file))
             .unwrap()
@@ -49,13 +77,9 @@ impl Fixture {
     }
 }
 fn stopped(pid: u32) -> bool {
-    let output = Command::new("/bin/ps")
-        .args(["-p", &pid.to_string(), "-o", "stat="])
-        .output()
-        .unwrap();
-    assert!(output.status.success() || output.status.code() == Some(1));
-    let state = String::from_utf8(output.stdout).unwrap();
-    state.trim().is_empty() || state.trim().starts_with('Z')
+    ic_host_process::testing::process_state(pid)
+        .expect("inspect managed test process state")
+        .is_none_or(|state| state == 'Z')
 }
 
 fn wait_until(mut condition: impl FnMut() -> bool) {
@@ -465,12 +489,13 @@ fn interrupted_setup_terminates_downloader_descendants_and_retains_failure() {
             } else {
                 ""
             };
-            write_executable_script(
-                &fixture.0.path().join("curl"),
-                format!(
-                    "#!/bin/sh\nwhile [ \"$1\" != --output ]; do shift; done\nprintf partial > \"$2\"\n{obstruction}\nprintf 'download diagnostic' >&2\nprintf '%s\\n' \"$$\" > \"$CURL_PID_FILE\"\n/bin/sleep 30 &\nprintf '%s\\n' \"$!\" > \"$DESCENDANT_PID_FILE\"\nwait\n"
-                ),
-            ).expect("write executable test script");
+            fixture.downloader(
+                obstruction,
+                r#"printf '%s\n' "$$" > "$CURL_PID_FILE"
+/bin/sleep 30 &
+printf '%s\n' "$!" > "$DESCENDANT_PID_FILE"
+wait"#,
+            );
             let diagnostic = fixture.0.path().join("diagnostic");
             let mut runner = Running(
                 Command::new(env!("CARGO_BIN_EXE_ic-testkit-server"))
@@ -546,12 +571,7 @@ fn failed_download_retains_partial_archive_and_original_process_failure() {
         } else {
             ""
         };
-        write_executable_script(
-            &fixture.0.path().join("curl"),
-            format!(
-                "#!/bin/sh\nwhile [ \"$1\" != --output ]; do shift; done\nprintf partial > \"$2\"\n{obstruction}\nprintf 'download diagnostic' >&2\n{ending}\n"
-            ),
-        ).expect("write executable test script");
+        fixture.downloader(obstruction, ending);
         let expected = capture_group_command(
             Command::new("/bin/sh").args(["-c", ending]),
             OutputLimits {
@@ -616,10 +636,7 @@ fn failed_download_retains_partial_archive_and_original_process_failure() {
 fn successful_download_stops_when_stderr_cannot_be_recorded() {
     let fixture = Fixture::new();
     let store = fixture.0.path().canonicalize().unwrap().join("store");
-    write_executable_script(
-        &fixture.0.path().join("curl"),
-        "#!/bin/sh\nwhile [ \"$1\" != --output ]; do shift; done\nprintf partial > \"$2\"\n/bin/mkdir \"${2%/*}/download.stderr\"\nprintf 'download diagnostic' >&2\n",
-    ).expect("write executable test script");
+    fixture.downloader(r#"/bin/mkdir "${2%/*}/download.stderr""#, "");
     let output = Command::new(env!("CARGO_BIN_EXE_ic-testkit-server"))
         .env("PATH", fixture.0.path())
         .args(["setup", "--directory"])

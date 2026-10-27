@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.69.2] - Unreleased
+
+### 🧹 Cleanup
+
+- Simplify process lifecycle, Wasm cache admission and baseline-pool completion
+  while preserving public APIs, cache identities and failure/recovery evidence.
+  Share Unix process observations and downloader setup across native fixtures.
+
+### 🔧 Tooling
+
+- Derive formatting-fixture helpers from declared companions and run each
+  adapter suite once under the temporary-path retention proof. Keep standalone
+  checks available. Adopt the committed Shared Tooling fixture correction
+  ([Shared #318](https://github.com/dragginzgame/shared-tooling/pull/318)).
+  [Details](docs/changelog/0.69.md#0692---unreleased).
+
 ## [0.69.1] - 2026-10-27
 
 ### ➕ Added

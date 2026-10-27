@@ -148,9 +148,9 @@ ci:
 	+$(MAKE) --no-print-directory fmt-check
 	+$(MAKE) --no-print-directory formatting-hook-check
 	+$(MAKE) --no-print-directory check-doc-links
-	+$(MAKE) --no-print-directory release-adapter-check
+	# Retention qualification runs the Make, release, publication and record suites
+	# once under a relative aliased temporary parent; keep standalone targets too.
 	+$(MAKE) --no-print-directory tooling-command-check
-	+$(MAKE) --no-print-directory publish-command-check
 	+$(MAKE) --no-print-directory test-artifacts-minimal
 	+$(MAKE) --no-print-directory test-fs-minimal test-fs-capability test-fs-temporary-file
 	+$(MAKE) --no-print-directory test-artifacts-wasm
