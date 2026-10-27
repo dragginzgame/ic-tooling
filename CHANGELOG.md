@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.69.1] - Unreleased
+
+### ➕ Added
+
+- Borrow a Testkit instance mutably without splitting its managed-server owner,
+  allowing native clients to start a live gateway while retaining teardown order.
+  [#257 — Expose mutable client access while retaining PocketIcInstance server custody](https://github.com/dragginzgame/ic-tooling/issues/257).
+  [Details](docs/changelog/0.69.md#0691---unreleased).
+
 ## [0.69.0] - 2026-10-27
 
 ### ⚠️ Breaking

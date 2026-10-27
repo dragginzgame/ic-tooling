@@ -1,159 +1,48 @@
-# Current handoff
+# Current handoff — 2026-10-27
 
-## Source and ownership
+## Scope and source
 
-This checkout starts at `42a9ec79b10f7bf9e3a5658980ca73817c2a771d`, release
-0.68.12. The ten internal cleanups are committed in that release. Shared Tooling
-and Platform adoption are prepared in the [0.69.0 draft](../changelog/0.69.md#0690---unreleased).
-Own package versions remain 0.68.12. The incoming Platform/macros 0.6.21 lock edit
-is archived; only those two records advance to 0.7.0. All other incoming lock
-bytes are preserved. No Git index or ref was changed by this work.
+The isolated contribution starts at release 0.69.0,
+`f268aef5d205e51811e934648afcd13f026635f1`. The normal sibling checkout is
+untouched. Package metadata remains 0.69.0; the compatible addition has pending
+0.69.1 notes, with no release or publication performed.
 
-Host, Build and Testkit retain the [extraction boundaries](../extraction.md).
-Consumers own credentials, budgets, targets, retries, installation and recovery.
-Shared Tooling is now 0.26.22 at `5fc904a935d82ad31f0fba14434b71ccb8c10345`,
-recorded in [the snapshot](../../.shared-tooling.snapshot). Rust edition 2024,
-MSRV 1.91 and native Linux/macOS 15 Intel and Apple Silicon remain required.
+[Tooling #257 — Expose mutable client access while retaining PocketIcInstance server custody](https://github.com/dragginzgame/ic-tooling/issues/257)
+owns `PocketIcInstance::instance_mut()`. Native consumers can call mutable client
+setup APIs while retaining the wrapper's managed-server owner and teardown order.
+The exclusive borrow cannot outlive the wrapper. Explicit replacement still
+transfers the old client's lifetime obligations to its caller.
+[Auth #90 — Consolidate admission policy and simplify client and qualification state](https://github.com/dragginzgame/ic-auth/issues/90)
+retains adoption after a supplying Testkit release; published 0.69.0 exposes only
+an immutable borrow and Auth has four `make_live` callers.
 
-## Current local changes
+## Focused evidence
 
-The canonical exporter updates five policy documents and the exact snapshot.
-The local agent overlay records the new baseline. The adopted guidance clarifies
-owned-type Candid exclusions, explicit external/retained-data boundaries, use of
-existing native error derives and strict inspection/output admission. Tool pins,
-executable scripts and CI wiring do not change.
-Policy adoption alone does not install a new source scanner or runtime gate.
+Linux evidence is retained in this isolated checkout's
+`target/auth-instance-access/`: the client/server drop-order test passes after
+mutating the retained client, all three wrapper borrow/non-detachment compile-fail
+doctests pass, and Testkit library Clippy passes with warnings denied.
+Native macOS and full workspace/release qualification were not run.
+No setup, server download, version bump, merge or publication was performed.
 
-The root catalog now requires published IC Platform 0.7.0, with matching macros
-and unchanged feature selections. Published archive checksums match the primary
-registry records, with source revision `60c43108ca7f2a99bfac62ec21075afff5ed7a7e`.
-Tooling does not call Platform's retired Candid compiler exports. Required
-external parsing/decoding, SDK identities and wire/storage formats remain intact.
+## Retained obligations and history
 
-Registry shard APIs expose Platform's owned `Principal`, so advancing its crate
-identity is a public compatibility change. Consumers exchanging those values
-must update their direct Platform dependency to 0.7 alongside Tooling 0.69.
-The pending release therefore requires a minor increment; package metadata is
-left for the user's normal release preparation. No compatibility facade or
-parallel production Platform version is added.
-
-Normal increments and exact-attempt recovery retain the delivered
-[release contract](../releases.md). No release command or state cleanup ran.
-
-## Adoption qualification and evidence
-
-The source archive, incoming lock/patch, exporter impact/refresh logs and
-qualification records are under `/tmp/ic-tooling-adopt-02622.o8o6Gf/`.
-Snapshot verification covers all 141 selected files at the exact source revision.
-Tracked Rust source review finds Candid only in the external decoder boundary
-and the standard ledger block projection; owned application payloads are not
-given a Candid derive. The prior Shared-only checks remain policy/snapshot
-evidence, separate from dependency qualification.
-
-Platform evidence is under `/tmp/ic-tooling-platform-07.xNqWCh/`: incoming
-source/lock/patch, primary index records, exact published archives/source,
-resolver delta, scoped graphs and focused logs. On actual Rust 1.91, 59 Host
-Tools tests, four native memory tests and 90 selected Testkit tests pass; six
-deliberately ignored Testkit cases remain unexecuted. Testkit and its CDK/Wire
-probe compile for Wasm. A standalone Registry consumer runs with Platform 0.7;
-the 0.6 Principal control refuses with compiler code E0308, confirming the public
-type-identity migration. That fixture's optional legacy dependency is not in
-the production workspace graph.
-
-Affected-owner all-target/all-feature Clippy passes. Five scoped native/Wasm
-graph checks pass, retaining deployed Host/PocketIC/Candid exclusions. One live
-PocketIC 16.1 Wire-call case passes on Linux after offline admission of the
-existing server bundle. No server/tool download occurred. Documentation and
-format checks remain distinct from these runtime results. Native macOS execution
-is outstanding; no full workspace/release gate, commit, push or publication ran.
-
-## Earlier cleanup qualification
-
-Baseline archive, exact lock and focused logs are retained under
-`/tmp/ic-tooling-cleanup-06812.vBhDNi/`. On actual Rust 1.91, 36 transaction,
-20 input/depfile, 88 Wasm cache/batch, 77 process, two directory-size, 21 private
-driver, 21 benchmark-marker and four pool unit tests pass. The driver test covers
-both a sampling error and a sampling panic, preserving the original cause and
-waiting for the worker's completion marker.
-
-Three live Linux PocketIC 16.1 pool cases pass on Rust 1.91: normal build/restore
-and explicit rebuild, failed restore/recovery, and unwind-driven invalidation.
-The existing server bundle passed offline archive/executable/version admission;
-no download occurred. The initial sandbox attempt could not bind loopback and
-remains retained separately from the passing native runs.
-
-Affected-owner all-target/all-feature Clippy passes on the declared development
-compiler. The Testkit Wasm library compiles on Rust 1.91. Formatting, documentation
-links and diff checks pass. Native macOS execution of this cleanup remains
-outstanding. No full workspace/release gate, commit, push, release or publication
-was run for this batch.
-
-The preceding 0.68.11 implementation and evaluation evidence remains under
-`/tmp/ic-tooling-open-issues.fOTL8a/`, including the private cache hashing no-go
-report and primary crypto constraint observations. The supplying accessor is now
-delivered; Timers' separately prepared adoption is consumer-owned. Earlier local
-qualification and failed attempts retain their original source identities and
-host limits. The previous detailed handoff remains in
-[release history](https://github.com/dragginzgame/ic-tooling/blob/fdf6ef8466cff741435e78324edadbe7b18dc260/docs/status/current.md).
-
-Earlier cleanup evidence remains under `/tmp/ic-tooling-cleanup-06810.l2W3fI/`:
-88 cache/batch tests, 12 package-admission tests, 29 private benchmark tests and
-CLI stream/exit projections on Rust 1.91, plus affected-owner Clippy. These
-observations describe that earlier source and are not new qualification of the
-evidence accessor.
-
-The delivered Shared/Platform/Wire adoption evidence remains under
-`/tmp/ic-tooling-adopt-02621.fYXFtb/`, tied to its own source and dependency
-selections. Its prior Linux and Rust 1.91 results do not qualify this addition.
-
-Earlier Shared 0.26.20 adoption evidence remains under
-`/tmp/ic-tooling-shared-02620.1xOqGH/`, including the consumer Make, release and
-retention checks. Preserve its original failed archived-Draft fixture at
-`/tmp/host-fixture-retention.8AIbwe/`.
-
-The earlier cleanup and Platform/Wire adoption evidence remains under
-`/tmp/ic-tooling-cleanup-0687-20261026/` and `/tmp/ic-tooling-adopt-20261026/`.
-Those observations retain their own source identities and host limits; they are
-not new native-host qualification of this tooling update. The previous detailed
-handoff remains [in Git history](https://github.com/dragginzgame/ic-tooling/blob/ae80ee173250848087b8da3322b68a1ed6e2feba/docs/status/current.md).
-
-## Dependency blocker and retained history
+Host, Build and Testkit keep their extraction boundaries, Shared Tooling 0.26.22
+and Platform 0.7 selection. Rust 1.91 remains the minimum; development uses 1.99.1.
+Linux and native macOS 15 Intel/Apple Silicon qualification remain distinct.
+Consumer-owned credentials, budgets, installation and recovery policy stay local.
 
 [Crypto qualification #240](https://github.com/dragginzgame/ic-tooling/issues/240)
-remains separate, with the supplying correction at
-[Platform #50](https://github.com/dragginzgame/ic-platform/issues/50). The selected
-graph still contains crypto-bigint 0.5.5. Actual ECDSA signing prevents an
-unused-code exemption; no local crypto fork, override or exemption was added.
-The Platform 0.7 native Tools graph still selects Agent 0.49.3 and elliptic-curve
-0.13.8 through that affected family, as retained in the current Platform evidence's
-`tools-native-tree.txt`. This dependency adoption does not resolve the advisory.
-The 2026-10-27 primary registry recheck still finds Agent 0.49.3 and
-ic-secp256k1 0.3.0 constrained to the older curve families. Current consumer
-inverse graphs and frozen registry records are in
-`/tmp/ic-tooling-open-issues.fOTL8a/crypto/`. This is a dependency-constraint review,
-not a fresh advisory audit or constant-time execution proof.
+and [Platform #50](https://github.com/dragginzgame/ic-platform/issues/50) remain
+unresolved: crypto-bigint 0.5.5 is selected through actual ECDSA signing, so no
+unused-code exemption applies. No local crypto fork, override or exemption was
+added. The earlier constraint review and evidence remain retained, not requalified
+by this accessor change.
 
-Earlier .6 evidence remains under `/tmp/ic-tooling-improvements-20261026/`,
-`/tmp/ic-tooling-0686-followup-20261026/` and `/tmp/ic-tooling-251-20261026/`.
-Earlier cleanup evidence remains under `/tmp/ic-tooling-complexity-5-20261025/`,
-`/tmp/ic-tooling-complexity-4-20261025/`, `/tmp/ic-tooling-complexity-3-20261025/`,
-`/tmp/ic-tooling-complexity-2-20261025/` and `/tmp/ic-tooling-complexity-20261025/`.
-Dependency-adoption evidence remains at `/tmp/ic-tooling-platform-wire-20261025/`
-and `/tmp/ic-tooling-adopt-20261024/` for its own source identities.
-
-Keep `/tmp/ic-tooling-249-250/`, `/tmp/ic-tooling-wire-07/` and
-`/tmp/ic-tooling-wire-071/` as earlier graph/codec evidence. Original audits remain
-under `/tmp/ic-tooling-audit-fixes/`, `/tmp/ic-tooling-audit-2/`,
-`/tmp/ic-tooling-audit-2-fixes/` and `/tmp/ic-tooling-shared-02610/`.
-Preserve the browser reproduction at `/tmp/ic-tooling-audit-browser-RwZzM9/`.
-
-The nested-workspace target fix is delivered. Preserve its original failed
-`target/package-qualification-3180841-0/`, `/tmp/ic-tooling-239/` and
-`/tmp/ic-tooling-package-phase/`. Earlier detailed qualification is retained in
-[the released handoff](https://github.com/dragginzgame/ic-tooling/blob/248df96b27b44366095d9d8e195cca8a1023bde1/docs/status/current.md).
-
-Migration and local-repository retirement archives remain under
-`/tmp/ic-tooling-migration/`, including `retirement/`; original refs were
-preserved in the former Host repository. Stale release-lock recovery evidence
-remains at `/tmp/ic-tooling-stale-release-lock.qHQFTn/lock`. Retained recovery
-plans, failed attempts, original artifacts and backups are not disposable.
+The [release-0.69.0 handoff](https://github.com/dragginzgame/ic-tooling/blob/f268aef5d205e51811e934648afcd13f026635f1/docs/status/current.md)
+retains prior Shared/Platform adoption, focused cleanup evidence and exact artifact
+paths. Migration/retirement archives at `/tmp/ic-tooling-migration/`, original Host
+refs, and stale-lock recovery evidence at `/tmp/ic-tooling-stale-release-lock.qHQFTn/lock`
+remain preserved. Earlier failed attempts, recovery plans, artifacts and backups
+are not disposable. Normal releases start fresh; exact-attempt recovery uses the
+saved source and never reconstructs state from partial preparation.
