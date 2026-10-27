@@ -53,6 +53,12 @@ Tooling changes use the affected consumer check: `make release-adapter-check`,
 `bash scripts/ci/test-host-fixture-retention.sh`. The shared
 [validation policy](../DRAGGINZGAME.md#validation-and-evidence) owns execution cadence.
 
+Standard `make fmt` and `make fmt-check` report each manifest/Rustfmt pass and
+its elapsed time. An unchanged successful selection can reuse its formatting
+receipt after prepared-tool admission; `FORMAT_RUST_ARGS=--no-cache` runs all
+passes explicitly. The Host Make fixture disables reuse for its substituted
+Cargo, while the formatting-hook fixture uses the actual prepared tools.
+
 `make clippy-workspace` is the existing full-workspace, all-target/all-feature
 warning-denied lint gate. CI/release validation runs it before expensive tests
 and builds after prerequisite admission. Publication and its dry run use that

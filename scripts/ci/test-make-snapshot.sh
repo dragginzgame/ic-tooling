@@ -9,6 +9,9 @@ root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 unset SHARED_TOOLING_ROOT
+# Substitute Cargo has no source metadata; exercise every formatter pass while
+# Shared's producer fixtures own exact-input reuse and invalidation coverage.
+export FORMAT_RUST_ARGS=--no-cache
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$root/scripts/ci/fixture-lifecycle.sh"
 # shellcheck source=scripts/ci/make-adapter-probes.sh
@@ -118,7 +121,8 @@ for selection in ordinary environment command nested recursive; do
         esac
         cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
         if [[ "$target" == fmt-check ]]; then
-            grep -Fx 'Checking formatting... ok' "$fixture/$selection-$target.log" >/dev/null
+            grep -E '^Manifest sorting \[\.\]\.\.\. ok \([0-9.]+s\)$' "$fixture/$selection-$target.log" >/dev/null
+            grep -E '^Rust formatting \[\.\]\.\.\. ok \([0-9.]+s\)$' "$fixture/$selection-$target.log" >/dev/null
         fi
         [[ ! -e "$HOST_MAKE_EXTERNAL" ]] || exit 1
     done
@@ -366,7 +370,7 @@ for target in fmt fmt-check; do
     HOST_MAKE_FAIL=sort RUNNER_TEMP="$fixture" make --no-print-directory "$target" \
         "FORMAT_CARGO=$PWD/cargo" > "$fixture/$target-failure.log" 2>&1 || status=$?
     [[ "$status" == 2 ]] || exit 1
-    grep -F 'FAILED (exit 23)' "$fixture/$target-failure.log" >/dev/null
+    grep -E '^Manifest sorting \[\.\]\.\.\. FAILED \(exit 23, [0-9.]+s\)$' "$fixture/$target-failure.log" >/dev/null
     detail="$(sed -n 's/^Details: //p' "$fixture/$target-failure.log")"
     [[ -f "$detail" ]] || exit 1
     printf 'formatter stdout evidence\nformatter stderr evidence\n' > "$fixture/expected-log"

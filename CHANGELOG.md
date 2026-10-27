@@ -7,7 +7,7 @@
 - Inspect a bounded gzip source through a pull reader, with mandatory footer
   validation and single-member completion even when the consumer stops early.
   Keep native source, integrity, limit and consumer errors distinct
-  ([#260](https://github.com/dragginzgame/ic-tooling/issues/260)).
+  ([#260 — Support bounded gzip readers for streaming Cargo archive inspection](https://github.com/dragginzgame/ic-tooling/issues/260)).
 
 - Borrow a Testkit instance mutably without splitting its managed-server owner,
   allowing native clients to start a live gateway while retaining teardown order.
@@ -19,6 +19,14 @@
 - Reuse the bounded artifact gzip encoder in ordinary artifact and HTTP fixtures,
   using fast level 1 and retaining independent backend/header
   controls. Confine direct compression dependencies to the artifact owner.
+  [Details](docs/changelog/0.69.md#0691---unreleased).
+
+### 🔧 Tooling
+
+- Adopt Shared Tooling 0.26.26 with per-pass formatting progress and timings,
+  conservative input reuse, opaque-submodule hooks and the canonical gzip
+  ownership policy. Use balanced Rust attribute inspection for reuse decisions,
+  update consumer fixtures and complete governance docs.
   [Details](docs/changelog/0.69.md#0691---unreleased).
 
 ## [0.69.0] - 2026-10-27

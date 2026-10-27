@@ -132,7 +132,7 @@ release-adapter-check:
 tooling-command-check:
 	+@checks="$$(bash scripts/ci/select-tooling-checks.sh tooling)" && \
 		for check in $$checks; do printf 'bash %s\n' "$$check"; bash "$$check" || exit $$?; done
-	+bash scripts/ci/check-release-commands.sh "$(CURDIR)" ci/tool-versions.env ci/release-delivery.txt make/consumer.mk make/tools.mk make/testkit.mk make/rust-format.mk make/release.mk make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/check-release-delivery.sh scripts/ci/run-formatting.sh
+	+bash scripts/ci/check-release-commands.sh "$(CURDIR)" ci/tool-versions.env ci/release-delivery.txt make/consumer.mk make/tools.mk make/testkit.mk make/rust-format.mk make/release.mk make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/check-release-delivery.sh scripts/ci/run-formatting.sh scripts/ci/run-rust-formatting.pl scripts/ci/RustSource.pm
 publish:
 	+bash scripts/publish/workspace.sh publish
 publish-check:

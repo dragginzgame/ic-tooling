@@ -73,10 +73,10 @@ perl -e '$p = $ARGV[0]; $p =~ s/([\\"])/\\$1/g; $p =~ s/\n/\\n/g;
     "$objects" > .git/objects/info/alternates
 git update-ref HEAD "$(git -C "$root" rev-parse HEAD)"
 git read-tree HEAD
-# The shared hook supports only regular tracked files. Reject before export.
+# Export regular files and opaque gitlinks, never symlink target bytes.
 git ls-files --stage > "$fixture/entries"
-if LC_ALL=C grep -Ev '^100(644|755) ' "$fixture/entries" > "$fixture/unsupported"; then
-    echo 'formatting adoption requires regular tracked files' >&2; exit 1
+if LC_ALL=C grep -Ev '^(100(644|755)|160000) ' "$fixture/entries" > "$fixture/unsupported"; then
+    echo 'formatting adoption requires regular tracked files or opaque submodules' >&2; exit 1
 fi
 git checkout-index --all
 if [[ "$rust_sources" == true ]]; then
