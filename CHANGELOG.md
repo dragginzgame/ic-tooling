@@ -5,7 +5,7 @@
 ### 🧹 Cleanup
 
 - Reuse the bounded artifact gzip encoder in ordinary artifact and HTTP fixtures,
-  preserving their compression settings and retaining independent backend/header
+  using fast level 1 and retaining independent backend/header
   controls. Confine direct compression dependencies to the artifact owner.
   [Details](docs/changelog/0.69.md#0691).
 

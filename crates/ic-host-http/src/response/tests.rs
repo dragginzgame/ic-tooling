@@ -146,7 +146,7 @@ async fn body_transport_failure_preserves_typed_cause_and_optional_evidence() {
 #[tokio::test(flavor = "current_thread")]
 async fn decoded_bytes_are_bounded_even_when_compressed_length_is_small() {
     let mut compressed = Vec::new();
-    ic_host_artifacts::artifact::encode_gzip(&[b'x'; 4096], &mut compressed, 6, 128).unwrap();
+    ic_host_artifacts::artifact::encode_gzip(&[b'x'; 4096], &mut compressed, 1, 128).unwrap();
     assert!(compressed.len() < 128);
     let headers = format!(
         "HTTP/1.1 200 OK\r\nContent-Encoding: gzip\r\nContent-Length: {}",
