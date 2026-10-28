@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.69.7] - Unreleased
+## [0.69.7] - 2026-10-28
 
 ### 🧹 Cleanup
 
