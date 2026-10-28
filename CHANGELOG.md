@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.69.4] - Unreleased
+
+### ⬆️ Dependencies
+
+- Adopt IC Platform 0.7.1 and unicode-width 0.2.3, and align the declared Wire
+  minimum with the already selected 0.7.18 release. Preserve feature isolation
+  and the Rust 1.91 minimum.
+  [Details](docs/changelog/0.69.md#0694---unreleased).
+
 ## [0.69.3] - 2026-10-27
 
 ### 🧹 Cleanup

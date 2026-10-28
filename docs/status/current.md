@@ -1,80 +1,77 @@
-# Current handoff — 2026-10-27
+# Current handoff — 2026-10-28
 
-## Source and scope
+## Source and authorized scope
 
-The user reported 0.69.2 live. The checkout was clean at
-`1e245a9e8791b04daa0bf971124ae8908d956821` before this accepted cleanup batch.
-Current changes are local and unstaged. Pending notes select 0.69.3 for compatible
-internal cleanup; package versions remain 0.69.2. Public APIs, cache formats,
-fingerprint framing, dependency selections and product-tool pins are unchanged.
-No commit, push, release, publication, setup/download or artifact cleanup ran.
+The upstream Cargo dependency adoption is local and unstaged over released
+0.69.3, HEAD `e3a71a922b1604f53b3e5a1530e154aec96e2a81`. Pending notes select
+0.69.4 for compatible dependency adoption. Workspace package versions remain
+0.69.3. No commit, push, tag, release or publication ran.
+
+The incoming working tree contained a Cargo.lock edit selecting Platform and its
+macro package at 0.7.1 and unicode-width at 0.2.3. Preserve it: the final lockfile
+is byte-for-byte identical to that incoming file. Wire and its derive were
+already locked at 0.7.18 in released 0.69.3. The real index remains unchanged.
+
+## Dependency selection and review
+
+The root catalog now declares compatible minimums Platform 0.7.1, Wire 0.7.18 and
+unicode-width 0.2.3. Child manifests still inherit from that catalog. No feature,
+default-feature, dependency-role, tool pin, source implementation or package
+identity changes. Cargo's registry-backed Rust 1.91 update preview reports no
+further compatible lockfile changes; it was a dry run, not a lock regeneration.
+
+Registry source identities and published code were inspected: Platform 0.7.1
+records `5862651a57de3fba6c03cc5d7c502aaca3cdebcf`, and Wire 0.7.18 records
+`c748379325266d7fa614fefee9d745eb4a88acca`. Platform's Principal/Account text,
+serialization and error simplification retains its contracts and established
+cryptographic implementation. Its optional native gzip capability is not enabled
+here. Wire 0.7.18 has no runtime/protocol change from 0.7.17. Uncommitted sibling
+work was inspected only as context; dependency bytes came from the registry.
 
 Shared Tooling remains the exact 144-file snapshot at
-`d08cbcafbaff4227e798a890232e2248bf167504` (0.27.1 plus the fixture correction).
-This batch does not refresh Shared Tooling or modify sibling working checkouts.
-Host, Build and Testkit retain their extraction boundaries and consumers retain
-installation, budgets, source custody and recovery policy.
+`d08cbcafbaff4227e798a890232e2248bf167504` (0.27.1 plus the prior fixture fix).
+This task changes Cargo dependency declarations, not that snapshot or executable
+setup. Sibling working trees and their dirty source/lock/artifacts were preserved.
 
-## Completed simplifications
+## Validation and evidence
 
-Startup owns one remaining-budget/poll-interval calculation across sync and async
-readiness and instance creation. Owned servers keep periodic liveness inspection;
-borrowed servers retain the full remaining creation deadline. Each execution
-path retains its waiting, panic, cancellation and cleanup behavior.
+Evidence is under `/tmp/ic-tooling-deps-0694.GN7ALu/`: starting HEAD/archive,
+incoming patch and exact manifest/lock backups, registry-update previews, selected
+metadata, qualification logs and final changed-source capture. Direct crates.io
+API access was unavailable; version selection used Cargo's refreshed registry
+and the cached published source identities. No host-tool setup/download ran.
 
-Artifact-cache hits and commits converge after their own required validation and
-materialization. Usage recording, scheduled maintenance, total timing and retained
-record construction have one completion owner. The transaction no longer stores
-a redundant namespace path. Namespace/content lock custody, post-materialization
-hit revalidation and primary/cleanup error retention keep their existing order.
+Actual Rust 1.91 Linux evidence passes for text rendering, Candid service
+integration, native stable-memory access and Wire call admission. The focused
+results are 34 Text tests, 11 Candid tests, four Native tests and nine Wire tests;
+the selected registry/Principal consumer result is recorded in `registry.log`.
+The locked/offline Wasm compile passes for Testkit with Wire and Native with
+stable-memory selected. Existing dependency ownership/inheritance and native/Wasm
+Testkit feature-graph checks pass, retaining the lightweight default boundaries.
 
-Batch maintenance owns conflicting-policy rejection and per-target deduplication
-together. The batch loop projects its preparation error once, preserving indexed
-specification failures and collect-all behavior. CLI server selection is an
-explicit directory/environment/default match with unchanged conflict diagnostics,
-URL precedence and spawn-only options.
+Two live prepared PocketIC 16.1 Wire cases pass: codec refusal/error identity and
+structured query/update rejections. The native run used loopback access without
+provisioning a server. Four-package all-target/all-feature warning-denied Clippy
+passes for Text, Tools, Testkit and Native. Formatting, local documentation links
+and final diff checks are recorded beside those logs.
 
-Wasm target admission and captured output projection have a dedicated private
-owner under `wasm_cache/outputs/`. Generic input discovery delegates the cdylib,
-name-collision and target-kind decisions instead of implementing them inline.
-Snapshots intentionally retain the projection or its error: the public borrowed
-`artifact_paths()` contract reads captured data without new observations, and
-non-Wasm generic evidence remains usable. This is a bounded private separation;
-it does not remove the output API or introduce lazy state, metadata copies or a
-second generic Cargo specification. The larger public redesign is unnecessary
-for this compatible batch.
+These are focused adoption checks, not a full workspace/release gate. Native
+macOS Intel and Apple Silicon qualification did not run for this dependency set;
+report it separately from Linux and static graph evidence. No release or consumer
+migration is claimed by local validation.
 
-## Validation and preservation
+## Prior work and retained obligations
 
-Evidence is under `/tmp/ic-tooling-cleanup-0693.JiPDSR/`: starting HEAD/archive,
-incoming patch, focused logs and final changed-source capture. All commands use
-locked/offline Cargo and prepared tools. No failed validation attempt occurred.
+The [0.69.3 handoff](https://github.com/dragginzgame/ic-tooling/blob/e3a71a922b1604f53b3e5a1530e154aec96e2a81/docs/status/current.md)
+retains the previous cleanup scope and evidence. Its source/logs remain under
+`/tmp/ic-tooling-cleanup-0693.JiPDSR/`, with older cleanup and Shared contribution
+records linked there. All prior public APIs, cache/fingerprint contracts and
+capability owners remain intact.
 
-Actual Rust 1.91 Linux evidence passes: 36 artifact-transaction cases, 13 Wasm
-batch cases, 75 Wasm-cache cases, 28 ordinary startup cases and 13 ordinary
-server-runner cases. Six startup and four server-runner live/helper cases remain
-ignored in their ordinary suites. Selected real PocketIC 16.1 cases also pass:
-synchronous owned-instance topology/lifetime, asynchronous owned and borrowed
-lifetimes, and the CLI's default prepared-bundle path without environment selection.
-Native tests used loopback access; they did not provision or download a server.
-
-Warning-denied all-target/all-feature Clippy passes for Build and Testkit.
-Formatting, local documentation links and final diff checks are recorded beside
-those logs. These are focused checks, not a full workspace or release gate.
-Native macOS Intel and Apple Silicon qualification did not run for this changed
-source and must remain separate from the Linux evidence.
-
-The [0.69.2 handoff](https://github.com/dragginzgame/ic-tooling/blob/1e245a9e8791b04daa0bf971124ae8908d956821/docs/status/current.md)
-retains the previous cleanup and Shared contribution evidence. Its source and
-logs remain under `/tmp/ic-tooling-cleanup-0692.DCU3sj/`; older preservation and
-qualification records remain linked from that historical handoff.
-
-## Retained obligations
-
-This batch supplies no crypto correction or security exemption. Historical
+This adoption supplies no crypto correction or advisory exemption. Historical
 [Tooling #240](https://github.com/dragginzgame/ic-tooling/issues/240) and supplying
 [Platform #50](https://github.com/dragginzgame/ic-platform/issues/50) retain graph
-and qualification evidence. No consumer migration or publication is claimed here.
+and qualification evidence. Existing review/qualification obligations remain.
 
 Migration/retirement archives remain under `/tmp/ic-tooling-migration/`. Original
 Host refs, stale-lock evidence at `/tmp/ic-tooling-stale-release-lock.qHQFTn/lock`,

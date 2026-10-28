@@ -1627,7 +1627,7 @@ version = "0.69.3"
 dependencies = [
  "serde",
  "serde_yaml",
- "unicode-width 0.2.2",
+ "unicode-width 0.2.3",
 ]
 
 [[package]]
@@ -1683,9 +1683,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "677aad73f8b1339cbe1cd7c851f4140bdcdc91c3838fda425bb82549dcd7c35d"
+checksum = "b10bd98bc6264719ea5a0032051031d8f0b78960c427b50622a10fadcb218a5a"
 dependencies = [
  "candid",
  "candid_parser",
@@ -1708,9 +1708,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-macros"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55473c96a300e051643ded29e5904e2efb131f531c322e2b1610619f3052648f"
+checksum = "530efb77ff0ff9909e691f2ceeb3097dc58dc0c9d5a78de69ebf08b044e9390e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2753,7 +2753,7 @@ checksum = "0d22152487193190344590e4f30e219cf3fe140d9e7a3fdb683d82aa2c5f4156"
 dependencies = [
  "arrayvec",
  "typed-arena",
- "unicode-width 0.2.2",
+ "unicode-width 0.2.3",
 ]
 
 [[package]]
@@ -4138,9 +4138,9 @@ checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
 
 [[package]]
 name = "unicode-width"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254"
+checksum = "ca718471876992059f251e33aafc334346ada08042b7661dd1fe313a9bced557"
 
 [[package]]
 name = "unicode-xid"
@@ -4313,7 +4313,7 @@ dependencies = [
  "bumpalo",
  "leb128fmt",
  "memchr",
- "unicode-width 0.2.2",
+ "unicode-width 0.2.3",
  "wasm-encoder",
 ]
 

@@ -37,8 +37,8 @@ ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.69", defau
 ic-host-fs = { path = "crates/ic-host-fs", version = "0.69", default-features = false }
 ic-host-process = { path = "crates/ic-host-process", version = "0.69", default-features = false }
 ic-host-text = { path = "crates/ic-host-text", version = "0.69", default-features = false }
-ic-platform = { version = "0.7.0", default-features = false }
-ic-wire = "0.7.17"
+ic-platform = { version = "0.7.1", default-features = false }
+ic-wire = "0.7.18"
 leb128 = "0.2.5"
 libc = "0.2.190"
 prost = "0.14.3"
@@ -54,7 +54,7 @@ thiserror = "2.0.18"
 tokio = { version = "1.52.3", default-features = false }
 toml = "1"
 toml_edit = "0.25.17"
-unicode-width = "0.2.2"
+unicode-width = "0.2.3"
 url = "2.5.7"
 wasm-encoder = { version = "0.262", default-features = false }
 wasmparser = { version = "0.262", default-features = false, features = ["std", "features"] }
