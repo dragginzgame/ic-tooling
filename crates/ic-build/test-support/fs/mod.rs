@@ -9,3 +9,24 @@ pub fn unique_temp_directory(label: &str) -> PathBuf {
     )
     .expect("create test directory")
 }
+
+/// Re-exec a libtest case so parallel forks cannot prolong its lock descriptors.
+pub fn run_isolated(driver: &str, context: &str) -> bool {
+    if std::env::var_os(driver).is_some() {
+        return false;
+    }
+    let thread = std::thread::current();
+    let name = thread.name().expect("libtest names each test thread");
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", name, "--test-threads=1"])
+        .env(driver, "1")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "isolated {context} failed: {}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    true
+}

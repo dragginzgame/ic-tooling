@@ -380,3 +380,44 @@ fn display_keeps_phase_primary_cause_and_secondary_cleanup() {
         }
     }
 }
+
+#[test]
+fn source_identity_preserves_direct_and_generic_boxed_causes() {
+    use std::error::Error as _;
+    for error in [
+        NamedWriteError::Producer {
+            source: io::Error::other("producer"),
+            cleanup_error: Some(io::Error::other("cleanup")),
+        },
+        NamedWriteError::BeforePublication {
+            source: io::Error::other("before"),
+            cleanup_error: None,
+        },
+        NamedWriteError::AfterPublication {
+            source: io::Error::other("after"),
+        },
+    ] {
+        let (NamedWriteError::Producer { source, .. }
+        | NamedWriteError::BeforePublication { source, .. }
+        | NamedWriteError::AfterPublication { source }) = &error;
+        assert!(std::ptr::eq(
+            error.source().unwrap().downcast_ref::<io::Error>().unwrap(),
+            source,
+        ));
+    }
+    let error = NamedWriteError::Producer {
+        source: Box::new(io::Error::other("boxed producer")),
+        cleanup_error: None,
+    };
+    let NamedWriteError::Producer { source, .. } = &error else {
+        unreachable!()
+    };
+    assert!(std::ptr::eq(
+        error
+            .source()
+            .unwrap()
+            .downcast_ref::<Box<io::Error>>()
+            .unwrap(),
+        source,
+    ));
+}

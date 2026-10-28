@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.69.8] - Unreleased
+
+### 🧹 Cleanup
+
+- Keep durable staging custody together and simplify error forwarding, preserving
+  publication phases, cleanup evidence and original error sources.
+- Finalize baseline-pool errors once, require complete benchmark summaries and
+  simplify depfile parsing, cache coordination and isolated lock fixtures.
+  [Details](docs/changelog/0.69.md#0698---unreleased).
+
 ## [0.69.7] - 2026-10-28
 
 ### 🧹 Cleanup

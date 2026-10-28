@@ -4,7 +4,7 @@ use super::WriteOptions;
 use std::{fmt, io, path::Path};
 
 /// Failure from a named or streamed producer and durable publication, retaining cleanup evidence.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum NamedWriteError<E> {
     /// The producer or its output validation failed; no publication was attempted.
     Producer {
@@ -61,17 +61,6 @@ impl<E: fmt::Display> fmt::Display for NamedWriteError<E> {
             write!(formatter, "; staging cleanup failed: {cleanup}")?;
         }
         Ok(())
-    }
-}
-
-impl<E: std::error::Error + 'static> std::error::Error for NamedWriteError<E> {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Producer { source, .. } => Some(source),
-            Self::BeforePublication { source, .. } | Self::AfterPublication { source } => {
-                Some(source)
-            }
-        }
     }
 }
 

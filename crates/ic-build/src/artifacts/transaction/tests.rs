@@ -12,7 +12,6 @@ use std::{
     fs,
     panic::{AssertUnwindSafe, catch_unwind},
     path::Path,
-    process::Command,
     sync::{
         Arc, Barrier,
         atomic::{AtomicUsize, Ordering},
@@ -1047,24 +1046,7 @@ fn scheduled_pruning_skips_an_immediate_second_acquisition() {
 #[test]
 fn pruning_removes_abandoned_staging_without_touching_active_transactions() {
     const CHILD_ENV: &str = "IC_TESTKIT_STAGING_PRUNING_CHILD";
-    if std::env::var_os(CHILD_ENV).is_none() {
-        // Control every holder of this fixture's lock. Other parallel tests
-        // can briefly inherit its descriptor when spawning before exec.
-        let output = Command::new(std::env::current_exe().unwrap())
-            .args([
-                "--exact",
-                "artifacts::transaction::tests::pruning_removes_abandoned_staging_without_touching_active_transactions",
-                "--test-threads=1",
-            ])
-            .env(CHILD_ENV, "1")
-            .output()
-            .unwrap();
-        assert!(
-            output.status.success(),
-            "isolated staging pruning failed: {}{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
+    if crate::fs_fixture::run_isolated(CHILD_ENV, "staging pruning") {
         return;
     }
 

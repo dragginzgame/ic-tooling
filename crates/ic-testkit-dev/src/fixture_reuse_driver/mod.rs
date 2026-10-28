@@ -241,29 +241,23 @@ fn text_command(command: &mut Command) -> Result<String, Error> {
         .map_err(|_| Error::InvalidData("tool output is not UTF-8"))
 }
 
-fn print_summary(summaries: &[(&str, Summary)]) -> Result<(), Error> {
+fn print_summary(summaries: &[(&str, Summary)]) {
     let mut rows = Vec::with_capacity(summaries.len());
     for (label, summary) in summaries {
-        let (Some(work), Some(fixture), Some(rate), Some(peak), Some(wait)) = (
-            summary.work_wall_ms.as_ref(),
-            summary.fixture_wall_ms.as_ref(),
-            summary.iterations_per_second.as_ref(),
-            summary.sampled_peak_tree_rss_bytes.as_ref(),
-            summary.wait(),
-        ) else {
-            return Err(Error::InvalidData("summary lacks required measurements"));
-        };
         let restore = summary
             .restore()
             .map_or_else(|| "-".into(), |restore| format!("{:.2}", restore.mean));
         rows.push([
             (*label).to_owned(),
-            format!("{:.2}", work.p50),
-            format!("{:.2}", fixture.p50),
-            format!("{:.2}", rate.p50),
+            format!("{:.2}", summary.work_wall_ms.p50),
+            format!("{:.2}", summary.fixture_wall_ms.p50),
+            format!("{:.2}", summary.iterations_per_second.p50),
             restore,
-            format!("{:.2}", wait.mean),
-            format!("{:.2}", peak.p50 / 1024.0 / 1024.0),
+            format!("{:.2}", summary.wait().mean),
+            format!(
+                "{:.2}",
+                summary.sampled_peak_tree_rss_bytes.p50 / 1024.0 / 1024.0
+            ),
         ]);
     }
     println!(
@@ -294,7 +288,6 @@ fn print_summary(summaries: &[(&str, Summary)]) -> Result<(), Error> {
             },
         )
     );
-    Ok(())
 }
 
 struct Inputs {
@@ -613,7 +606,8 @@ pub fn run() -> Result<(), Error> {
             Ok(())
         })?;
     }
-    print_summary(&summaries)
+    print_summary(&summaries);
+    Ok(())
 }
 
 // This caller admits small configuration trees; libraries do not select this policy.

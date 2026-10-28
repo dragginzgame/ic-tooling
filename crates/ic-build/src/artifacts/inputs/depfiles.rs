@@ -36,16 +36,16 @@ pub fn parse_cargo_depfile(text: &str) -> io::Result<Vec<PathBuf>> {
                 parser.token.push('$');
             }
             ':' => {
-                if parser.separated {
+                if parser.rule == RuleState::Dependencies {
                     return Err(invalid("unescaped colon in depfile dependency"));
                 }
                 parser.flush_token();
-                if !parser.has_target {
+                if parser.rule == RuleState::Empty {
                     return Err(invalid("depfile target is empty"));
                 }
-                parser.separated = true;
+                parser.rule = RuleState::Dependencies;
             }
-            '#' if !parser.separated && !parser.has_target && parser.token.is_empty() => {
+            '#' if parser.rule == RuleState::Empty && parser.token.is_empty() => {
                 for comment in chars.by_ref() {
                     if comment == '\n' {
                         break;
@@ -102,23 +102,6 @@ pub fn read_cargo_depfile_inputs(
         .map(|path| canonicalize_allow_missing(path))
         .collect::<io::Result<Vec<_>>>()?;
     let mut inputs = BTreeSet::new();
-    read_record_inputs(
-        current_dir,
-        record,
-        &excluded,
-        maximum_record_bytes,
-        &mut inputs,
-    )?;
-    Ok(inputs.into_iter().collect())
-}
-
-fn read_record_inputs(
-    current_dir: &Path,
-    record: &Path,
-    excluded: &[PathBuf],
-    maximum_record_bytes: usize,
-    inputs: &mut BTreeSet<PathBuf>,
-) -> io::Result<()> {
     let bytes = ic_host_fs::read::read_file_no_follow(record, maximum_record_bytes)
         .map_err(io::Error::from)?;
     let text = std::str::from_utf8(&bytes)
@@ -143,25 +126,32 @@ fn read_record_inputs(
         }
         inputs.insert(path);
     }
-    Ok(())
+    Ok(inputs.into_iter().collect())
+}
+
+#[derive(Default, Eq, PartialEq)]
+enum RuleState {
+    #[default]
+    Empty,
+    Targets,
+    Dependencies,
 }
 
 #[derive(Default)]
 struct DepfileParser {
     token: String,
-    has_target: bool,
-    separated: bool,
+    rule: RuleState,
     paths: BTreeSet<PathBuf>,
 }
 
 impl DepfileParser {
     fn flush_token(&mut self) {
         if !self.token.is_empty() {
-            if self.separated {
+            if self.rule == RuleState::Dependencies {
                 self.paths
                     .insert(PathBuf::from(std::mem::take(&mut self.token)));
             } else {
-                self.has_target = true;
+                self.rule = RuleState::Targets;
                 self.token.clear();
             }
         }
@@ -169,11 +159,10 @@ impl DepfileParser {
 
     fn finish_rule(&mut self) -> io::Result<()> {
         self.flush_token();
-        if self.has_target && !self.separated {
+        if self.rule == RuleState::Targets {
             return Err(invalid("depfile rule has no target separator"));
         }
-        self.has_target = false;
-        self.separated = false;
+        self.rule = RuleState::Empty;
         Ok(())
     }
 }

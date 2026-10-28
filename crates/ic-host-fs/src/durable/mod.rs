@@ -405,8 +405,8 @@ mod supported {
         // All filesystem operations below use the held directory descriptor.
         let parent = parent_path.unwrap_or_else(|| Path::new(""));
         let path = parent.join(file_name);
-        let (temp_name, temp_path, mut temp_file) =
-            create_sibling_temp(&parent_fd, parent, file_name, permissions, &mut before)
+        let mut staging =
+            create_sibling_temp(parent_fd, parent_path, file_name, permissions, &mut before)
                 .map_err(NamedWriteError::before)?;
 
         // Keep unused callbacks and the produced value alive through cleanup,
@@ -416,47 +416,34 @@ mod supported {
         let mut admit = Some(admit);
         let mut value = None;
         let published = (|| {
-            before(FileCommitStep::TemporaryFileWrite, &temp_path)
+            before(FileCommitStep::TemporaryFileWrite, &staging.path)
                 .map_err(NamedWriteError::before)?;
             value = Some(
-                produce.take().expect("producer runs once")(&temp_path, &mut temp_file).map_err(
-                    |source| NamedWriteError::Producer {
+                produce.take().expect("producer runs once")(&staging.path, &mut staging.file)
+                    .map_err(|source| NamedWriteError::Producer {
                         source,
                         cleanup_error: None,
-                    },
-                )?,
+                    })?,
             );
-            before(FileCommitStep::TemporaryFileSync, &temp_path)
+            before(FileCommitStep::TemporaryFileSync, &staging.path)
                 .map_err(NamedWriteError::before)?;
-            verify_staging(&parent_fd, parent_path, &temp_name, &temp_file)
-                .map_err(NamedWriteError::before)?;
-            temp_file.sync_all().map_err(NamedWriteError::before)?;
+            staging.verify().map_err(NamedWriteError::before)?;
+            staging.file.sync_all().map_err(NamedWriteError::before)?;
             let admit = admit.take().expect("admission runs once");
             if matches!(writer_custody, WriterCustody::ReadOnly) {
-                let read_only = retain_read_only(&parent_fd, parent_path, &temp_name, &temp_file)
-                    .map_err(NamedWriteError::before)?;
-                drop(std::mem::replace(&mut temp_file, read_only));
+                staging.make_read_only().map_err(NamedWriteError::before)?;
             }
-            admit(&temp_path, value.as_ref().expect("production succeeded")).map_err(|source| {
-                NamedWriteError::Producer {
+            admit(&staging.path, value.as_ref().expect("production succeeded")).map_err(
+                |source| NamedWriteError::Producer {
                     source,
                     cleanup_error: None,
-                }
-            })?;
+                },
+            )?;
             before(FileCommitStep::Publication, &path).map_err(NamedWriteError::before)?;
             // Keep the descriptor alive through rename so its identity cannot
             // be recycled after a producer unlinks or replaces the pathname.
-            verify_staging(&parent_fd, parent_path, &temp_name, &temp_file)
-                .map_err(NamedWriteError::before)?;
-            match mode {
-                PublicationMode::Replace => {
-                    unix_fs::renameat(parent_fd, &temp_name, parent_fd, file_name)
-                        .map_err(|error| NamedWriteError::before(errno_to_io(error)))
-                }
-                PublicationMode::CreateNew => {
-                    publish_create_new(&parent_fd, &temp_name, file_name, &temp_file)
-                }
-            }?;
+            staging.verify().map_err(NamedWriteError::before)?;
+            staging.publish(mode, file_name)?;
             Ok(())
         })();
         published.map_err(|mut error| {
@@ -465,7 +452,7 @@ mod supported {
             if let NamedWriteError::Producer { cleanup_error, .. }
             | NamedWriteError::BeforePublication { cleanup_error, .. } = &mut error
             {
-                *cleanup_error = remove_owned_temp(&parent_fd, &temp_name, &temp_file).err();
+                *cleanup_error = staging.cleanup().err();
             }
             error
         })?;
@@ -489,29 +476,61 @@ mod supported {
         Ok(Mode::from_raw_mode(permissions))
     }
 
-    fn retain_read_only(
-        parent_fd: &impl AsFd,
-        parent_path: Option<&Path>,
-        name: &OsStr,
-        original: &fs::File,
-    ) -> io::Result<fs::File> {
-        let read_only = fs::File::from(
-            unix_fs::openat(
-                parent_fd,
-                name,
-                OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
-                Mode::empty(),
-            )
-            .map_err(errno_to_io)?,
-        );
-        // Both descriptors remain open until identity is verified, preventing reuse.
-        let held = unix_fs::fstat(original).map_err(errno_to_io)?;
-        let reopened = unix_fs::fstat(&read_only).map_err(errno_to_io)?;
-        if !same_identity(&held, &reopened) {
-            return Err(staging_identity_error());
+    // Holds the descriptor and its namespace together through publication and
+    // explicit cleanup. No Drop cleanup: unwinding retains existing evidence.
+    struct StagingFile<'a> {
+        file: fs::File,
+        name: OsString,
+        path: PathBuf,
+        parent: BorrowedFd<'a>,
+        parent_path: Option<&'a Path>,
+    }
+
+    impl StagingFile<'_> {
+        fn verify(&self) -> io::Result<()> {
+            verify_staging(&self.parent, self.parent_path, &self.name, &self.file)
         }
-        verify_staging(parent_fd, parent_path, name, &read_only)?;
-        Ok(read_only)
+
+        fn make_read_only(&mut self) -> io::Result<()> {
+            let read_only = fs::File::from(
+                unix_fs::openat(
+                    self.parent,
+                    &self.name,
+                    OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
+                    Mode::empty(),
+                )
+                .map_err(errno_to_io)?,
+            );
+            // Both descriptors remain open until identity is verified, preventing reuse.
+            let held = unix_fs::fstat(&self.file).map_err(errno_to_io)?;
+            let reopened = unix_fs::fstat(&read_only).map_err(errno_to_io)?;
+            if !same_identity(&held, &reopened) {
+                return Err(staging_identity_error());
+            }
+            verify_staging(&self.parent, self.parent_path, &self.name, &read_only)?;
+            drop(std::mem::replace(&mut self.file, read_only));
+            Ok(())
+        }
+
+        fn cleanup(&self) -> io::Result<()> {
+            remove_owned_temp(&self.parent, &self.name, &self.file)
+        }
+
+        fn publish<E>(
+            &self,
+            mode: PublicationMode,
+            name: &OsStr,
+        ) -> Result<(), NamedWriteError<E>> {
+            match mode {
+                PublicationMode::Replace => {
+                    unix_fs::renameat(self.parent, &self.name, self.parent, name)
+                        .map_err(|error| NamedWriteError::before(errno_to_io(error)))
+                }
+                PublicationMode::CreateNew => {
+                    publish_create_new(&self.parent, &self.name, name, &self.file)
+                }
+            }
+        }
     }
 
     fn same_identity(left: &unix_fs::Stat, right: &unix_fs::Stat) -> bool {
@@ -756,13 +775,14 @@ mod supported {
         unix_fs::fsync(&owner_fd).map_err(errno_to_io)
     }
 
-    fn create_sibling_temp(
-        parent_fd: &impl AsFd,
-        parent: &Path,
+    fn create_sibling_temp<'a>(
+        parent_fd: BorrowedFd<'a>,
+        parent_path: Option<&'a Path>,
         file_name: &OsStr,
         permissions: Mode,
         before: &mut impl FnMut(FileCommitStep, &Path) -> io::Result<()>,
-    ) -> io::Result<(OsString, PathBuf, fs::File)> {
+    ) -> io::Result<StagingFile<'a>> {
+        let parent = parent_path.unwrap_or_else(|| Path::new(""));
         for _ in 0..TEMP_ATTEMPTS {
             let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
             let name = format!(".ic-host-tmp-{}-{sequence}", std::process::id());
@@ -783,7 +803,15 @@ mod supported {
                 OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::CLOEXEC,
                 permissions,
             ) {
-                Ok(file) => return Ok((temp_name, temp_path, fs::File::from(file))),
+                Ok(file) => {
+                    return Ok(StagingFile {
+                        file: fs::File::from(file),
+                        name: temp_name,
+                        path: temp_path,
+                        parent: parent_fd,
+                        parent_path,
+                    });
+                }
                 Err(error) if error == rustix::io::Errno::EXIST => {}
                 Err(error) => return Err(errno_to_io(error)),
             }

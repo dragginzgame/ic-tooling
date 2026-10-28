@@ -131,21 +131,29 @@ fn distribution(mut values: Vec<f64>) -> Result<Option<SampleStatistics>, Error>
     summarize_samples(&mut values).map_err(Error::Statistics)
 }
 
+fn required_distribution(values: Vec<f64>) -> Result<SampleStatistics, Error> {
+    distribution(values)?.ok_or(Error::InvalidData("summary lacks required measurements"))
+}
+
 #[derive(Serialize)]
 pub(super) struct Summary {
     phases_ms: BTreeMap<String, Option<SampleStatistics>>,
-    body_ms: Option<SampleStatistics>,
-    release_ms: Option<SampleStatistics>,
-    iteration_ms: Option<SampleStatistics>,
-    pub(super) work_wall_ms: Option<SampleStatistics>,
-    pub(super) fixture_wall_ms: Option<SampleStatistics>,
-    pub(super) iterations_per_second: Option<SampleStatistics>,
-    pub(super) sampled_peak_tree_rss_bytes: Option<SampleStatistics>,
+    body_ms: SampleStatistics,
+    release_ms: SampleStatistics,
+    iteration_ms: SampleStatistics,
+    pub(super) work_wall_ms: SampleStatistics,
+    pub(super) fixture_wall_ms: SampleStatistics,
+    pub(super) iterations_per_second: SampleStatistics,
+    pub(super) sampled_peak_tree_rss_bytes: SampleStatistics,
 }
 
 impl Summary {
-    pub(super) fn wait(&self) -> Option<&SampleStatistics> {
-        self.phases_ms["wait_ms"].as_ref()
+    pub(super) fn wait(&self) -> &SampleStatistics {
+        // MeasuredRun admission requires samples; required summary distributions
+        // reject an empty run set, and every sample contains a wait measurement.
+        self.phases_ms["wait_ms"]
+            .as_ref()
+            .expect("nonempty admitted runs contain wait measurements")
     }
 
     pub(super) fn restore(&self) -> Option<&SampleStatistics> {
@@ -171,19 +179,19 @@ pub(super) fn summarize(runs: &[MeasuredRun]) -> Result<Summary, Error> {
         .collect::<Result<_, Error>>()?;
     Ok(Summary {
         phases_ms,
-        body_ms: distribution(samples().map(|sample| sample.body_ms).collect())?,
-        release_ms: distribution(samples().map(|sample| sample.release_ms).collect())?,
-        iteration_ms: distribution(samples().map(|sample| sample.total_ms).collect())?,
-        work_wall_ms: distribution(runs.iter().map(|run| run.metrics.wall_ms).collect())?,
-        fixture_wall_ms: distribution(
+        body_ms: required_distribution(samples().map(|sample| sample.body_ms).collect())?,
+        release_ms: required_distribution(samples().map(|sample| sample.release_ms).collect())?,
+        iteration_ms: required_distribution(samples().map(|sample| sample.total_ms).collect())?,
+        work_wall_ms: required_distribution(runs.iter().map(|run| run.metrics.wall_ms).collect())?,
+        fixture_wall_ms: required_distribution(
             runs.iter().map(|run| run.metrics.fixture_wall_ms).collect(),
         )?,
-        iterations_per_second: distribution(
+        iterations_per_second: required_distribution(
             runs.iter()
                 .map(|run| run.metrics.iterations as f64 * 1000.0 / run.metrics.wall_ms)
                 .collect(),
         )?,
-        sampled_peak_tree_rss_bytes: distribution(
+        sampled_peak_tree_rss_bytes: required_distribution(
             runs.iter()
                 .map(|run| run.rss.sampled_peak_tree_rss_bytes as f64)
                 .collect(),
@@ -197,6 +205,11 @@ mod tests {
     use crate::fixture_reuse_driver::{Error, arguments::parse_arguments};
     use serde_json::{Map, Value, json};
     use std::path::PathBuf;
+
+    #[test]
+    fn empty_runs_are_rejected_before_summary_publication() {
+        assert!(matches!(summarize(&[]), Err(Error::InvalidData(_))));
+    }
 
     fn worker_report() -> Map<String, Value> {
         serde_json::to_value(crate::fixture_reuse_report::worker_report_fixture(1))
@@ -264,17 +277,20 @@ mod tests {
         )
         .unwrap();
         let summary = summarize(&[run, second]).unwrap();
+        let encoded = serde_json::to_value(&summary).unwrap();
+        assert_eq!(encoded["phases_ms"]["restore_ms"], Value::Null);
+        assert_eq!(
+            encoded["body_ms"],
+            json!({"count": 2, "mean": 2.0, "p50": 2.0, "p95": 3.0})
+        );
         assert!(summary.phases_ms["restore_ms"].is_none());
         assert_eq!(summary.phases_ms["build_ms"].as_ref().unwrap().count, 2);
-        assert_eq!(summary.body_ms.as_ref().unwrap().count, 2);
-        assert_eq!(summary.body_ms.as_ref().unwrap().mean, 2.0);
-        assert_eq!(summary.iteration_ms.as_ref().unwrap().mean, 5.0);
-        assert_eq!(summary.work_wall_ms.as_ref().unwrap().mean, 5.0);
-        assert_eq!(summary.fixture_wall_ms.as_ref().unwrap().mean, 6.0);
-        assert_eq!(
-            summary.sampled_peak_tree_rss_bytes.as_ref().unwrap().mean,
-            1536.0
-        );
+        assert_eq!(summary.body_ms.count, 2);
+        assert_eq!(summary.body_ms.mean, 2.0);
+        assert_eq!(summary.iteration_ms.mean, 5.0);
+        assert_eq!(summary.work_wall_ms.mean, 5.0);
+        assert_eq!(summary.fixture_wall_ms.mean, 6.0);
+        assert_eq!(summary.sampled_peak_tree_rss_bytes.mean, 1536.0);
         let stats = distribution(vec![4.0, 1.0, 3.0, 2.0]).unwrap().unwrap();
         assert_eq!(stats.mean, 2.5);
         assert_eq!(stats.p50, 2.5);

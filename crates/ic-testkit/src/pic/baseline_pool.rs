@@ -292,6 +292,29 @@ pub enum BaselinePoolError<E> {
     },
 }
 
+// Final timings are attached only after preparation and recovery have finished.
+enum PreparationFailure<E> {
+    Single(BaselinePoolPreparationError<E>),
+    Recovery {
+        original: Box<BaselinePoolPreparationError<E>>,
+        rebuild: Box<BaselinePoolPreparationError<E>>,
+    },
+}
+
+impl<E> PreparationFailure<E> {
+    fn with_timings(self, timings: BaselinePoolTimings) -> BaselinePoolError<E> {
+        let timings = Box::new(timings);
+        match self {
+            Self::Single(error) => BaselinePoolError::Preparation { error, timings },
+            Self::Recovery { original, rebuild } => BaselinePoolError::RecoveryFailed {
+                original,
+                rebuild,
+                timings,
+            },
+        }
+    }
+}
+
 /// Caller-owned build, preflight and non-snapshot reset policy for one pooled baseline.
 pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
     /// Metadata retained beside every baseline owned by this recipe.
@@ -617,13 +640,7 @@ where
 
         let result = self.prepare_slot(&mut slot, &mut timings);
         timings.total = total_started.elapsed();
-        let disposition = result.map_err(|mut error| {
-            match &mut error {
-                BaselinePoolError::Preparation { timings: saved, .. }
-                | BaselinePoolError::RecoveryFailed { timings: saved, .. } => **saved = timings,
-            }
-            error
-        })?;
+        let disposition = result.map_err(|error| error.with_timings(timings))?;
         Ok((
             CachedPocketIcBaselinePoolGuard { slot },
             BaselinePoolOutcome {
@@ -638,7 +655,7 @@ where
         &self,
         slot: &mut BoundedSlotLease<'_, CachedPocketIcBaseline<R::Metadata>, RebuildReason>,
         timings: &mut BaselinePoolTimings,
-    ) -> Result<BaselinePoolDisposition, BaselinePoolError<R::Error>> {
+    ) -> Result<BaselinePoolDisposition, PreparationFailure<R::Error>> {
         let (disposition, original) = match slot.state() {
             Slot::Reusable(_) => match self.prepare_reused(slot, timings) {
                 Ok(()) => {
@@ -649,10 +666,7 @@ where
                         // A failed restore may have partially changed the instance.
                         // Discard it without treating a fatal failure as a rebuild.
                         Self::discard_stale_slot(slot, timings);
-                        return Err(BaselinePoolError::Preparation {
-                            error: original,
-                            timings: Box::new(*timings),
-                        });
+                        return Err(PreparationFailure::Single(original));
                     }
                     FailureDisposition::Rebuild(reason) => {
                         (BaselinePoolDisposition::Rebuilt(reason), Some(original))
@@ -675,15 +689,11 @@ where
         let build = self.build_slot(slot, timings);
         if let Err(error) = build {
             return Err(match original {
-                Some(original) => BaselinePoolError::RecoveryFailed {
+                Some(original) => PreparationFailure::Recovery {
                     original: Box::new(original),
                     rebuild: Box::new(error),
-                    timings: Box::new(*timings),
                 },
-                None => BaselinePoolError::Preparation {
-                    error,
-                    timings: Box::new(*timings),
-                },
+                None => PreparationFailure::Single(error),
             });
         }
 

@@ -2257,20 +2257,11 @@ pub fn inspect_shared_incremental_target(
     }
 
     let (_lock, lock_wait, canonical) = lock_shared_incremental_target(spec)?;
-    let logical_size_bytes = directory_logical_size(&canonical).map_err(|source| {
-        WasmBuildError::io(
-            "measure shared incremental Cargo target",
-            canonical.clone(),
-            source,
-        )
-    })?;
-    let last_used = cache_entry_last_used(&canonical).map_err(|source| {
-        WasmBuildError::io(
-            "read shared incremental Cargo target use time",
-            canonical.clone(),
-            source,
-        )
-    })?;
+    let (logical_size_bytes, last_used) = observe_shared_target(
+        &canonical,
+        "measure shared incremental Cargo target",
+        "read shared incremental Cargo target use time",
+    )?;
     Ok(Some(SharedIncrementalTargetInspection {
         target_dir: canonical,
         logical_size_bytes,
@@ -2432,20 +2423,11 @@ fn maintain_shared_incremental_target_locked(
     lock_wait: Duration,
 ) -> Result<SharedIncrementalTargetMaintenance, WasmBuildError> {
     let started = Instant::now();
-    let logical_size_bytes_before = directory_logical_size(canonical).map_err(|source| {
-        WasmBuildError::io(
-            "measure shared incremental Cargo target before maintenance",
-            canonical.to_owned(),
-            source,
-        )
-    })?;
-    let last_used_before = cache_entry_last_used(canonical).map_err(|source| {
-        WasmBuildError::io(
-            "read shared incremental Cargo target use time before maintenance",
-            canonical.to_owned(),
-            source,
-        )
-    })?;
+    let (logical_size_bytes_before, last_used_before) = observe_shared_target(
+        canonical,
+        "measure shared incremental Cargo target before maintenance",
+        "read shared incremental Cargo target use time before maintenance",
+    )?;
     let expired = policy.max_age().is_some_and(|max_age| {
         SystemTime::now()
             .duration_since(last_used_before)
@@ -2479,6 +2461,20 @@ fn maintain_shared_incremental_target_locked(
         lock_wait,
         maintenance: started.elapsed(),
     })
+}
+
+// Both callers hold the target lock; keep size/use-time observation order and
+// their operation-specific diagnostic context at this shared read boundary.
+fn observe_shared_target(
+    target: &Path,
+    size_operation: &'static str,
+    use_operation: &'static str,
+) -> Result<(u64, SystemTime), WasmBuildError> {
+    let size = directory_logical_size(target)
+        .map_err(|source| WasmBuildError::io(size_operation, target.to_owned(), source))?;
+    let last_used = cache_entry_last_used(target)
+        .map_err(|source| WasmBuildError::io(use_operation, target.to_owned(), source))?;
+    Ok((size, last_used))
 }
 
 fn clear_shared_incremental_target_contents(target_dir: &Path) -> Result<(), WasmBuildError> {
@@ -2900,7 +2896,7 @@ fn emit_finished_progress(outcome: &WasmBuildOutcome, progress: &mut ProgressRep
     });
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 struct WasmAcquisitionContext {
     lock_wait: Option<Duration>,
     maintenance: Option<SharedIncrementalTargetMaintenanceOutcome>,
@@ -2970,7 +2966,8 @@ fn try_reuse_wasm_artifacts(
         BuildRecordInput {
             resolved,
             lock_wait,
-            shared_incremental: shared_incremental.clone(),
+            shared_incremental_lock_wait: shared_incremental.lock_wait,
+            shared_incremental_maintenance: shared_incremental.maintenance.clone(),
             input_resolution,
             cargo_build: None,
             active_entry: &cache_entry,
@@ -3080,7 +3077,8 @@ fn build_wasm_cache_miss(
             BuildRecordInput {
                 resolved,
                 lock_wait,
-                shared_incremental,
+                shared_incremental_lock_wait: shared_incremental.lock_wait,
+                shared_incremental_maintenance: shared_incremental.maintenance,
                 input_resolution,
                 cargo_build: Some(cargo_build),
                 active_entry: &cache_entry,
@@ -3116,7 +3114,8 @@ pub fn prune_wasm_build_cache(
 struct BuildRecordInput<'a> {
     resolved: &'a ResolvedCargoBuildInputs,
     lock_wait: Duration,
-    shared_incremental: WasmAcquisitionContext,
+    shared_incremental_lock_wait: Option<Duration>,
+    shared_incremental_maintenance: Option<SharedIncrementalTargetMaintenanceOutcome>,
     input_resolution: WasmInputResolutionTimings,
     cargo_build: Option<Duration>,
     active_entry: &'a Path,
@@ -3162,14 +3161,14 @@ fn complete_build_record(
         retention,
         timings: WasmBuildTimings {
             lock_wait: input.lock_wait,
-            shared_incremental_lock_wait: input.shared_incremental.lock_wait,
+            shared_incremental_lock_wait: input.shared_incremental_lock_wait,
             input_resolution: input.input_resolution,
             cargo_build: input.cargo_build,
             cache_maintenance,
             total: total_started.elapsed(),
         },
         maintenance,
-        shared_incremental_maintenance: input.shared_incremental.maintenance,
+        shared_incremental_maintenance: input.shared_incremental_maintenance,
     })
 }
 
@@ -3225,9 +3224,7 @@ fn cleanup_failed_fingerprint_build(
 }
 
 fn lock_wasm_build_cache(target_dir: &Path) -> Result<(File, Duration), WasmBuildError> {
-    create_dir_all(target_dir, "create Cargo target directory")?;
-    let lock_path = target_dir.join(".ic-testkit/wasm-build.lock");
-    lock_cache_file(&lock_path).map_err(wasm_cache_fs_error)
+    lock_wasm_build_cache_with_progress(target_dir, &mut ProgressReporter::silent())
 }
 
 fn lock_wasm_build_cache_with_progress(
