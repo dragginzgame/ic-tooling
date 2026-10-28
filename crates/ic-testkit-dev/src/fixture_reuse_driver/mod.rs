@@ -134,7 +134,7 @@ fn publish_report(
     write: impl FnOnce(&mut File) -> Result<(), Error>,
 ) -> Result<(), Error> {
     check_interrupted()?;
-    match write_existing_parent_validated_with(
+    let error = match write_existing_parent_validated_with(
         output,
         WriteOptions {
             mode: PublicationMode::Replace,
@@ -143,33 +143,30 @@ fn publish_report(
         write,
         |()| check_interrupted(),
     ) {
-        Ok(()) => Ok(()),
-        Err(NamedWriteError::Producer {
+        Ok(()) => return Ok(()),
+        Err(error) => error,
+    };
+    let (source, cleanup_error) = match error {
+        NamedWriteError::Producer {
             source,
             cleanup_error,
-        }) => {
-            if let Some(error) = cleanup_error {
-                eprintln!("could not clean report staging: {error}");
-            }
-            Err(source)
-        }
-        Err(NamedWriteError::BeforePublication {
+        } => (source, cleanup_error),
+        NamedWriteError::BeforePublication {
             source,
             cleanup_error,
-        }) => {
-            if let Some(error) = cleanup_error {
-                eprintln!("could not clean report staging: {error}");
-            }
-            Err(source.into())
-        }
-        Err(NamedWriteError::AfterPublication { source }) => {
+        } => (source.into(), cleanup_error),
+        NamedWriteError::AfterPublication { source } => {
             // The report is complete and visible. This driver promises atomic
             // visibility, not power-loss durability; do not report a failed
             // replacement or invite a retry after publication has occurred.
             eprintln!("report published; final durability or cleanup is unconfirmed: {source}");
-            Ok(())
+            return Ok(());
         }
+    };
+    if let Some(error) = cleanup_error {
+        eprintln!("could not clean report staging: {error}");
     }
+    Err(source)
 }
 
 struct CapturedRun {
@@ -192,8 +189,8 @@ fn measure(
     let mut worker = worker::Worker::spawn(command)?;
     let observed = (|| -> Result<_, Error> {
         let mut rss = report::RssMeasurements::default();
-        while worker.process().try_wait()?.is_none() && !INTERRUPTED.load(Ordering::Relaxed) {
-            let (resident, processes) = sampling::tree_rss(worker.process().id(), &snapshot()?)?;
+        while worker.try_wait()?.is_none() && !INTERRUPTED.load(Ordering::Relaxed) {
+            let (resident, processes) = sampling::tree_rss(worker.id(), &snapshot()?)?;
             rss.sampled_peak_tree_rss_bytes = rss.sampled_peak_tree_rss_bytes.max(resident);
             rss.peak_tree_process_count = rss.peak_tree_process_count.max(processes);
             rss.rss_samples += 1;

@@ -200,14 +200,17 @@ fn message(
     executable: &mut Option<PathBuf>,
     diagnostics: &mut impl Write,
 ) -> io::Result<()> {
-    selected_message(
-        serde_json::from_slice(bytes).map_err(io::Error::other)?,
-        package,
+    let decoded = serde_json::from_slice(bytes).map_err(io::Error::other)?;
+    let mut messages = NativeMessages {
+        package_id: package,
         spec,
-        executable,
-        &mut BuildCompletion::default(),
         diagnostics,
-    )
+        executable: executable.take(),
+        finished: BuildCompletion::default(),
+    };
+    let result = messages.accept(decoded);
+    *executable = messages.executable;
+    result
 }
 
 #[cfg(unix)]

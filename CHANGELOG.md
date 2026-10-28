@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.69.7] - Unreleased
+
+### 🧹 Cleanup
+
+- Simplify Cargo configuration traversal, native build message handling and
+  package revalidation. Record Wasm failure phases directly while preserving
+  input admission, artifact identities and failure evidence.
+- Share PocketIC server liveness checks and benchmark report cleanup handling;
+  restrict benchmark workers to the process operations their callers need.
+  [Details](docs/changelog/0.69.md#0697---unreleased).
+
 ## [0.69.6] - 2026-10-28
 
 ### 🩹 Fixed

@@ -138,14 +138,17 @@ pub fn preferred_configuration(directory: &Path) -> Option<PathBuf> {
 /// refuse non-regular files and excessive bytes. Error text excludes configuration contents.
 pub fn observe_configurations(
     roots: &[PathBuf],
-    mut limits: ConfigurationLimits,
+    limits: ConfigurationLimits,
 ) -> Result<Vec<ConfigurationFile>, ConfigurationError> {
-    let mut files = Vec::new();
-    let mut active = BTreeSet::new();
+    let mut traversal = ConfigurationTraversal {
+        files: Vec::new(),
+        active: BTreeSet::new(),
+        limits,
+    };
     for root in roots {
-        append_configuration(&mut files, root, &mut active, false, &mut limits, 0)?;
+        traversal.append(root, false, 0)?;
     }
-    Ok(files)
+    Ok(traversal.files)
 }
 
 /// Whether a variable overrides the selected Rust compiler, Rustdoc or their wrappers.
@@ -184,37 +187,44 @@ pub(crate) fn is_recipe_variable(name: &str) -> bool {
             || matches!(name, "CARGO_INCREMENTAL" | "RUSTC_BOOTSTRAP"))
 }
 
-fn append_configuration(
-    files: &mut Vec<ConfigurationFile>,
-    config: &Path,
-    active: &mut BTreeSet<PathBuf>,
-    optional: bool,
-    limits: &mut ConfigurationLimits,
-    depth: usize,
-) -> Result<(), ConfigurationError> {
-    if !config.is_absolute() {
-        return Err(invalid_configuration(
+struct ConfigurationTraversal {
+    files: Vec<ConfigurationFile>,
+    active: BTreeSet<PathBuf>,
+    limits: ConfigurationLimits,
+}
+
+impl ConfigurationTraversal {
+    fn append(
+        &mut self,
+        config: &Path,
+        optional: bool,
+        depth: usize,
+    ) -> Result<(), ConfigurationError> {
+        if !config.is_absolute() {
+            return Err(invalid_configuration(
+                config,
+                "configuration path must be absolute",
+            ));
+        }
+        if self.files.iter().any(|file| file.path == config) {
+            return Ok(());
+        }
+        if depth > self.limits.depth {
+            return Err(invalid_configuration(
+                config,
+                "include depth limit exceeded",
+            ));
+        }
+        if self.limits.files == 0 {
+            return Err(invalid_configuration(
+                config,
+                "configuration file count limit exceeded",
+            ));
+        }
+        let contents = match ic_host_fs::read::read_file(
             config,
-            "configuration path must be absolute",
-        ));
-    }
-    if files.iter().any(|file| file.path == config) {
-        return Ok(());
-    }
-    if depth > limits.depth {
-        return Err(invalid_configuration(
-            config,
-            "include depth limit exceeded",
-        ));
-    }
-    if limits.files == 0 {
-        return Err(invalid_configuration(
-            config,
-            "configuration file count limit exceeded",
-        ));
-    }
-    let contents =
-        match ic_host_fs::read::read_file(config, limits.file_bytes.min(limits.total_bytes)) {
+            self.limits.file_bytes.min(self.limits.total_bytes),
+        ) {
             Ok(contents) => contents,
             Err(ArtifactError::Io(error))
                 if optional && error.kind() == io::ErrorKind::NotFound =>
@@ -235,15 +245,14 @@ fn append_configuration(
                 });
             }
         };
-    limits.files -= 1;
-    limits.total_bytes -= contents.len();
-    let contents = String::from_utf8(contents)
-        .map_err(|_| invalid_configuration(config, "configuration is not UTF-8"))?;
-    let parent = config.parent().ok_or_else(|| {
-        invalid_configuration(config, "configuration path has no parent directory")
-    })?;
-    let location =
-        parent
+        self.limits.files -= 1;
+        self.limits.total_bytes -= contents.len();
+        let contents = String::from_utf8(contents)
+            .map_err(|_| invalid_configuration(config, "configuration is not UTF-8"))?;
+        let parent = config.parent().ok_or_else(|| {
+            invalid_configuration(config, "configuration path has no parent directory")
+        })?;
+        let location = parent
             .canonicalize()
             .map_err(|source| ConfigurationError::Io {
                 operation: "resolve Cargo configuration directory",
@@ -253,44 +262,45 @@ fn append_configuration(
             .join(config.file_name().ok_or_else(|| {
                 invalid_configuration(config, "configuration path has no file name")
             })?);
-    if !active.insert(location.clone()) {
-        return Ok(());
-    }
-    let configuration = toml::from_str::<Value>(&contents)
-        .map_err(|_| invalid_configuration(config, "invalid TOML"))?;
-    let compiler_overrides = [
-        "rustc",
-        "rustc-wrapper",
-        "rustc-workspace-wrapper",
-        "rustdoc",
-    ]
-    .into_iter()
-    .filter(|field| {
-        configuration
-            .get("build")
-            .and_then(|build| build.get(field))
-            .is_some()
-    })
-    .collect();
-    files.push(ConfigurationFile {
-        path: config.to_owned(),
-        location: location.clone(),
-        sha256: Sha256Digest::compute(contents.as_bytes()),
-        compiler_overrides,
-        recipe_sha256: configuration_recipe(&configuration),
-    });
-    if let Some(include) = configuration.get("include") {
-        for (included, optional) in configuration_includes(include, config)? {
-            let included = if included.is_absolute() {
-                Cow::Borrowed(included)
-            } else {
-                Cow::Owned(parent.join(included))
-            };
-            append_configuration(files, &included, active, optional, limits, depth + 1)?;
+        if !self.active.insert(location.clone()) {
+            return Ok(());
         }
+        let configuration = toml::from_str::<Value>(&contents)
+            .map_err(|_| invalid_configuration(config, "invalid TOML"))?;
+        let compiler_overrides = [
+            "rustc",
+            "rustc-wrapper",
+            "rustc-workspace-wrapper",
+            "rustdoc",
+        ]
+        .into_iter()
+        .filter(|field| {
+            configuration
+                .get("build")
+                .and_then(|build| build.get(field))
+                .is_some()
+        })
+        .collect();
+        self.files.push(ConfigurationFile {
+            path: config.to_owned(),
+            location: location.clone(),
+            sha256: Sha256Digest::compute(contents.as_bytes()),
+            compiler_overrides,
+            recipe_sha256: configuration_recipe(&configuration),
+        });
+        if let Some(include) = configuration.get("include") {
+            for (included, optional) in configuration_includes(include, config)? {
+                let included = if included.is_absolute() {
+                    Cow::Borrowed(included)
+                } else {
+                    Cow::Owned(parent.join(included))
+                };
+                self.append(&included, optional, depth + 1)?;
+            }
+        }
+        self.active.remove(&location);
+        Ok(())
     }
-    active.remove(&location);
-    Ok(())
 }
 
 fn configuration_includes<'a>(

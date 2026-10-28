@@ -3836,22 +3836,15 @@ fn separate_tool_phases_keep_aggregate_identity_timings() {
         progress.failure_timings.input_resolution().total(),
         Duration::from_secs(5)
     );
-    let error = WasmBuildError::CommandSpawn {
-        phase: WasmBuildPhase::RustcIdentity,
-        program: "missing-rustc".into(),
-        source: std::io::ErrorKind::NotFound.into(),
-    };
     assert_eq!(
-        progress
-            .failure_details(&error, Duration::from_secs(7))
-            .phase(),
+        progress.failure_details(Duration::from_secs(7)).phase(),
         WasmBuildPhase::RustcIdentity
     );
     assert_eq!(
         ProgressReporter::silent()
-            .failure_details(&error, Duration::ZERO)
+            .failure_details(Duration::ZERO)
             .phase(),
-        WasmBuildPhase::RustcIdentity
+        WasmBuildPhase::Specification
     );
 }
 

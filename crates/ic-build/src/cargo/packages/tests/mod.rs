@@ -250,6 +250,73 @@ fn source_inventory_detects_bytes_modes_links_and_resource_overflow() {
 }
 
 #[test]
+fn qualification_baseline_rejects_changes_to_every_retained_input_class() {
+    let root = unique_temp_directory("qualification-baseline");
+    let evidence = root.join("evidence");
+    let original_lock = root.join("Cargo.lock");
+    let original_manifest = root.join("Cargo.toml");
+    let archive = root.join("sample.crate");
+    let source = evidence.join("sample-1.0.0/source");
+    let manifest = evidence.join("Cargo.toml");
+    let lock = evidence.join("Cargo.lock");
+    fs::create_dir_all(source.parent().unwrap()).unwrap();
+    for path in [
+        &original_lock,
+        &original_manifest,
+        &archive,
+        &source,
+        &manifest,
+        &lock,
+    ] {
+        fs::write(path, b"original").unwrap();
+    }
+    let specs = [PackageArchiveSpec {
+        name: "sample",
+        version: "1.0.0",
+        patch_registry: false,
+    }];
+    let capture = || QualificationBaseline {
+        original_lock: (
+            original_lock.clone(),
+            read(&original_lock, limits().file_bytes).unwrap(),
+        ),
+        originals: [(
+            original_manifest.clone(),
+            read(&original_manifest, limits().file_bytes).unwrap(),
+        )]
+        .into(),
+        archives: [(
+            archive.clone(),
+            hash(&archive, limits().file_bytes).unwrap(),
+        )]
+        .into(),
+        sources: sources(&evidence, &specs, limits()).unwrap(),
+        verification_manifest: "original".into(),
+        admitted_lock: b"original".to_vec(),
+    };
+    capture().verify(&evidence, &specs, limits()).unwrap();
+    for path in [
+        &original_lock,
+        &original_manifest,
+        &archive,
+        &source,
+        &manifest,
+        &lock,
+    ] {
+        let baseline = capture();
+        fs::write(path, b"changed").unwrap();
+        assert!(
+            baseline.verify(&evidence, &specs, limits()).is_err(),
+            "{}",
+            path.display()
+        );
+        fs::write(path, b"original").unwrap();
+        capture().verify(&evidence, &specs, limits()).unwrap();
+    }
+    assert!(evidence.join("final-sources.json").is_file());
+}
+
+#[test]
 fn failed_command_retains_original_status_and_diagnostics() {
     let root = unique_temp_directory("package-failure");
     let mut command = Command::new("/bin/sh");

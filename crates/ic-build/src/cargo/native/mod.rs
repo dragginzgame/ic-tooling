@@ -137,41 +137,30 @@ pub fn build_native_executable(
     ]);
     command.args(arguments.build_arguments());
     let mut decoder = MessageDecoder::new(spec.max_message_bytes, false);
-    let mut executable = None;
-    let mut finished = BuildCompletion::default();
+    let mut messages = NativeMessages {
+        package_id: &package_id,
+        spec,
+        diagnostics: &mut diagnostics,
+        executable: None,
+        finished: BuildCompletion::default(),
+    };
     execute(
         &mut command,
         &mut spawn,
         &mut interrupted,
         |stream, chunk| {
             if stream == OutputStream::Stderr {
-                return diagnostics.write_all(chunk);
+                return messages.diagnostics.write_all(chunk);
             }
-            decoder.feed(chunk, |decoded| {
-                selected_message(
-                    decoded,
-                    &package_id,
-                    spec,
-                    &mut executable,
-                    &mut finished,
-                    &mut diagnostics,
-                )
-            })
+            decoder.feed(chunk, |decoded| messages.accept(decoded))
         },
     )?;
-    decoder.finish(|decoded| {
-        selected_message(
-            decoded,
-            &package_id,
-            spec,
-            &mut executable,
-            &mut finished,
-            &mut diagnostics,
-        )
-    })?;
-    finished.require_success()?;
+    decoder.finish(|decoded| messages.accept(decoded))?;
+    messages.finished.require_success()?;
     Ok(NativeExecutable {
-        executable: executable.ok_or_else(|| protocol("Cargo omitted the selected executable"))?,
+        executable: messages
+            .executable
+            .ok_or_else(|| protocol("Cargo omitted the selected executable"))?,
         target_directory,
     })
 }
@@ -215,45 +204,48 @@ fn matches_target(target: &schema::Target, spec: &NativeExecutableSpec<'_>) -> b
     target.name == spec.target_name && target.kind.contains(&spec.target_kind.cargo_kind())
 }
 
-fn selected_message(
-    message: schema::Message,
-    package_id: &str,
-    spec: &NativeExecutableSpec<'_>,
-    executable: &mut Option<PathBuf>,
-    finished: &mut BuildCompletion,
-    diagnostics: &mut impl Write,
-) -> io::Result<()> {
-    match message {
-        schema::Message::BuildFinished(result) => {
-            // Keep invalid completion sticky, but let execution/status failure
-            // remain primary before admitting the successful command's protocol.
-            finished.record(result.success);
-        }
-        schema::Message::CompilerMessage(message) => {
-            if let Some(rendered) = message.message.rendered {
-                diagnostics.write_all(rendered.as_bytes())?;
+struct NativeMessages<'a, 's> {
+    package_id: &'a str,
+    spec: &'a NativeExecutableSpec<'s>,
+    executable: Option<PathBuf>,
+    finished: BuildCompletion,
+    diagnostics: &'a mut dyn Write,
+}
+
+impl NativeMessages<'_, '_> {
+    fn accept(&mut self, message: schema::Message) -> io::Result<()> {
+        match message {
+            schema::Message::BuildFinished(result) => {
+                // Keep invalid completion sticky, but let execution/status failure
+                // remain primary before admitting the successful command's protocol.
+                self.finished.record(result.success);
             }
-        }
-        schema::Message::CompilerArtifact(artifact)
-            if artifact_matches(
-                &artifact,
-                package_id,
-                spec.target_name,
-                &spec.target_kind.cargo_kind(),
-            ) =>
-        {
-            let path = artifact
-                .executable
-                .filter(|path| path.is_absolute())
-                .ok_or_else(|| protocol("Cargo omitted absolute executable path"))?
-                .into_std_path_buf();
-            if executable.replace(path).is_some() {
-                return Err(protocol("Cargo reported multiple selected executables"));
+            schema::Message::CompilerMessage(message) => {
+                if let Some(rendered) = message.message.rendered {
+                    self.diagnostics.write_all(rendered.as_bytes())?;
+                }
             }
+            schema::Message::CompilerArtifact(artifact)
+                if artifact_matches(
+                    &artifact,
+                    self.package_id,
+                    self.spec.target_name,
+                    &self.spec.target_kind.cargo_kind(),
+                ) =>
+            {
+                let path = artifact
+                    .executable
+                    .filter(|path| path.is_absolute())
+                    .ok_or_else(|| protocol("Cargo omitted absolute executable path"))?
+                    .into_std_path_buf();
+                if self.executable.replace(path).is_some() {
+                    return Err(protocol("Cargo reported multiple selected executables"));
+                }
+            }
+            _ => {}
         }
-        _ => {}
+        Ok(())
     }
-    Ok(())
 }
 
 fn execute(

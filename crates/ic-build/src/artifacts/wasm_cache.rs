@@ -529,7 +529,7 @@ struct ProgressReporter<'a> {
     config: WasmBuildProgressConfig,
     observer: Option<&'a mut dyn FnMut(WasmBuildProgressEvent)>,
     last_event: Instant,
-    failure_phase: Option<WasmBuildPhase>,
+    failure_phase: WasmBuildPhase,
     failure_timings: WasmBuildFailureTimings,
 }
 
@@ -542,7 +542,7 @@ impl<'a> ProgressReporter<'a> {
             },
             observer: None,
             last_event: Instant::now(),
-            failure_phase: None,
+            failure_phase: WasmBuildPhase::Specification,
             failure_timings: WasmBuildFailureTimings::default(),
         }
     }
@@ -566,7 +566,7 @@ impl<'a> ProgressReporter<'a> {
             config,
             observer: Some(observer),
             last_event: Instant::now(),
-            failure_phase: None,
+            failure_phase: WasmBuildPhase::Specification,
             failure_timings: WasmBuildFailureTimings::default(),
         })
     }
@@ -637,11 +637,11 @@ impl<'a> ProgressReporter<'a> {
     }
 
     const fn begin_phase(&mut self, phase: WasmBuildPhase) {
-        self.failure_phase = Some(phase);
+        self.failure_phase = phase;
     }
 
     fn record_phase(&mut self, phase: WasmBuildPhase, elapsed: Duration) {
-        self.failure_phase = Some(phase);
+        self.failure_phase = phase;
         let timings = &mut self.failure_timings;
         // Select the authoritative timing slot once. Optional slots distinguish
         // an unrun phase from one that completed with zero elapsed time.
@@ -682,35 +682,11 @@ impl<'a> ProgressReporter<'a> {
         }
     }
 
-    fn failure_details(&self, error: &WasmBuildError, total: Duration) -> WasmBuildFailureDetails {
-        let phase = self
-            .failure_phase
-            .unwrap_or_else(|| classify_unobserved_failure(error));
+    const fn failure_details(&self, total: Duration) -> WasmBuildFailureDetails {
+        let phase = self.failure_phase;
         let mut timings = self.failure_timings;
         timings.total = total;
         WasmBuildFailureDetails { phase, timings }
-    }
-}
-
-fn classify_unobserved_failure(error: &WasmBuildError) -> WasmBuildPhase {
-    match error {
-        WasmBuildError::InvalidSpec { .. } => WasmBuildPhase::Specification,
-        WasmBuildError::CommandSpawn { phase, .. }
-        | WasmBuildError::CommandFailed { phase, .. } => *phase,
-        WasmBuildError::InvalidMetadata { .. } => WasmBuildPhase::CargoMetadata,
-        WasmBuildError::InvalidCargoConfiguration { .. } => WasmBuildPhase::InputDiscovery,
-        WasmBuildError::MissingArtifacts { .. }
-        | WasmBuildError::PreparedInputSnapshotInvalidated => WasmBuildPhase::ArtifactPublication,
-        WasmBuildError::InputsChangedDuringAcquisition { .. } => WasmBuildPhase::ContentHashing,
-        WasmBuildError::FailedBuildCleanup { .. } => WasmBuildPhase::Cleanup,
-        WasmBuildError::Io { source, .. }
-            if source
-                .get_ref()
-                .is_some_and(<dyn std::error::Error + Send + Sync>::is::<ToolError>) =>
-        {
-            WasmBuildPhase::CargoBuild
-        }
-        WasmBuildError::Io { .. } => WasmBuildPhase::ExactCacheCoordination,
     }
 }
 
@@ -2645,7 +2621,7 @@ fn batch_result(
     }
     let total = started.elapsed();
     result.map_err(|error| {
-        let details = progress.failure_details(&error, total);
+        let details = progress.failure_details(total);
         (error, details)
     })
 }

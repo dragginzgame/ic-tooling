@@ -1,14 +1,57 @@
 use ic_host_artifacts::batch::BatchLabelError;
-use std::{cell::Cell, fs};
+use std::{cell::Cell, error::Error as _, fs, io};
 
 use super::{
-    ArtifactCacheBatchEntry, ArtifactCacheBatchFailure, LabeledArtifactCacheSpec,
-    build_artifact_caches_batch,
+    ArtifactCacheBatchEntry, ArtifactCacheBatchFailure, ArtifactCacheBatchFailureTimings,
+    LabeledArtifactCacheSpec, build_artifact_caches_batch,
 };
 use crate::artifacts::{
-    ArtifactCacheOutcome, ArtifactCachePreparation, ArtifactCacheSpec, prepare_artifact_cache,
+    ArtifactCacheError, ArtifactCacheOutcome, ArtifactCachePreparation, ArtifactCacheSpec,
+    prepare_artifact_cache,
 };
 use crate::fs_fixture::unique_temp_directory;
+
+#[test]
+fn batch_failures_expose_the_original_unboxed_source() {
+    let artifact_error = || {
+        Box::new(ArtifactCacheError::InvalidSpec {
+            message: "primary".into(),
+        })
+    };
+    let failures = [
+        ArtifactCacheBatchFailure::Preparation {
+            source: artifact_error(),
+            timings: ArtifactCacheBatchFailureTimings::default(),
+        },
+        ArtifactCacheBatchFailure::Commit {
+            source: artifact_error(),
+            timings: ArtifactCacheBatchFailureTimings::default(),
+        },
+        ArtifactCacheBatchFailure::Callback {
+            source: Box::new(io::Error::other("callback")),
+            cleanup_error: Some(artifact_error()),
+            timings: ArtifactCacheBatchFailureTimings::default(),
+        },
+    ];
+    for failure in &failures {
+        let original = failure.source().unwrap();
+        match failure {
+            ArtifactCacheBatchFailure::Preparation { source, .. }
+            | ArtifactCacheBatchFailure::Commit { source, .. } => {
+                assert!(std::ptr::eq(
+                    original.downcast_ref::<ArtifactCacheError>().unwrap(),
+                    source.as_ref()
+                ));
+            }
+            ArtifactCacheBatchFailure::Callback { source, .. } => {
+                assert!(std::ptr::eq(
+                    original.downcast_ref::<io::Error>().unwrap(),
+                    source.as_ref()
+                ));
+            }
+        }
+    }
+}
 
 #[test]
 fn labeled_transactions_build_then_reuse_in_order() {

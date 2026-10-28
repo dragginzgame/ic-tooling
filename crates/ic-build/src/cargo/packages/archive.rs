@@ -1,7 +1,7 @@
 //! Unix archive qualification over Host descriptor-based traversal.
 
 use super::external_lock::admit_lock;
-use super::source_inventory::sources;
+use super::source_inventory::{SourceFile, sources};
 use crate::cargo::observation::{
     metadata_arguments,
     schema::{Metadata, Package},
@@ -288,6 +288,14 @@ fn qualify(
     admit_lock(&entry_lock, &admitted_lock)?;
     fs::write(evidence.join("admitted-Cargo.toml"), &manifest)?;
     fs::write(evidence.join("admitted-Cargo.lock"), &admitted_lock)?;
+    let baseline = QualificationBaseline {
+        original_lock: (lock, entry_lock),
+        originals,
+        archives,
+        sources,
+        verification_manifest: manifest,
+        admitted_lock,
+    };
     for (label, selection) in [("test-targets", "--all-targets"), ("test-docs", "--doc")] {
         let mut command = verification_cargo();
         command
@@ -297,33 +305,56 @@ fn qualify(
             .args(features.arguments());
         execute(&mut command, &evidence, label, limits.process)?;
     }
-    if read(&lock, limits.file_bytes)? != entry_lock {
-        return Err("original lock changed".into());
-    }
-    for (path, bytes) in originals {
-        if read(&path, limits.file_bytes)? != bytes {
-            return Err("original manifest changed".into());
+    baseline.verify(&evidence, packages, limits)
+}
+
+// The entry and admitted observations belong to one qualification attempt.
+// Revalidation remains explicit and ordered after all qualification commands.
+struct QualificationBaseline {
+    original_lock: (PathBuf, Vec<u8>),
+    originals: BTreeMap<PathBuf, Vec<u8>>,
+    archives: BTreeMap<PathBuf, Sha256Digest>,
+    sources: BTreeMap<PathBuf, SourceFile>,
+    verification_manifest: String,
+    admitted_lock: Vec<u8>,
+}
+
+impl QualificationBaseline {
+    fn verify(
+        self,
+        evidence: &Path,
+        packages: &[PackageArchiveSpec<'_>],
+        limits: PackageQualificationLimits,
+    ) -> Result<(), Cause> {
+        if read(&self.original_lock.0, limits.file_bytes)? != self.original_lock.1 {
+            return Err("original lock changed".into());
         }
-    }
-    for (path, digest) in archives {
-        if hash(&path, limits.file_bytes)? != digest {
-            return Err("package archive changed".into());
+        for (path, bytes) in self.originals {
+            if read(&path, limits.file_bytes)? != bytes {
+                return Err("original manifest changed".into());
+            }
         }
+        for (path, digest) in self.archives {
+            if hash(&path, limits.file_bytes)? != digest {
+                return Err("package archive changed".into());
+            }
+        }
+        let final_sources = self::sources(evidence, packages, limits)?;
+        fs::write(
+            evidence.join("final-sources.json"),
+            serde_json::to_vec(&final_sources)?,
+        )?;
+        if final_sources != self.sources {
+            return Err("extracted package sources changed".into());
+        }
+        if read(&evidence.join("Cargo.toml"), limits.file_bytes)?
+            != self.verification_manifest.as_bytes()
+            || read(&evidence.join("Cargo.lock"), limits.file_bytes)? != self.admitted_lock
+        {
+            return Err("admitted verification manifest or lock changed".into());
+        }
+        Ok(())
     }
-    let final_sources = self::sources(&evidence, packages, limits)?;
-    fs::write(
-        evidence.join("final-sources.json"),
-        serde_json::to_vec(&final_sources)?,
-    )?;
-    if final_sources != sources {
-        return Err("extracted package sources changed".into());
-    }
-    if read(&manifest_path, limits.file_bytes)? != manifest.as_bytes()
-        || read(&payload_lock, limits.file_bytes)? != admitted_lock
-    {
-        return Err("admitted verification manifest or lock changed".into());
-    }
-    Ok(())
 }
 
 fn verification_manifest(packages: &[PackageArchiveSpec<'_>]) -> Result<String, toml::ser::Error> {

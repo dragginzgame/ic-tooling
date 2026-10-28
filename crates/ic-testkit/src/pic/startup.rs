@@ -669,12 +669,10 @@ impl PocketIcStartupConfig {
             match owned_child.try_wait() {
                 Ok(Some(status)) => break Ok(status),
                 Ok(None) => {
-                    if let Some(managed) = server.as_mut() {
-                        match managed.try_wait() {
-                            Ok(Some(status)) => break Err(managed.exit_failure(status)),
-                            Ok(None) => {}
-                            Err(error) => break Err(error),
-                        }
+                    if let Some(managed) = server.as_mut()
+                        && let Err(error) = managed.check_running()
+                    {
+                        break Err(error);
                     }
                     thread::sleep(STARTUP_POLL_INTERVAL);
                 }
@@ -929,15 +927,10 @@ fn configured_builder(
 }
 
 fn check_server(server: &mut Option<ManagedServer>) -> Result<(), PocketIcStartupError> {
-    if let Some(managed) = server.as_mut() {
-        let error = match managed.try_wait() {
-            Ok(Some(status)) => Some(managed.exit_failure(status)),
-            Ok(None) => None,
-            Err(error) => Some(error),
-        };
-        if let Some(error) = error {
-            return Err(finalize_failure(error, None, server.take()));
-        }
+    if let Some(managed) = server.as_mut()
+        && let Err(error) = managed.check_running()
+    {
+        return Err(finalize_failure(error, None, server.take()));
     }
     Ok(())
 }
@@ -1055,9 +1048,7 @@ impl ManagedServer {
         &mut self,
         startup: &StartupDeadline,
     ) -> Result<Option<String>, PocketIcStartupError> {
-        if let Some(status) = self.try_wait()? {
-            return Err(self.exit_failure(status));
-        }
+        self.check_running()?;
         if Instant::now() >= startup.deadline {
             return Err(PocketIcStartupError::new(
                 PocketIcStartupFailure::ReadinessTimeout {
@@ -1076,6 +1067,13 @@ impl ManagedServer {
                 },
             )),
         }
+    }
+
+    fn check_running(&mut self) -> Result<(), PocketIcStartupError> {
+        if let Some(status) = self.try_wait()? {
+            return Err(self.exit_failure(status));
+        }
+        Ok(())
     }
 
     fn try_wait(&mut self) -> Result<Option<ExitStatus>, PocketIcStartupError> {

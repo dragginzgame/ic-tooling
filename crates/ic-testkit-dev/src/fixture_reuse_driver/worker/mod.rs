@@ -21,7 +21,15 @@ impl Worker {
         })
     }
 
-    pub(super) const fn process(&mut self) -> &mut Child {
+    pub(super) fn try_wait(&mut self) -> io::Result<Option<ExitStatus>> {
+        self.process().try_wait()
+    }
+
+    pub(super) fn id(&mut self) -> u32 {
+        self.process().id()
+    }
+
+    const fn process(&mut self) -> &mut Child {
         self.process
             .as_mut()
             .expect("unfinished worker retains its child")
