@@ -12,11 +12,36 @@ use serde::Serialize;
 
 use super::Error;
 
+/// Fixed provenance schema captured before worker execution.
+#[derive(Serialize)]
+pub(super) struct Provenance {
+    pub(super) host_profile: String,
+    pub(super) iterations: usize,
+    pub(super) logical_cpus: u64,
+    pub(super) modes: Vec<&'static str>,
+    pub(super) platform: String,
+    pub(super) pool_capacities: Vec<usize>,
+    pub(super) repeats: usize,
+    pub(super) revision: String,
+    pub(super) rss_command_stderr_bytes: usize,
+    pub(super) rss_command_stdout_bytes: usize,
+    pub(super) rss_sample_interval_ms: u128,
+    pub(super) rss_sampler: &'static str,
+    pub(super) rustc: String,
+    pub(super) server: String,
+    pub(super) server_version: String,
+    pub(super) state_bytes_per_canister: u32,
+    pub(super) wasm_profile: String,
+    pub(super) wasm_sha256: String,
+    pub(super) workers: usize,
+    pub(super) working_tree_dirty: bool,
+}
+
 /// Borrow collected measurements when encoding the final report.
 #[derive(Serialize)]
 pub(super) struct DriverReport<'a> {
     pub(super) format: &'static str,
-    pub(super) provenance: &'a serde_json::Value,
+    pub(super) provenance: &'a Provenance,
     pub(super) runs: BTreeMap<&'a str, &'a [MeasuredRun]>,
     pub(super) summary: BTreeMap<&'a str, &'a Summary>,
 }

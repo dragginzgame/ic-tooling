@@ -21,9 +21,13 @@ pub use beneath::{
 };
 
 #[cfg(unix)]
+mod descriptor;
+#[cfg(unix)]
 mod no_follow;
 #[cfg(unix)]
 pub mod tree;
+#[cfg(unix)]
+pub use descriptor::hash_descriptor;
 #[cfg(unix)]
 pub use no_follow::open_regular_file_no_follow;
 #[cfg(unix)]

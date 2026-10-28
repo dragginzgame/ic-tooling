@@ -35,14 +35,19 @@ pub trait TreeVisitor {
     fn enter_directory(&mut self, relative: &Path, display: &Path) -> Result<(), Self::Error>;
     /// Leave a directory after visiting its children, including the root.
     ///
+    /// Observation-only visitors need no completion work by default. Writers
+    /// must override this when directory synchronization or finalization matters.
+    ///
     /// # Errors
     /// Returns the caller's directory-completion error.
     fn leave_directory(
         &mut self,
-        fd: &OwnedFd,
-        relative: &Path,
-        display: &Path,
-    ) -> Result<(), Self::Error>;
+        _fd: &OwnedFd,
+        _relative: &Path,
+        _display: &Path,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
     /// Project an unsupported or changed entry type to the caller's error.
     fn unsupported(&self, display: &Path, kind: FileType) -> Self::Error;
     /// Project a non-UTF-8 entry path to the caller's error.

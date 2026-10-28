@@ -12,7 +12,7 @@ use ic_host_fs::read::tree::{TreeVisitor, walk_tree};
 
 use rustix::{
     fd::OwnedFd,
-    fs::{FileType, Mode, OFlags, open},
+    fs::{FileType, Mode, OFlags, fstat, open},
 };
 
 /// Typed source facts; JSON is built only while writing evidence.
@@ -78,12 +78,10 @@ impl TreeVisitor for SourceInventory<'_> {
     type Error = Cause;
 
     fn file(&mut self, fd: &OwnedFd, relative: &Path, _display: &Path) -> Result<(), Cause> {
-        use std::os::unix::fs::MetadataExt as _;
         self.admit(relative)?;
-        let file = std::fs::File::from(fd.try_clone()?);
-        let mode = file.metadata()?.mode() & 0o777;
-        let sha256 =
-            ic_host_artifacts::artifact::hash_reader(file, self.limits.file_bytes as u64)?.sha256;
+        let mode =
+            Mode::from_raw_mode(fstat(fd).map_err(std::io::Error::from)?.st_mode).bits() & 0o777;
+        let sha256 = ic_host_fs::read::hash_descriptor(fd, self.limits.file_bytes as u64)?.sha256;
         self.files
             .insert(self.prefix.join(relative), SourceFile { mode, sha256 });
         Ok(())
@@ -91,15 +89,6 @@ impl TreeVisitor for SourceInventory<'_> {
 
     fn enter_directory(&mut self, relative: &Path, _display: &Path) -> Result<(), Cause> {
         self.admit(relative)
-    }
-
-    fn leave_directory(
-        &mut self,
-        _fd: &OwnedFd,
-        _relative: &Path,
-        _display: &Path,
-    ) -> Result<(), Cause> {
-        Ok(())
     }
 
     fn unsupported(&self, display: &Path, _kind: FileType) -> Cause {

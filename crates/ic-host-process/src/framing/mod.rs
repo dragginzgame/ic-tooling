@@ -77,10 +77,10 @@ pub fn read_line(reader: &mut impl BufRead, maximum: u64) -> Result<Vec<u8>, Fra
 
 /// Incremental newline framing for process-output callbacks.
 ///
-/// The byte allowance includes the newline. Completed frames borrow reusable
-/// scratch until the callback returns. JSON, EOF acceptance, process lifetime
-/// and deadlines remain caller policy. After any failure, stop using the framer;
-/// no later input is admitted or implicitly drained.
+/// The byte allowance includes the newline. Completed frames borrow input or
+/// reusable scratch until the callback returns. JSON, EOF acceptance, process
+/// lifetime and deadlines remain caller policy. After any failure, stop using
+/// the framer; no later input is admitted or implicitly drained.
 pub struct LineFramer {
     maximum: u64,
     pending: Option<Vec<u8>>,
@@ -124,8 +124,12 @@ impl LineFramer {
                 pending.extend_from_slice(&fragment[..prefix]);
                 return Err(FrameReadError::TooLarge(pending));
             }
+            if pending.is_empty() && fragment.ends_with(b"\n") {
+                emit(fragment).map_err(FrameReadError::Io)?;
+                continue;
+            }
             pending
-                .try_reserve_exact(fragment.len())
+                .try_reserve(fragment.len())
                 .map_err(|error| FrameReadError::Io(io::Error::other(error)))?;
             pending.extend_from_slice(fragment);
             if pending.ends_with(b"\n") {

@@ -2,6 +2,19 @@
 use crate::{escape::terminal_text, width::display_width};
 use std::borrow::Cow;
 
+struct Cell<'a> {
+    text: Cow<'a, str>,
+    columns: usize,
+}
+
+impl<'a> Cell<'a> {
+    fn new(text: &'a str) -> Self {
+        let text = terminal_text(text);
+        let columns = display_width(&text);
+        Self { text, columns }
+    }
+}
+
 /// Caller-selected alignment of one complete column.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Alignment {
@@ -40,10 +53,10 @@ pub fn render<const N: usize>(
     if N == 0 {
         return String::new();
     }
-    let headers = headers.each_ref().map(|cell| terminal_text(cell.as_ref()));
+    let headers = headers.each_ref().map(|cell| Cell::new(cell.as_ref()));
     let rows = rows
         .iter()
-        .map(|row| row.each_ref().map(|cell| terminal_text(cell.as_ref())))
+        .map(|row| row.each_ref().map(|cell| Cell::new(cell.as_ref())))
         .collect::<Vec<_>>();
     let mut widths = [0; N];
     measure_row(&mut widths, &headers);
@@ -81,13 +94,13 @@ pub fn render<const N: usize>(
 pub fn render_bordered(headers: &[impl AsRef<str>], rows: &[Vec<impl AsRef<str>>]) -> String {
     let headers = headers
         .iter()
-        .map(|cell| terminal_text(cell.as_ref()))
+        .map(|cell| Cell::new(cell.as_ref()))
         .collect::<Vec<_>>();
     let rows = rows
         .iter()
         .map(|row| {
             row.iter()
-                .map(|cell| terminal_text(cell.as_ref()))
+                .map(|cell| Cell::new(cell.as_ref()))
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
@@ -130,14 +143,14 @@ pub fn render_bordered(headers: &[impl AsRef<str>], rows: &[Vec<impl AsRef<str>>
     output
 }
 
-fn measure_row(widths: &mut [usize], row: &[Cow<'_, str>]) {
+fn measure_row(widths: &mut [usize], row: &[Cell<'_>]) {
     for (width, value) in widths.iter_mut().zip(row) {
-        *width = (*width).max(display_width(value));
+        *width = (*width).max(value.columns);
     }
 }
 
 fn render_row(
-    row: &[Cow<'_, str>],
+    row: &[Cell<'_>],
     widths: &[usize],
     alignments: &[Alignment],
     gap: &str,
@@ -150,7 +163,7 @@ fn render_row(
 }
 
 fn append_cells(
-    row: &[Cow<'_, str>],
+    row: &[Cell<'_>],
     widths: &[usize],
     alignments: impl Iterator<Item = Alignment>,
     gap: &str,
@@ -160,8 +173,9 @@ fn append_cells(
         if index != 0 {
             output.push_str(gap);
         }
-        let value = row.get(index).map_or("", |cell| cell.as_ref());
-        let padding = width.saturating_sub(display_width(value));
+        let cell = row.get(index);
+        let value = cell.map_or("", |cell| cell.text.as_ref());
+        let padding = width.saturating_sub(cell.map_or(0, |cell| cell.columns));
         if alignment == Alignment::Right {
             output.extend(std::iter::repeat_n(' ', padding));
         }

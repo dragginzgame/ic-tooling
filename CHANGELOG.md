@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.69.5]
+
+### 🧹 Cleanup
+
+- Type benchmark provenance, share startup-fixture configuration and simplify
+  observing tree visitors. Preserve report schemas and durable writer completion.
+
+### ⚡ Performance
+
+- Reuse frame allocations, cache table display widths, index reusable input
+  digests and hash borrowed descriptors without duplicating handles. Preserve
+  byte limits, output bytes and artifact identities.
+  [Details](docs/changelog/0.69.md#0695).
+
 ## [0.69.4] - 2026-10-28
 
 ### ⬆️ Dependencies

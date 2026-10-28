@@ -2,7 +2,7 @@ use ic_host_artifacts::artifact::{Sha256Digest, visit_reader};
 use sha2::{Digest, Sha256};
 use std::{
     borrow::Cow,
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     ffi::{OsStr, OsString},
     fs::{self, File},
     io,
@@ -290,13 +290,12 @@ pub(super) fn digest_labeled_paths<L: AsRef<Path>, P: AsRef<Path>>(
 
 #[derive(Default)]
 pub(super) struct LabeledPathDigestCache {
-    entries: Vec<LabeledPathDigestCacheEntry>,
+    entries: BTreeMap<PathBuf, Vec<LabeledPathDigestCacheEntry>>,
 }
 
 struct LabeledPathDigestCacheEntry {
     domain: String,
     label: PathBuf,
-    path: PathBuf,
     canonical_root: PathBuf,
     excluded_roots: Vec<PathBuf>,
     traversed_external_path: bool,
@@ -337,15 +336,16 @@ impl LabeledPathDigestCache {
         excluded_roots: &[PathBuf],
     ) -> io::Result<InputDigest> {
         let canonical_root = path.canonicalize()?;
-        if let Some(entry) = self.entries.iter().find(|entry| {
-            entry.domain == domain
-                && entry.label == label
-                && entry.path == path
-                && entry.excluded_roots.iter().eq(effective_root_exclusions(
-                    &entry.canonical_root,
-                    excluded_roots,
-                    entry.traversed_external_path,
-                ))
+        if let Some(entry) = self.entries.get(path).and_then(|entries| {
+            entries.iter().find(|entry| {
+                entry.domain == domain
+                    && entry.label == label
+                    && entry.excluded_roots.iter().eq(effective_root_exclusions(
+                        &entry.canonical_root,
+                        excluded_roots,
+                        entry.traversed_external_path,
+                    ))
+            })
         }) {
             return Ok(entry.digest);
         }
@@ -364,21 +364,23 @@ impl LabeledPathDigestCache {
             Some(&mut trace),
         )?;
         let digest = hasher.finish();
-        self.entries.push(LabeledPathDigestCacheEntry {
-            domain: domain.to_owned(),
-            label: label.to_owned(),
-            path: path.to_owned(),
-            canonical_root,
-            excluded_roots: effective_root_exclusions(
-                &trace.canonical_root,
-                excluded_roots,
-                trace.traversed_external_path,
-            )
-            .cloned()
-            .collect(),
-            traversed_external_path: trace.traversed_external_path,
-            digest,
-        });
+        self.entries
+            .entry(path.to_owned())
+            .or_default()
+            .push(LabeledPathDigestCacheEntry {
+                domain: domain.to_owned(),
+                label: label.to_owned(),
+                canonical_root,
+                excluded_roots: effective_root_exclusions(
+                    &trace.canonical_root,
+                    excluded_roots,
+                    trace.traversed_external_path,
+                )
+                .cloned()
+                .collect(),
+                traversed_external_path: trace.traversed_external_path,
+                digest,
+            });
         Ok(digest)
     }
 }

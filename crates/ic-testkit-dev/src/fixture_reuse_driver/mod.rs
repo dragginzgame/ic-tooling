@@ -48,11 +48,10 @@ use ic_host_process::{
     },
 };
 use ic_host_text::table::{self, Alignment};
-use serde_json::{Value, json};
 
 use crate::fixture_reuse_protocol::Mode;
 use arguments::{Options, parse_arguments};
-use report::{DriverReport, MeasuredRun, Summary, summarize};
+use report::{DriverReport, MeasuredRun, Provenance, Summary, summarize};
 
 const WORKSPACE_DISCOVERY_LIMITS: OutputLimits = OutputLimits {
     stdout: OutputLimit::Terminate(64 * 1024),
@@ -306,7 +305,7 @@ struct Inputs {
     server: PathBuf,
     worker: PathBuf,
     wasm: WasmBuildOutcome,
-    provenance: Value,
+    provenance: Provenance,
 }
 
 fn tool_program(program: OsString) -> Result<PathBuf, Error> {
@@ -489,7 +488,7 @@ fn provenance(
     server_version: &str,
     wasm: &Path,
     facts: &ic_build::artifacts::CargoBuildFacts,
-) -> Result<Value, Error> {
+) -> Result<Provenance, Error> {
     // Capture the selected build and source facts before running cases.
     let git = git_provenance(
         root,
@@ -514,20 +513,47 @@ fn provenance(
         .next()
         .filter(|value| !value.is_empty())
         .ok_or(Error::InvalidData("captured compiler identity is empty"))?;
-    Ok(json!({
-        "server": server, "server_version": server_version,
-        "platform": text_command(Command::new("uname").arg("-srm"))?, "logical_cpus": cpus,
-        "rustc": rustc,
-        "revision": git.revision(),
-        "working_tree_dirty": git.is_dirty(),
-        "host_profile": options.profile, "wasm_profile": facts.selection.profile.as_deref().unwrap_or("dev"), "wasm_sha256": hash_file(wasm, WASM_LIMIT).map_err(Error::Artifact)?.sha256.to_string(),
-        "rss_sample_interval_ms": SAMPLE_INTERVAL.as_millis(), "rss_sampler": sampling::source(),
-        "rss_command_stdout_bytes": options.rss_limits().stdout.retained_bytes(),
-        "rss_command_stderr_bytes": options.rss_limits().stderr.retained_bytes(),
-        "iterations": options.iterations.get(), "workers": options.workers.get(), "repeats": options.repeats.get(),
-        "state_bytes_per_canister": options.state_bytes, "modes": options.modes.iter().map(|mode| mode.as_str()).collect::<Vec<_>>(),
-        "pool_capacities": if options.modes.contains(&Mode::Pooled) { options.capacities.iter().map(|capacity| capacity.get()).collect::<Vec<_>>() } else { vec![] },
-    }))
+    Ok(Provenance {
+        server: server
+            .to_str()
+            .ok_or(Error::InvalidData("server path is not UTF-8"))?
+            .to_owned(),
+        server_version: server_version.to_owned(),
+        platform: text_command(Command::new("uname").arg("-srm"))?,
+        logical_cpus: cpus,
+        rustc: rustc.to_owned(),
+        revision: git.revision().to_owned(),
+        working_tree_dirty: git.is_dirty(),
+        host_profile: options.profile.clone(),
+        wasm_profile: facts
+            .selection
+            .profile
+            .as_deref()
+            .unwrap_or("dev")
+            .to_owned(),
+        wasm_sha256: hash_file(wasm, WASM_LIMIT)
+            .map_err(Error::Artifact)?
+            .sha256
+            .to_string(),
+        rss_sample_interval_ms: SAMPLE_INTERVAL.as_millis(),
+        rss_sampler: sampling::source(),
+        rss_command_stdout_bytes: options.rss_limits().stdout.retained_bytes(),
+        rss_command_stderr_bytes: options.rss_limits().stderr.retained_bytes(),
+        iterations: options.iterations.get(),
+        workers: options.workers.get(),
+        repeats: options.repeats.get(),
+        state_bytes_per_canister: options.state_bytes,
+        modes: options.modes.iter().map(|mode| mode.as_str()).collect(),
+        pool_capacities: if options.modes.contains(&Mode::Pooled) {
+            options
+                .capacities
+                .iter()
+                .map(|capacity| capacity.get())
+                .collect()
+        } else {
+            vec![]
+        },
+    })
 }
 
 pub fn run() -> Result<(), Error> {
@@ -799,7 +825,6 @@ mod tests {
         } else {
             let inputs = prepare(&options).unwrap();
             assert_eq!(inputs.root, root.join("workspace"));
-            assert_eq!(inputs.provenance["rustc"], "fixture rustc");
             assert_eq!(
                 inputs.worker,
                 root.join("target/cargo-reported directory/worker fixture")
@@ -849,7 +874,7 @@ mod tests {
             }
             let retained = &inputs.wasm.record().artifacts()[0];
             assert_eq!(
-                inputs.provenance["wasm_sha256"],
+                inputs.provenance.wasm_sha256,
                 super::hash_file(retained, super::WASM_LIMIT)
                     .unwrap()
                     .sha256
@@ -867,6 +892,12 @@ mod tests {
                 Ok(serde_json::to_writer(file, &inputs.provenance)?)
             })
             .unwrap();
+            let encoded: Value =
+                serde_json::from_slice(&fs::read(root.join("report.json")).unwrap()).unwrap();
+            assert_eq!(encoded["rustc"], "fixture rustc");
+            assert_eq!(encoded["server"], root.join("server").to_str().unwrap());
+            assert_eq!(encoded["iterations"], options.iterations.get());
+            assert_eq!(encoded["workers"], options.workers.get());
         }
     }
 

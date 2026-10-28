@@ -4,9 +4,11 @@
 //! publication, fixed layouts and recovery remain with Backup.
 
 use super::{TreeVisitor, walk_tree};
-use crate::read::{OpenEntryError, OpenedEntry, open_directory_no_follow, open_entry_beneath};
+use crate::read::{
+    OpenEntryError, OpenedEntry, hash_descriptor, open_directory_no_follow, open_entry_beneath,
+};
 use ic_host_artifacts::artifact::{
-    ArtifactError, Sha256Digest, hash_reader,
+    ArtifactError, Sha256Digest,
     tree::{DirectoryChecksumError, checksum_relative_files},
 };
 use rustix::{
@@ -14,7 +16,6 @@ use rustix::{
     fs::FileType,
 };
 use std::{
-    fs::File,
     io,
     path::{Component, Path, PathBuf},
 };
@@ -104,10 +105,11 @@ impl ChecksumVisitor {
 
     pub(crate) fn record_file(
         &mut self,
-        file: File,
+        file: impl AsFd,
         relative: &Path,
     ) -> Result<(), TreeChecksumError> {
-        let identity = hash_reader(file, self.max_file_bytes).map_err(TreeChecksumError::Input)?;
+        let identity =
+            hash_descriptor(&file, self.max_file_bytes).map_err(TreeChecksumError::Input)?;
         self.checksums
             .push((relative.to_path_buf(), identity.sha256));
         Ok(())
@@ -121,17 +123,9 @@ impl ChecksumVisitor {
 impl TreeVisitor for ChecksumVisitor {
     type Error = TreeChecksumError;
     fn file(&mut self, fd: &OwnedFd, relative: &Path, _display: &Path) -> Result<(), Self::Error> {
-        self.record_file(File::from(fd.try_clone()?), relative)
+        self.record_file(fd, relative)
     }
     fn enter_directory(&mut self, _relative: &Path, _display: &Path) -> Result<(), Self::Error> {
-        Ok(())
-    }
-    fn leave_directory(
-        &mut self,
-        _fd: &OwnedFd,
-        _relative: &Path,
-        _display: &Path,
-    ) -> Result<(), Self::Error> {
         Ok(())
     }
     fn unsupported(&self, display: &Path, kind: FileType) -> Self::Error {

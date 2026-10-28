@@ -1428,15 +1428,10 @@ mod tests {
                 "builder-failure",
                 "#!/bin/sh\nprintf '%s\n%s\n' \"$$\" \"$2\"\nprintf 'builder-diagnostic' >&2\nprintf '34567\n' > \"$2\"\nexec sleep 30\n",
             );
-            let managed = PocketIcStartupConfig::Spawn {
-                server_binary: script.path(),
-                timeout: Duration::from_secs(2),
-                server_hard_ttl: None,
-                server_idle_ttl: None,
-                server_output_files: None,
-            }
-            .start_managed_server()
-            .unwrap();
+            let managed = script
+                .config(Duration::from_secs(2))
+                .start_managed_server()
+                .unwrap();
             let pid = managed.process_id();
             let directory = managed.server.files.directory.path().to_path_buf();
             let (sender, receiver) = mpsc::channel();
@@ -1487,13 +1482,7 @@ mod tests {
                     "#!/bin/sh\nprintf '%s\n%s\n' \"$$\" \"$2\"\nprintf 'original-server-diagnostic' >&2\n{port}\nexec sleep 30\n"
                 ),
             );
-            let config = PocketIcStartupConfig::Spawn {
-                server_binary: script.path(),
-                timeout: Duration::from_secs(2),
-                server_hard_ttl: None,
-                server_idle_ttl: None,
-                server_output_files: None,
-            };
+            let config = script.config(Duration::from_secs(2));
             let error = if port_io {
                 config.start_managed_server().err().unwrap()
             } else {
@@ -1667,16 +1656,11 @@ mod tests {
             "builder-panic",
             "#!/bin/sh\nprintf '%s' \"$$\" > \"$0.pid\"\nprintf 'builder stdout'\nprintf 'builder stderr' >&2\nprintf '34567\\n' > \"$2\"\nexec sleep 30\n",
         );
-        let error = PocketIcStartupConfig::Spawn {
-            server_binary: script.path(),
-            timeout: Duration::from_secs(2),
-            server_hard_ttl: None,
-            server_idle_ttl: None,
-            server_output_files: None,
-        }
-        .build_instance(PocketIcBuilder::new())
-        .err()
-        .unwrap();
+        let error = script
+            .config(Duration::from_secs(2))
+            .build_instance(PocketIcBuilder::new())
+            .err()
+            .unwrap();
         let PocketIcStartupFailure::BuilderPanicked { source } = error.failure() else {
             panic!("expected builder failure, got {error:?}");
         };
@@ -2091,14 +2075,9 @@ mod tests {
             "#!/bin/sh\nif [ \"$1\" != \"--port-file\" ] || [ -e \"$2\" ]; then exit 97; fi\nprintf 'synthetic server stdout'\nprintf 'synthetic bind failure' >&2\nexit 23\n",
         );
 
-        let result = PocketIcStartupConfig::Spawn {
-            server_binary: script.path(),
-            timeout: Duration::from_secs(2),
-            server_hard_ttl: None,
-            server_idle_ttl: None,
-            server_output_files: None,
-        }
-        .build_instance(PocketIcBuilder::new().with_application_subnet());
+        let result = script
+            .config(Duration::from_secs(2))
+            .build_instance(PocketIcBuilder::new().with_application_subnet());
 
         let error = result.err().unwrap();
         let PocketIcStartupFailure::ServerExited {
@@ -2122,14 +2101,7 @@ mod tests {
             "oversized-port",
             "#!/bin/sh\nprintf '%s\\n%s\\n' \"$$\" \"$2\"\nprintf '34567\\n%064s' '' > \"$2.pending\"\nmv \"$2.pending\" \"$2\"\nexec sleep 30\n",
         );
-        let result = PocketIcStartupConfig::Spawn {
-            server_binary: script.path(),
-            timeout: Duration::from_secs(2),
-            server_hard_ttl: None,
-            server_idle_ttl: None,
-            server_output_files: None,
-        }
-        .start_managed_server();
+        let result = script.config(Duration::from_secs(2)).start_managed_server();
         let error = result.err().unwrap();
         let PocketIcStartupFailure::InvalidServerPort { value, .. } = error.failure() else {
             panic!("oversized port publication must fail readiness");
@@ -2153,14 +2125,9 @@ mod tests {
         let timeout = Duration::from_millis(100);
         let started = Instant::now();
 
-        let result = PocketIcStartupConfig::Spawn {
-            server_binary: script.path(),
-            timeout,
-            server_hard_ttl: None,
-            server_idle_ttl: None,
-            server_output_files: None,
-        }
-        .build_instance(PocketIcBuilder::new().with_application_subnet());
+        let result = script
+            .config(timeout)
+            .build_instance(PocketIcBuilder::new().with_application_subnet());
 
         assert!(
             started.elapsed() < Duration::from_secs(2),
@@ -2183,15 +2150,10 @@ mod tests {
             "#!/bin/sh\nif [ \"$1\" != \"--port-file\" ] || [ -e \"$2\" ]; then echo 'unexpected managed server arguments' >&2; exit 97; fi\nprintf 'managed server ready: %s' \"$$\"\nprintf '34567\\n' > \"$2\"\nexec sleep 30\n",
         );
 
-        let server = PocketIcStartupConfig::Spawn {
-            server_binary: script.path(),
-            timeout: Duration::from_secs(2),
-            server_hard_ttl: None,
-            server_idle_ttl: None,
-            server_output_files: None,
-        }
-        .start_managed_server()
-        .expect("start caller-owned managed server");
+        let server = script
+            .config(Duration::from_secs(2))
+            .start_managed_server()
+            .expect("start caller-owned managed server");
 
         assert_eq!(server.url(), "http://127.0.0.1:34567/");
         assert_eq!(
@@ -2223,14 +2185,9 @@ mod tests {
                 mode,
                 &format!("#!/bin/sh\nsleep 30 &\nprintf '%s' \"$!\"\n{publish}{finish}"),
             );
-            let result = PocketIcStartupConfig::Spawn {
-                server_binary: script.path(),
-                timeout: Duration::from_millis(300),
-                server_hard_ttl: None,
-                server_idle_ttl: None,
-                server_output_files: None,
-            }
-            .start_managed_server();
+            let result = script
+                .config(Duration::from_millis(300))
+                .start_managed_server();
             let output = match result {
                 Ok(server) => {
                     let output = server.output().stdout().to_owned();
@@ -2374,6 +2331,16 @@ mod tests {
 
         fn path(&self) -> PathBuf {
             self.path.clone()
+        }
+
+        fn config(&self, timeout: Duration) -> PocketIcStartupConfig {
+            PocketIcStartupConfig::Spawn {
+                server_binary: self.path(),
+                timeout,
+                server_hard_ttl: None,
+                server_idle_ttl: None,
+                server_output_files: None,
+            }
         }
     }
 }

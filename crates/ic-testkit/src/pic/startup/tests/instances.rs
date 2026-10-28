@@ -42,15 +42,10 @@ fn client_drops_before_its_managed_server() {
         "owner-drop-order",
         "#!/bin/sh\nprintf '34567\\n' > \"$2\"\nexec sleep 30\n",
     );
-    let server = PocketIcStartupConfig::Spawn {
-        server_binary: script.path(),
-        timeout: Duration::from_secs(2),
-        server_hard_ttl: None,
-        server_idle_ttl: None,
-        server_output_files: None,
-    }
-    .start_managed_server()
-    .unwrap();
+    let server = script
+        .config(Duration::from_secs(2))
+        .start_managed_server()
+        .unwrap();
     let pid = server.process_id();
     let observed = Cell::new(false);
     let mut owned = PocketIcInstance {
