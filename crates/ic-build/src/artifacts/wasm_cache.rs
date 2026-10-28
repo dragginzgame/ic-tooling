@@ -1605,6 +1605,7 @@ impl ResolvedCargoBuildInputs {
                 self.inputs.iter().map(|input| input.path.as_path()),
                 &self.declared_package_files,
                 &mut exclusions,
+                &mut source_inputs::WorkspaceDeclarations::new(),
             )?;
             digest_labeled_paths_composable(
                 "wasm-source-inputs-v1",
@@ -1801,6 +1802,7 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
 
         let hashing_started = Instant::now();
         let mut batch_digest_cache = LabeledPathDigestCache::default();
+        let mut declarations = source_inputs::WorkspaceDeclarations::new();
         let digest_cache = &mut batch_digest_cache;
         let workspace_root = &active.workspace_root;
         let resolved_inputs =
@@ -1812,6 +1814,7 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
                             &discovered.inputs,
                             &mut discovered.exclusions,
                             digest_cache,
+                            &mut declarations,
                             workspace_root,
                             "hash batched Wasm build inputs",
                             "hash batched semantic Wasm build inputs",
@@ -3465,6 +3468,7 @@ fn build_fingerprint_with_policy(
                 &inputs,
                 &mut exclusions,
                 &mut cache,
+                &mut source_inputs::WorkspaceDeclarations::new(),
                 &spec.workspace_root,
                 "hash Wasm build inputs",
                 "hash semantic Wasm build inputs",

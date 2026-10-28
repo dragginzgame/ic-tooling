@@ -10,13 +10,15 @@ use std::{
 };
 
 fn artifact(manifest: &Path, paths: &[PathBuf]) -> schema::Message {
-    serde_json::from_value(serde_json::json!({
-        "reason":"compiler-artifact", "package_id":"path+file:///fixture#0.1.0",
-        "manifest_path":manifest,
-        "target":{"name":"custom_library","kind":["cdylib"],"crate_types":["cdylib"],"src_path":"/fixture/src/lib.rs","edition":"2024","doc":true,"doctest":false,"test":true},
-        "profile":{"opt_level":"0","debuginfo":0,"debug_assertions":true,"overflow_checks":true,"test":false},
-        "features":[],"filenames":paths,"executable":null,"fresh":false
-    })).unwrap()
+    let target = serde_json::json!({"name":"custom_library","kind":["cdylib"],"crate_types":["cdylib"],"src_path":"/fixture/src/lib.rs","edition":"2024","doc":true,"doctest":false,"test":true});
+    let mut artifact = crate::cargo_fixture::artifact_message(
+        "path+file:///fixture#0.1.0",
+        &target,
+        &paths.iter().map(PathBuf::as_path).collect::<Vec<_>>(),
+        None,
+    );
+    artifact["manifest_path"] = serde_json::json!(manifest);
+    serde_json::from_value(artifact).unwrap()
 }
 
 #[test]

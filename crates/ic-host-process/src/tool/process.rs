@@ -189,6 +189,7 @@ fn exchange(
     let mut stdin = child.take_stdin();
     let mut stdout = CapturedStream::new(stdout, limits.stdout, OutputStream::Stdout);
     let mut stderr = CapturedStream::new(child.take_stderr(), limits.stderr, OutputStream::Stderr);
+    let mut buffer = [0; 16 * 1024];
     // Resume the original panic after closing pipes and attempting cleanup.
     // The borrowed owner can outlive a caller's catch_unwind, so its Drop alone
     // cannot guarantee cleanup here. No callback is reused after unwinding.
@@ -238,8 +239,8 @@ fn exchange(
             } else {
                 false
             };
-            let progress_out = stdout.read_chunk(&mut output)?;
-            let progress_err = stderr.read_chunk(&mut output)?;
+            let progress_out = stdout.read_chunk(&mut buffer, &mut output)?;
+            let progress_err = stderr.read_chunk(&mut buffer, &mut output)?;
             status = poll_completion(child, successful_exit)
                 .map_err(|source| io_failure(ExecutionOperation::Wait, source))?;
             if let Some(status) = status
@@ -394,12 +395,12 @@ impl<R: Read> CapturedStream<R> {
 
     fn read_chunk(
         &mut self,
+        buffer: &mut [u8],
         output: &mut impl FnMut(OutputStream, &[u8]) -> io::Result<()>,
     ) -> Result<bool, ExecutionFailure> {
         let Some(pipe) = self.reader.as_mut() else {
             return Ok(false);
         };
-        let mut buffer = [0; 16 * 1024];
         let limit = self.policy.retained_bytes();
         let terminate = matches!(self.policy, OutputLimit::Terminate(_));
         let allowance = if terminate {

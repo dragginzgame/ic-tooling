@@ -63,11 +63,15 @@ fn fragmented_capture_keeps_capacity_and_overflow_evidence_within_budget() {
             OutputStream::Stdout,
         );
         for _ in 0..limit {
-            assert!(capture.read_chunk(&mut |_, _| Ok(())).unwrap());
+            assert!(
+                capture
+                    .read_chunk(&mut [0; 16 * 1024], &mut |_, _| Ok(()))
+                    .unwrap()
+            );
             assert!(capture.bytes.capacity() <= limit);
         }
         assert!(matches!(
-            capture.read_chunk(&mut |_, _| Ok(())),
+            capture.read_chunk(&mut [0; 16 * 1024], &mut |_, _| Ok(())),
             Err(ExecutionFailure::OutputLimit {
                 stream: OutputStream::Stdout
             })

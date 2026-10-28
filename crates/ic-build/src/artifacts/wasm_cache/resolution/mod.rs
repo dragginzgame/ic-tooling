@@ -15,12 +15,16 @@ use crate::{
     cargo::observation::schema,
 };
 use std::{
+    cell::OnceCell,
     collections::{BTreeSet, HashMap, HashSet, VecDeque},
     ffi::{OsStr, OsString},
     fs, io,
     path::{Path, PathBuf},
 };
 use toml::Value as TomlValue;
+
+#[cfg(test)]
+mod tests;
 
 // Parsed once per Cargo resolution context. Each specification still selects
 // its own closure and independently validates filesystem inputs.
@@ -29,6 +33,12 @@ pub(super) struct ParsedCargoMetadata<'a> {
     workspace_packages: HashMap<&'a str, Option<&'a str>>,
     nodes: HashMap<&'a str, &'a schema::Node>,
     pub(super) workspace_root: &'a Path,
+    workspace: OnceCell<WorkspaceFacts>,
+}
+
+struct WorkspaceFacts {
+    manifest: TomlValue,
+    locked_packages: Vec<LockedPackageIdentity>,
 }
 
 impl<'a> ParsedCargoMetadata<'a> {
@@ -67,7 +77,22 @@ impl<'a> ParsedCargoMetadata<'a> {
             workspace_packages,
             nodes,
             workspace_root: metadata.workspace_root.as_std_path(),
+            workspace: OnceCell::new(),
         })
+    }
+
+    // This metadata context lives for one discovery group, never across a
+    // fresh acquisition or mutation guard. Failed reads remain independently
+    // observable by later entries instead of caching a reconstructed error.
+    fn workspace(&self) -> Result<&WorkspaceFacts, WasmBuildError> {
+        if let Some(workspace) = self.workspace.get() {
+            return Ok(workspace);
+        }
+        let workspace = WorkspaceFacts {
+            manifest: read_workspace_manifest(self.workspace_root)?,
+            locked_packages: locked_package_identities(self.workspace_root)?,
+        };
+        Ok(self.workspace.get_or_init(|| workspace))
     }
 }
 
@@ -120,11 +145,17 @@ pub(super) fn resolve_local_inputs(
     }
 
     let workspace_root = metadata.workspace_root;
-    let root = read_workspace_manifest(workspace_root)?;
-    let workspace_projection =
-        semantic_workspace_projection(metadata, &closure, workspace_root, &root)?;
+    let workspace = metadata.workspace()?;
+    let root = &workspace.manifest;
+    let workspace_projection = semantic_workspace_projection(
+        metadata,
+        &closure,
+        workspace_root,
+        root,
+        &workspace.locked_packages,
+    )?;
     let (mut validation_inputs, configuration_identity) =
-        workspace_configuration_inputs(spec, workspace_root, &root)?;
+        workspace_configuration_inputs(spec, workspace_root, root)?;
     let declared_package_files = append_package_inputs(
         &mut validation_inputs,
         &metadata.packages,
@@ -176,11 +207,11 @@ fn semantic_workspace_projection(
     closure: &BTreeSet<&str>,
     workspace_root: &Path,
     root: &TomlValue,
+    locked_packages: &[LockedPackageIdentity],
 ) -> Result<Option<InputDigest>, WasmBuildError> {
     // A workspace-root or external local package cannot be separated from the
     // broad root safely; `None` keeps the complete-input fingerprint.
-    let locked_packages = locked_package_identities(workspace_root)?;
-    let locked_index = index_locked_packages(&locked_packages);
+    let locked_index = index_locked_packages(locked_packages);
     let mut identities = HashMap::new();
     for &id in closure {
         let package = metadata
@@ -421,6 +452,7 @@ pub(super) fn digest_resolved_local_inputs(
     inputs: &ResolvedLocalInputs,
     exclusions: &mut Vec<PathBuf>,
     cache: &mut LabeledPathDigestCache,
+    declarations: &mut source_inputs::WorkspaceDeclarations,
     error_path: &Path,
     validation_operation: &'static str,
     semantic_operation: &'static str,
@@ -434,6 +466,7 @@ pub(super) fn digest_resolved_local_inputs(
             .map(|(_, path)| path.as_path()),
         &inputs.declared_package_files,
         exclusions,
+        declarations,
     )
     .map_err(|source| WasmBuildError::Io {
         operation: validation_operation,

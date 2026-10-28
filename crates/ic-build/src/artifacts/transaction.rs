@@ -1446,21 +1446,9 @@ fn inspect_complete_output_set<'a>(
     }
     let outputs = &spec.outputs;
     for (index, output) in outputs.iter().enumerate() {
-        let path = staged_output_path(root, index);
-        match inspect_artifact(&path, output.validation) {
-            Ok(Some(artifact)) => info.push(VerifiedOutput {
-                index,
-                output,
-                info: artifact,
-            }),
-            Ok(None) => invalid.push((output.name.clone(), path)),
-            Err(source) => {
-                return Err(ArtifactCacheError::Io {
-                    operation: "inspect staged artifact output",
-                    path,
-                    source,
-                });
-            }
+        match inspect_output(root, index, output, "inspect staged artifact output")? {
+            Some(artifact) => info.push(artifact),
+            None => invalid.push((output.name.clone(), staged_output_path(root, index))),
         }
     }
     visit_undeclared_outputs(root, outputs.len(), |entry| {
@@ -1486,27 +1474,37 @@ fn inspect_cached_output_set<'a>(
     let mut info = Vec::new();
     let outputs = &spec.outputs;
     for (index, output) in outputs.iter().enumerate() {
-        let path = staged_output_path(root, index);
-        match inspect_artifact(&path, output.validation) {
-            Ok(Some(artifact)) => info.push(VerifiedOutput {
-                index,
-                output,
-                info: artifact,
-            }),
-            Ok(None) => return Ok(None),
-            Err(source) => {
-                return Err(ArtifactCacheError::Io {
-                    operation: "inspect cached artifact output",
-                    path,
-                    source,
-                });
-            }
+        match inspect_output(root, index, output, "inspect cached artifact output")? {
+            Some(artifact) => info.push(artifact),
+            None => return Ok(None),
         }
     }
     if visit_undeclared_outputs(root, outputs.len(), |_| {})? {
         return Ok(None);
     }
     Ok(Some(info))
+}
+
+fn inspect_output<'a>(
+    root: &Path,
+    index: usize,
+    output: &'a OutputSpec,
+    operation: &'static str,
+) -> Result<Option<VerifiedOutput<'a>>, ArtifactCacheError> {
+    let path = staged_output_path(root, index);
+    inspect_artifact(&path, output.validation)
+        .map(|info| {
+            info.map(|info| VerifiedOutput {
+                index,
+                output,
+                info,
+            })
+        })
+        .map_err(|source| ArtifactCacheError::Io {
+            operation,
+            path,
+            source,
+        })
 }
 
 fn visit_undeclared_outputs(

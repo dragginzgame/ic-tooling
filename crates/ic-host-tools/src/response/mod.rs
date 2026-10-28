@@ -10,7 +10,7 @@ mod tests;
 
 use serde::de::{Deserialize, Deserializer, IgnoredAny, MapAccess, Visitor};
 use serde_json::error::Category;
-use std::{collections::TryReserveError, fmt};
+use std::{borrow::Cow, collections::TryReserveError, fmt};
 
 /// The output format explicitly requested by the caller's CLI command.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -103,8 +103,9 @@ pub enum ResponseError {
 /// Input size is checked before parsing. `serde_json` owns JSON grammar and
 /// escaped strings; unknown metadata is skipped without building a value tree.
 /// JSON parser storage is bounded by the input allowance; its allocations are
-/// owned by Serde. Decoded bytes are reserved fallibly only after validating all
-/// hex and its independent allowance. Text hex permits only Rust ASCII whitespace;
+/// owned by Serde. Unescaped response text borrows the input; escaped text is
+/// decoded into owned storage. Decoded bytes are reserved fallibly only after
+/// validating all hex and its independent allowance. Text hex permits only Rust ASCII whitespace;
 /// JSON hex is compact, even at its edges. Candid validity is not checked.
 ///
 /// # Errors
@@ -186,19 +187,50 @@ fn json_error(error: &serde_json::Error) -> ResponseError {
     }
 }
 
-struct Envelope(Option<String>);
+struct ResponseText<'a>(Cow<'a, str>);
 
-impl<'de> Deserialize<'de> for Envelope {
+impl<'de> Deserialize<'de> for ResponseText<'de> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct TextVisitor;
+        impl<'de> Visitor<'de> for TextVisitor {
+            type Value = ResponseText<'de>;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("a string")
+            }
+
+            fn visit_borrowed_str<E: serde::de::Error>(
+                self,
+                text: &'de str,
+            ) -> Result<Self::Value, E> {
+                Ok(ResponseText(Cow::Borrowed(text)))
+            }
+
+            fn visit_str<E: serde::de::Error>(self, text: &str) -> Result<Self::Value, E> {
+                Ok(ResponseText(Cow::Owned(text.to_owned())))
+            }
+
+            fn visit_string<E: serde::de::Error>(self, text: String) -> Result<Self::Value, E> {
+                Ok(ResponseText(Cow::Owned(text)))
+            }
+        }
+        deserializer.deserialize_string(TextVisitor)
+    }
+}
+
+struct Envelope<'a>(Option<Cow<'a, str>>);
+
+impl<'de> Deserialize<'de> for Envelope<'de> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct EnvelopeVisitor;
         impl<'de> Visitor<'de> for EnvelopeVisitor {
-            type Value = Envelope;
+            type Value = Envelope<'de>;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.write_str("an ICP response object")
             }
 
-            fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Envelope, M::Error> {
+            fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Self::Value, M::Error> {
                 let mut response = None;
                 let mut seen = false;
                 while let Some(key) = map.next_key::<String>()? {
@@ -207,7 +239,9 @@ impl<'de> Deserialize<'de> for Envelope {
                             return Err(serde::de::Error::duplicate_field("response_bytes"));
                         }
                         seen = true;
-                        response = map.next_value::<Option<String>>()?;
+                        response = map
+                            .next_value::<Option<ResponseText<'de>>>()?
+                            .map(|text| text.0);
                     } else {
                         map.next_value::<IgnoredAny>()?;
                     }

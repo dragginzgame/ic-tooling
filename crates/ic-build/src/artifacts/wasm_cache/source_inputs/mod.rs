@@ -1,16 +1,24 @@
 //! Derive generated roots from explicit nested Cargo workspaces, before hashing.
 
+#[cfg(test)]
+mod tests;
+
 use super::super::{cache_fs::canonicalize_allow_missing, digest::InputPathError};
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     fs, io,
     path::{Path, PathBuf},
 };
+
+// Successful declaration observations are shared only within one hashing pass.
+// Each entry still derives exclusions from its own roots and declared sources.
+pub(super) type WorkspaceDeclarations = BTreeMap<PathBuf, bool>;
 
 pub(super) fn exclude_nested_workspace_targets<'a>(
     inputs: impl Iterator<Item = &'a Path>,
     declared_package_files: &[PathBuf],
     exclusions: &mut Vec<PathBuf>,
+    declarations: &mut WorkspaceDeclarations,
 ) -> io::Result<()> {
     let roots = inputs
         .map(|path| {
@@ -45,7 +53,7 @@ pub(super) fn exclude_nested_workspace_targets<'a>(
             }
             // Immediate input-root targets retain their existing admission policy.
             // An arbitrary source directory named `target` is never a marker.
-            if !roots.contains(&path) && declares_workspace(&path)? {
+            if !roots.contains(&path) && declares_workspace(&path, declarations)? {
                 let target = path.join("target");
                 if generated_target(&target)?
                     && !roots.iter().any(|input| input.starts_with(&target))
@@ -75,7 +83,19 @@ pub(super) fn exclude_nested_workspace_targets<'a>(
     Ok(())
 }
 
-fn declares_workspace(directory: &Path) -> io::Result<bool> {
+fn declares_workspace(
+    directory: &Path,
+    declarations: &mut WorkspaceDeclarations,
+) -> io::Result<bool> {
+    if let Some(declares) = declarations.get(directory) {
+        return Ok(*declares);
+    }
+    let declares = read_workspace_declaration(directory)?;
+    declarations.insert(directory.to_owned(), declares);
+    Ok(declares)
+}
+
+fn read_workspace_declaration(directory: &Path) -> io::Result<bool> {
     let manifest = directory.join("Cargo.toml");
     match fs::metadata(&manifest) {
         Ok(metadata) if metadata.is_file() => {}

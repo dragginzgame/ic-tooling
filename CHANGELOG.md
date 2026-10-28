@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.69.6]
+
+### 🧹 Cleanup
+
+- Share staged/cached output inspection and reuse the canonical Cargo test
+  scaffold while preserving their distinct failure contracts.
+
+### ⚡ Performance
+
+- Reuse workspace observations within batch resolution and process pipe scratch.
+  Reduce memory for directory sizing and unescaped JSON response decoding;
+  retain fresh mutation guards and per-specification exclusions.
+  [Details](docs/changelog/0.69.md#0696).
+
+### ⬆️ Dependencies
+
+- Adopt IC Platform 0.7.2 and IC Wire 0.7.19, preserving feature boundaries,
+  existing codec contracts and the Rust 1.91 minimum.
+
 ## [0.69.5] - 2026-10-28
 
 ### 🧹 Cleanup
