@@ -1,89 +1,79 @@
 # Current handoff — 2026-10-28
 
-## Source and authorized scope
+## Current fix and source
 
-The upstream dependency adoption is local and unstaged over released 0.69.5,
-HEAD `c5b6fae87c67` (full identity in evidence). Pending notes remain 0.69.6,
-covering the compatible cleanup batch and this adoption. Workspace versions
-remain 0.69.5. No staging, commit, push, release, tag or publication ran.
+The local correction for [#262 — Fix macOS source-inventory mode compilation](https://github.com/dragginzgame/ic-tooling/issues/262)
+is unstaged over clean HEAD `835cea7a5ced5317c3d2db9398c2699f2e980e78`
+(the maintainer's `0.69.6` preparation commit). The package version remains
+0.69.5, and the pending 0.69.6 notes now include this compatible repair.
+No staging, commit, push, tag, release or publication ran. No unrelated active
+Cargo/rustc process was visible at admission. Sibling checkouts, consumer
+compatibility pins, package manifests, Cargo.lock and the real index are intact.
 
-Incoming work included the complete seven-improvement cleanup, its two new
-regression files and numbered notes, plus a Cargo.lock update to Platform/macros
-0.7.2 and Wire/derive 0.7.19. Preserve all of it. This adoption leaves that
-lockfile byte-for-byte unchanged and changes no cleanup implementation. The real
-index, sibling checkouts, retained artifacts and Shared Tooling snapshot remain
-untouched. No unrelated active Cargo/rustc process was visible at admission.
+The issue and comment were read through GitHub. Exact native Intel and Apple
+Silicon logs, plus the optimizer Intel log, confirm E0308 in released 0.69.5:
+Darwin's Rustix mode bits are u16 while the inventory required u32. The same
+failure affects consumers preparing IC Build's release editor; their temporary
+0.69.4 selections remain consumer-owned until a corrected release is qualified.
 
-## Dependency selection and review
+## Implementation and contracts
 
-The root catalog now requires Platform 0.7.2 and Wire 0.7.19. Child manifests
-continue inheriting those requirements; features, dependency roles and Rust 1.91
-support are unchanged. Cargo's refreshed official registry index identifies those
-as the latest non-yanked releases. Its actual Rust 1.91 targeted update dry run
-reports zero further changes; eight unrelated dependencies were left alone.
-Direct crates.io API access was unavailable, so selection used Cargo's index and
-checksum-bound published registry sources rather than sibling working trees.
+The private source record now stores Rustix Mode directly. The descriptor's mode
+is masked with typed user/group/other permission flags, and its numeric bits are
+projected through the existing serde_json value representation only at encoding.
+This removes the platform-width mismatch without a cast or Linux same-type
+conversion warning. Permission masking remains exactly 0o777; SHA-256 framing,
+held-descriptor custody, JSON field ordering and the encoded evidence schema
+remain unchanged. No public API or artifact format migration is required.
 
-Published source identities are Platform/macros
-`95b7caf960ec3af045923d85bad4801e9e463782` and Wire/derive
-`793134aa4476b5cf7501004d6aab271687c7235f`. Source and normalized manifest diffs
-were reviewed. Platform macros are unchanged in source. Platform's Candid change
-only documents the existing Wasm nesting limitation. Its new owned DER framing
-guard precedes the imported signature parser; that optional capability is not
-enabled here, and the cryptographic bodies remain unchanged.
+The existing inventory regression now exercises special permission bits and the
+ordinary permission range before comparing complete JSON bytes with the former
+projection. It retains byte/mode change, symlink and resource-overflow checks.
+Strict Rust 1.91 Clippy exposed one pre-existing unfulfilled result_large_err
+expectation in the batch runner. Its deliberate inline-error exception is now
+a narrow allow with a compiler-variance reason, preserving the runtime layout
+while allowing both supported lint paths to pass without command-line overrides.
 
-Wire adds caller-storage encoders and Serde crate-path derive support, preserving
-existing codec/frame contracts. TypeScript changes are outside the selected
-consumer features. Testkit keeps its existing owned request buffers because the
-PocketIC transport consumes Vec values. No new adapter, schema or consumer API
-migration is introduced solely to use the added upstream surface.
+## Validation and limits
 
-## Validation and evidence
+Evidence is under `/tmp/ic-tooling-262.zTQbiB/`, selected by
+`/tmp/ic-tooling-262-current`. It retains the admission HEAD/status, lockfile and
+previous handoff, exact hosted failure logs, validation logs and final patch/source
+capture. The failed first MSRV lint attempt remains alongside its passing retry.
+No tools or compiler targets were installed or downloaded.
 
-Evidence is under `/tmp/ic-tooling-deps-0696.OJreg2/`, selected by
-`/tmp/ic-tooling-deps-0696-current`. It retains admission HEAD/status, the complete
-incoming patch/source archive, exact manifest/lock backups, previous handoff,
-registry-update preview, published identities/source diffs, selected Cargo
-metadata/features, focused logs and final changed-source capture. No host-tool
-setup/download or consumer-artifact cleanup ran.
+Actual Rust 1.91 Linux package/source-inventory checks pass: 13 tests, including
+complete JSON byte equality with the permission mask. Warning-denied IC Build
+all-target/all-feature Clippy passes on both Rust 1.91 and the development
+compiler. The artifact-transform integration target wasm_optimizer compiles on
+Rust 1.91. Formatting, local documentation links and diff checks are recorded
+beside those logs. No full workspace/release gate ran.
 
-Actual Rust 1.91 Linux tests pass for Candid service/decode integration (11),
-Testkit Wire admission/error behavior (9), and optional Native stable-memory
-observations (4). The locked/offline Wasm compile passes for Testkit, Native and
-the private performance probe, including its Platform CDK macros and Wire codec.
-This retains Candid/host exclusion on Wasm and optional dependency boundaries.
-Dependency ownership/inheritance and native/Wasm Testkit graph checks pass.
+The pinned local optimizer selection is unavailable, so real optimizer execution
+was not run; the read-only admission failure is retained. Neither Darwin target's
+standard library is installed locally, and no fresh native macOS 15 Intel or
+Apple Silicon qualification ran. Historical failing macOS logs identify the
+cause; they are not qualification of this patch. Required native CI and the
+corrected published Build artifact remain part of the maintainer's delivery flow.
+Keep #262 open until its qualification/delivery requirements are satisfied.
 
-Two live prepared PocketIC 16.1 Wire tests pass: codec refusal/error identity and
-structured query/update rejection. They used native Linux loopback access after
-rebuilding the selected CLI on Rust 1.91 and performing offline bundle admission;
-no server provisioning ran. Four-package all-target/all-feature warning-denied
-Clippy passes for Testkit, Dev, Native and the private probe. Formatting, local
-documentation links and final diff checks are recorded beside those logs.
+## Preserved consolidation and dependency work
 
-These are focused adoption checks, not a full workspace/release gate. Native
-macOS 15 Intel and Apple Silicon qualification did not run for this dependency
-set; report it separately from Linux evidence. No release or consumer deployment
-is claimed. Existing decoder byte/work allowances are not a Wasm stack guarantee;
-no advisory exemption or blanket crypto qualification is supplied by this task.
-
-## Preserved cleanup and history
-
-The preceding cleanup remains pending in the same worktree and 0.69.6 notes.
-Its evidence is `/tmp/ic-tooling-cleanup-0696.7aCypD/`, including the preserved
-90-line handoff and 239 focused Linux test results. Successful observations stay
-scoped to one batch context/pass; per-spec exclusions and fresh mutation guards
-remain intact. Output inspection/scaffolding, pipe scratch, directory sizing and
-borrowed response hex changes remain as qualified. Progress rendering, prepared
-snapshot indexing and selective status parsing remain deliberately unchanged.
-The admission copy of that handoff is also `previous-handoff.md` in this adoption's
-evidence directory; earlier cleanup/adoption records remain linked there.
+The preceding seven-improvement cleanup and Platform 0.7.2 / Wire 0.7.19 adoption
+are already included in HEAD and remain unchanged by this correction. Their
+current pending 0.69.6 notes remain intact. The admission handoff is preserved as
+`previous-handoff.md` in this issue's evidence directory. It records the 239-test
+cleanup evidence under `/tmp/ic-tooling-cleanup-0696.7aCypD/` and focused adoption
+evidence under `/tmp/ic-tooling-deps-0696.OJreg2/`, including two live Linux Wire
+checks against prepared PocketIC 16.1. That evidence keeps its original scope;
+this fix does not assert a new workspace or native macOS qualification.
 
 Shared Tooling remains the exact 144-file snapshot at
 `d08cbcafbaff4227e798a890232e2248bf167504`. Supplying [Platform #50](https://github.com/dragginzgame/ic-platform/issues/50)
 and historical [Tooling #240](https://github.com/dragginzgame/ic-tooling/issues/240)
-retain their existing qualification evidence and obligations; this task does not
-assert their resolution. Migration/retirement archives remain under
-`/tmp/ic-tooling-migration/`. Original Host refs, stale-lock evidence at
+retain their existing evidence and obligations; no advisory exemption or blanket
+crypto qualification is supplied. Earlier records remain linked in the preserved
+handoff. Migration/retirement archives remain under `/tmp/ic-tooling-migration/`.
+Original Host refs, stale-lock evidence at
 `/tmp/ic-tooling-stale-release-lock.qHQFTn/lock`, release plans, failed attempts
 and earlier backup/stash evidence remain preserved.

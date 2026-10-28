@@ -2,6 +2,12 @@
 
 ## [0.69.6]
 
+### 🩹 Fixed
+
+- Fix IC Build compilation on macOS Intel and Apple Silicon by preserving native
+  mode types until JSON serialization, retaining permission masking and evidence
+  bytes ([#262 — Fix macOS source-inventory mode compilation](https://github.com/dragginzgame/ic-tooling/issues/262)).
+
 ### 🧹 Cleanup
 
 - Share staged/cached output inspection and reuse the canonical Cargo test

@@ -211,6 +211,9 @@ fn source_inventory_detects_bytes_modes_links_and_resource_overflow() {
     fs::create_dir(&path).unwrap();
     let file = path.join("source");
     fs::write(&file, b"original").unwrap();
+    // Keep the full ordinary permission range while excluding special bits
+    // from numeric JSON on both Darwin's u16 mode and Linux's u32 mode.
+    fs::set_permissions(&file, fs::Permissions::from_mode(0o7751)).unwrap();
     let specs = [PackageArchiveSpec {
         name: "sample",
         version: "1.0.0",

@@ -18,14 +18,14 @@ use rustix::{
 /// Typed source facts; JSON is built only while writing evidence.
 #[derive(Debug, Eq, PartialEq)]
 pub(super) struct SourceFile {
-    mode: u32,
+    mode: Mode,
     sha256: Sha256Digest,
 }
 
 impl Serialize for SourceFile {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         // Keep the former encoding, including serde_json's feature-selected order.
-        serde_json::json!({"sha256": self.sha256.to_string(), "mode": self.mode})
+        serde_json::json!({"sha256": self.sha256.to_string(), "mode": self.mode.bits()})
             .serialize(serializer)
     }
 }
@@ -79,8 +79,8 @@ impl TreeVisitor for SourceInventory<'_> {
 
     fn file(&mut self, fd: &OwnedFd, relative: &Path, _display: &Path) -> Result<(), Cause> {
         self.admit(relative)?;
-        let mode =
-            Mode::from_raw_mode(fstat(fd).map_err(std::io::Error::from)?.st_mode).bits() & 0o777;
+        let mode = Mode::from_raw_mode(fstat(fd).map_err(std::io::Error::from)?.st_mode)
+            & (Mode::RWXU | Mode::RWXG | Mode::RWXO);
         let sha256 = ic_host_fs::read::hash_descriptor(fd, self.limits.file_bytes as u64)?.sha256;
         self.files
             .insert(self.prefix.join(relative), SourceFile { mode, sha256 });
