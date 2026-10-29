@@ -102,12 +102,7 @@ impl MeasuredRun {
             .iter()
             .chain(metrics.samples.iter().map(|sample| &sample.phases))
         {
-            if phases
-                .named_values()
-                .into_iter()
-                .filter_map(|(_, value)| value)
-                .any(invalid_duration)
-            {
+            if phases.values().into_iter().flatten().any(invalid_duration) {
                 return Err(Error::InvalidData("invalid worker phase duration"));
             }
         }
@@ -127,11 +122,12 @@ impl MeasuredRun {
 }
 
 // Complete floating-point sample statistics belong to this private report owner.
-fn distribution(mut values: Vec<f64>) -> Result<Option<SampleStatistics>, Error> {
+fn distribution(values: impl IntoIterator<Item = f64>) -> Result<Option<SampleStatistics>, Error> {
+    let mut values = values.into_iter().collect::<Vec<_>>();
     summarize_samples(&mut values).map_err(Error::Statistics)
 }
 
-fn required_distribution(values: Vec<f64>) -> Result<SampleStatistics, Error> {
+fn required_distribution(values: impl IntoIterator<Item = f64>) -> Result<SampleStatistics, Error> {
     distribution(values)?.ok_or(Error::InvalidData("summary lacks required measurements"))
 }
 
@@ -177,9 +173,7 @@ impl Summary {
 pub(super) fn summarize(runs: &[MeasuredRun]) -> Result<Summary, Error> {
     let samples = || runs.iter().flat_map(|run| &run.metrics.samples);
     let phase_values = |select: fn(&Phases) -> Option<f64>| {
-        samples()
-            .filter_map(|sample| select(&sample.phases))
-            .collect()
+        samples().filter_map(move |sample| select(&sample.phases))
     };
     // Fields select their measurements directly; collection has no positional schema.
     let phases_ms = PhaseSummary {
@@ -193,22 +187,18 @@ pub(super) fn summarize(runs: &[MeasuredRun]) -> Result<Summary, Error> {
     };
     Ok(Summary {
         phases_ms,
-        body_ms: required_distribution(samples().map(|sample| sample.body_ms).collect())?,
-        release_ms: required_distribution(samples().map(|sample| sample.release_ms).collect())?,
-        iteration_ms: required_distribution(samples().map(|sample| sample.total_ms).collect())?,
-        work_wall_ms: required_distribution(runs.iter().map(|run| run.metrics.wall_ms).collect())?,
-        fixture_wall_ms: required_distribution(
-            runs.iter().map(|run| run.metrics.fixture_wall_ms).collect(),
-        )?,
+        body_ms: required_distribution(samples().map(|sample| sample.body_ms))?,
+        release_ms: required_distribution(samples().map(|sample| sample.release_ms))?,
+        iteration_ms: required_distribution(samples().map(|sample| sample.total_ms))?,
+        work_wall_ms: required_distribution(runs.iter().map(|run| run.metrics.wall_ms))?,
+        fixture_wall_ms: required_distribution(runs.iter().map(|run| run.metrics.fixture_wall_ms))?,
         iterations_per_second: required_distribution(
             runs.iter()
-                .map(|run| run.metrics.iterations as f64 * 1000.0 / run.metrics.wall_ms)
-                .collect(),
+                .map(|run| run.metrics.iterations as f64 * 1000.0 / run.metrics.wall_ms),
         )?,
         sampled_peak_tree_rss_bytes: required_distribution(
             runs.iter()
-                .map(|run| run.rss.sampled_peak_tree_rss_bytes as f64)
-                .collect(),
+                .map(|run| run.rss.sampled_peak_tree_rss_bytes as f64),
         )?,
     })
 }
@@ -316,10 +306,7 @@ mod tests {
         assert_eq!(stats.p50, 2.5);
         assert_eq!(stats.p95, 4.0);
         assert_eq!(
-            distribution((1..=20).map(f64::from).collect())
-                .unwrap()
-                .unwrap()
-                .p95,
+            distribution((1..=20).map(f64::from)).unwrap().unwrap().p95,
             19.0
         );
     }

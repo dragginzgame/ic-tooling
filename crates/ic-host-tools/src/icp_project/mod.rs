@@ -110,16 +110,16 @@ pub fn environment_network(
         },
     )
     .map_err(ProjectParseError::InvalidYaml)?;
-    for (index, item) in project.environments.iter().enumerate() {
+    let mut selected = None;
+    for (index, item) in project.environments.into_iter().enumerate() {
         if item.name.trim().is_empty() || item.network.name.trim().is_empty() {
             return Err(ProjectParseError::EmptyEnvironmentField { index });
         }
+        if item.name == environment {
+            selected = Some(item.network.name);
+        }
     }
-    Ok(project
-        .environments
-        .into_iter()
-        .find(|item| item.name == environment)
-        .map(|item| item.network.name))
+    Ok(selected)
 }
 
 #[cfg(test)]

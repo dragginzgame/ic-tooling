@@ -23,35 +23,22 @@ pub fn terminal_text(value: &str) -> Cow<'_, str> {
 // Yield the presentation encoding without allocating a complete escaped copy.
 pub(crate) fn escaped_chars(value: &str) -> impl Iterator<Item = char> + '_ {
     let mut characters = value.chars();
-    let mut short = None;
-    let mut unicode: Option<std::char::EscapeUnicode> = None;
+    let mut pending: Option<std::char::EscapeDefault> = None;
     std::iter::from_fn(move || {
-        if let Some(character) = short.take() {
-            return Some(character);
-        }
-        if let Some(escaped) = &mut unicode
+        if let Some(escaped) = &mut pending
             && let Some(character) = escaped.next()
         {
             return Some(character);
         }
-        unicode = None;
+        pending = None;
         let character = characters.next()?;
-        match character {
-            '\n' | '\r' | '\t' => {
-                short = Some(match character {
-                    '\n' => 'n',
-                    '\r' => 'r',
-                    _ => 't',
-                });
-                Some('\\')
-            }
-            character if needs_escape(character) => {
-                let mut escaped = character.escape_unicode();
-                let first = escaped.next();
-                unicode = Some(escaped);
-                first
-            }
-            character => Some(character),
+        if needs_escape(character) {
+            let mut escaped = character.escape_default();
+            let first = escaped.next();
+            pending = Some(escaped);
+            first
+        } else {
+            Some(character)
         }
     })
 }
@@ -80,7 +67,7 @@ mod tests {
 
     #[test]
     fn printable_unicode_spaces_and_literal_backslashes_are_preserved() {
-        let text = "  界 e\u{301} 👩‍💻 \\n  ";
+        let text = "  界 e\u{301} 👩‍💻 '\" \\n  ";
         let escaped = terminal_text(text);
         assert_eq!(escaped, text);
         assert!(matches!(escaped, Cow::Borrowed(_)));

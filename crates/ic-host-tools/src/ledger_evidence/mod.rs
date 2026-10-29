@@ -121,9 +121,11 @@ impl<'a> BoundedLedgerBlocks<'a> {
         target: u128,
     ) -> Result<&'a Value, BlockEvidenceError> {
         let expected_len = tip.index.checked_sub(target).and_then(|n| n.checked_add(1));
-        if self.blocks.is_empty() || expected_len != Some(self.blocks.len() as u128) {
-            return Err(BlockEvidenceError::ChainMismatch);
-        }
+        let last = self
+            .blocks
+            .last()
+            .filter(|_| expected_len == Some(self.blocks.len() as u128))
+            .ok_or(BlockEvidenceError::ChainMismatch)?;
         let mut expected_hash = tip.hash;
         for (offset, block) in self.blocks.iter().enumerate() {
             let expected_index = tip.index - offset as u128;
@@ -147,10 +149,7 @@ impl<'a> BoundedLedgerBlocks<'a> {
                     .map_err(|_| BlockEvidenceError::ChainMismatch)?;
             }
         }
-        self.blocks
-            .last()
-            .map(|block| &block.block)
-            .ok_or(BlockEvidenceError::ChainMismatch)
+        Ok(&last.block)
     }
 }
 

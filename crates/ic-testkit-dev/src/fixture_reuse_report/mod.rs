@@ -26,15 +26,15 @@ pub struct Phases {
 }
 
 impl Phases {
-    pub(super) const fn named_values(&self) -> [(&'static str, Option<f64>); 7] {
+    pub(super) const fn values(&self) -> [Option<f64>; 7] {
         [
-            ("wait_ms", Some(self.wait_ms)),
-            ("build_ms", self.build_ms),
-            ("restore_ms", self.restore_ms),
-            ("reset_ms", self.reset_ms),
-            ("readiness_ms", self.readiness_ms),
-            ("validation_ms", self.validation_ms),
-            ("acquisition_ms", Some(self.acquisition_ms)),
+            Some(self.wait_ms),
+            self.build_ms,
+            self.restore_ms,
+            self.reset_ms,
+            self.readiness_ms,
+            self.validation_ms,
+            Some(self.acquisition_ms),
         ]
     }
 }

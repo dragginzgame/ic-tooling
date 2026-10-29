@@ -108,7 +108,7 @@ for profile in wasm wasm-validation wasm-encoding wasm-text wasm-encoding,wasm-v
     feature_graph="$(cargo tree -p ic-host-artifacts --no-default-features --features "$profile" \
         --target "$target" --edges normal,build --prefix none --format '{p} features={f}' --locked --offline)" || exit
     status=0
-    printf '%s\n' "$feature_graph" | rg '^wasmparser [^ ]+ features=([^, ]+,)*validate(,|$)' > /dev/null || status=$?
+    printf '%s\n' "$feature_graph" | rg '^wasmparser .+ features=([^, ]+,)*validate(,[^ ]*)?$' > /dev/null || status=$?
     case "$profile:$status" in
         wasm:1|wasm-encoding:1|wasm-text:1|wasm-validation:0|wasm-encoding,wasm-validation:0|wasm-text,wasm-validation:0) ;;
         *) printf '%s has an unexpected Wasm validator feature selection (status %s)\n' "$profile" "$status" >&2; exit 1 ;;
@@ -116,7 +116,7 @@ for profile in wasm wasm-validation wasm-encoding wasm-text wasm-encoding,wasm-v
     case "$profile" in
         *wasm-text*)
             status=0
-            printf '%s\n' "$feature_graph" | rg '^(wat|wast|wasm-encoder) [^ ]+ features=([^, ]+,)*component-model(,|$)' > /dev/null || status=$?
+            printf '%s\n' "$feature_graph" | rg '^(wat|wast|wasm-encoder) .+ features=([^, ]+,)*component-model(,[^ ]*)?$' > /dev/null || status=$?
             case "$status" in
                 1) ;;
                 *) printf '%s has an unexpected WAT component feature selection (status %s)\n' "$profile" "$status" >&2; exit 1 ;;

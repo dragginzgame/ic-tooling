@@ -459,8 +459,9 @@ fn retain_command_output(
 ) -> Vec<io::Error> {
     let (stdout, stderr): (&[u8], &[u8]) = match result {
         Ok(output) => (&output.stdout, &output.stderr),
-        Err(ToolError::Execution(error)) => (&error.evidence.stdout, &error.evidence.stderr),
-        Err(_) => (&[], &[]),
+        Err(error) => error.evidence().map_or((&[][..], &[][..]), |evidence| {
+            (evidence.stdout.as_slice(), evidence.stderr.as_slice())
+        }),
     };
     [
         fs::write(stdout_path, stdout),
