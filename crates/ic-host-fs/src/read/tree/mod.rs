@@ -80,11 +80,11 @@ pub fn walk_tree<V: TreeVisitor>(
             continue;
         }
         let name = std::ffi::OsStr::from_bytes(name_bytes);
-        if name.to_str().is_none() {
-            return Err(visitor.non_utf8(&display_root.join(name)));
-        }
         let relative_path: PathBuf = relative_directory.join(name);
         let display_path = display_root.join(&relative_path);
+        if name.to_str().is_none() {
+            return Err(visitor.non_utf8(&display_path));
+        }
         let kind = entry_type(directory_fd, entry.file_name())?;
         match kind {
             FileType::RegularFile | FileType::Directory => {

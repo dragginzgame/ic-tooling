@@ -797,3 +797,102 @@ fn origin_pairing_preserves_legacy_pairing_and_separates_prefixes_and_streams() 
         [3, 4]
     );
 }
+
+#[test]
+fn configured_prefix_precedence_preserves_delimited_and_empty_prefixes() {
+    let mut config = BenchmarkParserConfig {
+        prefixes: vec!["ICTK|probe".into()],
+        ..BenchmarkParserConfig::default()
+    };
+    let report = parse_benchmark_events("ICTK|probe|1|2|3\nICTK|probe|1|2|3|4\nnoise", &config);
+    assert_eq!(
+        report.events,
+        [] as [ic_testkit::benchmark::RawBenchmarkEvent; 0]
+    );
+    assert_eq!(report.ignored_line_count, 1);
+    assert_eq!(
+        report.malformed_markers[0].reason,
+        "prefix is not configured"
+    );
+    assert_eq!(
+        report.malformed_markers[1].reason,
+        "expected five pipe-separated columns"
+    );
+    // An exact field prefix wins even when a longer configured prefix precedes it.
+    config.prefixes.push("ICTK".into());
+    let report = parse_benchmark_events("ICTK|probe:start|1|2|3", &config);
+    assert_eq!(report.events.len(), 1);
+    assert_eq!(report.events[0].prefix, "ICTK");
+    config.prefixes = vec![String::new()];
+    let report = parse_benchmark_events("|probe:end|1|2|3", &config);
+    assert_eq!(report.events.len(), 1);
+    assert_eq!(report.events[0].prefix, "");
+}
+
+#[test]
+fn benchmark_errors_preserve_messages_and_direct_average_source() {
+    use ic_testkit::benchmark::{
+        BenchmarkAggregateError, BenchmarkAverageError, BenchmarkComparisonError,
+        BenchmarkMarkerError,
+    };
+    use std::error::Error as _;
+    for (error, expected) in [
+        (
+            BenchmarkAverageError::ZeroDenominator,
+            "benchmark run count is zero",
+        ),
+        (
+            BenchmarkAverageError::Overflow,
+            "scaled benchmark average exceeds u128",
+        ),
+    ] {
+        assert_eq!(error.to_string(), expected);
+        assert!(error.source().is_none());
+        let comparison = BenchmarkComparisonError::from(error);
+        assert_eq!(comparison.to_string(), expected);
+        assert_eq!(
+            comparison
+                .source()
+                .unwrap()
+                .downcast_ref::<BenchmarkAverageError>(),
+            Some(&error)
+        );
+    }
+    let current = BenchmarkComparisonError::DuplicateCurrent {
+        scope: BenchmarkScope::All,
+        span_label: "span".into(),
+    };
+    let previous = BenchmarkComparisonError::DuplicatePrevious {
+        scope: BenchmarkScope::All,
+        span_label: "span".into(),
+    };
+    assert_eq!(
+        current.to_string(),
+        "duplicate current benchmark row: All/span"
+    );
+    assert_eq!(
+        previous.to_string(),
+        "duplicate previous benchmark row: All/span"
+    );
+    assert!(current.source().is_none());
+    assert!(previous.source().is_none());
+    let aggregate = BenchmarkAggregateError {
+        span_label: "span".into(),
+        counter: BenchmarkCounter::Instructions,
+        scope: BenchmarkScope::All,
+    };
+    assert_eq!(
+        aggregate.to_string(),
+        "benchmark aggregate overflow: scope=All, span=span, counter=Instructions"
+    );
+    assert!(aggregate.source().is_none());
+    assert_eq!(
+        BenchmarkMarkerError::InvalidPrefix.to_string(),
+        "invalid benchmark marker prefix"
+    );
+    assert_eq!(
+        BenchmarkMarkerError::InvalidLabel.to_string(),
+        "invalid benchmark marker label"
+    );
+    assert!(BenchmarkMarkerError::InvalidLabel.source().is_none());
+}

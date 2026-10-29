@@ -131,18 +131,22 @@ fn held_root_keeps_its_inode_after_path_replacement() {
 #[test]
 fn non_utf8_child_is_rejected_without_lossy_substitution() {
     use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
-    let fixture = fixture();
-    let path = fixture.path().join(OsStr::from_bytes(b"\xff"));
-    if let Err(error) = fs::write(&path, b"bytes") {
+    for relative_parent in ["", "nested/deeper"] {
+        let fixture = fixture();
+        let parent = fixture.path().join(relative_parent);
+        fs::create_dir_all(&parent).unwrap();
+        let path = parent.join(OsStr::from_bytes(b"\xff"));
+        if let Err(error) = fs::write(&path, b"bytes") {
+            assert!(
+                cfg!(target_os = "macos")
+                    && error.raw_os_error() == Some(rustix::io::Errno::ILSEQ.raw_os_error()),
+                "{error}"
+            );
+            return;
+        }
         assert!(
-            cfg!(target_os = "macos")
-                && error.raw_os_error() == Some(rustix::io::Errno::ILSEQ.raw_os_error()),
-            "{error}"
+            matches!(checksum_directory(fixture.path(), 5), Err(TreeChecksumError::NonUtf8Path { path: actual }) if actual == path)
         );
-        return;
+        assert_eq!(fs::read(path).unwrap(), b"bytes");
     }
-    assert!(
-        matches!(checksum_directory(fixture.path(), 5), Err(TreeChecksumError::NonUtf8Path { path: actual }) if actual == path)
-    );
-    assert_eq!(fs::read(path).unwrap(), b"bytes");
 }

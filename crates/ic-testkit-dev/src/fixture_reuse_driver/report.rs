@@ -176,32 +176,20 @@ impl Summary {
 #[allow(clippy::cast_precision_loss)]
 pub(super) fn summarize(runs: &[MeasuredRun]) -> Result<Summary, Error> {
     let samples = || runs.iter().flat_map(|run| &run.metrics.samples);
-    let mut phases = Phases::default()
-        .named_values()
-        .map(|(name, _)| (name, Vec::new()));
-    for sample in samples() {
-        for ((_, values), (_, value)) in phases.iter_mut().zip(sample.phases.named_values()) {
-            values.extend(value);
-        }
-    }
-    // Keep every phase, including phases that were absent from every sample.
-    let [
-        (_, wait),
-        (_, build),
-        (_, restore),
-        (_, reset),
-        (_, readiness),
-        (_, validation),
-        (_, acquisition),
-    ] = phases;
+    let phase_values = |select: fn(&Phases) -> Option<f64>| {
+        samples()
+            .filter_map(|sample| select(&sample.phases))
+            .collect()
+    };
+    // Fields select their measurements directly; collection has no positional schema.
     let phases_ms = PhaseSummary {
-        acquisition_ms: required_distribution(acquisition)?,
-        build_ms: distribution(build)?,
-        readiness_ms: distribution(readiness)?,
-        reset_ms: distribution(reset)?,
-        restore_ms: distribution(restore)?,
-        validation_ms: distribution(validation)?,
-        wait_ms: required_distribution(wait)?,
+        acquisition_ms: required_distribution(phase_values(|phases| Some(phases.acquisition_ms)))?,
+        build_ms: distribution(phase_values(|phases| phases.build_ms))?,
+        readiness_ms: distribution(phase_values(|phases| phases.readiness_ms))?,
+        reset_ms: distribution(phase_values(|phases| phases.reset_ms))?,
+        restore_ms: distribution(phase_values(|phases| phases.restore_ms))?,
+        validation_ms: distribution(phase_values(|phases| phases.validation_ms))?,
+        wait_ms: required_distribution(phase_values(|phases| Some(phases.wait_ms)))?,
     };
     Ok(Summary {
         phases_ms,

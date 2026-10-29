@@ -874,7 +874,8 @@ pub fn prepare_artifact_cache(
     let total_started = Instant::now();
     validate_spec(spec)?;
     validate_filesystem_boundaries(spec)?;
-    let namespace_directory = initialize_cache(spec)?;
+    let namespace_id = namespace_identity(&spec.namespace);
+    let namespace_directory = initialize_cache(spec, &namespace_id)?;
 
     let coordination_lock_path = coordination_lock_path(spec);
     let (coordination_lock, coordination_wait) =
@@ -911,7 +912,7 @@ pub fn prepare_artifact_cache(
     }
 
     let entry_directory = entry_directory(&namespace_directory, resolved.key);
-    let namespace_lock_path = namespace_lock_path(spec);
+    let namespace_lock_path = namespace_lock_path_for_id(&spec.cache_root, &namespace_id);
     let (namespace_lock, namespace_wait) =
         lock_cache_file(&namespace_lock_path).map_err(artifact_cache_fs_error)?;
     timings.namespace_lock_wait = timings.namespace_lock_wait.saturating_add(namespace_wait);
@@ -1016,15 +1017,19 @@ pub fn prune_artifact_cache(
         return invalid_spec("cache root must not be empty");
     }
     ensure_cache_directory_tag(cache_root).map_err(artifact_cache_fs_error)?;
-    let namespace_directory = namespace_directory_for(cache_root, namespace);
-    let lock_path = namespace_lock_path_for(cache_root, namespace);
+    let namespace_id = namespace_identity(namespace);
+    let namespace_directory = namespace_directory_for_id(cache_root, &namespace_id);
+    let lock_path = namespace_lock_path_for_id(cache_root, &namespace_id);
     let (_lock, _) = lock_cache_file(&lock_path).map_err(artifact_cache_fs_error)?;
     prune_artifact_namespace_locked(cache_root, &namespace_directory, policy, None)
 }
 
-fn initialize_cache(spec: &ArtifactCacheSpec) -> Result<PathBuf, ArtifactCacheError> {
+fn initialize_cache(
+    spec: &ArtifactCacheSpec,
+    namespace_id: &str,
+) -> Result<PathBuf, ArtifactCacheError> {
     ensure_cache_directory_tag(&spec.cache_root).map_err(artifact_cache_fs_error)?;
-    let namespace = namespace_directory(spec);
+    let namespace = namespace_directory_for_id(&spec.cache_root, namespace_id);
     fs::create_dir_all(entries_directory(&namespace)).map_err(|source| ArtifactCacheError::Io {
         operation: "create artifact cache namespace",
         path: namespace.clone(),
@@ -1888,13 +1893,18 @@ fn format_output_index(index: usize) -> String {
 }
 
 fn namespace_directory(spec: &ArtifactCacheSpec) -> PathBuf {
-    namespace_directory_for(&spec.cache_root, &spec.namespace)
+    namespace_directory_for_id(&spec.cache_root, &namespace_identity(&spec.namespace))
 }
 
-fn namespace_directory_for(cache_root: &Path, namespace: &str) -> PathBuf {
+// One namespace identity selects both its data directory and its lock.
+fn namespace_identity(namespace: &str) -> String {
+    identifier_digest("artifact-cache-namespace-v1", namespace)
+}
+
+fn namespace_directory_for_id(cache_root: &Path, namespace_id: &str) -> PathBuf {
     cache_root
         .join(".ic-testkit/artifact-sets/namespaces")
-        .join(identifier_digest("artifact-cache-namespace-v1", namespace))
+        .join(namespace_id)
 }
 
 fn entries_directory(namespace: &Path) -> PathBuf {
@@ -1925,16 +1935,13 @@ fn content_lock_path_for_key(cache_root: &Path, key: &str) -> PathBuf {
 }
 
 fn namespace_lock_path(spec: &ArtifactCacheSpec) -> PathBuf {
-    namespace_lock_path_for(&spec.cache_root, &spec.namespace)
+    namespace_lock_path_for_id(&spec.cache_root, &namespace_identity(&spec.namespace))
 }
 
-fn namespace_lock_path_for(cache_root: &Path, namespace: &str) -> PathBuf {
+fn namespace_lock_path_for_id(cache_root: &Path, namespace_id: &str) -> PathBuf {
     cache_root
         .join(".ic-testkit/artifact-sets/locks/namespaces")
-        .join(format!(
-            "{}.lock",
-            identifier_digest("artifact-cache-namespace-v1", namespace)
-        ))
+        .join(format!("{namespace_id}.lock"))
 }
 
 fn identifier_digest(domain: &str, identifier: &str) -> String {

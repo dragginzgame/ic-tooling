@@ -59,10 +59,10 @@ pub fn render<const N: usize>(
         .map(|row| row.each_ref().map(|cell| Cell::new(cell.as_ref())))
         .collect::<Vec<_>>();
     let mut widths = [0; N];
-    measure_row(&mut widths, &headers);
-    for row in &rows {
-        measure_row(&mut widths, row);
-    }
+    measure_rows(
+        &mut widths,
+        std::iter::once(headers.as_slice()).chain(rows.iter().map(<[_; N]>::as_slice)),
+    );
     let gap = " ".repeat(options.column_gap);
     let mut output = String::new();
     render_row(&headers, &widths, alignments, &gap, &mut output);
@@ -104,12 +104,12 @@ pub fn render_bordered(headers: &[impl AsRef<str>], rows: &[Vec<impl AsRef<str>>
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    let mut widths = vec![0; headers.len()];
-    measure_row(&mut widths, &headers);
-    for row in &rows {
-        widths.resize(widths.len().max(row.len()), 0);
-        measure_row(&mut widths, row);
-    }
+    let columns = rows.iter().map(Vec::len).fold(headers.len(), usize::max);
+    let mut widths = vec![0; columns];
+    measure_rows(
+        &mut widths,
+        std::iter::once(headers.as_slice()).chain(rows.iter().map(Vec::as_slice)),
+    );
     if widths.is_empty() {
         return String::new();
     }
@@ -143,9 +143,16 @@ pub fn render_bordered(headers: &[impl AsRef<str>], rows: &[Vec<impl AsRef<str>>
     output
 }
 
-fn measure_row(widths: &mut [usize], row: &[Cell<'_>]) {
-    for (width, value) in widths.iter_mut().zip(row) {
-        *width = (*width).max(value.columns);
+// Both renderers measure the same escaped cells. Fixed-column tables retain
+// their arrays; only the dynamic renderer allocates a width vector.
+fn measure_rows<'text: 'row, 'row>(
+    widths: &mut [usize],
+    rows: impl Iterator<Item = &'row [Cell<'text>]>,
+) {
+    for row in rows {
+        for (width, value) in widths.iter_mut().zip(row) {
+            *width = (*width).max(value.columns);
+        }
     }
 }
 

@@ -15,24 +15,15 @@
 use std::collections::{BTreeMap, btree_map::Entry};
 
 /// Why a benchmark's scaled average cannot be represented.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum BenchmarkAverageError {
     /// A mean is undefined when the run count is zero, even at scale zero.
+    #[error("benchmark run count is zero")]
     ZeroDenominator,
     /// The scaled average exceeds `u128::MAX`.
+    #[error("scaled benchmark average exceeds u128")]
     Overflow,
 }
-
-impl std::fmt::Display for BenchmarkAverageError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(match self {
-            Self::ZeroDenominator => "benchmark run count is zero",
-            Self::Overflow => "scaled benchmark average exceeds u128",
-        })
-    }
-}
-
-impl std::error::Error for BenchmarkAverageError {}
 
 fn checked_scaled_average(
     total: u128,
@@ -54,9 +45,10 @@ fn checked_scaled_average(
 }
 
 /// A comparison refuses ambiguous row identities or unrepresentable means.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum BenchmarkComparisonError {
     /// More than one current row has the same scope and span.
+    #[error("duplicate current benchmark row: {scope:?}/{span_label}")]
     DuplicateCurrent {
         /// Repeated scope.
         scope: BenchmarkScope,
@@ -64,6 +56,7 @@ pub enum BenchmarkComparisonError {
         span_label: String,
     },
     /// More than one previous row has the same scope and span.
+    #[error("duplicate previous benchmark row: {scope:?}/{span_label}")]
     DuplicatePrevious {
         /// Repeated scope.
         scope: BenchmarkScope,
@@ -71,36 +64,8 @@ pub enum BenchmarkComparisonError {
         span_label: String,
     },
     /// A row's selected mean cannot be represented.
-    Average(BenchmarkAverageError),
-}
-
-impl std::fmt::Display for BenchmarkComparisonError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::DuplicateCurrent { scope, span_label } => write!(
-                formatter,
-                "duplicate current benchmark row: {scope:?}/{span_label}"
-            ),
-            Self::DuplicatePrevious { scope, span_label } => write!(
-                formatter,
-                "duplicate previous benchmark row: {scope:?}/{span_label}"
-            ),
-            Self::Average(error) => error.fmt(formatter),
-        }
-    }
-}
-impl std::error::Error for BenchmarkComparisonError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Average(error) => Some(error),
-            Self::DuplicateCurrent { .. } | Self::DuplicatePrevious { .. } => None,
-        }
-    }
-}
-impl From<BenchmarkAverageError> for BenchmarkComparisonError {
-    fn from(error: BenchmarkAverageError) -> Self {
-        Self::Average(error)
-    }
+    #[error("{0}")]
+    Average(#[from] BenchmarkAverageError),
 }
 
 /// Default prefix for benchmark marker lines.
@@ -376,7 +341,8 @@ pub enum BenchmarkCounter {
 }
 
 /// Overflow rejects the complete aggregation, without returning partial totals.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[error("benchmark aggregate overflow: scope={scope:?}, span={span_label}, counter={counter:?}")]
 pub struct BenchmarkAggregateError {
     /// Marker label used to group matching spans.
     pub span_label: String,
@@ -385,18 +351,6 @@ pub struct BenchmarkAggregateError {
     /// Suite identity or the cross-suite aggregate.
     pub scope: BenchmarkScope,
 }
-
-impl std::fmt::Display for BenchmarkAggregateError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            formatter,
-            "benchmark aggregate overflow: scope={:?}, span={}, counter={:?}",
-            self.scope, self.span_label, self.counter
-        )
-    }
-}
-
-impl std::error::Error for BenchmarkAggregateError {}
 
 /// Run count and scaled means for one present comparison side.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -448,24 +402,15 @@ pub fn format_marker(prefix: &str, label: &str, counters: BenchmarkCounters) -> 
 }
 
 /// A marker field cannot be represented in the line-oriented marker grammar.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum BenchmarkMarkerError {
     /// Prefix is empty or contains a pipe, CR or LF.
+    #[error("invalid benchmark marker prefix")]
     InvalidPrefix,
     /// Label contains a pipe/line break or lacks a nonempty span and start/end suffix.
+    #[error("invalid benchmark marker label")]
     InvalidLabel,
 }
-
-impl std::fmt::Display for BenchmarkMarkerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Self::InvalidPrefix => "invalid benchmark marker prefix",
-            Self::InvalidLabel => "invalid benchmark marker label",
-        })
-    }
-}
-
-impl std::error::Error for BenchmarkMarkerError {}
 
 /// Format one complete marker after admitting its prefix and start/end label.
 ///
@@ -515,7 +460,7 @@ fn append_benchmark_events(
 ) {
     for (index, line) in input.lines().enumerate() {
         let source_line = index + 1;
-        if !has_configured_prefix(line, &config.prefixes) {
+        let Some(prefix) = configured_prefix(line, &config.prefixes) else {
             if config.strict && !line.trim().is_empty() {
                 report.malformed_markers.push(malformed(
                     source_line,
@@ -527,9 +472,9 @@ fn append_benchmark_events(
                 report.ignored_line_count += 1;
             }
             continue;
-        }
+        };
 
-        match parse_marker_line(line, source_line, source, config) {
+        match parse_marker_line(line, prefix, source_line, source, &config.suite_derivation) {
             Ok(event) => report.events.push(event),
             Err(marker) => report.malformed_markers.push(marker),
         }
@@ -691,9 +636,10 @@ pub fn compare_benchmark_aggregates(
 
 fn parse_marker_line(
     line: &str,
+    admitted_prefix: &str,
     source_line: usize,
     source: BenchmarkEventSource,
-    config: &BenchmarkParserConfig,
+    suite_derivation: &SuiteDerivation,
 ) -> Result<RawBenchmarkEvent, MalformedBenchmarkMarker> {
     let invalid = |reason: String| malformed(source_line, source, line, reason);
     let parse_counter = |value: &str, name: &str| {
@@ -720,7 +666,9 @@ fn parse_marker_line(
         return Err(invalid("expected five pipe-separated columns".into()));
     };
 
-    if !config.prefixes.iter().any(|known| known == prefix) {
+    // Prefixes containing delimiters still earn the existing malformed-marker
+    // diagnostic after shape admission; they never become valid field prefixes.
+    if prefix != admitted_prefix {
         return Err(invalid("prefix is not configured".into()));
     }
 
@@ -736,7 +684,7 @@ fn parse_marker_line(
         heap_bytes: parse_counter(heap_bytes, "heap_bytes")?,
         memory_bytes: parse_counter(memory_bytes, "memory_bytes")?,
     };
-    let suite = config.suite_derivation.derive_suite(span_label);
+    let suite = suite_derivation.derive_suite(span_label);
 
     Ok(RawBenchmarkEvent {
         prefix: prefix.to_string(),
@@ -750,25 +698,29 @@ fn parse_marker_line(
 }
 
 fn split_label_kind(label: &str) -> Option<(&str, BenchmarkEventKind)> {
-    let start = label.strip_suffix(":start");
-    let end = label.strip_suffix(":end");
-
-    match (start, end) {
-        (Some(span_label), None) if !span_label.is_empty() => {
-            Some((span_label, BenchmarkEventKind::Start))
-        }
-        (None, Some(span_label)) if !span_label.is_empty() => {
-            Some((span_label, BenchmarkEventKind::End))
-        }
-        _ => None,
-    }
+    label
+        .strip_suffix(":start")
+        .map(|span| (span, BenchmarkEventKind::Start))
+        .or_else(|| {
+            label
+                .strip_suffix(":end")
+                .map(|span| (span, BenchmarkEventKind::End))
+        })
+        .filter(|(span, _)| !span.is_empty())
 }
 
-fn has_configured_prefix(line: &str, prefixes: &[String]) -> bool {
-    prefixes.iter().any(|prefix| {
-        line.strip_prefix(prefix)
-            .is_some_and(|rest| rest.starts_with('|'))
-    })
+fn configured_prefix<'a>(line: &str, prefixes: &'a [String]) -> Option<&'a str> {
+    let (field, _) = line.split_once('|')?;
+    prefixes
+        .iter()
+        .find(|known| known.as_str() == field)
+        .or_else(|| {
+            prefixes.iter().find(|known| {
+                line.strip_prefix(known.as_str())
+                    .is_some_and(|rest| rest.starts_with('|'))
+            })
+        })
+        .map(String::as_str)
 }
 
 fn malformed(

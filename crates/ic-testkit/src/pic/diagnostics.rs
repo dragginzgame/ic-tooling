@@ -410,17 +410,23 @@ fn render_log_records(
 
     for record in records {
         total_content_bytes = total_content_bytes.saturating_add(record.content.len());
-        if rendered.len() == limits.record_limit || retained_bytes == limits.byte_limit {
-            omitted_content_bytes = omitted_content_bytes.saturating_add(record.content.len());
+        let include = rendered.len() < limits.record_limit && retained_bytes < limits.byte_limit;
+        let retained = if include {
+            record
+                .content
+                .len()
+                .min(limits.byte_limit.saturating_sub(retained_bytes))
+        } else {
+            0
+        };
+        let omitted = record.content.len().saturating_sub(retained);
+        omitted_content_bytes = omitted_content_bytes.saturating_add(omitted);
+        if !include {
             continue;
         }
 
-        let available = limits.byte_limit.saturating_sub(retained_bytes);
-        let retained = record.content.len().min(available);
-        let omitted = record.content.len().saturating_sub(retained);
         let content = String::from_utf8_lossy(&record.content[..retained]).into_owned();
         retained_bytes = retained_bytes.saturating_add(retained);
-        omitted_content_bytes = omitted_content_bytes.saturating_add(omitted);
         rendered.push(CanisterDiagnosticLogRecord {
             index: record.idx,
             timestamp_nanos: record.timestamp_nanos,

@@ -98,13 +98,15 @@ impl<'a> BoundedLedgerBlocks<'a> {
         if blocks.len() > limits.blocks {
             return Err(BlockEvidenceError::BudgetExceeded);
         }
-        let mut nodes = limits.nodes;
-        let mut bytes = limits.bytes;
+        let mut budget = ValueBudget {
+            nodes: limits.nodes,
+            bytes: limits.bytes,
+        };
         for block in blocks {
             if block.id.0.bits() > 128 {
                 return Err(BlockEvidenceError::ChainMismatch);
             }
-            check_value(&block.block, limits.depth, &mut nodes, &mut bytes)?;
+            budget.check(&block.block, limits.depth)?;
         }
         Ok(Self { blocks })
     }
@@ -152,47 +154,53 @@ impl<'a> BoundedLedgerBlocks<'a> {
     }
 }
 
-fn check_value(
-    value: &Value,
-    depth: u8,
-    nodes: &mut usize,
-    bytes: &mut usize,
-) -> Result<(), BlockEvidenceError> {
-    *nodes = nodes
-        .checked_sub(1)
-        .ok_or(BlockEvidenceError::BudgetExceeded)?;
-    let depth = depth
-        .checked_sub(1)
-        .ok_or(BlockEvidenceError::BudgetExceeded)?;
-    let scalar_bytes = match value {
-        Value::Blob(value) => value.len(),
-        Value::Text(value) => value.len(),
-        Value::Nat64(_) => size_of::<u64>(),
-        Value::Nat(value) => usize::try_from(value.0.bits().div_ceil(8))
-            .map_err(|_| BlockEvidenceError::BudgetExceeded)?,
-        Value::Int(value) => {
-            i128::try_from(&value.0).map_err(|_| BlockEvidenceError::UnsupportedValue)?;
-            usize::try_from(value.0.bits().div_ceil(8))
-                .map_err(|_| BlockEvidenceError::BudgetExceeded)?
-        }
-        Value::Array(values) => {
-            for value in values {
-                check_value(value, depth, nodes, bytes)?;
+struct ValueBudget {
+    nodes: usize,
+    bytes: usize,
+}
+
+impl ValueBudget {
+    fn check(&mut self, value: &Value, depth: u8) -> Result<(), BlockEvidenceError> {
+        self.nodes = self
+            .nodes
+            .checked_sub(1)
+            .ok_or(BlockEvidenceError::BudgetExceeded)?;
+        let depth = depth
+            .checked_sub(1)
+            .ok_or(BlockEvidenceError::BudgetExceeded)?;
+        let scalar_bytes = match value {
+            Value::Blob(value) => value.len(),
+            Value::Text(value) => value.len(),
+            Value::Nat64(_) => size_of::<u64>(),
+            Value::Nat(value) => usize::try_from(value.0.bits().div_ceil(8))
+                .map_err(|_| BlockEvidenceError::BudgetExceeded)?,
+            Value::Int(value) => {
+                i128::try_from(&value.0).map_err(|_| BlockEvidenceError::UnsupportedValue)?;
+                usize::try_from(value.0.bits().div_ceil(8))
+                    .map_err(|_| BlockEvidenceError::BudgetExceeded)?
             }
-            0
-        }
-        Value::Map(values) => {
-            for (key, value) in values {
-                *bytes = bytes
-                    .checked_sub(key.len())
-                    .ok_or(BlockEvidenceError::BudgetExceeded)?;
-                check_value(value, depth, nodes, bytes)?;
+            Value::Array(values) => {
+                for value in values {
+                    self.check(value, depth)?;
+                }
+                0
             }
-            0
-        }
-    };
-    *bytes = bytes
-        .checked_sub(scalar_bytes)
-        .ok_or(BlockEvidenceError::BudgetExceeded)?;
-    Ok(())
+            Value::Map(values) => {
+                for (key, value) in values {
+                    self.charge_bytes(key.len())?;
+                    self.check(value, depth)?;
+                }
+                0
+            }
+        };
+        self.charge_bytes(scalar_bytes)
+    }
+
+    fn charge_bytes(&mut self, bytes: usize) -> Result<(), BlockEvidenceError> {
+        self.bytes = self
+            .bytes
+            .checked_sub(bytes)
+            .ok_or(BlockEvidenceError::BudgetExceeded)?;
+        Ok(())
+    }
 }

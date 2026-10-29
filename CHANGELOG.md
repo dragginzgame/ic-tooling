@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.69.11] - Unreleased
+
+### 🩹 Fixed
+
+- Preserve nested directory names in non-UTF-8 tree-entry diagnostics.
+
+### 🧹 Cleanup
+
+- Simplify benchmark parsing, reporting and error handling; share table width
+  preparation and consolidate bounded ledger/log accounting.
+- Carry admitted Wasm layout facts and reuse cache namespace identity, retaining
+  existing output formats and validation boundaries.
+  [Details](docs/changelog/0.69.md#06911---unreleased).
+
 ## [0.69.10] - 2026-10-29
 
 ### 🧹 Cleanup

@@ -70,7 +70,6 @@ pub fn run() -> Result<()> {
         previous,
         next,
     } = selection;
-    check_path(source)?;
     let input = read(source, limit)?;
     let output = match &arguments.operation {
         Operation::Manifest { context, .. } => {

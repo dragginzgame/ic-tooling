@@ -27,6 +27,7 @@ wire = ["dep:ic-wire", "dep:serde"]
 
 [dependencies]
 ic-platform = { workspace = true, features = ["principal"] }
+thiserror = { workspace = true }
 
 [target.'cfg(all(unix, not(target_arch = "wasm32")))'.dependencies]
 libc = { workspace = true }
@@ -40,7 +41,6 @@ ic-host-process = { workspace = true }
 ic-platform = { workspace = true, features = ["pocket-ic", "candid", "management-canister-types"] }
 ic-wire = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
-thiserror = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

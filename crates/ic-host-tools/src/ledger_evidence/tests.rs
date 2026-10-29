@@ -110,6 +110,39 @@ fn all_work_budgets_refuse_before_hashing() {
 }
 
 #[test]
+fn aggregate_budgets_charge_keys_and_values_with_branch_local_depth() {
+    let blocks = [0_u8, 1].map(|id| LedgerBlock {
+        id: Nat::from(id),
+        block: Value::Map(BTreeMap::from([
+            ("a".into(), Value::Blob(b"xy".to_vec().into())),
+            ("bb".into(), Value::Text("z".into())),
+        ])),
+    });
+    // Each block has three nodes, three key bytes and three payload bytes.
+    // Siblings and separate roots each receive the full branch-depth allowance.
+    let limits = BlockEvidenceLimits {
+        blocks: 2,
+        nodes: 6,
+        bytes: 12,
+        depth: 2,
+    };
+    BoundedLedgerBlocks::admit(&blocks, limits).unwrap();
+    for limits in [
+        BlockEvidenceLimits { nodes: 5, ..limits },
+        BlockEvidenceLimits {
+            bytes: 11,
+            ..limits
+        },
+        BlockEvidenceLimits { depth: 1, ..limits },
+    ] {
+        assert!(matches!(
+            BoundedLedgerBlocks::admit(&blocks, limits),
+            Err(BlockEvidenceError::BudgetExceeded)
+        ));
+    }
+}
+
+#[test]
 fn signed_value_overflow_and_excessive_indexes_refuse_before_hashing() {
     let blocks = [LedgerBlock {
         id: Nat::from(0_u8),

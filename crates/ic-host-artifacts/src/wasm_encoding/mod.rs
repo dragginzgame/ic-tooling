@@ -132,24 +132,18 @@ impl std::error::Error for EncodingError {}
 /// # Errors
 /// Returns length/output admission, memory, import-call, export or data-extent refusal.
 pub fn encode(module: &CallModule<'_>, max_bytes: usize) -> Result<Vec<u8>, EncodingError> {
-    admit(module, max_bytes)?;
-    let import_count = length(module.imports.len())?;
-    let void_type = module
-        .imports
-        .iter()
-        .position(|import| import.parameters == 0)
-        .map_or(Ok(import_count), length)?;
+    let EncodingLayout {
+        import_count,
+        function_end,
+        void_type,
+    } = admit(module, max_bytes)?;
     let mut types = TypeSection::new();
     let mut imports = ImportSection::new();
-    for (index, import) in module.imports.iter().enumerate() {
+    for (index, import) in (0..import_count).zip(module.imports) {
         types
             .ty()
             .function((0..import.parameters).map(|_| ValType::I32), []);
-        imports.import(
-            import.module,
-            import.name,
-            EntityType::Function(length(index)?),
-        );
+        imports.import(import.module, import.name, EntityType::Function(index));
     }
     if void_type == import_count {
         types.ty().function([], []);
@@ -158,13 +152,9 @@ pub fn encode(module: &CallModule<'_>, max_bytes: usize) -> Result<Vec<u8>, Enco
     let mut exports = ExportSection::new();
     let mut code = CodeSection::new();
     exports.export(module.memory.export, ExportKind::Memory, 0);
-    for (index, function) in module.functions.iter().enumerate() {
+    for (index, function) in (import_count..function_end).zip(module.functions) {
         functions.function(void_type);
-        exports.export(
-            function.name,
-            ExportKind::Func,
-            import_count + length(index)?,
-        );
+        exports.export(function.name, ExportKind::Func, index);
         let mut body = Function::new([]);
         for call in &function.calls {
             for &argument in &call.arguments {
@@ -221,17 +211,22 @@ fn charge(total: &mut usize, amount: usize, limit: usize) -> Result<(), Encoding
     Ok(())
 }
 
-fn admit(module: &CallModule<'_>, limit: usize) -> Result<(), EncodingError> {
+// Checked index bounds belong to admission, while final encoded-size validation
+// remains independent because section framing is known only after encoding.
+struct EncodingLayout {
+    import_count: u32,
+    function_end: u32,
+    void_type: u32,
+}
+
+fn admit(module: &CallModule<'_>, limit: usize) -> Result<EncodingLayout, EncodingError> {
     let mut minimum = 0;
     charge(&mut minimum, 8, limit)?;
-    length(
-        module
-            .imports
-            .len()
-            .checked_add(1)
-            .ok_or(EncodingError::LengthOverflow)?,
-    )?;
-    length(
+    let import_count = length(module.imports.len())?;
+    import_count
+        .checked_add(1)
+        .ok_or(EncodingError::LengthOverflow)?;
+    let function_end = length(
         module
             .functions
             .len()
@@ -295,7 +290,16 @@ fn admit(module: &CallModule<'_>, limit: usize) -> Result<(), EncodingError> {
             return Err(EncodingError::DuplicateExport);
         }
     }
-    Ok(())
+    let void_type = module
+        .imports
+        .iter()
+        .position(|import| import.parameters == 0)
+        .map_or(Ok(import_count), length)?;
+    Ok(EncodingLayout {
+        import_count,
+        function_end,
+        void_type,
+    })
 }
 
 #[cfg(test)]
