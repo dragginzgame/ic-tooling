@@ -383,19 +383,11 @@ pub(super) fn record_cache_maintenance(
     let marker = path.join(LAST_MAINTENANCE_FILE);
     let elapsed = encode_system_time(&marker, SystemTime::now())?;
     let contents = format!("{}\n{maintenance_identity}\n", elapsed.as_nanos());
-    ic_host_fs::durable::write_bytes(
+    write_cache_marker(
         &marker,
-        ic_host_fs::durable::WriteOptions {
-            mode: ic_host_fs::durable::PublicationMode::Replace,
-            permissions: 0o666,
-        },
         contents.as_bytes(),
+        "record cache maintenance time",
     )
-    .map_err(|source| CacheFsError {
-        operation: "record cache maintenance time",
-        path: marker,
-        source: io::Error::other(source),
-    })
 }
 
 pub(super) fn perform_scheduled_cache_maintenance(
@@ -446,13 +438,21 @@ fn write_system_time(
     operation: &'static str,
 ) -> Result<(), CacheFsError> {
     let elapsed = encode_system_time(path, timestamp)?;
+    write_cache_marker(path, elapsed.as_nanos().to_string().as_bytes(), operation)
+}
+
+fn write_cache_marker(
+    path: &Path,
+    contents: &[u8],
+    operation: &'static str,
+) -> Result<(), CacheFsError> {
     ic_host_fs::durable::write_bytes(
         path,
         ic_host_fs::durable::WriteOptions {
             mode: ic_host_fs::durable::PublicationMode::Replace,
             permissions: 0o666,
         },
-        elapsed.as_nanos().to_string().as_bytes(),
+        contents,
     )
     .map_err(|source| CacheFsError {
         operation,

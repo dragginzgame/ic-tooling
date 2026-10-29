@@ -1,79 +1,78 @@
 # Current handoff — 2026-10-29
 
-## IC Platform 0.8.1 adoption
+## Accepted scope and source
 
-The requested dependency adoption is complete locally and unstaged over
-`645ae21d` (Release 0.69.14). Incoming worktree/index were clean, with no active
-Cargo/rustc process visible. Workspace package versions remain 0.69.14; no
-staging, commit, push, release, publication, tool install or sibling edit ran.
-The Shared snapshot remains 0.27.1 at
-`d08cbcafbaff4227e798a890232e2248bf167504`.
+The maintainer requested work on open issues #263, #266 and #267. Snapshot and
+Platform corrections were already delivered; their current evidence was verified
+and both issues closed. The Cargo grouping correction is complete locally,
+unstaged, with its own checks and notes. It remains open for delivery and native
+qualification. No commit, push, version transaction, release, publication, tool
+installation, sibling source edit or artifact cleanup ran in this issue batch.
 
-The root requires published IC Platform 0.8.1 with defaults disabled; its macro
-package resolves to 0.8.1. Registry search and package metadata verified the
-published version and Rust 1.91 floor. Existing registry Wire, PocketIC 16.1.0,
-management, executor and ic0 versions remain selected. No unrelated package
-version was updated. The lockfile drops seven obsolete packages: base32,
-icrc-cbor, icrc-ledger-types, libm, minicbor, minicbor-derive and syn 1.x.
+The ordinary checkout remains on `ecc8d61d` (Release 0.70.0), with its admitted
+35 dirty files preserved. They contain Wire 0.7.22 adoption and all ten previous
+complexity reductions. Cargo.toml, Cargo.lock, the real index and HEAD retain
+their admission contents. Own versions remain 0.70.0; pending notes stay 0.70.1
+because the combined local batch preserves published APIs and feature boundaries.
+Shared remains 0.27.1 at `d08cbcafbaff4227e798a890232e2248bf167504`.
 
-Pending notes are **0.70.0**, because the public Tools ledger value changes from
-registry ICRC types to Platform-owned types. Consumers constructing LedgerBlock
-or using verified values must select Platform 0.8.1's Value. Consumers exchanging
-owned Registry principals likewise need the same Platform 0.8 identity. Candid/
-Serde representations and ledger hashes retain the supplying contract; no data
-rewrite or uncertain-operation replay is required. No compatibility bridge was
-added. Released 0.69 history is unchanged; package versions were not bumped.
+PR #265 was separately merged normally as
+`01bbf850f1f14c3678485da4601a80cd75dee88f`; it is not pulled into this dirty
+checkout. Its reconciliation head `55252e66` now has all four workflows passing.
+Native Linux x86-64 and macOS 15 Intel/Apple Silicon, MSRV and lint/security pass
+in CI run 40910712564. This does not qualify the later local grouping changes.
+Merge evidence remains at `/tmp/ic-tooling-merge-265.iHrIEC/`.
 
-Registry keeps the minimal owned-principal feature. Tests validate its bytes and
-intervals without importing external conversions. Docs identify the optional
-principal-external feature for SDK boundaries; graph policy rejects external
-Principal and SHA-2 in the registry-only profile. Ledger/all-feature graphs now
-reject the retired registry ICRC/CBOR packages instead of requiring them.
+## Bounded Cargo observations
 
-Testkit explicitly selects principal-external to preserve its public external
-Principal identity, including fake_principal on Wasm. Its existing native
-PocketIC/Candid/management selections remain; Wasm remains Candid-free. The probe
-retains its CDK/raw runtime, and stable-memory adapters retain their backing API.
-Examples name the new Platform release. Native observation APIs from PR #265
-are separate and are not included by this dependency update.
+Build tries each input package only against the latest group, starting another
+group on a feature conflict. Including isolated trees, nonempty selections use
+at most `2n−1` observer calls. Earlier groups are not searched; packing can be
+conservative. Every proposed group is still observed through actual Cargo and
+must preserve all isolated normal/build trees. Feature/target/locked/offline
+flags, the caller observer and its typed execution errors remain unchanged.
+Malformed forests and missing/additional selected roots return CargoTreeError.
+No cross-call cache, dependency, duplicate consumer owner or metadata substitute
+was added. The bound covers observer calls, not caller-selected output/time.
 
-## Validation and evidence
+Evidence: `/tmp/ic-tooling-issues-263-267.9Ckcfb/`. Admission source/patch/status,
+failed and corrected Clippy logs, actual Rust 1.91 checks and the comparative
+probe source/results are retained. Ten focused grouping tests pass, covering
+compatible/incompatible work bounds, conservative order, actual Cargo feature
+unification, graph selections, malformed forests and typed process failures.
+Strict all-target/all-feature Build Clippy passes on prepared Rust 1.99.1;
+strict Build Rustdoc passes on actual Rust 1.91. Formatting and doc links pass.
 
-Evidence: `/tmp/ic-tooling-platform-081.DQsDFy/`. Admission source/lock/handoff,
-exact check commands, logs, final patch/source and identity records are retained.
-Warning-denied all-target/all-feature Clippy passes for the five direct Platform
-consumer packages on prepared Rust 1.99.1, before focused tests.
+The comparative probe uses the frozen Canic adoption workspace's six selected
+canister packages with locked/offline Wasm normal/build trees on Rust 1.91.
+Previous and bounded algorithms produce identical groups: 15 versus 11 Cargo
+calls, 75,407,408 versus 51,465,988 stdout bytes. Single sequential local samples
+take 5,016 versus 3,586 ms; this is not a stable benchmark or whole-build claim.
+The frozen root manifest/lock remain unchanged. This is a graph probe, not a
+Canic build/release or full adapter qualification. New grouping source has no
+native macOS execution or hosted CI yet; no full workspace/release gate ran.
 
-Actual Rust 1.91 tests pass: 12 cases comprising isolated Registry (3), ledger
-evidence (4), Testkit deterministic Principal (1) and native stable memory (4).
-Rust 1.91 Wasm checks pass for Testkit/Native selected fixtures and the private
-probe. Registry-only strict Rustdoc passes without external-conversion features.
-Tools' actual native Linux profile graph script and selected Testkit native/Wasm
-normal/build graphs pass; Wasm explicitly retains ic_principal/ic0 and excludes
-Candid, PocketIC, Wire, the executor, macros and Host packages. ShellCheck, shell
-syntax, formatting, local doc links and diff checks pass.
+## Delivered corrections and preserved evidence
 
-No full local workspace or release gate, live PocketIC run or native macOS
-qualification ran. Native macOS 15 Intel/Apple Silicon evidence is separate;
-Linux and Wasm compilation do not establish it. No Wasm-size saving is claimed.
+[#263 — Snapshot timer coherence](https://github.com/dragginzgame/ic-tooling/issues/263)
+is closed after checking the delivered metadata-upload snapshot implementation,
+installed regression coverage and the retained Canic four-case sequence. All four
+labels pass on frozen Testkit 0.69.13; the governed suite log confirms success in
+`/home/adam/projects/canic/target/adoption-qualification-20261029/`. No later
+moving-root or production backup qualification is inferred. Original failing
+Canic evidence under `target/session-release-0113/` remains untouched.
 
-## Preserved obligations and prior work
+[#267 — Native Platform convergence](https://github.com/dragginzgame/ic-tooling/issues/267)
+is closed against published Tooling 0.70.0 and the existing Timers one-Platform
+consumer evidence. Platform adoption evidence remains at
+`/tmp/ic-tooling-platform-081.DQsDFy/`. Its owned Principal/ledger migration still
+requires consumer alignment; Testkit preserves its external Principal API.
 
-[PR #265 — Own raw native observations and workload mechanics in Host](https://github.com/dragginzgame/ic-tooling/pull/265)
-was repaired and pushed separately at efb49570. Its repair evidence remains at
-`/tmp/ic-tooling-265.xBrNN0/`; original Host/consumer evidence remains under
-`/tmp/profiler-host-ownership-20261029`. Its native CI and supplier acceptance keep
-their own source identities; this adoption neither merges nor retargets that PR.
-
-[Testkit snapshot consumer acceptance (#263)](https://github.com/dragginzgame/ic-tooling/issues/263)
-retains scope at `/tmp/ic-tooling-263.WQ4ch3/`. This batch establishes neither
-Canic adoption nor its retained four-case sequence qualification.
-
-Earlier cleanup evidence remains at `/tmp/ic-tooling-cleanup-06914.hJOCPI/`,
-`/tmp/ic-tooling-cleanup-06913.uEdXff/`, `/tmp/ic-tooling-cleanup-06912.cqgTkd/`,
-`/tmp/ic-tooling-cleanup-06911.Pznlfz/` and `/tmp/ic-tooling-cleanup-06910.ZwEZDQ/`.
-Preparation race/package failures, migration/retirement backups under
-`/tmp/ic-tooling-migration/`, original Host archive refs, stale release-lock
-backup `/tmp/ic-tooling-stale-release-lock.qHQFTn/lock`, release plans and stash
-evidence remain preserved. Earlier supplying-owner obligations retain their
-recorded scope. No artifact cleanup ran beyond existing owned fixture behavior.
+Earlier cleanup evidence remains at `/tmp/ic-tooling-cleanup-0701.bAD18Y/`:
+110 focused Rust 1.91 cases and four installed Linux/PocketIC 16.1.0 cases,
+selected Wasm, graphs, Clippy and docs passed for that source. Wire adoption
+evidence remains at `/tmp/ic-tooling-wire-0722.kvAbqM/`. No native macOS proof
+is attributed to these uncommitted changes. Admission handoffs retain earlier
+preparation/package failures, migration/retirement backups, original Host archive
+refs, stale release-lock backups, release plans and stash obligations; preserve
+them. No consumer artifacts or migration evidence were removed.

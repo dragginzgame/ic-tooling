@@ -2534,7 +2534,13 @@ pub fn build_wasm_canisters_cached(
     spec: &WasmBuildSpec,
     mut spawn: impl FnMut(&mut Command) -> io::Result<OwnedChild>,
 ) -> Result<WasmBuildOutcome, WasmBuildError> {
-    build_wasm_canisters_cached_internal(spec, &mut ProgressReporter::silent(), None, &mut spawn)
+    build_wasm_canisters_cached_internal(
+        spec,
+        None,
+        &mut ProgressReporter::silent(),
+        None,
+        &mut spawn,
+    )
 }
 
 /// Build or reuse exact Wasm artifacts with caller-selected progress observation.
@@ -2556,6 +2562,7 @@ where
 {
     build_wasm_canisters_cached_internal(
         spec,
+        None,
         &mut ProgressReporter::new(Some((config, &mut observer)))?,
         None,
         &mut spawn,
@@ -2568,6 +2575,7 @@ where
 )]
 pub(super) fn build_wasm_canisters_cached_in_batch(
     spec: &WasmBuildSpec,
+    maintenance: Option<SharedIncrementalTargetMaintenanceConfig>,
     index: usize,
     resolver: &mut WasmBuildBatchInputResolver<'_, '_>,
     observation: Option<(
@@ -2585,6 +2593,7 @@ pub(super) fn build_wasm_canisters_cached_in_batch(
     let started = Instant::now();
     let result = build_wasm_canisters_cached_internal(
         spec,
+        maintenance,
         &mut progress,
         Some((resolver, index)),
         &mut spawn,
@@ -2639,12 +2648,16 @@ enum SharedAcquisition<'a> {
 
 fn build_wasm_canisters_cached_internal(
     spec: &WasmBuildSpec,
+    batch_maintenance: Option<SharedIncrementalTargetMaintenanceConfig>,
     progress: &mut ProgressReporter<'_>,
     mut batch_resolution: Option<(&mut WasmBuildBatchInputResolver<'_, '_>, usize)>,
     mut spawn: &mut dyn FnMut(&mut Command) -> io::Result<OwnedChild>,
 ) -> Result<WasmBuildOutcome, WasmBuildError> {
     let total_started = Instant::now();
-    let plan = validate_spec(spec)?;
+    // The batch tracker supplies maintenance only for the first specification
+    // of a distinct shared target, after refusing per-spec ownership conflicts.
+    // Keep ordinary spec admission and its failure order before this projection.
+    let plan = batch_maintenance.map_or(validate_spec(spec)?, CachePlan::MaintainedShared);
     let prepared_invalidation = batch_prepared_invalidation(batch_resolution.as_ref());
     progress.emit(WasmBuildProgressEvent::Started);
     let shared_incremental = match plan {

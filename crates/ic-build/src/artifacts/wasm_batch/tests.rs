@@ -416,10 +416,8 @@ fn batch_maintenance_configures_each_shared_target_once() {
         .prepare_spec(&first)
         .expect("resolve shared target")
         .expect("first shared target must own maintenance");
-    assert_eq!(
-        prepared_first.shared_incremental_target_maintenance(),
-        Some(maintenance)
-    );
+    assert_eq!(prepared_first, maintenance);
+    assert!(first.shared_incremental_target_maintenance().is_none());
     assert!(tracker.prepare_spec(&second).unwrap().is_none());
     assert!(tracker.prepare_spec(&other).unwrap().is_some());
     assert!(tracker.prepare_spec(&isolated).unwrap().is_none());

@@ -726,10 +726,12 @@ impl ArtifactBuildTransaction {
     /// Returns an unknown-output or atomic source-copy/publication error.
     pub fn import_output(&self, name: &str, source: &Path) -> Result<(), ArtifactCacheError> {
         let destination = self.output_path(name)?;
-        copy_file_atomic(source, &destination).map_err(|source_error| ArtifactCacheError::Io {
-            operation: "import artifact output into staging",
-            path: destination,
-            source: source_error,
+        copy_file_atomic(source, &destination).map_err(|source_error| {
+            cache_io(
+                "import artifact output into staging",
+                destination,
+                source_error,
+            )
         })?;
         Ok(())
     }
@@ -763,13 +765,13 @@ impl ArtifactBuildTransaction {
     /// # Errors
     /// Returns the filesystem error if removing the owned staging directory fails.
     pub fn abort(mut self) -> Result<(), ArtifactCacheError> {
-        self.staging_directory
-            .try_cleanup()
-            .map_err(|source| ArtifactCacheError::Io {
-                operation: "abort artifact cache transaction",
-                path: self.staging_directory.path().to_owned(),
+        self.staging_directory.try_cleanup().map_err(|source| {
+            cache_io(
+                "abort artifact cache transaction",
+                self.staging_directory.path().to_owned(),
                 source,
-            })?;
+            )
+        })?;
         Ok(())
     }
 
@@ -811,10 +813,12 @@ impl ArtifactBuildTransaction {
             },
             &manifest,
         )
-        .map_err(|source| ArtifactCacheError::Io {
-            operation: "write artifact cache manifest",
-            path: self.staging_directory.path().join(MANIFEST_FILE),
-            source: io::Error::other(source),
+        .map_err(|source| {
+            cache_io(
+                "write artifact cache manifest",
+                self.staging_directory.path().join(MANIFEST_FILE),
+                io::Error::other(source),
+            )
         })?;
         let namespace_lock_path = namespace_lock_path(&self.spec);
         let (_namespace_lock, namespace_wait) =
@@ -825,11 +829,11 @@ impl ArtifactBuildTransaction {
             .saturating_add(namespace_wait);
         remove_unretained_entry(&self.entry_directory).map_err(artifact_cache_fs_error)?;
         fs::rename(self.staging_directory.path(), &self.entry_directory).map_err(|source| {
-            ArtifactCacheError::Io {
-                operation: "publish artifact cache entry",
-                path: self.entry_directory.clone(),
+            cache_io(
+                "publish artifact cache entry",
+                self.entry_directory.clone(),
                 source,
-            }
+            )
         })?;
         self.staging_directory.disarm();
         self.timings.publication = publication_started.elapsed();
@@ -1024,11 +1028,8 @@ fn initialize_cache(
 ) -> Result<PathBuf, ArtifactCacheError> {
     ensure_cache_directory_tag(&spec.cache_root).map_err(artifact_cache_fs_error)?;
     let namespace = namespace_directory_for_id(&spec.cache_root, namespace_id);
-    fs::create_dir_all(entries_directory(&namespace)).map_err(|source| ArtifactCacheError::Io {
-        operation: "create artifact cache namespace",
-        path: namespace.clone(),
-        source,
-    })?;
+    fs::create_dir_all(entries_directory(&namespace))
+        .map_err(|source| cache_io("create artifact cache namespace", namespace.clone(), source))?;
     Ok(namespace)
 }
 
@@ -1099,12 +1100,8 @@ fn validate_spec(spec: &ArtifactCacheSpec) -> Result<(), ArtifactCacheError> {
 
 fn validate_filesystem_boundaries(spec: &ArtifactCacheSpec) -> Result<(), ArtifactCacheError> {
     let mut cargo_boundaries = CargoInputBoundaries::default();
-    let cache_root =
-        canonicalize_allow_missing(&spec.cache_root).map_err(|source| ArtifactCacheError::Io {
-            operation: "resolve artifact cache root",
-            path: spec.cache_root.clone(),
-            source,
-        })?;
+    let cache_root = canonicalize_allow_missing(&spec.cache_root)
+        .map_err(|source| cache_io("resolve artifact cache root", &spec.cache_root, source))?;
     let mut declared_paths = Vec::with_capacity(spec.inputs.len() + spec.tools.len());
     for (kind, labeled_paths) in [("input", &spec.inputs), ("tool", &spec.tools)] {
         for labeled in labeled_paths {
@@ -1117,10 +1114,8 @@ fn validate_filesystem_boundaries(spec: &ArtifactCacheSpec) -> Result<(), Artifa
                 ));
             }
             let is_directory = fs::metadata(&canonical)
-                .map_err(|source| ArtifactCacheError::Io {
-                    operation: "inspect declared artifact cache path",
-                    path: canonical.clone(),
-                    source,
+                .map_err(|source| {
+                    cache_io("inspect declared artifact cache path", &canonical, source)
                 })?
                 .is_dir();
             let entry_path =
@@ -1192,11 +1187,11 @@ fn validate_filesystem_boundaries(spec: &ArtifactCacheSpec) -> Result<(), Artifa
             Ok(_) => {}
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(source) => {
-                return Err(ArtifactCacheError::Io {
-                    operation: "inspect artifact output destination",
-                    path: destination,
+                return Err(cache_io(
+                    "inspect artifact output destination",
+                    destination,
                     source,
-                });
+                ));
             }
         }
     }
@@ -1212,20 +1207,12 @@ fn resolve_file_entry(path: &Path, operation: &'static str) -> Result<PathBuf, A
         }
         _ => canonicalize_allow_missing(path),
     };
-    resolved.map_err(|source| ArtifactCacheError::Io {
-        operation,
-        path: path.to_owned(),
-        source,
-    })
+    resolved.map_err(|source| cache_io(operation, path.to_owned(), source))
 }
 
 fn canonicalize_path(path: &Path, operation: &'static str) -> Result<PathBuf, ArtifactCacheError> {
     path.canonicalize()
-        .map_err(|source| ArtifactCacheError::Io {
-            operation,
-            path: path.to_owned(),
-            source,
-        })
+        .map_err(|source| cache_io(operation, path.to_owned(), source))
 }
 
 fn validate_identifier(kind: &str, value: &str) -> Result<(), ArtifactCacheError> {
@@ -1293,10 +1280,12 @@ fn resolve_key(spec: &ArtifactCacheSpec) -> Result<ResolvedKey, ArtifactCacheErr
         paths,
         std::slice::from_ref(&spec.cache_root),
     )
-    .map_err(|source| ArtifactCacheError::Io {
-        operation: "hash artifact cache inputs",
-        path: spec.cache_root.clone(),
-        source,
+    .map_err(|source| {
+        cache_io(
+            "hash artifact cache inputs",
+            spec.cache_root.clone(),
+            source,
+        )
     })?;
     let input_digest = if spec.cargo_build_inputs.is_empty() {
         declared_input_digest
@@ -1372,11 +1361,11 @@ fn validated_cache_outputs<'a>(
         Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(source) => {
-            return Err(ArtifactCacheError::Io {
-                operation: "inspect artifact cache entry",
-                path: entry.to_owned(),
+            return Err(cache_io(
+                "inspect artifact cache entry",
+                entry.to_owned(),
                 source,
-            });
+            ));
         }
     };
     if !entry_metadata.file_type().is_dir() || !cache_entry_root_is_valid(entry)? {
@@ -1387,11 +1376,11 @@ fn validated_cache_outputs<'a>(
         Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(source) => {
-            return Err(ArtifactCacheError::Io {
-                operation: "inspect artifact cache manifest",
-                path: manifest_path,
+            return Err(cache_io(
+                "inspect artifact cache manifest",
+                manifest_path,
                 source,
-            });
+            ));
         }
     };
     if !manifest_metadata.file_type().is_file() {
@@ -1402,13 +1391,8 @@ fn validated_cache_outputs<'a>(
     let Some(maximum_len) = maximum_manifest_len(spec) else {
         return Ok(None);
     };
-    let Some(manifest) = read_file_with_limit(&manifest_path, maximum_len).map_err(|source| {
-        ArtifactCacheError::Io {
-            operation: "read artifact cache manifest",
-            path: manifest_path,
-            source,
-        }
-    })?
+    let Some(manifest) = read_file_with_limit(&manifest_path, maximum_len)
+        .map_err(|source| cache_io("read artifact cache manifest", manifest_path, source))?
     else {
         return Ok(None);
     };
@@ -1420,11 +1404,11 @@ fn validated_cache_outputs<'a>(
     };
     let mut comparison = MatchingWriter::new(&manifest);
     write_manifest(&mut comparison, key, &output_info).map_err(|source| {
-        ArtifactCacheError::Io {
-            operation: "compare artifact cache manifest",
-            path: entry.join(MANIFEST_FILE),
+        cache_io(
+            "compare artifact cache manifest",
+            entry.join(MANIFEST_FILE),
             source,
-        }
+        )
     })?;
     Ok(comparison.is_complete_match().then_some(output_info))
 }
@@ -1499,11 +1483,7 @@ fn inspect_output<'a>(
                 info,
             })
         })
-        .map_err(|source| ArtifactCacheError::Io {
-            operation,
-            path,
-            source,
-        })
+        .map_err(|source| cache_io(operation, path, source))
 }
 
 fn visit_undeclared_outputs(
@@ -1533,20 +1513,13 @@ fn visit_undeclared_children(
     operation: &'static str,
     mut visit: impl FnMut(fs::DirEntry),
 ) -> Result<bool, ArtifactCacheError> {
-    let entries = fs::read_dir(directory).map_err(|source| ArtifactCacheError::Io {
-        operation,
-        path: directory.to_owned(),
-        source,
-    })?;
+    let entries = fs::read_dir(directory)
+        .map_err(|source| cache_io(operation, directory.to_owned(), source))?;
     let mut undeclared = false;
     // Scan to completion even for boolean-only callers: a later directory-read
     // error must remain an error rather than becoming a cache miss.
     for entry in entries {
-        let entry = entry.map_err(|source| ArtifactCacheError::Io {
-            operation,
-            path: directory.to_owned(),
-            source,
-        })?;
+        let entry = entry.map_err(|source| cache_io(operation, directory.to_owned(), source))?;
         if !is_expected(&entry.file_name()) {
             undeclared = true;
             visit(entry);
@@ -1580,11 +1553,11 @@ fn cache_entry_root_is_valid(root: &Path) -> Result<bool, ArtifactCacheError> {
     match fs::symlink_metadata(&last_used) {
         Ok(metadata) => Ok(metadata.file_type().is_file()),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(true),
-        Err(source) => Err(ArtifactCacheError::Io {
-            operation: "inspect artifact cache use marker",
-            path: last_used,
+        Err(source) => Err(cache_io(
+            "inspect artifact cache use marker",
+            last_used,
             source,
-        }),
+        )),
     }
 }
 
@@ -1592,11 +1565,7 @@ fn is_plain_directory(path: &Path, operation: &'static str) -> Result<bool, Arti
     match fs::symlink_metadata(path) {
         Ok(metadata) => Ok(metadata.file_type().is_dir()),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
-        Err(source) => Err(ArtifactCacheError::Io {
-            operation,
-            path: path.to_owned(),
-            source,
-        }),
+        Err(source) => Err(cache_io(operation, path.to_owned(), source)),
     }
 }
 
@@ -1691,10 +1660,12 @@ fn materialize_outputs(
             &output.destination,
             preserve_matching.then_some(info),
         )
-        .map_err(|source| ArtifactCacheError::Io {
-            operation: "materialize artifact output",
-            path: output.destination.clone(),
-            source,
+        .map_err(|source| {
+            cache_io(
+                "materialize artifact output",
+                output.destination.clone(),
+                source,
+            )
         })?;
     }
     Ok(())
@@ -1748,23 +1719,27 @@ fn remove_abandoned_staging(
         Ok(entries) => entries,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
         Err(source) => {
-            return Err(ArtifactCacheError::Io {
-                operation: "read artifact staging root during pruning",
-                path: staging_root,
+            return Err(cache_io(
+                "read artifact staging root during pruning",
+                staging_root,
                 source,
-            });
+            ));
         }
     };
     for entry in entries {
-        let entry = entry.map_err(|source| ArtifactCacheError::Io {
-            operation: "read artifact staging entry during pruning",
-            path: staging_root.clone(),
-            source,
+        let entry = entry.map_err(|source| {
+            cache_io(
+                "read artifact staging entry during pruning",
+                staging_root.clone(),
+                source,
+            )
         })?;
-        let file_type = entry.file_type().map_err(|source| ArtifactCacheError::Io {
-            operation: "inspect artifact staging entry during pruning",
-            path: entry.path(),
-            source,
+        let file_type = entry.file_type().map_err(|source| {
+            cache_io(
+                "inspect artifact staging entry during pruning",
+                entry.path(),
+                source,
+            )
         })?;
         if !file_type.is_dir() {
             continue;
@@ -1780,15 +1755,19 @@ fn remove_abandoned_staging(
             continue;
         };
         let path = entry.path();
-        let bytes = directory_logical_size(&path).map_err(|source| ArtifactCacheError::Io {
-            operation: "measure abandoned artifact staging directory",
-            path: path.clone(),
-            source,
+        let bytes = directory_logical_size(&path).map_err(|source| {
+            cache_io(
+                "measure abandoned artifact staging directory",
+                path.clone(),
+                source,
+            )
         })?;
-        remove_path_if_present(&path).map_err(|source| ArtifactCacheError::Io {
-            operation: "remove abandoned artifact staging directory during pruning",
-            path,
-            source,
+        remove_path_if_present(&path).map_err(|source| {
+            cache_io(
+                "remove abandoned artifact staging directory during pruning",
+                path,
+                source,
+            )
         })?;
         report.record_uncommitted_removal(bytes);
     }
@@ -1838,40 +1817,35 @@ fn create_staging_directory(
     key: InputDigest,
 ) -> Result<PathBuf, ArtifactCacheError> {
     let staging_root = namespace.join("staging");
-    fs::create_dir_all(&staging_root).map_err(|source| ArtifactCacheError::Io {
-        operation: "create artifact staging root",
-        path: staging_root.clone(),
-        source,
-    })?;
+    fs::create_dir_all(&staging_root)
+        .map_err(|source| cache_io("create artifact staging root", staging_root.clone(), source))?;
     remove_same_key_staging(&staging_root, key)?;
     let sequence = STAGING_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let staging = staging_root.join(format!("{key}-{}-{sequence}", std::process::id()));
-    fs::create_dir_all(staging.join("outputs")).map_err(|source| ArtifactCacheError::Io {
-        operation: "create artifact transaction staging directory",
-        path: staging.clone(),
-        source,
+    fs::create_dir_all(staging.join("outputs")).map_err(|source| {
+        cache_io(
+            "create artifact transaction staging directory",
+            staging.clone(),
+            source,
+        )
     })?;
     Ok(staging)
 }
 
 fn remove_same_key_staging(root: &Path, key: InputDigest) -> Result<(), ArtifactCacheError> {
     let prefix = format!("{key}-");
-    let entries = fs::read_dir(root).map_err(|source| ArtifactCacheError::Io {
-        operation: "read artifact staging root",
-        path: root.to_owned(),
-        source,
-    })?;
+    let entries = fs::read_dir(root)
+        .map_err(|source| cache_io("read artifact staging root", root.to_owned(), source))?;
     for entry in entries {
-        let entry = entry.map_err(|source| ArtifactCacheError::Io {
-            operation: "read artifact staging entry",
-            path: root.to_owned(),
-            source,
-        })?;
+        let entry = entry
+            .map_err(|source| cache_io("read artifact staging entry", root.to_owned(), source))?;
         if entry.file_name().to_string_lossy().starts_with(&prefix) {
-            remove_path_if_present(&entry.path()).map_err(|source| ArtifactCacheError::Io {
-                operation: "remove abandoned artifact staging directory",
-                path: entry.path(),
-                source,
+            remove_path_if_present(&entry.path()).map_err(|source| {
+                cache_io(
+                    "remove abandoned artifact staging directory",
+                    entry.path(),
+                    source,
+                )
             })?;
         }
     }
@@ -1942,12 +1916,20 @@ fn identifier_digest(domain: &str, identifier: &str) -> String {
     digest_bytes(domain, identifier.as_bytes()).to_hex()
 }
 
-fn artifact_cache_fs_error(error: CacheFsError) -> ArtifactCacheError {
+fn cache_io(
+    operation: &'static str,
+    path: impl Into<PathBuf>,
+    source: io::Error,
+) -> ArtifactCacheError {
     ArtifactCacheError::Io {
-        operation: error.operation,
-        path: error.path,
-        source: error.source,
+        operation,
+        path: path.into(),
+        source,
     }
+}
+
+fn artifact_cache_fs_error(error: CacheFsError) -> ArtifactCacheError {
+    cache_io(error.operation, error.path, error.source)
 }
 
 impl ArtifactOutputValidation {

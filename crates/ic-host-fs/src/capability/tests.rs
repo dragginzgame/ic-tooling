@@ -398,13 +398,7 @@ fn entries_are_bounded_without_candidate_or_unicode_policy() {
 fn special_files_are_refused_without_waiting_for_a_fifo_writer() {
     let fixture = FixtureDirectory::new(&std::env::temp_dir(), "capability-fifo").unwrap();
     let fifo = fixture.path().join("fifo");
-    assert!(
-        std::process::Command::new("/usr/bin/mkfifo")
-            .arg(&fifo)
-            .status()
-            .unwrap()
-            .success()
-    );
+    crate::testing::create_fifo(&fifo, None).unwrap();
     let root = Directory::open_root(fixture.path(), OBSERVE)
         .unwrap()
         .unwrap();

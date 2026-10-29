@@ -500,18 +500,13 @@ pub fn capture_group_command(
     command: &mut Command,
     limits: OutputLimits,
 ) -> Result<CompletedExecution, ToolError> {
-    validate_limits(limits)?;
-    process::capture_command(
+    capture_group_command_with_cancellation(
         command,
         limits,
-        process::CleanupScope::ProcessGroup {
-            cleanup: crate::child::CleanupPolicy::KillAndWait,
-            deadline: None,
-        },
-        true,
+        crate::child::CleanupPolicy::KillAndWait,
+        None,
         || false,
     )
-    .map_err(|source| ToolError::Execution(Box::new(source)))
 }
 
 /// Capture a command with caller-selected group cleanup, deadline and cancellation.

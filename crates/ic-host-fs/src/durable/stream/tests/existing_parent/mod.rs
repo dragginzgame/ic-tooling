@@ -194,7 +194,7 @@ fn existing_parent_refuses_non_directories_without_blocking() {
     let regular = fixture.path().join("regular");
     fs::write(&regular, b"preserved").unwrap();
     let fifo = fixture.path().join("fifo");
-    crate::test_support::create_fifo(&fifo, None).unwrap();
+    crate::testing::create_fifo(&fifo, None).unwrap();
     for parent in [&fifo, &regular] {
         let mut child = Command::new(std::env::current_exe().unwrap())
             .args(["--exact", "durable::stream::tests::existing_parent::existing_parent_refuses_non_directories_without_blocking", "--test-threads=1"])

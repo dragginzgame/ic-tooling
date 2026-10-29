@@ -603,7 +603,7 @@ fn run_wasm_batch(
                     label: specs[index].label.clone(),
                 },
             )?;
-    let mut report = build_wasm_batch(specs, batch_config, |spec, index| {
+    let mut report = build_wasm_batch(specs, batch_config, |spec, index, maintenance| {
         let label = &specs[index].label;
         if let Some((_, observer)) = observation.as_mut() {
             observer(WasmBuildBatchProgressEvent::BuildStarted {
@@ -624,6 +624,7 @@ fn run_wasm_batch(
         };
         let attempt = build_wasm_canisters_cached_in_batch(
             spec,
+            maintenance,
             index,
             &mut resolver,
             progress_config.map(|config| (config, &mut forward as &mut dyn FnMut(_))),
@@ -656,6 +657,7 @@ where
     F: FnMut(
         &WasmBuildSpec,
         usize,
+        Option<SharedIncrementalTargetMaintenanceConfig>,
     ) -> Result<WasmBuildOutcome, (WasmBuildError, WasmBuildFailureDetails)>,
 {
     let started = Instant::now();
@@ -665,7 +667,7 @@ where
         let entry_started = Instant::now();
         let spec = &labeled.spec;
         let result = match maintenance.prepare_spec(spec) {
-            Ok(configured) => build(configured.as_ref().unwrap_or(spec), index),
+            Ok(configured) => build(spec, index, configured),
             Err(error) => Err((
                 error,
                 WasmBuildFailureDetails::specification(entry_started.elapsed()),
@@ -711,7 +713,7 @@ impl BatchMaintenanceTracker {
     fn prepare_spec(
         &mut self,
         spec: &WasmBuildSpec,
-    ) -> Result<Option<WasmBuildSpec>, WasmBuildError> {
+    ) -> Result<Option<SharedIncrementalTargetMaintenanceConfig>, WasmBuildError> {
         let Some(config) = self.config else {
             return Ok(None);
         };
@@ -730,10 +732,7 @@ impl BatchMaintenanceTracker {
         if !self.configured_targets.insert(canonical) {
             return Ok(None);
         }
-        Ok(Some(
-            spec.clone()
-                .with_shared_incremental_target_maintenance(config),
-        ))
+        Ok(Some(config))
     }
 }
 

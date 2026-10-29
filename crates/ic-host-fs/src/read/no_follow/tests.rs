@@ -151,7 +151,7 @@ fn ancestor_symlinks_remain_an_explicit_consumer_confinement_obligation() {
 fn fifo_without_a_writer_is_rejected_without_waiting_for_one() {
     let fixture = fixture();
     let path = fixture.path().join("fifo");
-    crate::test_support::create_fifo(&path, Some(0o600)).unwrap();
+    crate::testing::create_fifo(&path, Some(0o600)).unwrap();
     let (tx, rx) = mpsc::channel();
     let path_for_reader = path.clone();
     let reader = thread::spawn(move || {

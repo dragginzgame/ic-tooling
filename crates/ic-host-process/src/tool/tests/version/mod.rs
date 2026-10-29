@@ -51,14 +51,7 @@ fn no_follow_admission_rejects_aliases_and_nonfiles_before_execution() {
     let alias = fixture.path().join("alias");
     symlink(&candidate, &alias).unwrap();
     let fifo = fixture.path().join("fifo");
-    assert!(
-        std::process::Command::new("/usr/bin/mkfifo")
-            .args(["-m", "400"])
-            .arg(&fifo)
-            .status()
-            .unwrap()
-            .success()
-    );
+    ic_host_fs::testing::create_fifo(&fifo, Some(0o400)).unwrap();
     let digest = hash_file(&candidate, 1024 * 1024).unwrap().sha256;
     for rejected in [&alias, &fifo, fixture.path()] {
         let spec = VersionSpec {

@@ -261,15 +261,22 @@ fn resolve_excluded_roots(paths: &[PathBuf]) -> io::Result<Vec<PathBuf>> {
         .collect()
 }
 
+fn ordered_labeled_paths<L: AsRef<Path>, P>(
+    paths: impl IntoIterator<Item = (L, P)>,
+) -> Vec<(L, P)> {
+    let mut paths = paths.into_iter().collect::<Vec<_>>();
+    paths.sort_by(|(left, _), (right, _)| {
+        os_bytes(left.as_ref().as_os_str()).cmp(&os_bytes(right.as_ref().as_os_str()))
+    });
+    paths
+}
+
 pub(super) fn digest_labeled_paths<L: AsRef<Path>, P: AsRef<Path>>(
     domain: &str,
     paths: impl IntoIterator<Item = (L, P)>,
     excluded_roots: &[PathBuf],
 ) -> io::Result<InputDigest> {
-    let mut paths = paths.into_iter().collect::<Vec<_>>();
-    paths.sort_by(|(left, _), (right, _)| {
-        os_bytes(left.as_ref().as_os_str()).cmp(&os_bytes(right.as_ref().as_os_str()))
-    });
+    let paths = ordered_labeled_paths(paths);
 
     let excluded_roots = resolve_excluded_roots(excluded_roots)?;
     let mut visited_directories = BTreeSet::new();
@@ -313,10 +320,7 @@ pub(super) fn digest_labeled_paths_composable<'a>(
     excluded_roots: &[PathBuf],
     cache: &mut LabeledPathDigestCache,
 ) -> io::Result<InputDigest> {
-    let mut paths = paths.into_iter().collect::<Vec<_>>();
-    paths.sort_by(|(left, _), (right, _)| {
-        os_bytes(left.as_os_str()).cmp(&os_bytes(right.as_os_str()))
-    });
+    let paths = ordered_labeled_paths(paths);
     let excluded_roots = resolve_excluded_roots(excluded_roots)?;
     let mut hasher = InputHasher::new(&format!("{domain}/composable-v1"));
     for (label, path) in paths {

@@ -25,6 +25,26 @@ pub mod selection;
 use ic_host_artifacts::batch::validate_labels;
 use std::{collections::BTreeMap, path::Path};
 
+/// Invalid Cargo dependency-tree evidence returned by a grouping observer.
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum CargoTreeError {
+    /// A root line did not name a package.
+    #[error("empty Cargo tree root")]
+    EmptyRoot,
+    /// A selected root appeared more than once.
+    #[error("duplicate Cargo tree root")]
+    DuplicateRoot,
+    /// Dependency lines appeared before any root.
+    #[error("Cargo dependency has no selected root")]
+    MissingRoot,
+    /// The observer returned no dependency trees.
+    #[error("empty Cargo dependency forest")]
+    EmptyForest,
+    /// Missing or additional roots prevent comparison with the requested selection.
+    #[error("Cargo dependency roots do not match the selected packages")]
+    SelectedRootsMismatch,
+}
+
 /// Partition packages without changing their resolved normal/build dependency trees.
 ///
 /// The caller supplies the recipe's Cargo selection, target and tree observer.
@@ -39,10 +59,18 @@ use std::{collections::BTreeMap, path::Path};
 /// invoking the observer, with zero-based indices in the error. An empty
 /// package list returns an empty plan without invoking the observer.
 ///
+/// Packages are considered in input order and only appended to the most recent
+/// group. A feature conflict starts a new group; earlier groups are not retried.
+/// For `n > 0` packages this makes at most `2 * n - 1` observer calls, including
+/// each isolated tree. Groups may be conservative rather than maximally packed.
+/// Every candidate is observed through Cargo; no feature union is inferred from
+/// isolated metadata and no observations are reused across calls.
+///
 /// # Errors
 /// Returns invalid package input, the observer's original boxed error without
-/// conversion, or invalid dependency-tree evidence. Capture error identities
-/// belong to the observer's runner, independently of Build's Host generation.
+/// conversion, or [`CargoTreeError`] for invalid dependency-tree evidence.
+/// Capture error identities belong to the observer's runner, independently of
+/// Build's Host generation.
 pub fn compatible_package_groups(
     workspace: &Path,
     packages: &[String],
@@ -56,22 +84,15 @@ pub fn compatible_package_groups(
     let mut isolated = BTreeMap::new();
     let mut groups: Vec<Vec<String>> = Vec::new();
     for package in packages {
-        let mut tree = resolved_trees(
+        let tree = resolved_trees(
             workspace,
             &[package.as_str()],
             target,
             selection,
             &mut observe_tree,
         )?;
-        if tree.len() != 1 {
-            return Err("Cargo returned additional isolated package roots".into());
-        }
-        let selected = tree
-            .remove(package)
-            .ok_or("Cargo omitted the selected package tree")?;
-        isolated.insert(package.clone(), selected);
-        let mut selected_group = None;
-        for (index, group) in groups.iter().enumerate() {
+        isolated.extend(tree);
+        if let Some(group) = groups.last_mut() {
             let candidate = group
                 .iter()
                 .map(String::as_str)
@@ -80,15 +101,11 @@ pub fn compatible_package_groups(
             let combined =
                 resolved_trees(workspace, &candidate, target, selection, &mut observe_tree)?;
             if preserves_individual_trees(&isolated, &combined, &candidate) {
-                selected_group = Some(index);
-                break;
+                group.push(package.clone());
+                continue;
             }
         }
-        if let Some(index) = selected_group {
-            groups[index].push(package.clone());
-        } else {
-            groups.push(vec![package.clone()]);
-        }
+        groups.push(vec![package.clone()]);
     }
     Ok(groups)
 }
@@ -113,10 +130,15 @@ fn resolved_trees(
         offline: selection.offline,
         features: &selection.features,
     })?;
-    parse_trees(&tree)
+    let trees = parse_trees(&tree)?;
+    if trees.len() != packages.len() || packages.iter().any(|package| !trees.contains_key(*package))
+    {
+        return Err(CargoTreeError::SelectedRootsMismatch.into());
+    }
+    Ok(trees)
 }
 
-fn parse_trees(text: &str) -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+fn parse_trees(text: &str) -> Result<BTreeMap<String, String>, CargoTreeError> {
     let mut trees = BTreeMap::new();
     let mut root = None;
     for line in text.lines().filter(|line| !line.is_empty()) {
@@ -124,20 +146,20 @@ fn parse_trees(text: &str) -> Result<BTreeMap<String, String>, Box<dyn std::erro
             let name = package
                 .split_whitespace()
                 .next()
-                .ok_or("empty Cargo tree root")?;
+                .ok_or(CargoTreeError::EmptyRoot)?;
             if trees.insert(name.to_string(), String::new()).is_some() {
-                return Err("duplicate Cargo tree root".into());
+                return Err(CargoTreeError::DuplicateRoot);
             }
             root = Some(name);
         }
         let tree = root
             .and_then(|name| trees.get_mut(name))
-            .ok_or("Cargo dependency has no selected root")?;
+            .ok_or(CargoTreeError::MissingRoot)?;
         tree.push_str(line);
         tree.push('\n');
     }
     if trees.is_empty() {
-        return Err("empty Cargo dependency forest".into());
+        return Err(CargoTreeError::EmptyForest);
     }
     Ok(trees)
 }

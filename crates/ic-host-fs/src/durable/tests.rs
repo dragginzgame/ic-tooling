@@ -506,7 +506,7 @@ fn private_lock_refuses_missing_parents_and_unsafe_entries_without_changes() {
     let dangling = fixture.path().join("dangling");
     symlink(&missing, &dangling).unwrap();
     let fifo = fixture.path().join("fifo");
-    crate::test_support::create_fifo(&fifo, None).unwrap();
+    crate::testing::create_fifo(&fifo, None).unwrap();
     for path in [&link, &dangling, fixture.path(), &fifo] {
         let before = fs::symlink_metadata(path).unwrap();
         assert!(matches!(
@@ -582,7 +582,7 @@ fn lock_errors_preserve_admission_and_original_io_causes() {
     let link = fixture.path().join("link");
     std::os::unix::fs::symlink(&target, &link).unwrap();
     let fifo = fixture.path().join("fifo");
-    crate::test_support::create_fifo(&fifo, None).unwrap();
+    crate::testing::create_fifo(&fifo, None).unwrap();
     // Existing special entries must be rejected without staging in their parent.
     for path in [fixture.path(), &link, &fifo, Path::new("/dev/null")] {
         let result = open_regular_lock_file_with_parents(path);

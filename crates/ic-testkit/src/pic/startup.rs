@@ -1757,13 +1757,9 @@ mod tests {
         drop((stdout, stderr));
         fs::remove_file(&files.stdout).unwrap();
         fs::remove_file(&files.stderr).unwrap();
-        assert!(
-            Command::new("mkfifo")
-                .args([&files.port, &files.stdout, &files.stderr])
-                .status()
-                .expect("create FIFO startup files")
-                .success()
-        );
+        for path in [&files.port, &files.stdout, &files.stderr] {
+            ic_host_fs::testing::create_fifo(path, None).expect("create FIFO startup file");
+        }
         for path in [&files.port, &files.stdout, &files.stderr] {
             // A delayed writer bounds a blocked read and records whether the
             // reader needed it. Completion cancels the writer; with no reader,
@@ -2053,13 +2049,7 @@ mod tests {
         assert!(StartupFiles::create(Some((stdout.clone(), stderr.clone()))).is_err());
         assert_eq!(fs::read(&stdout).unwrap(), b"retained attempt");
         fs::remove_file(stderr.clone()).unwrap();
-        assert!(
-            Command::new("mkfifo")
-                .arg(&stderr)
-                .status()
-                .unwrap()
-                .success()
-        );
+        ic_host_fs::testing::create_fifo(&stderr, None).unwrap();
         fs::remove_file(stdout.clone()).unwrap();
         assert!(StartupFiles::create(Some((stdout.clone(), stderr))).is_err());
         assert!(stdout.is_file());

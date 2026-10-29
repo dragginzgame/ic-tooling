@@ -89,7 +89,7 @@ fn verified_copy_refuses_fifo_without_a_writer_and_follows_selected_symlinks() {
     let output = fixture.path().join("output");
     fs::write(&source, b"bytes").unwrap();
     symlink(&source, &alias).unwrap();
-    crate::test_support::create_fifo(&fifo, None).unwrap();
+    crate::testing::create_fifo(&fifo, None).unwrap();
     let options = WriteOptions {
         mode: super::super::PublicationMode::Replace,
         permissions: 0o600,

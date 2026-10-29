@@ -68,6 +68,31 @@ pub fn create_fixture_directory(parent: &Path, prefix: &str) -> io::Result<PathB
     crate::directory::create_unique_directory(&parent, prefix, 0o700, None)
 }
 
+/// Create a real FIFO without opening either endpoint; callers select its mode.
+///
+/// Uses the native POSIX utility on Unix, including macOS. The path must be
+/// absent and have a caller-owned parent; no cleanup or byte IO is performed.
+/// # Errors
+/// Returns utility spawn or nonzero-exit failures.
+#[cfg(unix)]
+pub fn create_fifo(path: &Path, permissions: Option<u32>) -> io::Result<()> {
+    // rustix's mkfifoat is unavailable on Apple hosts. Use the native POSIX
+    // utility consistently so every special-file fixture exercises a real FIFO.
+    let mut command = std::process::Command::new("/usr/bin/mkfifo");
+    command.env_clear();
+    if let Some(permissions) = permissions {
+        command.args(["-m", &format!("{permissions:o}")]);
+    }
+    let status = command.arg(path).status()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(io::Error::other(format!(
+            "FIFO fixture creation failed: {status}"
+        )))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

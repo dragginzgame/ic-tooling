@@ -209,17 +209,11 @@ pub fn setup(directory: &Path, mut interrupted: impl FnMut() -> bool) -> Result<
             &mut interrupted,
         )
         .and_then(ic_host_process::tool::CompletedExecution::require_success);
-        if let Some(stderr) = outcome
-            .as_ref()
-            .ok()
-            .map(|completed| &completed.stderr)
-            .or_else(|| {
-                outcome
-                    .as_ref()
-                    .err()
-                    .and_then(|error| error.evidence())
-                    .map(|evidence| &evidence.stderr)
-            })
+        let stderr = match &outcome {
+            Ok(completed) => Some(completed.stderr.as_slice()),
+            Err(error) => error.evidence().map(|evidence| evidence.stderr.as_slice()),
+        };
+        if let Some(stderr) = stderr
             && let Err(record_error) = write_evidence(
                 &archive
                     .parent()

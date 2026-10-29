@@ -1,7 +1,7 @@
 use super::*;
 use ic_host_artifacts::batch::BatchLabelError;
 use ic_host_process::tool::{OutputLimit, OutputLimits, capture_command};
-use std::process::Command;
+use std::{fmt::Write, fs, process::Command};
 
 fn execute_tree(
     spec: &observation::CargoTreeSpec<'_>,
@@ -104,10 +104,9 @@ fn unsuccessful_tree_commands_preserve_status_and_bounded_diagnostics() {
         },
     )
     .unwrap_err();
-    assert!(malformed.downcast_ref::<ToolError>().is_none());
     assert_eq!(
-        malformed.to_string(),
-        "Cargo dependency has no selected root"
+        malformed.downcast_ref::<CargoTreeError>(),
+        Some(&CargoTreeError::MissingRoot)
     );
 }
 
@@ -153,7 +152,105 @@ fn incomplete_tree_capture_and_spawn_failures_preserve_typed_host_errors() {
     );
     fs::remove_dir_all(root).unwrap();
 }
-use std::fs;
+
+#[test]
+fn grouping_bounds_observer_work_for_compatible_and_conflicting_packages() {
+    for count in [1, 4, 16, 64] {
+        let packages = (0..count).map(|i| format!("role-{i}")).collect::<Vec<_>>();
+        for conflicting in [false, true] {
+            let mut calls = 0;
+            let groups = compatible_package_groups(
+                Path::new("."),
+                &packages,
+                "wasm32-unknown-unknown",
+                &selection::CargoSelection::default(),
+                |spec| {
+                    calls += 1;
+                    let features = if conflicting && spec.packages.len() > 1 {
+                        "unified"
+                    } else {
+                        "isolated"
+                    };
+                    let mut text = String::new();
+                    for name in spec.packages {
+                        write!(text, "0{name} v1.0.0\t\n1shared v1.0.0\t{features}\n").unwrap();
+                    }
+                    Ok(text)
+                },
+            )
+            .unwrap();
+            assert_eq!(calls, 2 * count - 1);
+            if conflicting {
+                assert_eq!(
+                    groups,
+                    packages.iter().map(|p| vec![p.clone()]).collect::<Vec<_>>()
+                );
+            } else {
+                assert_eq!(groups.as_slice(), std::slice::from_ref(&packages));
+            }
+        }
+    }
+}
+
+#[test]
+fn grouping_keeps_safe_input_order_without_retrying_earlier_groups() {
+    let groups = compatible_package_groups(
+        Path::new("."),
+        &["left".into(), "right".into(), "peer".into()],
+        "wasm32-unknown-unknown",
+        &selection::CargoSelection::default(),
+        |spec| {
+            let has_right = spec.packages.contains(&"right");
+            let has_peer = spec.packages.iter().any(|p| *p != "right");
+            let mut text = String::new();
+            for name in spec.packages {
+                let features = if *name == "right" {
+                    "extra"
+                } else if has_right && has_peer {
+                    "base,extra"
+                } else {
+                    "base"
+                };
+                write!(text, "0{name} v1.0.0\t\n1shared v1.0.0\t{features}\n").unwrap();
+            }
+            Ok(text)
+        },
+    )
+    .unwrap();
+    assert_eq!(groups, [vec!["left"], vec!["right"], vec!["peer"]]);
+}
+
+#[test]
+fn malformed_isolated_and_combined_observations_preserve_typed_failures() {
+    for (text, expected) in [
+        ("", CargoTreeError::EmptyForest),
+        ("0\n", CargoTreeError::EmptyRoot),
+        (
+            "0left v1.0.0\n0left v1.0.0\n",
+            CargoTreeError::DuplicateRoot,
+        ),
+        ("1dependency v1.0.0\n", CargoTreeError::MissingRoot),
+        ("0other v1.0.0\n", CargoTreeError::SelectedRootsMismatch),
+    ] {
+        for combined in [false, true] {
+            let error = compatible_package_groups(
+                Path::new("."),
+                &["left".into(), "right".into()],
+                "wasm32-unknown-unknown",
+                &selection::CargoSelection::default(),
+                |spec| {
+                    Ok(if !combined || spec.packages.len() > 1 {
+                        text.into()
+                    } else {
+                        format!("0{} v1.0.0\n", spec.packages[0])
+                    })
+                },
+            )
+            .unwrap_err();
+            assert_eq!(error.downcast_ref::<CargoTreeError>(), Some(&expected));
+        }
+    }
+}
 
 #[test]
 fn real_cargo_resolution_batches_peers_and_splits_feature_growth() {

@@ -662,22 +662,19 @@ where
         timings: &mut BaselinePoolTimings,
     ) -> Result<BaselinePoolDisposition, PreparationFailure<R::Error>> {
         let (disposition, original) = match slot.state() {
-            Slot::Reusable(_) => match self.prepare_reused(slot, timings) {
-                Ok(()) => {
+            Slot::Reusable(_) => {
+                let Err(original) = self.prepare_reused(slot, timings) else {
                     return Ok(BaselinePoolDisposition::Restored);
-                }
-                Err(original) => match self.failure_disposition(&original) {
-                    FailureDisposition::Fatal => {
-                        // A failed restore may have partially changed the instance.
-                        // Discard it without treating a fatal failure as a rebuild.
-                        Self::discard_stale_slot(slot, timings);
-                        return Err(PreparationFailure::Single(original));
-                    }
-                    FailureDisposition::Rebuild(reason) => {
-                        (BaselinePoolDisposition::Rebuilt(reason), Some(original))
-                    }
-                },
-            },
+                };
+                let FailureDisposition::Rebuild(reason) = self.failure_disposition(&original)
+                else {
+                    // A failed restore may have partially changed the instance.
+                    // Discard it without treating a fatal failure as a rebuild.
+                    Self::discard_stale_slot(slot, timings);
+                    return Err(PreparationFailure::Single(original));
+                };
+                (BaselinePoolDisposition::Rebuilt(reason), Some(original))
+            }
             Slot::Empty => (BaselinePoolDisposition::Built, None),
             Slot::Invalidated { reason, .. } => {
                 (BaselinePoolDisposition::Rebuilt(reason.clone()), None)

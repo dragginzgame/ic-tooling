@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.70.1]
+
+### ⬆️ Dependencies
+
+- Adopt IC Wire 0.7.22 for Testkit's typed calls and private probe protocol,
+  preserving existing features, APIs, protocol bytes and admission rules.
+  [Details](docs/changelog/0.70.md#0701---unreleased).
+
+### 🧹 Cleanup
+
+- Bound Cargo package grouping to at most `2n−1` observations while preserving
+  each package's isolated feature graph. Groups may be conservatively split.
+  [#266 — Bound repeated Cargo resolution](https://github.com/dragginzgame/ic-tooling/issues/266).
+- Consolidate private probe contracts, graph-check arguments and batch maintenance
+  plumbing without changing protocol bytes, build recipes or recovery policy.
+- Simplify process capture, baseline preparation, digest ordering and cache
+  publication diagnostics; share native FIFO test fixtures.
+
 ## [0.70.0] - 2026-10-29
 
 ### ⚠️ Breaking

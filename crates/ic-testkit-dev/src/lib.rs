@@ -60,13 +60,12 @@ pub fn worker_main() -> ExitCode {
 /// Project the private probe's explicit native frame contract for `PocketIC` calls.
 #[must_use]
 pub const fn probe_wire_spec(
-    method: &'static str,
-    method_id: u64,
+    method: ic_testkit_perf_probe::protocol::Method,
 ) -> ic_testkit::pic::WireCallSpec {
     ic_testkit::pic::WireCallSpec {
-        method,
-        method_id,
-        request_limits: ic_testkit_perf_probe::protocol::LIMITS,
-        response_limits: ic_testkit_perf_probe::protocol::LIMITS,
+        method: method.name,
+        method_id: method.id,
+        request_limits: method.request_limits,
+        response_limits: method.response_limits,
     }
 }

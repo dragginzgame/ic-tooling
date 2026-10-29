@@ -63,7 +63,7 @@ fn symlinks_and_special_entries_reject_without_following_or_waiting() {
         ));
         fs::remove_file(root.join("link")).unwrap();
     }
-    crate::test_support::create_fifo(&root.join("pipe"), None).unwrap();
+    crate::testing::create_fifo(&root.join("pipe"), None).unwrap();
     assert!(matches!(
         checksum_directory(&root, u64::MAX),
         Err(TreeChecksumError::UnsupportedEntry {

@@ -89,6 +89,12 @@ Build 0.23 renders metadata/tree commands through each specification's
 accepts a tree observer. All these observations execute through the caller's
 selected runner, preserving its Host generation, budgets and typed failures.
 Admit successful, complete output before decoding.
+Grouping considers packages in input order and tries only the latest group,
+requiring at most `2n - 1` tree observations for `n > 0` packages. Each proposed
+group must preserve every isolated normal/build dependency tree. Earlier groups
+are not retried, so the result can contain more groups than a packing search.
+Malformed forests or mismatched selected roots return `cargo::CargoTreeError`;
+the observer's original typed execution failures remain unchanged.
 Build uses neither Host FS's `capability` nor `temporary-file` features; both
 remain disabled. Consumers using those optional APIs select them explicitly.
 `cargo::discovery::declared_workspace_root_from` finds the nearest explicit

@@ -26,7 +26,7 @@ use ic_testkit::pic::{
     PocketIcInstance, PocketIcStartupConfig, PreparedBaseline, ResetPolicies, ResetReceipt,
     ResetRequirements, SnapshotRestoreFunding, query_wire, update_wire,
 };
-use ic_testkit_perf_probe::protocol::{InspectState, MutateState, SeedState, State};
+use ic_testkit_perf_probe::protocol::{INSPECT_STATE, MUTATE_STATE, SEED_STATE, State};
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 const TIMEOUT: Duration = Duration::from_secs(30);
@@ -110,7 +110,7 @@ impl Recipe {
                 pic.instance(),
                 id,
                 Principal::anonymous(),
-                probe_wire_spec(SeedState::NAME, SeedState::ID),
+                probe_wire_spec(SEED_STATE),
                 &self.state_bytes,
             )
             .map_err(recipe_error)?;
@@ -135,7 +135,7 @@ impl Recipe {
                 pic,
                 *id,
                 Principal::anonymous(),
-                probe_wire_spec(InspectState::NAME, InspectState::ID),
+                probe_wire_spec(INSPECT_STATE),
                 &(),
             )
             .map_err(recipe_error)?;
@@ -154,7 +154,7 @@ impl Recipe {
                 pic,
                 *id,
                 Principal::anonymous(),
-                probe_wire_spec(MutateState::NAME, MutateState::ID),
+                probe_wire_spec(MUTATE_STATE),
                 &(),
             )?;
         }

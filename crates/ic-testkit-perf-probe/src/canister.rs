@@ -1,6 +1,6 @@
 use crate::protocol::{
-    self, BenchmarkOnce, BenchmarkTrap, InspectState, MutateState, Ping, QueryCaller, SeedState,
-    State, UpdateCaller,
+    self, BENCHMARK_ONCE, BENCHMARK_TRAP, INSPECT_STATE, MUTATE_STATE, PING, QUERY_CALLER,
+    SEED_STATE, State, UPDATE_CALLER,
 };
 use ic_platform::cdk::{query, update};
 use ic_testkit::performance;
@@ -15,8 +15,8 @@ thread_local! {
 // Deterministic snapshot-contained state for the opt-in fixture benchmark.
 #[update(
     guard = "guard",
-    decode_with = "decode::<u32, {SeedState::ID}>",
-    encode_with = "encode_unit::<{SeedState::ID}>"
+    decode_with = "decode::<u32, {SEED_STATE.id}>",
+    encode_with = "encode_unit::<{SEED_STATE.id}>"
 )]
 fn fixture_seed_state(bytes: u32) {
     FIXTURE_STATE.with_borrow_mut(|state| *state = (0, vec![42; bytes as usize]));
@@ -24,8 +24,8 @@ fn fixture_seed_state(bytes: u32) {
 
 #[update(
     guard = "guard",
-    decode_with = "decode::<(), {MutateState::ID}>",
-    encode_with = "encode_unit::<{MutateState::ID}>"
+    decode_with = "decode::<(), {MUTATE_STATE.id}>",
+    encode_with = "encode_unit::<{MUTATE_STATE.id}>"
 )]
 fn fixture_mutate_state() {
     FIXTURE_STATE.with_borrow_mut(|state| {
@@ -38,8 +38,8 @@ fn fixture_mutate_state() {
 
 #[query(
     guard = "guard",
-    decode_with = "decode::<(), {InspectState::ID}>",
-    encode_with = "encode::<State, {InspectState::ID}>"
+    decode_with = "decode::<(), {INSPECT_STATE.id}>",
+    encode_with = "encode::<State, {INSPECT_STATE.id}>"
 )]
 fn fixture_state() -> State {
     FIXTURE_STATE.with_borrow(|state| State {
@@ -51,8 +51,8 @@ fn fixture_state() -> State {
 
 #[query(
     guard = "guard",
-    decode_with = "decode::<(), {Ping::ID}>",
-    encode_with = "encode::<Text<4>, {Ping::ID}>"
+    decode_with = "decode::<(), {PING.id}>",
+    encode_with = "encode::<Text<4>, {PING.id}>"
 )]
 fn ping() -> Text<4> {
     Text::new("pong".into()).expect("fixed probe reply fits")
@@ -60,8 +60,8 @@ fn ping() -> Text<4> {
 
 #[update(
     guard = "guard",
-    decode_with = "decode::<(), {BenchmarkOnce::ID}>",
-    encode_with = "encode::<u64, {BenchmarkOnce::ID}>"
+    decode_with = "decode::<(), {BENCHMARK_ONCE.id}>",
+    encode_with = "encode::<u64, {BENCHMARK_ONCE.id}>"
 )]
 fn benchmark_once() -> u64 {
     performance::try_measure("probe/benchmark_once:start").expect("static benchmark label");
@@ -77,8 +77,8 @@ fn benchmark_once() -> u64 {
 
 #[update(
     guard = "guard",
-    decode_with = "decode::<(), {BenchmarkTrap::ID}>",
-    encode_with = "encode_unit::<{BenchmarkTrap::ID}>"
+    decode_with = "decode::<(), {BENCHMARK_TRAP.id}>",
+    encode_with = "encode_unit::<{BENCHMARK_TRAP.id}>"
 )]
 fn benchmark_start_then_trap() {
     performance::try_measure("probe/benchmark_start_then_trap:start")
@@ -88,8 +88,8 @@ fn benchmark_start_then_trap() {
 
 #[query(
     guard = "guard",
-    decode_with = "decode::<(), {QueryCaller::ID}>",
-    encode_with = "encode::<Bytes<29>, {QueryCaller::ID}>"
+    decode_with = "decode::<(), {QUERY_CALLER.id}>",
+    encode_with = "encode::<Bytes<29>, {QUERY_CALLER.id}>"
 )]
 fn fixture_query_caller() -> Bytes<29> {
     Bytes::new(ic_platform::cdk::api::msg_caller().as_slice().to_vec())
@@ -98,8 +98,8 @@ fn fixture_query_caller() -> Bytes<29> {
 
 #[update(
     guard = "guard",
-    decode_with = "decode::<(), {UpdateCaller::ID}>",
-    encode_with = "encode::<Bytes<29>, {UpdateCaller::ID}>"
+    decode_with = "decode::<(), {UPDATE_CALLER.id}>",
+    encode_with = "encode::<Bytes<29>, {UPDATE_CALLER.id}>"
 )]
 fn fixture_update_caller() -> Bytes<29> {
     Bytes::new(ic_platform::cdk::api::msg_caller().as_slice().to_vec())

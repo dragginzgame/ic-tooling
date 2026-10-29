@@ -25,109 +25,53 @@ pub struct State {
     pub first: Option<u8>,
 }
 
-/// Seed the fixture's deterministic heap allocation.
-pub struct SeedState;
-impl SeedState {
-    /// Stable Wire method discriminator for this private endpoint.
-    pub const ID: u64 = 0x544b_5052_4f42_0001;
+/// Complete private endpoint identity and frame budgets.
+#[derive(Clone, Copy)]
+pub struct Method {
+    /// Stable Wire method discriminator.
+    pub id: u64,
     /// Exported canister method name.
-    pub const NAME: &'static str = "fixture_seed_state";
+    pub name: &'static str,
     /// Request frame and decoding budgets.
-    pub const REQUEST_LIMITS: Limits = LIMITS;
+    pub request_limits: Limits,
     /// Response frame and decoding budgets.
-    pub const RESPONSE_LIMITS: Limits = LIMITS;
+    pub response_limits: Limits,
 }
+
+impl Method {
+    const fn new(id: u64, name: &'static str) -> Self {
+        Self {
+            id,
+            name,
+            request_limits: LIMITS,
+            response_limits: LIMITS,
+        }
+    }
+}
+
+/// Seed the fixture's deterministic heap allocation.
+pub const SEED_STATE: Method = Method::new(0x544b_5052_4f42_0001, "fixture_seed_state");
 
 /// Mutate the fixture's counter and first byte.
-pub struct MutateState;
-impl MutateState {
-    /// Stable Wire method discriminator for this private endpoint.
-    pub const ID: u64 = 0x544b_5052_4f42_0002;
-    /// Exported canister method name.
-    pub const NAME: &'static str = "fixture_mutate_state";
-    /// Request frame and decoding budgets.
-    pub const REQUEST_LIMITS: Limits = LIMITS;
-    /// Response frame and decoding budgets.
-    pub const RESPONSE_LIMITS: Limits = LIMITS;
-}
+pub const MUTATE_STATE: Method = Method::new(0x544b_5052_4f42_0002, "fixture_mutate_state");
 
 /// Inspect the fixture's heap without mutating it.
-pub struct InspectState;
-impl InspectState {
-    /// Stable Wire method discriminator for this private endpoint.
-    pub const ID: u64 = 0x544b_5052_4f42_0003;
-    /// Exported canister method name.
-    pub const NAME: &'static str = "fixture_state";
-    /// Request frame and decoding budgets.
-    pub const REQUEST_LIMITS: Limits = LIMITS;
-    /// Response frame and decoding budgets.
-    pub const RESPONSE_LIMITS: Limits = LIMITS;
-}
+pub const INSPECT_STATE: Method = Method::new(0x544b_5052_4f42_0003, "fixture_state");
 
 /// Confirm the same canister remains callable after an intentional trap.
-pub struct Ping;
-impl Ping {
-    /// Stable Wire method discriminator for this private endpoint.
-    pub const ID: u64 = 0x544b_5052_4f42_0004;
-    /// Exported canister method name.
-    pub const NAME: &'static str = "ping";
-    /// Request frame and decoding budgets.
-    pub const REQUEST_LIMITS: Limits = LIMITS;
-    /// Response frame and decoding budgets.
-    pub const RESPONSE_LIMITS: Limits = LIMITS;
-}
+pub const PING: Method = Method::new(0x544b_5052_4f42_0004, "ping");
 
 /// Execute the measured arithmetic workload.
-pub struct BenchmarkOnce;
-impl BenchmarkOnce {
-    /// Stable Wire method discriminator for this private endpoint.
-    pub const ID: u64 = 0x544b_5052_4f42_0005;
-    /// Exported canister method name.
-    pub const NAME: &'static str = "benchmark_once";
-    /// Request frame and decoding budgets.
-    pub const REQUEST_LIMITS: Limits = LIMITS;
-    /// Response frame and decoding budgets.
-    pub const RESPONSE_LIMITS: Limits = LIMITS;
-}
+pub const BENCHMARK_ONCE: Method = Method::new(0x544b_5052_4f42_0005, "benchmark_once");
 
 /// Emit a start marker and intentionally trap before its matching end.
-pub struct BenchmarkTrap;
-impl BenchmarkTrap {
-    /// Stable Wire method discriminator for this private endpoint.
-    pub const ID: u64 = 0x544b_5052_4f42_0006;
-    /// Exported canister method name.
-    pub const NAME: &'static str = "benchmark_start_then_trap";
-    /// Request frame and decoding budgets.
-    pub const REQUEST_LIMITS: Limits = LIMITS;
-    /// Response frame and decoding budgets.
-    pub const RESPONSE_LIMITS: Limits = LIMITS;
-}
+pub const BENCHMARK_TRAP: Method = Method::new(0x544b_5052_4f42_0006, "benchmark_start_then_trap");
 
 /// Observe the actual caller of a query through the typed native adapter.
-pub struct QueryCaller;
-impl QueryCaller {
-    /// Stable Wire method discriminator for this private endpoint.
-    pub const ID: u64 = 0x544b_5052_4f42_0007;
-    /// Exported canister method name.
-    pub const NAME: &'static str = "fixture_query_caller";
-    /// Request frame and decoding budgets.
-    pub const REQUEST_LIMITS: Limits = LIMITS;
-    /// Response frame and decoding budgets.
-    pub const RESPONSE_LIMITS: Limits = LIMITS;
-}
+pub const QUERY_CALLER: Method = Method::new(0x544b_5052_4f42_0007, "fixture_query_caller");
 
 /// Observe the actual caller of an update through the typed native adapter.
-pub struct UpdateCaller;
-impl UpdateCaller {
-    /// Stable Wire method discriminator for this private endpoint.
-    pub const ID: u64 = 0x544b_5052_4f42_0008;
-    /// Exported canister method name.
-    pub const NAME: &'static str = "fixture_update_caller";
-    /// Request frame and decoding budgets.
-    pub const REQUEST_LIMITS: Limits = LIMITS;
-    /// Response frame and decoding budgets.
-    pub const RESPONSE_LIMITS: Limits = LIMITS;
-}
+pub const UPDATE_CALLER: Method = Method::new(0x544b_5052_4f42_0008, "fixture_update_caller");
 
 #[cfg(test)]
 mod tests {
@@ -136,13 +80,13 @@ mod tests {
     #[test]
     fn selected_limits_admit_the_largest_control_values() {
         let request =
-            ic_wire::native::encode_request(SeedState::ID, &u32::MAX, SeedState::REQUEST_LIMITS)
+            ic_wire::native::encode_request(SEED_STATE.id, &u32::MAX, SEED_STATE.request_limits)
                 .unwrap();
         assert_eq!(
             ic_wire::native::decode_request::<u32>(
-                SeedState::ID,
+                SEED_STATE.id,
                 &request,
-                SeedState::REQUEST_LIMITS
+                SEED_STATE.request_limits
             ),
             Ok(u32::MAX)
         );
@@ -153,31 +97,31 @@ mod tests {
                 first,
             };
             let reply = ic_wire::native::encode_response(
-                InspectState::ID,
+                INSPECT_STATE.id,
                 &state,
-                InspectState::RESPONSE_LIMITS,
+                INSPECT_STATE.response_limits,
             )
             .unwrap();
             assert_eq!(
                 ic_wire::native::decode_response::<State>(
-                    InspectState::ID,
+                    INSPECT_STATE.id,
                     &reply,
-                    InspectState::RESPONSE_LIMITS
+                    INSPECT_STATE.response_limits
                 ),
                 Ok(state)
             );
         }
         let reply = ic_wire::native::encode_response(
-            BenchmarkOnce::ID,
+            BENCHMARK_ONCE.id,
             &u64::MAX,
-            BenchmarkOnce::RESPONSE_LIMITS,
+            BENCHMARK_ONCE.response_limits,
         )
         .unwrap();
         assert_eq!(
             ic_wire::native::decode_response::<u64>(
-                BenchmarkOnce::ID,
+                BENCHMARK_ONCE.id,
                 &reply,
-                BenchmarkOnce::RESPONSE_LIMITS
+                BENCHMARK_ONCE.response_limits
             ),
             Ok(u64::MAX)
         );

@@ -98,7 +98,7 @@ fn bounds_and_unsafe_entries_reject_without_removing_evidence() {
         Err(TreeChecksumError::UnsupportedEntry { kind: FileType::Symlink, path }) if path == file)
     );
     fs::remove_file(&file).unwrap();
-    crate::test_support::create_fifo(&file, None).unwrap();
+    crate::testing::create_fifo(&file, None).unwrap();
     assert!(
         matches!(sync_checksum_directory_at(&directory, root, 3, |_, _| Ok(())),
         Err(TreeChecksumError::UnsupportedEntry { kind: FileType::Fifo, path }) if path == file)
