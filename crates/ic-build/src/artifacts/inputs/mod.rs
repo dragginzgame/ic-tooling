@@ -11,6 +11,7 @@ use crate::artifacts::{
     cache_fs::canonicalize_allow_missing,
     digest::{InputDigest, InputPathError, InputTreeEntry, InputTreeWalk},
 };
+use crate::cargo::selection::is_normal_component;
 use ic_host_artifacts::artifact::Sha256Digest;
 use sha2::{Digest as _, Sha256};
 use std::{
@@ -130,10 +131,7 @@ impl InputEvidenceSpec {
             }
         }
         for name in &spec.excluded_names {
-            let mut components = Path::new(name).components();
-            if !matches!(components.next(), Some(Component::Normal(_)))
-                || components.next().is_some()
-            {
+            if !is_normal_component(Path::new(name)) {
                 return Err(input_io(
                     Path::new(name),
                     io::Error::new(
@@ -194,7 +192,12 @@ impl InputEvidence {
     /// # Errors
     /// Returns non-absolute paths, invalid exclusions, unsupported files or I/O.
     pub fn capture(spec: &InputEvidenceSpec) -> Result<Self, InputEvidenceError> {
-        let spec = spec.normalized()?;
+        Self::capture_normalized(spec.normalized()?)
+    }
+
+    // Both entry points admit policy once; callers retain source custody.
+    // Roots are sorted and unique; exclusions are already resolved and admitted.
+    fn capture_normalized(spec: InputEvidenceSpec) -> Result<Self, InputEvidenceError> {
         let mut entries = BTreeMap::new();
         let mut visited = BTreeSet::new();
         let mut walk =
@@ -366,7 +369,9 @@ impl InputEvidence {
         }
         let mut combined = after.clone();
         combined.roots.extend(self.spec.roots.iter().cloned());
-        let mut retained = Self::capture(&combined)?;
+        combined.roots.sort();
+        combined.roots.dedup();
+        let mut retained = Self::capture_normalized(combined)?;
         for (path, before) in &self.entries {
             if retained.entries.get(path) != Some(before) {
                 return Err(InputEvidenceError::ChangedInput { path: path.clone() });

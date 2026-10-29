@@ -3869,7 +3869,7 @@ fn artifact_relative_path(spec: &WasmBuildSpec, target: &WasmArtifactTarget) -> 
     } else {
         profile
     };
-    directory.join(format!("{}.wasm", target.name.replace('-', "_")))
+    directory.join(&target.file_name)
 }
 
 fn expected_artifacts(
@@ -3933,7 +3933,7 @@ fn validated_artifact_set(
                 return None;
             }
             let info = digest_file("wasm-artifact-v1", &artifact).ok()?;
-            (stamp == artifact_stamp_contents(fingerprint, info.digest)).then_some(
+            (stamp == artifact_stamp_contents(&header, info.digest)).then_some(
                 VerifiedWasmArtifact {
                     cached_path: artifact,
                     public_path,
@@ -3966,11 +3966,8 @@ fn artifact_stamp_header(fingerprint: InputDigest) -> String {
     format!("{CACHE_FORMAT_VERSION}\nbuild-sha256:{fingerprint}\n")
 }
 
-fn artifact_stamp_contents(fingerprint: InputDigest, artifact_digest: InputDigest) -> String {
-    format!(
-        "{}{ARTIFACT_STAMP_DIGEST_LABEL}{artifact_digest}\n",
-        artifact_stamp_header(fingerprint),
-    )
+fn artifact_stamp_contents(header: &str, artifact_digest: InputDigest) -> String {
+    format!("{header}{ARTIFACT_STAMP_DIGEST_LABEL}{artifact_digest}\n")
 }
 
 fn write_artifact_stamp(
@@ -3980,7 +3977,7 @@ fn write_artifact_stamp(
     preserve_matching: bool,
 ) -> Result<(), WasmBuildError> {
     let stamp_path = artifact_stamp_path(artifact);
-    let stamp = artifact_stamp_contents(fingerprint, info.digest);
+    let stamp = artifact_stamp_contents(&artifact_stamp_header(fingerprint), info.digest);
     if preserve_matching && destination_matches_bytes(&stamp_path, stamp.as_bytes()) {
         return Ok(());
     }

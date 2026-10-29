@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.69.13]
+
+### 🧹 Cleanup
+
+- Simplify Cargo argument construction, input capture and streamed artifact
+  discovery, retaining admission checks and existing command behavior.
+- Reuse admitted artifact names, stamp headers and package paths; streamline
+  explicit server selection and startup port parsing.
+  [Details](docs/changelog/0.69.md#06913---unreleased).
+
 ## [0.69.12] - 2026-10-29
 
 ### 🧹 Cleanup

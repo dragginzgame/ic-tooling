@@ -33,26 +33,26 @@ impl Default for CargoFeatureSelection {
 impl CargoFeatureSelection {
     pub(crate) fn arguments(&self) -> Vec<OsString> {
         let mut arguments = Vec::new();
+        self.append_arguments(&mut arguments);
+        arguments
+    }
+
+    fn append_arguments(&self, arguments: &mut Vec<OsString>) {
         if self.all_features {
             arguments.push("--all-features".into());
         }
         if !self.default_features {
             arguments.push("--no-default-features".into());
         }
-        if !self.features.is_empty() {
-            arguments.push(
-                format!(
-                    "--features={}",
-                    self.features
-                        .iter()
-                        .map(String::as_str)
-                        .collect::<Vec<_>>()
-                        .join(",")
-                )
-                .into(),
-            );
+        let mut features = self.features.iter();
+        if let Some(first) = features.next() {
+            let mut flag = format!("--features={first}");
+            for feature in features {
+                flag.push(',');
+                flag.push_str(feature);
+            }
+            arguments.push(flag.into());
         }
-        arguments
     }
 }
 
@@ -102,7 +102,7 @@ impl CargoSelection {
                 format!("--profile={profile}").into()
             });
         }
-        arguments.extend(self.metadata_arguments());
+        append_graph_arguments(&mut arguments, &self.features, self.locked, self.offline);
         arguments
     }
 }
@@ -114,13 +114,22 @@ pub(crate) fn graph_arguments(
     offline: bool,
 ) -> Vec<OsString> {
     let mut arguments = Vec::new();
+    append_graph_arguments(&mut arguments, features, locked, offline);
+    arguments
+}
+
+fn append_graph_arguments(
+    arguments: &mut Vec<OsString>,
+    features: &CargoFeatureSelection,
+    locked: bool,
+    offline: bool,
+) {
     for (enabled, flag) in [(locked, "--locked"), (offline, "--offline")] {
         if enabled {
             arguments.push(flag.into());
         }
     }
-    arguments.extend(features.arguments());
-    arguments
+    features.append_arguments(arguments);
 }
 
 // Shared lexical test only. Callers retain Cargo selection and refusal policy,

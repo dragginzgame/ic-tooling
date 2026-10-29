@@ -489,7 +489,8 @@ fn admit_graph(
     for spec in packages {
         let package = package(metadata, spec.name)?;
         let manifest = root
-            .join(format!("{}-{}/Cargo.toml", spec.name, spec.version))
+            .join(spec.directory_name())
+            .join("Cargo.toml")
             .canonicalize()?;
         if package.version.to_string() != spec.version
             || package.source.is_some()

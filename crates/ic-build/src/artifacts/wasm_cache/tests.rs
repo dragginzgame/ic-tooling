@@ -1651,6 +1651,24 @@ fn wasm_output_validation_distinguishes_libraries_from_cdylib_examples() {
         .expect("library with both crate types");
     assert!(matches!(built, WasmBuildOutcome::Built(_)));
     drop(built);
+    fs::write(
+        &manifest,
+        original + &example.replace("name = \"fixture\"", "name = \"hyphen-probe\""),
+    )
+    .unwrap();
+    fs::write(
+        root.join("fixture/examples/hyphen-probe.rs"),
+        "pub fn example() {}\n",
+    )
+    .unwrap();
+    let spec = spec.with_example("hyphen-probe");
+    let inputs = resolve_cargo_build_inputs(&spec).unwrap();
+    assert_eq!(
+        inputs.artifact_paths().unwrap(),
+        [spec
+            .target_dir
+            .join("wasm32-unknown-unknown/debug/examples/hyphen_probe.wasm")]
+    );
     fs::remove_dir_all(root).unwrap();
 }
 
@@ -3769,17 +3787,21 @@ fn cargo_artifact_protocol_refuses_bad_evidence_after_child_completion() {
 fn fixture_targets(spec: &WasmBuildSpec) -> Vec<super::WasmArtifactTarget> {
     spec.packages
         .iter()
-        .map(|package| super::WasmArtifactTarget {
-            package_id: String::new(),
-            name: spec
+        .map(|package| {
+            let name = spec
                 .example
                 .clone()
-                .unwrap_or_else(|| package.replace('-', "_")),
-            kind: if spec.example.is_some() {
-                crate::cargo::observation::schema::TargetKind::Example
-            } else {
-                crate::cargo::observation::schema::TargetKind::CDyLib
-            },
+                .unwrap_or_else(|| package.replace('-', "_"));
+            super::WasmArtifactTarget {
+                package_id: String::new(),
+                file_name: format!("{}.wasm", name.replace('-', "_")),
+                name,
+                kind: if spec.example.is_some() {
+                    crate::cargo::observation::schema::TargetKind::Example
+                } else {
+                    crate::cargo::observation::schema::TargetKind::CDyLib
+                },
+            }
         })
         .collect()
 }

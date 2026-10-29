@@ -1153,10 +1153,10 @@ impl StartupFiles {
         if !contents.contains('\n') {
             return Ok(PortFileState::Pending);
         }
-        let value = contents.trim().to_owned();
+        let value = contents.trim();
         match value.parse::<u16>() {
             Ok(port) if port != 0 => Ok(PortFileState::Ready(port)),
-            _ => Ok(PortFileState::Invalid(value)),
+            _ => Ok(PortFileState::Invalid(value.to_owned())),
         }
     }
 

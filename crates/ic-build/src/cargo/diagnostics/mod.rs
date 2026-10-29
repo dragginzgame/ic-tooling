@@ -4,6 +4,7 @@ use super::{
     messages::{BuildCompletion, MessageDecoder},
     observation::schema,
 };
+use ic_host_artifacts::artifact::visit_reader;
 use ic_host_process::tool::{OutputLimit, OutputLimits, capture_command};
 use std::{
     fs,
@@ -62,24 +63,10 @@ pub fn library_artifact(
         Ok(())
     };
     let mut decoder = MessageDecoder::new(maximum, false);
-    let mut buffer = [0; 8192];
-    loop {
-        let count = match input.read(&mut buffer) {
-            Ok(count) => count,
-            Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
-            Err(error) => return Err(error),
-        };
-        if count == 0 {
-            break;
-        }
-        let bytes = buffer.get(..count).ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                "reader returned more bytes than its buffer can hold",
-            )
-        })?;
-        decoder.feed(bytes, &mut receive)?;
-    }
+    // Per-message admission stays with the decoder; no smaller total stream budget.
+    visit_reader::<io::Error>(&mut input, &mut [0; 8192], u64::MAX, |bytes| {
+        decoder.feed(bytes, &mut receive)
+    })?;
     decoder.finish(&mut receive)?;
     let path = selected
         .filter(|path| finished.require_success().is_ok() && path.is_file())

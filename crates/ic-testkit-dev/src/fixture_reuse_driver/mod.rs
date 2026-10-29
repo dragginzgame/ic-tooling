@@ -324,6 +324,14 @@ fn cargo_command(cargo: &Path, root: &Path, rustc: Option<&Path>) -> Command {
     command
 }
 
+fn server_program(path: &Path, root: &Path) -> Result<PathBuf, Error> {
+    // Preserve native path errors, then anchor exact selection against PATH lookup.
+    // Host owns executable checks and the single canonicalization.
+    fs::metadata(path)?;
+    let path = std::env::current_dir()?.join(path);
+    resolve_executable(&path, root, &[]).map_err(Error::Resolution)
+}
+
 fn prepare(options: &Options) -> Result<Inputs, Error> {
     let cargo = tool_program(std::env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo")))?;
     let rustc = std::env::var_os("RUSTC").map(tool_program).transpose()?;
@@ -351,10 +359,7 @@ fn prepare(options: &Options) -> Result<Inputs, Error> {
             "benchmark requires the repository's perf_probe checkout".into(),
         ));
     }
-    // The operator supplies an exact path. Canonicalization prevents a bare name
-    // from silently turning into discovery through PATH.
-    let server = resolve_executable(&fs::canonicalize(&options.server)?, &root, &[])
-        .map_err(Error::Resolution)?;
+    let server = server_program(&options.server, &root)?;
     let server_version = text_command(Command::new(&server).arg("--version"))?;
     if !ic_testkit::pic::supports_pocket_ic_server(server_version.as_bytes()) {
         return Err(Error::InvalidData("expected pocket-ic-server 16.x.y"));
@@ -890,6 +895,37 @@ mod tests {
             assert_eq!(encoded["iterations"], options.iterations.get());
             assert_eq!(encoded["workers"], options.workers.get());
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn explicit_server_paths_preserve_native_failures_without_path_search() {
+        let cwd = std::env::current_dir().unwrap();
+        let fixture = ic_host_fs::testing::FixtureDirectory::new(&cwd, "server-paths").unwrap();
+        let executable = fixture.path().join("server");
+        fs::write(&executable, b"#!/bin/sh\nexit 0\n").unwrap();
+        fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
+        let expected = executable.canonicalize().unwrap();
+        for path in [executable.as_path(), executable.strip_prefix(&cwd).unwrap()] {
+            assert_eq!(
+                super::server_program(path, fixture.path()).unwrap(),
+                expected
+            );
+        }
+        for path in [PathBuf::new(), fixture.path().join("missing")] {
+            assert!(
+                matches!(super::server_program(&path, fixture.path()), Err(Error::Io(error)) if error.kind() == io::ErrorKind::NotFound)
+            );
+        }
+        assert!(matches!(
+            super::server_program(fixture.path(), fixture.path()),
+            Err(Error::Resolution(super::ResolutionError::NotRegularFile))
+        ));
+        fs::set_permissions(&executable, fs::Permissions::from_mode(0o600)).unwrap();
+        assert!(matches!(
+            super::server_program(&executable, fixture.path()),
+            Err(Error::Resolution(super::ResolutionError::NotExecutable))
+        ));
     }
 
     #[cfg(unix)]

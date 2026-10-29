@@ -12,6 +12,7 @@ use std::{
 pub(super) struct WasmArtifactTarget {
     pub(super) package_id: String,
     pub(super) name: String,
+    pub(super) file_name: String,
     pub(super) kind: schema::TargetKind,
 }
 
@@ -69,6 +70,7 @@ pub(super) fn select_targets<'a>(
             Ok(WasmArtifactTarget {
                 package_id: package.id.repr.clone(),
                 name: target.name.clone(),
+                file_name: format!("{cache_name}.wasm"),
                 kind: if example.is_some() {
                     schema::TargetKind::Example
                 } else {
