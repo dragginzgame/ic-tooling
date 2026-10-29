@@ -10,6 +10,10 @@ use std::{
 
 use ic_host_fs::durable::{PublicationMode, WriteOptions, write_bytes};
 
+const READY_MARKER: &str = "barrier-ready";
+const ACKNOWLEDGED_MARKER: &str = "barrier-acknowledged";
+const ARMED_MARKER: &str = "barrier-armed";
+
 // Existence is the handshake signal, so publish complete bytes atomically.
 // The caller exclusively owns this fixture namespace and its retained files.
 fn publish_marker(path: &Path, contents: &[u8]) -> io::Result<()> {
@@ -38,9 +42,9 @@ pub fn kill_child_at_acknowledged_barrier(
     root: &Path,
     timeout: Duration,
 ) -> io::Result<()> {
-    let ready_path = root.join("barrier-ready");
-    let acknowledge_path = root.join("barrier-acknowledged");
-    let armed_path = root.join("barrier-armed");
+    let ready_path = root.join(READY_MARKER);
+    let acknowledge_path = root.join(ACKNOWLEDGED_MARKER);
+    let armed_path = root.join(ARMED_MARKER);
     let handshake = (|| {
         wait_for_child_path(child, &ready_path, "child barrier", timeout)?;
         publish_marker(&acknowledge_path, b"acknowledged\n")?;
@@ -64,9 +68,9 @@ pub fn kill_child_at_acknowledged_barrier(
 /// # Panics
 /// Panics on marker write failure or missing parent acknowledgement.
 pub fn hold_at_acknowledged_barrier(root: &Path, timeout: Duration) -> ! {
-    let ready_path = root.join("barrier-ready");
-    let acknowledge_path = root.join("barrier-acknowledged");
-    let armed_path = root.join("barrier-armed");
+    let ready_path = root.join(READY_MARKER);
+    let acknowledge_path = root.join(ACKNOWLEDGED_MARKER);
+    let armed_path = root.join(ARMED_MARKER);
     publish_marker(&ready_path, b"ready\n").expect("signal child barrier");
     wait_for_path(&acknowledge_path, "parent barrier acknowledgement", timeout)
         .expect("wait for parent barrier acknowledgement");

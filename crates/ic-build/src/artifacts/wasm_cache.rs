@@ -1233,22 +1233,16 @@ impl WasmBuildTimings {
         input_resolution.include(other.input_resolution);
         Self {
             lock_wait: self.lock_wait.saturating_add(other.lock_wait),
-            shared_incremental_lock_wait: [
+            shared_incremental_lock_wait: super::sum_optional_durations(
                 self.shared_incremental_lock_wait,
                 other.shared_incremental_lock_wait,
-            ]
-            .into_iter()
-            .flatten()
-            .reduce(Duration::saturating_add),
+            ),
             input_resolution,
-            cargo_build: [self.cargo_build, other.cargo_build]
-                .into_iter()
-                .flatten()
-                .reduce(Duration::saturating_add),
-            cache_maintenance: [self.cache_maintenance, other.cache_maintenance]
-                .into_iter()
-                .flatten()
-                .reduce(Duration::saturating_add),
+            cargo_build: super::sum_optional_durations(self.cargo_build, other.cargo_build),
+            cache_maintenance: super::sum_optional_durations(
+                self.cache_maintenance,
+                other.cache_maintenance,
+            ),
             total: self.total.saturating_add(other.total),
         }
     }

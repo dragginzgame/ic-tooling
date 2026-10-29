@@ -34,6 +34,10 @@ fn exact_scaling_rounding_and_carries_preserve_arbitrary_precision() {
     }
     let long = format!("1.234{}", "9".repeat(4096));
     assert_eq!(compact_decimal_text(&long, 0), Ok("1.23".to_string()));
+    let carry = format!("{}.995", "9".repeat(4096));
+    let rounded = format!("1{}", "0".repeat(4096));
+    assert_eq!(fixed_decimal_text(&carry, 0), Ok(format!("{rounded}.00")));
+    assert_eq!(compact_decimal_text(&carry, 0), Ok(rounded));
 }
 
 #[test]

@@ -105,21 +105,9 @@ pub(super) fn upload(
         original,
         uploaded: &uploaded,
     };
-    transfer.copy_region(
-        metadata.wasm_module_size,
-        |offset, size| SnapshotDataKind::WasmModule { offset, size },
-        |offset| SnapshotDataOffset::WasmModule { offset },
-    )?;
-    transfer.copy_region(
-        metadata.wasm_memory_size,
-        |offset, size| SnapshotDataKind::WasmMemory { offset, size },
-        |offset| SnapshotDataOffset::WasmMemory { offset },
-    )?;
-    transfer.copy_region(
-        metadata.stable_memory_size,
-        |offset, size| SnapshotDataKind::StableMemory { offset, size },
-        |offset| SnapshotDataOffset::StableMemory { offset },
-    )?;
+    transfer.copy_region(metadata.wasm_module_size, Region::WasmModule)?;
+    transfer.copy_region(metadata.wasm_memory_size, Region::WasmMemory)?;
+    transfer.copy_region(metadata.stable_memory_size, Region::StableMemory)?;
     for chunk in metadata.wasm_chunk_store {
         let data = transfer.read(SnapshotDataKind::WasmChunk {
             hash: chunk.hash.clone(),
@@ -148,6 +136,32 @@ const fn require_complete_system_state(
         ));
     }
     Ok(())
+}
+
+#[derive(Clone, Copy)]
+enum Region {
+    WasmModule,
+    WasmMemory,
+    StableMemory,
+}
+
+impl Region {
+    const fn at(self, offset: u64, size: u64) -> (SnapshotDataKind, SnapshotDataOffset) {
+        match self {
+            Self::WasmModule => (
+                SnapshotDataKind::WasmModule { offset, size },
+                SnapshotDataOffset::WasmModule { offset },
+            ),
+            Self::WasmMemory => (
+                SnapshotDataKind::WasmMemory { offset, size },
+                SnapshotDataOffset::WasmMemory { offset },
+            ),
+            Self::StableMemory => (
+                SnapshotDataKind::StableMemory { offset, size },
+                SnapshotDataOffset::StableMemory { offset },
+            ),
+        }
+    }
 }
 
 struct SnapshotTransfer<'a> {
@@ -189,22 +203,18 @@ impl SnapshotTransfer<'_> {
         )
     }
 
-    fn copy_region(
-        &self,
-        bytes: u64,
-        read_kind: impl Fn(u64, u64) -> SnapshotDataKind,
-        write_kind: impl Fn(u64) -> SnapshotDataOffset,
-    ) -> Result<(), Failure> {
+    fn copy_region(&self, bytes: u64, region: Region) -> Result<(), Failure> {
         let mut offset = 0;
         while offset < bytes {
             let size = CHUNK_BYTES.min(bytes - offset);
-            let data = self.read(read_kind(offset, size))?;
+            let (read_kind, write_kind) = region.at(offset, size);
+            let data = self.read(read_kind)?;
             if data.len() as u64 != size {
                 return Err(Failure::Invalid(
                     "snapshot returned an incomplete data region",
                 ));
             }
-            self.write(write_kind(offset), data)?;
+            self.write(write_kind, data)?;
             offset += size;
         }
         Ok(())

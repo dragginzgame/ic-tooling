@@ -8,11 +8,11 @@ use ic_host_fs::{
 use std::{
     error::Error,
     io::{self, Write as _},
+    path::Path,
 };
 
 /// Translate an admitted command into the existing FS operations.
 pub fn run(operation: Operation) -> Result<(), Box<dyn Error>> {
-    let create_new = matches!(&operation, Operation::CreatePrivate { .. });
     match operation {
         Operation::HashFile { path, max_bytes } => {
             let identity = hash_file_no_follow(&path, max_bytes as u64)?;
@@ -27,27 +27,30 @@ pub fn run(operation: Operation) -> Result<(), Box<dyn Error>> {
             source,
             destination,
             max_bytes,
-        }
-        | Operation::ReplacePrivate {
+        } => write_private(&source, &destination, max_bytes, PublicationMode::CreateNew)?,
+        Operation::ReplacePrivate {
             source,
             destination,
             max_bytes,
-        } => {
-            let mode = if create_new {
-                PublicationMode::CreateNew
-            } else {
-                PublicationMode::Replace
-            };
-            let bytes = read_file_no_follow(&source, max_bytes)?;
-            write_bytes(
-                &destination,
-                WriteOptions {
-                    mode,
-                    permissions: 0o600,
-                },
-                &bytes,
-            )?;
-        }
+        } => write_private(&source, &destination, max_bytes, PublicationMode::Replace)?,
     }
+    Ok(())
+}
+
+fn write_private(
+    source: &Path,
+    destination: &Path,
+    max_bytes: usize,
+    mode: PublicationMode,
+) -> Result<(), Box<dyn Error>> {
+    let bytes = read_file_no_follow(source, max_bytes)?;
+    write_bytes(
+        destination,
+        WriteOptions {
+            mode,
+            permissions: 0o600,
+        },
+        &bytes,
+    )?;
     Ok(())
 }

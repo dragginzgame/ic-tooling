@@ -233,8 +233,8 @@ impl<'de> Deserialize<'de> for Envelope<'de> {
             fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Self::Value, M::Error> {
                 let mut response = None;
                 let mut seen = false;
-                while let Some(key) = map.next_key::<String>()? {
-                    if key == "response_bytes" {
+                while let Some(key) = map.next_key::<ResponseText<'de>>()? {
+                    if key.0 == "response_bytes" {
                         if seen {
                             return Err(serde::de::Error::duplicate_field("response_bytes"));
                         }

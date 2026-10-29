@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.69.12]
+
+### 🧹 Cleanup
+
+- Narrow internal tool admission and retained build evidence, and pair snapshot
+  transfer regions while preserving public APIs, freshness checks and restore behavior.
+- Consolidate timing, decimal rounding, response parsing and file-command handling;
+  share redacted diagnostics and crash-barrier markers, and simplify report reading.
+  [Details](docs/changelog/0.69.md#06912---unreleased).
+
 ## [0.69.11] - 2026-10-29
 
 ### 🩹 Fixed

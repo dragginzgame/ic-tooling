@@ -61,31 +61,28 @@ fn render(value: &str, exponent: usize, compact: bool) -> Result<String, Invalid
     if digits.next().unwrap_or(b'0') >= b'5' {
         hundredths += 1;
     }
-    let mut integer = integer.to_string();
+    let mut integer = integer.as_bytes().to_vec();
     if hundredths == 100 {
         increment(&mut integer);
         hundredths = 0;
     }
     if !compact || hundredths != 0 {
-        use std::fmt::Write as _;
-        write!(integer, ".{hundredths:02}").expect("writing to a String cannot fail");
-        if compact && hundredths.is_multiple_of(10) {
-            integer.pop();
+        integer.push(b'.');
+        integer.push(b'0' + hundredths / 10);
+        if !compact || !hundredths.is_multiple_of(10) {
+            integer.push(b'0' + hundredths % 10);
         }
     }
-    Ok(integer)
+    Ok(String::from_utf8(integer).expect("decimal digits remain UTF-8"))
 }
 
-fn increment(value: &mut String) {
-    let mut digits = value.as_bytes().to_vec();
+fn increment(digits: &mut Vec<u8>) {
     for digit in digits.iter_mut().rev() {
         if *digit < b'9' {
             *digit += 1;
-            *value = String::from_utf8(digits).expect("decimal digits remain UTF-8");
             return;
         }
         *digit = b'0';
     }
     digits.insert(0, b'1');
-    *value = String::from_utf8(digits).expect("decimal digits remain UTF-8");
 }

@@ -209,7 +209,7 @@ fn measure(
     }
     output.rewind()?;
     let bytes = read_opened_file(
-        output.try_clone()?,
+        output,
         usize::try_from(REPORT_LIMIT).expect("report limit fits supported hosts"),
     )
     .map_err(Error::Artifact)?;

@@ -220,26 +220,43 @@ impl From<CompletedExecution> for ExecutionEvidence {
 
 impl fmt::Debug for CompletedExecution {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CompletedExecution")
-            .field("status", &self.status)
-            .field("stdout_bytes", &self.stdout.len())
-            .field("stderr_bytes", &self.stderr.len())
-            .field("stdout_truncated", &self.stdout_truncated)
-            .field("stderr_truncated", &self.stderr_truncated)
-            .finish()
+        finish_capture_debug(
+            f.debug_struct("CompletedExecution")
+                .field("status", &self.status),
+            &self.stdout,
+            &self.stderr,
+            self.stdout_truncated,
+            self.stderr_truncated,
+        )
     }
 }
 
 impl fmt::Debug for ExecutionEvidence {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ExecutionEvidence")
-            .field("status", &self.status)
-            .field("stdout_bytes", &self.stdout.len())
-            .field("stderr_bytes", &self.stderr.len())
-            .field("stdout_truncated", &self.stdout_truncated)
-            .field("stderr_truncated", &self.stderr_truncated)
-            .finish()
+        finish_capture_debug(
+            f.debug_struct("ExecutionEvidence")
+                .field("status", &self.status),
+            &self.stdout,
+            &self.stderr,
+            self.stdout_truncated,
+            self.stderr_truncated,
+        )
     }
+}
+
+fn finish_capture_debug(
+    debug: &mut fmt::DebugStruct<'_, '_>,
+    stdout: &[u8],
+    stderr: &[u8],
+    stdout_truncated: bool,
+    stderr_truncated: bool,
+) -> fmt::Result {
+    debug
+        .field("stdout_bytes", &stdout.len())
+        .field("stderr_bytes", &stderr.len())
+        .field("stdout_truncated", &stdout_truncated)
+        .field("stderr_truncated", &stderr_truncated)
+        .finish()
 }
 
 /// Process or pipe operation that produced an IO failure.
@@ -763,11 +780,13 @@ impl AdmittedTool {
     ) -> Result<Self, ToolError> {
         Self::admit_observation(
             spec,
-            Some(expected),
-            Some(expected_version),
+            Admission::Pinned {
+                digest: expected,
+                version: expected_version,
+                no_follow: false,
+            },
             context,
             limits,
-            false,
         )
     }
 
@@ -789,11 +808,13 @@ impl AdmittedTool {
     ) -> Result<Self, ToolError> {
         Self::admit_observation(
             spec,
-            Some(expected),
-            Some(expected_version),
+            Admission::Pinned {
+                digest: expected,
+                version: expected_version,
+                no_follow: true,
+            },
             context,
             limits,
-            true,
         )
     }
 
@@ -821,7 +842,7 @@ impl AdmittedTool {
         context: &ExecutionContext<'_>,
         limits: OutputLimits,
     ) -> Result<Self, ToolError> {
-        Self::admit_observation(spec, None, Some(expected_version), context, limits, false)
+        Self::admit_observation(spec, Admission::Version(expected_version), context, limits)
     }
 
     /// Record installed bytes and their version with one version invocation.
@@ -843,17 +864,24 @@ impl AdmittedTool {
         context: &ExecutionContext<'_>,
         limits: OutputLimits,
     ) -> Result<Self, ToolError> {
-        Self::admit_observation(spec, None, None, context, limits, false)
+        Self::admit_observation(spec, Admission::Observe, context, limits)
     }
 
     fn admit_observation(
         spec: &VersionSpec<'_>,
-        expected: Option<Sha256Digest>,
-        expected_version: Option<&str>,
+        admission: Admission<'_>,
         context: &ExecutionContext<'_>,
         limits: OutputLimits,
-        no_follow: bool,
     ) -> Result<Self, ToolError> {
+        let (expected, expected_version, no_follow) = match admission {
+            Admission::Pinned {
+                digest,
+                version,
+                no_follow,
+            } => (Some(digest), Some(version), no_follow),
+            Admission::Version(version) => (None, Some(version), false),
+            Admission::Observe => (None, None, false),
+        };
         if !spec.executable.is_absolute() {
             return Err(ToolError::InvalidInvocation(
                 InvalidInvocation::ExecutablePath,
@@ -949,6 +977,17 @@ impl AdmittedTool {
         process::capture(&self.path, arguments, context, limits)
             .map_err(|source| ToolError::Execution(Box::new(source)))
     }
+}
+
+#[derive(Clone, Copy)]
+enum Admission<'a> {
+    Pinned {
+        digest: Sha256Digest,
+        version: &'a str,
+        no_follow: bool,
+    },
+    Version(&'a str),
+    Observe,
 }
 
 fn verify_executable(

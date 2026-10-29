@@ -71,6 +71,16 @@ mod transaction_batch;
 mod wasm_batch;
 mod wasm_cache;
 
+fn sum_optional_durations(
+    left: Option<std::time::Duration>,
+    right: Option<std::time::Duration>,
+) -> Option<std::time::Duration> {
+    [left, right]
+        .into_iter()
+        .flatten()
+        .reduce(std::time::Duration::saturating_add)
+}
+
 #[cfg(test)]
 pub(crate) mod test_support;
 
