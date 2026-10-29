@@ -20,6 +20,8 @@ use super::{
 /// Only the captured canister is restored. Time, other canisters, pending work
 /// and external resources are not reset. Use a custom recipe or a fresh instance
 /// when those mutations matter. Funding is applied immediately before restore.
+/// This recipe stops/drains its single canister before capture and warm restore,
+/// then starts it at readiness. Automatic progress must remain disabled.
 /// Non-transport restore failures are fatal: the pool discards the affected
 /// baseline before returning the error. Dead transport permits one recovery build.
 pub struct StandaloneCanisterRecipe<B> {
@@ -57,7 +59,16 @@ where
 
     fn build(&self) -> Result<CachedPocketIcBaseline<Principal>, io::Error> {
         let (pocket_ic, canister_id) = (self.build)()?.into_parts();
-        CachedPocketIcBaseline::capture(
+        super::transport::capture_call(|| pocket_ic.instance().stop_canister(canister_id, None))
+            .map_err(|source| {
+                io::Error::other(super::ControllerSnapshotError::CaptureFailed {
+                    canister_id,
+                    sender: None,
+                    source: Box::new(source),
+                    cleanup_failures: Vec::new(),
+                })
+            })?;
+        let baseline = CachedPocketIcBaseline::capture(
             pocket_ic,
             [CanisterSnapshotTarget {
                 canister_id,
@@ -65,7 +76,9 @@ where
             }],
             canister_id,
         )
-        .map_err(io::Error::other)
+        .map_err(io::Error::other)?;
+        self.drive_to_readiness(&baseline)?;
+        Ok(baseline)
     }
 
     fn reset_non_snapshot_state(
@@ -75,11 +88,28 @@ where
         Ok(ResetReceipt::default())
     }
 
+    fn prepare_restore(
+        &self,
+        baseline: &CachedPocketIcBaseline<Principal>,
+    ) -> Result<(), io::Error> {
+        super::transport::capture_call(|| {
+            baseline
+                .pocket_ic()
+                .stop_canister(*baseline.metadata(), None)
+        })
+        .map_err(io::Error::other)
+    }
+
     fn drive_to_readiness(
         &self,
-        _baseline: &CachedPocketIcBaseline<Principal>,
+        baseline: &CachedPocketIcBaseline<Principal>,
     ) -> Result<(), io::Error> {
-        Ok(())
+        super::transport::capture_call(|| {
+            baseline
+                .pocket_ic()
+                .start_canister(*baseline.metadata(), None)
+        })
+        .map_err(io::Error::other)
     }
 
     fn validate(

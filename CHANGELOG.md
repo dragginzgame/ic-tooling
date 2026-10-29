@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.69.9] - Unreleased
+
+### 🩹 Fixed
+
+- Restore cached baseline timers and low-Wasm-memory-hook state together with
+  heap state using complete uploaded snapshots. Preserve exact senders, funding,
+  current simulated time and partial-failure evidence
+  ([#263 — Snapshots restore heap without matching timer state](https://github.com/dragginzgame/ic-tooling/issues/263)).
+  Custom recipes must stop/drain the complete snapshot set before capture or
+  restore and restart after complete success; the standalone recipe handles its
+  single canister. [Details](docs/changelog/0.69.md#0699---unreleased).
+
 ## [0.69.8] - 2026-10-28
 
 ### 🧹 Cleanup

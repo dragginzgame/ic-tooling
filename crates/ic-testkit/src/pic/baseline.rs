@@ -20,6 +20,8 @@ impl<T> CachedPocketIcBaseline<T> {
     ///
     /// Empty inputs are rejected before capture. Capture is ordered and transactional as documented by
     /// [`PocketIcSnapshotExt::capture_snapshots`]. No sender fallback is performed.
+    /// The caller stops/drains every target before capture and restarts only
+    /// after the entire capture succeeds. Automatic progress must be disabled.
     ///
     /// # Errors
     /// Returns a controller snapshot error if target admission or snapshot capture fails.
@@ -45,6 +47,8 @@ impl<T> CachedPocketIcBaseline<T> {
 
     /// Restore with exactly the captured senders and selected cycle funding.
     /// Success means the complete captured set was restored.
+    /// Stop/drain the entire set first; restart after complete restore/reset.
+    /// Absolute captured timers and hook state are restored; current time is not.
     ///
     /// # Errors
     /// Returns a controller snapshot error if funding or snapshot restoration fails.

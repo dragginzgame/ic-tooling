@@ -326,6 +326,8 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
     fn reset_requirements(&self) -> &ResetRequirements;
 
     /// Construct and capture one complete baseline.
+    /// Stop/drain the complete snapshot set before capture, then start it after
+    /// the complete set is captured and ready. Automatic progress stays disabled.
     ///
     /// # Errors
     /// Returns the recipe error if construction or baseline capture fails.
@@ -333,8 +335,9 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
 
     /// Admit recipe-specific preconditions before the pool restores snapshots.
     ///
-    /// Most recipes need no preflight. Checks such as exact current cycle-balance
-    /// guards run here, before restoration can charge cycles. This cannot replace
+    /// Stop/drain every captured canister here unless the complete set is already
+    /// stopped. Checks such as exact current cycle-balance guards also run here,
+    /// before restoration can charge cycles. This cannot replace
     /// the pool's canonical restore or manufacture its completion evidence.
     ///
     /// # Errors
@@ -357,6 +360,8 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
 
     /// Drive the topology to the recipe's readiness boundary.
     /// Successful completion permits final invariant validation.
+    /// Restart the complete stopped set here, after canonical restore and the
+    /// non-snapshot reset have succeeded. Never restart a partially restored set.
     ///
     /// # Errors
     /// Returns the recipe error if the caller-defined readiness boundary is not reached.

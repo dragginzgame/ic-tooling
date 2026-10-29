@@ -512,6 +512,7 @@ fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
     )
     .expect("install standalone fixture");
     let (owned, canister) = fixture.into_parts();
+    owned.instance().stop_canister(canister, None).unwrap();
     assert_eq!(owned.server().unwrap().process_id(), pid);
     let baseline = CachedPocketIcBaseline::capture(
         owned,

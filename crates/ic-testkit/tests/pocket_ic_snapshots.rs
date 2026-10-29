@@ -218,6 +218,44 @@ fn failed_snapshot_set_capture_cleans_up_earlier_snapshots() {
 }
 
 #[test]
+fn upload_refusal_removes_only_owned_temporary_snapshots_and_can_recover() {
+    let owned = support::pocket_ic();
+    let pic = owned.instance();
+    let id = pic.create_canister();
+    pic.install_canister(id, b"\0asm\x01\0\0\0".to_vec(), vec![], None);
+    pic.stop_canister(id, None).unwrap();
+    // PocketIC 16.1's ten-snapshot limit leaves room for the temporary take,
+    // then refuses metadata upload. Existing caller snapshots must survive.
+    let mut original = (0..9)
+        .map(|_| pic.take_canister_snapshot(id, None, None).unwrap().id)
+        .collect::<Vec<_>>();
+    let target = CanisterSnapshotTarget {
+        canister_id: id,
+        sender: None,
+    };
+    let error = pic.capture_snapshots([target]).unwrap_err();
+    assert!(
+        matches!(error, ControllerSnapshotError::CaptureFailed { source, cleanup_failures, .. }
+        if matches!(*source, PocketIcCallFailure::Rejected(_)) && cleanup_failures.is_empty())
+    );
+    let mut remaining = pic
+        .list_canister_snapshots(id, None)
+        .unwrap()
+        .into_iter()
+        .map(|s| s.id)
+        .collect::<Vec<_>>();
+    original.sort();
+    remaining.sort();
+    assert_eq!(remaining, original);
+    pic.delete_canister_snapshot(id, None, original.remove(0))
+        .unwrap();
+    let snapshots = pic.capture_snapshots([target]).unwrap();
+    pic.restore_snapshots(&snapshots, SnapshotRestoreFunding::Preserve)
+        .unwrap();
+    assert_eq!(pic.list_canister_snapshots(id, None).unwrap().len(), 9);
+}
+
+#[test]
 fn snapshot_restore_only_adds_cycles_when_explicitly_requested() {
     let owned = support::pocket_ic();
     let pocket_ic = owned.instance();

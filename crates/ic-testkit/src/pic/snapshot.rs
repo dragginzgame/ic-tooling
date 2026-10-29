@@ -5,6 +5,8 @@ use ic_platform::principal::ExternalPrincipal as Principal;
 
 use super::{PocketIcCallFailure, transport};
 
+mod transfer;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct ControllerSnapshot {
     snapshot_id: Vec<u8>,
@@ -32,6 +34,8 @@ pub struct SnapshotCleanupFailure {
     pub canister_id: Principal,
     /// Exact sender selected for cleanup.
     pub sender: Option<Principal>,
+    /// Exact known snapshot whose deletion failed; no other ID was substituted.
+    pub snapshot_id: Vec<u8>,
     /// Complete rejection or operation failure, retaining transport classification.
     pub source: Box<PocketIcCallFailure>,
 }
@@ -62,6 +66,26 @@ pub enum ControllerSnapshotError {
         /// Repeated canister id.
         canister_id: Principal,
     },
+    /// Snapshot transfer metadata or complete data admission failed.
+    #[error("invalid snapshot for {canister_id}: {message}; {} partial snapshots could not be cleaned up", .cleanup_failures.len())]
+    InvalidSnapshot {
+        /// Exact canister selected for capture.
+        canister_id: Principal,
+        /// Refused snapshot property, excluding source bytes.
+        message: &'static str,
+        /// Known snapshot deletions that failed during rollback.
+        cleanup_failures: Vec<SnapshotCleanupFailure>,
+    },
+    /// The external management snapshot message could not be encoded or decoded.
+    #[error("snapshot codec failed for {canister_id}: {source}")]
+    SnapshotCodec {
+        /// Exact canister selected for capture.
+        canister_id: Principal,
+        /// Original external Candid codec failure.
+        source: ic_platform::candid::contract::Error,
+        /// Known snapshot deletions that failed during rollback.
+        cleanup_failures: Vec<SnapshotCleanupFailure>,
+    },
     /// Snapshot capture failed with the exact selected sender.
     #[error("failed to capture snapshot for {canister_id} with sender {sender:?}: {source}; {} partial snapshots could not be cleaned up", .cleanup_failures.len())]
     CaptureFailed {
@@ -90,9 +114,17 @@ pub enum ControllerSnapshotError {
 pub trait PocketIcSnapshotExt {
     /// Capture snapshots with one explicit sender per canister.
     ///
+    /// The caller must stop and drain the complete target set before capture,
+    /// then restart it only after the complete set succeeds. This helper does
+    /// not stop/start canisters or rewind simulated time. Disable automatic
+    /// progress and exclude concurrent instance operations throughout the set.
     /// Input is duplicate-checked before any effects and captured in deterministic
     /// canister-id order. A later failure rolls back snapshots captured earlier
-    /// in the set. No other sender is attempted after a rejection.
+    /// in the set, including known temporary transfer snapshots. No other sender
+    /// is attempted after a rejection. Upload semantics preserve the captured
+    /// global timer and low-memory hook alongside the module, globals, heap,
+    /// stable memory, certified data and chunk store. Transfer uses bounded
+    /// management messages; total work follows the captured state size.
     ///
     /// # Errors
     /// Returns a target-admission or snapshot-capture error, retaining completed work.
@@ -104,6 +136,12 @@ pub trait PocketIcSnapshotExt {
         I: IntoIterator<Item = CanisterSnapshotTarget>;
 
     /// Restore each snapshot with its exact captured sender and selected funding.
+    ///
+    /// The caller must stop/drain the entire captured set before restoring and
+    /// restart only after every restore and non-snapshot reset succeeds. Automatic
+    /// progress and concurrent instance operations must remain disabled. Absolute
+    /// timer deadlines are restored, not shifted; an expired timer may run when
+    /// its canister restarts. Simulated time and lifecycle remain caller-owned.
     ///
     /// `Preserve` never adds cycles; `TopUpTo` is evaluated before each restore.
     /// `PocketIC` may charge cycles for the restore itself. Rejection or panic stops
@@ -163,22 +201,38 @@ where
     }
     let mut snapshots = BTreeMap::new();
     for (canister_id, sender) in ordered_targets {
-        let failure = match try_take_snapshot(pocket_ic, canister_id, sender) {
+        let mut pending = Vec::new();
+        let failure = match try_take_snapshot(pocket_ic, canister_id, sender, &mut pending) {
             Ok(snapshot) => {
                 snapshots.insert(canister_id, snapshot);
                 continue;
             }
             Err(failure) => failure,
         };
-        let cleanup_failures =
-            cleanup_captured_snapshots(snapshots, |canister_id, sender, snapshot_id| {
+        let mut cleanup_failures = cleanup_snapshot_ids(pocket_ic, canister_id, sender, pending);
+        cleanup_failures.extend(cleanup_captured_snapshots(
+            snapshots,
+            |canister_id, sender, snapshot_id| {
                 pocket_ic.delete_canister_snapshot(canister_id, sender, snapshot_id)
-            });
-        return Err(ControllerSnapshotError::CaptureFailed {
-            canister_id,
-            sender,
-            source: Box::new(failure),
-            cleanup_failures,
+            },
+        ));
+        return Err(match failure {
+            transfer::Failure::Call(failure) => ControllerSnapshotError::CaptureFailed {
+                canister_id,
+                sender,
+                source: Box::new(failure),
+                cleanup_failures,
+            },
+            transfer::Failure::Invalid(message) => ControllerSnapshotError::InvalidSnapshot {
+                canister_id,
+                message,
+                cleanup_failures,
+            },
+            transfer::Failure::Codec(source) => ControllerSnapshotError::SnapshotCodec {
+                canister_id,
+                source,
+                cleanup_failures,
+            },
         });
     }
     Ok(ControllerSnapshots(snapshots))
@@ -217,13 +271,42 @@ fn try_take_snapshot(
     pocket_ic: &PocketIc,
     canister_id: Principal,
     sender: Option<Principal>,
-) -> Result<ControllerSnapshot, PocketIcCallFailure> {
+    pending: &mut Vec<Vec<u8>>,
+) -> Result<ControllerSnapshot, transfer::Failure> {
     let snapshot =
         transport::capture_call(|| pocket_ic.take_canister_snapshot(canister_id, sender, None))?;
+    pending.push(snapshot.id.clone());
+    let uploaded = transfer::upload(pocket_ic, canister_id, sender, &snapshot.id, pending)?;
+    transport::capture_call(|| {
+        pocket_ic.delete_canister_snapshot(canister_id, sender, snapshot.id)
+    })?;
+    pending.clear();
     Ok(ControllerSnapshot {
-        snapshot_id: snapshot.id,
+        snapshot_id: uploaded,
         sender,
     })
+}
+
+fn cleanup_snapshot_ids(
+    pic: &PocketIc,
+    canister_id: Principal,
+    sender: Option<Principal>,
+    ids: Vec<Vec<u8>>,
+) -> Vec<SnapshotCleanupFailure> {
+    ids.into_iter()
+        .filter_map(|id| {
+            transport::capture_call(|| {
+                pic.delete_canister_snapshot(canister_id, sender, id.clone())
+            })
+            .err()
+            .map(|source| SnapshotCleanupFailure {
+                canister_id,
+                sender,
+                snapshot_id: id,
+                source: Box::new(source),
+            })
+        })
+        .collect()
 }
 
 fn cleanup_captured_snapshots(
@@ -232,12 +315,14 @@ fn cleanup_captured_snapshots(
 ) -> Vec<SnapshotCleanupFailure> {
     let mut failures = Vec::new();
     for (canister_id, snapshot) in snapshots {
-        let cleanup =
-            transport::capture_call(|| remove(canister_id, snapshot.sender, snapshot.snapshot_id));
+        let cleanup = transport::capture_call(|| {
+            remove(canister_id, snapshot.sender, snapshot.snapshot_id.clone())
+        });
         if let Err(source) = cleanup {
             failures.push(SnapshotCleanupFailure {
                 canister_id,
                 sender: snapshot.sender,
+                snapshot_id: snapshot.snapshot_id,
                 source: Box::new(source),
             });
         }
@@ -329,17 +414,21 @@ mod tests {
                 canister_id: rejected_id,
                 sender: rejected_sender,
                 source: rejected,
+                snapshot_id: rejected_snapshot,
             },
             SnapshotCleanupFailure {
                 canister_id: panicked_id,
                 sender: panicked_sender,
                 source: panicked,
+                snapshot_id: panicked_snapshot,
             },
         ] = failures.as_slice()
         else {
             panic!("expected both cleanup failures: {failures:?}");
         };
         assert_eq!(*rejected_id, ids[1]);
+        assert_eq!(rejected_snapshot, &[7]);
+        assert_eq!(panicked_snapshot, &[7]);
         assert_eq!(*rejected_sender, sender);
         let PocketIcCallFailure::Rejected(response) = rejected.as_ref() else {
             panic!("expected rejection: {rejected:?}");

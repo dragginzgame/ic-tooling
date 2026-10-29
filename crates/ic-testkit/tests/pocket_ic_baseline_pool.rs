@@ -64,8 +64,19 @@ struct TwoCanisterMetadata {
     baseline_cycles: [u128; 2],
 }
 
+fn lifecycle(
+    call: impl FnOnce() -> Result<(), ic_platform::pocket_ic::RejectResponse>,
+) -> Result<(), TestRecipeError> {
+    use ic_testkit::pic::{PocketIcCallFailure, try_pocket_ic_operation};
+    try_pocket_ic_operation(call)
+        .map_err(PocketIcCallFailure::Operation)
+        .and_then(|result| result.map_err(PocketIcCallFailure::Rejected))
+        .map_err(TestRecipeError::Lifecycle)
+}
+
 #[derive(Debug)]
 enum TestRecipeError {
+    Lifecycle(ic_testkit::pic::PocketIcCallFailure),
     Snapshot(ControllerSnapshotError),
     Startup(PocketIcStartupError),
     DomainMutation(&'static str),
@@ -146,6 +157,7 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             pocket_ic
                 .instance()
                 .install_canister(canister_id, EMPTY_WASM.to_vec(), vec![], None);
+            lifecycle(|| pocket_ic.instance().stop_canister(canister_id, None))?;
         }
 
         let mut baseline = CachedPocketIcBaseline::capture(
@@ -161,6 +173,9 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             },
         )
         .map_err(TestRecipeError::from)?;
+        for id in canister_ids {
+            lifecycle(|| baseline.pocket_ic().start_canister(id, None))?;
+        }
         let baseline_time_nanos = baseline.pocket_ic().get_time().as_nanos_since_unix_epoch();
         let baseline_cycles = canister_ids.map(|id| baseline.pocket_ic().cycle_balance(id));
         let metadata = baseline.metadata_mut();
@@ -197,6 +212,9 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             return Err(TestRecipeError::Synthetic("requested restore failure"));
         }
 
+        for id in baseline.metadata().canister_ids {
+            lifecycle(|| baseline.pocket_ic().stop_canister(id, None))?;
+        }
         Ok(())
     }
 
@@ -262,7 +280,7 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
 
     fn drive_to_readiness(
         &self,
-        _baseline: &CachedPocketIcBaseline<Self::Metadata>,
+        baseline: &CachedPocketIcBaseline<Self::Metadata>,
     ) -> Result<(), Self::Error> {
         if self
             .controls
@@ -270,6 +288,9 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             .swap(false, Ordering::SeqCst)
         {
             return Err(TestRecipeError::Synthetic("requested readiness failure"));
+        }
+        for id in baseline.metadata().canister_ids {
+            lifecycle(|| baseline.pocket_ic().start_canister(id, None))?;
         }
         Ok(())
     }
@@ -346,6 +367,7 @@ impl std::fmt::Display for TestRecipeError {
         match self {
             Self::Snapshot(error) => error.fmt(formatter),
             Self::Startup(error) => error.fmt(formatter),
+            Self::Lifecycle(error) => error.fmt(formatter),
             Self::DomainMutation(domain) => write!(formatter, "{domain} mutated while leased"),
             Self::Synthetic(message) => formatter.write_str(message),
         }
@@ -357,6 +379,7 @@ impl std::error::Error for TestRecipeError {
         match self {
             Self::Snapshot(error) => Some(error),
             Self::Startup(error) => Some(error),
+            Self::Lifecycle(error) => Some(error),
             Self::DomainMutation(_) | Self::Synthetic(_) => None,
         }
     }
@@ -520,9 +543,13 @@ fn canonical_restore_failure_preserves_the_snapshot_cause_and_failed_rebuild() {
     let (baseline, _) = pool.acquire().unwrap();
     let canister = baseline.metadata().canister_ids[0];
     baseline.pocket_ic().stop_canister(canister, None).unwrap();
+    let snapshots = baseline
+        .pocket_ic()
+        .list_canister_snapshots(canister, None)
+        .unwrap();
     baseline
         .pocket_ic()
-        .delete_canister(canister, None)
+        .delete_canister_snapshot(canister, None, snapshots[0].id.clone())
         .unwrap();
     drop(baseline);
     controls.fail_next_build.store(true, Ordering::SeqCst);

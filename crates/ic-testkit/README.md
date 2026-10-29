@@ -151,6 +151,22 @@ The published archive includes [`CHANGELOG.md`](CHANGELOG.md) for historical
 upgrade actions. Current build and artifact-cache contracts belong to IC Build;
 historical Testkit artifact imports are not current entry points.
 
+Snapshot baselines retain global timer and low-Wasm-memory-hook state through
+metadata-upload snapshots, together with module/globals, heap, stable memory,
+certified data and the chunk store. Capture transfers data in bounded management
+messages and requires an additional temporary snapshot slot, memory and cycles. Initial capture is
+more work; warm reuse loads the already prepared snapshot. No server/client
+shared directory or application-specific timer reset is required.
+
+Custom recipes must stop/drain the whole captured set before capture and in
+`prepare_restore`, then restart only after complete capture or successful
+restore/reset in `drive_to_readiness`. Keep automatic progress disabled and
+exclude concurrent instance operations. The standalone recipe handles its
+single canister's stop/start lifecycle. Absolute captured deadlines are retained;
+current simulated time is not rewound, so an expired restored timer may fire on
+restart. Failures preserve primary causes and known snapshot cleanup IDs; a lost
+creation reply can leave an unknown snapshot requiring caller reconciliation.
+
 The repository also includes a complete
 [multi-canister baseline recipe](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-testkit/examples/multi_canister_baseline_pool.rs)
 compiled by the crate's normal all-target checks. The

@@ -77,6 +77,16 @@ fn recipe_error(error: impl Error + Send + Sync + 'static) -> RecipeError {
     RecipeError(Box::new(error))
 }
 
+fn lifecycle(
+    call: impl FnOnce() -> std::result::Result<(), ic_platform::pocket_ic::RejectResponse>,
+) -> std::result::Result<(), RecipeError> {
+    use ic_testkit::pic::{PocketIcCallFailure, try_pocket_ic_operation};
+    try_pocket_ic_operation(call)
+        .map_err(PocketIcCallFailure::Operation)
+        .and_then(|result| result.map_err(PocketIcCallFailure::Rejected))
+        .map_err(recipe_error)
+}
+
 impl Recipe {
     // Fresh construction intentionally does not pay for snapshot capture.
     fn create(
@@ -167,7 +177,10 @@ impl PocketIcBaselineRecipe for Recipe {
 
     fn build(&self) -> std::result::Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error> {
         let (pic, ids) = self.create()?;
-        CachedPocketIcBaseline::capture(
+        for id in ids {
+            lifecycle(|| pic.instance().stop_canister(id, None))?;
+        }
+        let baseline = CachedPocketIcBaseline::capture(
             pic,
             ids.map(|id| CanisterSnapshotTarget {
                 canister_id: id,
@@ -175,7 +188,19 @@ impl PocketIcBaselineRecipe for Recipe {
             }),
             ids,
         )
-        .map_err(recipe_error)
+        .map_err(recipe_error)?;
+        self.drive_to_readiness(&baseline)?;
+        Ok(baseline)
+    }
+
+    fn prepare_restore(
+        &self,
+        baseline: &CachedPocketIcBaseline<Self::Metadata>,
+    ) -> std::result::Result<(), Self::Error> {
+        for id in baseline.metadata() {
+            lifecycle(|| baseline.pocket_ic().stop_canister(*id, None))?;
+        }
+        Ok(())
     }
 
     fn reset_non_snapshot_state(
@@ -189,8 +214,11 @@ impl PocketIcBaselineRecipe for Recipe {
 
     fn drive_to_readiness(
         &self,
-        _baseline: &CachedPocketIcBaseline<Self::Metadata>,
+        baseline: &CachedPocketIcBaseline<Self::Metadata>,
     ) -> std::result::Result<(), Self::Error> {
+        for id in baseline.metadata() {
+            lifecycle(|| baseline.pocket_ic().start_canister(*id, None))?;
+        }
         Ok(())
     }
 

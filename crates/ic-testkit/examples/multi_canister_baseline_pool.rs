@@ -28,8 +28,19 @@ struct TopologyMetadata {
     canister_ids: [Principal; 2],
 }
 
+fn lifecycle(
+    call: impl FnOnce() -> Result<(), ic_platform::pocket_ic::RejectResponse>,
+) -> Result<(), RecipeError> {
+    use ic_testkit::pic::{PocketIcCallFailure, try_pocket_ic_operation};
+    try_pocket_ic_operation(call)
+        .map_err(PocketIcCallFailure::Operation)
+        .and_then(|result| result.map_err(PocketIcCallFailure::Rejected))
+        .map_err(RecipeError::Lifecycle)
+}
+
 #[derive(Debug)]
 enum RecipeError {
+    Lifecycle(ic_testkit::pic::PocketIcCallFailure),
     Startup(PocketIcStartupError),
     Snapshot(ControllerSnapshotError),
     Validation(&'static str),
@@ -65,9 +76,10 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             pocket_ic
                 .instance()
                 .install_canister(canister_id, EMPTY_WASM.to_vec(), vec![], None);
+            lifecycle(|| pocket_ic.instance().stop_canister(canister_id, None))?;
         }
 
-        CachedPocketIcBaseline::capture(
+        let baseline = CachedPocketIcBaseline::capture(
             pocket_ic,
             canister_ids.map(|id| CanisterSnapshotTarget {
                 canister_id: id,
@@ -75,7 +87,19 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             }),
             TopologyMetadata { canister_ids },
         )
-        .map_err(Into::into)
+        .map_err(RecipeError::Snapshot)?;
+        self.drive_to_readiness(&baseline)?;
+        Ok(baseline)
+    }
+
+    fn prepare_restore(
+        &self,
+        baseline: &CachedPocketIcBaseline<Self::Metadata>,
+    ) -> Result<(), Self::Error> {
+        for id in baseline.metadata().canister_ids {
+            lifecycle(|| baseline.pocket_ic().stop_canister(id, None))?;
+        }
+        Ok(())
     }
 
     fn reset_non_snapshot_state(
@@ -89,8 +113,11 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
 
     fn drive_to_readiness(
         &self,
-        _baseline: &CachedPocketIcBaseline<Self::Metadata>,
+        baseline: &CachedPocketIcBaseline<Self::Metadata>,
     ) -> Result<(), Self::Error> {
+        for id in baseline.metadata().canister_ids {
+            lifecycle(|| baseline.pocket_ic().start_canister(id, None))?;
+        }
         Ok(())
     }
 
@@ -143,6 +170,7 @@ impl fmt::Display for RecipeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Startup(error) => error.fmt(formatter),
+            Self::Lifecycle(error) => error.fmt(formatter),
             Self::Snapshot(error) => error.fmt(formatter),
             Self::Validation(message) => formatter.write_str(message),
         }
@@ -153,6 +181,7 @@ impl Error for RecipeError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Startup(error) => Some(error),
+            Self::Lifecycle(error) => Some(error),
             Self::Snapshot(error) => Some(error),
             Self::Validation(_) => None,
         }

@@ -431,11 +431,13 @@ fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition() {
     assert!(matches!(
         error,
         BaselinePoolError::Preparation {
-            error: BaselinePoolPreparationError::Restore(
-                ControllerSnapshotError::RestoreFailed { .. }
-            ),
+            error: BaselinePoolPreparationError::Recipe {
+                stage: BaselinePreparationStage::RestoreCanisters,
+                source,
+            },
             ..
-        }
+        } if matches!(source.get_ref().and_then(|error| error.downcast_ref::<ic_testkit::pic::PocketIcCallFailure>()),
+            Some(ic_testkit::pic::PocketIcCallFailure::Rejected(_)))
     ));
 
     let (fixture, outcome) = pool
