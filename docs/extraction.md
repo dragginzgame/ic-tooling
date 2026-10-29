@@ -118,6 +118,17 @@ roles and retained-data qualification. The existing Shared stable-memory rule
 requires IC Memory handles; retiring that owner also needs a coordinated baseline
 change. No allocation or stored-format migration is implied by the Candid facade.
 
+## Profiler native mechanics
+
+The authorized Host extraction from Profiler commit
+`70907ffa3b1a61c89929b02ff8d8e40509de9f8e` owns raw procfs/libproc/Mach
+observations and Unix workload gate/custody mechanics in `ic-host-process`.
+Profiler retains its serialized capture DTOs, pinned-process admission, selected
+roots, cadence, aggregation and diagnostics. Platform retains native IC adapters
+and matching build inputs. This introduces no upward Host dependency. Native
+source provenance and safety comments are retained; there is no cryptographic
+implementation transfer.
+
 ## Current implementation
 
 The initial library source is committed IC Host Tools 0.2.0 at

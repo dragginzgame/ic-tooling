@@ -4,6 +4,7 @@ pub mod child;
 #[cfg(unix)]
 pub mod custody;
 pub mod framing;
+pub mod observation;
 #[cfg(unix)]
 pub mod provenance;
 pub mod sampling;

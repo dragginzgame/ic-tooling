@@ -4,10 +4,12 @@
 //! Group cleanup signals members of a newly created group; it cannot contain
 //! processes that escape that group or prove completion of external effects.
 
+mod gate;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(test)]
 mod tests;
+pub use gate::{LaunchGateError, gated_command};
 
 use rustix::{
     io::Errno,
@@ -275,6 +277,31 @@ impl OwnedChild {
             .transpose()
     }
 
+    /// Explicitly relinquish cleanup, leaving a running workload and its group alive.
+    ///
+    /// Performs one nonblocking direct-child reap and then invalidates this
+    /// owner's signalling/waiting custody, even if that observation fails.
+    /// No readiness, successful-start or retry permission is inferred. The caller
+    /// owns the remaining lifetime/reaping; dropping this value closes its pipe
+    /// handles without killing the workload. This differs from successful handoff.
+    /// # Errors
+    /// Refuses lost or terminating custody. Native wait errors are returned after
+    /// cleanup is relinquished, so they never override the explicit keep-running choice.
+    pub fn relinquish(&mut self) -> io::Result<Option<ExitStatus>> {
+        if let Some(status) = self.state.status() {
+            return Ok(Some(status));
+        }
+        if !self.is_owned() {
+            return Err(Errno::CHILD.into());
+        }
+        let result = retry_interrupted(|| self.child.try_wait());
+        self.state = match result {
+            Ok(Some(status)) => ChildState::Reaped(status),
+            _ => ChildState::Lost { reap_started: None },
+        };
+        result
+    }
+
     /// Reap an already successful leader without signalling its remaining group.
     ///
     /// This is the explicit transfer point for a background lifetime. The caller
@@ -366,27 +393,59 @@ impl OwnedChild {
     /// direct-child kill fallback. Drop cannot report errors; call this explicitly
     /// when cleanup evidence matters.
     pub fn terminate(&mut self) -> Result<ExitStatus, CleanupError> {
+        self.terminate_inner(None)
+    }
+
+    /// Signal an owned group with TERM, wait until leader exit or the selected
+    /// grace elapses without reaping, then KILL the group and reap synchronously.
+    ///
+    /// Unlike the bounded cleanup policy, reaping has no elapsed-time bound.
+    /// The caller selects this operation after its final observation. Direct-only
+    /// children retain their ordinary direct kill/wait behavior.
+    /// # Errors
+    /// Retains signalling and reaping failures separately, as in [`Self::terminate`].
+    pub fn terminate_with_grace(&mut self, grace: Duration) -> Result<ExitStatus, CleanupError> {
+        self.terminate_inner(self.group.then_some(grace))
+    }
+
+    fn terminate_inner(
+        &mut self,
+        exit_grace: Option<Duration>,
+    ) -> Result<ExitStatus, CleanupError> {
         if let Some(status) = self.state.status() {
             return Ok(status);
         }
         let first_attempt = self.state.reap_started().is_none();
-        let term_error =
-            if first_attempt && let CleanupPolicy::TermThenKill { grace, .. } = self.cleanup {
-                let error = self.signal_group(Signal::TERM).err();
-                if error.is_none() {
-                    let started = Instant::now();
-                    while started.elapsed() < grace {
-                        std::thread::sleep(
-                            grace
-                                .saturating_sub(started.elapsed())
-                                .min(Duration::from_secs(1)),
-                        );
-                    }
+        let term_error = if first_attempt && let Some(grace) = exit_grace {
+            let error = self.signal_group(Signal::TERM).err();
+            let started = Instant::now();
+            while started.elapsed() < grace {
+                if self.poll_exit().ok().flatten().is_some() {
+                    break;
                 }
-                error
-            } else {
-                None
-            };
+                std::thread::sleep(
+                    grace
+                        .saturating_sub(started.elapsed())
+                        .min(Duration::from_millis(10)),
+                );
+            }
+            error
+        } else if first_attempt && let CleanupPolicy::TermThenKill { grace, .. } = self.cleanup {
+            let error = self.signal_group(Signal::TERM).err();
+            if error.is_none() {
+                let started = Instant::now();
+                while started.elapsed() < grace {
+                    std::thread::sleep(
+                        grace
+                            .saturating_sub(started.elapsed())
+                            .min(Duration::from_secs(1)),
+                    );
+                }
+            }
+            error
+        } else {
+            None
+        };
         let group_error = if first_attempt && self.group {
             self.signal_group(Signal::KILL).err()
         } else {
@@ -398,11 +457,15 @@ impl OwnedChild {
             } else {
                 None
             };
-        let waited = match self.cleanup {
-            CleanupPolicy::KillAndWait => self.reap(),
-            CleanupPolicy::TermThenKill { reap_timeout, .. } => {
-                let started = self.state.start_reaping();
-                self.reap_bounded(started, reap_timeout)
+        let waited = if exit_grace.is_some() {
+            self.reap()
+        } else {
+            match self.cleanup {
+                CleanupPolicy::KillAndWait => self.reap(),
+                CleanupPolicy::TermThenKill { reap_timeout, .. } => {
+                    let started = self.state.start_reaping();
+                    self.reap_bounded(started, reap_timeout)
+                }
             }
         };
         match waited {

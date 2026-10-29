@@ -1,78 +1,86 @@
 # Current handoff — 2026-10-29
 
-## Accepted scope and source
+## Current integration state
 
-The maintainer requested work on open issues #263, #266 and #267. Snapshot and
-Platform corrections were already delivered; their current evidence was verified
-and both issues closed. The Cargo grouping correction is complete locally,
-unstaged, with its own checks and notes. It remains open for delivery and native
-qualification. No commit, push, version transaction, release, publication, tool
-installation, sibling source edit or artifact cleanup ran in this issue batch.
+The maintainer requested resolution of the ordinary checkout's pull conflicts.
+Local main is `f53d4080` (Release 0.70.1), following `01e1b12c`; tag v0.70.1
+exists. The existing merge brings in PR #265 through
+`01bbf850f1f14c3678485da4601a80cd75dee88f`. Only CHANGELOG.md,
+docs/changelog/0.70.md and this handoff conflicted. Rust and other documentation
+changes merged automatically. This repair changes only those three files;
+existing staged source changes and local release commits are preserved.
 
-The ordinary checkout remains on `ecc8d61d` (Release 0.70.0), with its admitted
-35 dirty files preserved. They contain Wire 0.7.22 adoption and all ten previous
-complexity reductions. Cargo.toml, Cargo.lock, the real index and HEAD retain
-their admission contents. Own versions remain 0.70.0; pending notes stay 0.70.1
-because the combined local batch preserves published APIs and feature boundaries.
-Shared remains 0.27.1 at `d08cbcafbaff4227e798a890232e2248bf167504`.
+The complete local 0.70.1 root ledger and detailed-note bodies remain unchanged.
+Incoming Process additions are recorded under compatible pending 0.70.2, rather
+than retroactively adding them to finalized 0.70.1. Workspace versions and the
+lockfile remain at their admitted 0.70.1 contents. This selects notes only: no
+version change, new commit, push, tag, release or publication is performed.
+The merge commit remains for the maintainer to complete after reviewing.
 
-PR #265 was separately merged normally as
-`01bbf850f1f14c3678485da4601a80cd75dee88f`; it is not pulled into this dirty
-checkout. Its reconciliation head `55252e66` now has all four workflows passing.
-Native Linux x86-64 and macOS 15 Intel/Apple Silicon, MSRV and lint/security pass
-in CI run 40910712564. This does not qualify the later local grouping changes.
-Merge evidence remains at `/tmp/ic-tooling-merge-265.iHrIEC/`.
+Conflict/index/stage backups and original source are retained at
+`/tmp/ic-tooling-conflicts-0701.R6FwVw/`. Both sides, the common-base documents
+and the marker-bearing files are saved. Earlier ordinary-checkout changes are
+now in the maintainer's local commits, including Wire 0.7.22 adoption, the ten
+complexity reductions and bounded Cargo grouping. Shared remains 0.27.1 at
+`d08cbcafbaff4227e798a890232e2248bf167504`.
 
-## Bounded Cargo observations
+## Incoming Process ownership
 
-Build tries each input package only against the latest group, starting another
-group on a feature conflict. Including isolated trees, nonempty selections use
-at most `2n−1` observer calls. Earlier groups are not searched; packing can be
-conservative. Every proposed group is still observed through actual Cargo and
-must preserve all isolated normal/build trees. Feature/target/locked/offline
-flags, the caller observer and its typed execution errors remain unchanged.
-Malformed forests and missing/additional selected roots return CargoTreeError.
-No cross-call cache, dependency, duplicate consumer owner or metadata substitute
-was added. The bound covers observer calls, not caller-selected output/time.
+[#264 — Raw process observations and Profiler workload mechanics](https://github.com/dragginzgame/ic-tooling/issues/264)
+is supplied by [PR #265](https://github.com/dragginzgame/ic-tooling/pull/265).
+Host Process owns raw procfs, Darwin libproc/Mach, clock and thread facts imported
+from Profiler 70907ff. Profiler retains selection, creation-identity admission,
+DTOs, cadence, aggregation, retention and diagnostics. Platform retains native
+IC adapters and supplying build inputs. Bounded RSS-only sampling stays separate.
 
-Evidence: `/tmp/ic-tooling-issues-263-267.9Ckcfb/`. Admission source/patch/status,
-failed and corrected Clippy logs, actual Rust 1.91 checks and the comparative
-probe source/results are retained. Ten focused grouping tests pass, covering
-compatible/incompatible work bounds, conservative order, actual Cargo feature
-unification, graph selections, malformed forests and typed process failures.
-Strict all-target/all-feature Build Clippy passes on prepared Rust 1.99.1;
-strict Build Rustdoc passes on actual Rust 1.91. Formatting and doc links pass.
+OwnedChild supports non-reaping observation, explicit relinquishment for callers
+that keep a workload running, caller-selected graceful group termination followed
+by synchronous reaping, and an argv/stdin-preserving launch gate. Readiness,
+later reaping after relinquishment, retries and descendant containment remain
+caller-owned. No IC dependency or second production owner is introduced.
 
-The comparative probe uses the frozen Canic adoption workspace's six selected
-canister packages with locked/offline Wasm normal/build trees on Rust 1.91.
-Previous and bounded algorithms produce identical groups: 15 versus 11 Cargo
-calls, 75,407,408 versus 51,465,988 stdout bytes. Single sequential local samples
-take 5,016 versus 3,586 ms; this is not a stable benchmark or whole-build claim.
-The frozen root manifest/lock remain unchanged. This is a graph probe, not a
-Canic build/release or full adapter qualification. New grouping source has no
-native macOS execution or hosted CI yet; no full workspace/release gate ran.
+Consumers use one immutable Host source family until registry supply is released.
+Paired adoption is recorded in [Profiler #7](https://github.com/dragginzgame/ic-profiler/pull/7)
+and [Platform #95](https://github.com/dragginzgame/ic-platform/pull/95).
+Their c20dbd1 acceptance records do not automatically qualify later supplier heads.
 
-## Delivered corrections and preserved evidence
+## Validation and acceptance boundaries
+
+This conflict repair is documentation-only. It checks removal of conflict
+markers, exact preservation of finalized notes and unrelated source/index entries,
+documentation links and diff consistency; no new Rust suite or broad gate runs.
+
+PR reconciliation source `55252e66` passed all four workflows. CI run
+40910712564 passed native Linux x86-64, native macOS 15 Intel and Apple Silicon,
+MSRV and lint/security. Prior focused Process evidence includes 31 actual Rust
+1.91 child/observation tests and strict Clippy. Merge evidence remains at
+`/tmp/ic-tooling-merge-265.iHrIEC/`. These hosted results qualify that supplier
+source, not the combined ordinary-checkout merge with later local 0.70.1 changes.
+
+[#266 — Bound repeated Cargo resolution](https://github.com/dragginzgame/ic-tooling/issues/266)
+uses at most 2n−1 observer calls, trying only the latest group while preserving
+every isolated normal/build tree. Packing may be conservative; malformed trees
+and mismatched roots have typed failures. Its prior local evidence is
+`/tmp/ic-tooling-issues-263-267.9Ckcfb/`: ten Rust 1.91 grouping tests, strict
+Clippy/Rustdoc, and the six-package frozen Canic graph probe. The probe preserved
+groups with 15 versus 11 calls; single local timings are not a stable benchmark.
+No new macOS or hosted qualification of that grouping/combined source is claimed.
+
+## Preserved delivered fixes and evidence
 
 [#263 — Snapshot timer coherence](https://github.com/dragginzgame/ic-tooling/issues/263)
-is closed after checking the delivered metadata-upload snapshot implementation,
-installed regression coverage and the retained Canic four-case sequence. All four
-labels pass on frozen Testkit 0.69.13; the governed suite log confirms success in
-`/home/adam/projects/canic/target/adoption-qualification-20261029/`. No later
-moving-root or production backup qualification is inferred. Original failing
-Canic evidence under `target/session-release-0113/` remains untouched.
+and [#267 — Native Platform convergence](https://github.com/dragginzgame/ic-tooling/issues/267)
+were closed with delivered supplier and consumer evidence. Canic's retained
+four-case sequence passes on frozen Testkit 0.69.13 in
+`/home/adam/projects/canic/target/adoption-qualification-20261029/`; original
+failures remain under `target/session-release-0113/`. This does not qualify
+later moving-root source or production backup/restore. Platform 0.70.0 adoption
+still requires matching owned Principal/ledger types in consumers; Testkit's
+external Principal API remains unchanged.
 
-[#267 — Native Platform convergence](https://github.com/dragginzgame/ic-tooling/issues/267)
-is closed against published Tooling 0.70.0 and the existing Timers one-Platform
-consumer evidence. Platform adoption evidence remains at
-`/tmp/ic-tooling-platform-081.DQsDFy/`. Its owned Principal/ledger migration still
-requires consumer alignment; Testkit preserves its external Principal API.
-
-Earlier cleanup evidence remains at `/tmp/ic-tooling-cleanup-0701.bAD18Y/`:
-110 focused Rust 1.91 cases and four installed Linux/PocketIC 16.1.0 cases,
-selected Wasm, graphs, Clippy and docs passed for that source. Wire adoption
-evidence remains at `/tmp/ic-tooling-wire-0722.kvAbqM/`. No native macOS proof
-is attributed to these uncommitted changes. Admission handoffs retain earlier
-preparation/package failures, migration/retirement backups, original Host archive
-refs, stale release-lock backups, release plans and stash obligations; preserve
-them. No consumer artifacts or migration evidence were removed.
+Prior Platform, Wire and cleanup records remain at
+`/tmp/ic-tooling-platform-081.DQsDFy/`, `/tmp/ic-tooling-wire-0722.kvAbqM/` and
+`/tmp/ic-tooling-cleanup-0701.bAD18Y/`. Earlier admitted handoffs retain package/
+preparation failures, migration/retirement backups, original Host archive refs,
+stale release-lock backups, release plans and stash obligations. No artifact
+cleanup or sibling source change is performed.
