@@ -9,7 +9,7 @@ PocketIC-oriented test utilities for Internet Computer canister tests.
 ```toml
 [dev-dependencies]
 ic-testkit = "0.66"
-ic-platform = { version = "0.6.19", features = ["pocket-ic"] }
+ic-platform = { version = "0.8.1", features = ["pocket-ic"] }
 ```
 
 For typed application calls, enable the `wire` feature and depend directly on

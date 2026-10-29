@@ -71,12 +71,12 @@ check_graph "$parser_free" ic-host-tools none encoding '' \
     "^(ic-platform|${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$"
 check_graph "$yaml_allowed" ic-host-tools none icp-project 'ic-host-text serde_yaml unsafe-libyaml' \
     "^(ic-platform|${codec}|ic-host-(artifacts|fs|process)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$"
-check_graph "$parser_free" ic-host-tools none ledger-evidence 'ic-platform candid icrc-ledger-types' \
-    '^(candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-agent|reqwest|ic-stable-structures)$'
+check_graph "$parser_free" ic-host-tools none ledger-evidence 'ic-platform candid' \
+    '^(candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-agent|reqwest|ic-stable-structures|icrc-ledger-types|icrc-cbor)$'
 check_graph "$parser_free" ic-host-tools none icp-ledger prost \
     "^(ic-platform|${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$"
 check_graph "$parser_free" ic-host-tools none registry 'ic-platform prost' \
-    "^(${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest)$"
+    "^(${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|ic_principal|sha2)$"
 check_graph "$parser_free" ic-host-tools none ic-interface \
     'ic-host-artifacts wasmparser' "^(ic-platform|${codec}|ic-host-(fs|process|text)|${serialization}|wasm-encoder)$"
 check_graph "$parser_free" ic-host-wasm-inspect default '' 'ic-host-artifacts ic-host-fs' \
@@ -92,8 +92,8 @@ check_graph "$parser_free" ic-host-tools none candid,ic-interface,certificate \
     'ic-platform candid_parser serde_cbor ic-certification ic-host-artifacts wasmparser' \
     '^(ic-host-(fs|process|text)|ic-agent|reqwest|minicbor)$'
 check_graph "$yaml_allowed" ic-host-tools none --all-features \
-    'ic-platform candid_parser serde_cbor ic-certification ic-host-artifacts wasmparser ic-agent reqwest icrc-ledger-types ic-host-text serde_yaml unsafe-libyaml prost' \
-    '^(ic-host-(fs|process)|ic-stable-structures)$'
+    'ic-platform candid_parser serde_cbor ic-certification ic-host-artifacts wasmparser ic-agent reqwest ic-host-text serde_yaml unsafe-libyaml prost' \
+    '^(ic-host-(fs|process)|ic-stable-structures|icrc-ledger-types|icrc-cbor)$'
 check_graph "$parser_free" ic-host-text default '' unicode-width \
     "^(ic-host-(artifacts|fs|process|tools)|ic-platform|candid_parser|ic-agent|ic-certification|${serialization}|serde)$"
 check_graph "$yaml_allowed" ic-host-text none yaml 'unicode-width serde serde_yaml unsafe-libyaml' \
