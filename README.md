@@ -299,6 +299,19 @@ then reaps a successful leader without stopping the background group. See the
 [child cleanup contract](docs/changelog/0.5.md#explicit-child-and-process-group-cleanup)
 for exclusive ownership and descendant limitations.
 
+For workload capture, `OwnedChild::terminate_with_grace` waits for leader exit or
+the caller's grace without reaping, then kills the group and reaps synchronously.
+`relinquish` explicitly releases cleanup for a keep-running choice, including on
+wait error; it does not imply a successful startup or install a reaper.
+`child::gated_command` prepares an argv-preserving launcher; the caller configures
+IO, spawns and releases the returned newline gate after its own readiness check.
+
+`observation` supplies raw native clock/thread/process facts and child-list
+completeness. Procfs operations accept an explicitly selected mount; no workload,
+read allowance, cadence, aggregation or report policy is selected. These richer
+observations preserve opaque creation identities and optional Linux I/O/PSS.
+They are distinct from the existing bounded RSS-only `sampling` table contract.
+
 Unix `custody::CommandCustody` instead retains a caller-selected sidecar lock
 through one command's inherited descriptor and cooperating descendants. Persist
 its `ic_host_fs::identity::FileIdentity` with original intent before `spawn`,

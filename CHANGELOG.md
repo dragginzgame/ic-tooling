@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.70.1]
+
+### ➕ Added
+
+- Supply raw native process observations and explicit launch-gate, graceful cleanup
+  and keep-running operations for Profiler, preserving caller-owned capture and
+  lifecycle policy
+  ([#264 — Own raw process observations and Profiler workload mechanics in Host](https://github.com/dragginzgame/ic-tooling/issues/264)).
+  [Details](docs/changelog/0.70.md#0701---unreleased).
+
 ## [0.70.0] - 2026-10-29
 
 ### ⚠️ Breaking

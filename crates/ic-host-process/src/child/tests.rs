@@ -1,5 +1,6 @@
 use super::*;
 mod direct;
+mod profiler;
 use crate::test_support::Fixture;
 use rustix::fs::{OFlags, fcntl_getfl, fcntl_setfl};
 use std::{
