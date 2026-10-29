@@ -14,6 +14,11 @@
 - Add `try_pocket_ic_call` to retain structured rejections and recognized
   transport failures without retrying calls or swallowing unrelated panics.
 
+### 🧪 Testing
+
+- Avoid intermittent cache input-race qualification failures by replacing the
+  fixture input atomically while preserving exact digest-drift assertions.
+
 ## [0.69.9] - 2026-10-29
 
 ### 🩹 Fixed

@@ -576,7 +576,9 @@ fn incomplete_output_set_fails_and_removes_staging() {
 fn preparation_input_race_refuses_once_and_preserves_retained_output() {
     let root = unique_temp_directory("preparation-input-race");
     let input = root.join("input");
+    let replacement = root.join("replacement");
     fs::write(&input, b"before").unwrap();
+    fs::write(&replacement, b"after").unwrap();
     let spec = ArtifactCacheSpec::new(&root.join("cache"), "race", "recipe/v1")
         .with_input("input", &input)
         .with_output("output", &root.join("output"));
@@ -601,7 +603,10 @@ fn preparation_input_race_refuses_once_and_preserves_retained_output() {
         );
         thread::sleep(Duration::from_millis(1));
     }
-    fs::write(&input, b"after").unwrap();
+    // Preparation may still be hashing when the content lock appears. Publish
+    // complete replacement bytes so that hash can see only the old or new file,
+    // never the empty/partial contents of an in-place truncating write.
+    fs::rename(&replacement, &input).unwrap();
     drop(namespace_lock);
     let after = resolve_key(&spec).unwrap().input_digest;
     let error = worker
@@ -611,7 +616,8 @@ fn preparation_input_race_refuses_once_and_preserves_retained_output() {
     assert!(
         matches!(error, ArtifactCacheError::InputsChangedDuringPreparation {
         before: observed_before, after: observed_after
-    } if observed_before == before && observed_after == after)
+    } if observed_before == before && observed_after == after),
+        "expected captured digest drift from {before} to {after}, got {error:?}",
     );
     assert_eq!(
         fs::read(retained.record().artifacts()[0].path()).unwrap(),
