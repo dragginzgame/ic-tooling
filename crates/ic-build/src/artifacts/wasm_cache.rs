@@ -525,10 +525,14 @@ impl WasmBuildProgressConfig {
     }
 }
 
-struct ProgressReporter<'a> {
+struct ProgressObservation<'a> {
     config: WasmBuildProgressConfig,
-    observer: Option<&'a mut dyn FnMut(WasmBuildProgressEvent)>,
+    observer: &'a mut dyn FnMut(WasmBuildProgressEvent),
     last_event: Instant,
+}
+
+struct ProgressReporter<'a> {
+    observation: Option<ProgressObservation<'a>>,
     failure_phase: WasmBuildPhase,
     failure_timings: WasmBuildFailureTimings,
 }
@@ -536,12 +540,7 @@ struct ProgressReporter<'a> {
 impl<'a> ProgressReporter<'a> {
     fn silent() -> Self {
         Self {
-            config: WasmBuildProgressConfig {
-                heartbeat_interval: None,
-                emit_cargo_output: false,
-            },
-            observer: None,
-            last_event: Instant::now(),
+            observation: None,
             failure_phase: WasmBuildPhase::Specification,
             failure_timings: WasmBuildFailureTimings::default(),
         }
@@ -562,30 +561,30 @@ impl<'a> ProgressReporter<'a> {
                     .to_owned(),
             });
         }
-        Ok(ProgressReporter {
-            config,
-            observer: Some(observer),
-            last_event: Instant::now(),
-            failure_phase: WasmBuildPhase::Specification,
-            failure_timings: WasmBuildFailureTimings::default(),
+        Ok(Self {
+            observation: Some(ProgressObservation {
+                config,
+                observer,
+                last_event: Instant::now(),
+            }),
+            ..Self::silent()
         })
     }
 
     fn emit(&mut self, event: WasmBuildProgressEvent) {
-        if let Some(observer) = &mut self.observer {
-            observer(event);
-            self.last_event = Instant::now();
+        if let Some(observation) = &mut self.observation {
+            (observation.observer)(event);
+            observation.last_event = Instant::now();
         }
     }
 
-    const fn is_observed(&self) -> bool {
-        self.observer.is_some()
-    }
-
     fn heartbeat_due_in(&self) -> Option<Duration> {
-        self.config
-            .heartbeat_interval
-            .map(|interval| interval.saturating_sub(self.last_event.elapsed()))
+        self.observation.as_ref().and_then(|observation| {
+            observation
+                .config
+                .heartbeat_interval
+                .map(|interval| interval.saturating_sub(observation.last_event.elapsed()))
+        })
     }
 
     fn emit_heartbeat(&mut self, phase: WasmBuildPhase, elapsed: Duration) {
@@ -605,7 +604,7 @@ impl<'a> ProgressReporter<'a> {
     {
         let started = Instant::now();
         self.begin_phase(phase);
-        let result = if !self.is_observed() || self.config.heartbeat_interval.is_none() {
+        let result = if self.heartbeat_due_in().is_none() {
             operation()
         } else {
             thread::scope(|scope| {
@@ -2654,19 +2653,23 @@ fn build_wasm_canisters_cached_internal(
     let plan = validate_spec(spec)?;
     let prepared_invalidation = batch_prepared_invalidation(batch_resolution.as_ref());
     progress.emit(WasmBuildProgressEvent::Started);
-    if let CachePlan::MaintainedShared(config) = plan {
-        let outcome = build_wasm_with_shared_incremental(
-            spec,
-            SharedAcquisition::Scheduled(config),
-            prepared_invalidation,
-            total_started,
-            progress,
-            batch_resolution.take(),
-            &mut spawn,
-        )?;
-        emit_finished_progress(&outcome, progress);
-        return Ok(outcome);
-    }
+    let shared_incremental = match plan {
+        CachePlan::Isolated => false,
+        CachePlan::Shared => true,
+        CachePlan::MaintainedShared(config) => {
+            let outcome = build_wasm_with_shared_incremental(
+                spec,
+                SharedAcquisition::Scheduled(config),
+                prepared_invalidation,
+                total_started,
+                progress,
+                batch_resolution.take(),
+                &mut spawn,
+            )?;
+            emit_finished_progress(&outcome, progress);
+            return Ok(outcome);
+        }
+    };
     let (cache_lock, first_lock_wait) =
         lock_wasm_build_cache_with_progress(&spec.target_dir, progress)?;
     ensure_cache_directory_tag(&spec.target_dir)?;
@@ -2687,35 +2690,32 @@ fn build_wasm_canisters_cached_internal(
             fingerprint: resolved.fingerprint,
         });
 
-        match plan {
-            CachePlan::Isolated => {
-                let cache_entry = cache_entry_directory(spec, resolved.fingerprint);
-                build_wasm_cache_miss(
-                    spec,
-                    &resolved,
+        if shared_incremental {
+            drop(cache_lock);
+            build_wasm_with_shared_incremental(
+                spec,
+                SharedAcquisition::Miss {
+                    resolved: &resolved,
                     first_lock_wait,
-                    isolated_acquisition,
-                    &cache_entry,
-                    total_started,
-                    progress,
-                    &mut spawn,
-                )
-            }
-            CachePlan::Shared | CachePlan::MaintainedShared(_) => {
-                drop(cache_lock);
-                build_wasm_with_shared_incremental(
-                    spec,
-                    SharedAcquisition::Miss {
-                        resolved: &resolved,
-                        first_lock_wait,
-                    },
-                    isolated_acquisition.prepared_invalidation,
-                    total_started,
-                    progress,
-                    None,
-                    &mut spawn,
-                )
-            }
+                },
+                isolated_acquisition.prepared_invalidation,
+                total_started,
+                progress,
+                None,
+                &mut spawn,
+            )
+        } else {
+            let cache_entry = cache_entry_directory(spec, resolved.fingerprint);
+            build_wasm_cache_miss(
+                spec,
+                &resolved,
+                first_lock_wait,
+                isolated_acquisition,
+                &cache_entry,
+                total_started,
+                progress,
+                &mut spawn,
+            )
         }
     }?;
     emit_finished_progress(&outcome, progress);
@@ -3295,18 +3295,19 @@ fn lock_cache_file_with_progress(
 ) -> Result<(File, Duration), WasmBuildError> {
     let started = Instant::now();
     progress.begin_phase(phase);
-    let result = if !progress.is_observed() || progress.config.heartbeat_interval.is_none() {
-        lock_cache_file(lock_path).map_err(wasm_cache_fs_error)
-    } else {
-        let heartbeat_interval = progress
-            .config
-            .heartbeat_interval
-            .expect("observed cache lock must have a heartbeat interval");
-        lock_cache_file_with_wait_observer(lock_path, heartbeat_interval, |elapsed| {
-            progress.emit_heartbeat_if_due(phase, elapsed);
-        })
-        .map_err(wasm_cache_fs_error)
-    };
+    let result = progress
+        .observation
+        .as_ref()
+        .and_then(|observation| observation.config.heartbeat_interval)
+        .map_or_else(
+            || lock_cache_file(lock_path).map_err(wasm_cache_fs_error),
+            |interval| {
+                lock_cache_file_with_wait_observer(lock_path, interval, |elapsed| {
+                    progress.emit_heartbeat_if_due(phase, elapsed);
+                })
+                .map_err(wasm_cache_fs_error)
+            },
+        );
     progress.record_phase(phase, started.elapsed());
     result
 }
@@ -3737,7 +3738,11 @@ fn communicate_cargo_build(
         },
         |stream, bytes| {
             let mut progress = progress.borrow_mut();
-            if progress.config.emit_cargo_output {
+            if progress
+                .observation
+                .as_ref()
+                .is_some_and(|observation| observation.config.emit_cargo_output)
+            {
                 progress.emit(WasmBuildProgressEvent::CargoOutput {
                     stream,
                     bytes: bytes.to_vec(),

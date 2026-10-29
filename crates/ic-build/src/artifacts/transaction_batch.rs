@@ -378,6 +378,16 @@ where
     })
 }
 
+// Partial failures carry causes; public construction attaches final timings once.
+enum EntryFailure<E> {
+    Preparation(Box<ArtifactCacheError>),
+    Commit(Box<ArtifactCacheError>),
+    Callback {
+        source: Box<E>,
+        cleanup_error: Option<Box<ArtifactCacheError>>,
+    },
+}
+
 fn build_artifact_cache_entry<E>(
     index: usize,
     labeled: &LabeledArtifactCacheSpec,
@@ -385,15 +395,12 @@ fn build_artifact_cache_entry<E>(
 ) -> ArtifactCacheBatchEntry<E> {
     let entry_started = Instant::now();
     let mut timings = ArtifactCacheBatchFailureTimings::default();
-    let mut result = (|| {
+    let result = (|| {
         let preparation_started = Instant::now();
         let preparation = prepare_artifact_cache(&labeled.spec);
         timings.preparation = preparation_started.elapsed();
         let transaction =
-            match preparation.map_err(|source| ArtifactCacheBatchFailure::Preparation {
-                source: Box::new(source),
-                timings,
-            })? {
+            match preparation.map_err(|source| EntryFailure::Preparation(Box::new(source)))? {
                 ArtifactCachePreparation::Reused(record) => {
                     return Ok(ArtifactCacheOutcome::Reused(record));
                 }
@@ -407,30 +414,33 @@ fn build_artifact_cache_entry<E>(
             let cleanup_started = Instant::now();
             let cleanup_error = transaction.abort().err().map(Box::new);
             timings.cleanup = Some(cleanup_started.elapsed());
-            return Err(ArtifactCacheBatchFailure::Callback {
+            return Err(EntryFailure::Callback {
                 source: Box::new(source),
                 cleanup_error,
-                timings,
             });
         }
 
         let commit_started = Instant::now();
         let committed = transaction.commit();
         timings.commit = Some(commit_started.elapsed());
-        committed.map_err(|source| ArtifactCacheBatchFailure::Commit {
-            source: Box::new(source),
-            timings,
-        })
+        committed.map_err(|source| EntryFailure::Commit(Box::new(source)))
     })();
     let entry_elapsed = entry_started.elapsed();
-    if let Err(
-        ArtifactCacheBatchFailure::Preparation { timings, .. }
-        | ArtifactCacheBatchFailure::Commit { timings, .. }
-        | ArtifactCacheBatchFailure::Callback { timings, .. },
-    ) = &mut result
-    {
-        timings.total = entry_elapsed;
-    }
+    timings.total = entry_elapsed;
+    let result = result.map_err(|failure| match failure {
+        EntryFailure::Preparation(source) => {
+            ArtifactCacheBatchFailure::Preparation { source, timings }
+        }
+        EntryFailure::Commit(source) => ArtifactCacheBatchFailure::Commit { source, timings },
+        EntryFailure::Callback {
+            source,
+            cleanup_error,
+        } => ArtifactCacheBatchFailure::Callback {
+            source,
+            cleanup_error,
+            timings,
+        },
+    });
     ArtifactCacheBatchEntry {
         index,
         label: labeled.label.clone(),

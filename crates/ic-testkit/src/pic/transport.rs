@@ -120,11 +120,28 @@ impl std::error::Error for PocketIcCallFailure {
 pub(super) fn capture_call<T>(
     call: impl FnOnce() -> Result<T, RejectResponse>,
 ) -> Result<T, PocketIcCallFailure> {
-    match capture_operation(call) {
-        Ok(Ok(value)) => Ok(value),
-        Ok(Err(response)) => Err(PocketIcCallFailure::Rejected(response)),
-        Err(source) => Err(PocketIcCallFailure::Operation(source)),
-    }
+    capture_operation(call)
+        .map_err(PocketIcCallFailure::Operation)?
+        .map_err(PocketIcCallFailure::Rejected)
+}
+
+/// Execute one synchronous `PocketIC` call, retaining rejection or transport failure.
+///
+/// Uses [`try_pocket_ic_operation`]'s transport recognition and invokes `call`
+/// exactly once. Structured rejections are returned unchanged. Recovery,
+/// reconciliation and lifecycle policy remain with the caller.
+///
+/// # Panics
+/// Unrecognized panic payloads continue unwinding.
+///
+/// # Errors
+/// Returns the original rejection or a recognized upstream transport panic.
+pub fn try_pocket_ic_call<T>(
+    call: impl FnOnce() -> Result<T, RejectResponse>,
+) -> Result<T, PocketIcCallFailure> {
+    try_pocket_ic_operation(call)
+        .map_err(PocketIcCallFailure::Operation)?
+        .map_err(PocketIcCallFailure::Rejected)
 }
 
 // Extract a stable string message from one panic payload.
@@ -266,6 +283,47 @@ mod tests {
         is_dead_instance_transport_error, is_dead_pocket_ic_transport_error,
         try_pocket_ic_operation,
     };
+
+    #[test]
+    fn typed_call_preserves_values_rejections_and_panic_policy_without_replay() {
+        use ic_platform::pocket_ic::{ErrorCode, RejectCode, RejectResponse};
+        use std::{panic::catch_unwind, sync::Arc};
+
+        assert_eq!(super::try_pocket_ic_call(|| Ok(17)).unwrap(), 17);
+        let rejection = RejectResponse {
+            reject_code: RejectCode::CanisterReject,
+            reject_message: "exact rejection".into(),
+            error_code: ErrorCode::CanisterRejectedMessage,
+            certified: false,
+        };
+        let Err(PocketIcCallFailure::Rejected(observed)) =
+            super::try_pocket_ic_call(|| Err::<(), _>(rejection.clone()))
+        else {
+            panic!("expected the structured rejection");
+        };
+        assert_eq!(observed, rejection);
+        let mut attempts = 0;
+        let Err(PocketIcCallFailure::Operation(source)) = super::try_pocket_ic_call::<()>(|| {
+            attempts += 1;
+            panic!("{REFUSED}");
+        }) else {
+            panic!("expected the recognized transport failure");
+        };
+        assert_eq!(attempts, 1);
+        assert!(source.is_transport());
+        assert_eq!(source.message(), REFUSED);
+
+        let payload = Arc::new(17_u8);
+        let resumed = catch_unwind(|| {
+            let _ = super::try_pocket_ic_call::<()>(|| {
+                std::panic::panic_any(Arc::clone(&payload));
+            });
+        })
+        .unwrap_err()
+        .downcast::<Arc<u8>>()
+        .unwrap();
+        assert!(Arc::ptr_eq(&payload, &resumed));
+    }
 
     #[derive(Debug)]
     struct WrapperError(std::io::Error);

@@ -211,10 +211,8 @@ where
                 source,
             }
         })?;
-    let reply = transport::try_pocket_ic_operation(|| call(request))
-        .map_err(PocketIcCallFailure::Operation)
-        .and_then(|reply| reply.map_err(PocketIcCallFailure::Rejected))
-        .map_err(|source| WireCallError::Call {
+    let reply =
+        transport::try_pocket_ic_call(|| call(request)).map_err(|source| WireCallError::Call {
             context: Box::new(context.clone()),
             source: Box::new(source),
         })?;

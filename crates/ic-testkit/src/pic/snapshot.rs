@@ -209,13 +209,23 @@ where
             }
             Err(failure) => failure,
         };
-        let mut cleanup_failures = cleanup_snapshot_ids(pocket_ic, canister_id, sender, pending);
-        cleanup_failures.extend(cleanup_captured_snapshots(
-            snapshots,
+        let cleanup_failures = cleanup_captured_snapshots(
+            pending
+                .into_iter()
+                .map(|snapshot_id| {
+                    (
+                        canister_id,
+                        ControllerSnapshot {
+                            snapshot_id,
+                            sender,
+                        },
+                    )
+                })
+                .chain(snapshots),
             |canister_id, sender, snapshot_id| {
                 pocket_ic.delete_canister_snapshot(canister_id, sender, snapshot_id)
             },
-        ));
+        );
         return Err(match failure {
             transfer::Failure::Call(failure) => ControllerSnapshotError::CaptureFailed {
                 canister_id,
@@ -287,30 +297,8 @@ fn try_take_snapshot(
     })
 }
 
-fn cleanup_snapshot_ids(
-    pic: &PocketIc,
-    canister_id: Principal,
-    sender: Option<Principal>,
-    ids: Vec<Vec<u8>>,
-) -> Vec<SnapshotCleanupFailure> {
-    ids.into_iter()
-        .filter_map(|id| {
-            transport::capture_call(|| {
-                pic.delete_canister_snapshot(canister_id, sender, id.clone())
-            })
-            .err()
-            .map(|source| SnapshotCleanupFailure {
-                canister_id,
-                sender,
-                snapshot_id: id,
-                source: Box::new(source),
-            })
-        })
-        .collect()
-}
-
 fn cleanup_captured_snapshots(
-    snapshots: BTreeMap<Principal, ControllerSnapshot>,
+    snapshots: impl IntoIterator<Item = (Principal, ControllerSnapshot)>,
     mut remove: impl FnMut(Principal, Option<Principal>, Vec<u8>) -> Result<(), RejectResponse>,
 ) -> Vec<SnapshotCleanupFailure> {
     let mut failures = Vec::new();
@@ -388,7 +376,7 @@ mod tests {
                 )
             })
             .into_iter()
-            .collect();
+            .collect::<std::collections::BTreeMap<_, _>>();
         let rejection = RejectResponse {
             reject_code: RejectCode::CanisterReject,
             reject_message: "cleanup rejected".into(),

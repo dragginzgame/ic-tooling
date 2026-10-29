@@ -67,11 +67,7 @@ struct TwoCanisterMetadata {
 fn lifecycle(
     call: impl FnOnce() -> Result<(), ic_platform::pocket_ic::RejectResponse>,
 ) -> Result<(), TestRecipeError> {
-    use ic_testkit::pic::{PocketIcCallFailure, try_pocket_ic_operation};
-    try_pocket_ic_operation(call)
-        .map_err(PocketIcCallFailure::Operation)
-        .and_then(|result| result.map_err(PocketIcCallFailure::Rejected))
-        .map_err(TestRecipeError::Lifecycle)
+    ic_testkit::pic::try_pocket_ic_call(call).map_err(TestRecipeError::Lifecycle)
 }
 
 #[derive(Debug)]

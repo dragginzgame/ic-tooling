@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.69.10] - Unreleased
+
+### 🧹 Cleanup
+
+- Simplify snapshot transfer and rollback, build observation and qualification,
+  and process execution while preserving typed failures and cleanup behavior.
+- Keep benchmark phase summaries typed with unchanged JSON fields and nulls.
+  [Details](docs/changelog/0.69.md#06910---unreleased).
+
+### ➕ Added
+
+- Add `try_pocket_ic_call` to retain structured rejections and recognized
+  transport failures without retrying calls or swallowing unrelated panics.
+
 ## [0.69.9] - 2026-10-29
 
 ### 🩹 Fixed

@@ -20,6 +20,7 @@ mod tests;
 
 const POLL_INTERVAL: Duration = Duration::from_millis(2);
 
+#[derive(Clone, Copy)]
 enum Exchange<'a> {
     Capture,
     Communicate {
@@ -30,14 +31,19 @@ enum Exchange<'a> {
 }
 
 impl<'a> Exchange<'a> {
-    const fn parameters(self) -> (bool, Option<&'a [u8]>, SuccessfulExit) {
+    const fn input(self) -> Option<&'a [u8]> {
         match self {
-            Self::Capture => (false, None, SuccessfulExit::Cleanup),
+            Self::Communicate { input, .. } => input,
+            Self::Capture | Self::Drain => None,
+        }
+    }
+
+    const fn successful_exit(self) -> SuccessfulExit {
+        match self {
             Self::Communicate {
-                input,
-                successful_exit,
-            } => (false, input, successful_exit),
-            Self::Drain => (true, None, SuccessfulExit::Cleanup),
+                successful_exit, ..
+            } => successful_exit,
+            Self::Capture | Self::Drain => SuccessfulExit::Cleanup,
         }
     }
 }
@@ -183,7 +189,6 @@ fn exchange(
     mut cancelled: impl FnMut() -> bool,
     mut output: impl FnMut(OutputStream, &[u8]) -> io::Result<()>,
 ) -> Result<CompletedExecution, ExecutionError> {
-    let (allow_reaped, input, successful_exit) = operation.parameters();
     let timeout = limits.timeout;
     let mut status = None;
     let mut stdin = child.take_stdin();
@@ -195,7 +200,7 @@ fn exchange(
     // cannot guarantee cleanup here. No callback is reused after unwinding.
     let result = catch_unwind(AssertUnwindSafe(|| {
         let admitted = child.is_owned()
-            || (allow_reaped
+            || (matches!(operation, Exchange::Drain)
                 && child
                     .try_wait()
                     .map_err(|source| io_failure(ExecutionOperation::Wait, source))?
@@ -206,13 +211,13 @@ fn exchange(
                 io::ErrorKind::InvalidInput.into(),
             ));
         }
-        if input.is_some() && stdin.is_none() {
+        if operation.input().is_some() && stdin.is_none() {
             return Err(io_failure(
                 ExecutionOperation::StdinPipe,
                 io::ErrorKind::BrokenPipe.into(),
             ));
         }
-        let mut remaining = input.unwrap_or_default();
+        let mut remaining = operation.input().unwrap_or_default();
         if remaining.is_empty() {
             drop(stdin.take());
         }
@@ -241,7 +246,7 @@ fn exchange(
             };
             let progress_out = stdout.read_chunk(&mut buffer, &mut output)?;
             let progress_err = stderr.read_chunk(&mut buffer, &mut output)?;
-            status = poll_completion(child, successful_exit)
+            status = poll_completion(child, operation.successful_exit())
                 .map_err(|source| io_failure(ExecutionOperation::Wait, source))?;
             if let Some(status) = status
                 && stdout.reader.is_none()
@@ -253,7 +258,7 @@ fn exchange(
                 }
                 // Retained success still needs timely caller admission. Ordinary
                 // capture keeps its existing synchronous-cleanup exception.
-                if successful_exit == SuccessfulExit::Retain
+                if operation.successful_exit() == SuccessfulExit::Retain
                     && timeout.is_some_and(|timeout| started.elapsed() >= timeout)
                 {
                     return Err(ExecutionFailure::TimedOut);

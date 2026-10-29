@@ -98,52 +98,34 @@ pub(super) fn upload(
     )?;
     let uploaded = uploaded.snapshot_id;
     pending.push(uploaded.clone());
-    copy_region(
+    let transfer = SnapshotTransfer {
         pic,
         canister_id,
         sender,
         original,
-        &uploaded,
+        uploaded: &uploaded,
+    };
+    transfer.copy_region(
         metadata.wasm_module_size,
         |offset, size| SnapshotDataKind::WasmModule { offset, size },
         |offset| SnapshotDataOffset::WasmModule { offset },
     )?;
-    copy_region(
-        pic,
-        canister_id,
-        sender,
-        original,
-        &uploaded,
+    transfer.copy_region(
         metadata.wasm_memory_size,
         |offset, size| SnapshotDataKind::WasmMemory { offset, size },
         |offset| SnapshotDataOffset::WasmMemory { offset },
     )?;
-    copy_region(
-        pic,
-        canister_id,
-        sender,
-        original,
-        &uploaded,
+    transfer.copy_region(
         metadata.stable_memory_size,
         |offset, size| SnapshotDataKind::StableMemory { offset, size },
         |offset| SnapshotDataOffset::StableMemory { offset },
     )?;
     for chunk in metadata.wasm_chunk_store {
-        let (data,): (ReadCanisterSnapshotDataResult,) = call(
-            pic,
-            canister_id,
-            sender,
-            "read_canister_snapshot_data",
-            ReadCanisterSnapshotDataArgs {
-                canister_id,
-                snapshot_id: original.to_vec(),
-                kind: SnapshotDataKind::WasmChunk {
-                    hash: chunk.hash.clone(),
-                },
-            },
-        )?;
-        if data.chunk.len() as u64 > CHUNK_BYTES
-            || ic_host_artifacts::artifact::Sha256Digest::compute(&data.chunk)
+        let data = transfer.read(SnapshotDataKind::WasmChunk {
+            hash: chunk.hash.clone(),
+        })?;
+        if data.len() as u64 > CHUNK_BYTES
+            || ic_host_artifacts::artifact::Sha256Digest::compute(&data)
                 .as_bytes()
                 .as_slice()
                 != chunk.hash.as_slice()
@@ -152,18 +134,7 @@ pub(super) fn upload(
                 "snapshot chunk store entry exceeds the protocol limit or has the wrong hash",
             ));
         }
-        let (): () = call(
-            pic,
-            canister_id,
-            sender,
-            "upload_canister_snapshot_data",
-            UploadCanisterSnapshotDataArgs {
-                canister_id,
-                snapshot_id: uploaded.clone(),
-                kind: SnapshotDataOffset::WasmChunk,
-                chunk: data.chunk,
-            },
-        )?;
+        transfer.write(SnapshotDataOffset::WasmChunk, data)?;
     }
     Ok(uploaded)
 }
@@ -179,54 +150,65 @@ const fn require_complete_system_state(
     Ok(())
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "one bounded region transfer keeps caller identity and exact read/write selections explicit"
-)]
-fn copy_region(
-    pic: &PocketIc,
+struct SnapshotTransfer<'a> {
+    pic: &'a PocketIc,
     canister_id: Principal,
     sender: Option<Principal>,
-    original: &[u8],
-    uploaded: &[u8],
-    bytes: u64,
-    read_kind: impl Fn(u64, u64) -> SnapshotDataKind,
-    write_kind: impl Fn(u64) -> SnapshotDataOffset,
-) -> Result<(), Failure> {
-    let mut offset = 0;
-    while offset < bytes {
-        let size = CHUNK_BYTES.min(bytes - offset);
+    original: &'a [u8],
+    uploaded: &'a [u8],
+}
+
+impl SnapshotTransfer<'_> {
+    fn read(&self, kind: SnapshotDataKind) -> Result<Vec<u8>, Failure> {
         let (data,): (ReadCanisterSnapshotDataResult,) = call(
-            pic,
-            canister_id,
-            sender,
+            self.pic,
+            self.canister_id,
+            self.sender,
             "read_canister_snapshot_data",
             ReadCanisterSnapshotDataArgs {
-                canister_id,
-                snapshot_id: original.to_vec(),
-                kind: read_kind(offset, size),
+                canister_id: self.canister_id,
+                snapshot_id: self.original.to_vec(),
+                kind,
             },
         )?;
-        if data.chunk.len() as u64 != size {
-            return Err(Failure::Invalid(
-                "snapshot returned an incomplete data region",
-            ));
-        }
-        let (): () = call(
-            pic,
-            canister_id,
-            sender,
+        Ok(data.chunk)
+    }
+
+    fn write(&self, kind: SnapshotDataOffset, chunk: Vec<u8>) -> Result<(), Failure> {
+        call(
+            self.pic,
+            self.canister_id,
+            self.sender,
             "upload_canister_snapshot_data",
             UploadCanisterSnapshotDataArgs {
-                canister_id,
-                snapshot_id: uploaded.to_vec(),
-                kind: write_kind(offset),
-                chunk: data.chunk,
+                canister_id: self.canister_id,
+                snapshot_id: self.uploaded.to_vec(),
+                kind,
+                chunk,
             },
-        )?;
-        offset += size;
+        )
     }
-    Ok(())
+
+    fn copy_region(
+        &self,
+        bytes: u64,
+        read_kind: impl Fn(u64, u64) -> SnapshotDataKind,
+        write_kind: impl Fn(u64) -> SnapshotDataOffset,
+    ) -> Result<(), Failure> {
+        let mut offset = 0;
+        while offset < bytes {
+            let size = CHUNK_BYTES.min(bytes - offset);
+            let data = self.read(read_kind(offset, size))?;
+            if data.len() as u64 != size {
+                return Err(Failure::Invalid(
+                    "snapshot returned an incomplete data region",
+                ));
+            }
+            self.write(write_kind(offset), data)?;
+            offset += size;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

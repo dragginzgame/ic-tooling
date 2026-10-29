@@ -66,7 +66,7 @@ pub use startup::{
 pub use time::{TickUntilError, advance_and_tick, tick_until};
 pub use transport::{
     PocketIcCallFailure, PocketIcOperationError, is_dead_pocket_ic_transport_error,
-    try_pocket_ic_operation,
+    try_pocket_ic_call, try_pocket_ic_operation,
 };
 #[cfg(feature = "wire")]
 pub use wire::{WireCallContext, WireCallError, WireCallSpec, query_wire, update_wire};

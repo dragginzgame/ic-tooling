@@ -135,9 +135,25 @@ fn required_distribution(values: Vec<f64>) -> Result<SampleStatistics, Error> {
     distribution(values)?.ok_or(Error::InvalidData("summary lacks required measurements"))
 }
 
+// Keep the former map's alphabetical field order in serialized reports.
+#[derive(Serialize)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "serialized field names explicitly carry their millisecond units"
+)]
+struct PhaseSummary {
+    acquisition_ms: SampleStatistics,
+    build_ms: Option<SampleStatistics>,
+    readiness_ms: Option<SampleStatistics>,
+    reset_ms: Option<SampleStatistics>,
+    restore_ms: Option<SampleStatistics>,
+    validation_ms: Option<SampleStatistics>,
+    wait_ms: SampleStatistics,
+}
+
 #[derive(Serialize)]
 pub(super) struct Summary {
-    phases_ms: BTreeMap<String, Option<SampleStatistics>>,
+    phases_ms: PhaseSummary,
     body_ms: SampleStatistics,
     release_ms: SampleStatistics,
     iteration_ms: SampleStatistics,
@@ -148,16 +164,12 @@ pub(super) struct Summary {
 }
 
 impl Summary {
-    pub(super) fn wait(&self) -> &SampleStatistics {
-        // MeasuredRun admission requires samples; required summary distributions
-        // reject an empty run set, and every sample contains a wait measurement.
-        self.phases_ms["wait_ms"]
-            .as_ref()
-            .expect("nonempty admitted runs contain wait measurements")
+    pub(super) const fn wait(&self) -> &SampleStatistics {
+        &self.phases_ms.wait_ms
     }
 
-    pub(super) fn restore(&self) -> Option<&SampleStatistics> {
-        self.phases_ms["restore_ms"].as_ref()
+    pub(super) const fn restore(&self) -> Option<&SampleStatistics> {
+        self.phases_ms.restore_ms.as_ref()
     }
 }
 
@@ -173,10 +185,24 @@ pub(super) fn summarize(runs: &[MeasuredRun]) -> Result<Summary, Error> {
         }
     }
     // Keep every phase, including phases that were absent from every sample.
-    let phases_ms = phases
-        .into_iter()
-        .map(|(name, values)| Ok((name.into(), distribution(values)?)))
-        .collect::<Result<_, Error>>()?;
+    let [
+        (_, wait),
+        (_, build),
+        (_, restore),
+        (_, reset),
+        (_, readiness),
+        (_, validation),
+        (_, acquisition),
+    ] = phases;
+    let phases_ms = PhaseSummary {
+        acquisition_ms: required_distribution(acquisition)?,
+        build_ms: distribution(build)?,
+        readiness_ms: distribution(readiness)?,
+        reset_ms: distribution(reset)?,
+        restore_ms: distribution(restore)?,
+        validation_ms: distribution(validation)?,
+        wait_ms: required_distribution(wait)?,
+    };
     Ok(Summary {
         phases_ms,
         body_ms: required_distribution(samples().map(|sample| sample.body_ms).collect())?,
@@ -283,8 +309,14 @@ mod tests {
             encoded["body_ms"],
             json!({"count": 2, "mean": 2.0, "p50": 2.0, "p95": 3.0})
         );
-        assert!(summary.phases_ms["restore_ms"].is_none());
-        assert_eq!(summary.phases_ms["build_ms"].as_ref().unwrap().count, 2);
+        assert!(summary.restore().is_none());
+        assert_eq!(summary.phases_ms.build_ms.as_ref().unwrap().count, 2);
+        assert_eq!(summary.wait().count, 2);
+        // Preserve the former sorted-map encoding, including nullable phases.
+        assert_eq!(
+            serde_json::to_string(&summary.phases_ms).unwrap(),
+            serde_json::to_string(&encoded["phases_ms"]).unwrap(),
+        );
         assert_eq!(summary.body_ms.count, 2);
         assert_eq!(summary.body_ms.mean, 2.0);
         assert_eq!(summary.iteration_ms.mean, 5.0);

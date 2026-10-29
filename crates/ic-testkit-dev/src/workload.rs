@@ -80,11 +80,7 @@ fn recipe_error(error: impl Error + Send + Sync + 'static) -> RecipeError {
 fn lifecycle(
     call: impl FnOnce() -> std::result::Result<(), ic_platform::pocket_ic::RejectResponse>,
 ) -> std::result::Result<(), RecipeError> {
-    use ic_testkit::pic::{PocketIcCallFailure, try_pocket_ic_operation};
-    try_pocket_ic_operation(call)
-        .map_err(PocketIcCallFailure::Operation)
-        .and_then(|result| result.map_err(PocketIcCallFailure::Rejected))
-        .map_err(recipe_error)
+    ic_testkit::pic::try_pocket_ic_call(call).map_err(recipe_error)
 }
 
 impl Recipe {

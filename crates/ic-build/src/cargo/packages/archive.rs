@@ -147,165 +147,198 @@ pub fn qualify_package_archives(
     mut cargo: impl FnMut() -> Command,
     mut extractor: impl FnMut(&Path, &Path) -> Command,
 ) -> Result<(), PackageQualificationError> {
-    qualify(
+    PreparedQualification::prepare(
         workspace,
         archive_root,
         evidence,
         packages,
         features,
         limits,
-        &mut cargo,
-        &mut extractor,
     )
+    .and_then(|prepared| prepared.run(&mut cargo, &mut extractor))
     .map_err(|cause| PackageQualificationError {
         evidence: evidence.to_owned(),
         cause,
     })
 }
 
-#[expect(
-    clippy::too_many_lines,
-    clippy::too_many_arguments,
-    reason = "ordered archive qualification retains one before/after custody boundary"
-)]
-fn qualify(
-    workspace: &Path,
-    archive_root: &Path,
-    evidence: &Path,
-    packages: &[PackageArchiveSpec<'_>],
-    features: &CargoFeatureSelection,
+// Paths and selection are admitted before the attempt writes evidence or runs commands.
+struct PreparedQualification<'a> {
+    workspace: PathBuf,
+    archive_root: PathBuf,
+    evidence: PathBuf,
+    packages: &'a [PackageArchiveSpec<'a>],
+    features: &'a CargoFeatureSelection,
     limits: PackageQualificationLimits,
-    cargo: &mut impl FnMut() -> Command,
-    extractor: &mut impl FnMut(&Path, &Path) -> Command,
-) -> Result<(), Cause> {
-    if packages.is_empty() || limits.file_bytes == 0 || limits.source_entries == 0 {
-        return Err("empty package selection or admission budget".into());
-    }
-    let mut names = BTreeSet::new();
-    for package in packages {
-        if !identifier(package.name) || !identifier(package.version) || !names.insert(package.name)
-        {
-            return Err("invalid or duplicate package archive identity".into());
+}
+
+impl<'a> PreparedQualification<'a> {
+    fn prepare(
+        workspace: &Path,
+        archive_root: &Path,
+        evidence: &Path,
+        packages: &'a [PackageArchiveSpec<'a>],
+        features: &'a CargoFeatureSelection,
+        limits: PackageQualificationLimits,
+    ) -> Result<Self, Cause> {
+        if packages.is_empty() || limits.file_bytes == 0 || limits.source_entries == 0 {
+            return Err("empty package selection or admission budget".into());
         }
-    }
-    let workspace = workspace.canonicalize()?;
-    let archive_root = archive_root.canonicalize()?;
-    let evidence = evidence.canonicalize()?;
-    for path in [&workspace, &archive_root, &evidence] {
-        if path
-            .as_os_str()
-            .as_encoded_bytes()
-            .iter()
-            .any(|b| matches!(b, b'\r' | b'\n'))
-        {
-            return Err("invalid directory namespace".into());
+        let mut names = BTreeSet::new();
+        for package in packages {
+            if !identifier(package.name)
+                || !identifier(package.version)
+                || !names.insert(package.name)
+            {
+                return Err("invalid or duplicate package archive identity".into());
+            }
         }
-    }
-    if fs::read_dir(&evidence)?.next().is_some() {
-        return Err("evidence directory is not empty".into());
-    }
-    let lock = workspace.join("Cargo.lock");
-    let entry_lock = read(&lock, limits.file_bytes)?;
-    fs::write(evidence.join("entry-Cargo.lock"), &entry_lock)?;
-    let mut command = cargo();
-    command
-        .current_dir(&workspace)
-        .args(metadata_arguments(false, None))
-        .args(["--offline", "--locked"]);
-    let metadata = execute(&mut command, &evidence, "entry-metadata", limits.process)?;
-    let metadata = serde_json::from_slice(&metadata)?;
-    let mut originals = BTreeMap::new();
-    originals.insert(
-        workspace.join("Cargo.toml"),
-        read(&workspace.join("Cargo.toml"), limits.file_bytes)?,
-    );
-    for spec in packages {
-        let selected = package(&metadata, spec.name)?;
-        if selected.version.to_string() != spec.version {
-            return Err("entry package version differs from selection".into());
+        let workspace = workspace.canonicalize()?;
+        let archive_root = archive_root.canonicalize()?;
+        let evidence = evidence.canonicalize()?;
+        for path in [&workspace, &archive_root, &evidence] {
+            if path
+                .as_os_str()
+                .as_encoded_bytes()
+                .iter()
+                .any(|b| matches!(b, b'\r' | b'\n'))
+            {
+                return Err("invalid directory namespace".into());
+            }
         }
-        let path = selected.manifest_path.clone().into_std_path_buf();
-        originals.insert(path.clone(), read(&path, limits.file_bytes)?);
+        if fs::read_dir(&evidence)?.next().is_some() {
+            return Err("evidence directory is not empty".into());
+        }
+        Ok(Self {
+            workspace,
+            archive_root,
+            evidence,
+            packages,
+            features,
+            limits,
+        })
     }
-    for (index, bytes) in originals.values().enumerate() {
-        fs::write(evidence.join(format!("entry-manifest-{index}")), bytes)?;
-    }
-    let mut command = cargo();
-    command.current_dir(&workspace).args([
-        "package",
-        "--offline",
-        "--locked",
-        "--allow-dirty",
-        "--no-verify",
-    ]);
-    for spec in packages {
-        command.args(["-p", spec.name]);
-    }
-    command.args(features.arguments());
-    execute(&mut command, &evidence, "package", limits.process)?;
-    let mut archives = BTreeMap::new();
-    for (index, spec) in packages.iter().enumerate() {
-        let path = archive_root.join(format!("{}.crate", spec.directory_name()));
-        archives.insert(path.clone(), hash(&path, limits.file_bytes)?);
-        execute(
-            &mut extractor(&path, &evidence),
-            &evidence,
-            &format!("extract-{index}"),
-            limits.process,
-        )?;
-    }
-    let mut archive_hashes = String::new();
-    for digest in archives.values() {
-        writeln!(archive_hashes, "{digest}")?;
-    }
-    fs::write(evidence.join("archive.sha256"), archive_hashes)?;
-    let sources = sources(&evidence, packages, limits)?;
-    fs::write(
-        evidence.join("entry-sources.json"),
-        serde_json::to_vec(&sources)?,
-    )?;
-    let manifest = verification_manifest(packages)?;
-    let manifest_path = evidence.join("Cargo.toml");
-    let payload_lock = evidence.join("Cargo.lock");
-    fs::write(&manifest_path, &manifest)?;
-    fs::write(&payload_lock, &entry_lock)?;
-    let mut verification_cargo = || {
+
+    #[expect(
+        clippy::too_many_lines,
+        reason = "ordered archive qualification retains one before/after custody boundary"
+    )]
+    fn run(
+        self,
+        cargo: &mut impl FnMut() -> Command,
+        extractor: &mut impl FnMut(&Path, &Path) -> Command,
+    ) -> Result<(), Cause> {
+        let Self {
+            workspace,
+            archive_root,
+            evidence,
+            packages,
+            features,
+            limits,
+        } = self;
+        let lock = workspace.join("Cargo.lock");
+        let entry_lock = read(&lock, limits.file_bytes)?;
+        fs::write(evidence.join("entry-Cargo.lock"), &entry_lock)?;
         let mut command = cargo();
         command
-            .current_dir(&evidence)
-            .env("CARGO_TARGET_DIR", evidence.join("target"));
-        command
-    };
-    let mut command = verification_cargo();
-    command
-        .args(metadata_arguments(true, None))
-        .args(["--offline", "--manifest-path"])
-        .arg(&manifest_path)
-        .args(features.arguments());
-    let metadata = execute(&mut command, &evidence, "metadata", limits.process)?;
-    admit_graph(&serde_json::from_slice(&metadata)?, &evidence, packages)?;
-    let admitted_lock = read(&payload_lock, limits.file_bytes)?;
-    admit_lock(&entry_lock, &admitted_lock)?;
-    fs::write(evidence.join("admitted-Cargo.toml"), &manifest)?;
-    fs::write(evidence.join("admitted-Cargo.lock"), &admitted_lock)?;
-    let baseline = QualificationBaseline {
-        original_lock: (lock, entry_lock),
-        originals,
-        archives,
-        sources,
-        verification_manifest: manifest,
-        admitted_lock,
-    };
-    for (label, selection) in [("test-targets", "--all-targets"), ("test-docs", "--doc")] {
+            .current_dir(&workspace)
+            .args(metadata_arguments(false, None))
+            .args(["--offline", "--locked"]);
+        let metadata = execute(&mut command, &evidence, "entry-metadata", limits.process)?;
+        let metadata = serde_json::from_slice(&metadata)?;
+        let mut originals = BTreeMap::new();
+        originals.insert(
+            workspace.join("Cargo.toml"),
+            read(&workspace.join("Cargo.toml"), limits.file_bytes)?,
+        );
+        for spec in packages {
+            let selected = package(&metadata, spec.name)?;
+            if selected.version.to_string() != spec.version {
+                return Err("entry package version differs from selection".into());
+            }
+            let path = selected.manifest_path.clone().into_std_path_buf();
+            originals.insert(path.clone(), read(&path, limits.file_bytes)?);
+        }
+        for (index, bytes) in originals.values().enumerate() {
+            fs::write(evidence.join(format!("entry-manifest-{index}")), bytes)?;
+        }
+        let mut command = cargo();
+        command.current_dir(&workspace).args([
+            "package",
+            "--offline",
+            "--locked",
+            "--allow-dirty",
+            "--no-verify",
+        ]);
+        for spec in packages {
+            command.args(["-p", spec.name]);
+        }
+        command.args(features.arguments());
+        execute(&mut command, &evidence, "package", limits.process)?;
+        let mut archives = BTreeMap::new();
+        for (index, spec) in packages.iter().enumerate() {
+            let path = archive_root.join(format!("{}.crate", spec.directory_name()));
+            archives.insert(path.clone(), hash(&path, limits.file_bytes)?);
+            execute(
+                &mut extractor(&path, &evidence),
+                &evidence,
+                &format!("extract-{index}"),
+                limits.process,
+            )?;
+        }
+        let mut archive_hashes = String::new();
+        for digest in archives.values() {
+            writeln!(archive_hashes, "{digest}")?;
+        }
+        fs::write(evidence.join("archive.sha256"), archive_hashes)?;
+        let sources = sources(&evidence, packages, limits)?;
+        fs::write(
+            evidence.join("entry-sources.json"),
+            serde_json::to_vec(&sources)?,
+        )?;
+        let manifest = verification_manifest(packages)?;
+        let manifest_path = evidence.join("Cargo.toml");
+        let payload_lock = evidence.join("Cargo.lock");
+        fs::write(&manifest_path, &manifest)?;
+        fs::write(&payload_lock, &entry_lock)?;
+        let mut verification_cargo = || {
+            let mut command = cargo();
+            command
+                .current_dir(&evidence)
+                .env("CARGO_TARGET_DIR", evidence.join("target"));
+            command
+        };
         let mut command = verification_cargo();
         command
-            .args(["test", "--offline", "--locked", "--manifest-path"])
+            .args(metadata_arguments(true, None))
+            .args(["--offline", "--manifest-path"])
             .arg(&manifest_path)
-            .args(["--workspace", selection])
             .args(features.arguments());
-        execute(&mut command, &evidence, label, limits.process)?;
+        let metadata = execute(&mut command, &evidence, "metadata", limits.process)?;
+        admit_graph(&serde_json::from_slice(&metadata)?, &evidence, packages)?;
+        let admitted_lock = read(&payload_lock, limits.file_bytes)?;
+        admit_lock(&entry_lock, &admitted_lock)?;
+        fs::write(evidence.join("admitted-Cargo.toml"), &manifest)?;
+        fs::write(evidence.join("admitted-Cargo.lock"), &admitted_lock)?;
+        let baseline = QualificationBaseline {
+            original_lock: (lock, entry_lock),
+            originals,
+            archives,
+            sources,
+            verification_manifest: manifest,
+            admitted_lock,
+        };
+        for (label, selection) in [("test-targets", "--all-targets"), ("test-docs", "--doc")] {
+            let mut command = verification_cargo();
+            command
+                .args(["test", "--offline", "--locked", "--manifest-path"])
+                .arg(&manifest_path)
+                .args(["--workspace", selection])
+                .args(features.arguments());
+            execute(&mut command, &evidence, label, limits.process)?;
+        }
+        baseline.verify(&evidence, packages, limits)
     }
-    baseline.verify(&evidence, packages, limits)
 }
 
 // The entry and admitted observations belong to one qualification attempt.
@@ -404,28 +437,38 @@ fn execute(
     let result = capture_command(command, limits)
         .and_then(CompletedExecution::require_success)
         .and_then(CompletedExecution::require_complete);
-    let (stdout, stderr) = match &result {
-        Ok(output) => (&output.stdout, &output.stderr),
-        Err(ToolError::Execution(error)) => (&error.evidence.stdout, &error.evidence.stderr),
-        Err(_) => (&Vec::new(), &Vec::new()),
-    };
-    let retention = [
-        fs::write(evidence.join(format!("{label}.json")), stdout),
-        fs::write(evidence.join(format!("{label}.stderr")), stderr),
-    ]
-    .into_iter()
-    .filter_map(Result::err)
-    .collect::<Vec<_>>();
+    let stdout_path = evidence.join(format!("{label}.json"));
+    let stderr_path = evidence.join(format!("{label}.stderr"));
+    let retention = retain_command_output(&result, &stdout_path, &stderr_path);
     match result {
         Ok(output) if retention.is_empty() => Ok(output.stdout),
         other => Err(Box::new(PackageCommandError {
             stage: label.to_owned(),
-            stdout_path: evidence.join(format!("{label}.json")),
-            stderr_path: evidence.join(format!("{label}.stderr")),
+            stdout_path,
+            stderr_path,
             execution: other.err(),
             retention,
         })),
     }
+}
+
+fn retain_command_output(
+    result: &Result<CompletedExecution, ToolError>,
+    stdout_path: &Path,
+    stderr_path: &Path,
+) -> Vec<io::Error> {
+    let (stdout, stderr): (&[u8], &[u8]) = match result {
+        Ok(output) => (&output.stdout, &output.stderr),
+        Err(ToolError::Execution(error)) => (&error.evidence.stdout, &error.evidence.stderr),
+        Err(_) => (&[], &[]),
+    };
+    [
+        fs::write(stdout_path, stdout),
+        fs::write(stderr_path, stderr),
+    ]
+    .into_iter()
+    .filter_map(Result::err)
+    .collect()
 }
 
 fn package<'a>(metadata: &'a Metadata, name: &str) -> Result<&'a Package, Cause> {
