@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.70.0]
+
+### ⚠️ Breaking
+
+- Adopt IC Platform 0.8.1. Tools' ledger values now use Platform-owned types;
+  consumers must use matching Platform 0.8 types when constructing ledger blocks
+  or exchanging Registry principals. External encodings and ledger hashes remain
+  unchanged. [Migration details](docs/changelog/0.70.md#0700---unreleased).
+
+### 🧹 Cleanup
+
+- Remove the upstream ICRC ledger/CBOR dependency family; keep Registry's owned
+  principals independent of external Principal conversions. Testkit explicitly
+  selects those conversions to preserve its existing Principal API.
+
 ## [0.69.14] - 2026-10-29
 
 ### 🩹 Fixed

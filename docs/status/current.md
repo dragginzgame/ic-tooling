@@ -1,87 +1,79 @@
 # Current handoff — 2026-10-29
 
-## Source and scope
+## IC Platform 0.8.1 adoption
 
-The accepted ten-item cleanup batch is complete locally and unstaged over
-`7a44d77f` (Release 0.69.13). The incoming working/staged tree was clean;
-no active Cargo/rustc process was visible. Package versions remain 0.69.13.
-Compatible pending notes are 0.69.14: no public API, report/cache format,
-consumer migration or tool-selection change is required. Cargo.lock is
-byte-identical to admission; manifests and Shared snapshot are unchanged.
+The requested dependency adoption is complete locally and unstaged over
+`645ae21d` (Release 0.69.14). Incoming worktree/index were clean, with no active
+Cargo/rustc process visible. Workspace package versions remain 0.69.14; no
+staging, commit, push, release, publication, tool install or sibling edit ran.
+The Shared snapshot remains 0.27.1 at
+`d08cbcafbaff4227e798a890232e2248bf167504`.
 
-No staging, commit, push, tag, release, publication, dependency update, tool
-installation or sibling edit ran. Shared Tooling remains
-`d08cbcafbaff4227e798a890232e2248bf167504` (144 files).
+The root requires published IC Platform 0.8.1 with defaults disabled; its macro
+package resolves to 0.8.1. Registry search and package metadata verified the
+published version and Rust 1.91 floor. Existing registry Wire, PocketIC 16.1.0,
+management, executor and ic0 versions remain selected. No unrelated package
+version was updated. The lockfile drops seven obsolete packages: base32,
+icrc-cbor, icrc-ledger-types, libm, minicbor, minicbor-derive and syn 1.x.
 
-## Completed changes and refined graph proposal
+Pending notes are **0.70.0**, because the public Tools ledger value changes from
+registry ICRC types to Platform-owned types. Consumers constructing LedgerBlock
+or using verified values must select Platform 0.8.1's Value. Consumers exchanging
+owned Registry principals likewise need the same Platform 0.8 identity. Candid/
+Serde representations and ledger hashes retain the supplying contract; no data
+rewrite or uncertain-operation replay is required. No compatibility bridge was
+added. Released 0.69 history is unchanged; package versions were not bumped.
 
-Benchmark task collection explicitly joins every worker and retains the first
-failure in worker order. A later panic no longer replaces that cause through
-implicit scope cleanup. Successful sample ordering and measurement boundaries
-remain. Report statistics accept iterators and collect at one boundary; phase
-validation uses the existing values without unused labels or serialization changes.
+Registry keeps the minimal owned-principal feature. Tests validate its bytes and
+intervals without importing external conversions. Docs identify the optional
+principal-external feature for SDK boundaries; graph policy rejects external
+Principal and SHA-2 in the registry-only profile. Ledger/all-feature graphs now
+reject the retired registry ICRC/CBOR packages instead of requiring them.
 
-Terminal escaping uses one standard escape iterator behind the existing unsafe
-character predicate. Printable Unicode, literal quotes/backslashes and borrowed
-results remain exact. Environment lookup validates every entry while selecting
-the requested network; duplicate identities still fail YAML admission. Ledger
-verification admits its final block once, retaining length/hash/parent checks.
+Testkit explicitly selects principal-external to preserve its public external
+Principal identity, including fake_principal on Wasm. Its existing native
+PocketIC/Candid/management selections remain; Wasm remains Candid-free. The probe
+retains its CDK/raw runtime, and stable-memory adapters retain their backing API.
+Examples name the new Platform release. Native observation APIs from PR #265
+are separate and are not included by this dependency update.
 
-HTTP overflow has one refusal branch with the existing retained-prefix,
-allocation-error precedence and cancellation behavior. Package qualification
-logs use the canonical error-evidence accessor. Tree sync/hash drops a redundant
-rewind of freshly opened files, preserving descriptor custody, ordered hooks and
-`File::sync_all` (including Apple's stronger platform synchronization).
+## Validation and evidence
 
-The proposed replacement of complete enabled-feature inspection with Shared's
-feature-edge checker was rejected by a real Cargo forwarding probe. Feature edges
-do not inventory every enabled dependency feature forwarded from a root. The
-original full-feature checks remain; their regex now also recognizes path
-identities. Four local Cargo fixtures demonstrate forbidden validator/component
-features escaping the old regex and being rejected by the current consumer.
-Shared's helper and snapshot remain intact; no new parser or dependency was added.
+Evidence: `/tmp/ic-tooling-platform-081.DQsDFy/`. Admission source/lock/handoff,
+exact check commands, logs, final patch/source and identity records are retained.
+Warning-denied all-target/all-feature Clippy passes for the five direct Platform
+consumer packages on prepared Rust 1.99.1, before focused tests.
 
-## Validation and limits
+Actual Rust 1.91 tests pass: 12 cases comprising isolated Registry (3), ledger
+evidence (4), Testkit deterministic Principal (1) and native stable memory (4).
+Rust 1.91 Wasm checks pass for Testkit/Native selected fixtures and the private
+probe. Registry-only strict Rustdoc passes without external-conversion features.
+Tools' actual native Linux profile graph script and selected Testkit native/Wasm
+normal/build graphs pass; Wasm explicitly retains ic_principal/ic0 and excludes
+Candid, PocketIC, Wire, the executor, macros and Host packages. ShellCheck, shell
+syntax, formatting, local doc links and diff checks pass.
 
-Evidence: `/tmp/ic-tooling-cleanup-06914.hJOCPI/`, selected by
-`/tmp/ic-tooling-cleanup-06914-current`. Admission source/lock/handoff, commands,
-attempted and final logs, negative probes, final patch/source and identity records
-are retained there. Prior evidence remains separate.
+No full local workspace or release gate, live PocketIC run or native macOS
+qualification ran. Native macOS 15 Intel/Apple Silicon evidence is separate;
+Linux and Wasm compilation do not establish it. No Wasm-size saving is claimed.
 
-Actual Rust 1.91 Linux focused tests pass: 45 cases across worker completion,
-report statistics/fields, escaping and its width/progress/table callers,
-environment/ledger projection, command-failure retention, tree synchronization
-and bounded HTTP reads. HTTP fixtures used local loopback execution. No external
-service was contacted. An exhaustive old/new escape probe matches all 1,112,064
-Unicode scalars, borrowed/owned decisions and adjacent escape sequences.
-The new worker failure regression fails against archived original production
-code with the expected scoped-thread panic; it passes against the changed code.
+## Preserved obligations and prior work
 
-Warning-denied all-target/all-feature Clippy passes for the six changed packages
-on prepared Rust 1.99.1. Final native Linux dependency graphs, shell syntax and
-ShellCheck pass. The first lint attempt used a missing tool path; its failure
-remains, followed by a pass using prepared `/home/adam/.local/bin/shellcheck`.
-Provisional feature-edge probes are retained alongside the final full-feature
-checks. Formatting, local documentation links and diff checks pass.
-
-No full workspace or release gate ran. This batch needed no live PocketIC run.
-Native macOS 15 Intel and Apple Silicon qualification did not run; Linux evidence
-is separate. Public boundaries, dependencies and platform-sync contracts remain.
-
-## Preserved obligations and evidence
+[PR #265 — Own raw native observations and workload mechanics in Host](https://github.com/dragginzgame/ic-tooling/pull/265)
+was repaired and pushed separately at efb49570. Its repair evidence remains at
+`/tmp/ic-tooling-265.xBrNN0/`; original Host/consumer evidence remains under
+`/tmp/profiler-host-ownership-20261029`. Its native CI and supplier acceptance keep
+their own source identities; this adoption neither merges nor retargets that PR.
 
 [Testkit snapshot consumer acceptance (#263)](https://github.com/dragginzgame/ic-tooling/issues/263)
-retains its scope at `/tmp/ic-tooling-263.WQ4ch3/`. This batch establishes neither
-Canic adoption nor its retained four-case sequence qualification and changes no
-issue state. The prior handoff is retained in this batch's admission evidence.
+retains scope at `/tmp/ic-tooling-263.WQ4ch3/`. This batch establishes neither
+Canic adoption nor its retained four-case sequence qualification.
 
-Previous batch evidence remains at `/tmp/ic-tooling-cleanup-06913.uEdXff/`,
-`/tmp/ic-tooling-cleanup-06912.cqgTkd/`, `/tmp/ic-tooling-cleanup-06911.Pznlfz/`
-and `/tmp/ic-tooling-cleanup-06910.ZwEZDQ/`. The race fixture and failed package
-attempt remain at `/tmp/ic-tooling-preparation-race.IMHoSv/` and
-`target/package-qualification-1823269-0/`. Earlier supplying-owner obligations
-retain the scope linked through those handoffs. Migration/retirement backups
-remain under `/tmp/ic-tooling-migration/`; original Host archive refs,
-`/tmp/ic-tooling-stale-release-lock.qHQFTn/lock`, release plans, failed attempts
-and earlier stash records remain preserved. No artifact cleanup ran beyond
-existing owned regression-fixture behavior.
+Earlier cleanup evidence remains at `/tmp/ic-tooling-cleanup-06914.hJOCPI/`,
+`/tmp/ic-tooling-cleanup-06913.uEdXff/`, `/tmp/ic-tooling-cleanup-06912.cqgTkd/`,
+`/tmp/ic-tooling-cleanup-06911.Pznlfz/` and `/tmp/ic-tooling-cleanup-06910.ZwEZDQ/`.
+Preparation race/package failures, migration/retirement backups under
+`/tmp/ic-tooling-migration/`, original Host archive refs, stale release-lock
+backup `/tmp/ic-tooling-stale-release-lock.qHQFTn/lock`, release plans and stash
+evidence remain preserved. Earlier supplying-owner obligations retain their
+recorded scope. No artifact cleanup ran beyond existing owned fixture behavior.

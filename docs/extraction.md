@@ -48,10 +48,12 @@ external-protocol type integration and the supported CDK/executor interface.
 It must expose explicit supported operations rather than a blanket upstream
 re-export. Where generic external DTOs need Candid traits or derives, a deliberately
 supported trait/macro surface is necessary and remains upstream-coupled until
-replaced. Identity-only consumers use Platform's unconditional owned `Principal`.
+replaced. Identity-only consumers select Platform's `principal` feature for its
+owned `Principal`.
 Registry shard APIs use that type; external SDKs and required Candid DTOs retain
-`principal::ExternalPrincipal`, with explicit byte-preserving conversions. Neither
-the owned principal nor the new owned Account selects a Candid codec or trait.
+`principal::ExternalPrincipal`, with explicit byte-preserving conversions selected
+by `principal-external`. Neither the owned principal nor the new owned Account
+selects a Candid codec or trait.
 Canic retains dispatch, authentication and lifecycle policy; Timers retains
 scheduling; Query retains NNS/SNS/ledger operations and schemas; Testkit retains
 PocketIC lifecycle; Build retains native extraction execution. Host's five crates

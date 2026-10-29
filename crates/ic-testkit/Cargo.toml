@@ -26,7 +26,7 @@ held-reply-fixtures = ["reply-fixtures", "ic-host-artifacts/wasm-text"]
 wire = ["dep:ic-wire", "dep:serde"]
 
 [dependencies]
-ic-platform = { workspace = true, features = ["principal"] }
+ic-platform = { workspace = true, features = ["principal-external"] }
 thiserror = { workspace = true }
 
 [target.'cfg(all(unix, not(target_arch = "wasm32")))'.dependencies]
