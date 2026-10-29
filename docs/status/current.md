@@ -2,87 +2,86 @@
 
 ## Source and scope
 
-Nine of the ten accepted simplifications are implemented locally and unstaged
-over `b0c94001` (Release 0.69.12). The incoming working/staged tree was clean;
-no active Cargo/rustc process was visible. The prior handoff describes the
-previous batch, already committed in this base. Package versions remain 0.69.12;
-compatible pending notes are 0.69.13. Cargo.lock is byte-identical to admission.
+The accepted ten-item cleanup batch is complete locally and unstaged over
+`7a44d77f` (Release 0.69.13). The incoming working/staged tree was clean;
+no active Cargo/rustc process was visible. Package versions remain 0.69.13.
+Compatible pending notes are 0.69.14: no public API, report/cache format,
+consumer migration or tool-selection change is required. Cargo.lock is
+byte-identical to admission; manifests and Shared snapshot are unchanged.
 
 No staging, commit, push, tag, release, publication, dependency update, tool
-installation or sibling edit ran. Manifests and Shared snapshot are unchanged.
-Shared Tooling remains `d08cbcafbaff4227e798a890232e2248bf167504` (144 files).
+installation or sibling edit ran. Shared Tooling remains
+`d08cbcafbaff4227e798a890232e2248bf167504` (144 files).
 
-## Completed changes and retained decision
+## Completed changes and refined graph proposal
 
-Cargo profile, lock/network and feature flags append to one argument buffer,
-with the same ordering and feature encoding. Input capture has one private path
-for admitted specifications: revalidation combines and sorts the roots without
-cloning/normalizing exclusions again. Public entrypoints still admit inputs, and
-source scans, old-root custody, absence authority and digest bytes remain intact.
-Exclusion names reuse the existing single-normal-component predicate with their
-own error context.
+Benchmark task collection explicitly joins every worker and retains the first
+failure in worker order. A later panic no longer replaces that cause through
+implicit scope cleanup. Successful sample ordering and measurement boundaries
+remain. Report statistics accept iterators and collect at one boundary; phase
+validation uses the existing values without unused labels or serialization changes.
 
-Diagnostic artifact discovery reuses Host's reader traversal, retaining its
-8 KiB scratch, maximum representable aggregate count and Cargo's per-message
-allowance. Interrupted/native IO, impossible counts, protocol/completion and
-artifact selection remain independently checked.
+Terminal escaping uses one standard escape iterator behind the existing unsafe
+character predicate. Printable Unicode, literal quotes/backslashes and borrowed
+results remain exact. Environment lookup validates every entry while selecting
+the requested network; duplicate identities still fail YAML admission. Ledger
+verification admits its final block once, retaining length/hash/parent checks.
 
-Wasm paths carry the filename normalized during target admission, keeping raw
-Cargo names for message matching and retaining collision admission. Cache stamp
-validation reuses its prepared header; independent artifact hashing and complete
-stamp-byte comparison remain. Extracted graph admission uses the existing
-package directory-name renderer.
+HTTP overflow has one refusal branch with the existing retained-prefix,
+allocation-error precedence and cancellation behavior. Package qualification
+logs use the canonical error-evidence accessor. Tree sync/hash drops a redundant
+rewind of freshly opened files, preserving descriptor custody, ordered hooks and
+`File::sync_all` (including Apple's stronger platform synchronization).
 
-Benchmark server selection anchors the exact caller path and leaves the single
-canonicalization to Host. An initial metadata observation preserves native path
-errors; executable/type checks and the no-PATH contract remain. Port parsing
-borrows trimmed text and allocates only invalid-value diagnostics.
-
-Proposal 5, a typed workspace JSON envelope, is intentionally retained as-is.
-Source review found that the current generic decoder accepts duplicate root keys
-using the last value. A derived envelope would reject these; preserving the
-behavior would require extra custom parsing code. No new decoder or issue was
-introduced for a refactor that would increase complexity. Public APIs, feature/
-dependency boundaries, report/cache formats and lifecycle contracts are unchanged.
-No consumer migration or new tool selection is required.
+The proposed replacement of complete enabled-feature inspection with Shared's
+feature-edge checker was rejected by a real Cargo forwarding probe. Feature edges
+do not inventory every enabled dependency feature forwarded from a root. The
+original full-feature checks remain; their regex now also recognizes path
+identities. Four local Cargo fixtures demonstrate forbidden validator/component
+features escaping the old regex and being rejected by the current consumer.
+Shared's helper and snapshot remain intact; no new parser or dependency was added.
 
 ## Validation and limits
 
-Evidence: `/tmp/ic-tooling-cleanup-06913.uEdXff/`, selected by
-`/tmp/ic-tooling-cleanup-06913-current`. Admission source/lock/handoff, commands,
-attempted and final logs, final patch/source and identity records are retained.
+Evidence: `/tmp/ic-tooling-cleanup-06914.hJOCPI/`, selected by
+`/tmp/ic-tooling-cleanup-06914-current`. Admission source/lock/handoff, commands,
+attempted and final logs, negative probes, final patch/source and identity records
+are retained there. Prior evidence remains separate.
 
-Actual Rust 1.91 Linux focused tests pass: 67 cases across Cargo selection,
-metadata and native invocation, standalone input evidence, diagnostic stream
-handling, extracted package identity/manifests, exact cache stamps and artifact
-paths, worker preparation/report handling and startup port parsing. Added
-coverage checks a hyphenated cdylib example's projected filename, absolute and
-relative explicit server paths, native missing-path errors and executable/type
-refusals. Existing cases retain exact stamps, source drift/absence policy,
-interrupted/impossible readers, output custody and command failure evidence.
+Actual Rust 1.91 Linux focused tests pass: 45 cases across worker completion,
+report statistics/fields, escaping and its width/progress/table callers,
+environment/ledger projection, command-failure retention, tree synchronization
+and bounded HTTP reads. HTTP fixtures used local loopback execution. No external
+service was contacted. An exhaustive old/new escape probe matches all 1,112,064
+Unicode scalars, borrowed/owned decisions and adjacent escape sequences.
+The new worker failure regression fails against archived original production
+code with the expected scoped-thread panic; it passes against the changed code.
 
-Warning-denied all-target/all-feature Clippy passes for the three changed
-packages on prepared Rust 1.99.1. After correcting the new server-path fixture,
-its library/test lint and all 23 driver tests pass again. Initial line-limit
-lint and fixture setup failures remain; final logs identify corrected evidence.
-Formatting, local documentation links and diff checks pass. No full workspace
-or release gate ran. This batch needed no live PocketIC execution. Native macOS
-15 Intel and Apple Silicon qualification did not run; Linux is separate evidence.
+Warning-denied all-target/all-feature Clippy passes for the six changed packages
+on prepared Rust 1.99.1. Final native Linux dependency graphs, shell syntax and
+ShellCheck pass. The first lint attempt used a missing tool path; its failure
+remains, followed by a pass using prepared `/home/adam/.local/bin/shellcheck`.
+Provisional feature-edge probes are retained alongside the final full-feature
+checks. Formatting, local documentation links and diff checks pass.
+
+No full workspace or release gate ran. This batch needed no live PocketIC run.
+Native macOS 15 Intel and Apple Silicon qualification did not run; Linux evidence
+is separate. Public boundaries, dependencies and platform-sync contracts remain.
 
 ## Preserved obligations and evidence
 
-[#263](https://github.com/dragginzgame/ic-tooling/issues/263) retains its consumer
-acceptance scope at `/tmp/ic-tooling-263.WQ4ch3/`. This batch establishes neither
-Canic adoption nor its four-case sequence qualification and changes no issue state.
-The earlier race-fixture evidence and failed package attempt remain at
-`/tmp/ic-tooling-preparation-race.IMHoSv/` and
-`target/package-qualification-1823269-0/`.
+[Testkit snapshot consumer acceptance (#263)](https://github.com/dragginzgame/ic-tooling/issues/263)
+retains its scope at `/tmp/ic-tooling-263.WQ4ch3/`. This batch establishes neither
+Canic adoption nor its retained four-case sequence qualification and changes no
+issue state. The prior handoff is retained in this batch's admission evidence.
 
-Previous batch evidence remains at `/tmp/ic-tooling-cleanup-06912.cqgTkd/`,
-`/tmp/ic-tooling-cleanup-06911.Pznlfz/` and
-`/tmp/ic-tooling-cleanup-06910.ZwEZDQ/`. Older evidence and supplying-owner
-obligations retain the scope linked through those handoffs. Migration/retirement
-backups remain under `/tmp/ic-tooling-migration/`; original Host archive refs,
+Previous batch evidence remains at `/tmp/ic-tooling-cleanup-06913.uEdXff/`,
+`/tmp/ic-tooling-cleanup-06912.cqgTkd/`, `/tmp/ic-tooling-cleanup-06911.Pznlfz/`
+and `/tmp/ic-tooling-cleanup-06910.ZwEZDQ/`. The race fixture and failed package
+attempt remain at `/tmp/ic-tooling-preparation-race.IMHoSv/` and
+`target/package-qualification-1823269-0/`. Earlier supplying-owner obligations
+retain the scope linked through those handoffs. Migration/retirement backups
+remain under `/tmp/ic-tooling-migration/`; original Host archive refs,
 `/tmp/ic-tooling-stale-release-lock.qHQFTn/lock`, release plans, failed attempts
 and earlier stash records remain preserved. No artifact cleanup ran beyond
 existing owned regression-fixture behavior.

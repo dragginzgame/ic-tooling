@@ -10,12 +10,7 @@ use crate::read::tree::{
 };
 use ic_host_artifacts::artifact::Sha256Digest;
 use rustix::{fd::OwnedFd, fs::FileType};
-use std::{
-    fs::File,
-    io::{self, Seek, SeekFrom},
-    os::fd::AsFd,
-    path::Path,
-};
+use std::{fs::File, io, os::fd::AsFd, path::Path};
 
 /// Ordered pre-sync observations; an error stops before the selected sync.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -70,10 +65,9 @@ where
     type Error = TreeChecksumError;
 
     fn file(&mut self, fd: &OwnedFd, relative: &Path, display: &Path) -> Result<(), Self::Error> {
-        let mut file = File::from(fd.try_clone()?);
+        let file = File::from(fd.try_clone()?);
         (self.before_sync)(TreeSyncStep::RegularFile, display)?;
         file.sync_all()?;
-        file.seek(SeekFrom::Start(0))?;
         self.checksum.record_file(file, relative)
     }
 

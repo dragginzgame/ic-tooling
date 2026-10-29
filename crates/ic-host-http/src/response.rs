@@ -141,14 +141,11 @@ pub async fn read_body_into(
             received_bytes =
                 received_bytes.saturating_add(u64::try_from(chunk.len()).unwrap_or(u64::MAX));
             let overflow = chunk.len() > options.max_bytes.saturating_sub(bytes.len());
-            if overflow && !options.retain_partial_on_error {
-                return Err(ReadFailure::Limit {
-                    limit: options.max_bytes,
-                });
+            if !overflow || options.retain_partial_on_error {
+                let admitted = reserve_bounded(bytes, chunk.len(), options.max_bytes)
+                    .map_err(ReadFailure::Allocation)?;
+                bytes.extend_from_slice(&chunk[..admitted]);
             }
-            let admitted = reserve_bounded(bytes, chunk.len(), options.max_bytes)
-                .map_err(ReadFailure::Allocation)?;
-            bytes.extend_from_slice(&chunk[..admitted]);
             if overflow {
                 return Err(ReadFailure::Limit {
                     limit: options.max_bytes,

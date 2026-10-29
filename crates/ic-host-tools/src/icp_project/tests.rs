@@ -87,4 +87,9 @@ fn malformed_missing_and_duplicate_facts_refuse_projection() {
             Err(ProjectParseError::EmptyEnvironmentField { .. })
         ));
     }
+    let yaml = b"environments: {demo: {name: demo, network: {name: local}}, other: {name: other, network: {name: ' '}}}";
+    assert!(matches!(
+        environment_network(yaml, "demo", yaml.len()),
+        Err(ProjectParseError::EmptyEnvironmentField { index: 1 })
+    ));
 }

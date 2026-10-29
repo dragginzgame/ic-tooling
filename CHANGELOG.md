@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.69.14]
+
+### 🩹 Fixed
+
+- Join every benchmark worker after failure, preserving the first worker's
+  failure instead of allowing a later panic to replace it during implicit cleanup.
+- Enforce forbidden Wasm dependency features for path dependencies as well as
+  registry dependencies.
+
+### 🧹 Cleanup
+
+- Simplify escaping, benchmark report collection, bounded HTTP reads and evidence
+  projection.
+- Streamline environment lookup, ledger-chain admission and tree hashing while
+  preserving validation order, report formats and platform synchronization.
+  [Details](docs/changelog/0.69.md#06914---unreleased).
+
 ## [0.69.13] - 2026-10-29
 
 ### 🧹 Cleanup

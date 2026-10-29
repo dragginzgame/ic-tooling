@@ -336,15 +336,22 @@ fn run_tasks(
             .collect::<Vec<_>>();
         let started = Instant::now();
         barrier.wait();
-        let mut samples = Vec::new();
+        let mut result = Ok(Vec::new());
         for handle in handles {
-            samples.extend(
-                handle
-                    .join()
-                    .map_err(|_| io::Error::other("benchmark worker panicked"))??,
-            );
+            let completed = handle
+                .join()
+                .unwrap_or_else(|_| Err(io::Error::other("benchmark worker panicked").into()));
+            result = match (result, completed) {
+                (Ok(mut samples), Ok(worker_samples)) => {
+                    samples.extend(worker_samples);
+                    Ok(samples)
+                }
+                // Join every remaining worker, retaining the first failure in
+                // worker order rather than leaving joins to scope unwinding.
+                (Err(error), _) | (_, Err(error)) => Err(error),
+            };
         }
-        Ok((samples, ms(started.elapsed())))
+        result.map(|samples| (samples, ms(started.elapsed())))
     })
 }
 
@@ -447,6 +454,63 @@ pub fn run(arguments: WorkerArguments) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sample(iteration: usize) -> Sample {
+        Sample {
+            iteration,
+            phases: Phases::default(),
+            body_ms: 0.0,
+            release_ms: 0.0,
+            total_ms: 0.0,
+        }
+    }
+
+    #[test]
+    fn task_collection_preserves_worker_order_and_every_iteration() {
+        let (samples, _) = run_tasks(
+            NonZeroUsize::new(5).unwrap(),
+            NonZeroUsize::new(2).unwrap(),
+            |iteration| Ok(sample(iteration)),
+        )
+        .unwrap();
+        assert_eq!(
+            samples
+                .iter()
+                .map(|sample| sample.iteration)
+                .collect::<Vec<_>>(),
+            [0, 2, 4, 1, 3]
+        );
+    }
+
+    #[test]
+    fn task_failure_joins_later_workers_and_preserves_the_first_cause() {
+        for first_panics in [false, true] {
+            let completed = AtomicBool::new(false);
+            let error = run_tasks(
+                NonZeroUsize::new(3).unwrap(),
+                NonZeroUsize::new(3).unwrap(),
+                |iteration| match iteration {
+                    0 if first_panics => panic!("first worker panic"),
+                    0 => Err(io::Error::from_raw_os_error(28).into()),
+                    1 if !first_panics => panic!("later worker panic"),
+                    1 => Err(io::Error::from_raw_os_error(13).into()),
+                    _ => {
+                        completed.store(true, Ordering::Relaxed);
+                        Ok(sample(iteration))
+                    }
+                },
+            )
+            .err()
+            .expect("the benchmark must retain the primary failure");
+            assert!(completed.load(Ordering::Relaxed));
+            let cause = error.downcast_ref::<io::Error>().unwrap();
+            if first_panics {
+                assert_eq!(cause.to_string(), "benchmark worker panicked");
+            } else {
+                assert_eq!(cause.raw_os_error(), Some(28));
+            }
+        }
+    }
 
     #[test]
     fn recipe_error_contract_preserves_the_erased_producer() {
