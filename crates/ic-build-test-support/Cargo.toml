@@ -1,0 +1,16 @@
+[package]
+name = "ic-build-test-support"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ic-host-fs = { workspace = true, features = ["test-support"] }
+ic-host-process.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+
+[lints]
+workspace = true

@@ -2,14 +2,8 @@
 #![allow(dead_code)]
 
 pub mod process;
+pub use ic_build_test_support::{cargo, fs as fs_fixture};
 
-#[path = "../../test-support/fs/mod.rs"]
-pub mod fs_fixture;
-
-#[path = "../../test-support/cargo/mod.rs"]
-pub mod cargo;
-
-#[path = "../../test-support/cargo/wasm.rs"]
 pub mod wasm;
 
 use std::path::{Path, PathBuf};

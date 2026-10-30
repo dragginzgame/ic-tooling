@@ -1512,6 +1512,7 @@ version = "0.70.5"
 dependencies = [
  "cargo_metadata",
  "clap",
+ "ic-build-test-support",
  "ic-host-artifacts",
  "ic-host-fs",
  "ic-host-process",
@@ -1522,6 +1523,16 @@ dependencies = [
  "thiserror 2.0.18",
  "toml 1.1.8+spec-1.1.0",
  "toml_edit 0.25.17+spec-1.1.0",
+]
+
+[[package]]
+name = "ic-build-test-support"
+version = "0.70.5"
+dependencies = [
+ "ic-host-fs",
+ "ic-host-process",
+ "serde_json",
+ "toml 1.1.8+spec-1.1.0",
 ]
 
 [[package]]

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.70.6]
+
+### 🧹 Cleanup
+
+- Share IC Build unit/integration scaffolds through an unpublished dev-only
+  support crate and give archive tests an ordinary module directory. Production
+  library dependencies are unchanged.
+
 ## [0.70.5] - 2026-10-30
 
 ### 🧹 Cleanup

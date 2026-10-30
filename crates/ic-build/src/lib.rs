@@ -9,9 +9,4 @@ pub mod artifacts;
 pub mod cargo;
 
 #[cfg(test)]
-#[path = "../test-support/cargo/mod.rs"]
-pub(crate) mod cargo_fixture;
-
-#[cfg(test)]
-#[path = "../test-support/fs/mod.rs"]
-pub(crate) mod fs_fixture;
+pub(crate) use ic_build_test_support::{cargo as cargo_fixture, fs as fs_fixture};
