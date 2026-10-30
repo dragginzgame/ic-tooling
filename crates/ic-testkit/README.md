@@ -37,10 +37,10 @@ published support crate solely for target-specific feature isolation. The
 intentional; native Testkit is not a Candid-free profile.
 
 The optional native `wire` feature adds `pic::query_wire` and `pic::update_wire`.
-Enable it on your Testkit dependency and declare `ic-wire = "0.8.0"` for your native
+Enable it on your Testkit dependency and declare `ic-wire = "0.10.0"` for your native
 Serde contracts. Each helper takes an explicit target/caller, a `WireCallSpec`
 with the exported name, method ID and request/response limits, and a borrowed
-request. Align your direct Wire dependency to 0.8 when supplying limits or matching
+request. Align your direct Wire dependency to 0.10 when supplying limits or matching
 typed codec errors. It executes one PocketIC operation without update retries; a refused reply
 does not prove absence of effects. It preserves
 application-level results. `WireCallError` retains typed codec causes, complete

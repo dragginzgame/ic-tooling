@@ -255,7 +255,7 @@ controlled application protocols. Add `ic-wire` alongside it:
 
 ```toml
 [dev-dependencies]
-ic-wire = "0.8.0"
+ic-wire = "0.10.0"
 ```
 
 Both helpers accept an explicit canister, caller, `WireCallSpec` and borrowed
@@ -264,7 +264,7 @@ Serde types and finite limits. One call encodes once, executes one PocketIC
 operation and decodes its response; application-level results are returned unchanged.
 Requests may use Wire's borrowed bounded fields. Responses must implement
 `serde::de::DeserializeOwned`, because the helper releases the reply buffer before
-returning; Serialize is not required for responses. Wire 0.8 validates primitives
+returning; Serialize is not required for responses. Wire 0.10 validates primitives
 in one pass and permits collection/custom-visitor normalization. Consumers own
 semantic ordering and uniqueness rules; re-encoding is not original-byte proof.
 Use raw calls to retain frames for exact retries, signatures or hashes.
@@ -279,7 +279,7 @@ allocated the reply. It is not network pre-allocation admission or a peak-heap
 bound. Error display omits payloads; use the typed rejection for details and raw
 PocketIC calls for malformed requests or original reply evidence. The feature is
 off by default and adds no Wire dependency to the canister library graph. Align
-direct Wire dependencies to 0.8 when supplying limits or matching typed codec
+direct Wire dependencies to 0.10 when supplying limits or matching typed codec
 causes, since these public types carry Wire's dependency identity.
 
 ## External protocol calls

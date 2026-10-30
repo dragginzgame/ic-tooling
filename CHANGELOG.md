@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.72.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt IC Platform 0.11.1. Consumers exchanging Platform-owned registry principals
+  with Tools must align their direct Platform dependency to 0.11.
+  [Upgrade details](docs/changelog/0.72.md#0720---unreleased).
+- Adopt IC Wire 0.10.0. Testkit callers supplying limits or matching typed Wire
+  errors must align their direct Wire dependency to 0.10.
+
+### 🧹 Cleanup
+
+- Keep Platform free of a production Wire dependency. Optional Platform type
+  schemas now belong to Wire's `platform-types` feature.
+
 ## [0.71.0] - 2026-10-30
 
 ### ⚠️ Breaking

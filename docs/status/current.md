@@ -2,29 +2,36 @@
 
 ## Current adoption and local result
 
-The latest task fixes Build's archive packaging failure caused by the self dev
-dependency introduced during Shared adoption. The prior adoption changes are now
-committed through `24fa3824` (commit title `0.71.0`; actual workspace version still
-0.70.5). The repair leaves local unstaged changes over that clean admission.
-Build no longer depends on itself: integration targets using its shared helpers
-explicitly require `test-support`. Existing Make/CI all-feature selections retain
-all tests; plain Cargo invocations must select that feature for these ten targets.
-The CLI target still requires only `cli`, and the ignored optimizer target keeps
-its existing admission. Default unit tests need no feature. Only Build's self
-edge is removed from the lock; no dependency version or checksum changes.
+The latest task adopts published Platform 0.11.1 and Wire 0.10.0 together over
+the pending adoption changes on `028bc592` (Release 0.71.0). Incoming dirty work
+and untracked notes are retained in admission evidence. Only Platform, macros,
+runtime guard, Wire and its derive crate change in the lock beyond this admission.
+The inherited feature selections stay unchanged; Wire's optional endpoint and
+Platform schema integrations stay disabled in Tooling. No Rust caller rewrite
+was needed.
 
-Wire remains 0.8.0 with its matching derive crate. Shared Tooling remains 0.27.11
+Platform no longer has a production Wire dependency or `wire-schema` feature.
+Wire owns the optional `platform-types` integration, selecting Platform's principal
+capability and TypeScript support without CDK/runtime. This dependency points from
+Wire to Platform. The current consumers do not need the optional schemas.
+
+Build's repaired test wiring is preserved: integration targets using shared
+helpers explicitly require `test-support`; Make/CI all-feature selections retain
+all tests. The CLI target still requires only `cli`, and the ignored optimizer
+target keeps its existing admission. Default unit tests need no feature.
+
+Wire is now 0.10.0 with its matching derive crate. Shared Tooling remains 0.27.11
 at `62edfbd43087a718bf0283e9040676a49211976d`, independently verified against
-all 148 declared payloads in the earlier adoption. Platform remains 0.9.1.
+all 148 declared payloads in the earlier adoption.
 
-Platform-owned public type identities change across this minor boundary;
-Tools callers exchanging those types must align Platform to 0.9. Testkit callers
-supplying Wire limits or matching typed codec causes must align direct Wire to
-0.8 because those exposed types change dependency identity. Native codec bytes,
-protocol and admission rules stay unchanged; optional Wire endpoint integration
-remains disabled. The draft stays 0.71.0, carrying the earlier unpublished 0.70.6
-graph cleanup and both dependency migrations. Own
-workspace/package versions remain 0.70.5; index and HEAD are unchanged. No local
+Tools' public registry principal has Platform-owned dependency identity, so
+consumers exchanging these values must align Platform to 0.11. Testkit's public
+limits and typed codec causes likewise require direct Wire dependencies to align
+to 0.10. The draft stays 0.72.0 for both migrations; published 0.71 notes stay
+unchanged. Native
+codec bytes, protocol and admission rules stay unchanged, and optional Wire
+endpoint integration remains disabled. Own workspace/package versions remain
+0.71.0; index and HEAD are unchanged. No local
 commit, push, release, publication, normal sibling checkout edit or artifact
 cleanup ran.
 
@@ -32,7 +39,7 @@ Platform embeds its executor and system-call implementation. Wasm policies now
 exclude external ic0/executor packages and check the actual Platform feature
 selection: Testkit uses ic0 without runtime/executor; the private probe selects
 all three. Codec, native-only and Metrics/Wire boundaries remain enforced.
-Platform 0.9.1 selects an internal singleton guard only with executor/runtime;
+Platform selects an internal singleton guard only with executor/runtime;
 Testkit/Dev and Host/Tools policies exclude it, while the private Wasm probe
 requires exactly one. No extra graph observation was added.
 
@@ -52,7 +59,71 @@ required identities. Validation-only profiles retain their previous policy.
 The complete Host/Tools graph script makes 36 observations instead of 39 per
 target. No cache, public mode, new dependency or supported contract was added.
 
-## Build archive repair evidence
+## Coordinated adoption and dependency direction evidence
+
+Evidence is `/tmp/ic-tooling-wire-platform.1UowyL/`, retaining admission dirty
+source/untracked notes, lock/index/HEAD, registry update/fetch and focused logs.
+Published Platform 0.11.1 records source commit
+`1ed69142b0337311632db540cb70e40bbf059ee6`; Wire 0.10.0 records
+`c9d4e7b45b9ba6d841d7e2a664877e3bea035a5b`.
+
+Actual Rust 1.91 passes 17 tests: three registry, nine native Wire-call, four
+native memory-adapter and one private protocol limit test. The private runtime
+probe and selected Testkit/Native Wasm profiles compile. Strict all-target/all-
+feature Clippy passes for Tools, Testkit, Testkit Native, Testkit Dev and the
+private probe. Host/Tools and Testkit dependency policies pass.
+
+An isolated offline `platform-types` consumer graph resolves exactly one Wire
+0.10.0 and one Platform 0.11.1, without Candid, CDK, Platform macros or a runtime
+guard. Metadata confirms Platform has no production Wire declaration or retired
+schema feature, and Wire's optional production edge points to Platform. This is
+a dependency-graph proof, not installed canister or schema runtime qualification.
+No optional integration was enabled in the real workspace.
+
+Root manifest sorting, documentation links and diff checks pass. Only the five
+coordinated package selections change from admission; earlier local work, Build's
+repair, own 0.71.0 versions, real index and HEAD remain preserved. No native macOS
+execution, installed IC experiment, hosted dispatch, full workspace gate, release,
+publication, cleanup or Git mutation ran.
+
+## Prior Wire 0.9 adoption evidence
+
+Evidence is `/tmp/ic-tooling-wire-refresh.9bpaQ5/`, retaining incoming dirty work,
+untracked notes, lock/index/HEAD, registry update/fetch and focused logs. Published
+Wire 0.9.0 records source commit `edb5d1b1286c73ea8fc8afa6cb28339e96fd3174`.
+Its facade Rust sources are identical to 0.8.0; the changed optional endpoint
+dependency is not selected here. Consumer examples and draft release notes now
+name the matching direct Wire 0.9 dependency. No Rust caller changes were needed.
+
+Actual Rust 1.91 passes nine native Wire-call tests and the private protocol's
+largest-control-values test, and compiles the private probe for Wasm. Strict
+all-target/all-feature Clippy passes for Testkit, Testkit Dev and the private
+probe. Host/Tools and Testkit dependency policies, root manifest sorting,
+documentation links and diff checks pass. Only the two Wire lock packages change
+beyond admission; Platform selections, Build's repair, own 0.71.0 versions, real
+index and HEAD are preserved. No native macOS execution, installed IC experiment,
+hosted dispatch, full workspace gate, release, publication, cleanup or Git
+mutation ran.
+
+## Prior Platform 0.10 adoption evidence
+
+Evidence is `/tmp/ic-tooling-platform-refresh.yu2V68/`, retaining clean admission,
+lock/index/HEAD, registry resolution/fetch and focused logs. Published Platform
+0.10.0 records source commit `421edbc90494f7dec7f03bac64b0708e80943acb`.
+Its facade source changes from 0.9.1 add the prepared-call module and its runtime
+export; existing modules are unchanged. No Rust caller rewrite was needed.
+
+Actual Rust 1.91 passes three registry, nine native Wire-call and four native
+memory-adapter tests. The private runtime probe and selected Testkit/Native Wasm
+profiles compile with Platform 0.10.0. Strict all-target/all-feature Clippy passes
+for Tools, Testkit, Testkit Native, Testkit Dev and the private probe. Host/Tools
+and Testkit dependency policies, root manifest sorting, documentation links and
+diff checks pass. Lock changes are confined to the three Platform packages;
+the real index, HEAD, Build's repaired wiring and own 0.71.0 versions are preserved.
+No native macOS execution, installed IC experiment, hosted dispatch, full workspace
+gate, release, publication, artifact cleanup or Git mutation ran.
+
+## Prior Build archive repair evidence
 
 The original failure remains at
 `target/package-qualification-1040156-0/`. Evidence for the repair is
