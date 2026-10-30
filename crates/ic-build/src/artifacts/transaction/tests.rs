@@ -6,7 +6,7 @@ use super::{
 use crate::artifacts::{
     ArtifactCacheMaintenance, CacheRetentionLimits, WasmBuildSpec, resolve_cargo_build_inputs,
 };
-use crate::fs_fixture::unique_temp_directory;
+use crate::testing::fs::unique_temp_directory;
 use std::{
     ffi::OsString,
     fs,
@@ -128,12 +128,12 @@ fn os_native_argument_and_environment_builders_affect_identity() {
 #[test]
 fn nested_workspace_generated_outputs_preserve_transactions_and_explicit_guards() {
     let root = unique_temp_directory("transaction-nested-workspace");
-    crate::cargo_fixture::write_nested_workspace_fixture(&root).unwrap();
+    crate::testing::cargo::write_nested_workspace_fixture(&root).unwrap();
     let build = WasmBuildSpec::new(
         &root.join("driver"),
         &root.join("build-target"),
         &["driver"],
-        crate::cargo_fixture::environment(),
+        crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     );
     let generated = root.join("adapter/consumer/target/generated");
@@ -233,7 +233,7 @@ fn cargo_snapshot_keys_semantic_identity_and_guards_raw_workspace_inputs() {
         &root,
         &root.join("target"),
         &["canister"],
-        crate::cargo_fixture::environment(),
+        crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     );
     let before = resolve_cargo_build_inputs(&build_spec).expect("resolve first Cargo snapshot");

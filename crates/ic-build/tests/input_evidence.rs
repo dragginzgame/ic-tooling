@@ -9,7 +9,7 @@ use std::{fs, process::Command};
 
 #[test]
 fn real_cargo_depfiles_retain_external_include_evidence() {
-    let root = support::fs_fixture::unique_temp_directory("real-cargo-input-evidence");
+    let root = ic_build::testing::fs::unique_temp_directory("real-cargo-input-evidence");
     fs::create_dir(root.join("src")).unwrap();
     fs::create_dir(root.join("external")).unwrap();
     fs::write(

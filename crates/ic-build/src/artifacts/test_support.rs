@@ -1,15 +1,15 @@
 #[cfg(unix)]
 use ic_host_process::testing::write_executable_script;
 
-use crate::fs_fixture::unique_temp_directory;
+use crate::testing::fs::unique_temp_directory;
 use std::path::PathBuf;
 
 /// Real Cargo metadata and identities, with a deterministic minimal Wasm producer.
 #[cfg(unix)]
 pub(super) fn fake_wasm_build_spec(label: &str) -> (PathBuf, super::wasm_cache::WasmBuildSpec) {
     let root = unique_temp_directory(label);
-    crate::cargo_fixture::write_workspace(&root, &["fixture"]).expect("write workspace manifest");
-    crate::cargo_fixture::write_fixture_package(
+    crate::testing::cargo::write_workspace(&root, &["fixture"]).expect("write workspace manifest");
+    crate::testing::cargo::write_fixture_package(
         &root.join("fixture"),
         "[lib]\ncrate-type = [\"cdylib\"]\n",
         "pub fn value() -> u8 { 1 }\n",
@@ -18,7 +18,7 @@ pub(super) fn fake_wasm_build_spec(label: &str) -> (PathBuf, super::wasm_cache::
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let quoted_cargo = format!("'{}'", cargo.to_string_lossy().replace('\'', "'\"'\"'"));
     let wrapper = root.join("cargo.sh");
-    let artifact_message = crate::cargo_fixture::wasm_artifact_message_script(&root, "target");
+    let artifact_message = crate::testing::cargo::wasm_artifact_message_script(&root, "target");
     write_executable_script(
         &wrapper,
         format!(
@@ -40,7 +40,7 @@ exec {quoted_cargo} "$@"
         &root,
         &root.join("exact"),
         &["fixture"],
-        crate::cargo_fixture::environment(),
+        crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_isolated_builds()

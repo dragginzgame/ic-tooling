@@ -1,5 +1,5 @@
 use super::*;
-use crate::fs_fixture::unique_temp_directory;
+use crate::testing::fs::unique_temp_directory;
 use ic_host_process::tool::{
     CompletedExecution, ExecutionFailure, OutputLimit, OutputLimits, ToolError, capture_command,
 };

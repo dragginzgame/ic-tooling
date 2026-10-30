@@ -1,8 +1,4 @@
 //! Linux procfs observations. Callers select a mount and own read budgets.
-#![allow(
-    unsafe_code,
-    reason = "reviewed sysconf observations imported from Profiler"
-)]
 use super::{ChildProcesses, ProcessObservation};
 use std::{collections::BTreeSet, fs, path::Path, sync::OnceLock};
 
@@ -27,6 +23,10 @@ fn page_size() -> u64 {
 }
 
 #[cfg(unix)]
+#[expect(
+    unsafe_code,
+    reason = "read signed sysconf results for the existing fallback contract"
+)]
 fn positive_sysconf(name: libc::c_int, fallback: u64) -> u64 {
     // Keep the signed result: Rustix's unsigned parameter helpers cannot retain
     // sysconf's negative failure sentinel for this existing fallback contract.

@@ -4,7 +4,7 @@ use std::{io, path::Path};
 
 /// Write and lock an independent, dependency-free cdylib workspace.
 pub fn write_workspace(root: &Path) -> io::Result<()> {
-    super::cargo::write_fixture_package(
+    ic_build::testing::cargo::write_fixture_package(
         root,
         "[workspace]\n[lib]\ncrate-type = [\"cdylib\"]\n",
         "pub fn value() -> u32 { 7 }\n",
@@ -29,7 +29,7 @@ pub fn spec(root: &Path, target: &Path, packages: &[&str]) -> ic_build::artifact
         root,
         target,
         packages,
-        super::cargo::environment(),
+        ic_build::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
 }

@@ -2,9 +2,9 @@
 
 mod support;
 
+use ic_build::testing::fs::unique_temp_directory as unique_temp_dir;
 use std::fs;
 use support::discover_workspace;
-use support::fs_fixture::unique_temp_directory as unique_temp_dir;
 
 #[test]
 fn workspace_discovery_obeys_cargo_membership_and_independent_roots() {

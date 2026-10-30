@@ -38,7 +38,7 @@ serialization='serde_cbor|minicbor'
 parser_free='^(serde_yaml|unsafe-libyaml|wat|wast)$'
 yaml_allowed='^(wat|wast)$'
 wat_allowed='^(serde_yaml|unsafe-libyaml)$'
-check_graph() {
+observe_graph() {
     local package="$1"
     shift
     local arguments=(--consumer "$root" --package "$package" --target "$target")
@@ -46,9 +46,12 @@ check_graph() {
     # Tools explicitly owns selected Platform profiles; generic Host owners do not.
     [[ "$package" == ic-host-tools ]] || arguments+=(--forbid ic-platform)
     arguments+=(--forbid-pattern '^(ciborium|ciborium-io|ciborium-ll)$')
-    arguments+=(--forbid-pattern '^(ic-cdk|ic-cdk-macros|ic-cdk-executor|ic-platform-macros|ic0)$')
+    arguments+=(--forbid-pattern '^(ic-cdk|ic-cdk-macros|ic-cdk-executor|ic-platform-macros|ic-platform-runtime-guard|ic0)$')
     arguments+=(--forbid-pattern '^(serde_yaml_ng|serde_yml|serde-saphyr|granit-parser)$')
-    perl "$root/scripts/ci/check-cargo-graph.pl" "${arguments[@]}" "$@" > /dev/null
+    perl "$root/scripts/ci/check-cargo-graph.pl" "${arguments[@]}" "$@"
+}
+check_graph() {
+    observe_graph "$@" > /dev/null
 }
 
 check_graph ic-host-tools --forbid-pattern "$parser_free" \
@@ -98,21 +101,26 @@ check_graph ic-host-text --forbid-pattern "$yaml_allowed" --no-default-features 
     --require unicode-width=1 --require serde=1 --require serde_yaml=1 --require unsafe-libyaml=1
 check_graph ic-host-artifacts --forbid-pattern "$parser_free" \
     --forbid-pattern '^(ic-host-process|wasm-encoder|wasmparser|clap)$'
-check_graph ic-host-artifacts --forbid-pattern "$parser_free" --no-default-features --features wasm \
-    --forbid-pattern '^wasm-encoder$' \
-    --require wasmparser=1
-check_graph ic-host-artifacts --forbid-pattern "$parser_free" --no-default-features --features wasm-encoding \
-    --forbid-pattern "^(ic-host-(fs|process|text|tools)|ic-platform|${codec}|wasmparser)$" \
-    --require wasm-encoder=1
-check_graph ic-host-artifacts --forbid-pattern "$wat_allowed" --no-default-features --features wasm-text \
-    --forbid-pattern "^(ic-host-(fs|process|text|tools)|ic-platform|${codec}|wasmparser)$" \
-    --require wat=1 --require wast=1 --require wasm-encoder=1
 for profile in wasm wasm-validation wasm-encoding wasm-text wasm-encoding,wasm-validation wasm-text,wasm-validation; do
-    # Shared parses rendered identities and their effective feature unions;
-    # this consumer retains the validator/component policy for each profile.
-    feature_graph="$(perl scripts/ci/check-cargo-graph.pl --consumer "$root" \
-        --package ic-host-artifacts --no-default-features --features "$profile" \
-        --target "$target" --require ic-host-artifacts=1 --json --observations)" || exit
+    # One observation supplies package policy and effective feature assertions.
+    # Preserve the existing policy selection for each independent profile.
+    case "$profile" in
+        wasm)
+            observation=(observe_graph ic-host-artifacts --forbid-pattern "$parser_free"
+                --forbid-pattern '^wasm-encoder$' --require wasmparser=1) ;;
+        wasm-encoding)
+            observation=(observe_graph ic-host-artifacts --forbid-pattern "$parser_free"
+                --forbid-pattern "^(ic-host-(fs|process|text|tools)|ic-platform|${codec}|wasmparser)$"
+                --require wasm-encoder=1) ;;
+        wasm-text)
+            observation=(observe_graph ic-host-artifacts --forbid-pattern "$wat_allowed"
+                --forbid-pattern "^(ic-host-(fs|process|text|tools)|ic-platform|${codec}|wasmparser)$"
+                --require wat=1 --require wast=1 --require wasm-encoder=1) ;;
+        *)
+            observation=(perl scripts/ci/check-cargo-graph.pl --consumer "$root"
+                --package ic-host-artifacts --target "$target" --require ic-host-artifacts=1) ;;
+    esac
+    feature_graph="$("${observation[@]}" --no-default-features --features "$profile" --json --observations)" || exit
     validation=false text=false
     [[ "$profile" != *wasm-validation* ]] || validation=true
     [[ "$profile" != *wasm-text* ]] || text=true

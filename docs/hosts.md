@@ -151,6 +151,15 @@ Host Artifacts and Wasm parsing. The standalone Wasm inspector
 retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.91
 and native Linux/macOS matrix as the existing libraries.
 
+Platform 0.9 embeds the IC system-call and executor implementations. Testkit's
+Wasm graph excludes external `ic0` and `ic-cdk-executor` packages; the private
+performance probe enables Platform's executor through `cdk`. Wasm compilation
+checks this selection separately from native execution and installed IC behavior.
+Platform 0.9.1 selects its internal singleton guard only for executor/runtime
+users. The graph policies exclude it from Host/Tools and Testkit, and require it
+for the private probe's Wasm runtime.
+Consumers exchanging Platform-owned values with Tools must align Platform 0.9.
+
 Native CI prepares pinned Rust and the complete common toolsets, then verifies
 the shared snapshot, declarations, formatter prerequisites, actual hook behavior,
 release adapter,

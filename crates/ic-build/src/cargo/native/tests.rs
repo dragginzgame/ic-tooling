@@ -64,7 +64,7 @@ fn messages_keep_exact_package_target_diagnostics_and_ambiguity() {
     let spec = spec();
     let (id, _) = selection(metadata(), &spec).unwrap();
     let target = serde_json::to_value(&metadata().packages[0].targets[0]).unwrap();
-    let artifact = crate::cargo_fixture::artifact_message(
+    let artifact = crate::testing::cargo::artifact_message(
         &id,
         &target,
         &[],
@@ -227,7 +227,7 @@ fn caller_spawn_and_cancellation_cover_metadata_and_build() {
         time::{Duration, Instant},
     };
 
-    let root = crate::fs_fixture::unique_temp_directory("native-cancellation");
+    let root = crate::testing::fs::unique_temp_directory("native-cancellation");
     let metadata_path = root.join("metadata.json");
     fs::write(&metadata_path, serde_json::to_vec(&metadata()).unwrap()).unwrap();
     for (phase, incomplete) in [
@@ -297,14 +297,14 @@ cat "$METADATA"
 #[test]
 fn native_admission_requires_one_successful_completion_even_with_an_artifact() {
     use std::fs;
-    let root = crate::fs_fixture::unique_temp_directory("native-completion");
+    let root = crate::testing::fs::unique_temp_directory("native-completion");
     fs::write(
         root.join("metadata.json"),
         serde_json::to_vec(&metadata()).unwrap(),
     )
     .unwrap();
     let target = serde_json::to_value(&metadata().packages[0].targets[0]).unwrap();
-    let artifact = crate::cargo_fixture::artifact_message(
+    let artifact = crate::testing::cargo::artifact_message(
         &metadata().packages[0].id.repr,
         &target,
         &[],

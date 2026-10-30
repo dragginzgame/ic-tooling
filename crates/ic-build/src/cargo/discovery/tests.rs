@@ -1,5 +1,5 @@
 use super::*;
-use crate::fs_fixture::unique_temp_directory;
+use crate::testing::fs::unique_temp_directory;
 
 #[test]
 fn nearest_declaration_accepts_file_start_and_standalone_package() {

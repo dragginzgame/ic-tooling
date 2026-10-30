@@ -575,7 +575,7 @@ pub fn build_wasm_canisters_cached_batch(
     run_wasm_batch(specs, config, None, progress, &mut spawn)
 }
 
-#[allow(
+#[expect(
     clippy::result_large_err,
     reason = "Clippy versions differ on size reporting; batch entries retain complete failure details inline without per-failure allocation."
 )]

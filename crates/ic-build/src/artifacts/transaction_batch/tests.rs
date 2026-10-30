@@ -9,7 +9,7 @@ use crate::artifacts::{
     ArtifactCacheError, ArtifactCacheOutcome, ArtifactCachePreparation, ArtifactCacheSpec,
     prepare_artifact_cache,
 };
-use crate::fs_fixture::unique_temp_directory;
+use crate::testing::fs::unique_temp_directory;
 
 #[test]
 fn batch_failures_expose_the_original_unboxed_source() {

@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.71.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt IC Platform 0.9.1, including its owned runtime and public type identities.
+  Consumers exchanging Platform types with Tools must align on Platform 0.9.
+  [Upgrade details](docs/changelog/0.71.md#0710---unreleased).
+
+### ⬆️ Dependencies
+
+- Adopt IC Wire 0.7.25 and Shared Tooling 0.27.11.
+
+### 🧹 Cleanup
+
+- Share dependency observations between artifact package rules and feature checks,
+  preserving each profile's admission policy with three fewer Cargo queries per
+  target. [Details](docs/changelog/0.71.md#0710---unreleased).
+
+### 🧪 Testing
+
+- Share Build fixture support through an opt-in feature and ordinary Rust modules;
+  keep lint exceptions scoped and explained under the refreshed Shared rules.
+
 ## [0.70.5] - 2026-10-30
 
 ### 🧹 Cleanup

@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn discovery_refuses_oversized_complete_json_and_preserves_invocation_errors() {
-        let root = crate::fs_fixture::unique_temp_directory("discovery-capture");
+        let root = crate::testing::fs::unique_temp_directory("discovery-capture");
         let limits = OutputLimits {
             stdout: OutputLimit::Terminate(64 * 1024),
             stderr: OutputLimit::Terminate(64 * 1024),

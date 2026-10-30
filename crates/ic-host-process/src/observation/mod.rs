@@ -112,7 +112,7 @@ pub fn children(pid: u32, capacity: usize) -> ChildProcesses {
 #[must_use]
 #[cfg_attr(
     not(target_os = "linux"),
-    allow(
+    expect(
         clippy::missing_const_for_fn,
         reason = "the Linux implementation queries live scheduler state and cannot be const"
     )

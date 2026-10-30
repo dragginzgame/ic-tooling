@@ -19,7 +19,7 @@ use std::{fs, path::Path, process::Command};
 
 #[test]
 fn reported_custom_libraries_and_exports_survive_shared_target_collisions() {
-    let root = support::fs_fixture::unique_temp_directory("cargo-execution");
+    let root = ic_build::testing::fs::unique_temp_directory("cargo-execution");
     fs::create_dir_all(root.join("captures")).unwrap();
     let target = root.join("target");
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
@@ -27,7 +27,7 @@ fn reported_custom_libraries_and_exports_survive_shared_target_collisions() {
     for (workspace, marker) in [("first", 1), ("second", 2)] {
         let directory = root.join(workspace);
         let manifest = write_library_fixture(&directory, marker, &cargo);
-        let mut environment = support::cargo::environment();
+        let mut environment = ic_build::testing::cargo::environment();
         environment
             .entry("RUSTC".into())
             .or_insert_with(|| "rustc".into());

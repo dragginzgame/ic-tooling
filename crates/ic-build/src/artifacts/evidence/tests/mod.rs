@@ -113,7 +113,7 @@ fn raw_input_changes_and_mismatched_recipe_fingerprints_refuse_evidence() {
     );
     fs::remove_file(config).unwrap();
     evidence.verify_current().unwrap();
-    let alternate = spec.with_environment(crate::cargo_fixture::environment_with([(
+    let alternate = spec.with_environment(crate::testing::cargo::environment_with([(
         "RECIPE_MARKER",
         "changed",
     )]));

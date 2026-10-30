@@ -651,7 +651,7 @@ mod tests {
         LabeledPathDigestCache, copy_file_atomic, digest_bytes, digest_file,
         digest_labeled_paths_composable,
     };
-    use crate::fs_fixture::unique_temp_directory;
+    use crate::testing::fs::unique_temp_directory;
     use std::{fs, path::PathBuf};
 
     #[cfg(unix)]

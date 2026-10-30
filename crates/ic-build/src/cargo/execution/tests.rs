@@ -1,5 +1,5 @@
 use super::*;
-use crate::fs_fixture::unique_temp_directory;
+use crate::testing::fs::unique_temp_directory;
 #[cfg(unix)]
 use ic_host_process::testing::write_executable_script;
 use ic_host_process::tool::{ExecutionFailure, OutputLimit};
@@ -11,7 +11,7 @@ use std::{
 
 fn artifact(manifest: &Path, paths: &[PathBuf]) -> schema::Message {
     let target = serde_json::json!({"name":"custom_library","kind":["cdylib"],"crate_types":["cdylib"],"src_path":"/fixture/src/lib.rs","edition":"2024","doc":true,"doctest":false,"test":true});
-    let mut artifact = crate::cargo_fixture::artifact_message(
+    let mut artifact = crate::testing::cargo::artifact_message(
         "path+file:///fixture#0.1.0",
         &target,
         &paths.iter().map(PathBuf::as_path).collect::<Vec<_>>(),

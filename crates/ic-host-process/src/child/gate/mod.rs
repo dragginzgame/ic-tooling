@@ -1,5 +1,5 @@
 //! Caller-released Unix command launch gate, without capture or readiness policy.
-#![allow(
+#![expect(
     unsafe_code,
     reason = "reviewed async-signal-safe post-fork descriptor operations imported from Profiler"
 )]

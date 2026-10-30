@@ -1634,7 +1634,10 @@ impl WasmBuildInputSnapshotState {
                     .ok_or(index)
             })
             .collect::<Result<Vec<_>, _>>()?;
-        #[allow(deprecated, reason = "try_update is unstable at the Rust 1.91 MSRV")]
+        #[allow(
+            deprecated,
+            reason = "fetch_update is deprecated only on newer compilers; try_update is unstable at the Rust 1.91 MSRV"
+        )]
         let _ = self
             .reader_reuses
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {

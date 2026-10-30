@@ -8,10 +8,5 @@
 pub mod artifacts;
 pub mod cargo;
 
-#[cfg(test)]
-#[path = "../test-support/cargo/mod.rs"]
-pub(crate) mod cargo_fixture;
-
-#[cfg(test)]
-#[path = "../test-support/fs/mod.rs"]
-pub(crate) mod fs_fixture;
+#[cfg(any(test, feature = "test-support"))]
+pub mod testing;

@@ -4,7 +4,7 @@ use ic_host_process::testing::write_executable_script;
 
 use super::test_support::fake_wasm_build_spec;
 use super::{ArtifactCachePreparation, ArtifactCacheSpec, prepare_artifact_cache};
-use crate::fs_fixture::unique_temp_directory;
+use crate::testing::fs::unique_temp_directory;
 use std::{ffi::OsString, fs, path::Path, time::Duration};
 use {
     ic_host_artifacts::artifact::{ArtifactError, Sha256Digest},

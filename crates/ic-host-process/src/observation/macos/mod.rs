@@ -1,6 +1,6 @@
 //! Darwin host observations through libc's libproc and Mach interfaces.
 //! Linux-only counters remain explicitly unavailable.
-#![allow(
+#![expect(
     unsafe_code,
     reason = "reviewed libproc and Mach observations imported from Profiler"
 )]
@@ -39,7 +39,7 @@ pub(super) fn identity(pid: u32) -> Option<u64> {
 
 // libc still supplies this ABI. Keep the existing integration dependency graph
 // rather than adding a second Mach binding solely for its timebase struct.
-#[allow(deprecated)]
+#[expect(deprecated, reason = "libc still owns the imported Mach timebase ABI")]
 fn mach_ns(ticks: u64) -> Option<u64> {
     static SCALE: OnceLock<Option<(u32, u32)>> = OnceLock::new();
     let (numer, denom) = (*SCALE.get_or_init(|| {

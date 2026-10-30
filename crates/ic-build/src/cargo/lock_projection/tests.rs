@@ -184,7 +184,7 @@ fn projection_refusals_preserve_caller_order_and_prior_version_precedence() {
 
 #[test]
 fn cargo_generated_workspace_update_preserves_external_selections() {
-    use crate::fs_fixture::unique_temp_directory;
+    use crate::testing::fs::unique_temp_directory;
     use std::{fs, process::Command};
 
     let root = unique_temp_directory("cargo-lock-projection");

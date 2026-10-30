@@ -1,8 +1,12 @@
-//! Private Cargo fixture scaffolding shared by unit and integration targets.
+//! Cargo fixture scaffolding shared by unit and integration targets.
 
 use std::{fs, io, path::Path};
 
 /// Valid protocol scaffold; individual tests retain their own invalid mutations.
+///
+/// # Panics
+/// Panics if the supplied paths cannot be represented as JSON.
+#[must_use]
 pub fn artifact_message(
     package: &str,
     target: &serde_json::Value,
@@ -17,6 +21,10 @@ pub fn artifact_message(
     })
 }
 
+/// Write a minimal fixture workspace; return original directory/write errors.
+///
+/// # Errors
+/// Returns directory creation or manifest write errors.
 pub fn write_workspace(root: &Path, members: &[&str]) -> io::Result<()> {
     fs::create_dir_all(root)?;
     let members = toml::Value::Array(
@@ -31,6 +39,10 @@ pub fn write_workspace(root: &Path, members: &[&str]) -> io::Result<()> {
     )
 }
 
+/// Write a fixture library and caller-selected manifest fields; preserve I/O errors.
+///
+/// # Errors
+/// Returns directory creation, manifest or source write errors.
 pub fn write_fixture_package(
     directory: &Path,
     manifest_tail: &str,
@@ -47,6 +59,9 @@ pub fn write_fixture_package(
 }
 
 /// A selected external dependency containing two independent Cargo workspaces.
+///
+/// # Errors
+/// Returns directory creation, manifest or source write errors.
 pub fn write_nested_workspace_fixture(root: &Path) -> io::Result<()> {
     for (directory, name, tail) in [
         (
@@ -81,6 +96,10 @@ pub fn write_nested_workspace_fixture(root: &Path) -> io::Result<()> {
 
 /// Synthetic Cargo artifact record using the fixture's actual package/target ID.
 /// The shell variable must contain a JSON-safe generated fixture output directory.
+///
+/// # Panics
+/// Panics if Cargo metadata fails, is malformed or omits the fixture's cdylib target.
+#[must_use]
 pub fn wasm_artifact_message_script(root: &Path, variable: &str) -> String {
     let output =
         std::process::Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
@@ -133,6 +152,9 @@ pub fn wasm_artifact_message_script(root: &Path, variable: &str) -> String {
 }
 
 /// Test-selected compiler group cleanup, independent of progress reporting.
+///
+/// # Errors
+/// Returns the native child spawn error.
 pub fn spawn_cargo(
     command: &mut std::process::Command,
 ) -> std::io::Result<ic_host_process::child::OwnedChild> {
@@ -143,6 +165,7 @@ pub fn spawn_cargo(
 }
 
 /// This test adapter selects the toolchain/runtime inputs needed by its Cargo fixtures.
+#[must_use]
 pub fn environment() -> std::collections::BTreeMap<std::ffi::OsString, std::ffi::OsString> {
     [
         "PATH",

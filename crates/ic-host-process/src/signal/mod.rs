@@ -57,7 +57,10 @@ impl SignalActions {
     /// The caller must supply an async-signal-safe handler and exclusively
     /// coordinate process-global changes to the selected dispositions through
     /// restoration/Drop, including reverse-order restoration of overlapping guards.
-    #[allow(unsafe_code)]
+    #[expect(
+        unsafe_code,
+        reason = "install caller-owned Unix signal dispositions with reviewed sigaction arguments"
+    )]
     pub unsafe fn install(
         signals: &[libc::c_int],
         handler: extern "C" fn(libc::c_int),
@@ -102,7 +105,10 @@ impl SignalActions {
     ///
     /// # Errors
     /// Returns the first native restoration failure.
-    #[allow(unsafe_code)]
+    #[expect(
+        unsafe_code,
+        reason = "restore the original caller-owned Unix signal dispositions"
+    )]
     pub fn restore(&mut self) -> io::Result<()> {
         let mut first_error = None;
         let previous = std::mem::take(&mut self.previous);

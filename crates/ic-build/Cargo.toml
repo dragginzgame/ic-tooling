@@ -18,6 +18,7 @@ required-features = ["cli"]
 [features]
 default = []
 cli = ["dep:clap", "clap/derive", "serde/derive"]
+test-support = ["ic-host-fs/test-support"]
 
 [target.'cfg(unix)'.dependencies]
 # Production dependencies
@@ -44,6 +45,7 @@ ic-host-process = { workspace = true, features = ["test-support"] }
 [dev-dependencies]
 # Tests and tooling only
 clap.workspace = true
+ic-build = { workspace = true, features = ["test-support"] }
 ic-host-fs = { workspace = true, features = ["test-support"] }
 
 [[test]]

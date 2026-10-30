@@ -5,6 +5,7 @@ mod support;
 use ic_build::artifacts::{
     ArtifactCacheOutcome, ArtifactCachePreparation, ArtifactCacheSpec, prepare_artifact_cache,
 };
+use ic_build::testing::fs::unique_temp_directory;
 use std::{
     fs::{self, OpenOptions},
     io::Write as _,
@@ -12,7 +13,6 @@ use std::{
     thread,
     time::Duration,
 };
-use support::fs_fixture::unique_temp_directory;
 
 const WORKER_ROOT_ENV: &str = "IC_TESTKIT_ARTIFACT_PROCESS_ROOT";
 const WORKER_ID_ENV: &str = "IC_TESTKIT_ARTIFACT_PROCESS_WORKER";

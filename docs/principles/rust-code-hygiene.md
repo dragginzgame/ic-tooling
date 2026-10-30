@@ -20,8 +20,13 @@ architecture on another.
   conditional builds and generated code targeting `no_std` consumers. Document
   that support boundary in the owning crate or local overlay. Import consistency
   must not add a `std` requirement or raise MSRV.
-- Use ordinary Rust module discovery. Avoid `#[path]` wiring and ambiguous
-  duplicate file/directory module shapes.
+- Use ordinary Rust module discovery. **Do not use `#[path]` module attributes**,
+  including raw-identifier spelling and `cfg_attr` path overrides, in production
+  code, tests, examples, benchmarks or generated Rust. Arrange files under their
+  owning module or share code through the appropriate library crate. Do not
+  substitute `include!` or generated path indirection to evade this rule.
+  Attribute text in parser/scanner input fixtures is data, not permitted module
+  wiring. Avoid ambiguous duplicate file/directory module shapes.
 - Keep a type, its inherent implementation, and its trait implementations near
   one another when that improves navigation.
 
@@ -132,6 +137,32 @@ or section banners.
   negative regression cases selected by the owning normal test/CI path. Cover
   the failure that escaped, not just a successful fixture. Shared rules guide
   review; adopting prose alone does not install executable enforcement.
+
+## Lint suppressions
+
+- Fix the underlying warning where practical. When suppression is justified,
+  use `#[expect(lint_name, reason = "...")]` at the narrowest useful scope so
+  the compiler reports an expectation that no longer matches a warning.
+- Review every existing `allow` when adding, changing or auditing lint
+  suppressions, including crate/module attributes, conditional attributes,
+  generated Rust, Cargo lint tables and command-line settings. Replace it with
+  a scoped expectation wherever the supported compiler, target and feature
+  configurations permit. Shared helpers and test fixtures follow the same rule.
+- Where a warning depends on configuration, first narrow the scope or use
+  `cfg_attr` to express the applicable expectation. Retain an `allow` only when
+  an expectation cannot faithfully cover the maintained configurations; record
+  that specific limitation alongside the suppression, using `reason` for Rust
+  attributes. Convenience or a copied existing allowance is not a justification.
+- Keep `unfulfilled_lint_expectations` enabled. Remove obsolete suppressions
+  when the warning disappears instead of suppressing the unfulfilled expectation
+  or changing it back to `allow`.
+- Cargo lint tables and command-line lint levels do not support `expect`.
+  Review their `allow` entries for relocation to source-level expectations;
+  keep any necessary configuration-level allowance documented with its scope
+  and reason. Use supported configuration syntax.
+
+See the [Rust lint expectation contract](https://doc.rust-lang.org/reference/attributes/diagnostics.html#the-expect-attribute)
+and [Cargo lint configuration](https://doc.rust-lang.org/cargo/reference/manifest.html#the-lints-section).
 
 ## Tooling
 

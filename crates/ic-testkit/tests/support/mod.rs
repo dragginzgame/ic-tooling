@@ -1,5 +1,8 @@
 // Each integration target uses only the fixtures it needs.
-#![allow(dead_code)]
+#![allow(
+    dead_code,
+    reason = "integration targets use different subsets of the shared server/wait helpers"
+)]
 
 pub mod wait;
 

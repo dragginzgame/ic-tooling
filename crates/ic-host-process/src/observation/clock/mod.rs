@@ -4,7 +4,7 @@
 use rustix::time::{ClockId, DynamicClockId, clock_gettime_dynamic};
 
 #[cfg(unix)]
-#[allow(
+#[expect(
     clippy::cast_sign_loss,
     reason = "successful native clocks have nonnegative seconds and nanoseconds"
 )]

@@ -4,10 +4,10 @@
 
 mod support;
 
+use ic_build::testing::cargo::spawn_cargo;
 use ic_host_process::child::OwnedChild;
 #[cfg(unix)]
 use ic_host_process::testing::write_executable_script;
-use support::cargo::spawn_cargo;
 
 use ic_build::artifacts::{
     ArtifactCacheOutcome, ArtifactCachePreparation, ArtifactCacheSpec, CacheRetentionLimits,
@@ -25,8 +25,8 @@ use std::{
 };
 
 fn fixture() -> PathBuf {
-    let root = support::fs_fixture::unique_temp_directory("handoff");
-    support::cargo::write_fixture_package(
+    let root = ic_build::testing::fs::unique_temp_directory("handoff");
+    ic_build::testing::cargo::write_fixture_package(
         &root.join("workspace"),
         "[workspace]\n[lib]\ncrate-type = [\"cdylib\"]\n",
         "pub fn fixture() {}\n",
@@ -34,7 +34,8 @@ fn fixture() -> PathBuf {
     .unwrap();
     // Use real Cargo metadata but synthetic variant-specific build bytes. No
     // Wasm toolchain or canister runtime is needed to exercise cache ownership.
-    let message = support::cargo::wasm_artifact_message_script(&root.join("workspace"), "output");
+    let message =
+        ic_build::testing::cargo::wasm_artifact_message_script(&root.join("workspace"), "output");
     let script = r#"#!/bin/sh
 if [ "$1" != build ]; then exec "$REAL_CARGO" "$@"; fi
 if [ "$VARIANT" = failure ]; then exit 23; fi
@@ -52,11 +53,11 @@ fn isolated_wasm_spec(root: &Path, variant: &str) -> WasmBuildSpec {
         &root.join("workspace"),
         &root.join("wasm"),
         &["fixture"],
-        support::cargo::environment(),
+        ic_build::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_cargo_program(root.join("cargo.sh"))
-    .with_environment(support::cargo::environment_with([
+    .with_environment(ic_build::testing::cargo::environment_with([
         (
             "REAL_CARGO",
             std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()),

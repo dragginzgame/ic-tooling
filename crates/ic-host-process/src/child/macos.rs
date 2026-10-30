@@ -2,7 +2,7 @@ use rustix::process::Pid;
 
 // Darwin can reject killpg with EPERM when only the zombie leader remains.
 // Do not dismiss permission failures for groups containing any other member.
-#[allow(
+#[expect(
     unsafe_code,
     reason = "reviewed fixed-buffer libproc query unavailable through rustix"
 )]

@@ -3,7 +3,7 @@ use crate::artifacts::{
     digest::{InputHasher, digest_labeled_paths},
     parse_cargo_depfile, read_cargo_depfile_inputs,
 };
-use crate::fs_fixture::unique_temp_directory;
+use crate::testing::fs::unique_temp_directory;
 use sha2::{Digest as _, Sha256};
 use std::{
     fs, io,

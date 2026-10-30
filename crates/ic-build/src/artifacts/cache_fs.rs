@@ -627,7 +627,7 @@ fn remove_cache_entry(
 
 #[cfg(test)]
 mod tests {
-    use crate::fs_fixture::unique_temp_directory;
+    use crate::testing::fs::unique_temp_directory;
     use std::{
         fs,
         time::{Duration, SystemTime, UNIX_EPOCH},

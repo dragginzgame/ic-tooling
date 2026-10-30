@@ -46,7 +46,7 @@ fn caller_flags_and_release_remaps_reach_cargo() {
     fs::create_dir_all(root.join("src")).unwrap();
     fs::write(
         root.join("Cargo.toml"),
-        "[package]\nname = \"flags_probe\"\nversion = \"0.0.0\"\nedition = \"2024\"\n[workspace]\n",
+        "[package]\nname = \"flags_probe\"\nversion = \"0.0.0\"\nedition = \"2024\"\n[workspace]\n[lints.rust]\nunexpected_cfgs = { level = \"deny\", check-cfg = ['cfg(caller_encoded)', 'cfg(caller_ordinary)'] }\n",
     )
     .unwrap();
     let source = root.join("src/absolute.rs");
@@ -54,7 +54,7 @@ fn caller_flags_and_release_remaps_reach_cargo() {
     fs::write(
         root.join("src/main.rs"),
         format!(
-            "#![allow(unexpected_cfgs)]\ninclude!({source:?});\nfn main() {{ println!(\"{{}}|{{}}|{{}}\", SOURCE, cfg!(caller_encoded), cfg!(caller_ordinary)); }}\n"
+            "include!({source:?});\nfn main() {{ println!(\"{{}}|{{}}|{{}}\", SOURCE, cfg!(caller_encoded), cfg!(caller_ordinary)); }}\n"
         ),
     ).unwrap();
     let additions = [format!(

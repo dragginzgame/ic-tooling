@@ -184,6 +184,16 @@ storage allocation, admission, backing access or persistence integrations.
 
 ## Rust workspaces and portable tooling
 
+Use ordinary Rust module discovery. `#[path]` module attributes, including
+conditional path overrides, are prohibited. Follow the
+[module layout rule](docs/principles/rust-code-hygiene.md#ownership-and-module-shape)
+for source, tests and generated code.
+
+Prefer `#[expect(..., reason = "...")]` over `#[allow(...)]` for Rust lint
+suppressions. Repositories must review every `allow` for conversion and retain
+one only with a concrete reason why an expectation cannot work. Follow the
+[lint suppression rule](docs/principles/rust-code-hygiene.md#lint-suppressions).
+
 Use root-owned workspace dependencies and versions, reviewed shared tooling,
 explicit setup and the product's declared compiler/host requirements. External
 IC dependencies go through `ic-platform`; npm SDK Core uses

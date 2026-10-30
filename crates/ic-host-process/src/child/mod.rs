@@ -505,7 +505,7 @@ impl OwnedChild {
 
     #[cfg_attr(
         not(target_os = "macos"),
-        allow(
+        expect(
             clippy::needless_pass_by_ref_mut,
             reason = "Darwin inspects and may invalidate child ownership"
         )

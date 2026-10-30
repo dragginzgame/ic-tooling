@@ -1,4 +1,7 @@
-#![allow(unsafe_code)]
+#![expect(
+    unsafe_code,
+    reason = "exercise Unix signal handlers and restoration in isolated fixture processes"
+)]
 
 use super::SignalActions;
 use std::{

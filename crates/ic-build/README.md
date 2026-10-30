@@ -10,6 +10,10 @@ The release-metadata binary is optional. Install it with
 with `cargo build -p ic-build --features cli --bin ic-build-release-metadata`.
 Library-only consumers do not enable `cli` and do not depend on Clap.
 
+The optional `test-support` feature exposes `ic_build::testing` for Cargo fixture
+scaffolding and retained temporary directories. Tests opt in explicitly; callers
+own fixture recipes, selected environments and cleanup.
+
 The public entry points are:
 
 - `ic_build::artifacts`: exact Cargo input resolution, Wasm acquisition,

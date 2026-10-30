@@ -1,5 +1,5 @@
 use crate::cargo::selection::CargoSelection;
-use crate::cargo_fixture::spawn_cargo;
+use crate::testing::cargo::spawn_cargo;
 use ic_host_artifacts::batch::BatchLabelError;
 #[cfg(unix)]
 use ic_host_process::testing::write_executable_script;
@@ -20,7 +20,7 @@ use crate::artifacts::{
     SharedIncrementalTargetMaintenanceOutcome, WasmBuildInputSnapshot,
     test_support::fake_wasm_build_spec,
 };
-use crate::fs_fixture::unique_temp_directory;
+use crate::testing::fs::unique_temp_directory;
 #[cfg(unix)]
 use std::{fs, os::unix::fs::symlink, sync::Mutex};
 
@@ -59,7 +59,7 @@ fn library_output_validation_survives_batch_and_prepared_resolution() {
         &root,
         &root.join("exact"),
         &["ordinary"],
-        crate::cargo_fixture::environment(),
+        crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_cargo_program(root.join("cargo.sh"));
@@ -128,7 +128,7 @@ fn batch_retains_every_indexed_failure() {
                 &root,
                 &target,
                 &[],
-                crate::cargo_fixture::environment(),
+                crate::testing::cargo::environment(),
                 CONFIGURATION_LIMITS,
             )
             .with_cargo_program(&cargo),
@@ -139,7 +139,7 @@ fn batch_retains_every_indexed_failure() {
                 &root,
                 &target,
                 &["fixture"],
-                crate::cargo_fixture::environment(),
+                crate::testing::cargo::environment(),
                 CONFIGURATION_LIMITS,
             )
             .with_cargo_selection(CargoSelection {
@@ -201,7 +201,7 @@ fn batch_failure_retains_partial_metadata_timing() {
             &root,
             &root.join("target"),
             &["fixture"],
-            crate::cargo_fixture::environment(),
+            crate::testing::cargo::environment(),
             CONFIGURATION_LIMITS,
         )
         .with_cargo_program(&cargo),
@@ -293,7 +293,7 @@ fn batch_rejects_invalid_labels_before_progress_or_build_work() {
         Path::new("."),
         Path::new("target"),
         &[],
-        crate::cargo_fixture::environment(),
+        crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     );
     let empty = [LabeledWasmBuildSpec::new("", invalid.clone())];
@@ -347,7 +347,7 @@ fn batch_progress_retains_the_caller_label() {
             Path::new("."),
             Path::new("target"),
             &[],
-            crate::cargo_fixture::environment(),
+            crate::testing::cargo::environment(),
             CONFIGURATION_LIMITS,
         ),
     )];
@@ -383,7 +383,7 @@ fn batch_maintenance_configures_each_shared_target_once() {
         Path::new("."),
         Path::new("exact-a"),
         &["a"],
-        crate::cargo_fixture::environment(),
+        crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_shared_incremental_target("shared-a");
@@ -391,7 +391,7 @@ fn batch_maintenance_configures_each_shared_target_once() {
         Path::new("."),
         Path::new("exact-b"),
         &["b"],
-        crate::cargo_fixture::environment(),
+        crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_shared_incremental_target("shared-a");
@@ -399,7 +399,7 @@ fn batch_maintenance_configures_each_shared_target_once() {
         Path::new("."),
         Path::new("exact-c"),
         &["c"],
-        crate::cargo_fixture::environment(),
+        crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_shared_incremental_target("shared-b");
@@ -407,7 +407,7 @@ fn batch_maintenance_configures_each_shared_target_once() {
         Path::new("."),
         Path::new("exact-d"),
         &["d"],
-        crate::cargo_fixture::environment(),
+        crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_isolated_builds();
@@ -489,7 +489,7 @@ fn batch_maintenance_rejects_per_spec_policy_ownership() {
             Path::new("."),
             Path::new("exact"),
             &["fixture"],
-            crate::cargo_fixture::environment(),
+            crate::testing::cargo::environment(),
             CONFIGURATION_LIMITS,
         )
         .with_shared_incremental_target("shared")
@@ -632,7 +632,7 @@ fn missing_tools_keep_their_phase_in_silent_and_observed_batches() {
             WasmBuildPhase::CargoIdentity,
         ),
         (
-            spec.with_environment(crate::cargo_fixture::environment_with([(
+            spec.with_environment(crate::testing::cargo::environment_with([(
                 "RUSTC",
                 missing.as_os_str(),
             )])),

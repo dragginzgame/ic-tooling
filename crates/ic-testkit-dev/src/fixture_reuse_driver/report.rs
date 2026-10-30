@@ -169,7 +169,10 @@ impl Summary {
     }
 }
 
-#[allow(clippy::cast_precision_loss)]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "finite-sample reports intentionally project exact counters into approximate rates"
+)]
 pub(super) fn summarize(runs: &[MeasuredRun]) -> Result<Summary, Error> {
     let samples = || runs.iter().flat_map(|run| &run.metrics.samples);
     let phase_values = |select: fn(&Phases) -> Option<f64>| {

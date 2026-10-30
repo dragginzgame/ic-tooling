@@ -51,7 +51,7 @@ pub fn produce_and_retain_artifact(
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
-    use crate::fs_fixture::unique_temp_directory;
+    use crate::testing::fs::unique_temp_directory;
     use ic_host_artifacts::artifact::ArtifactError;
     use std::{io::Write, os::unix::process::ExitStatusExt};
 

@@ -1,8 +1,8 @@
 //! Actual Cargo/Wasm compilation, exact inputs and publication qualification.
 
 use ic_build::cargo::selection::CargoSelection;
+use ic_build::testing::cargo::spawn_cargo;
 use ic_host_process::child::OwnedChild;
-use support::cargo::spawn_cargo;
 
 mod support;
 
@@ -28,7 +28,7 @@ use std::{
     time::Duration,
 };
 
-use support::fs_fixture::unique_temp_directory as unique_temp_dir;
+use ic_build::testing::fs::unique_temp_directory as unique_temp_dir;
 use support::wasm_path;
 
 #[cfg(unix)]
@@ -809,7 +809,7 @@ fn shared_incremental_wasm_cache_keeps_mutable_cargo_state_outside_exact_entries
 
     let changed = spec
         .clone()
-        .with_environment(support::cargo::environment_with([(
+        .with_environment(ic_build::testing::cargo::environment_with([(
             "IC_TESTKIT_SHARED_INCREMENTAL_PROBE",
             "changed",
         )]));
@@ -984,7 +984,7 @@ fn resolved_cargo_inputs_guard_transactional_artifacts_through_commit() {
     let mismatched_build_spec =
         wasm_spec
             .clone()
-            .with_environment(support::cargo::environment_with([(
+            .with_environment(ic_build::testing::cargo::environment_with([(
                 "IC_TESTKIT_BRIDGE_MODE",
                 "changed",
             )]));
@@ -1127,7 +1127,7 @@ fn source_changes_during_shared_incremental_build_reject_exact_publication() {
     let spec = support::wasm::spec(&workspace, &root.join("exact-cache"), &["race_probe"])
         .with_shared_incremental_target(root.join("shared-target"))
         .with_cargo_program(&wrapper)
-        .with_environment(support::cargo::environment_with([
+        .with_environment(ic_build::testing::cargo::environment_with([
             (OsString::from("REAL_CARGO"), real_cargo),
             (
                 OsString::from("IC_TESTKIT_BUILD_STARTED"),
@@ -1233,7 +1233,7 @@ fn source_race_invalidates_every_prepared_snapshot_reader() {
     let spec = support::wasm::spec(&workspace, &root.join("exact-cache"), &["race_probe"])
         .with_shared_incremental_target(root.join("shared-target"))
         .with_cargo_program(&wrapper)
-        .with_environment(support::cargo::environment_with([
+        .with_environment(ic_build::testing::cargo::environment_with([
             (OsString::from("REAL_CARGO"), real_cargo),
             (
                 OsString::from("IC_TESTKIT_BUILD_STARTED"),

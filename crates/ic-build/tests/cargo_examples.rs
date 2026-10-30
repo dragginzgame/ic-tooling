@@ -1,8 +1,8 @@
 //! Named examples share Cargo identity/output selection while callers own execution.
 
 use ic_build::cargo::selection::{CargoFeatureSelection, CargoSelection};
+use ic_build::testing::cargo::spawn_cargo;
 use ic_host_process::child::OwnedChild;
-use support::cargo::spawn_cargo;
 
 mod support;
 
@@ -24,7 +24,7 @@ use std::{
 };
 
 fn workspace() -> std::path::PathBuf {
-    let root = support::fs_fixture::unique_temp_directory("cargo-example");
+    let root = ic_build::testing::fs::unique_temp_directory("cargo-example");
     let workspace = root.join("workspace");
     fs::create_dir_all(workspace.join("src")).unwrap();
     fs::create_dir(workspace.join(".cargo")).unwrap();
@@ -73,7 +73,7 @@ fn recipe(root: &Path) -> WasmBuildSpec {
         &workspace,
         &workspace.join("target/cargo"),
         &["example-fixture"],
-        support::cargo::environment(),
+        ic_build::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_example("probe")
@@ -153,7 +153,7 @@ fn named_examples_build_and_reuse_without_aliasing_library_or_other_example() {
             &root.join("workspace"),
             &root.join("workspace/target/cargo"),
             &["example-fixture"],
-            support::cargo::environment(),
+            ic_build::testing::cargo::environment(),
             CONFIGURATION_LIMITS,
         )
         .with_cargo_selection(CargoSelection {
@@ -305,7 +305,7 @@ fn unsafe_or_conflicting_example_selectors_fail_before_dispatch() {
         &root.join("workspace"),
         &root.join("target"),
         &["one", "two"],
-        support::cargo::environment(),
+        ic_build::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_example("probe");

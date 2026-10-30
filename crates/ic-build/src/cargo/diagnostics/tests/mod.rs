@@ -1,5 +1,5 @@
 use super::*;
-use crate::fs_fixture::unique_temp_directory;
+use crate::testing::fs::unique_temp_directory;
 use serde_json::json;
 
 struct InterruptedReader<'a> {
@@ -33,7 +33,7 @@ fn exact_library_selection_rejects_incomplete_ambiguous_and_oversized_evidence()
     fs::write(&path, []).unwrap();
     let target = json!({"kind":["lib"],"crate_types":["lib"],"name":"fixture",
         "src_path":"/fixture/src/lib.rs","edition":"2024","doc":true,"doctest":true,"test":true});
-    let artifact = crate::cargo_fixture::artifact_message(
+    let artifact = crate::testing::cargo::artifact_message(
         "path+file:///fixture#0.1.0",
         &target,
         &[path.as_path()],

@@ -40,6 +40,8 @@ codec, host parser and executor/runtime capabilities separately selectable, with
 no default activation. An executor-only consumer must not acquire the parser or
 codec. Platform 0.2 owns the maintained Candid-free CDK adapters and explicit-codec
 entrypoints, while preserving the registry executor and raw system-call identities.
+As of Platform 0.9, Platform owns the executor and system-call implementation;
+consumers align Platform versions rather than selecting external runtime packages.
 Host enables none of those runtime features. Any necessary proc-macro implementation
 crate belongs to this same boundary repository, not to a second runtime owner.
 

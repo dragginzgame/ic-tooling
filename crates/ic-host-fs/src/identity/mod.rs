@@ -43,7 +43,13 @@ impl FileIdentity {
     }
 
     #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
-    #[cfg_attr(target_vendor = "apple", allow(clippy::cast_sign_loss))]
+    #[cfg_attr(
+        target_vendor = "apple",
+        expect(
+            clippy::cast_sign_loss,
+            reason = "match std's signed Darwin device-ID projection"
+        )
+    )]
     pub(crate) const fn from_stat(stat: &rustix::fs::Stat) -> Self {
         Self {
             // Match std's MetadataExt::dev projection of Darwin's signed dev_t.

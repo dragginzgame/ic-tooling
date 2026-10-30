@@ -1,15 +1,11 @@
 // Each integration target uses only the fixtures it needs.
-#![allow(dead_code)]
+#![allow(
+    dead_code,
+    reason = "integration targets select different subsets of this shared support module"
+)]
 
 pub mod process;
 
-#[path = "../../test-support/fs/mod.rs"]
-pub mod fs_fixture;
-
-#[path = "../../test-support/cargo/mod.rs"]
-pub mod cargo;
-
-#[path = "../../test-support/cargo/wasm.rs"]
 pub mod wasm;
 
 use std::path::{Path, PathBuf};

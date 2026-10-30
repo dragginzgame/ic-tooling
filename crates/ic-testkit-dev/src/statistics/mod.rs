@@ -48,7 +48,10 @@ pub enum SampleStatisticsError {
 /// floating-point projections and the conversion of the count for division are
 /// approximate. No histogram or exact-integer aggregate is reconstructed.
 ///
-#[allow(clippy::cast_precision_loss)]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "finite-sample means divide by an approximate floating-point count"
+)]
 pub fn summarize_samples(
     samples: &mut [f64],
 ) -> Result<Option<SampleStatistics>, SampleStatisticsError> {

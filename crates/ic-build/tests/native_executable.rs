@@ -113,7 +113,7 @@ fn actual_cargo_reports_custom_profile_executable_and_streams_failed_build_diagn
 }
 
 fn fixture() -> (std::path::PathBuf, OsString) {
-    let root = support::fs_fixture::unique_temp_directory("native-executable");
+    let root = ic_build::testing::fs::unique_temp_directory("native-executable");
     fs::create_dir(root.join("examples")).unwrap();
     fs::write(root.join("Cargo.toml"), "[package]\nname = \"native-fixture\"\nversion = \"0.0.0\"\nedition = \"2024\"\n[workspace]\n[profile.custom]\ninherits = \"dev\"\n").unwrap();
     fs::write(

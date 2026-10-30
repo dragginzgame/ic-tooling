@@ -11,13 +11,13 @@ use ic_build::artifacts::{
     CacheRetentionLimits, SharedIncrementalTargetMaintenanceOutcome, WasmBuildOutcome,
     WasmBuildSpec, build_wasm_canisters_cached, maintain_shared_incremental_target_at_most_every,
 };
+use ic_build::testing::fs::unique_temp_directory;
 use std::{
     ffi::OsString,
     fs,
     path::{Path, PathBuf},
     time::Duration,
 };
-use support::fs_fixture::unique_temp_directory;
 
 const WORKER_ROOT_ENV: &str = "IC_TESTKIT_WASM_PROCESS_ROOT";
 const WORKER_ID_ENV: &str = "IC_TESTKIT_WASM_PROCESS_WORKER";
@@ -87,12 +87,12 @@ fn shared_incremental_process_worker() {
         &workspace,
         &root.join(format!("cache-{worker}")),
         &["fixture"],
-        support::cargo::environment(),
+        ic_build::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_shared_incremental_target(root.join("shared-target"))
     .with_cargo_program(root.join("cargo-wrapper.sh"))
-    .with_environment(support::cargo::environment_with([
+    .with_environment(ic_build::testing::cargo::environment_with([
         (OsString::from("REAL_CARGO"), real_cargo),
         (
             OsString::from("IC_TESTKIT_ACTIVE_BUILD"),
@@ -131,7 +131,7 @@ fn scheduled_shared_target_maintenance_process_worker() {
         &workspace,
         &root.join(format!("cache-{worker}")),
         &["fixture"],
-        support::cargo::environment(),
+        ic_build::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_shared_incremental_target(root.join("shared-target"));
