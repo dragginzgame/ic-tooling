@@ -482,7 +482,7 @@ fn descriptor_publication_preserves_sync_state_and_foreign_stage_cleanup_evidenc
 fn closed_writer_admission_executes_before_replacing_the_destination() {
     const DRIVER: &str = "IC_HOST_FS_EXECUTABLE_ADMISSION_DRIVER";
     // Re-exec before opening descriptors so unrelated test forks cannot retain them.
-    if crate::test_support::run_isolated(DRIVER, "executable admission") {
+    if crate::testing::run_isolated(DRIVER, "executable admission") {
         return;
     }
     let fixture = fixture();

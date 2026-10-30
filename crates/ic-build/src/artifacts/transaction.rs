@@ -11,7 +11,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ic_host_artifacts::artifact::MatchingWriter;
+use ic_host_artifacts::artifact::{BoundedWriter, MatchingWriter};
 use ic_host_fs::owned_directory::{OwnedDirectory, remove_path_if_present};
 use ic_host_fs::read::directory_logical_size;
 
@@ -234,6 +234,7 @@ struct OutputSpec {
     validation: ArtifactOutputValidation,
 }
 
+#[derive(Clone, Copy)]
 struct VerifiedOutput<'a> {
     index: usize,
     output: &'a OutputSpec,
@@ -804,14 +805,13 @@ impl ArtifactBuildTransaction {
         }
 
         let publication_started = Instant::now();
-        let manifest = manifest_contents(self.resolved.key, &output_info);
-        ic_host_fs::durable::write_bytes(
+        ic_host_fs::durable::write_with(
             &self.staging_directory.path().join(MANIFEST_FILE),
             ic_host_fs::durable::WriteOptions {
                 mode: ic_host_fs::durable::PublicationMode::Replace,
                 permissions: 0o666,
             },
-            &manifest,
+            |writer| write_manifest(writer, self.resolved.key, output_info.iter().copied()),
         )
         .map_err(|source| {
             cache_io(
@@ -1403,7 +1403,7 @@ fn validated_cache_outputs<'a>(
         return Ok(None);
     };
     let mut comparison = MatchingWriter::new(&manifest);
-    write_manifest(&mut comparison, key, &output_info).map_err(|source| {
+    write_manifest(&mut comparison, key, output_info.iter().copied()).map_err(|source| {
         cache_io(
             "compare artifact cache manifest",
             entry.join(MANIFEST_FILE),
@@ -1592,34 +1592,33 @@ fn manifest_header(key: InputDigest) -> String {
 }
 
 fn maximum_manifest_len(spec: &ArtifactCacheSpec) -> Option<usize> {
-    // Exact writer layout with maximum-width u64 byte counts and SHA-256 hex.
-    // Keep dynamic names/tokens in bytes, including any multibyte UTF-8.
-    let header_len = ARTIFACT_CACHE_FORMAT.len() + "\nkey:\n".len() + 64;
-    let row_overhead = "output:".len() + "::::\n".len() + 20 + 64;
-    spec.outputs
-        .iter()
-        .enumerate()
-        .try_fold(header_len, |length, (index, output)| {
-            let index_digits = usize::try_from(index.checked_ilog10().unwrap_or(0) + 1).ok()?;
-            length
-                .checked_add(row_overhead)?
-                .checked_add(index_digits)?
-                .checked_add(output.name.len())?
-                .checked_add(output.validation.cache_token().len())
-        })
+    // Count the actual format at its widest byte count, without retaining it.
+    // The same writer owns names, tokens, separators and fixed-width digests.
+    let widest = FileDigest {
+        bytes: u64::MAX,
+        digest: InputDigest::from_bytes([0; 32]),
+    };
+    let mut writer = BoundedWriter::new(io::sink(), usize::MAX as u64);
+    write_manifest(
+        &mut writer,
+        widest.digest,
+        spec.outputs
+            .iter()
+            .enumerate()
+            .map(|(index, output)| VerifiedOutput {
+                index,
+                output,
+                info: widest,
+            }),
+    )
+    .ok()?;
+    usize::try_from(writer.bytes_written()).ok()
 }
 
-fn manifest_contents(key: InputDigest, outputs: &[VerifiedOutput<'_>]) -> Vec<u8> {
-    let mut manifest = Vec::new();
-    write_manifest(&mut manifest, key, outputs)
-        .expect("writing an artifact manifest to a Vec cannot fail");
-    manifest
-}
-
-fn write_manifest(
+fn write_manifest<'a>(
     writer: &mut impl io::Write,
     key: InputDigest,
-    outputs: &[VerifiedOutput<'_>],
+    outputs: impl IntoIterator<Item = VerifiedOutput<'a>>,
 ) -> io::Result<()> {
     writer.write_all(manifest_header(key).as_bytes())?;
     for VerifiedOutput {

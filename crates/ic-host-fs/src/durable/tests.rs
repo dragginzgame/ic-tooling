@@ -454,7 +454,7 @@ fn private_lock_preserves_existing_identity_and_caller_owned_acquisition() {
     use std::os::unix::fs::{MetadataExt, PermissionsExt};
     const DRIVER: &str = "IC_HOST_FS_PRIVATE_LOCK_DRIVER";
     // Isolate immediate Drop release from descriptors inherited by other test forks.
-    if crate::test_support::run_isolated(DRIVER, "private lock test") {
+    if crate::testing::run_isolated(DRIVER, "private lock test") {
         return;
     }
     let fixture = crate::test_support::fixture();

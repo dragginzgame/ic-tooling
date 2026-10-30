@@ -1,12 +1,14 @@
 //! Caller-released Unix command launch gate, without capture or readiness policy.
 #![allow(
     unsafe_code,
-    reason = "reviewed pipe, close-on-exec and post-fork descriptor operations imported from Profiler"
+    reason = "reviewed async-signal-safe post-fork descriptor operations imported from Profiler"
 )]
+use rustix::io::{FdFlags, fcntl_setfd};
 use std::{
     ffi::{OsStr, OsString},
     fs::File,
     io,
+    os::{fd::AsRawFd, unix::process::CommandExt},
     process::Command,
 };
 
@@ -45,22 +47,11 @@ pub fn gated_command(
     arguments: &[OsString],
     launcher_name: &OsStr,
 ) -> Result<(Command, File), LaunchGateError> {
-    use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
-    use std::os::unix::process::CommandExt;
-
-    let mut descriptors = [-1; 2];
-    // SAFETY: descriptors has space for both pipe output descriptors.
-    if unsafe { libc::pipe(descriptors.as_mut_ptr()) } != 0 {
-        return Err(LaunchGateError::Pipe(std::io::Error::last_os_error()));
-    }
-    // SAFETY: pipe succeeded and transfers ownership of two unique FDs.
-    let read = unsafe { OwnedFd::from_raw_fd(descriptors[0]) };
-    let write = unsafe { OwnedFd::from_raw_fd(descriptors[1]) };
-    for fd in [read.as_raw_fd(), write.as_raw_fd()] {
-        // SAFETY: fcntl operates on live descriptors and retains no pointers.
-        if unsafe { libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) } < 0 {
-            return Err(LaunchGateError::Descriptor(std::io::Error::last_os_error()));
-        }
+    let (read, write) =
+        rustix::pipe::pipe().map_err(|source| LaunchGateError::Pipe(source.into()))?;
+    for fd in [&read, &write] {
+        fcntl_setfd(fd, FdFlags::CLOEXEC)
+            .map_err(|source| LaunchGateError::Descriptor(source.into()))?;
     }
     let write_fd = write.as_raw_fd();
     let mut command = Command::new("/bin/sh");

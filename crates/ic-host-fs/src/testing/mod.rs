@@ -5,6 +5,37 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Re-exec the current libtest case without unrelated descriptor-owning threads.
+///
+/// Returns `true` after the isolated child passes; that caller should return.
+/// Returns `false` inside the child selected by the caller-owned environment
+/// guard. Uses the current test's exact name and one test thread; no timeout or
+/// output allowance is selected. This helper is available only for test support.
+///
+/// # Panics
+/// Panics outside a named test thread, if the test executable cannot be found or
+/// spawned, or if the isolated test fails. Child output is included on failure.
+#[must_use]
+pub fn run_isolated(driver: &str, context: &str) -> bool {
+    if std::env::var_os(driver).is_some() {
+        return false;
+    }
+    let thread = std::thread::current();
+    let name = thread.name().expect("libtest names each test thread");
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", name, "--test-threads=1"])
+        .env(driver, "1")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "isolated {context} failed:\n{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    true
+}
+
 /// A fresh test directory removed on normal Drop and retained during panic.
 ///
 /// Uses [`create_fixture_directory`] for allocation and

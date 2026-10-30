@@ -81,7 +81,7 @@ pub fn compatible_package_groups(
     ) -> Result<String, Box<dyn std::error::Error>>,
 ) -> Result<Vec<Vec<String>>, Box<dyn std::error::Error>> {
     validate_labels(packages.iter().map(String::as_str))?;
-    let mut isolated = BTreeMap::new();
+    let mut current_trees = BTreeMap::new();
     let mut groups: Vec<Vec<String>> = Vec::new();
     for package in packages {
         let tree = resolved_trees(
@@ -91,7 +91,7 @@ pub fn compatible_package_groups(
             selection,
             &mut observe_tree,
         )?;
-        isolated.extend(tree);
+        current_trees.extend(tree);
         if let Some(group) = groups.last_mut() {
             let candidate = group
                 .iter()
@@ -100,11 +100,13 @@ pub fn compatible_package_groups(
                 .collect::<Vec<_>>();
             let combined =
                 resolved_trees(workspace, &candidate, target, selection, &mut observe_tree)?;
-            if preserves_individual_trees(&isolated, &combined, &candidate) {
+            if preserves_individual_trees(&current_trees, &combined, &candidate) {
                 group.push(package.clone());
                 continue;
             }
         }
+        // Earlier groups are sealed: only this package can enter the next one.
+        current_trees.retain(|name, _| name == package);
         groups.push(vec![package.clone()]);
     }
     Ok(groups)

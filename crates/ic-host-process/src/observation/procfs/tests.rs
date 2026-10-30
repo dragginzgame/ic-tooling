@@ -63,8 +63,21 @@ fn optional_details_keep_missingness_and_do_not_read_unselected_pss() {
     assert_eq!(observed.pss_bytes, None);
     read_details(fixture.path(), &mut observed, true);
     assert_eq!(observed.pss_bytes, Some(12 * 1024));
-    fs::remove_file(dir.join("io")).unwrap();
+    fs::write(
+        dir.join("io"),
+        "read_bytes: 1\nread_bytes::: 55\nread_bytes: bad\nwrite_bytes: -1\nwrite_bytes: 89 ignored\nwrite_bytes: bad\nunused: 900\n",
+    ).unwrap();
+    fs::write(dir.join("smaps_rollup"), "Pss: 3 kB\nPss: 5 kB\nPss: bad\n").unwrap();
+    read_details(fixture.path(), &mut observed, true);
+    assert_eq!(
+        (observed.read_bytes, observed.write_bytes),
+        (Some(55), Some(89))
+    );
+    assert_eq!(observed.pss_bytes, Some(5 * 1024));
     fs::remove_file(dir.join("smaps_rollup")).unwrap();
+    read_details(fixture.path(), &mut observed, false);
+    assert_eq!(observed.pss_bytes, Some(5 * 1024));
+    fs::remove_file(dir.join("io")).unwrap();
     read_details(fixture.path(), &mut observed, true);
     assert_eq!(
         (

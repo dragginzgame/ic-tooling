@@ -91,7 +91,7 @@ fn direct_descriptor_operations_refuse_nonregular_files() {
 fn descriptor_contention_reports_and_preserves_returned_ownership() {
     const DRIVER: &str = "IC_HOST_FS_DESCRIPTOR_LOCK_DRIVER";
     // Re-exec before opening descriptors so unrelated test forks cannot retain them.
-    if crate::test_support::run_isolated(DRIVER, "descriptor lock test") {
+    if crate::testing::run_isolated(DRIVER, "descriptor lock test") {
         return;
     }
     let fixture = fixture();

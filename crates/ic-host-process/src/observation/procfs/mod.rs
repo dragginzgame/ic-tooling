@@ -4,24 +4,14 @@
     reason = "reviewed sysconf observations imported from Profiler"
 )]
 use super::{ChildProcesses, ProcessObservation};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fs,
-    path::Path,
-    sync::OnceLock,
-};
+use std::{collections::BTreeSet, fs, path::Path, sync::OnceLock};
 
 fn ticks_per_second() -> u64 {
     static VALUE: OnceLock<u64> = OnceLock::new();
     *VALUE.get_or_init(|| {
         #[cfg(unix)]
-        {
-            // SAFETY: sysconf is called with a defined name and no pointers.
-            let value = unsafe { libc::sysconf(libc::_SC_CLK_TCK) };
-            if value > 0 {
-                return u64::try_from(value).ok().unwrap_or_default();
-            }
-        }
+        return positive_sysconf(libc::_SC_CLK_TCK, 100);
+        #[cfg(not(unix))]
         100
     })
 }
@@ -30,15 +20,21 @@ fn page_size() -> u64 {
     static VALUE: OnceLock<u64> = OnceLock::new();
     *VALUE.get_or_init(|| {
         #[cfg(unix)]
-        {
-            // SAFETY: sysconf is called with a defined name and no pointers.
-            let value = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
-            if value > 0 {
-                return u64::try_from(value).ok().unwrap_or_default();
-            }
-        }
+        return positive_sysconf(libc::_SC_PAGESIZE, 4096);
+        #[cfg(not(unix))]
         4096
     })
+}
+
+#[cfg(unix)]
+fn positive_sysconf(name: libc::c_int, fallback: u64) -> u64 {
+    // SAFETY: both callers use defined sysconf names; no pointers are involved.
+    let value = unsafe { libc::sysconf(name) };
+    if value > 0 {
+        u64::try_from(value).ok().unwrap_or_default()
+    } else {
+        fallback
+    }
 }
 
 /// Read the Linux creation token from a caller-selected procfs mount.
@@ -96,29 +92,33 @@ fn parse_stat(stat: &str) -> Option<(&str, [&str; 22])> {
     Some((name, std::array::from_fn(|_| fields.next().unwrap_or(""))))
 }
 
-fn key_values(text: &str) -> BTreeMap<String, u64> {
+fn field_value(text: &str, name: &str) -> Option<u64> {
     text.lines()
         .filter_map(|line| {
             let mut fields = line.split_whitespace();
-            let key = fields.next()?.trim_end_matches(':');
-            Some((key.to_string(), fields.next()?.parse().ok()?))
+            if fields.next()?.trim_end_matches(':') != name {
+                return None;
+            }
+            fields.next()?.parse().ok()
         })
-        .collect()
+        .next_back()
 }
 
 /// Read Linux I/O and optionally PSS for an already selected observation.
 /// This does not revalidate identity; consumers retain before/after checks.
 pub fn read_details(proc_root: &Path, result: &mut ProcessObservation, memory_detail: bool) {
-    let io = fs::read_to_string(proc_root.join(result.pid.to_string()).join("io"))
-        .ok()
-        .map(|s| key_values(&s));
-    result.read_bytes = io.as_ref().and_then(|m| m.get("read_bytes").copied());
-    result.write_bytes = io.as_ref().and_then(|m| m.get("write_bytes").copied());
+    let io = fs::read_to_string(proc_root.join(result.pid.to_string()).join("io")).ok();
+    result.read_bytes = io
+        .as_deref()
+        .and_then(|text| field_value(text, "read_bytes"));
+    result.write_bytes = io
+        .as_deref()
+        .and_then(|text| field_value(text, "write_bytes"));
     if memory_detail {
         result.pss_bytes =
             fs::read_to_string(proc_root.join(result.pid.to_string()).join("smaps_rollup"))
                 .ok()
-                .and_then(|s| key_values(&s).get("Pss").copied())
+                .and_then(|text| field_value(&text, "Pss"))
                 .map(|kb| kb.saturating_mul(1024));
     }
 }

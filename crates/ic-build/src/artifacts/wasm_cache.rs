@@ -4073,8 +4073,7 @@ fn copy_wasm_artifacts(
             "Cargo artifact count does not match admitted outputs",
         ));
     }
-    for (index, (cached, _)) in destinations.iter().enumerate() {
-        let source = &source_artifacts[index];
+    for (source, (cached, _)) in source_artifacts.iter().zip(destinations) {
         if source != cached {
             copy_file_atomic(source, cached).map_err(|source| {
                 WasmBuildError::io(

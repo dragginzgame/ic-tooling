@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.70.3]
+
+### 🧹 Cleanup
+
+- Keep only active-group dependency evidence and stream artifact-cache manifests
+  through the same format used for verification and read bounds.
+- Simplify native launch-gate preparation and procfs field reads; share isolated
+  test execution and move Testkit graph policy out of Make's shell quoting.
+  [Details](docs/changelog/0.70.md#0703---unreleased).
+
 ## [0.70.2] - 2026-10-29
 
 ### ➕ Added

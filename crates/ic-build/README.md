@@ -18,7 +18,6 @@ The public entry points are:
 - `ic_build::cargo`: typed selections, configuration/metadata observations,
   feature-safe package grouping, Cargo communication and exact artifact selection,
   native executable builds, package qualification and lock projection.
-- `ic_build::batch`: labels shared by Build's batch and grouping APIs.
 
 The dependency direction is consumer adapters → IC Build → Host Artifacts,
 FS and Process. Host owns byte/hash primitives, filesystem admission/durable
@@ -28,17 +27,15 @@ admission; IcyDB owns optimizer/interface policy; Testkit owns testing and Pocke
 lifecycle. Build depends on none of those consumers. Shared Tooling owns the
 reviewed development, installation and release helpers used by this checkout.
 
-Release 0.18 removes `ArtifactStagingDirectory`; use published Host FS 0.27.5
-fresh-directory allocation and `OwnedDirectory` directly for staging. Capture
-records retain their artifact lifetime and explicit cleanup behavior.
+Host FS owns fresh-directory allocation and `OwnedDirectory` staging custody.
+Capture records retain their artifact lifetime and explicit cleanup behavior.
 
 The [ownership design](../../docs/build/design/build-ownership.md) distinguishes current
 owners from the historical extraction audit. The [artifact API guide](../../docs/build/artifacts.md)
-owns detailed contracts and upgrade actions; the [current handoff](../../docs/build/status/current.md)
+owns detailed contracts and upgrade actions; the [current handoff](../../docs/status/current.md)
 records source-bound qualification and outstanding consumer acceptance.
 
-Batch label errors use `ic_host_artifacts::batch::BatchLabelError` in
-0.18; replace imports from the retired `ic_build::batch` module.
+Batch label errors use `ic_host_artifacts::batch::BatchLabelError`.
 
 ## Use
 
@@ -46,19 +43,18 @@ IC Build requires Rust 1.91.0 or newer:
 
 ```toml
 [dependencies]
-ic-build = "0.66"
+ic-build = "0.70"
 # Add matching direct Host dependencies when passing Host values through Build.
-ic-host-process = { version = "0.66", default-features = false }
+ic-host-process = { version = "0.70", default-features = false }
 ```
 
-The coordinated Build 0.66 selects Host 0.66. Consumers passing Host values
+The coordinated Build 0.70 selects Host 0.70. Consumers passing Host values
 through the execution/artifact APIs must align their direct Artifacts, FS and
-Process dependencies to 0.66. The command/byte observation interfaces do not
+Process dependencies to 0.70. The command/byte observation interfaces do not
 exchange Host values. Defaults stay disabled; Build needs no Platform dependency.
 
 The examples use the current API and are compiled as Cargo example targets.
-Release 0.19 replaces public raw Cargo-child communication with typed
-`CargoInvocation` / `execute_cargo`, including explicit compiler selection and
+Use typed `CargoInvocation` / `execute_cargo` for Cargo builds, with explicit compiler selection and
 execution-bound tool observations; see the
 [migration contract](../../docs/build/artifacts.md#cargo-observations).
 Wasm specifications require the complete environment at construction and an
@@ -81,9 +77,7 @@ mutable target custody remains with the caller. Both select their Host spawner
 explicitly and add no elapsed-time deadline. Applications supply their own
 cancellation, process-group custody and source admission where required.
 
-Current source selects the published Host 0.31 family; match direct Host
-dependencies when exchanging Host values with the execution/artifact engine.
-Build 0.23 renders metadata/tree commands through each specification's
+Metadata/tree observations render commands through each specification's
 `command` method and exposes canonical decoding. Workspace discovery uses
 `workspace_root_command` and `decode_workspace_root`; feature-safe grouping
 accepts a tree observer. All these observations execute through the caller's

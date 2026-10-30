@@ -690,7 +690,7 @@ mod tests {
         use std::os::unix::fs::symlink;
         const CHILD_ENV: &str = "IC_TESTKIT_NONBLOCKING_CACHE_LOCK_CHILD";
 
-        if crate::fs_fixture::run_isolated(CHILD_ENV, "nonblocking cache lock test") {
+        if ic_host_fs::testing::run_isolated(CHILD_ENV, "nonblocking cache lock test") {
             return;
         }
 

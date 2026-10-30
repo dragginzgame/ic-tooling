@@ -812,7 +812,8 @@ fn manifest_read_bound_preserves_writer_widths_and_byte_lengths() {
                     info: FileDigest { bytes, digest: key },
                 })
                 .collect::<Vec<_>>();
-            let encoded = super::manifest_contents(key, &outputs);
+            let mut encoded = Vec::new();
+            super::write_manifest(&mut encoded, key, outputs).unwrap();
             assert!(encoded.len() <= maximum, "{count} outputs, {bytes} bytes");
             if bytes == u64::MAX {
                 assert_eq!(encoded.len(), maximum);
@@ -833,7 +834,7 @@ fn manifest_read_bound_preserves_writer_widths_and_byte_lengths() {
             },
         })
         .collect::<Vec<_>>();
-    let error = super::write_manifest(&mut insufficient, key, &outputs).unwrap_err();
+    let error = super::write_manifest(&mut insufficient, key, outputs).unwrap_err();
     assert_eq!(error.kind(), std::io::ErrorKind::WriteZero);
 }
 
@@ -1052,7 +1053,7 @@ fn scheduled_pruning_skips_an_immediate_second_acquisition() {
 #[test]
 fn pruning_removes_abandoned_staging_without_touching_active_transactions() {
     const CHILD_ENV: &str = "IC_TESTKIT_STAGING_PRUNING_CHILD";
-    if crate::fs_fixture::run_isolated(CHILD_ENV, "staging pruning") {
+    if ic_host_fs::testing::run_isolated(CHILD_ENV, "staging pruning") {
         return;
     }
 
