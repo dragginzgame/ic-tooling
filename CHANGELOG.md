@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.71.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt IC Wire 0.8 for Testkit's typed calls and private probe protocol.
+  `WireCallSpec` limits and codec error sources now have Wire 0.8 identity;
+  callers must align their direct Wire dependency. Existing protocol bytes,
+  caller budgets, error context and one-shot transport behavior are preserved.
+  No Wire 0.7 bridge is retained
+  ([#271](https://github.com/dragginzgame/ic-tooling/issues/271)).
+
 ## [0.70.5] - 2026-10-30
 
 ### 🧹 Cleanup

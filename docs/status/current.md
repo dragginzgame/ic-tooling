@@ -1,5 +1,21 @@
 # Current handoff — 2026-10-30
 
+## Pending Testkit Wire 0.8 alignment
+
+[#271](https://github.com/dragginzgame/ic-tooling/issues/271) owns the Wire 0.8
+alignment prepared from released 0.70.5 in an isolated contribution. Testkit's
+public limits/error identities and the private probe use one published Wire 0.8
+selection, without a compatibility bridge. Package metadata remains 0.70.5;
+the public type change belongs in pending 0.71.0 alongside the separately
+tracked [Platform convergence](https://github.com/dragginzgame/ic-tooling/issues/270).
+No pending sibling changes are copied into this contribution.
+
+Selected-package Clippy, nine codec/transport unit cases, two live PocketIC Wire
+cases, native/Wasm graph checks and Rust 1.91 native/Wasm compilation pass.
+Live cases use explicitly prepared
+PocketIC 16.1.0 and require localhost access. No full CI, macOS acceptance,
+publication or consumer adoption is claimed by this contribution.
+
 ## Completed scope and source
 
 The maintainer accepted the three remaining audit findings and requested upstream
