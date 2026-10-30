@@ -7,10 +7,12 @@
 - Adopt IC Platform 0.9.1, including its owned runtime and public type identities.
   Consumers exchanging Platform types with Tools must align on Platform 0.9.
   [Upgrade details](docs/changelog/0.71.md#0710---unreleased).
+- Adopt IC Wire 0.8.0 for typed Testkit calls. Callers constructing limits or
+  matching Wire errors must align their direct Wire dependency to 0.8.
 
 ### ⬆️ Dependencies
 
-- Adopt IC Wire 0.7.25 and Shared Tooling 0.27.11.
+- Adopt Shared Tooling 0.27.11.
 
 ### 🧹 Cleanup
 

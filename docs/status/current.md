@@ -2,20 +2,21 @@
 
 ## Current adoption and local result
 
-The maintainer requested new Shared Tooling, IC Wire and IC Platform adoption.
-The local changes remain unstaged over
-`9af35e5c9b4cc301f2875b95b9643bf1adfb51b7` (Release 0.70.5). Shared Tooling
-0.27.11 is exported from `62edfbd43087a718bf0283e9040676a49211976d` and
-independently verified against all 148 declared payloads. Platform 0.9.1 and
-Wire 0.7.25 are registry-resolved with corresponding macro/derive packages.
-The incoming Wire lock update is preserved. The latest Platform follow-up found
-0.9.1 already selected in the lock and preserved it byte for byte, raising the
-root minimum from 0.9.0 to 0.9.1. The earlier adoption changed only Platform
-selections/runtime ownership and Build's self dev edge beyond its own admission.
+The latest request adopts IC Wire 0.8.0. The previous Shared/Platform adoption and
+cleanup are committed in `9f3282d5` (commit title `0.71.0`; actual workspace version
+still 0.70.5). This follow-up leaves local unstaged changes over that clean
+admission. Root Wire minimum and the registry Wire/derive selections move from
+0.7.25 to 0.8.0; no other lock package changes. Shared Tooling remains 0.27.11
+at `62edfbd43087a718bf0283e9040676a49211976d`, independently verified against
+all 148 declared payloads in the earlier adoption. Platform remains 0.9.1.
 
 Platform-owned public type identities change across this minor boundary;
-Tools callers exchanging those types must align Platform to 0.9. The draft is
-therefore 0.71.0, carrying the earlier unpublished 0.70.6 graph cleanup. Own
+Tools callers exchanging those types must align Platform to 0.9. Testkit callers
+supplying Wire limits or matching typed codec causes must align direct Wire to
+0.8 because those exposed types change dependency identity. Native codec bytes,
+protocol and admission rules stay unchanged; optional Wire endpoint integration
+remains disabled. The draft stays 0.71.0, carrying the earlier unpublished 0.70.6
+graph cleanup and both dependency migrations. Own
 workspace/package versions remain 0.70.5; index and HEAD are unchanged. No local
 commit, push, release, publication, normal sibling checkout edit or artifact
 cleanup ran.
@@ -44,7 +45,24 @@ required identities. Validation-only profiles retain their previous policy.
 The complete Host/Tools graph script makes 36 observations instead of 39 per
 target. No cache, public mode, new dependency or supported contract was added.
 
-## Latest Platform follow-up evidence
+## Latest Wire follow-up evidence
+
+Evidence is `/tmp/ic-tooling-wire-adoption.LysnjP/`, retaining clean admission,
+lock/index/HEAD, registry update/fetch and focused command logs. Published Wire
+0.8.0 records source commit `25a7212269ca4fe1257cf4d3d22efbbe040cb84b`.
+Consumer README/overview and draft release notes document the direct Wire 0.8
+alignment. No Rust caller edits or new dependency/feature owner were needed.
+
+Actual Rust 1.91 passes nine native Wire-call tests and the private protocol's
+largest-control-values test, and compiles the private canister probe for Wasm.
+Strict all-target/all-feature Clippy passes for Testkit, Testkit Dev and the private
+probe, including native consumer integration target compilation. Host/Tools and
+Testkit dependency policies, root manifest sorting, documentation links and diff
+checks pass. Index, HEAD and own versions remain unchanged. No native macOS
+execution, installed canister experiment, hosted dispatch, full workspace gate,
+Git mutation, release or publication ran.
+
+## Prior Platform follow-up evidence
 
 Evidence is `/tmp/ic-tooling-platform-adoption.mWKv3B/`, retaining incoming
 changes, untracked source, lock/index/HEAD, registry resolution and focused logs.
