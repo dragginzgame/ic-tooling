@@ -2,11 +2,18 @@
 
 ## Current adoption and local result
 
-The latest request adopts IC Wire 0.8.0. The previous Shared/Platform adoption and
-cleanup are committed in `9f3282d5` (commit title `0.71.0`; actual workspace version
-still 0.70.5). This follow-up leaves local unstaged changes over that clean
-admission. Root Wire minimum and the registry Wire/derive selections move from
-0.7.25 to 0.8.0; no other lock package changes. Shared Tooling remains 0.27.11
+The latest task fixes Build's archive packaging failure caused by the self dev
+dependency introduced during Shared adoption. The prior adoption changes are now
+committed through `24fa3824` (commit title `0.71.0`; actual workspace version still
+0.70.5). The repair leaves local unstaged changes over that clean admission.
+Build no longer depends on itself: integration targets using its shared helpers
+explicitly require `test-support`. Existing Make/CI all-feature selections retain
+all tests; plain Cargo invocations must select that feature for these ten targets.
+The CLI target still requires only `cli`, and the ignored optimizer target keeps
+its existing admission. Default unit tests need no feature. Only Build's self
+edge is removed from the lock; no dependency version or checksum changes.
+
+Wire remains 0.8.0 with its matching derive crate. Shared Tooling remains 0.27.11
 at `62edfbd43087a718bf0283e9040676a49211976d`, independently verified against
 all 148 declared payloads in the earlier adoption. Platform remains 0.9.1.
 
@@ -31,7 +38,7 @@ requires exactly one. No extra graph observation was added.
 
 The refreshed module/lint rules are applied to maintained Rust wiring. Build's
 shared Cargo/filesystem fixtures have one opt-in `test-support` library owner;
-integration tests select it through a self dev dependency. Ordinary modules own
+integration targets select it through explicit required features. Ordinary modules own
 archive tests and integration-only Wasm fixtures. No crate or compatibility
 reexport was added. Generated flag probes declare their cfg names. Lint
 expectations retain reasons; three allows remain for integration-target subset
@@ -45,7 +52,27 @@ required identities. Validation-only profiles retain their previous policy.
 The complete Host/Tools graph script makes 36 observations instead of 39 per
 target. No cache, public mode, new dependency or supported contract was added.
 
-## Latest Wire follow-up evidence
+## Build archive repair evidence
+
+The original failure remains at
+`target/package-qualification-1040156-0/`. Evidence for the repair is
+`/tmp/ic-tooling-build-package-fix.OoQTaq/`, retaining admission, original stderr,
+real packaged archives, extracted sources and focused logs. Actual offline,
+locked, all-feature Cargo packaging with `--no-verify` succeeds for Build 0.70.5;
+extracted tests run separately below. No version bump was needed. The final
+archive's normalized manifest has no self
+dependency and retains all twelve integration targets, with ten requiring
+`test-support`, CLI requiring only `cli`, and optimizer ungated as before.
+
+Actual Rust 1.91 passes the final extracted archive's helper test with
+`test-support` and all five CLI tests with only `cli`. Source-side checks pass
+two default-feature unit tests and the selected integration helper; strict
+all-target/all-feature Build Clippy also passes. Manifest sorting, documentation
+links and diff checks pass. The lock changes only the self edge; real index, HEAD
+and own versions are preserved. No full coordinated package suite, release gate,
+native macOS execution, publication, artifact cleanup or Git mutation ran.
+
+## Prior Wire follow-up evidence
 
 Evidence is `/tmp/ic-tooling-wire-adoption.LysnjP/`, retaining clean admission,
 lock/index/HEAD, registry update/fetch and focused command logs. Published Wire

@@ -115,6 +115,12 @@ Build shares IC Tooling's [host qualification](../../docs/hosts.md) and
 `make clippy PACKAGE=ic-build` and `make msrv PACKAGE=ic-build`.
 The separate optimizer workflow retains real Wasm transformation qualification.
 
+Integration tests using shared Build helpers require `test-support`; Make and CI
+already enable it through `--all-features`. For one fixture, use
+`cargo test -p ic-build --features test-support --test artifact_helpers --locked --offline`.
+The CLI integration target requires only `cli`. Default unit tests need no feature.
+Declare integration targets that use Build helpers with `required-features = ["test-support"]`.
+
 Use `make testkit-package-check` for coordinated archive qualification.
 Consumer recipes, tool selections, budgets and lifecycle stay with their owners.
 The [source inventory](../../docs/design/tooling-consolidation.md) records original

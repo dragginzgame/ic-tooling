@@ -25,6 +25,11 @@
 - Share Build fixture support through an opt-in feature and ordinary Rust modules;
   keep lint exceptions scoped and explained under the refreshed Shared rules.
 
+### 🩹 Fixed
+
+- Keep Build archives packageable before publication by gating integration tests
+  explicitly, without resolving fixture features through a registry self-dependency.
+
 ## [0.70.5] - 2026-10-30
 
 ### 🧹 Cleanup

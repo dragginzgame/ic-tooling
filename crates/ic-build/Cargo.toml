@@ -45,12 +45,51 @@ ic-host-process = { workspace = true, features = ["test-support"] }
 [dev-dependencies]
 # Tests and tooling only
 clap.workspace = true
-ic-build = { workspace = true, features = ["test-support"] }
 ic-host-fs = { workspace = true, features = ["test-support"] }
+
+[[test]]
+name = "artifact_cache_process"
+required-features = ["test-support"]
+
+[[test]]
+name = "artifact_handoff"
+required-features = ["test-support"]
+
+[[test]]
+name = "artifact_helpers"
+required-features = ["test-support"]
+
+[[test]]
+name = "cargo_examples"
+required-features = ["test-support"]
+
+[[test]]
+name = "cargo_execution"
+required-features = ["test-support"]
+
+[[test]]
+name = "input_evidence"
+required-features = ["test-support"]
+
+[[test]]
+name = "native_executable"
+required-features = ["test-support"]
+
+[[test]]
+name = "package_qualification"
+required-features = ["test-support"]
 
 [[test]]
 name = "release_metadata_cli"
 required-features = ["cli"]
+
+[[test]]
+name = "wasm_build"
+required-features = ["test-support"]
+
+[[test]]
+name = "wasm_cache_process"
+required-features = ["test-support"]
 
 [lints]
 workspace = true

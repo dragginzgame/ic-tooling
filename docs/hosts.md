@@ -48,6 +48,10 @@ and Wasm features; production filesystem dependencies select none of them.
 Check target-directory ownership before compilation. Preserve failure logs and artifacts.
 The Testkit, feature-graph and MSRV qualification targets above are aggregates;
 select the affected Cargo test or profile below for ordinary development.
+Build integration tests using shared helpers require `test-support`; Make/CI
+all-feature selections retain them. A focused invocation is `cargo test -p ic-build
+--features test-support --test artifact_helpers --locked --offline`; select `cli`
+alone for its release-metadata CLI target. Default unit tests need no feature.
 Tooling changes use the affected consumer check: `make release-adapter-check`,
 `bash scripts/ci/test-make-snapshot.sh` or
 `bash scripts/ci/test-host-fixture-retention.sh`. The shared
