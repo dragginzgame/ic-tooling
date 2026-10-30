@@ -5,6 +5,7 @@ pub use evidence::{HttpCapture, HttpCaptureFailure, HttpContentLength, capture_h
 mod fixture;
 pub use fixture::{HttpFixture, HttpFixtureLimits};
 
+use crate::testing::remaining_until;
 use std::{
     io::{self, Read as _},
     net::TcpStream,
@@ -94,10 +95,7 @@ fn validate_line(line: &[u8]) -> io::Result<()> {
 }
 
 fn set_remaining_timeout(stream: &TcpStream, deadline: Instant) -> io::Result<()> {
-    let remaining = deadline
-        .checked_duration_since(Instant::now())
-        .filter(|remaining| !remaining.is_zero())
-        .ok_or(io::ErrorKind::TimedOut)?;
+    let remaining = remaining_until(deadline).ok_or(io::ErrorKind::TimedOut)?;
     stream.set_read_timeout(Some(remaining))
 }
 

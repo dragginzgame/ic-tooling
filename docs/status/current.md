@@ -2,95 +2,67 @@
 
 ## Completed scope and source
 
-The maintainer accepted all ten reviewed reductions and asked about common
-Rustix guidance. The IC Tooling changes are complete locally and unstaged over
-`86d816b3361dbeaf5bdad3fa43f47c19e59aad38` (Release 0.70.2). Admission contained
-one unrelated Cargo.lock update; it remains byte-identical. Root Cargo.toml,
-own package versions, HEAD and the real index are unchanged. Pending compatible
-notes select 0.70.3; no production API or persisted-format migration is needed.
-No Tooling commit, push, version transaction, tag, release or publication ran.
+The maintainer selected the remaining-deadline consolidation from the latest
+complexity audit. It is complete locally and unstaged over `c80d061f` (Release
+0.70.3). Socket acceptance, HTTP request-line reads, request capture and fixture
+response writes share one private calculation. Each caller retains its error
+projection and existing validation, cancellation and I/O ordering. No public
+API, feature, protocol or consumer migration changes.
 
-Evidence: `/tmp/ic-tooling-cleanup-0703.mBTxZ4/`. Admission source/patch/index/
-manifest/lock, focused logs, graph argument captures, final source and preservation
-records are retained there. Shared snapshot stays 0.27.1 at
-`d08cbcafbaff4227e798a890232e2248bf167504`; no local snapshot-owned rule was edited.
+One socket regression confirms that an expired response deadline returns
+TimedOut without sending bytes. Existing tests retain queued-connection refusal,
+partial capture evidence, request budgets, cancellation and stalled-peer cleanup.
+Pending notes select compatible 0.70.4. Own package versions remain 0.70.3;
+no commit, push, version transaction, tag, release or publication ran.
 
-## Converged mechanics
-
-Grouping retains isolated trees only for the current group; sealed groups are
-never searched. Conservative input order, exact feature equality and the 2n−1
-observer-call bound remain. Wasm copies pair admitted lists directly, retaining
-count refusal before effects. No resolver cache or package-selection mode is added.
-
-Artifact manifests stream through the existing durable writer. The same format
-counts its maximum read length using widest byte fields and a bounded sink,
-and compares retained manifests. The intermediate document and separately
-maintained row-width arithmetic are removed. Bytes, keys, bounded admission,
-corruption refusal and typed publication/cleanup causes remain unchanged.
-
-The launch gate uses existing Rustix pipe and owned-descriptor flag APIs before
-spawning; only Process's native Rustix pipe capability is added. Pipe/descriptor
-error variants, exact argv/stdin and the reviewed async-signal-safe post-fork
-operations remain. Procfs details select named counters without owned maps,
-retaining last-valid duplicates, missingness, units and optional PSS behavior.
-Positive sysconf conversion has one owner; caches and fallbacks stay separate.
-
-Opt-in FS testing owns the common exact-case libtest re-execution fixture used
-by FS and Build. No compatibility aliases or production process owner are added.
-Testkit graph profiles moved from Make shell fragments into
-scripts/ci/check-testkit-graphs.sh. All ten checker argument vectors match the
-admitted Make target exactly. Build README now describes the coordinated 0.70
-family and current module paths; historical changelog entries are preserved.
+Evidence: `/tmp/ic-tooling-deadlines-0704.y8lrZV/`. It retains the admission
+source archive (including the preceding handoff), patch, manifest, lock, index,
+HEAD, focused logs and final preservation records. The unrelated incoming
+Cargo.lock edit is byte-identical; root Cargo.toml, HEAD and real index are
+unchanged. Shared snapshot remains 0.27.1 at
+`d08cbcafbaff4227e798a890232e2248bf167504`; no snapshot-owned rule was edited.
 
 ## Validation and native boundaries
 
-Strict all-target/all-feature warning-denied Clippy passes for Build, FS and
-Process on prepared Rust 1.99.1. Actual Rust 1.91/Linux checks pass: 60 focused
-top-level tests covering grouping, transactional manifests/output publication,
-Wasm copy inventory, descriptor isolation, procfs and child/gate contracts.
-Subprocess reruns of isolated cases are not counted as additional distinct tests.
-The detail regression includes malformed/duplicate counters and unselected PSS.
+Strict all-target/all-feature warning-denied Clippy passes for Host Process on
+prepared Rust 1.99.1. Actual Rust 1.91/Linux execution passes all 18 selected
+HTTP and TCP acceptance tests, including the new no-response-bytes regression.
+The first sandboxed HTTP attempt could not bind sockets; its failure log is
+retained. The actual native rerun and TCP tests passed outside that restriction.
+An initial Clippy diagnostic in the new assertion was corrected; both logs remain.
+Formatting, product documentation links and diff checks pass.
 
-Strict Rustdoc passes for those three packages on actual Rust 1.91. FS library
-compilation with test support passes on the prepared Wasm target at Rust 1.91;
-this does not promise executable subprocess support on Wasm. The actual Testkit
-native/Wasm graph script, before/after argv equality, ShellCheck, shell syntax,
-formatting, documentation links and diff checks pass.
+No full workspace/release gate, hosted CI or native macOS execution ran for this
+local change. macOS 15 Intel and Apple Silicon qualification remains separate;
+Linux evidence does not qualify either host. Earlier native matrix evidence in
+CI run 40927061973 belongs to delivered 0.70.2, not this change.
 
-No full workspace/release gate ran. No native macOS execution or hosted CI ran
-for this local batch. Earlier Linux and both native macOS passes in CI run
-40927061973 qualify delivered 0.70.2, not these subsequent local changes.
+## Previous delivery and retained evidence
 
-## Shared guidance proposal
+The preceding ten reductions are now in local Release 0.70.3. Their original
+source, 60 focused Rust 1.91 tests, strict Clippy/Rustdoc, FS Wasm compilation,
+graph equivalence and shell/doc evidence remain at
+`/tmp/ic-tooling-cleanup-0703.mBTxZ4/`. That batch simplified Cargo grouping,
+artifact manifests, launch-gate preparation, procfs reads, sysconf conversion,
+isolated test execution, Wasm copy pairing and graph-check wiring.
 
-Rustix declarations and native usage were inspected in Canic and IC Backup.
 [Shared Tooling PR #323 — Prefer safe native interfaces behind existing Host owners](https://github.com/dragginzgame/shared-tooling/pull/323)
-proposes Host owners first, then suitable std/Rustix APIs, with narrow native
-features and documented ABI, unavailable-API and post-fork FFI exceptions.
-Error/descriptor semantics and native-host qualification remain explicit.
-It requires no Rustix dependency in unrelated/minimal/Wasm packages.
-
-The PR uses the isolated `shared-tooling-rule/` clone under this evidence root,
-from main `11d519c6`, with scoped commit `8acc0b95`. Its 500-reference doc-link
-check, instruction review and diff checks pass. The normal Shared checkout's
-dirty README/stack work was not copied or edited. The PR is open, unmerged and
-unadopted here; no Shared version bump, release or fleet adoption ran.
+was prepared in that root's isolated `shared-tooling-rule/` clone. It was open
+and unmerged at the preceding audit; its remote state was not rechecked during
+this local fix. No Shared adoption or normal sibling checkout edits ran here.
 
 ## Preserved obligations and evidence
 
-PR #265 merged through `01bbf850`; ordinary pull conflicts were resolved and the
-maintainer completed merge `5123d971` and Release 0.70.2. Conflict and source
-backups remain at `/tmp/ic-tooling-conflicts-0701.R6FwVw/` and
-`/tmp/ic-tooling-merge-265.iHrIEC/`. Profiler #7 and Platform #95 retain their
-separate supplier-source/adoption obligations. Issue #266 closed on delivered
-0.70.2 with native qualification; earlier grouping/probe evidence remains at
-`/tmp/ic-tooling-issues-263-267.9Ckcfb/` and
-`/tmp/ic-tooling-266-closure-20261029.json`.
+PR #265 merge/conflict backups remain at
+`/tmp/ic-tooling-conflicts-0701.R6FwVw/` and
+`/tmp/ic-tooling-merge-265.iHrIEC/`. Profiler #7 and Platform #95 retain separate
+supplier-source/adoption obligations. Issue #266 closed on delivered 0.70.2;
+its grouping/native evidence remains at `/tmp/ic-tooling-issues-263-267.9Ckcfb/`
+and `/tmp/ic-tooling-266-closure-20261029.json`.
 
 Snapshot #263 and Platform #267 closure evidence remains with those owning
 issues. Canic's frozen four-case sequence passes on Testkit 0.69.13; no later
 moving-root or production backup/restore qualification is inferred. Preserve
-prior Platform, Wire and cleanup roots under /tmp, original failed package/
+prior Platform, Wire and cleanup roots under /tmp, original failed package and
 preparation attempts, migration/retirement archives, Host archive refs, stale
-release-lock backups, release plans and stash evidence. No artifact cleanup or
-sibling working-source edit was performed.
+release-lock backups, release plans and stash evidence. No artifacts were cleaned.

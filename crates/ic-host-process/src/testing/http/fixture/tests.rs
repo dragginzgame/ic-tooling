@@ -33,6 +33,26 @@ fn responds_with_exact_bytes_and_returns_the_unmodified_request() {
 }
 
 #[test]
+fn elapsed_response_deadline_sends_no_bytes() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let mut client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+    client
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .unwrap();
+    let (mut server, _) = listener.accept().unwrap();
+    assert_eq!(
+        write_response(&mut server, b"response", Instant::now())
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::TimedOut
+    );
+    drop(server);
+    let mut received = Vec::new();
+    client.read_to_end(&mut received).unwrap();
+    assert_eq!(received, b"");
+}
+
+#[test]
 fn refuses_invalid_setup_and_request_budgets() {
     for content_type in ["", "text/plain\r\nInjected: yes", "text/\0plain"] {
         assert_eq!(

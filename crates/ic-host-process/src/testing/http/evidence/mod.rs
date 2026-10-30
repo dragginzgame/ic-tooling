@@ -1,5 +1,6 @@
 //! Original-byte evidence for bounded synthetic HTTP peers.
 
+use crate::testing::remaining_until;
 use std::{
     io::{self, Read},
     net::TcpStream,
@@ -185,10 +186,7 @@ fn capture_with_deadline(
     let mut chunk = [0; 4096];
     let mut expected_length = None;
     let failure = loop {
-        let Some(remaining) = deadline
-            .checked_duration_since(Instant::now())
-            .filter(|value| !value.is_zero())
-        else {
+        let Some(remaining) = remaining_until(deadline) else {
             break HttpCaptureFailure::Deadline;
         };
         let window = (capacity - bytes.len()).min(chunk.len());

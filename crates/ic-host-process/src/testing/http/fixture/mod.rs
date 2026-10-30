@@ -1,7 +1,7 @@
 //! Owned, one-request HTTP 200 fixtures for native transport tests.
 
 use super::{HttpContentLength, evidence::capture_http_request_until};
-use crate::testing::net::accept_tcp_until_with_cancellation;
+use crate::testing::{net::accept_tcp_until_with_cancellation, remaining_until};
 use std::{
     io::{self, Write as _},
     net::{Shutdown, TcpListener, TcpStream},
@@ -173,20 +173,14 @@ fn serve(
     Ok(request)
 }
 
-fn remaining(deadline: Instant) -> io::Result<Duration> {
-    deadline
-        .checked_duration_since(Instant::now())
-        .filter(|duration| !duration.is_zero())
-        .ok_or_else(|| io::ErrorKind::TimedOut.into())
-}
-
 fn write_response(
     stream: &mut TcpStream,
     mut response: &[u8],
     deadline: Instant,
 ) -> io::Result<()> {
     while !response.is_empty() {
-        stream.set_write_timeout(Some(remaining(deadline)?))?;
+        let remaining = remaining_until(deadline).ok_or(io::ErrorKind::TimedOut)?;
+        stream.set_write_timeout(Some(remaining))?;
         match stream.write(response) {
             Ok(0) => return Err(io::ErrorKind::WriteZero.into()),
             Ok(bytes) => response = &response[bytes..],

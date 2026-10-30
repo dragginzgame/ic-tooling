@@ -1,5 +1,6 @@
 //! Explicit deadline-bounded native socket acceptance for test fixtures.
 
+use crate::testing::remaining_until;
 use std::{
     io,
     net::{SocketAddr, TcpListener, TcpStream},
@@ -34,10 +35,7 @@ pub(super) fn accept_tcp_until_with_cancellation(
         if cancelled() {
             return Err(io::ErrorKind::Interrupted.into());
         }
-        let remaining = deadline
-            .checked_duration_since(Instant::now())
-            .filter(|remaining| !remaining.is_zero())
-            .ok_or(io::ErrorKind::TimedOut)?;
+        let remaining = remaining_until(deadline).ok_or(io::ErrorKind::TimedOut)?;
         match listener.accept() {
             Ok((stream, peer)) => {
                 stream.set_nonblocking(false)?;

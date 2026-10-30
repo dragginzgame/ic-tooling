@@ -3,6 +3,8 @@
 //! Callers own fixture content, paths, namespace custody, transport policy and
 //! assertions. Executable helpers own writer-process lifetime; no tool is admitted.
 
+use std::time::{Duration, Instant};
+
 #[cfg(unix)]
 use std::{
     fs,
@@ -19,6 +21,13 @@ use crate::child::{CleanupPolicy, OwnedChild};
 pub mod crash_barrier;
 pub mod http;
 pub mod net;
+
+// A zero or elapsed deadline must never become a native socket timeout.
+fn remaining_until(deadline: Instant) -> Option<Duration> {
+    deadline
+        .checked_duration_since(Instant::now())
+        .filter(|remaining| !remaining.is_zero())
+}
 
 /// Observe one Unix test process through the native `ps` state field.
 ///

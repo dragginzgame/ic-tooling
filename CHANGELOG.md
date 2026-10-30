@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.70.4] - Unreleased
+
+### 🧹 Cleanup
+
+- Share socket fixture deadline calculations while preserving timeout errors,
+  cancellation order and partial capture evidence.
+  [Details](docs/changelog/0.70.md#0704---unreleased).
+
 ## [0.70.3] - 2026-10-30
 
 ### 🧹 Cleanup
