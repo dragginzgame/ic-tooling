@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.72.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt IC Wire 0.9 for Testkit's public limits/error identities and private probe.
+  Callers sharing those Rust types align to Wire 0.9; native codec bytes, caller
+  budgets and one-shot transport behavior are unchanged.
+  [Upgrade details](docs/changelog/0.72.md#0720---unreleased).
+
 ## [0.71.0] - 2026-10-30
 
 ### ⚠️ Breaking

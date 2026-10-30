@@ -1,5 +1,20 @@
 # Current handoff — 2026-10-30
 
+## Pending Wire 0.9 typed-call alignment
+
+Published 0.71.0 supplies Wire 0.8 limits/errors. The subsequent Wire 0.9 consumer
+request in [#271](https://github.com/dragginzgame/ic-tooling/issues/271) needs that
+new public Rust identity. The isolated contribution from released `028bc592`
+updates only the Wire catalog/lock and notes. Caller budgets, codecs, typed error
+context and one-shot transport implementation stay unchanged. Notes select the
+existing pending 0.72 line; package metadata stays 0.71.0. The normal checkout's
+separate pending Platform 0.10 adoption is neither copied nor overwritten.
+
+Selected Testkit Clippy, nine Wire unit cases, two real PocketIC Wire cases,
+Rust 1.91 native/Wasm compilation and native/Wasm graph policy pass. No full CI,
+macOS execution or publication ran. Auth adoption also needs Platform's native
+Wire 0.9 schema trait, tracked by [#105](https://github.com/dragginzgame/ic-platform/issues/105).
+
 ## Current adoption and local result
 
 The latest task fixes Build's archive packaging failure caused by the self dev
