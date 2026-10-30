@@ -380,7 +380,10 @@ make_probe_target_admission "$(command -v make)" "$PWD/Makefile" "$fixture/local
     "$HOST_MAKE_EVENTS" fmt fmt-check release-patch release-minor release-major release-resume \
     "${cargo_targets[@]}" "${helper_targets[@]}"
 [[ ! -e "$HOST_MAKE_EXTERNAL" ]] || exit 1
-# Exercise the real documentation Make entrypoint against newly imported docs.
+# Exercise the real documentation Make entrypoint with a complete minimal corpus.
+# Runtime companion docs can link to other Shared guides outside this fixture's
+# closure; the checkout's complete documentation has its own link check.
+rm -rf docs
 cp "$root/scripts/ci/check-product-doc-links.sh" "$root/scripts/ci/check-documentation-links.pl" scripts/ci/
 git init -q
 mkdir -p docs/build docs/testkit docs/design testing/browser crates/example target

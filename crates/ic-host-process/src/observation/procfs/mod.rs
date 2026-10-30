@@ -28,6 +28,8 @@ fn page_size() -> u64 {
 
 #[cfg(unix)]
 fn positive_sysconf(name: libc::c_int, fallback: u64) -> u64 {
+    // Keep the signed result: Rustix's unsigned parameter helpers cannot retain
+    // sysconf's negative failure sentinel for this existing fallback contract.
     // SAFETY: both callers use defined sysconf names; no pointers are involved.
     let value = unsafe { libc::sysconf(name) };
     if value > 0 {

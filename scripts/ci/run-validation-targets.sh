@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/check-make-execution.sh scripts/ci/verify-file-checksum.sh
+# Shared companions: scripts/ci/check-make-execution.sh scripts/ci/verify-file-checksum.sh scripts/ci/validation-input-checkpoint.pl
 set -euo pipefail
 
 usage() {
@@ -40,6 +40,7 @@ if [[ "${VALIDATION_RUNNER_SNAPSHOT_PATH:-}" != "$RUNNER_SOURCE" ]]; then
     cp "$RUNNER_SOURCE" "$RUNNER_SNAPSHOT"
     cp "$(dirname "$RUNNER_SOURCE")/check-make-execution.sh" "$RUNNER_SNAPSHOT_DIR/"
     cp "$(dirname "$RUNNER_SOURCE")/verify-file-checksum.sh" "$RUNNER_SNAPSHOT_DIR/"
+    cp "$(dirname "$RUNNER_SOURCE")/validation-input-checkpoint.pl" "$RUNNER_SNAPSHOT_DIR/"
     bash -n "$RUNNER_SNAPSHOT"
     snapshot_status=0
     VALIDATION_REPOSITORY_ROOT="$REPOSITORY_ROOT" \
@@ -142,59 +143,9 @@ fi
 unset VALIDATION_INPUT_ROOT VALIDATION_INPUT_BASELINE
 
 input_checkpoint() {
-    perl -MJSON::PP - "$REPOSITORY_ROOT" "$input_baseline" "$1" "${RUNNER_SOURCE%/*}/verify-file-checksum.sh" \
-        ${input_paths[@]+"${input_paths[@]}"} <<'PERL'
-use strict;
-use warnings;
-my ($root, $baseline, $output, $checksum, @paths) = @ARGV;
-my $json = JSON::PP->new->canonical;
-my $expected = {};
-if (length $baseline) {
-    open my $in, '<', $baseline or die "error: read checkpoint $baseline: $!\n";
-    local $/;
-    $expected = $json->decode(<$in>);
-    close $in or die "error: close checkpoint: $!\n";
-}
-my %observed;
-my $failed = 0;
-for my $path (sort keys %{{map { $_ => 1 } (keys %$expected, @paths)}}) {
-    die "error: checkpoint inputs must be relative file paths: $path\n"
-        if $path =~ m{^/|[\x00\r\n]|(?:^|/)\.{1,2}(?:/|$)|//|/$};
-    my $hash;
-    eval {
-        my $route = $root;
-        for my $part (split m{/}, $path) {
-            $route .= "/$part";
-            die "symlink in input route" if -l $route;
-        }
-        die "not a regular readable file" unless -f $route && -r $route;
-        open my $in, '-|', 'bash', $checksum, '--print', 'sha256', $route or die "checksum: $!";
-        local $/;
-        $hash = <$in>;
-        close $in or die "checksum observation failed";
-        $hash =~ s/\n\z//;
-        die "invalid checksum" unless $hash =~ /\A[0-9a-f]{64}\z/;
-    };
-    if ($@) {
-        $observed{$path} = {error => "$@"};
-        print STDERR "error: cannot observe validation input $path: $@\n";
-        $failed = 1;
-    } else {
-        $observed{$path} = $hash;
-        if (exists $expected->{$path} && $expected->{$path} ne $hash) {
-            print STDERR "error: validation input changed: $path ($expected->{$path} -> $hash)\n";
-            $failed = 1;
-        }
-    }
-}
-open my $out, '>', $output or die "error: write input evidence $output: $!\n";
-print {$out} $json->encode(\%observed), "\n" or die "error: write input evidence: $!\n";
-close $out or die "error: close input evidence: $!\n";
-if ($failed) {
-    print STDERR "Restart preparation and the full gate against the current inputs; prior validation cannot be reused.\n";
-    exit 1;
-}
-PERL
+    perl "${RUNNER_SOURCE%/*}/validation-input-checkpoint.pl" \
+        "$REPOSITORY_ROOT" "$input_baseline" "$1" "${RUNNER_SOURCE%/*}/verify-file-checksum.sh" \
+        ${input_paths[@]+"${input_paths[@]}"}
 }
 
 if [[ -n "$input_baseline" || ${#input_paths[@]} -gt 0 ]]; then
@@ -303,7 +254,7 @@ persist_failure_log() {
     printf '%s\n' "$retained_log"
 }
 
-print_failure_detail() {
+select_failure_detail() {
     local log="$1"
     local target="$2"
     local clean_log="${log}.clean"
@@ -339,6 +290,22 @@ print_failure_detail() {
             printf '[%s] %s\n' "$target" "$line"
         fi
     done <<< "$details"
+}
+
+print_failure_detail() {
+    local log="$1" target="$2" excerpt="$1.excerpt" line
+    # Select once per immutable failed-target log. Console, retained highlights
+    # and GitHub summaries project the same excerpt without rescanning raw bytes.
+    if [[ ! -f "$excerpt" ]]; then
+        select_failure_detail "$log" "$target" > "$excerpt"
+    fi
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" =~ $INHERITED_DIAGNOSTIC_PATTERN ]]; then
+            print_retained_error_line "$line"
+        else
+            printf '%s\n' "$line"
+        fi
+    done < "$excerpt"
 }
 
 persist_highlighted_failure_log() {
@@ -473,7 +440,6 @@ for target in "$@"; do
                 "Unable to retain the complete failure log under: $FAILURE_LOG_ROOT"
             print_error_line "$target" "Full failure log retained at: $retained_log"
         fi
-        print_failure_detail "$log" "$target"
     fi
 
     elapsed="$((SECONDS - start))"
@@ -528,7 +494,7 @@ if [[ ${#failed_targets[@]} -ne 0 ]]; then
         preserve_temporary_logs=true
     fi
     highlighted_failure_log="$(persist_highlighted_failure_log)"
-    printf '\nFailure details (repeated from the full logs):\n'
+    if [[ "$RUNNER_DEPTH" == 0 ]]; then printf '\nFailure details (selected from the full logs):\n'; fi
     for index in "${!targets[@]}"; do
         if [[ "${results[$index]}" == "FAIL" ]]; then
             echo
@@ -537,7 +503,9 @@ if [[ ${#failed_targets[@]} -ne 0 ]]; then
                 print_error_line "${targets[$index]}" \
                     "Full failure log retained at: ${retained_logs[$index]}"
             fi
-            print_failure_detail "${logs[$index]}" "${targets[$index]}"
+            if [[ "$RUNNER_DEPTH" == 0 ]]; then
+                print_failure_detail "${logs[$index]}" "${targets[$index]}"
+            fi
         fi
     done
 

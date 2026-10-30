@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.70.5] - Unreleased
+
+### 🧹 Cleanup
+
+- Reuse safe native clock, thread-ID and affinity queries while preserving
+  observation semantics and clock fallbacks.
+- Adopt Shared Tooling 0.27.10 and use its structured feature observations in
+  dependency checks. [Details](docs/changelog/0.70.md#0705---unreleased).
+
 ## [0.70.4] - 2026-10-30
 
 ### 🧹 Cleanup

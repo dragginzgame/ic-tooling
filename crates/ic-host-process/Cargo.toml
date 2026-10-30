@@ -13,10 +13,13 @@ publish = ["crates-io"]
 [target.'cfg(unix)'.dependencies]
 command-fds.workspace = true
 libc.workspace = true
-rustix = { workspace = true, features = ["param", "pipe", "process"] }
+rustix = { workspace = true, features = ["param", "pipe", "process", "time"] }
 
 [features]
 test-support = []
+
+[target.'cfg(target_os = "linux")'.dependencies]
+rustix = { workspace = true, features = ["thread"] }
 
 [dependencies]
 ic-host-artifacts.workspace = true

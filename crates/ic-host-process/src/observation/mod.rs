@@ -117,22 +117,14 @@ pub fn children(pid: u32, capacity: usize) -> ChildProcesses {
         reason = "the Linux implementation queries live scheduler state and cannot be const"
     )
 )]
-#[allow(
-    unsafe_code,
-    reason = "reviewed initialized sched_getaffinity output imported from Profiler"
-)]
 pub fn affinity_cpus(pid: u32) -> Option<u32> {
     #[cfg(target_os = "linux")]
     {
-        let pid = libc::pid_t::try_from(pid).ok()?;
-        // SAFETY: cpu_set_t is a plain-data bitset; all-zero initialization is valid.
-        let mut set: libc::cpu_set_t = unsafe { std::mem::zeroed() };
-        // SAFETY: correct writable output buffer and ABI size; pointer is not retained.
-        if unsafe { libc::sched_getaffinity(pid, std::mem::size_of_val(&set), &raw mut set) } != 0 {
-            return None;
-        }
-        // SAFETY: reads the complete initialized bitset after a successful query.
-        u32::try_from(unsafe { libc::CPU_COUNT(&set) }).ok()
+        // None retains Linux's pid=0 selection of the calling thread.
+        let pid = rustix::thread::Pid::from_raw(i32::try_from(pid).ok()?);
+        rustix::thread::sched_getaffinity(pid)
+            .ok()
+            .map(|set| set.count())
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -143,6 +135,18 @@ pub fn affinity_cpus(pid: u32) -> Option<u32> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn affinity_preserves_current_thread_selection_and_invalid_pid_refusal() {
+        let current = super::affinity_cpus(0).unwrap();
+        assert!(current > 0);
+        assert_eq!(
+            super::affinity_cpus(u32::try_from(super::tid()).unwrap()),
+            Some(current)
+        );
+        assert_eq!(super::affinity_cpus(u32::MAX), None);
+    }
+
     #[test]
     #[cfg(unix)]
     fn native_identity_clocks_and_process_facts_are_available() {

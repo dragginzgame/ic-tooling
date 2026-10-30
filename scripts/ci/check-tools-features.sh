@@ -108,24 +108,25 @@ check_graph ic-host-artifacts --forbid-pattern "$wat_allowed" --no-default-featu
     --forbid-pattern "^(ic-host-(fs|process|text|tools)|ic-platform|${codec}|wasmparser)$" \
     --require wat=1 --require wast=1 --require wasm-encoder=1
 for profile in wasm wasm-validation wasm-encoding wasm-text wasm-encoding,wasm-validation wasm-text,wasm-validation; do
-    feature_graph="$(cargo tree -p ic-host-artifacts --no-default-features --features "$profile" \
-        --target "$target" --edges normal,build --prefix none --format '{p} features={f}' --locked --offline)" || exit
-    status=0
-    printf '%s\n' "$feature_graph" | rg '^wasmparser .+ features=([^, ]+,)*validate(,[^ ]*)?$' > /dev/null || status=$?
-    case "$profile:$status" in
-        wasm:1|wasm-encoding:1|wasm-text:1|wasm-validation:0|wasm-encoding,wasm-validation:0|wasm-text,wasm-validation:0) ;;
-        *) printf '%s has an unexpected Wasm validator feature selection (status %s)\n' "$profile" "$status" >&2; exit 1 ;;
-    esac
-    case "$profile" in
-        *wasm-text*)
-            status=0
-            printf '%s\n' "$feature_graph" | rg '^(wat|wast|wasm-encoder) .+ features=([^, ]+,)*component-model(,[^ ]*)?$' > /dev/null || status=$?
-            case "$status" in
-                1) ;;
-                *) printf '%s has an unexpected WAT component feature selection (status %s)\n' "$profile" "$status" >&2; exit 1 ;;
-            esac
-            ;;
-    esac
+    # Shared parses rendered identities and their effective feature unions;
+    # this consumer retains the validator/component policy for each profile.
+    feature_graph="$(perl scripts/ci/check-cargo-graph.pl --consumer "$root" \
+        --package ic-host-artifacts --no-default-features --features "$profile" \
+        --target "$target" --require ic-host-artifacts=1 --json --observations)" || exit
+    validation=false text=false
+    [[ "$profile" != *wasm-validation* ]] || validation=true
+    [[ "$profile" != *wasm-text* ]] || text=true
+    if ! jq -e --argjson validation "$validation" --argjson text "$text" '
+        (any(.observations[];
+            .name == "wasmparser" and (.features | index("validate") != null)) == $validation)
+        and (( $text | not) or all(.observations[] |
+            select(.name == "wat" or .name == "wast" or .name == "wasm-encoder");
+            .features | index("component-model") == null))
+    ' <<< "$feature_graph" > /dev/null; then
+        printf '%s\n%s has an unexpected Wasm validator/component feature selection\n' \
+            "$feature_graph" "$profile" >&2
+        exit 1
+    fi
 done
 check_graph ic-host-fs --forbid-pattern "$parser_free" \
     --forbid-pattern "^(ic-host-(process|tools|text)|ic-platform|${codec}|ic-agent|ic-certification|reqwest|${serialization}|clap|cap-std|cap-fs-ext|tempfile)$" \

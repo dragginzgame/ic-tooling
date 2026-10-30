@@ -1,29 +1,29 @@
 //! Native clocks and thread identity. No sampling, retention or application policy.
-#![allow(
-    unsafe_code,
-    reason = "reviewed clock_gettime and native thread identity calls imported from Profiler"
+
+#[cfg(unix)]
+use rustix::time::{ClockId, DynamicClockId, clock_gettime_dynamic};
+
+#[cfg(unix)]
+#[allow(
+    clippy::cast_sign_loss,
+    reason = "successful native clocks have nonnegative seconds and nanoseconds"
 )]
+fn clock_ns(clock: ClockId) -> Option<u64> {
+    let value = clock_gettime_dynamic(DynamicClockId::Known(clock)).ok()?;
+    Some(
+        (value.tv_sec as u64)
+            .saturating_mul(1_000_000_000)
+            .saturating_add(value.tv_nsec as u64),
+    )
+}
 
 /// Host monotonic nanoseconds, falling back to a process-local Instant epoch.
 #[must_use]
-#[allow(
-    clippy::cast_sign_loss,
-    reason = "successful native monotonic clocks have nonnegative seconds and nanoseconds"
-)]
 pub fn monotonic_ns() -> u64 {
     static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
     #[cfg(unix)]
-    {
-        let mut value = libc::timespec {
-            tv_sec: 0,
-            tv_nsec: 0,
-        };
-        // SAFETY: points to an initialized timespec; clock_gettime does not retain it.
-        if unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC, &raw mut value) } == 0 {
-            return (value.tv_sec as u64)
-                .saturating_mul(1_000_000_000)
-                .saturating_add(value.tv_nsec as u64);
-        }
+    if let Some(value) = clock_ns(ClockId::Monotonic) {
+        return value;
     }
     u64::try_from(
         START
@@ -36,23 +36,10 @@ pub fn monotonic_ns() -> u64 {
 
 /// CPU nanoseconds of the current thread; zero when the native clock is unavailable.
 #[must_use]
-#[allow(
-    clippy::cast_sign_loss,
-    reason = "successful native CPU clocks have nonnegative seconds and nanoseconds"
-)]
 pub fn thread_cpu_ns() -> u64 {
     #[cfg(unix)]
-    {
-        let mut value = libc::timespec {
-            tv_sec: 0,
-            tv_nsec: 0,
-        };
-        // SAFETY: valid writable timespec; this clock describes only the current thread.
-        if unsafe { libc::clock_gettime(libc::CLOCK_THREAD_CPUTIME_ID, &raw mut value) } == 0 {
-            return (value.tv_sec as u64)
-                .saturating_mul(1_000_000_000)
-                .saturating_add(value.tv_nsec as u64);
-        }
+    if let Some(value) = clock_ns(ClockId::ThreadCPUTime) {
+        return value;
     }
     0
 }
@@ -62,13 +49,16 @@ pub fn thread_cpu_ns() -> u64 {
 pub fn tid() -> u64 {
     #[cfg(target_os = "linux")]
     {
-        // SAFETY: gettid has no pointer arguments.
-        u64::try_from(unsafe { libc::syscall(libc::SYS_gettid) }).unwrap_or_default()
+        u64::try_from(rustix::thread::gettid().as_raw_pid()).unwrap_or_default()
     }
     #[cfg(target_os = "macos")]
     {
         let mut id = 0;
         // SAFETY: a null thread selects the current thread; id is writable.
+        #[expect(
+            unsafe_code,
+            reason = "Darwin thread ID has no matching Rustix interface"
+        )]
         if unsafe { libc::pthread_threadid_np(0, &raw mut id) } == 0 {
             id
         } else {

@@ -20,9 +20,10 @@ product, release and recovery obligations remain binding when applicable.
   fleet reports here; their existence does not require every consumer to vendor
   them or add sibling scans/dashboard tests to its CI. Consumers still adopt
   shared tooling needed for their own development and validation.
-- Keep repository-fleet inventory and governance out of IC Metrics' product
-  scope. IC Metrics owns reusable measurement arithmetic; a repository count is
-  a Shared Tooling report, not a new IC Metrics API, dependency or application.
+- Keep repository-fleet inventory and governance out of IC Observability's product
+  scope. Its `ic-metrics` and `ic-logging` crates own reusable measurement and log
+  engines; a repository count is a Shared Tooling report, not a new Observability
+  API, dependency or application.
   Product libraries do not become fleet-management owners because a report
   contains counts or is called a metric.
 - Local overlays may strengthen the baseline or define product-specific choices
@@ -139,44 +140,99 @@ product, release and recovery obligations remain binding when applicable.
   planned. Preserve unresolved local defects in their owning issues with a
   self-owned solution; closing an upstream plan does not mean the defect is fixed.
 
-## Repository files: no symlinks
+<a id="repository-files-no-symlinks"></a>
 
-- **Do not create or commit symlinks for maintained repository files or
-  directories.** This includes source, manifests, documentation, scripts, shared
-  snapshots, license files and shipped package assets. Generated source and
-  package outputs follow the same rule; fix their generator when necessary.
-- Use explicit dependency/configuration paths or the canonical package interface.
-  When packaging needs a local file, use a regular copy and verify it against
-  its owner. In particular, package-local `LICENSE` files must be regular files
-  containing the applicable complete terms and notices, never symlinks.
-- The permitted repository-tooling uses are generated selection pointers owned
-  and admitted by Shared Tooling's verified executable store, and deliberately
-  created symlinks in isolated rejection/security fixtures. Keep these outside
-  maintained source and shipped package assets; they do not authorize general
-  file aliases, package-license links or links into sibling checkouts.
-- Operating-system/toolchain layouts and directory aliases outside the maintained
-  repository tree remain external inputs, subject to each tool's path admission.
-  This rule does not authorize deleting existing installations, evidence or link
-  targets. Replace an obsolete repository link without modifying its target.
-- Review tracked Git modes, working-tree paths and actual package file lists
-  when adopting the rule. A clean index alone does not prove generated or packaged
-  files comply. Any other repository-owned use needs a scoped maintainer-approved
-  exception under the baseline's local-authority rules.
+## Repository files: self-contained source and packages
+
+- **Keep source and distributions self-contained; prefer regular files.** This
+  is a portability and reproducibility default, not a claim that symlinks are
+  unidiomatic. Use explicit dependencies/configuration paths or the canonical
+  package interface instead of repository links into sibling checkouts or
+  machine-specific external locations.
+- A narrow internal relative link is acceptable when it removes real maintenance
+  work and stays within the owning checkout. Document its purpose and qualify
+  checkout, tooling and packaging behavior on supported hosts. Avoid dangling
+  links, cycles and implicit external dependencies. Prefer an ordinary reference
+  when it serves the same purpose; do not introduce copied files and a syncing
+  mechanism merely to avoid a useful internal link.
+- Shared snapshots and shipped package assets remain regular, self-contained
+  files. Materialize packaging copies at their generator and verify them against
+  their canonical owner. Package-local `LICENSE` files contain the applicable
+  complete terms and notices as regular files. An internal source link does not
+  authorize shipping an unresolved link or omitting its target from an archive.
+- Generated selection pointers in the verified executable store and deliberate
+  symlinks in isolated security/rejection fixtures remain valid tooling uses.
+  Normal operating-system/toolchain layouts and aliased checkout paths should
+  work where practical; a repository-file preference alone is not a reason to
+  reject them. Preserve each tool's actual path and custody requirements.
+- Concentrate strict link/escape checks at packaging, installation and
+  security-sensitive read/write boundaries. Review Git modes, working paths and
+  package inventories when relevant, but do not build a general symlink scanner
+  into every command. The optional `check-no-symlinks.pl` helper enforces a
+  stricter all-regular inventory for repositories that choose it; it cannot
+  assess justified internal links. Such repositories should select appropriate
+  boundary checks rather than add a parallel exception framework merely to keep
+  that gate. Shared Tooling itself retains this stricter inventory check.
+- Preserve existing installations, evidence and link targets. Replacing an
+  obsolete repository link must not modify its target. Exceptions to the
+  self-contained dependency or shipped-file requirements still need scoped
+  maintainer approval under the baseline's local-authority rules.
 
 ## CLI applications
 
-- **Use Clap for Rust CLI applications**, including developer tools and maintained
-  utility binaries. Use its derive or builder API rather than handwritten
-  `std::env::args` loops, custom flag/subcommand dispatch or a parallel parser.
-- Let Clap own argument/value parsing, typed values, defaults, required arguments,
-  allowed values, argument groups/conflicts/dependencies, help, version, usage and
-  parse-error diagnostics. Before adding custom CLI logic, check whether Clap
-  already provides the behavior and use that capability.
-- Prefer Clap's extension points when application-specific parsing is needed.
-  Keep custom validation limited to domain constraints Clap cannot express;
-  document that gap and keep domain semantics with their existing owner. Do not
-  reimplement generic CLI mechanics behind wrappers or duplicate manual checks
-  that Clap already enforces.
+- **Use Clap for as much Rust CLI behavior as its supported APIs can own.** This
+  includes developer tools, generators, benchmark runners and maintained example
+  or utility binaries. Use its derive or builder API; adding Clap only for flag
+  recognition does not justify a second parser or validation layer.
+- Declare typed values, paths, nonzero/ranged numbers, enumerated choices,
+  defaults and environment sources in Clap. Use its argument actions, arity,
+  groups, conflicts and requirements for supported argument relationships, and
+  its help, version, usage, styling and parse-error handling. Check the selected
+  version's capabilities before writing equivalent custom logic.
+- Compose owned subcommands into the Clap command tree and pass parsed values to
+  handlers. Reserve raw argument forwarding for actual external command
+  boundaries. Do not maintain argv scanners, hidden flag injection, repeated
+  parsing or separate help/option catalogs to connect our own commands when
+  Clap's composition and propagation can carry the same contract.
+- Integrate application-specific syntax through Clap's value parsers and typed
+  extension points, reusing the existing domain parser. Keep custom validation
+  for constraints Clap cannot express, runtime/configuration-dependent policy
+  and independent trust or effect boundaries; document the reason locally.
+  Merely using custom validation today is not evidence of a capability gap.
+- When adopting a Clap capability, remove the superseded CLI mechanics and
+  their duplicate declarations. Preserve intended syntax, defaults/precedence,
+  native path bytes, output/exit behavior and sensitive-value redaction. Keep
+  domain admission at its owner; do not weaken it or add a generic CLI framework
+  merely to replace a local parser.
+
+## Metrics and logging
+
+- **Use `ic-metrics` for metrics and `ic-logging` for logging in all our Rust
+  crates**, including libraries, canisters, native tools, tests and examples.
+  [IC Observability](https://github.com/dragginzgame/ic-observability) owns both
+  canonical crates. Select the capabilities a crate uses; this does not require
+  otherwise unused dependencies or instrumentation in every crate.
+- Outside those canonical owners, do not introduce or maintain custom measurement
+  arithmetic, accumulators, histograms, recording engines, log stores, retention or paging engines, or
+  competing metrics/logging frameworks for facilities we own. Reuse the canonical
+  crates rather than copying their implementations or hiding duplicates behind
+  wrappers. Existing bespoke implementations are migration work, not precedent
+  for new ones.
+- If a required capability is missing or unsuitable, search for an existing
+  issue or open one in
+  [IC Observability](https://github.com/dragginzgame/ic-observability/issues).
+  Describe the concrete consumer requirement and extend the canonical crate
+  there before adopting the improvement. Do not solve the gap with a private
+  fork, local copy or parallel fallback engine. Adopt a compatible, available
+  dependency through the normal dependency workflow; an issue alone does not
+  establish that the capability exists.
+- Consumers retain measurement attribution, units, labels, platform sampling,
+  clocks, budgets, authorization, lifecycle, endpoints and export formats.
+  Thin adapters may translate these application contracts or integrate governed
+  persistence; they must delegate shared arithmetic, recording, retention and
+  paging. IC Persistence continues to own `ic-metrics-stable` and its governed
+  Memory/Storage integration. Preserve supported consumer behavior and stored
+  formats when replacing an existing engine, then delete the replaced copy.
 
 ## IC application encoding
 
@@ -476,6 +532,11 @@ contracts; ordinary development does not require rereading these mechanics.
 
 ## Rust workspaces and portable tooling
 
+- Governed tools target latest stable during authorized maintenance, while
+  builds keep exact reviewed versions and checksums. Retaining an older version
+  needs a documented compatibility blocker and owning follow-up. Use the
+  [tool freshness workflow](../tasks/cargo-tool-versions.md), including optional
+  sccache; never resolve latest dynamically in builds or create a second installer.
 - Directory names for repositories, workspaces, tooling and operational inputs
   must not contain line-feed (LF) or carriage-return (CR) characters, including
   ancestor directories and resolved symlink destinations. Do not create or select
