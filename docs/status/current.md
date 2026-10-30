@@ -2,13 +2,25 @@
 
 ## Current adoption and local result
 
-The latest task adopts published Platform 0.11.1 and Wire 0.10.0 together over
-the pending adoption changes on `028bc592` (Release 0.71.0). Incoming dirty work
-and untracked notes are retained in admission evidence. Only Platform, macros,
-runtime guard, Wire and its derive crate change in the lock beyond this admission.
-The inherited feature selections stay unchanged; Wire's optional endpoint and
-Platform schema integrations stay disabled in Tooling. No Rust caller rewrite
-was needed.
+The latest task adds explicit publication batches over clean admission `8511880f`
+(Release 0.72.0). The prior Platform/Wire adoption and Build packaging repair are
+committed in that release. Changes remain unstaged; pending notes select compatible
+0.72.1. Own workspace/package versions remain 0.72.0. Cargo manifests, lock, real
+index and HEAD match admission; no Rust sources or dependencies changed.
+
+`make publish-check PACKAGE='name ...'` and `make publish PACKAGE='name ...'`
+select a nonempty unique subset of the public roster. Default/development or
+environment-only PACKAGE values retain the full roster. Make forwards explicit
+values through a target-specific environment value and quoted script argument;
+shell metacharacters remain literal and are rejected as invalid names.
+
+All workspace metadata must still match the synchronized public roster, registry
+and repository policy, and the existing full lint gate stays before packaging.
+Selected package paths, notices, archives, provenance, source rechecks, exact Cargo
+selectors and retained intents all follow the batch. Cargo retains dependency
+resolution/order and upload verification; no registry lookup, automatic skipping,
+retry or release state was added. The documented foundation-first flow preserves
+already published payloads and separates preparation commits from finalized tags.
 
 Platform no longer has a production Wire dependency or `wire-schema` feature.
 Wire owns the optional `platform-types` integration, selecting Platform's principal
@@ -27,11 +39,11 @@ all 148 declared payloads in the earlier adoption.
 Tools' public registry principal has Platform-owned dependency identity, so
 consumers exchanging these values must align Platform to 0.11. Testkit's public
 limits and typed codec causes likewise require direct Wire dependencies to align
-to 0.10. The draft stays 0.72.0 for both migrations; published 0.71 notes stay
-unchanged. Native
+to 0.10. These migrations shipped in 0.72.0; the publication update adds no library
+API or dependency change. Native
 codec bytes, protocol and admission rules stay unchanged, and optional Wire
 endpoint integration remains disabled. Own workspace/package versions remain
-0.71.0; index and HEAD are unchanged. No local
+0.72.0; index and HEAD are unchanged. No local
 commit, push, release, publication, normal sibling checkout edit or artifact
 cleanup ran.
 
@@ -59,7 +71,30 @@ required identities. Validation-only profiles retain their previous policy.
 The complete Host/Tools graph script makes 36 observations instead of 39 per
 target. No cache, public mode, new dependency or supported contract was added.
 
-## Coordinated adoption and dependency direction evidence
+## Publication batch evidence and limitations
+
+Evidence is `/tmp/ic-tooling-publication-batches.0qZUDh/`, retaining admission,
+index/lock/HEAD and focused logs. Actual publication adapter fixtures pass with
+real locked/offline workspace metadata and real notice/provenance validators,
+while Git, Cargo package/upload and full workspace lint effects are substituted.
+They cover the unchanged default roster, Host-only, remaining-package and reordered
+batches; exact package/upload arguments and matching per-batch intents/provenance;
+empty/private/unknown/duplicate/unsafe selections; unselected metadata drift,
+dirty upload refusal, selected provenance failure, lint failure and Cargo status
+retention without retry. Prior archive, source, interruption and lock cases pass.
+
+The real Make snapshot fixture passes with substitute effects, proving explicit
+command-line forwarding, environment/default exclusion, empty/metacharacter bytes
+and existing parallel/jobserver routing. Bash syntax, ShellCheck with companion
+sources, documentation links and diff checks pass. The first ShellCheck invocation
+omitted companion loading; its diagnostic and the corrected run are retained.
+
+No live dry run/upload, registry lookup, version/tag change, Git mutation,
+full workspace gate, library suite, artifact cleanup or native macOS execution
+ran. Linux fixture evidence does not qualify native macOS. Earlier native/MSRV
+evidence below remains bound to its original source and commands.
+
+## Prior coordinated adoption and dependency direction evidence
 
 Evidence is `/tmp/ic-tooling-wire-platform.1UowyL/`, retaining admission dirty
 source/untracked notes, lock/index/HEAD, registry update/fetch and focused logs.

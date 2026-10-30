@@ -31,6 +31,7 @@ help:
 	@echo 'Full release validation: ci (workspace Clippy first), msrv-qualification; focused MSRV: msrv PACKAGE=<crate>'
 	@echo 'Maintainer releases: release-patch, release-minor, release-major, release-resume VERSION=X.Y.Z'
 	@echo 'crates.io publication: publish-check (dry run), publish (upload); offline fixture: publish-command-check'
+	@echo 'Publication batches: publish-check/publish PACKAGE="crate ..."; default selects the complete public roster'
 .PHONY: formatting-hook-check
 .PHONY: install-release-editor release-editor-check check-no-symlinks
 install-release-editor:
@@ -133,10 +134,11 @@ tooling-command-check:
 	+@checks="$$(bash scripts/ci/select-tooling-checks.sh tooling)" && \
 		for check in $$checks; do printf 'bash %s\n' "$$check"; bash "$$check" || exit $$?; done
 	+bash scripts/ci/check-release-commands.sh "$(CURDIR)" ci/tool-versions.env ci/release-delivery.txt make/consumer.mk make/tools.mk make/testkit.mk make/rust-format.mk make/release.mk make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/check-release-delivery.sh scripts/ci/run-formatting.sh scripts/ci/run-rust-formatting.pl scripts/ci/RustSource.pm
+publish publish-check: export IC_TOOLING_PUBLISH_SELECTION = $(PACKAGE)
 publish:
-	+bash scripts/publish/workspace.sh publish
+	+bash scripts/publish/workspace.sh publish $(if $(filter command line,$(origin PACKAGE)),--packages "$$IC_TOOLING_PUBLISH_SELECTION")
 publish-check:
-	+bash scripts/publish/workspace.sh check
+	+bash scripts/publish/workspace.sh check $(if $(filter command line,$(origin PACKAGE)),--packages "$$IC_TOOLING_PUBLISH_SELECTION")
 publish-command-check:
 	+bash scripts/publish/test-workspace.sh
 ci:

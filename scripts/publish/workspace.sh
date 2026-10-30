@@ -6,8 +6,8 @@ set -euo pipefail
 # Cargo owns packaging, dependency ordering, verification, upload
 # and index waiting. The caller owns credentials and partial-upload recovery.
 mode="${1:-}"
-[[ $# == 1 && ( "$mode" == publish || "$mode" == check ) ]] || {
-    echo 'usage: workspace.sh publish|check' >&2; exit 2;
+[[ ( $# == 1 || ( $# == 3 && "$2" == --packages ) ) && ( "$mode" == publish || "$mode" == check ) ]] || {
+    echo 'usage: workspace.sh publish|check [--packages "NAME ..."]' >&2; exit 2;
 }
 fail() { echo "publication refused: $1" >&2; exit 1; }
 tooling_root="${BASH_SOURCE[0]}"
@@ -16,10 +16,26 @@ tooling_root="$(cd -P "${tooling_root%/*}/../.." && printf '%s/.' "$PWD")"
 tooling_root="${tooling_root%/.}"
 # Publication and archive qualification share this consumer-owned selection.
 # Shared companions: ci/public-packages.txt
-packages=()
+public_packages=()
 while IFS= read -r package || [[ -n "$package" ]]; do
-    packages+=("$package")
+    public_packages+=("$package")
 done < "$tooling_root/ci/public-packages.txt"
+packages=("${public_packages[@]}")
+if [[ $# == 3 ]]; then
+    case "$3" in *$'\r'*|*$'\n'*) fail 'package selections must not contain CR/LF' ;; esac
+    IFS=$' \t' read -r -a packages <<< "$3"
+    [[ ${#packages[@]} -gt 0 ]] || fail 'select at least one public package'
+    seen='|'
+    for package in "${packages[@]}"; do
+        eligible=false
+        for public_package in "${public_packages[@]}"; do
+            [[ "$package" != "$public_package" ]] || eligible=true
+        done
+        "$eligible" || fail "unknown or private publication package: $package"
+        [[ "$seen" != *"|$package|"* ]] || fail "duplicate publication package: $package"
+        seen="$seen$package|"
+    done
+fi
 package_path() {
     jq -er --arg package "$1" --arg prefix "$root/" '
         .packages[] | select(.name == $package) | .manifest_path
@@ -69,7 +85,7 @@ jq -e '
       and ($packages | all(.repository == "https://github.com/dragginzgame/ic-tooling"))
       and ($packages | any(.name == "ic-host-wasm-inspect" and
           any(.targets[]; .name == "ic-host-wasm-inspect" and (.kind | index("bin")))))
-' "$attempt/metadata.json" --args "${packages[@]}" > /dev/null || fail 'expected selected synchronized crates.io packages'
+' "$attempt/metadata.json" --args "${public_packages[@]}" > /dev/null || fail 'expected selected synchronized crates.io packages'
 package_directories=()
 for package in "${packages[@]}"; do
     directory="$(package_path "$package")" || fail "invalid package directory for $package"

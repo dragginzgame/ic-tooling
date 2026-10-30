@@ -60,10 +60,26 @@ The consumer-owned [public package list](../ci/public-packages.txt) selects both
 publication and coordinated archive qualification. Publication checks it against
 Cargo metadata before running lint or packaging; private test packages stay out.
 
+Publication defaults to that complete roster. An explicit command-line
+`PACKAGE='name ...'` selects a nonempty batch from it for either publication mode:
+
+```bash
+make publish-check PACKAGE='ic-host-artifacts'
+make publish PACKAGE='ic-host-artifacts'
+```
+
+Unknown/private names, duplicates and an explicitly empty selection are refused.
+The default `PACKAGE` used by development commands, or an environment-only value,
+does not narrow publication. All public workspace metadata must still satisfy
+the synchronized version, registry and repository policy. Each selected archive
+receives the same license and provenance admission, exact version selectors,
+source-drift checks and retained-attempt handling as a complete upload. Coordinated
+archive qualification still selects the complete roster independently of a batch.
+
 `make publish-check` runs Cargo's publication checks with all features
 and `--locked --registry crates-io --dry-run`. It packages and verifies the selected
 workspace packages through exact `--package NAME@VERSION` selectors without
-uploading: the six Host libraries, `ic-build`, `ic-testkit`,
+uploading. The default selection is the six Host libraries, `ic-build`, `ic-testkit`,
 `ic-testkit-native` and the `ic-host-wasm-inspect` CLI. The development driver
 and Wasm probe remain private. It admits working edits so packaging can be reviewed
 before committing. It can access the registry; set `CARGO_NET_OFFLINE=true` for
@@ -75,7 +91,8 @@ Both publication modes require prepared dependencies and pass the same offline
 `make clippy-workspace` gate after source admission, before packaging or registry
 effects. The wrapper never installs tools or fetches missing lint dependencies.
 
-`make publish` uploads the current committed workspace version to crates.io.
+`make publish` uploads the selected packages at the current committed workspace
+version to crates.io.
 It requires a clean working tree, synchronized selected publishable packages and
 prepared Cargo 1.99, Git, tar and the pinned local jq. Cargo owns dependency ordering,
 package verification and index waiting. Package policy restricts each package to
@@ -153,14 +170,53 @@ exact source/packages against registry state. Neither command removes stale lock
 retries an upload or overwrites earlier evidence. Directory paths containing CR/LF
 are refused before Cargo admission or dispatch; ordinary spaces remain supported.
 
+### Foundation-first bootstrap
+
+Host Artifacts is below Platform, while Tooling's Testkit is above Platform/Wire.
+When Platform needs an unpublished Host change, publish the foundation first:
+
+1. Prepare the intended coordinated workspace version and commit the foundational
+   changes while upper-layer dependencies still resolve to published releases.
+   Batch selection limits package preparation/upload; full workspace metadata and
+   the existing lint gate still apply.
+   If later adoption will change this same planned release, use a preparation
+   commit and finalize its Git release/tag after the last source change. If the
+   version is already tagged, finish its remaining packages from that unchanged
+   source and put subsequent adoption in the next normal release.
+2. Check and publish the required Host batch with an explicit `PACKAGE` selection,
+   as in the example above. Include any other unpublished local dependencies the
+   selected packages need. Cargo owns resolution, verification and ordering.
+3. Publish the required Platform and Wire updates through their release flows,
+   then adopt their published versions in Tooling and commit the remaining changes.
+   Keep the already uploaded packages' version and source intact. Each batch
+   records its own committed source; no release tags or versions are changed by
+   the publisher.
+4. Check and publish only the remaining packages. For an Artifacts-only first
+   batch, the current remaining public roster is:
+
+   ```bash
+   remaining=(ic-build ic-host-fs ic-host-http ic-host-process ic-host-text
+              ic-host-tools ic-host-wasm-inspect ic-testkit ic-testkit-native)
+   make publish-check PACKAGE="${remaining[*]}"
+   make publish PACKAGE="${remaining[*]}"
+   ```
+
+Use an already published compatible Host version when possible; that needs no
+bootstrap batch. After any partial publication, use explicit remaining selections:
+an unqualified `make publish` still requests the complete roster. The wrapper never
+looks up registry state, automatically skips versions or retries an upload.
+
+### Partial-upload recovery
+
 Workspace uploads are not atomic. A failure, timeout or lost reply can leave some
 packages published. The wrapper stops and does not retry, skip existing versions,
 bump versions or interpret failure as absence. Retain the intent and artifacts,
 inspect the exact name/version entries on crates.io, and compare their published
 source with the recorded source before continuing. Stop if registry access or
 payload identity is uncertain. After confirming which packages are present,
-publish only confirmed missing packages using Cargo's `--package` selections,
-in dependency order: artifacts, filesystem, process, IC tools, then the Wasm CLI.
+publish only confirmed missing packages using `make publish PACKAGE='name ...'`
+after reconciling any retained attempt locks. This preserves the wrapper's
+admission checks; Cargo owns dependency ordering.
 Do not rerun the full workspace upload blindly or change source under the same version.
 
 The [Cargo publish documentation](https://doc.rust-lang.org/cargo/commands/cargo-publish.html)

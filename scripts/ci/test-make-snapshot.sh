@@ -279,8 +279,25 @@ cat > "$fixture/local/scripts/publish/workspace.sh" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
 [[ "$1" == publish || "$1" == check ]] || exit 1
+printf '%s\0' "$@" > "$HOST_MAKE_EXTERNAL.publication-args"
 exec cargo "$1"
 STUB
+# Only command-line PACKAGE requests a batch; values cross the shell literally.
+for target in publish publish-check; do
+    mode=publish
+    [[ "$target" != publish-check ]] || mode=check
+    PATH="$fixture/local:$PATH" make --no-print-directory "$target" > "$fixture/publication-default.log" 2>&1
+    printf '%s\0' "$mode" > "$fixture/publication-expected"
+    cmp "$fixture/publication-expected" "$HOST_MAKE_EXTERNAL.publication-args"
+    PATH="$fixture/local:$PATH" PACKAGE=ic-testkit make --no-print-directory "$target" > "$fixture/publication-environment.log" 2>&1
+    cmp "$fixture/publication-expected" "$HOST_MAKE_EXTERNAL.publication-args"
+    for selection in 'ic-host-artifacts ic-host-fs' '' 'ic-host-artifacts; touch injected'; do
+        PATH="$fixture/local:$PATH" make --no-print-directory "$target" "PACKAGE=$selection" > "$fixture/publication-selected.log" 2>&1
+        printf '%s\0' "$mode" --packages "$selection" > "$fixture/publication-expected"
+        cmp "$fixture/publication-expected" "$HOST_MAKE_EXTERNAL.publication-args"
+        [[ ! -e injected ]] || exit 1
+    done
+done
 # Membership/order expectations are independent of the discovery roster.
 : > "$HOST_MAKE_EVENTS"
 PATH="$fixture/local:$PATH" make --no-print-directory tooling-command-check > "$fixture/tooling-order.log" 2>&1

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.72.1] - Unreleased
+
+### ➕ Added
+
+- Support explicit publication batches with `PACKAGE='crate ...'`, retaining full
+  admission checks for foundation-first bootstrap and remaining-package uploads.
+  [Details](docs/changelog/0.72.md#0721---unreleased).
+
 ## [0.72.0] - 2026-10-30
 
 ### ⚠️ Breaking
