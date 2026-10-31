@@ -177,11 +177,12 @@ Platform selects its internal singleton guard only for executor/runtime
 users. The graph policies exclude it from Host/Tools and Testkit, and require it
 for the private probe's Wasm runtime.
 Consumers exchanging Platform-owned registry principals with Tools must align
-Platform 0.15.1. Its facade reexports canonical `ic-platform-types` 0.15.0 identities.
-Platform has no production Wire or Host Artifacts dependency. Published Wire
-0.12.1's optional `platform-types` schemas still select Types 0.1; matching schemas
-for Types 0.15 are not published yet. This workspace uses only Wire's core codec
-and does not select that bridge or `ic-wire-endpoint`. Platform 0.15.1 restores
+Platform 0.15.2. Its facade reexports canonical `ic-platform-types` 0.15.1 identities.
+Platform has no production Wire or Host Artifacts dependency. Wire 0.13.0's optional
+`platform-types` schemas share that Types generation. The archive consumer fixture
+opts into those schemas and checks Principal/Account metadata alongside core frames.
+Production profiles use only Wire's core codec and do not select that bridge or
+`ic-wire-endpoint`. Platform's separate groups preserve
 independent Types releases; incompatible Types changes still require explicit
 consumer and schema adoption.
 

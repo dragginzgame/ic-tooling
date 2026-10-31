@@ -19,10 +19,11 @@ primary package. Neither primary owns the other group; root Cargo metadata has
 no version. Dependencies, edition 2024 and Rust 1.91 remain inherited. Group maps
 in root Cargo comments name the canonical packages and release ledgers.
 
-Adoption preserves both groups' existing 0.73.0 package identities. Foundation's
-compatible release-tooling notes select 0.73.1; integration's exposed Platform/Wire
-identity changes select 0.74.0. These are independent pending notes, not prepared
-versions. Root `CHANGELOG.md` indexes both groups and
+Both groups began with their existing 0.73.0 identities. Foundation 0.73.1 and
+integration 0.74.0 are now published. The next integration notes select 0.75.0
+because Wire 0.13 changes Testkit's public limits/error identities; Foundation
+stays on 0.73.1. Pending notes do not prepare numeric versions.
+Root `CHANGELOG.md` indexes both groups and
 [coordinated history through 0.73.0](../../releases/history.md). Existing Testkit
 package-specific history remains in the integration ledger with its original
 scope; the old crate-local changelog is a packaged navigation pointer.
@@ -102,11 +103,13 @@ YQ="$PWD/.tools/host/bin/yq" bash scripts/release/test-integration-cohort.sh "$e
 ```
 
 Its disposable integration minor never changes actual versions or uploads. Rust
-1.91 consumer tests compose candidate 0.74.0 Tools/Testkit/Native archives with
-published Build/Artifacts/FS/Process 0.73.0. Build's original public error types,
+1.91 consumer tests compose the next Tools/Testkit/Native minor with the current
+published Foundation version. Build's original public error types,
 canonical registry/facade identities, direct Wire limits and Native memory traits
 remain compatible. Bounded core Wire frames round-trip the selected Principal
-and Account types without the optional schema bridge. The fixture retains candidate manifests, exact package archives,
+and Account types; the consumer explicitly enables their optional Wire schemas
+and verifies canonical metadata support. Production features remain unchanged.
+The fixture retains candidate manifests, exact package archives,
 metadata and logs. It is opt-in because a foundation version under preparation
 need not already exist in the registry; it is not a pre-publication gate.
 
@@ -128,11 +131,11 @@ publication of a changed declaration under an already published consumer version
 
 Tools exposes Platform principals, Testkit exposes Wire limits/errors, and Native
 optionally exposes Platform memory traits. Their direct consumers must align
-those suppliers after incompatible changes. Platform 0.15.1 restores independent
-Types releases from the existing 0.15.0 identity. Published Wire 0.12.1's optional
-bridge still targets Types 0.1 and is not selected here; its matching adoption is
-unpublished. The consumer fixture checks the actual registry/facade type owner
-and core Wire limits without that unsupported optional schema pairing. A future
+those suppliers after incompatible changes. Platform 0.15.2 and Types 0.15.1 keep
+their independent release ownership. Wire 0.13.0's optional bridge selects the
+same Types generation. The consumer fixture checks registry/facade type ownership,
+core Wire limits and the explicitly selected schema pairing. Tooling production
+profiles do not enable that bridge or Endpoint. A future
 incompatible Types release still requires explicit integration adoption.
 
 Existing ungrouped tags, receipts, plans and partial-publication evidence retain

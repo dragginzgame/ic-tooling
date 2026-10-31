@@ -5,6 +5,20 @@ with the private development/probe packages. Its canonical version is Testkit's
 package version. Earlier releases share the
 [coordinated history through 0.73.0](../history.md#0730---2026-10-31).
 
+## [0.75.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Wire 0.13.0. Testkit's public Wire limits and codec errors now use that
+  Rust type identity; typed callers must align their direct Wire dependency.
+  Frame bytes, budgets, transport errors and retry policy remain unchanged.
+
+### ⬆️ Dependencies
+
+- Adopt Metrics 0.23.2 and Platform 0.15.2 with canonical Types 0.15.1.
+  Preserve arithmetic-only Metrics and existing native/Wasm feature boundaries.
+  Wire's optional identity schemas now share Platform's Types generation.
+
 ## [0.74.0] - 2026-10-31
 
 ### ⚠️ Breaking
