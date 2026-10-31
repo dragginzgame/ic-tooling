@@ -425,7 +425,7 @@ impl PocketIcStartupConfig {
         .map_err(|source| {
             PocketIcStartupError::new(PocketIcStartupFailure::ServerVersionProbe { source })
         })?;
-        let expected = super::server::expected_server_version();
+        let expected = super::server::pocket_ic_server_requirement();
         if !super::supports_pocket_ic_server(&evidence.stdout) {
             return Err(PocketIcStartupError::new(
                 PocketIcStartupFailure::ServerVersionMismatch {

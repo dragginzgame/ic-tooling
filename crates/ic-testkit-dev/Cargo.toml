@@ -17,7 +17,6 @@ ic-host-text = { workspace = true }
 ic-platform = { workspace = true, features = ["pocket-ic"] }
 ic-testkit = { workspace = true, features = ["wire"] }
 ic-testkit-perf-probe = { workspace = true }
-ic-wire = { workspace = true }
 libc = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -25,6 +24,7 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }
+ic-wire.workspace = true
 
 [lints]
 workspace = true

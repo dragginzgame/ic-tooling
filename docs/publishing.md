@@ -42,6 +42,11 @@ the selected dependency versions.
 The complete gate runs `make clippy-workspace` after prerequisite admission and
 before expensive tests or builds, with the existing workspace/all-target/all-feature
 scope and warnings denied. Failure stops later stages under parallel Make too.
+Native hosted CI combines this gate with the publication dry run through
+`make ci-publication`, using publication's source admission and lint once before
+the dry run and the remaining offline CI checks. Standalone `make ci` and
+`make publish-check` each retain their full lint gate. This combined command
+does not upload packages or authorize publication.
 Release verification and CI both use `make msrv-qualification` for native
 workspace, Testkit Wasm and unsupported-filesystem compilation at Rust 1.91.
 Both numbered pending-heading spellings, `## [X.Y.Z]` and

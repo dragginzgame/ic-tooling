@@ -8,6 +8,13 @@ qualification using the prepared server; `make testkit-wasm-check` and
 qualifies all ten public archives through Build. Private packages remain
 excluded from publication. Native macOS results must come from native runners.
 
+Native hosted CI uses `make ci-publication`: prerequisite admission, publication's
+source and workspace lint gate, then the publication dry run, followed by the
+remaining CI checks with `CARGO_NET_OFFLINE=true`. The full lint runs once; a
+failure stops subsequent stages even under parallel Make. Standalone `make ci`
+retains its own full lint gate and does not run the publication dry run.
+Both are full qualification commands, subject to the shared validation policy.
+
 `make msrv-qualification` is the shared CI/release MSRV gate. It runs the native
 workspace, deployed Testkit Wasm profiles and unsupported-filesystem compilation
 sequentially on Rust 1.91. Prepare that toolchain and its Wasm target first.
@@ -155,7 +162,7 @@ Host Artifacts and Wasm parsing. The standalone Wasm inspector
 retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.91
 and native Linux/macOS matrix as the existing libraries.
 
-Platform 0.11 embeds the IC system-call and executor implementations. Testkit's
+Platform 0.12 embeds the IC system-call and executor implementations. Testkit's
 Wasm graph excludes external `ic0` and `ic-cdk-executor` packages; the private
 performance probe enables Platform's executor through `cdk`. Wasm compilation
 checks this selection separately from native execution and installed IC behavior.
@@ -163,8 +170,10 @@ Platform selects its internal singleton guard only for executor/runtime
 users. The graph policies exclude it from Host/Tools and Testkit, and require it
 for the private probe's Wasm runtime.
 Consumers exchanging Platform-owned registry principals with Tools must align
-Platform 0.11. Platform has no production Wire dependency; consumers needing
-Platform type schemas select Wire's optional `platform-types` integration.
+Platform 0.12. Platform has no production Wire dependency. Consumers needing
+Platform type schemas select Wire 0.11's optional `platform-types` integration,
+which targets Platform 0.12.
+This workspace uses only Wire's core codec and does not enable that integration.
 
 Native CI prepares pinned Rust and the complete common toolsets, then verifies
 the shared snapshot, declarations, formatter prerequisites, actual hook behavior,

@@ -18,7 +18,9 @@
 pub mod fixtures;
 
 mod server;
-pub use server::{POCKET_IC_SERVER_VERSION, supports_pocket_ic_server};
+pub use server::{
+    POCKET_IC_SERVER_VERSION, pocket_ic_server_requirement, supports_pocket_ic_server,
+};
 #[cfg(unix)]
 pub mod server_assets;
 

@@ -5,7 +5,10 @@ pub const POCKET_IC_SERVER_VERSION: &str = "16.1.0";
 
 const SUPPORTED_MAJOR: u64 = 16;
 
-pub(super) fn expected_server_version() -> String {
+/// Human-readable stable server range accepted by [`supports_pocket_ic_server`].
+/// Provisioning's exact reviewed artifact version is selected independently.
+#[must_use]
+pub fn pocket_ic_server_requirement() -> String {
     format!(
         "pocket-ic-server >={SUPPORTED_MAJOR}.0.0,<{}.0.0 (stable)",
         SUPPORTED_MAJOR + 1

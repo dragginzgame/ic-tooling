@@ -6,7 +6,6 @@
 
 use crate::interface::{ExportedMethod, MethodMode};
 use ic_platform::candid_parser::{self, Dec, FuncMode, IDLProg, TypeEnv};
-use std::fmt;
 
 #[cfg(test)]
 mod tests;
@@ -46,17 +45,12 @@ impl ServiceMethod {
 }
 
 /// Parser/type-check failure without exposing dependency types in the API.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
+#[error("{inner}")]
 pub struct ParseError {
-    source: candid_parser::Error,
+    // Intentionally not a source: this wrapper terminates the public chain.
+    inner: candid_parser::Error,
 }
-
-impl fmt::Display for ParseError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.source.fmt(formatter)
-    }
-}
-impl std::error::Error for ParseError {}
 
 /// Failure to produce a complete service inventory.
 #[derive(Debug, thiserror::Error)]
@@ -92,7 +86,7 @@ pub enum ServiceError {
 }
 
 const fn parse_error(source: candid_parser::Error) -> ServiceError {
-    ServiceError::Parse(ParseError { source })
+    ServiceError::Parse(ParseError { inner: source })
 }
 
 /// Parse and type-check a self-contained document, then return its method facts.

@@ -2663,23 +2663,19 @@ fn build_wasm_canisters_cached_internal(
     let plan = batch_maintenance.map_or(validate_spec(spec)?, CachePlan::MaintainedShared);
     let prepared_invalidation = batch_prepared_invalidation(batch_resolution.as_ref());
     progress.emit(WasmBuildProgressEvent::Started);
-    let shared_incremental = match plan {
-        CachePlan::Isolated => false,
-        CachePlan::Shared => true,
-        CachePlan::MaintainedShared(config) => {
-            let outcome = build_wasm_with_shared_incremental(
-                spec,
-                SharedAcquisition::Scheduled(config),
-                prepared_invalidation,
-                total_started,
-                progress,
-                batch_resolution.take(),
-                &mut spawn,
-            )?;
-            emit_finished_progress(&outcome, progress);
-            return Ok(outcome);
-        }
-    };
+    if let CachePlan::MaintainedShared(config) = plan {
+        let outcome = build_wasm_with_shared_incremental(
+            spec,
+            SharedAcquisition::Scheduled(config),
+            prepared_invalidation,
+            total_started,
+            progress,
+            batch_resolution.take(),
+            &mut spawn,
+        )?;
+        emit_finished_progress(&outcome, progress);
+        return Ok(outcome);
+    }
     let (cache_lock, first_lock_wait) =
         lock_wasm_build_cache_with_progress(&spec.target_dir, progress)?;
     ensure_cache_directory_tag(&spec.target_dir)?;
@@ -2700,7 +2696,7 @@ fn build_wasm_canisters_cached_internal(
             fingerprint: resolved.fingerprint,
         });
 
-        if shared_incremental {
+        if matches!(plan, CachePlan::Shared) {
             drop(cache_lock);
             build_wasm_with_shared_incremental(
                 spec,
@@ -2721,7 +2717,7 @@ fn build_wasm_canisters_cached_internal(
                 &resolved,
                 first_lock_wait,
                 isolated_acquisition,
-                &cache_entry,
+                AcquiredCargoTarget::Exact(&cache_entry),
                 total_started,
                 progress,
                 &mut spawn,
@@ -2804,7 +2800,7 @@ fn build_wasm_with_shared_incremental(
         current,
         lock_wait,
         shared_incremental,
-        &shared_target,
+        AcquiredCargoTarget::Shared(&shared_target),
         total_started,
         progress,
         &mut spawn,
@@ -3018,6 +3014,14 @@ fn verify_resolved_inputs(
     Ok(verified)
 }
 
+// Only the shared acquisition path supplies a shared target, after taking its
+// coordination lock. Publication need not reinterpret the original specification.
+#[derive(Clone, Copy)]
+enum AcquiredCargoTarget<'a> {
+    Exact(&'a Path),
+    Shared(&'a Path),
+}
+
 #[expect(
     clippy::too_many_arguments,
     reason = "keep the caller's spawner separate from recipe, acquisition and progress state"
@@ -3027,7 +3031,7 @@ fn build_wasm_cache_miss(
     resolved: &ResolvedCargoBuildInputs,
     lock_wait: Duration,
     shared_incremental: WasmAcquisitionContext,
-    cargo_target_dir: &Path,
+    cargo_target: AcquiredCargoTarget<'_>,
     total_started: Instant,
     progress: &mut ProgressReporter<'_>,
     mut spawn: &mut dyn FnMut(&mut Command) -> io::Result<OwnedChild>,
@@ -3045,12 +3049,13 @@ fn build_wasm_cache_miss(
         Ok::<_, WasmBuildError>(OwnedDirectory::new(cache_entry.clone()))
     })?;
     let build_result = (|| {
-        if matches!(
-            spec.cache_mode,
-            WasmBuildCacheMode::SharedIncremental { .. }
-        ) {
-            record_cache_entry_use(cargo_target_dir)?;
-        }
+        let cargo_target_dir = match cargo_target {
+            AcquiredCargoTarget::Exact(path) => path,
+            AcquiredCargoTarget::Shared(path) => {
+                record_cache_entry_use(path)?;
+                path
+            }
+        };
         let build_started = Instant::now();
         progress.begin_phase(WasmBuildPhase::CargoBuild);
         let cargo_result = run_cargo_build(spec, cargo_target_dir, targets, progress, &mut spawn);

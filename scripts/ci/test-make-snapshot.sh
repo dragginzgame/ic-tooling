@@ -280,6 +280,11 @@ cat > "$fixture/local/scripts/publish/workspace.sh" <<'STUB'
 set -euo pipefail
 [[ "$1" == publish || "$1" == check ]] || exit 1
 printf '%s\0' "$@" > "$HOST_MAKE_EXTERNAL.publication-args"
+if [[ "${HOST_MAKE_PUBLICATION_LINT:-0}" == 1 ]]; then
+    make --no-print-directory clippy-workspace
+    cargo "$1"
+    exit "${HOST_MAKE_PUBLICATION_STATUS:-0}"
+fi
 exec cargo "$1"
 STUB
 # Only command-line PACKAGE requests a batch; values cross the shell literally.
@@ -336,13 +341,14 @@ done
 cat > "$fixture/local/scripts/ci/check-no-symlinks.pl" <<'STUB'
 exec 'cargo', 'fixture-no-symlinks';
 STUB
+for ci_target in ci ci-publication; do
 for lint_status in 23 0; do
     : > "$HOST_MAKE_EVENTS"
     status=0
     PATH="$fixture/local:$PATH" RUNNER_TEMP="$fixture" \
-        HOST_MAKE_CLIPPY_STATUS="$lint_status" HOST_MAKE_FAIL=sort \
-        make "${jobserver_options[@]}" "MAKE=$(command -v make)" ci \
-        > "$fixture/ci-lint-$lint_status.log" 2>&1 || status=$?
+        HOST_MAKE_CLIPPY_STATUS="$lint_status" HOST_MAKE_FAIL=sort HOST_MAKE_PUBLICATION_LINT=1 \
+        make "${jobserver_options[@]}" "MAKE=$(command -v make)" "$ci_target" \
+        > "$fixture/$ci_target-lint-$lint_status.log" 2>&1 || status=$?
     [[ "$status" == 2 ]] || exit 1
     grep -Fx 'clippy --workspace --all-targets --all-features --locked --offline -- -D warnings' \
         "$HOST_MAKE_EVENTS" > "$fixture/clippy-events"
@@ -352,8 +358,19 @@ for lint_status in 23 0; do
         if grep -E '^(sort |fmt )' "$HOST_MAKE_EVENTS"; then exit 1; fi
     else
         [[ "$(tail -n 1 "$HOST_MAKE_EVENTS")" == 'sort --workspace --grouped --check' ]] || exit 1
+        if [[ "$ci_target" == ci-publication ]]; then
+            [[ "$(grep -Fxc check "$HOST_MAKE_EVENTS")" -eq 1 ]] || exit 1
+        fi
     fi
 done
+done
+: > "$HOST_MAKE_EVENTS"
+status=0
+PATH="$fixture/local:$PATH" RUNNER_TEMP="$fixture" HOST_MAKE_PUBLICATION_LINT=1 \
+    HOST_MAKE_PUBLICATION_STATUS=17 make "${jobserver_options[@]}" "MAKE=$(command -v make)" ci-publication \
+    > "$fixture/ci-publication-refusal.log" 2>&1 || status=$?
+[[ "$status" == 2 && "$(tail -n 1 "$HOST_MAKE_EVENTS")" == check ]] || exit 1
+if grep -E '^(sort |fmt )' "$HOST_MAKE_EVENTS"; then exit 1; fi
 # Every package retains the same floor, including optional YAML.
 for package in ic-host-text ic-host-tools; do
     : > "$HOST_MAKE_EVENTS"

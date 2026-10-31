@@ -29,6 +29,7 @@ help:
 	@echo 'Individual setup: install-host-tools, install-ic-tools, install-rust-tools'
 	@echo 'Source reports: cloc (this workspace); fleet reports run in Shared Tooling'
 	@echo 'Full release validation: ci (workspace Clippy first), msrv-qualification; focused MSRV: msrv PACKAGE=<crate>'
+	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
 	@echo 'Maintainer releases: release-patch, release-minor, release-major, release-resume VERSION=X.Y.Z'
 	@echo 'crates.io publication: publish-check (dry run), publish (upload); offline fixture: publish-command-check'
 	@echo 'Publication batches: publish-check/publish PACKAGE="crate ..."; default selects the complete public roster'
@@ -141,12 +142,23 @@ publish-check:
 	+bash scripts/publish/workspace.sh check $(if $(filter command line,$(origin PACKAGE)),--packages "$$IC_TOOLING_PUBLISH_SELECTION")
 publish-command-check:
 	+bash scripts/publish/test-workspace.sh
+.PHONY: ci-publication _ci-preflight _ci-checks
+# Native CI reuses publication's admission/lint gate. Standalone ci retains its
+# own lint gate; no skip flag or cached receipt can bypass either entrypoint.
 ci:
+	+$(MAKE) --no-print-directory _ci-preflight
+	+$(MAKE) --no-print-directory clippy-workspace
+	+$(MAKE) --no-print-directory _ci-checks
+ci-publication:
+	+$(MAKE) --no-print-directory _ci-preflight
+	+$(MAKE) --no-print-directory publish-check
+	+CARGO_NET_OFFLINE=true $(MAKE) --no-print-directory _ci-checks
+_ci-preflight:
 	+$(MAKE) --no-print-directory shared-tooling-check
 	+$(MAKE) --no-print-directory check-no-symlinks
 	+$(MAKE) --no-print-directory tools-check
 	+$(MAKE) --no-print-directory dependency-pins-check
-	+$(MAKE) --no-print-directory clippy-workspace
+_ci-checks:
 	+$(MAKE) --no-print-directory fmt-check
 	+$(MAKE) --no-print-directory formatting-hook-check
 	+$(MAKE) --no-print-directory check-doc-links

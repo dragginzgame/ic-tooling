@@ -89,14 +89,12 @@ jobs:
           cache: 'true'
           cache-save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           cache-extra-key: ${{ hashFiles('ci/release-editor.env') }}
-      - name: Run native CI
+      - name: Run native CI and publication qualification
         env:
           TMPDIR: ${{ runner.temp }}/portable-fixtures
         run: |
           mkdir -p "$TMPDIR"
-          CARGO_NET_OFFLINE=true make ci
-      - name: Verify publication archives with registry access
-        run: make publish-check
+          make ci-publication
       - name: Retain successful native qualification
         uses: ./.github/actions/retain-qualification
         with:

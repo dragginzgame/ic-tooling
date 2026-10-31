@@ -42,8 +42,8 @@ use ic_host_process::{
     sampling,
     signal::{SignalActionError, SignalActions},
     tool::{
-        AdmittedTool, CompletedExecution, ExecutionContext, ExecutionFailure, OutputLimit,
-        OutputLimits, ResolutionError, ToolError, VersionSpec, capture_command, resolve_executable,
+        AdmittedTool, CompletedExecution, ExecutionContext, OutputLimit, OutputLimits,
+        ResolutionError, ToolError, VersionSpec, capture_command, resolve_executable,
         run_group_command,
     },
 };
@@ -71,6 +71,8 @@ pub enum Error {
     InvalidArgument(String),
     #[error("invalid benchmark data: {0}")]
     InvalidData(&'static str),
+    #[error("invalid benchmark data: expected {0}")]
+    ServerVersion(String),
     #[error("{0}")]
     Io(#[from] io::Error),
     #[error("{0}")]
@@ -342,14 +344,7 @@ fn prepare(options: &Options) -> Result<Inputs, Error> {
     let output = capture_command(&mut workspace, WORKSPACE_DISCOVERY_LIMITS)
         .and_then(CompletedExecution::require_success)
         .and_then(CompletedExecution::require_complete)
-        .map_err(|error| {
-            let kind = match error.execution_error().map(|execution| &execution.failure) {
-                Some(ExecutionFailure::Io { source, .. }) => source.kind(),
-                Some(ExecutionFailure::ExitStatus) => io::ErrorKind::InvalidInput,
-                _ => io::ErrorKind::Other,
-            };
-            io::Error::new(kind, error)
-        })?;
+        .map_err(Error::Tool)?;
     let root = decode_workspace_root(&output.stdout)?;
     if !root
         .join("crates/ic-testkit-perf-probe/Cargo.toml")
@@ -362,7 +357,9 @@ fn prepare(options: &Options) -> Result<Inputs, Error> {
     let server = server_program(&options.server, &root)?;
     let server_version = text_command(Command::new(&server).arg("--version"))?;
     if !ic_testkit::pic::supports_pocket_ic_server(server_version.as_bytes()) {
-        return Err(Error::InvalidData("expected pocket-ic-server 16.x.y"));
+        return Err(Error::ServerVersion(
+            ic_testkit::pic::pocket_ic_server_requirement(),
+        ));
     }
     check_interrupted()?;
     let native = build_native_executable(
@@ -794,15 +791,16 @@ mod tests {
 
     #[cfg(unix)]
     fn assert_prepared_tool_context(root: &Path, missing: bool) {
-        let options = parse_arguments([
-            OsString::from("--server"),
-            root.join("server").into_os_string(),
-        ])
-        .unwrap();
+        let server = root.join("server");
+        let options =
+            parse_arguments([OsString::from("--server"), server.into_os_string()]).unwrap();
         if missing {
-            assert!(
-                matches!(prepare(&options), Err(Error::Io(error)) if error.kind() == io::ErrorKind::NotFound)
-            );
+            assert!(matches!(
+                prepare(&options), Err(Error::Tool(error)) if matches!(
+                    error.execution_error().map(|execution| &execution.failure),
+                    Some(ExecutionFailure::Io { source, .. }) if source.kind() == io::ErrorKind::NotFound
+                )
+            ));
         } else if std::env::var_os("IC_TESTKIT_BENCHMARK_TOOL_FAIL_BUILD").is_some() {
             let Err(Error::Build(error)) = prepare(&options) else {
                 panic!("failed producer must preserve its typed cause");

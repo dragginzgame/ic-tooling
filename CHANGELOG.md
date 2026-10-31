@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.73.0] - Unreleased
+
+### ➕ Added
+
+- Render explicitly selected release-group manifest literals with the managed
+  IC Build editor, preserving unrelated versions and requirements. Shared Tooling
+  retains group/graph admission and transactional installation
+  ([Shared #328](https://github.com/dragginzgame/shared-tooling/issues/328)).
+
+### ⚠️ Breaking
+
+- Adopt IC Platform 0.12.0. Consumers exchanging Platform-owned registry
+  principals with Tools must align their direct Platform dependency to 0.12
+  and rebuild together. [Upgrade details](docs/changelog/0.73.md#0730---unreleased).
+- Adopt IC Wire 0.11.0. Testkit callers supplying limits or matching typed codec
+  errors must align their direct Wire dependency to 0.11. This completes the
+  local adoption for [#274 — Align Testkit typed Wire calls with the Platform 0.12-compatible Wire release](https://github.com/dragginzgame/ic-tooling/issues/274);
+  coordinated Tooling publication remains pending.
+
+### 🧹 Cleanup
+
+- Run workspace lint once in combined native CI/publication qualification while
+  preserving full admission for standalone commands. Keep Wire test-only in the
+  private development driver and carry admitted cache targets through Build.
+  [Details](docs/changelog/0.73.md#0730---unreleased).
+
+### 🩹 Fixed
+
+- Preserve typed Cargo-discovery failures and native Cargo paths in development
+  fixtures; use one PocketIC compatibility requirement in startup diagnostics.
+
 ## [0.72.1] - 2026-10-30
 
 ### ➕ Added
