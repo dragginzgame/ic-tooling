@@ -1,12 +1,3 @@
-# Release groups: ci/cargo-release-groups.json
-# foundation: ic-host-artifacts, ic-host-fs, ic-host-http, ic-host-process,
-#   ic-host-text, ic-build, ic-host-wasm-inspect
-#   version: crates/ic-build/Cargo.toml package.version
-#   changelog: releases/foundation/CHANGELOG.md
-# integration: ic-host-tools, ic-testkit, ic-testkit-native,
-#   ic-testkit-dev and ic-testkit-perf-probe (private qualification)
-#   version: crates/ic-testkit/Cargo.toml package.version
-#   changelog: releases/integration/CHANGELOG.md
 [workspace]
 members = [
     "apps/ic-host-wasm-inspect",
@@ -33,47 +24,57 @@ authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
 description = "Host-side artifact, filesystem, process and IC tooling"
 
 [workspace.dependencies]
-# Production dependencies
-# Shared production/test dependencies stay in this section.
+# Foundation
+# Changelog : releases/foundation/CHANGELOG.md
+ic-build = { path = "crates/ic-build", version = "0.73.1", default-features = false }
+ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.73.1", default-features = false }
+ic-host-fs = { path = "crates/ic-host-fs", version = "0.73.1", default-features = false }
+ic-host-http = { path = "crates/ic-host-http", version = "0.73.1", default-features = false }
+ic-host-process = { path = "crates/ic-host-process", version = "0.73.1", default-features = false }
+ic-host-text = { path = "crates/ic-host-text", version = "0.73.1", default-features = false }
+ic-host-wasm-inspect = { path = "apps/ic-host-wasm-inspect", version = "0.73.1" }
+
+# Integration (Dev and perf probe are private qualification crates)
+# Changelog : releases/integration/CHANGELOG.md
+ic-host-tools = { path = "crates/ic-host-tools", version = "0.75.0", default-features = false }
+ic-testkit = { path = "crates/ic-testkit", version = "0.75.0", default-features = false }
+ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.75.0" }
+ic-testkit-native = { path = "crates/ic-testkit-native", version = "0.75.0", default-features = false }
+ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.75.0" }
+
+# External production dependencies
 cap-fs-ext = "4.0.2"
 cap-std = "4.0.2"
 cargo_metadata = "0.23.1"
-clap = { version = "4.6.7", default-features = false, features = ["std", "help", "usage", "error-context"] }
 command-fds = "0.3.3"
 flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
-ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.73", default-features = false }
-ic-host-fs = { path = "crates/ic-host-fs", version = "0.73", default-features = false }
-ic-host-process = { path = "crates/ic-host-process", version = "0.73", default-features = false }
-ic-host-text = { path = "crates/ic-host-text", version = "0.73", default-features = false }
-ic-metrics = { version = "0.23.2", default-features = false }
+ic-metrics = { version = "0.24.0", default-features = false }
 ic-platform = { version = "0.15.2", default-features = false }
-ic-wire = "0.13.0"
-leb128 = "0.2.5"
 libc = "0.2.190"
 prost = "0.14.3"
-reqwest = { version = "0.13.5", default-features = false }
 rustix = { version = "1.1.4", default-features = false, features = ["std", "fs"] }
-serde = { version = "1.0.228", default-features = false }
 serde_cbor = "0.11.2"
-serde_json = "1.0.150"
 serde_yaml = "0.9.34"
 sha2 = "0.10.9"
 tempfile = "3.27.0"
 thiserror = "2.0.18"
-tokio = { version = "1.52.3", default-features = false }
 toml = "1"
 toml_edit = "0.25.17"
 unicode-width = "0.2.3"
 url = "2.5.7"
 wasm-encoder = { version = "0.263", default-features = false }
-wasmparser = { version = "0.263", default-features = false, features = ["std", "features"] }
 # Wat's minor line selects the matching 0.x encoder family; upgrade these together.
 wat = { version = "~1.263.0", default-features = false }
 
-# Tests and tooling only
-ic-build = { path = "crates/ic-build", version = "0.73", default-features = false }
-ic-testkit = { path = "crates/ic-testkit", version = "0.75", default-features = false }
-ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe" }
+# External mixed production/test dependencies
+clap = { version = "4.6.7", default-features = false, features = ["std", "help", "usage", "error-context"] }
+ic-wire = "0.13.0"
+leb128 = "0.2.5"
+reqwest = { version = "0.13.5", default-features = false }
+serde = { version = "1.0.228", default-features = false }
+serde_json = "1.0.150"
+tokio = { version = "1.52.3", default-features = false }
+wasmparser = { version = "0.263", default-features = false, features = ["std", "features"] }
 
 [workspace.lints.rust]
 missing_docs = "warn"

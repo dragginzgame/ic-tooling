@@ -11,6 +11,13 @@ The driver's retained attempt holds selection diagnostics beside Build's
 `archives/` qualification directory; its Cargo `target/` is excluded from evidence
 uploads, while selection and archive diagnostics remain retained.
 
+Plain `cargo clean` removes this workspace's complete `target/`, including nested
+qualification caches and evidence. Builds/releases do not clean automatically.
+Release receipts and durable deployment logs under `.git/release-state/` survive
+that cleanup; separate `.tools` selections, the shared tool store and explicitly
+chosen fixture roots retain their own cleanup scope. Cargo's normal workspace
+target is unchanged, and operator target/profile/package selections remain valid.
+
 Native hosted CI uses `make ci-publication`: prerequisite admission, publication's
 source and workspace lint gate, then the publication dry run, followed by the
 remaining CI checks with `CARGO_NET_OFFLINE=true`. The full lint runs once; a
@@ -266,11 +273,12 @@ each admitted entrypoint before setup or other effects.
 `make check-no-symlinks` checks indexed and tracked/nonignored working paths in CI
 and the release gate. Publication checks complete regular source notices and the
 prepared archive's exact notice bytes before upload.
-The root catalog uses `Production dependencies`, and all six maintained library/
-CLI members are `Production packages`. Shared test/production dependencies stay
-in the production category. No current external catalog entry is test-only.
-Internal aliases exist only for dependencies inherited by actual members;
-workspace membership does not require a matching catalog dependency.
+The root catalog groups all twelve local members by release ownership, with full
+versions and their group changelog paths, including private and unused entries.
+External production-only and mixed production/test dependencies have separate
+blocks; no current external dependency is build-only or test-only. Catalog entries
+add no graph edges until members inherit them. Release admission checks every
+entry's version, actual member path and owning group's dependency roster.
 Clap is shared by production CLIs and maintained examples. FS gates its binary
 and normal Clap edge behind `cli`; generic Artifacts/FS/Process library graphs
 exclude it. Clap owns typed arguments, help, version and diagnostics; CLIs retain

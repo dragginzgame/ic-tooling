@@ -5,6 +5,13 @@ with the private development/probe packages. Its canonical version is Testkit's
 package version. Earlier releases share the
 [coordinated history through 0.73.0](../history.md#0730---2026-10-31).
 
+## [0.75.1] - Unreleased
+
+### ⬆️ Dependencies
+
+- Adopt Metrics 0.24.0 with defaults disabled. Benchmark arithmetic and public
+  errors remain unchanged; native metadata stays outside Testkit's graph.
+
 ## [0.75.0] - 2026-10-31
 
 ### ⚠️ Breaking

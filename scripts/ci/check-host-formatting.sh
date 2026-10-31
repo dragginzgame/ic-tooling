@@ -13,6 +13,7 @@ fixture="$(fixture_create "${TMPDIR:-/tmp}/host-formatting.XXXXXX")"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Host formatting input retained"' EXIT
 
+# Keep the labelled first entry fixed while perturbing entries within its group.
 perl "$root/scripts/ci/prepare-cargo-formatting-fixture.pl" \
     "$root/Cargo.toml" workspace.dependencies ic-host-artifacts ic-host-fs > "$fixture/unsorted.toml"
 bash "$root/scripts/ci/check-formatting-hooks.sh" "$root" \
