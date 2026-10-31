@@ -25,11 +25,6 @@ reply-fixtures = ["ic-host-artifacts/wasm-encoding"]
 held-reply-fixtures = ["reply-fixtures", "ic-host-artifacts/wasm-text"]
 wire = ["dep:ic-wire", "dep:serde"]
 
-[dependencies]
-ic-metrics.workspace = true
-ic-platform = { workspace = true, features = ["principal-external"] }
-thiserror = { workspace = true }
-
 [target.'cfg(all(unix, not(target_arch = "wasm32")))'.dependencies]
 libc = { workspace = true }
 
@@ -46,6 +41,11 @@ tokio = { workspace = true, features = ["time"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 ic-platform = { workspace = true, features = ["ic0"] }
+
+[dependencies]
+ic-metrics.workspace = true
+ic-platform = { workspace = true, features = ["principal-external"] }
+thiserror = { workspace = true }
 
 [target.'cfg(all(unix, not(target_arch = "wasm32")))'.dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }
