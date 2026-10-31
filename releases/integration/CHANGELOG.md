@@ -5,6 +5,14 @@ with the private development/probe packages. Its canonical version is Testkit's
 package version. Earlier releases share the
 [coordinated history through 0.73.0](../history.md#0730---2026-10-31).
 
+## [0.75.2] - Unreleased
+
+### 🧪 Testing
+
+- Separate private browser fixtures’ graceful-exit allowance from deliberate
+  forced-shutdown checks, including a delayed nonzero-exit regression.
+  ([#288](https://github.com/dragginzgame/ic-tooling/issues/288))
+
 ## [0.75.1] - 2026-10-31
 
 ### ⬆️ Dependencies

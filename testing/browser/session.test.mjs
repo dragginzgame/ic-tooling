@@ -12,7 +12,7 @@ async function fixture(body, run, overrides = {}) {
     return await withFixtureSession({command:process.execPath,
       args:['--input-type=module', '-e', `import {writeFileSync} from 'node:fs'; ${body}`],
       env:{...process.env, READY:readyPath}, readyPath, logPath,
-      startupMs:2000, stopMs:100, pollMs:10, ...overrides}, run);
+      startupMs:2000, stopMs:2000, pollMs:10, ...overrides}, run);
   } finally { await rm(root, { recursive:true, force:true }); }
 }
 const ready = "writeFileSync(process.env.READY, JSON.stringify({pid:process.pid}));";
@@ -23,7 +23,7 @@ test('ready session returns result and gracefully reaps child', async () => {
 });
 test('body failure survives forced shutdown of a SIGTERM-ignoring child', async () => {
   let pid;
-  await assert.rejects(fixture(`process.on('SIGTERM',()=>{}); ${ready} setInterval(()=>{},100);`, value=>{pid=value.pid; throw new Error('body failure');}), /body failure/);
+  await assert.rejects(fixture(`process.on('SIGTERM',()=>{}); ${ready} setInterval(()=>{},100);`, value=>{pid=value.pid; throw new Error('body failure');}, {stopMs:100}), /body failure/);
   assert.throws(()=>process.kill(pid, 0), {code:'ESRCH'});
 });
 test('startup exit, timeout and spawn errors refuse before callback', async () => {
@@ -71,6 +71,7 @@ test('nonzero fixture exit after readiness refuses successful and failed bodies'
   }
 });
 
+// Slow graceful exit must finish before the separate forced-shutdown guard.
 test('nonzero exit during requested graceful shutdown is retained', async () => {
-  await assert.rejects(fixture(`${ready} process.stdin.once('data',()=>process.exit(17));`, () => 42), /fixture exited unsuccessfully \(17\)/);
+  await assert.rejects(fixture(`${ready} process.stdin.once('data',()=>setTimeout(()=>process.exit(17),250));`, () => 42), /fixture exited unsuccessfully \(17\)/);
 });
