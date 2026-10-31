@@ -1,7 +1,7 @@
 # IC Tooling Agent Rules
 
 Read docs/status/current.md first, then [DRAGGINZGAME.md](DRAGGINZGAME.md).
-The baseline is Shared Tooling 0.27.19 revision 54fc49e12f439dbe18d232f622a6d78e61773353,
+The baseline is Shared Tooling 0.27.21 revision 143a9abb9ae81feae9400ff3844b03b1ddfdd75a,
 recorded with exact file digests in [.shared-tooling.snapshot](.shared-tooling.snapshot).
 
 ## Local rules
@@ -27,7 +27,8 @@ recorded with exact file digests in [.shared-tooling.snapshot](.shared-tooling.s
   using this repository's target directory before editing or compiling.
 - Follow [the shared validation policy](DRAGGINZGAME.md#validation-and-evidence)
   using the local commands in [the host guide](docs/hosts.md).
-  Release commands retain explicit release authorization; never clean consumer artifacts.
+  No implicit artifact cleanup. Explicit cleanup follows the Shared scope rules;
+  plain Cargo cleanup retains its whole-workspace target semantics.
 - Linux x86-64 and macOS 15 on Intel and Apple Silicon are required hosts.
   Report native macOS qualification separately from Linux evidence.
 - Follow shared changelog rules. GitHub issues are the sole follow-up tracker;

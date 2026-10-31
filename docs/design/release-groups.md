@@ -20,9 +20,10 @@ no version. Dependencies, edition 2024 and Rust 1.91 remain inherited. Group map
 in root Cargo comments name the canonical packages and release ledgers.
 
 Both groups began with their existing 0.73.0 identities. Foundation 0.73.1 and
-integration 0.74.0 are now published. The next integration notes select 0.75.0
-because Wire 0.13 changes Testkit's public limits/error identities; Foundation
-stays on 0.73.1. Pending notes do not prepare numeric versions.
+integration 0.75.0 are now published. Pending notes select Foundation 0.73.2 for
+release-admission changes and integration 0.75.1 for arithmetic-only Metrics
+adoption. Neither change breaks its packages' public API. Pending notes do not
+prepare numeric versions.
 Root `CHANGELOG.md` indexes both groups and
 [coordinated history through 0.73.0](../../releases/history.md). Existing Testkit
 package-specific history remains in the integration ledger with its original
@@ -37,7 +38,7 @@ Ten independently versioned packages would add decisions without helping this ca
 
 ## Existing release machinery
 
-The reviewed Shared 0.27.19 snapshot at `54fc49e12f439dbe18d232f622a6d78e61773353`
+The reviewed Shared 0.27.21 snapshot at `143a9abb9ae81feae9400ff3844b03b1ddfdd75a`
 supplies the [group contract](../releases.md#explicit-cargo-release-groups),
 graph admission, selected manifest/lock edits and transaction. The managed editor
 is published IC Build 0.73.0 with `cli`, selected through normal tool-store admission.
@@ -128,6 +129,11 @@ foundation break can require an integration upgrade and foundation-first
 publication. Cross-group requirements track their supplier's contract and need
 not numerically match the consumer. Updating a workspace requirement is not
 publication of a changed declaration under an already published consumer version.
+Every member has a root catalog entry with its full current version and local
+path, including private and unused entries. Contiguous group blocks name their
+ledgers; each alias belongs to that group's policy roster. Admission checks both
+groups and actual paths; preparation updates selected requirements transactionally,
+preserving existing operators. Unused catalog entries introduce no graph edges.
 
 Tools exposes Platform principals, Testkit exposes Wire limits/errors, and Native
 optionally exposes Platform memory traits. Their direct consumers must align

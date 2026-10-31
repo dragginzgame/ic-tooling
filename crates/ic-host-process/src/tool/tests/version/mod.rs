@@ -252,8 +252,13 @@ fn installed_file_and_spec_are_admitted_before_version_dispatch() {
 fn version_capture_keeps_output_and_deadline_limits() {
     let fixture = Fixture::new();
     let path = tool_path();
-    for argument in ["--flood-stdout", "--wait"] {
-        let Err(ToolError::Execution(error)) = AdmittedTool::admit_version(
+    // Overflow needs time to start on a loaded host; only the waiting case tests
+    // a short deadline.
+    for (argument, timeout) in [
+        ("--flood-stdout", LIMITS.timeout),
+        ("--wait", Some(Duration::from_millis(100))),
+    ] {
+        let error = match AdmittedTool::admit_version(
             &VersionSpec {
                 executable: &path,
                 executable_bytes: 1024 * 1024,
@@ -263,26 +268,34 @@ fn version_capture_keeps_output_and_deadline_limits() {
             &fixture.context(&[]),
             OutputLimits {
                 stdout: crate::tool::OutputLimit::Terminate(17),
-                timeout: Some(Duration::from_millis(100)),
+                timeout,
                 ..LIMITS
             },
-        ) else {
-            panic!("version capture must remain bounded");
+        ) {
+            Err(ToolError::Execution(error)) => error,
+            Err(error) => panic!("unexpected {argument} admission error: {error:?}"),
+            Ok(_) => panic!("{argument} version capture must remain bounded"),
         };
         if argument == "--flood-stdout" {
-            assert!(matches!(
-                error.failure,
-                ExecutionFailure::OutputLimit {
-                    stream: OutputStream::Stdout
-                }
-            ));
+            assert!(
+                matches!(
+                    error.failure,
+                    ExecutionFailure::OutputLimit {
+                        stream: OutputStream::Stdout
+                    }
+                ),
+                "{argument}: {error:?}"
+            );
             assert_eq!(error.evidence.stdout.len(), 17);
             assert!(error.evidence.stdout_truncated);
         } else {
-            assert!(matches!(error.failure, ExecutionFailure::TimedOut));
+            assert!(
+                matches!(error.failure, ExecutionFailure::TimedOut),
+                "{argument}: {error:?}"
+            );
         }
-        assert!(error.evidence.status.is_some());
-        assert!(error.cleanup.is_none());
+        assert!(error.evidence.status.is_some(), "{argument}: {error:?}");
+        assert!(error.cleanup.is_none(), "{argument}: {error:?}");
     }
 }
 

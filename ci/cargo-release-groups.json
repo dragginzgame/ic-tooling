@@ -10,7 +10,10 @@
         "ic-host-text", "ic-build", "ic-host-wasm-inspect"
       ],
       "changelog": "releases/foundation/CHANGELOG.md",
-      "dependencies": ["ic-host-artifacts", "ic-host-fs", "ic-host-process", "ic-host-text", "ic-build"]
+      "dependencies": [
+        "ic-build", "ic-host-artifacts", "ic-host-fs", "ic-host-http",
+        "ic-host-process", "ic-host-text", "ic-host-wasm-inspect"
+      ]
     },
     {
       "name": "integration",
@@ -21,7 +24,10 @@
         "ic-testkit-dev", "ic-testkit-perf-probe"
       ],
       "changelog": "releases/integration/CHANGELOG.md",
-      "dependencies": ["ic-testkit"]
+      "dependencies": [
+        "ic-host-tools", "ic-testkit", "ic-testkit-dev",
+        "ic-testkit-native", "ic-testkit-perf-probe"
+      ]
     }
   ]
 }

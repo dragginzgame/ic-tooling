@@ -1,113 +1,139 @@
 # Current handoff — 2026-10-31
 
-## Deployment checkpoint
+## Authorized deployment
 
-PR [#282](https://github.com/dragginzgame/ic-tooling/pull/282) merged supplier
-adoption at `b821a92c258dec23df5558be19109609514984f0`. The user authorized the
-integration 0.75.0 release and publication; Foundation stays at 0.73.1.
+The maintainer has requested deployment of this accepted batch: Foundation
+**0.73.2**, then integration **0.75.1**, through the standard Git release and
+separate registry-publication flows. PR #284 carries source delivery, including
+the Process fix. Required release gates remain intact; hosted native CI is async.
+Live deployment results and evidence coordinates are recorded at
+`.git/release-state/deployment-foundation-0.73.2-integration-0.75.1/delivery-result.json`.
+The sections below record admission and focused evidence; consult that result,
+actual manifests and remote/registry observations for delivery completion.
 
-The recorded `/tmp` evidence directories disappeared after integration, including
-the current deployment, supplier-refresh, cohort and migration directories. Their
-paths below are historical coordinates, not claims of current availability.
-This deployment removed no original build caches or Git refs. The attempted third
-cache backup was incomplete; the temporary copies are also no longer available.
+## Admission source and scope
 
-Fresh deployment logs use `.git/release-state/deployment-integration-0.75.0/`.
-Its `temp-root` records `/var/tmp/ic-tooling-release075.p0B3Z7` for new fixtures.
-The first release invocation stopped before validation because its `/tmp` log
-destination was missing; no package version or release ref changed in that attempt.
-The source-preparation observations below remain distinct from the fresh gate.
+HEAD/main remains released `c40c66b92120dbfb745219bf8f4e2a34bb3ce1f4`, tagged
+`integration-v0.75.0`. Its three public packages are published; the private Dev
+and probe members are 0.75.0 without publication. Foundation's seven packages
+remain published at 0.73.1. Their manifests and existing release identities stay.
 
-## Supplier-preparation record
+The current task fixes Process version-capture qualification in
+[#286](https://github.com/dragginzgame/ic-tooling/issues/286), preserving the pending
+Shared Tooling/Metrics adoption. Changes remain local and unstaged.
+No own numeric package versions, Git refs, release plans, tool pins or registry
+publications changed. There is one workspace/catalog/lock, unchanged crate
+ownership and features, edition 2024 and MSRV 1.91.
 
-Supplier preparation began at `1a78892fe04edd43e07cb3d1709b36088a1a7e49`.
-Foundation 0.73.1 and integration 0.74.0 were released and published through the
-standard commands in the preceding deployment. Their tags are
-`foundation-v0.73.1` at `3b095515ed2b2020d700b5bf0e90c0c4459f5454` and
-`integration-v0.74.0` at HEAD. Seven Foundation and three integration packages
-are public; the two private integration members were never uploaded.
+The current refresh's incoming dirty patch, index entries, source export and
+focused logs are retained at `/var/tmp/ic-tooling-shared-refresh.M3bsiQ/`.
+Earlier Shared/Metrics evidence remains at
+`/var/tmp/ic-tooling-shared020-metrics024.vmORyU/`; that earlier task started clean.
+Sibling checkouts were inspected only; none changed.
+The Process fix's incoming patch, Intel artifact and focused source/archive
+evidence are retained at `/var/tmp/ic-tooling-286.eTpfLb/`.
 
-The supplier-adoption task requested published Metrics, Platform and Wire.
-Admission had a dirty Cargo.lock already selecting Metrics 0.23.2,
-Platform/macros/guard 0.15.2 and Types 0.15.1. Those records are preserved.
-The scoped update adds Wire/Derive 0.13.0; every other lock record matches
-admission. At the end of preparation, changes were local and unstaged. No own
-package versions, refs, tags, release plans or publications changed in that phase.
+## Shared Tooling adoption
 
-The user has now authorized deployment of the complete pending integration batch
-as 0.75.0. The standard group release and publication commands own its preparation,
-qualification and delivery; unaffected Foundation stays at 0.73.1. The source
-preparation recorded here precedes those release effects. Deployment admission
-and subsequent results now use the Git-owned checkpoint directory above.
+The canonical exporter adopted the latest committed Shared revision
+`143a9abb9ae81feae9400ff3844b03b1ddfdd75a` from an isolated clean source. Upstream
+titles this commit **0.27.22**, while its `VERSION` and exported manifest report
+**0.27.21**. Record both without modifying managed payloads. Its impact report
+and independently verified 151-file snapshot are retained. This refresh updates
+the engineering core, code-hygiene/release/workspace rules and release-group
+admission helper/projection. Executable tool pins are unchanged.
 
-Shared Tooling remains 0.27.19 at
-`54fc49e12f439dbe18d232f622a6d78e61773353`. There is one workspace/catalog/lock,
-explicit package versions and two [release groups](../design/release-groups.md).
-Foundation remains 0.73.1; integration remains 0.74.0. Edition 2024, MSRV 1.91,
-public crate names, API ownership and supported features are preserved.
+All twelve workspace members now have root catalog entries with their full
+current versions and actual local paths, including private and unused entries.
+Contiguous release-group blocks name their ledgers, replacing the duplicate header
+map. External production-only and mixed production/test blocks reflect real
+member usage; there are no build-only or test-only external entries. Both policy
+alias rosters cover their entire groups. Bare requirements remain bare, and
+existing feature/default selections stay unchanged. Catalog-only declarations
+introduce no graph edges. Admission checks coverage, ownership and actual paths
+across both groups; the existing transaction still owns selected release edits.
 
-## Supplier selection and compatibility
+Plain Cargo cleanup retains its default whole-workspace target semantics.
+There is no target-directory redirection or new cleanup wrapper. Explicit cleanup
+may remove nested caches and evidence beneath target; retention forbids automatic
+cleanup rather than narrowing operator requests. Durable release evidence stays
+outside target under `.git/release-state/`. This task ran no cleanup.
 
-The catalog now requires Metrics 0.23.2, Platform 0.15.2 and Wire 0.13.0.
-Canonical Types resolves once at 0.15.1. Registry source provenance identifies:
+## Metrics and compatibility
 
-- Metrics: `06020376352355deb068f5d8978813ef5405cedd`.
-- Platform/macros/guard: `3587cd2633b5c94fd7ebf9dea3eefdb0433ea59d`.
-- Types: `668e44f70455b3118859f81ec1b7aa23de7db63a`.
-- Wire/Derive: `65d1b91600d64a1e4255774f6bfc8ad9752a63cb`.
+The catalog and lock select published **ic-metrics 0.24.0**, with default features
+still disabled. Its native Wire schema generation changes upstream; Testkit uses
+only exact arithmetic and maps failures to its own public benchmark error types.
+Benchmark values, public errors and production feature boundaries remain unchanged.
+The lockfile update changes only the Metrics version/checksum record. Platform
+0.15.2, Types 0.15.1, Wire/Derive 0.13.0 and every other selection are preserved.
 
-The [integration ledger](../../releases/integration/CHANGELOG.md) proposes 0.75.0:
-Testkit exposes Wire limits/errors, so direct typed callers must select the 0.13
-identity. Frame bytes, budgets, transport errors and retry policy stay unchanged.
-Metrics and Platform patches preserve their existing runtime contracts.
-
-Wire's optional identity schemas now select the same Types generation as the
-Platform facade. The isolated consumer explicitly enables `platform-types` and
-verifies Principal/Account metadata alongside core frames. Production profiles
-keep their original features: arithmetic-only Metrics, no automatic schema or
-Endpoint activation, and the existing Candid-free Testkit Wasm boundary.
+Pending compatible notes are Foundation **0.73.2** for the maintained release and
+dependency-admission changes, and integration **0.75.1** for arithmetic-only Metrics
+adoption. The upstream Metrics minor does not break Testkit's own public boundary.
+These are changelog proposals only; actual member versions stay 0.73.1/0.75.0.
+See the [Foundation](../../releases/foundation/CHANGELOG.md) and
+[integration](../../releases/integration/CHANGELOG.md) ledgers.
 
 ## Focused qualification
 
-These observations originally used `/tmp/ic-tooling-supplier-refresh.nSPNBd/`;
-its raw temporary evidence is now absent, as recorded above.
-Actual full locked/offline root metadata, inherited declarations, Testkit and
-Tools feature graphs pass. Strict all-target/all-feature Clippy passes for the
-five affected packages: Tools, Testkit, Native, Dev and the private probe.
+Actual full locked/offline metadata, snapshot integrity, inherited declarations
+and native/Wasm Testkit graph policies pass. Metrics remains feature-free in the
+native all-feature and Wasm graphs. Strict all-target/all-feature Clippy passes
+for Testkit, Native, Dev and the runtime probe. Rust 1.91 passes all 23 benchmark
+tests; Testkit/Native Wasm profiles and the probe compile on the same compiler.
 
-Rust 1.91 passes 23 benchmark tests, nine Wire unit tests, three registry tests,
-four Native memory tests and two live PocketIC call tests. Testkit/Native Wasm
-profiles and the runtime probe compile on 1.91. Live tests use the existing
-PocketIC 16.1.0 installation with localhost permission; no server tool changed.
+The Metrics/compiler/graph results above are from the earlier adoption evidence;
+this catalog refresh changes no production source or selected dependencies.
+Fresh full locked/offline metadata confirms identical resolved package identities,
+edges, feature selections and member versions; the lockfile remains byte-identical
+to this refresh's admission copy. Actual read-only release queries still return
+0.73.1 and 0.75.0. The earlier disposable consumer proves Cargo accepts an
+abbreviated compatible requirement while normal admission rejects it.
 
-`/tmp/integration-cohort.EoP3tI/` originally held a disposable 0.75.0 candidate
-against published Foundation 0.73.1. Both source and normalized-archive consumers
-pass two real tests each on Rust 1.91, including canonical facade/registry types,
-Wire limits, Principal/Account schemas and frame round trips, and Native memory.
-The fixture changes neither actual versions nor the registry.
+Fresh real consumer release-adapter fixtures pass for both groups, including all
+selected catalog requirements, unselected-file preservation, rollback and committed
+receipt checks. They use disposable Git and the existing published editor; setup
+and complete CI/MSRV gates are substitutes. Additional real admission probes
+reject a missing member, an incomplete alias roster and an unused integration
+alias pointing at the wrong crate when Foundation is selected.
 
-No full workspace/release gate or native macOS execution was run for this local
-supplier refresh. Earlier release evidence does not qualify the changed graph.
-GitHub [#276](https://github.com/dragginzgame/ic-tooling/issues/276) owns release-group
-native acceptance; GitHub remains the sole follow-up tracker.
+Fresh snapshot, dependency admission and actual formatting/hooks pass, including
+dirty-file preservation and dependency sorting perturbation. Completing the
+catalog inserted HTTP between the old fixture pair. The probe now swaps adjacent
+Artifacts/FS entries inside Foundation, leaving the label-bearing Build entry
+fixed. Both the initial refusal and corrected passing attempt are retained.
+Earlier Make routing evidence remains applicable; Make routing itself is unchanged.
 
-## Retained evidence and recovery
+The Process version-probe fixture now gives output overflow the existing five-second
+guard while retaining a separate 100 ms waiting deadline and strict error/capture/
+cleanup assertions. Failure diagnostics include the actual error. Rust 1.91 passes
+all ten version-admission tests in both source and the real normalized archive;
+strict Process Clippy and focused formatting pass. A disposable 250 ms delayed
+startup reproduces a `TimedOut` failure with the old short overflow deadline and
+passes with the fix. The original Intel artifact has no actual error variant;
+this controlled reproduction establishes the race, not that missing observation.
 
-The preceding deployment's complete Linux CI/MSRV logs and release receipts remain
-under `.git/release-state/` for Foundation 0.73.1 and integration 0.74.0. Temporary
-copies, publication summaries and registry observations previously recorded under
-`/tmp/ic-tooling-deploy019.6xOjTH/` are now absent. PRs #278–281 were normal merges.
-Prior handoff text remains in Git history; temporary handoff copies are absent.
+No full workspace/release gate, publication or native macOS execution ran for this
+adoption. Previous release qualification does not qualify these changed inputs.
+Released main `c40c66b9` now has complete passing Linux and native macOS 15
+Intel/Apple Silicon CI/runtime results; #276 is closed with that evidence.
+The Process fix remains local and needs delivery/native qualification under #286.
+GitHub remains the only follow-up tracker.
 
-Historical supplier, group and cohort evidence locations included
-`/tmp/ic-tooling-platform015.v8GsIj/`, `/tmp/ic-tooling-shared018.eFTK4d/`,
-`/tmp/ic-tooling-276-activation.Gjb80U/` and `/tmp/ic-tooling-268-274-276.m4ejqy/`.
-Preserve remaining failed package attempts, including `target/package-qualification-2233002-0/`
-and `target/package-qualification-1987543-0/`, the deployment's fixture failures,
-all successful qualification targets, migration/retirement archives and original
-archived refs wherever retained. This deployment performed no artifact cleanup
-or sibling checkout mutation; it cannot claim custody of removed temporary archives.
+## Retained release evidence
 
-Legacy ungrouped plans, locks, receipts, notes and partial-publication evidence
-retain their original identities. Never reinterpret them under the new groups;
-recover against their recorded source/adapter in isolation with explicit authority.
+The preceding 0.75 deployment's fresh Linux CI/MSRV gates, source/archive consumers,
+publication dry run/upload and registry/ref confirmations remain under
+`.git/release-state/deployment-integration-0.75.0/`, including `delivery-result.json`
+and the verified `cohort-evidence.tar.zst`. Canonical group receipts/logs remain
+directly under `.git/release-state/`. Its fixture root was
+`/var/tmp/ic-tooling-release075.p0B3Z7/`; no cache or Git ref was deleted by that run.
+
+Earlier `/tmp` supplier, cohort, deployment and migration directories disappeared
+during that deployment. Their old paths in Git history are historical coordinates,
+not proof of current availability. Preserve remaining working artifacts, package
+attempts, tool installations, archived refs and migration evidence wherever retained.
+Old grouped and ungrouped plans keep their recorded source/adapter/policy; never
+reinterpret them under the new admission rules. Recovery uses the recorded source
+in isolation and retains its own authority and destination checks.
