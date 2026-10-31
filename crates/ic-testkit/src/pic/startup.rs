@@ -2,7 +2,7 @@ use std::{
     fmt::Write as _,
     fs::{self, File, OpenOptions},
     future::Future as _,
-    io::{self, Read as _},
+    io,
     path::{Path, PathBuf},
     process::{Command, ExitStatus, Stdio},
     sync::mpsc::{self, RecvTimeoutError},
@@ -1122,28 +1122,28 @@ struct StartupFiles {
 impl StartupFiles {
     fn read_port(&self) -> Result<PortFileState, PocketIcStartupError> {
         let port_path = &self.port;
-        let mut contents = String::new();
-        match ic_host_fs::read::open_regular_file(port_path)
-            .map_err(|error| match error {
-                ic_host_artifacts::artifact::ArtifactError::Io(source) => source,
-                error => io::Error::new(io::ErrorKind::InvalidData, error),
-            })
-            .and_then(|file| {
-                file.take((SERVER_PORT_FILE_LIMIT + 1) as u64)
-                    .read_to_string(&mut contents)
-            }) {
-            Ok(_) => {}
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                return Ok(PortFileState::Pending);
-            }
-            Err(source) => {
-                return Err(PocketIcStartupError::new(PocketIcStartupFailure::Io {
-                    operation: "read PocketIC server port file",
-                    path: port_path.clone(),
-                    source,
-                }));
-            }
-        }
+        let contents =
+            match ic_host_fs::read::read_file_prefix(port_path, SERVER_PORT_FILE_LIMIT + 1)
+                .map_err(|error| match error {
+                    ic_host_artifacts::artifact::ArtifactError::Io(source) => source,
+                    error => io::Error::new(io::ErrorKind::InvalidData, error),
+                })
+                .and_then(|(bytes, _)| {
+                    String::from_utf8(bytes)
+                        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+                }) {
+                Ok(contents) => contents,
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    return Ok(PortFileState::Pending);
+                }
+                Err(source) => {
+                    return Err(PocketIcStartupError::new(PocketIcStartupFailure::Io {
+                        operation: "read PocketIC server port file",
+                        path: port_path.clone(),
+                        source,
+                    }));
+                }
+            };
         if contents.len() > SERVER_PORT_FILE_LIMIT {
             return Ok(PortFileState::Invalid(format!(
                 "{} (port file exceeds {SERVER_PORT_FILE_LIMIT} bytes)",

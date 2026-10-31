@@ -4,6 +4,18 @@ This group covers Artifacts, FS, HTTP, Process, Text, Build and the Wasm inspect
 Build owns the group version. Earlier releases retain their coordinated scope in
 [shared history](../history.md#0730---2026-10-31).
 
+## [0.73.3] - Unreleased
+
+### ➕ Added
+
+- Build exposes package-command capture with bounded output and independent
+  retention of both logs, preserving execution and log-write failures together.
+
+### 🧹 Cleanup
+
+- Keep the acquired Wasm cache target and its shared-lock/maintenance evidence
+  together without changing cache validation or lock ordering.
+
 ## [0.73.2] - 2026-10-31
 
 ### 🔧 Changed

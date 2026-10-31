@@ -2681,7 +2681,9 @@ fn build_wasm_canisters_cached_internal(
     ensure_cache_directory_tag(&spec.target_dir)?;
 
     let resolved = resolve_initial_inputs(spec, batch_resolution.take(), progress)?;
-    let isolated_acquisition = WasmAcquisitionContext::isolated(prepared_invalidation);
+    let cache_entry = cache_entry_directory(spec, resolved.fingerprint);
+    let isolated_acquisition =
+        WasmAcquisitionContext::isolated(&cache_entry, prepared_invalidation);
     let outcome = if let Some(outcome) = try_reuse_wasm_artifacts(
         spec,
         &resolved,
@@ -2711,13 +2713,11 @@ fn build_wasm_canisters_cached_internal(
                 &mut spawn,
             )
         } else {
-            let cache_entry = cache_entry_directory(spec, resolved.fingerprint);
             build_wasm_cache_miss(
                 spec,
                 &resolved,
                 first_lock_wait,
-                isolated_acquisition,
-                AcquiredCargoTarget::Exact(&cache_entry),
+                &isolated_acquisition,
                 total_started,
                 progress,
                 &mut spawn,
@@ -2777,8 +2777,12 @@ fn build_wasm_with_shared_incremental(
             )
         })
         .transpose()?;
-    let shared_incremental =
-        WasmAcquisitionContext::shared(shared_lock_wait, maintenance, prepared_invalidation);
+    let shared_incremental = WasmAcquisitionContext::shared(
+        &shared_target,
+        shared_lock_wait,
+        maintenance,
+        prepared_invalidation,
+    );
     if let Some(outcome) = try_reuse_wasm_artifacts(
         spec,
         current,
@@ -2799,8 +2803,7 @@ fn build_wasm_with_shared_incremental(
         spec,
         current,
         lock_wait,
-        shared_incremental,
-        AcquiredCargoTarget::Shared(&shared_target),
+        &shared_incremental,
         total_started,
         progress,
         &mut spawn,
@@ -2902,30 +2905,47 @@ fn emit_finished_progress(outcome: &WasmBuildOutcome, progress: &mut ProgressRep
     });
 }
 
-#[derive(Debug, Default)]
-struct WasmAcquisitionContext {
-    lock_wait: Option<Duration>,
-    maintenance: Option<SharedIncrementalTargetMaintenanceOutcome>,
+#[derive(Debug)]
+struct WasmAcquisitionContext<'a> {
+    cargo_target: AcquiredCargoTarget<'a>,
     prepared_invalidation: Option<Arc<RwLock<bool>>>,
 }
 
-impl WasmAcquisitionContext {
-    fn isolated(prepared_invalidation: Option<Arc<RwLock<bool>>>) -> Self {
+impl<'a> WasmAcquisitionContext<'a> {
+    const fn isolated(target: &'a Path, prepared_invalidation: Option<Arc<RwLock<bool>>>) -> Self {
         Self {
+            cargo_target: AcquiredCargoTarget::Exact(target),
             prepared_invalidation,
-            ..Self::default()
         }
     }
 
     const fn shared(
+        target: &'a Path,
         lock_wait: Duration,
         maintenance: Option<SharedIncrementalTargetMaintenanceOutcome>,
         prepared_invalidation: Option<Arc<RwLock<bool>>>,
     ) -> Self {
         Self {
-            lock_wait: Some(lock_wait),
-            maintenance,
+            cargo_target: AcquiredCargoTarget::Shared {
+                target,
+                lock_wait,
+                maintenance,
+            },
             prepared_invalidation,
+        }
+    }
+
+    const fn lock_wait(&self) -> Option<Duration> {
+        match &self.cargo_target {
+            AcquiredCargoTarget::Exact(_) => None,
+            AcquiredCargoTarget::Shared { lock_wait, .. } => Some(*lock_wait),
+        }
+    }
+
+    fn maintenance(&self) -> Option<SharedIncrementalTargetMaintenanceOutcome> {
+        match &self.cargo_target {
+            AcquiredCargoTarget::Exact(_) => None,
+            AcquiredCargoTarget::Shared { maintenance, .. } => maintenance.clone(),
         }
     }
 
@@ -2948,7 +2968,7 @@ fn try_reuse_wasm_artifacts(
     spec: &WasmBuildSpec,
     resolved: &ResolvedCargoBuildInputs,
     lock_wait: Duration,
-    shared_incremental: &WasmAcquisitionContext,
+    shared_incremental: &WasmAcquisitionContext<'_>,
     total_started: Instant,
     progress: &mut ProgressReporter<'_>,
 ) -> Result<Option<WasmBuildOutcome>, WasmBuildError> {
@@ -2972,8 +2992,8 @@ fn try_reuse_wasm_artifacts(
         BuildRecordInput {
             resolved,
             lock_wait,
-            shared_incremental_lock_wait: shared_incremental.lock_wait,
-            shared_incremental_maintenance: shared_incremental.maintenance.clone(),
+            shared_incremental_lock_wait: shared_incremental.lock_wait(),
+            shared_incremental_maintenance: shared_incremental.maintenance(),
             input_resolution,
             cargo_build: None,
             active_entry: &cache_entry,
@@ -2986,7 +3006,7 @@ fn try_reuse_wasm_artifacts(
 fn validate_reused_inputs(
     spec: &WasmBuildSpec,
     resolved: &ResolvedCargoBuildInputs,
-    context: &WasmAcquisitionContext,
+    context: &WasmAcquisitionContext<'_>,
     progress: &mut ProgressReporter<'_>,
 ) -> Result<WasmInputResolutionTimings, WasmBuildError> {
     let mut timings = resolved.timings;
@@ -3016,22 +3036,21 @@ fn verify_resolved_inputs(
 
 // Only the shared acquisition path supplies a shared target, after taking its
 // coordination lock. Publication need not reinterpret the original specification.
-#[derive(Clone, Copy)]
+#[derive(Debug)]
 enum AcquiredCargoTarget<'a> {
     Exact(&'a Path),
-    Shared(&'a Path),
+    Shared {
+        target: &'a Path,
+        lock_wait: Duration,
+        maintenance: Option<SharedIncrementalTargetMaintenanceOutcome>,
+    },
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "keep the caller's spawner separate from recipe, acquisition and progress state"
-)]
 fn build_wasm_cache_miss(
     spec: &WasmBuildSpec,
     resolved: &ResolvedCargoBuildInputs,
     lock_wait: Duration,
-    shared_incremental: WasmAcquisitionContext,
-    cargo_target: AcquiredCargoTarget<'_>,
+    shared_incremental: &WasmAcquisitionContext<'_>,
     total_started: Instant,
     progress: &mut ProgressReporter<'_>,
     mut spawn: &mut dyn FnMut(&mut Command) -> io::Result<OwnedChild>,
@@ -3049,11 +3068,11 @@ fn build_wasm_cache_miss(
         Ok::<_, WasmBuildError>(OwnedDirectory::new(cache_entry.clone()))
     })?;
     let build_result = (|| {
-        let cargo_target_dir = match cargo_target {
+        let cargo_target_dir = match &shared_incremental.cargo_target {
             AcquiredCargoTarget::Exact(path) => path,
-            AcquiredCargoTarget::Shared(path) => {
-                record_cache_entry_use(path)?;
-                path
+            AcquiredCargoTarget::Shared { target, .. } => {
+                record_cache_entry_use(target)?;
+                target
             }
         };
         let build_started = Instant::now();
@@ -3092,8 +3111,8 @@ fn build_wasm_cache_miss(
             BuildRecordInput {
                 resolved,
                 lock_wait,
-                shared_incremental_lock_wait: shared_incremental.lock_wait,
-                shared_incremental_maintenance: shared_incremental.maintenance,
+                shared_incremental_lock_wait: shared_incremental.lock_wait(),
+                shared_incremental_maintenance: shared_incremental.maintenance(),
                 input_resolution,
                 cargo_build: Some(cargo_build),
                 active_entry: &cache_entry,

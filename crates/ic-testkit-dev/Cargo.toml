@@ -22,6 +22,9 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 
+[target.'cfg(unix)'.dependencies]
+rustix = { workspace = true, features = ["process"] }
+
 [dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }
 ic-wire.workspace = true

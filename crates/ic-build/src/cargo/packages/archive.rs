@@ -434,18 +434,43 @@ fn execute(
 ) -> Result<Vec<u8>, Cause> {
     // Retain intent before a potentially long command; output remains bounded capture.
     fs::write(evidence.join("current-stage"), label)?;
+    Ok(capture_package_command(
+        command,
+        label,
+        &evidence.join(format!("{label}.json")),
+        &evidence.join(format!("{label}.stderr")),
+        limits,
+    )
+    .map_err(|error| error as Cause)?
+    .stdout)
+}
+
+/// Capture a successful, complete package command and retain both output streams.
+///
+/// Callers select the stage, existing output directories and capture bounds.
+/// Both log writes are attempted even when execution or the first write fails.
+/// This does not create directories or update a qualification stage marker.
+///
+/// # Errors
+/// Returns the original execution failure together with any independent log-write
+/// failures, or a retention-only failure when a successful command cannot be logged.
+pub fn capture_package_command(
+    command: &mut Command,
+    stage: &str,
+    stdout_path: &Path,
+    stderr_path: &Path,
+    limits: OutputLimits,
+) -> Result<CompletedExecution, Box<PackageCommandError>> {
     let result = capture_command(command, limits)
         .and_then(CompletedExecution::require_success)
         .and_then(CompletedExecution::require_complete);
-    let stdout_path = evidence.join(format!("{label}.json"));
-    let stderr_path = evidence.join(format!("{label}.stderr"));
-    let retention = retain_command_output(&result, &stdout_path, &stderr_path);
+    let retention = retain_command_output(&result, stdout_path, stderr_path);
     match result {
-        Ok(output) if retention.is_empty() => Ok(output.stdout),
+        Ok(output) if retention.is_empty() => Ok(output),
         other => Err(Box::new(PackageCommandError {
-            stage: label.to_owned(),
-            stdout_path,
-            stderr_path,
+            stage: stage.to_owned(),
+            stdout_path: stdout_path.to_owned(),
+            stderr_path: stderr_path.to_owned(),
             execution: other.err(),
             retention,
         })),

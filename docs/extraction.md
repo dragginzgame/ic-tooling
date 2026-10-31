@@ -9,8 +9,9 @@ retained artifact caches. `ic-testkit` and `ic-testkit-native` own simulator
 integration and native test measurement. `ic-testkit-dev` and
 `ic-testkit-perf-probe` are private qualification packages. Build and Testkit
 depend on Host; Host does not depend on either. The private Testkit driver
-may also depend on Build. One workspace and release identity do not merge
-these capability boundaries or enable optional features for consumers.
+may also depend on Build. One workspace contains independently versioned
+Foundation and integration [release groups](design/release-groups.md). These
+groups preserve the capability boundaries and optional consumer features.
 
 The maintainer approved `ic-host-http` under
 [#117](https://github.com/dragginzgame/ic-tooling/issues/117). It accepts an
@@ -25,7 +26,7 @@ failure-evidence contracts; consumer adoption is separate from this implementati
 
 The maintainer's 2026-10-18 direction is one controlled dependency boundary for
 Candid and the CDK family, with IC Wire owning controlled application protocols.
-Host now consumes published `ic-platform` 0.5.0 for bounded Candid decoding,
+Host consumes the workspace-selected published `ic-platform` for bounded Candid decoding,
 native parsing and optional certification types. Platform's `docs/migration.md`
 owns the fleet adoption contract. Host retains service-to-Wasm projections,
 strict certificate CBOR admission and the released aggregate-byte adapter.

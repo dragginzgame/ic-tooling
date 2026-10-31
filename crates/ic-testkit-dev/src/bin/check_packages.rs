@@ -10,10 +10,11 @@ use std::{
 
 use ic_build::cargo::observation::{CargoMetadataSpec, decode_metadata};
 use ic_build::cargo::packages::{
-    PackageArchiveSpec, PackageCommandError, PackageQualificationLimits, qualify_package_archives,
+    PackageArchiveSpec, PackageCommandError, PackageQualificationLimits, capture_package_command,
+    qualify_package_archives,
 };
 use ic_build::cargo::selection::CargoFeatureSelection;
-use ic_host_process::tool::{CompletedExecution, OutputLimit, OutputLimits, capture_command};
+use ic_host_process::tool::{OutputLimit, OutputLimits};
 
 fn main() -> ExitCode {
     match run() {
@@ -132,33 +133,14 @@ fn workspace_versions(
     .command(Command::new(
         std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()),
     ))?;
-    let observation = capture_command(&mut command, limits)
-        .and_then(CompletedExecution::require_success)
-        .and_then(CompletedExecution::require_complete);
-    let stdout_path = evidence.join("selection.json");
-    let stderr_path = evidence.join("selection.stderr");
-    let output = observation.map_err(|error| {
-        let mut retention = Vec::new();
-        if let Some(captured) = error.evidence() {
-            for (path, bytes) in [
-                (&stdout_path, &captured.stdout),
-                (&stderr_path, &captured.stderr),
-            ] {
-                if let Err(error) = std::fs::write(path, bytes) {
-                    retention.push(error);
-                }
-            }
-        }
-        PackageCommandError {
-            stage: "workspace-selection".to_owned(),
-            stdout_path: stdout_path.clone(),
-            stderr_path: stderr_path.clone(),
-            execution: Some(error),
-            retention,
-        }
-    })?;
-    std::fs::write(stdout_path, &output.stdout)?;
-    std::fs::write(stderr_path, &output.stderr)?;
+    let output = capture_package_command(
+        &mut command,
+        "workspace-selection",
+        &evidence.join("selection.json"),
+        &evidence.join("selection.stderr"),
+        limits,
+    )
+    .map_err(|error| error as Box<dyn Error>)?;
     let metadata = decode_metadata(&output.stdout)?;
     Ok(metadata
         .workspace_packages()
