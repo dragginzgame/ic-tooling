@@ -16,6 +16,7 @@ bash "$root/scripts/ci/archive-product-evidence.sh" "$repository" "$temporary" "
 [[ ! -e "$fixture/empty.tar.gz" ]] || exit 1
 mkdir -p "$temporary/wasm-qualification/optimizer" \
     "$repository/target/package-qualification-123-0/target/debug" \
+    "$repository/target/package-qualification-456-0/archives/target/debug" \
     "$repository/target/publish/admission/check.partial" \
     "$repository/target/debug"
 printf 'failed optimizer\n' > "$temporary/wasm-qualification/optimizer/qualification.log"
@@ -24,6 +25,9 @@ printf 'fetch failed\n' > "$temporary/wasm-qualification/dependencies-fetch.log"
 printf 'failed package\n' > "$repository/target/package-qualification-123-0/test-targets.stderr"
 printf 'retained hidden input\n' > "$repository/target/package-qualification-123-0/.input"
 printf 'cache\n' > "$repository/target/package-qualification-123-0/target/debug/cache"
+printf 'selection metadata\n' > "$repository/target/package-qualification-456-0/selection.json"
+printf 'failed archive\n' > "$repository/target/package-qualification-456-0/archives/test-targets.stderr"
+printf 'nested cache\n' > "$repository/target/package-qualification-456-0/archives/target/debug/cache"
 printf 'unrelated cache\n' > "$repository/target/debug/cache"
 printf 'partial admission\n' > "$repository/target/publish/admission/check.partial/metadata.log"
 bash "$root/scripts/ci/archive-product-evidence.sh" "$repository" "$temporary" "$fixture/evidence.tar.gz"
@@ -34,10 +38,13 @@ for path in wasm-qualification/optimizer/qualification.log \
     cmp "$temporary/$path" "$fixture/extracted/$path"
 done
 for path in target/package-qualification-123-0/test-targets.stderr \
+    target/package-qualification-456-0/selection.json \
+    target/package-qualification-456-0/archives/test-targets.stderr \
     target/package-qualification-123-0/.input target/publish/admission/check.partial/metadata.log; do
     cmp "$repository/$path" "$fixture/extracted/$path"
 done
 [[ ! -e "$fixture/extracted/target/package-qualification-123-0/target" &&
+   ! -e "$fixture/extracted/target/package-qualification-456-0/archives/target" &&
    ! -e "$fixture/extracted/target/debug" ]] || exit 1
 # Shared archive admission refuses redirected ancestors, retaining original inputs.
 mv "$repository/target" "$fixture/retained-target"

@@ -12,6 +12,8 @@ Build owns the group version. Earlier releases retain their coordinated scope in
   Shared runner, preserving full workspace qualification. Maintainers now select
   `RELEASE_GROUP=foundation` or `RELEASE_GROUP=integration`; publication and archive
   qualification use each package's actual version.
+  Selection diagnostics remain outside Build's initially empty qualification
+  directory; evidence uploads retain logs and exclude its isolated Cargo cache.
   [Release ownership and migration](../../docs/design/release-groups.md)
   ([#276 — Reduce unrelated Host and Build version churn](https://github.com/dragginzgame/ic-tooling/issues/276)).
 

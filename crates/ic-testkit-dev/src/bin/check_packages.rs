@@ -83,14 +83,18 @@ fn run() -> Result<(), Box<dyn Error>> {
         &versions,
         include_str!("../../../../ci/public-packages.txt"),
     )?;
+    // Build owns an initially empty evidence directory; selection diagnostics
+    // remain alongside it in the driver's retained attempt.
+    let archives = evidence.join("archives");
+    std::fs::create_dir(&archives)?;
     eprintln!(
         "Current archive stage: {}",
-        evidence.join("current-stage").display()
+        archives.join("current-stage").display()
     );
     qualify_package_archives(
         workspace,
         &target.join("package"),
-        &evidence,
+        &archives,
         &packages,
         &CargoFeatureSelection {
             all_features: true,

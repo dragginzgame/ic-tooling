@@ -7,6 +7,9 @@ qualification using the prepared server; `make testkit-wasm-check` and
 `make testkit-msrv` qualify deployed profiles. `make testkit-package-check`
 qualifies all ten public archives through Build. Private packages remain
 excluded from publication. Native macOS results must come from native runners.
+The driver's retained attempt holds selection diagnostics beside Build's
+`archives/` qualification directory; its Cargo `target/` is excluded from evidence
+uploads, while selection and archive diagnostics remain retained.
 
 Native hosted CI uses `make ci-publication`: prerequisite admission, publication's
 source and workspace lint gate, then the publication dry run, followed by the
