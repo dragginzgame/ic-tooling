@@ -30,6 +30,15 @@ flat attempts. The failed attempt remains at
 `target/package-qualification-1987543-0/`; full release output is retained in the
 deployment evidence directory. No failed validation is counted as a pass.
 
+PR [#279](https://github.com/dragginzgame/ic-tooling/pull/279) merged that repair at
+`d1762992e45cfc0d8ef75238fefbea1e4de11637`. Actual ten-package archives then passed
+all-target and documentation tests at `target/package-qualification-2087506-0/`.
+The next complete release attempt stopped in the FS minimal suite: the newly
+written bundle-selection script returned Linux `ExecutableFileBusy`. Its fixture
+now invokes `/bin/sh` explicitly, preserving `$0`-relative runtime lookup and all
+publication/rejection assertions. Preserve `/tmp/ic-host-fs-test-2523853-64/` and
+`foundation-release.fixed.log`; no versions, tags or registry uploads were made.
+
 Admission, exporter impact/refresh and qualification are retained at
 `/tmp/ic-tooling-shared018.eFTK4d/`. The clean isolated source pins Shared 0.27.18
 at `ceaa1937c95c3d40c4453ca55d8655ebfcdf73f8` (151 payloads). This includes the

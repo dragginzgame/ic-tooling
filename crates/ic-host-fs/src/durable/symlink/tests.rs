@@ -3,19 +3,19 @@ use crate::test_support::fixture;
 
 #[test]
 fn admitted_bundle_runs_before_and_after_selection_and_rejection_preserves_it() {
-    use std::os::unix::fs::PermissionsExt as _;
     let fixture = fixture();
     let bundle = fixture.path().join("bundle");
     fs::create_dir_all(bundle.join("bin")).unwrap();
     fs::create_dir(bundle.join("lib")).unwrap();
     let target = bundle.join("bin/tool");
     fs::write(&target, b"#!/bin/sh\ncat \"${0%/*}/../lib/runtime\"\n").unwrap();
-    fs::set_permissions(&target, fs::Permissions::from_mode(0o755)).unwrap();
     fs::write(bundle.join("lib/runtime"), b"admitted").unwrap();
     let destination = fixture.path().join("selected");
     let stage = bundle.join("staged-link");
     let admit = |path: &Path| {
-        let output = std::process::Command::new(path).output()?;
+        // Forking parallel tests can briefly inherit a writer to the new script.
+        // Execute the prepared interpreter while preserving the script's $0.
+        let output = std::process::Command::new("/bin/sh").arg(path).output()?;
         assert!(output.status.success());
         assert_eq!(output.stdout, b"admitted");
         Ok::<_, io::Error>(())
