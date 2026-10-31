@@ -343,6 +343,30 @@ fn failed_command_retains_original_status_and_diagnostics() {
 }
 
 #[test]
+fn successful_command_still_retains_stderr_when_stdout_logging_fails() {
+    let root = unique_temp_directory("package-partial-retention");
+    let stdout_path = root.join("stdout-directory");
+    fs::create_dir(&stdout_path).unwrap();
+    let stderr_path = root.join("stderr");
+    let mut command = Command::new("/bin/sh");
+    command.args(["-c", "printf output; printf diagnostic >&2"]);
+    let error = capture_package_command(
+        &mut command,
+        "workspace-selection",
+        &stdout_path,
+        &stderr_path,
+        limits().process,
+    )
+    .unwrap_err();
+    assert!(error.execution.is_none());
+    assert_eq!(error.retention.len(), 1);
+    assert_eq!(error.stage, "workspace-selection");
+    assert_eq!(error.stdout_path, stdout_path);
+    assert_eq!(error.stderr_path, stderr_path);
+    assert_eq!(fs::read(stderr_path).unwrap(), b"diagnostic");
+}
+
+#[test]
 fn logging_failure_does_not_replace_nonzero_process_evidence() {
     let root = unique_temp_directory("package-retention-failure");
     let mut command = Command::new("/bin/sh");

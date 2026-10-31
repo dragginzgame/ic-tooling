@@ -63,25 +63,18 @@ impl Drop for Worker {
 fn request_shutdown(child: &mut Child) -> io::Result<()> {
     #[cfg(unix)]
     {
+        use rustix::process::{Pid, Signal, kill_process};
+
         if child.try_wait()?.is_some() {
             return Ok(());
         }
-        let pid = libc::pid_t::try_from(child.id()).map_err(io::Error::other)?;
-        #[expect(
-            unsafe_code,
-            reason = "signal only this still-owned, unreaped direct child"
-        )]
-        // SAFETY: after try_wait returns None this owned child has not been reaped,
+        let pid = Pid::from_raw(i32::try_from(child.id()).map_err(io::Error::other)?)
+            .ok_or_else(|| io::Error::other("worker PID must be positive"))?;
+        // After try_wait returns None this owned child has not been reaped,
         // so its PID cannot be reused before wait. Signal its handler, not its group.
-        let sent = unsafe { libc::kill(pid, libc::SIGTERM) } == 0;
-        if sent {
-            return Ok(());
-        }
-        let error = io::Error::last_os_error();
-        if error.raw_os_error() == Some(libc::ESRCH) {
-            Ok(())
-        } else {
-            Err(error)
+        match kill_process(pid, Signal::TERM) {
+            Ok(()) | Err(rustix::io::Errno::SRCH) => Ok(()),
+            Err(error) => Err(error.into()),
         }
     }
     #[cfg(not(unix))]

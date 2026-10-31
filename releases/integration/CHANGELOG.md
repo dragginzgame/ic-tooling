@@ -7,6 +7,22 @@ package version. Earlier releases share the
 
 ## [0.75.2] - Unreleased
 
+### ⬆️ Dependencies
+
+- Adopt Wire/Derive 0.13.2, preserving the current public Rust types, codec
+  behavior, resource budgets and production feature boundaries.
+
+### 🩹 Fixed
+
+- Package selection uses Build's command evidence handling, so a failed stdout
+  log write still attempts stderr retention and reports the selected stage and paths.
+
+### 🧹 Cleanup
+
+- Reuse Host's bounded port-file reader while preserving startup admission and
+  diagnostics. Private benchmark workers use safe direct-process signaling while
+  retaining cooperative shutdown and owned-child checks.
+
 ### 🧪 Testing
 
 - Separate private browser fixtures’ graceful-exit allowance from deliberate
