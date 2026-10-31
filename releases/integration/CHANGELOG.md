@@ -5,6 +5,14 @@ with the private development/probe packages. Its canonical version is Testkit's
 package version. Earlier releases share the
 [coordinated history through 0.73.0](../history.md#0730---2026-10-31).
 
+## [0.75.1]
+
+### 🔧 Changed
+
+- Show Testkit's full current version in the root dependency catalog and label
+  its integration group. Preserve package versions, features and lock selections;
+  Foundation requirements use the currently selected patch.
+
 ## [0.75.0] - 2026-10-31
 
 ### ⚠️ Breaking

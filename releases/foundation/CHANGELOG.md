@@ -4,6 +4,14 @@ This group covers Artifacts, FS, HTTP, Process, Text, Build and the Wasm inspect
 Build owns the group version. Earlier releases retain their coordinated scope in
 [shared history](../history.md#0730---2026-10-31).
 
+## [0.73.2]
+
+### 🔧 Changed
+
+- Show current Foundation versions directly in the root dependency catalog and
+  label their release group. Local requirements now name the already selected
+  patch version; package versions, features and lock selections are unchanged.
+
 ## [0.73.1] - 2026-10-31
 
 ### 🔧 Changed
