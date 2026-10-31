@@ -1020,7 +1020,10 @@ Aggregate and comparison rows, and aggregate errors, expose their identity as
 `BenchmarkScope::All`; a suite literally named `ALL` remains a distinct value.
 CSV and text output carry instructions, Wasm heap bytes and stable-memory bytes.
 Use `average(scale)` for checked, floor-rounded `u128`
-means derived from exact totals and run counts within Testkit. For example,
+means derived from exact totals and run counts. Testkit delegates the numeric
+projection to Metrics with default features disabled, preserving its typed
+average errors without adding native Wire metadata. Grouping and atomic counter
+updates remain Testkit-owned. For example,
 scale ten projects totals 3 and 4 across two runs to 35 (mean 3.5). Projection
 returns a typed error for zero runs or an unrepresentable scaled result.
 `compare_benchmark_aggregates(current, previous, scale)` returns a fallible report

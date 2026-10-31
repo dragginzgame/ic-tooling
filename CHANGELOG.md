@@ -4,8 +4,8 @@
 
 ### ⚠️ Breaking
 
-- Adopt IC Platform 0.12.0. Consumers exchanging Platform-owned registry
-  principals with Tools must align their direct Platform dependency to 0.12
+- Adopt IC Platform 0.13.0. Consumers exchanging Platform-owned registry
+  principals with Tools must align their direct Platform dependency to 0.13
   and rebuild together. [Upgrade details](docs/changelog/0.73.md#0730---unreleased).
 - Adopt IC Wire 0.11.0. Testkit callers supplying limits or matching typed codec
   errors must align their direct Wire dependency to 0.11. This completes the
@@ -14,6 +14,11 @@
 
 ### 🧹 Cleanup
 
+- Remove the Platform-to-Host bootstrap exception from the current publication
+  flow; retain explicit batches for older supplier selections and partial uploads.
+- Delegate Testkit's scaled benchmark averages to arithmetic-only Metrics,
+  preserving typed errors and keeping metadata dependencies disabled
+  ([#268 — Delegate Testkit scaled benchmark averages to ic-metrics](https://github.com/dragginzgame/ic-tooling/issues/268)).
 - Run workspace lint once in combined native CI/publication qualification while
   preserving full admission for standalone commands. Keep Wire test-only in the
   private development driver and carry admitted cache targets through Build.
@@ -21,6 +26,9 @@
 
 ### 🩹 Fixed
 
+- Align the Wasm encoder/parser and Wat dependency family to eliminate duplicate
+  encoder identities without weakening feature boundaries
+  ([#275 — Keep Wat and direct Wasm encoder selections in one graph identity](https://github.com/dragginzgame/ic-tooling/issues/275)).
 - Preserve typed Cargo-discovery failures and native Cargo paths in development
   fixtures; use one PocketIC compatibility requirement in startup diagnostics.
 

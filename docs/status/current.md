@@ -1,87 +1,86 @@
 # Current handoff — 2026-10-31
 
-## Source and local result
+## Source and accepted scope
 
-HEAD remains `85f759d7e964568dffecfdef1d6c8a7c6872be52` (Release 0.72.1).
-Own versions remain 0.72.1; pending notes select 0.73.0 for exposed Platform/Wire
-identities. Changes remain local and unstaged. Prior cleanup and incoming lock
-edits are preserved, with authorized updates to three Platform and two Wire
-records. The previous long handoff is preserved verbatim in
-[the 2026-10-30 archive](archive-2026-10-30.md), including prior source-bound
-qualification, migration/retirement backups and outstanding owner obligations.
+HEAD remains `e2f5e610831175c020d486b1a84a37bffb06a10c` (maintainer commit
+`0.73.0`). Root/package versions still read 0.72.1; pending notes select 0.73.0.
+The latest task adopts Platform and reviews more issues, preserving all pending
+#268/#275 fixes. Only three Platform lock records change from this step's dirty
+admission. Real index and HEAD are unchanged; no staging, commit, own version
+bump, release, tag or publication ran. Earlier startup evidence is preserved at
+admission Git and in the [2026-10-30 archive](archive-2026-10-30.md).
 
-The latest task adopts published Wire 0.11.0 plus its derive crate alongside
-Platform 0.12.0/macros/runtime guard. Wire core Rust sources match 0.10.0; Platform
-facade sources match 0.11.1. Platform's optional gzip supplier changed, but Tooling
-does not select it. Tools' public principals require direct Platform 0.12 alignment;
-Testkit's public Limits/codec causes require Wire 0.11. Wire's optional schemas and
-endpoints remain disabled. Codec bytes, budgets and transport policy are unchanged.
+Platform is now published 0.13.0 with matching macros/runtime guard. It removes
+the gzip facade and Host Artifacts dependency; selected implementation sources
+otherwise match 0.12. Tooling already uses codecs directly, so no caller moved.
+The publication guide now makes normal current publication distinct from the
+retained legacy Host-first bootstrap and partial-upload procedures.
 
-Native CI uses `ci-publication`: prerequisite admission, publication source
-admission and full workspace lint once, the dry run, then remaining checks offline.
-Standalone CI/publication retain independent full gates, without a lint bypass.
-Testkit Dev's direct Wire use is test-only; Platform remains production-owned for
-workload limits. Build carries admitted cache targets without re-reading cache
-mode. Cargo-discovery errors retain ToolError; fake Cargo preserves native paths.
-Startup/driver share the PocketIC range message. Candid parser errors use derive
-while retaining display and the intentionally terminated source chain.
+Tools' public registry principals require direct Platform 0.13 alignment. Wire
+remains on published 0.11.0 for the core codec. Its optional schemas/endpoints
+remain disabled and target Platform 0.12; they do not supply Platform 0.13 schema
+identities. No extra Platform generation or schema compatibility shim is added.
 
-## Latest evidence and limitations
+## Latest evidence and limits
 
-Wire evidence is `/tmp/ic-tooling-wire-adoption.2VwCQY/`, retaining dirty admission,
-index response, lock/index/HEAD, source provenance, server admission/hash and logs.
-Published Wire names source `568196014214a27b1a679b119ffde45284ed5eae`.
-Rust 1.91 passes nine Wire contract tests, one private protocol test and both real
-PocketIC codec/refusal/rejection integration tests against the prepared 16.1.0
-server. Strict all-target/all-feature Clippy passes for Testkit, Dev and the probe.
-Selected Testkit/probe Wasm compilation and native/Wasm/runtime graph policies
-pass. Manifest sorting, links and diff checks pass. Only the two Wire lock records
-change from this step's admission; real index, HEAD and own versions are preserved.
-No new native macOS execution or full workspace/release gate ran. Wasm compilation
-and Linux installed tests do not qualify native macOS or live IC production.
+Evidence is `/tmp/ic-tooling-platform013.KYEMoV/`, retaining dirty admission,
+lock/index/HEAD, registry responses, metadata/edge inventory, focused logs and
+prepared server admission/hash. Platform 0.13 names supplier source
+`bb0e2ae0bc851f48fcbcd071dbacf7236bbc2b1b`.
 
-Platform evidence is `/tmp/ic-tooling-platform-adoption.6oO1jt/`, retaining its
-admission, index responses, provenance and logs. Published Platform names source
-`7d9927f49320b06922fcd4dc745f8229f5a371fc`. Rust 1.91 passed 17 focused tests and
-selected Testkit/Native/probe Wasm compilation; affected-package strict Clippy,
-Host/Tools graphs and selected Testkit policies passed. That step changed only
-three Platform lock records beyond its admission.
+Rust 1.91 passes 19 tests: three registry, nine Wire, four native memory, one
+private protocol and two real PocketIC codec/refusal/rejection scenarios using
+the prepared 16.1.0 server. Selected Testkit/Native/probe Wasm compilation passes.
+Affected-package strict all-target/all-feature Clippy, complete Testkit and
+Host/Tools dependency policies, manifest sorting, pins, docs and diff checks pass.
+Only three Platform lock records differ from admission. Native macOS 15 Intel/
+Apple Silicon, full workspace/release gates and hosted dispatch were not run.
+Linux execution and Wasm compilation do not establish native macOS qualification.
 
-Prior cleanup evidence is `/tmp/ic-tooling-cleanup-0722.N0q9MJ/`, including original
-failures and corrected logs. It records MSRV parser/server/driver/cache tests,
-affected-package strict Clippy and Make ordering/refusal fixtures, plus script,
-workflow, format, docs and Rustdoc checks. Reuse is bound to unchanged inputs.
+## Preserved fixes and qualification
 
-The incoming lock's Wat 1.263 brings encoder 0.263 beside direct encoder 0.262,
-failing the held-reply single-identity policy. It was preserved and policy was
-not relaxed. The prior isolated copy passed with committed lock and changed Dev
-manifest; current selected graphs do not override that known full-graph failure.
-[#275 — Keep Wat and direct Wasm encoder selections in one graph identity](https://github.com/dragginzgame/ic-tooling/issues/275)
-owns reconciliation. Preserve old package failures, release plans, locks, receipts
-and retirement backups. No current-repository Git mutation, own version bump,
-tag, publication, tool download, sibling edit or artifact cleanup ran.
+#268 delegates scaled benchmark averages to published Metrics 0.22.0 with default
+features disabled. Error variants/messages, exact/floor arithmetic, zero-run
+precedence, atomic grouped updates and reporting retain the Testkit contract.
+Metrics metadata/recording remain disabled and its normal dependencies are Serde.
+Host/Build still exclude Metrics; default native and Wasm Testkit exclude Wire.
 
-## Reviewed upstream integration and issue ownership
+#275 aligns encoder/parser 0.263 and Wat 1.263, retaining incoming Wat and unrelated
+lock edits while removing duplicate 0.262 records. Wat stays within the 1.263
+patch line to prevent routine drift into another encoder family. The complete
+Testkit graph policy now passes without relaxing identity/feature requirements.
 
-[Shared Tooling PR #327](https://github.com/dragginzgame/shared-tooling/pull/327)
-merged as `81ee6b59a31f6789c85caa4f9343e57ae5824c3e`. Its isolated snapshot fixture
-repair includes documentation companions; focused publication/attempt/snapshot,
-shell and docs checks passed on Linux. Hosted/native evidence remains bound to
-its actual revision and run. The adopted snapshot remains Shared 0.27.11 at
-`62edfbd43087a718bf0283e9040676a49211976d`. Tooling retains the lower publication
-runner because consumer license/provenance/roster/source policy still needs an
-owner; the higher adapter would introduce another admission flow.
+Their evidence is `/tmp/ic-tooling-268-275.1UBPlt/`: 60 focused Rust 1.91 tests,
+including 23 benchmark, 31 artifact Wasm, one encoder consumer, three held-fixture
+and two real held-reply scenarios. It also records selected Wasm compilation,
+strict affected-package Clippy, graph policies and script/format/docs checks.
+That prior runtime evidence stays bound to its original inputs; latest Platform
+qualification above covers the newly affected profiles. Metrics supplier source
+is `402168f1b08dd09502cc0a5fd713d41344cf461f`.
 
-[Observability PR #102](https://github.com/dragginzgame/ic-observability/pull/102)
-merged as `691fb85ace5125e0f941def3acb95a21d3ec1a1d`. Metrics arithmetic adoption
-remains owned by
-[#268 — Delegate Testkit scaled benchmark averages to ic-metrics](https://github.com/dragginzgame/ic-tooling/issues/268),
-with its published-profile prerequisite; no Git/path workaround was added.
+## Issue and delivery boundaries
 
-The preceding PR review found no open Tooling PRs. PR #269 was closed as
-superseded by the released ordinary-module test-support owner. Issues #270/#271
-were closed against published 0.71/0.72 and recorded Auth installed evidence.
+[#268 — Delegate Testkit scaled benchmark averages to ic-metrics](https://github.com/dragginzgame/ic-tooling/issues/268)
+and [#275 — Keep Wat and direct Wasm encoder selections in one graph identity](https://github.com/dragginzgame/ic-tooling/issues/275)
+have local fixes; closure needs delivered source and applicable qualification.
 [#274 — Align Testkit typed Wire calls with the Platform 0.12-compatible Wire release](https://github.com/dragginzgame/ic-tooling/issues/274)
-now has local Platform/Wire adoption implemented and qualified. It remains open
-for coordinated Tooling publication; downstream availability is not established
-by these uncommitted changes. GitHub remains the follow-up tracker.
+has local adoption, but downstream Tooling publication remains pending. Public
+integration guidance now reflects Platform 0.13/core Wire 0.11 without claiming
+that Wire's optional schema integration targets 0.13.
+
+[#276 — Reduce unrelated Host and Build version churn from integration-only Tooling changes](https://github.com/dragginzgame/ic-tooling/issues/276)
+now records the actual internal requirements, public error/digest identities and
+release/publication constraints. Platform #118 was administratively closed without
+its stable-identity implementation; Wire #36 remains an upstream boundary decision.
+Keep the agreed coordinated workspace policy. No independent-version split or
+wide-range dependency workaround was made. Metadata evidence is in this task's
+`cohort-edges.json`; the issue owns the decision and acceptance, not this handoff.
+
+Shared remains 0.27.11 / `62edfbd43087a718bf0283e9040676a49211976d`; PR #327 merged
+as `81ee6b59a31f6789c85caa4f9343e57ae5824c3e`. Consumer provenance/licensing/source
+admission keeps the lower publication runner. Previous adoption evidence is under
+`/tmp/ic-tooling-wire-adoption.2VwCQY/` and `/tmp/ic-tooling-platform-adoption.6oO1jt/`;
+cleanup evidence is `/tmp/ic-tooling-cleanup-0722.N0q9MJ/`. Preserve failed cases,
+package artifacts, release plans/locks/receipts, supplier clones, migration/
+retirement archives and original Host refs. No tool download, sibling checkout
+edit or artifact cleanup ran. GitHub remains the sole follow-up tracker.

@@ -1563,8 +1563,8 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
- "wasm-encoder 0.262.0",
- "wasmparser 0.262.0",
+ "wasm-encoder",
+ "wasmparser",
  "wat",
 ]
 
@@ -1665,10 +1665,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-platform"
-version = "0.12.0"
+name = "ic-metrics"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2aa0f99f96ecb4eb64146f09353633c6abefc822a3d962447a79a71f8e9e37af"
+checksum = "ff47b21318777d1965036e7200eb21833dee9aa8c6309d30381010da230d29cd"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "ic-platform"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69b5ca61398ae30351fc68bf0f726daf2aa3a2f7cc9161da7d6e6e231593e275"
 dependencies = [
  "candid",
  "candid_parser",
@@ -1695,9 +1704,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-macros"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40135ac50d7e7356bafc9604d93469f464bbbfe9226a2610b1c33487d9a71cb8"
+checksum = "ef7f0886f261abf6b5485c3d87ec6258a09f3d412d19567da3ccc049d8cbdeec"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1706,9 +1715,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-runtime-guard"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31ee28e271ce87e1ff161419a254f12eda2ec454fc0602914fa9e4ffa2da1de3"
+checksum = "714038027dbc8bee4a3429a7d15299769ebfa7a24d674b4c28732d8ef3812e9c"
 
 [[package]]
 name = "ic-stable-structures"
@@ -1727,6 +1736,7 @@ dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
  "ic-host-process",
+ "ic-metrics",
  "ic-platform",
  "ic-wire",
  "libc",
@@ -4196,21 +4206,12 @@ dependencies = [
 
 [[package]]
 name = "wasm-encoder"
-version = "0.262.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4495a6f85dd94c411c749303efcbc5defade0b0cbdbc0541495241ab917a9b5a"
-dependencies = [
- "leb128fmt",
-]
-
-[[package]]
-name = "wasm-encoder"
 version = "0.263.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b883a26aea02eaabe2d2c3fba7eb039ef5cdcb5d5201ae5551e73d5e251a81f"
 dependencies = [
  "leb128fmt",
- "wasmparser 0.263.0",
+ "wasmparser",
 ]
 
 [[package]]
@@ -4224,16 +4225,6 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
-]
-
-[[package]]
-name = "wasmparser"
-version = "0.262.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "974d643b125b272607e2fff8012ea14a8328acd7621e4bafa7afb32500052b1b"
-dependencies = [
- "bitflags",
- "indexmap",
 ]
 
 [[package]]
@@ -4256,7 +4247,7 @@ dependencies = [
  "leb128fmt",
  "memchr",
  "unicode-width 0.2.3",
- "wasm-encoder 0.263.0",
+ "wasm-encoder",
 ]
 
 [[package]]

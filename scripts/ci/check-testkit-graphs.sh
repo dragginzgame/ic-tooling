@@ -10,8 +10,8 @@ cd "$root"
 consumer="$root/"
 host="$(rustc -vV | sed -n 's/^host: //p')"
 test -n "$host"
-policy=(--consumer "$consumer" --require ic-platform=1
-    --forbid ic-build --forbid ic-host-text --forbid ic-metrics
+policy=(--consumer "$consumer" --require ic-platform=1 --require ic-metrics=1
+    --forbid ic-build --forbid ic-host-text
     --forbid ic-agent --forbid candid_parser --forbid ic0 --forbid-pattern '^ic-cdk')
 runtime_policy=("${policy[@]}")
 policy+=(--forbid ic-platform-runtime-guard)
@@ -32,9 +32,12 @@ perl scripts/ci/check-cargo-graph.pl "${policy[@]}" \
 perl scripts/ci/check-cargo-graph.pl "${policy[@]}" \
     --package ic-testkit --target "$host" --features held-reply-fixtures \
     --require wat=1 --require wast=1 --require wasm-encoder=1
-perl scripts/ci/check-cargo-graph.pl "${policy[@]}" \
+testkit_native="$(perl scripts/ci/check-cargo-graph.pl "${policy[@]}" \
     --package ic-testkit --target "$host" --all-features \
-    --require clap=1 --require ic-wire=1 --require pocket-ic=1
+    --require clap=1 --require ic-wire=1 --require pocket-ic=1 --json --observations)"
+# Even profiles with an independent Wire caller keep Metrics arithmetic-only.
+jq -e 'any(.observations[]; .name == "ic-metrics" and (.features | length == 0))' \
+    <<< "$testkit_native" > /dev/null
 perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --package ic-testkit-dev --target "$host" --all-features \
     --require ic-build=1 --require ic-platform=1 --require pocket-ic=1 \
@@ -50,7 +53,8 @@ testkit_wasm="$(perl scripts/ci/check-cargo-graph.pl "${policy[@]}" --package ic
     --forbid wat --forbid wast --forbid wasm-encoder --forbid wasmparser --forbid ic-management-canister-types \
     --forbid ic-platform-macros --json --observations)"
 jq -e 'any(.observations[]; .name == "ic-platform" and
-    (.features | index("ic0") != null and index("executor") == null and index("runtime") == null))' \
+    (.features | index("ic0") != null and index("executor") == null and index("runtime") == null))
+    and any(.observations[]; .name == "ic-metrics" and (.features | length == 0))' \
     <<< "$testkit_wasm" > /dev/null
 probe_wasm="$(perl scripts/ci/check-cargo-graph.pl "${runtime_policy[@]}" --package ic-testkit-perf-probe \
     --target wasm32-unknown-unknown --forbid-pattern '^ic-host-' \

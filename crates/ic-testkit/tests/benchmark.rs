@@ -354,7 +354,9 @@ fn updated_aggregate_totals_and_runs_drive_averages_and_comparisons() {
 
 #[test]
 fn wide_means_preserve_integer_differences_and_explicit_projection_errors() {
+    assert_eq!(aggregate_benchmark_spans(&[]).unwrap(), []);
     for values in [
+        [0, 0],
         [1_u128 << 53, (1_u128 << 53) + 1],
         [u128::MAX - 1, u128::MAX],
     ] {

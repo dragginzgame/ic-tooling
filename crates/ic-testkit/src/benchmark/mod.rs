@@ -7,7 +7,7 @@
 //! producers can use [`format_marker`] on the host or
 //! `ic_testkit::performance` in canister code.
 //!
-//! Totals and run counts remain exact integers. Means use Testkit's exact
+//! Totals and run counts remain exact integers. Means use Metrics' exact
 //! scaled integer projection, rounded down. Callers choose the scale and handle
 //! projection errors; reports use scale one in the original counter units.
 //! Comparisons retain current and previous means instead of percentage estimates.
@@ -30,18 +30,12 @@ fn checked_scaled_average(
     runs: u64,
     scale: u64,
 ) -> Result<u128, BenchmarkAverageError> {
-    if runs == 0 {
-        return Err(BenchmarkAverageError::ZeroDenominator);
-    }
-    let runs = u128::from(runs);
-    let scale = u128::from(scale);
-    // Split before multiplying: only the final average must fit. The remainder
-    // and scale are at most u64::MAX, so their product always fits in u128.
-    let fraction = (total % runs) * scale / runs;
-    (total / runs)
-        .checked_mul(scale)
-        .and_then(|whole| whole.checked_add(fraction))
-        .ok_or(BenchmarkAverageError::Overflow)
+    ic_metrics::checked_scaled_ratio(total, runs, scale).map_err(|error| match error {
+        ic_metrics::MeasurementRatioError::ZeroDenominator => {
+            BenchmarkAverageError::ZeroDenominator
+        }
+        ic_metrics::MeasurementRatioError::Overflow => BenchmarkAverageError::Overflow,
+    })
 }
 
 /// A comparison refuses ambiguous row identities or unrepresentable means.

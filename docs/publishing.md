@@ -177,8 +177,13 @@ are refused before Cargo admission or dispatch; ordinary spaces remain supported
 
 ### Foundation-first bootstrap
 
-Host Artifacts is below Platform, while Tooling's Testkit is above Platform/Wire.
-When Platform needs an unpublished Host change, publish the foundation first:
+Platform 0.13 has no Host Artifacts dependency. The current workspace therefore
+needs no Platform-to-Tooling bootstrap exception: adopt published Platform/Wire
+suppliers, then qualify and publish the intended Tooling cohort normally.
+
+The procedure below remains available for older supplier selections that still
+depend on an unpublished Host change, including Platform's retired gzip facade.
+Use it only after confirming that dependency in the actual selected graph:
 
 1. Prepare the intended coordinated workspace version and commit the foundational
    changes while upper-layer dependencies still resolve to published releases.

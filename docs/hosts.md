@@ -162,7 +162,7 @@ Host Artifacts and Wasm parsing. The standalone Wasm inspector
 retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.91
 and native Linux/macOS matrix as the existing libraries.
 
-Platform 0.12 embeds the IC system-call and executor implementations. Testkit's
+Platform 0.13 embeds the IC system-call and executor implementations. Testkit's
 Wasm graph excludes external `ic0` and `ic-cdk-executor` packages; the private
 performance probe enables Platform's executor through `cdk`. Wasm compilation
 checks this selection separately from native execution and installed IC behavior.
@@ -170,10 +170,15 @@ Platform selects its internal singleton guard only for executor/runtime
 users. The graph policies exclude it from Host/Tools and Testkit, and require it
 for the private probe's Wasm runtime.
 Consumers exchanging Platform-owned registry principals with Tools must align
-Platform 0.12. Platform has no production Wire dependency. Consumers needing
-Platform type schemas select Wire 0.11's optional `platform-types` integration,
-which targets Platform 0.12.
+Platform 0.13. Platform has no production Wire or Host Artifacts dependency.
+Consumers needing Platform type schemas must select a compatible Wire integration;
+Wire 0.11's `platform-types` targets Platform 0.12 and does not supply 0.13 schemas.
 This workspace uses only Wire's core codec and does not enable that integration.
+
+Testkit's benchmark projection uses arithmetic-only Metrics with default features
+disabled. Graph checks require one Metrics identity and no selected Metrics
+features in native all-feature and Wasm profiles. Default native and all-feature
+Wasm Testkit still exclude Wire; Host/Build retain their Metrics exclusions.
 
 Native CI prepares pinned Rust and the complete common toolsets, then verifies
 the shared snapshot, declarations, formatter prerequisites, actual hook behavior,

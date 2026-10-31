@@ -26,6 +26,7 @@ held-reply-fixtures = ["reply-fixtures", "ic-host-artifacts/wasm-text"]
 wire = ["dep:ic-wire", "dep:serde"]
 
 [dependencies]
+ic-metrics.workspace = true
 ic-platform = { workspace = true, features = ["principal-external"] }
 thiserror = { workspace = true }
 
