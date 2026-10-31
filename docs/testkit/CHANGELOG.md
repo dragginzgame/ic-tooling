@@ -368,14 +368,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   `Connect { ... }`. TTL and output-file settings belong only to `Spawn`;
   construct variants directly instead of using configuration builders/accessors.
   Process ownership, startup deadlines and retained output remain unchanged.
-  [Migration details](../../crates/ic-testkit/CHANGELOG.md#0520).
+  [Migration details](../../releases/integration/CHANGELOG.md#0520).
 
 - Baseline pools restore their own captured snapshots using funding selected in
   reset requirements. Recipes may check preconditions but no longer implement
   snapshot restoration. Update classifiers for typed restore causes and keep real
   non-snapshot reset guarantees. Successful manual restoration returns unit;
   inspect captured IDs on the baseline and funding in recipe requirements.
-  [Migration details](../../crates/ic-testkit/CHANGELOG.md#0520).
+  [Migration details](../../releases/integration/CHANGELOG.md#0520).
 
 ### Changed
 
@@ -419,7 +419,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   errors directly must select
   `ic-host-process` 0.25. Package compiler requirements remain unchanged.
   Benchmark tooling awaits a Build release aligned with Host 0.25.
-  [Migration details](../../crates/ic-testkit/CHANGELOG.md#0510).
+  [Migration details](../../releases/integration/CHANGELOG.md#0510).
 
 - Pool readiness and validation hooks return `Result<(), E>` without mandatory
   string receipts. Real recipe checks, reset coverage and stage timings remain.
@@ -508,7 +508,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   policy explicitly, and setup retains descriptor-based locking and archive
   authentication through the current Host APIs.
 
-[Migration details](../../crates/ic-testkit/CHANGELOG.md#0500)
+[Migration details](../../releases/integration/CHANGELOG.md#0500)
 
 ### Changed
 
@@ -618,7 +618,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Keep baseline-pool invalidation and its caller-selected reason in one slot
   state, preserving unwind recovery and replacement of invalid baselines.
 
-[Migration details](../../crates/ic-testkit/CHANGELOG.md#0480)
+[Migration details](../../releases/integration/CHANGELOG.md#0480)
 
 ## [0.47.0] - 2026-10-15
 
@@ -672,7 +672,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   retaining selected tools, locked/offline policy, complete bounded output and
   original command/schema failures. Cargo builds retain unlimited duration.
 
-[Integration details](../../crates/ic-testkit/CHANGELOG.md#0470)
+[Integration details](../../releases/integration/CHANGELOG.md#0470)
 
 ## [0.46.0] - 2026-10-15
 
@@ -710,7 +710,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Include MIT license text in both published crates and inherit the existing
   workspace license in the private performance probe.
 
-[Integration details](../../crates/ic-testkit/CHANGELOG.md#0460)
+[Integration details](../../releases/integration/CHANGELOG.md#0460)
 
 ## [0.45.0] - 2026-10-15
 
@@ -760,7 +760,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   PocketIC admission and package-specific failure ordering. Surface the failing
   substituted recipe log when a product target unexpectedly fails.
 
-[Integration details](../../crates/ic-testkit/CHANGELOG.md#0450)
+[Integration details](../../releases/integration/CHANGELOG.md#0450)
 
 ## [0.44.0] - 2026-10-15
 
@@ -791,7 +791,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   retaining the directory descriptor until verified bundle publication.
   Failed attempts and installed bundles retain their existing layout and policy.
 
-[Integration details](../../crates/ic-testkit/CHANGELOG.md#0440)
+[Integration details](../../releases/integration/CHANGELOG.md#0440)
 
 ## [0.43.0] - 2026-10-14
 
@@ -813,7 +813,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Serialize benchmark metadata directly from its typed record, retaining JSON
   fields and the trailing newline; key presentation follows record order.
 
-[Integration details](../../crates/ic-testkit/CHANGELOG.md#0430)
+[Integration details](../../releases/integration/CHANGELOG.md#0430)
 
 ## [0.42.0] - 2026-10-14
 
@@ -841,7 +841,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   restored CI caches cannot prevent the real server check from starting
   ([#91](https://github.com/dragginzgame/ic-testkit/issues/91)).
 
-[Integration details](../../crates/ic-testkit/CHANGELOG.md#0420)
+[Integration details](../../releases/integration/CHANGELOG.md#0420)
 
 ## [0.41.0] - 2026-10-14
 
@@ -875,7 +875,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   its synthetic network cases remain independent of the caller
   ([#83](https://github.com/dragginzgame/ic-testkit/issues/83)).
 
-[Integration details](../../crates/ic-testkit/CHANGELOG.md#0410)
+[Integration details](../../releases/integration/CHANGELOG.md#0410)
 
 ## [0.40.0] - 2026-10-14
 
@@ -911,7 +911,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   previously skipped by the ordinary test command
   ([#68](https://github.com/dragginzgame/ic-testkit/issues/68)).
 
-[Integration details](../../crates/ic-testkit/CHANGELOG.md#0400)
+[Integration details](../../releases/integration/CHANGELOG.md#0400)
 
 ## [0.39.0] - 2026-10-14
 
@@ -940,7 +940,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   [#59](https://github.com/dragginzgame/ic-testkit/issues/59),
   [Shared #162](https://github.com/dragginzgame/shared-tooling/issues/162)).
 
-[Integration details](../../crates/ic-testkit/CHANGELOG.md#0390)
+[Integration details](../../releases/integration/CHANGELOG.md#0390)
 
 ## [0.38.0] - 2026-10-13
 
@@ -984,7 +984,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   ([Shared #151](https://github.com/dragginzgame/shared-tooling/issues/151),
   [Shared #152](https://github.com/dragginzgame/shared-tooling/issues/152)).
 
-[Integration details](../../crates/ic-testkit/CHANGELOG.md#0380)
+[Integration details](../../releases/integration/CHANGELOG.md#0380)
 
 ## [0.37.0] - 2026-10-13
 
@@ -1006,7 +1006,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   [Shared #150](https://github.com/dragginzgame/shared-tooling/issues/150)).
 - Use the selected IC Build 0.1.3 for development examples and tests.
 
-[Dependency and simplification details](../../crates/ic-testkit/CHANGELOG.md#0370)
+[Dependency and simplification details](../../releases/integration/CHANGELOG.md#0370)
 
 ## [0.36.0] - 2026-10-13
 
@@ -1043,7 +1043,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Make managed-server lifecycle qualification safe under parallel tests.
 
-[Dependency and construction details](../../crates/ic-testkit/CHANGELOG.md#0360)
+[Dependency and construction details](../../releases/integration/CHANGELOG.md#0360)
 
 ## [0.35.1] - 2026-10-13
 
@@ -1066,7 +1066,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   parsing PocketIC markers; generic cache behavior stays with IC Build
   ([IC Build #1](https://github.com/dragginzgame/ic-build/issues/1)).
 
-[Dependency and test details](../../crates/ic-testkit/CHANGELOG.md#0351)
+[Dependency and test details](../../releases/integration/CHANGELOG.md#0351)
 
 ## [0.35.0] - 2026-10-12
 
@@ -1092,7 +1092,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   [#59](https://github.com/dragginzgame/ic-testkit/issues/59),
   [Shared #63](https://github.com/dragginzgame/shared-tooling/issues/63)).
 
-[Migration and tooling details](../../crates/ic-testkit/CHANGELOG.md#0350)
+[Migration and tooling details](../../releases/integration/CHANGELOG.md#0350)
 
 ## [0.34.7] - 2026-10-12
 
@@ -1104,7 +1104,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   [Shared #138](https://github.com/dragginzgame/shared-tooling/issues/138),
   [Shared #133](https://github.com/dragginzgame/shared-tooling/issues/133)).
 
-[Tooling details](../../crates/ic-testkit/CHANGELOG.md#0347)
+[Tooling details](../../releases/integration/CHANGELOG.md#0347)
 
 ## [0.34.6] - 2026-10-12
 
@@ -1120,7 +1120,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Isolate cache-lock reacquisition checks from parallel subprocess spawning
   ([#66](https://github.com/dragginzgame/ic-testkit/issues/66)).
 
-[Tooling details](../../crates/ic-testkit/CHANGELOG.md#0346)
+[Tooling details](../../releases/integration/CHANGELOG.md#0346)
 
 ## [0.34.5] - 2026-10-12
 
@@ -1135,7 +1135,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   [Shared #133](https://github.com/dragginzgame/shared-tooling/issues/133)).
 - Update locked IC Host dependencies to 0.14.7.
 
-[Tooling details](../../crates/ic-testkit/CHANGELOG.md#0345)
+[Tooling details](../../releases/integration/CHANGELOG.md#0345)
 
 ## [0.34.4] - 2026-10-12
 
@@ -1160,7 +1160,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   readback, rejecting missing or changed observations
   ([#59](https://github.com/dragginzgame/ic-testkit/issues/59)).
 
-[Tooling and setup details](../../crates/ic-testkit/CHANGELOG.md#0344)
+[Tooling and setup details](../../releases/integration/CHANGELOG.md#0344)
 
 ## [0.34.3] - 2026-10-12
 
@@ -1178,7 +1178,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   a symlink, preserving the failure status and excluding link targets
   ([#59](https://github.com/dragginzgame/ic-testkit/issues/59)).
 
-[Dependency and evidence details](../../crates/ic-testkit/CHANGELOG.md#0343)
+[Dependency and evidence details](../../releases/integration/CHANGELOG.md#0343)
 
 ## [0.34.2] - 2026-10-12
 
@@ -1202,7 +1202,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Correct the host guide's formatter setup command and prepared tool path
   ([#57](https://github.com/dragginzgame/ic-testkit/issues/57)).
 
-[Setup details](../../crates/ic-testkit/CHANGELOG.md#0342)
+[Setup details](../../releases/integration/CHANGELOG.md#0342)
 
 ## [0.34.1] - 2026-10-12
 
@@ -1229,7 +1229,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   modes while excluding shared payloads
   ([#59](https://github.com/dragginzgame/ic-testkit/issues/59)).
 
-[Evidence qualification details](../../crates/ic-testkit/CHANGELOG.md#0341)
+[Evidence qualification details](../../releases/integration/CHANGELOG.md#0341)
 
 ## [0.34.0] - 2026-10-11
 
@@ -1247,7 +1247,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   validation from the current version. Conflicting state still refuses recovery
   ([Shared #126](https://github.com/dragginzgame/shared-tooling/issues/126)).
 
-[Migration and tooling details](../../crates/ic-testkit/CHANGELOG.md#0340)
+[Migration and tooling details](../../releases/integration/CHANGELOG.md#0340)
 
 ## [0.33.8] - 2026-10-11
 
@@ -1266,7 +1266,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   identities, and provide guarded maintainer recovery guidance
   ([Shared #126](https://github.com/dragginzgame/shared-tooling/issues/126)).
 
-[Setup details](../../crates/ic-testkit/CHANGELOG.md#0338)
+[Setup details](../../releases/integration/CHANGELOG.md#0338)
 
 ## [0.33.7] - 2026-10-11
 
@@ -1285,7 +1285,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   collection ([#59](https://github.com/dragginzgame/ic-testkit/issues/59),
   [Shared #121](https://github.com/dragginzgame/shared-tooling/issues/121)).
 
-[Retention details](../../crates/ic-testkit/CHANGELOG.md#0337)
+[Retention details](../../releases/integration/CHANGELOG.md#0337)
 
 ## [0.33.6] - 2026-10-11
 
@@ -1298,7 +1298,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   ([#58](https://github.com/dragginzgame/ic-testkit/issues/58),
   [Shared #120](https://github.com/dragginzgame/shared-tooling/issues/120)).
 
-[Setup details](../../crates/ic-testkit/CHANGELOG.md#0336)
+[Setup details](../../releases/integration/CHANGELOG.md#0336)
 
 ## [0.33.5] - 2026-10-11
 
@@ -1317,7 +1317,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   in CI failure archives, including when host and IC evidence is compacted
   ([#57](https://github.com/dragginzgame/ic-testkit/issues/57)).
 
-[Setup details](../../crates/ic-testkit/CHANGELOG.md#0335)
+[Setup details](../../releases/integration/CHANGELOG.md#0335)
 
 ## [0.33.4] - 2026-10-11
 
@@ -1549,7 +1549,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Adopt IC Host 0.10's consolidated durable-write API through the public Host
   re-exports. Update writer calls and publication-error handling using the
-  [migration guide](../../crates/ic-testkit/CHANGELOG.md#0280). Testkit write failures
+  [migration guide](../../releases/integration/CHANGELOG.md#0280). Testkit write failures
   preserve publication phase and cleanup evidence; retained cache formats and
   installations require no reset.
 
@@ -1800,7 +1800,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Invalid-port and builder startup errors now retain bounded output and secondary
   cleanup diagnostics. Update affected variant literals and patterns, including
   the now-structured `BuilderDisconnected`; see
-  [package migration notes](../../crates/ic-testkit/CHANGELOG.md#0230)
+  [package migration notes](../../releases/integration/CHANGELOG.md#0230)
   ([#30](https://github.com/dragginzgame/ic-testkit/issues/30)).
 
 ### Fixed
@@ -1859,7 +1859,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Adopt IC Host Tooling 0.5 through the public host-crate re-exports. Gzip
   encoding now takes numeric levels 0–9; update compression arguments, Wasm
   fact literals and exhaustive inspection-error matches. See
-  [package migration notes](../../crates/ic-testkit/CHANGELOG.md#0220).
+  [package migration notes](../../releases/integration/CHANGELOG.md#0220).
 
 - Observed Cargo builds now run in an owned process group. Observer unwinding
   stops the compiler group as well as Cargo; callers must not rely on those
@@ -1889,7 +1889,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Refresh the canonical release engine and engineering baseline to Shared Tooling
   0.1.21, including its PR-delivery helper. This repository retains direct atomic
   branch/tag delivery; adopting the shared PR flow requires separate consumer
-  adapters and qualification. See [package notes](../../crates/ic-testkit/CHANGELOG.md#0213)
+  adapters and qualification. See [package notes](../../releases/integration/CHANGELOG.md#0213)
   ([shared #42](https://github.com/dragginzgame/shared-tooling/issues/42)).
 
 ### Testing
@@ -1944,7 +1944,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Select compatible IC Host Tooling 0.4.2 dependencies, exposing its
   named-output, chunk-digest and installed-tool admission additions through the
   existing public host-crate re-exports. See
-  [package notes](../../crates/ic-testkit/CHANGELOG.md#0211).
+  [package notes](../../releases/integration/CHANGELOG.md#0211).
 
 ## [0.21.0] - 2026-10-07
 
@@ -1964,7 +1964,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   `with_isolated_builds()` when isolation is required, and keep retention limits
   explicit. Existing retained isolated targets are not deleted automatically
   ([#18](https://github.com/dragginzgame/ic-testkit/issues/18)).
-  See [migration details](../../crates/ic-testkit/CHANGELOG.md#0210).
+  See [migration details](../../releases/integration/CHANGELOG.md#0210).
 
 ### Added
 
@@ -2027,7 +2027,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   executable operations and Git provenance from `ic_testkit::ic_host_process`.
   `ic_testkit::ic_host_tools` now exposes Candid and response helpers only.
   `read_wasm` returns `ic_host_artifacts::artifact::ArtifactError`.
-  See the [migration guide](../../crates/ic-testkit/CHANGELOG.md#0200)
+  See the [migration guide](../../releases/integration/CHANGELOG.md#0200)
   ([#13](https://github.com/dragginzgame/ic-testkit/issues/13)).
 
 - Durable publication now synchronizes the final parent directory. An error
@@ -2058,7 +2058,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   Cargo inheritance and offline formatter checks, removing duplicate local checks
   ([#11](https://github.com/dragginzgame/ic-testkit/issues/11),
   [#12](https://github.com/dragginzgame/ic-testkit/issues/12)).
-  See [detailed notes](../../crates/ic-testkit/CHANGELOG.md#0200).
+  See [detailed notes](../../releases/integration/CHANGELOG.md#0200).
 
 ### Fixed
 
@@ -2068,7 +2068,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Cache retention releases its lock when the final record owner drops, even
   during concurrent process spawning. The macOS request-reader fixture tolerates
   a connection that is not yet ready to accept.
-  See [detailed notes](../../crates/ic-testkit/CHANGELOG.md#0200).
+  See [detailed notes](../../releases/integration/CHANGELOG.md#0200).
 - Host-tool recovery fixtures restore exact archive bytes and retain failure
   diagnostics, avoiding differences from repacking on native hosts
   ([Shared Tooling #17](https://github.com/dragginzgame/shared-tooling/issues/17)).
@@ -2089,7 +2089,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   offline and upload policy local. IC tool setup shares checksum generation and
   rejects receipt traversal and filename failures before activation
   ([Shared Tooling #10](https://github.com/dragginzgame/shared-tooling/issues/10)).
-  See [detailed notes](../../crates/ic-testkit/CHANGELOG.md#0192).
+  See [detailed notes](../../releases/integration/CHANGELOG.md#0192).
 - Release guards use the shared command-adoption checker and retain the
   consumer's metadata and sequencing checks. The shared runner's fixture suite
   is maintained upstream instead of copied and rerun here
@@ -2114,7 +2114,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   unavailable registry observations stop the command. Release admission verifies
   the existing annotated tag requirement and its exact commit, including failed
   Git inspections.
-  See [detailed notes](../../crates/ic-testkit/CHANGELOG.md#0191).
+  See [detailed notes](../../releases/integration/CHANGELOG.md#0191).
 - Release admission rejects failed version queries and reads of saved validation
   and readiness records before changing metadata, preserving records for retry
   ([#7](https://github.com/dragginzgame/ic-testkit/issues/7)).
@@ -2129,7 +2129,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   typed errors. The external-transform example now requires digest/version
   authority and uses shared verified execution. The shared dependency checker
   replaces `make actions-check`.
-  See the [migration guide](../../crates/ic-testkit/CHANGELOG.md#0190).
+  See the [migration guide](../../releases/integration/CHANGELOG.md#0190).
 
 ### Added
 
@@ -2148,7 +2148,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   their preservation assertions, and metadata fixtures exercise the actual
   Make callbacks, including rejection of incorrect selected commits
   ([#7](https://github.com/dragginzgame/ic-testkit/issues/7)). See the
-  [package tooling notes](../../crates/ic-testkit/CHANGELOG.md#0190).
+  [package tooling notes](../../releases/integration/CHANGELOG.md#0190).
 - Source-tree fingerprinting reuses bounded file buffers and avoids extra native
   filename copies on Unix, reducing allocations while preserving cache digests.
 
@@ -2163,7 +2163,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   ([#7](https://github.com/dragginzgame/ic-testkit/issues/7),
   [Shared Tooling #4](https://github.com/dragginzgame/shared-tooling/issues/4),
   [#5](https://github.com/dragginzgame/shared-tooling/issues/5)). See the
-  [package tooling notes](../../crates/ic-testkit/CHANGELOG.md#0183).
+  [package tooling notes](../../releases/integration/CHANGELOG.md#0183).
 - Adopt Shared Tooling's formatter-failure correction for the system Bash on
   macOS, preserving selected files and the index when formatting fails.
 
@@ -2176,7 +2176,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   digest. Rejection preserves metadata and evidence; validation retries retain
   the failed attempt's log
   ([#7](https://github.com/dragginzgame/ic-testkit/issues/7)). See the
-  [package tooling notes](../../crates/ic-testkit/CHANGELOG.md#0182).
+  [package tooling notes](../../releases/integration/CHANGELOG.md#0182).
 - Release metadata hashes use exact file bytes, so Git filters and line-ending
   conversion cannot conceal changes to live files or retained backups
   ([#7](https://github.com/dragginzgame/ic-testkit/issues/7)).
@@ -2205,7 +2205,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Release-check fixtures work with finalized or pending changelog notes, so
   checks remain usable after a release
   ([#7](https://github.com/dragginzgame/ic-testkit/issues/7)). See the
-  [package tooling notes](../../crates/ic-testkit/CHANGELOG.md#0181).
+  [package tooling notes](../../releases/integration/CHANGELOG.md#0181).
 - Portable CI explicitly prepares `rustfmt` and stops at the first shell
   failure. Hook setup rejects a missing `rustfmt` before activation. CI matrices
   collect all supported hosts' results when another host fails, preserving
@@ -2224,7 +2224,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   with `make release-resume VERSION=X.Y.Z`, retaining their exact version,
   destination, validation logs and prepared metadata. See
   [#7](https://github.com/dragginzgame/ic-testkit/issues/7) and the
-  [package migration notes](../../crates/ic-testkit/CHANGELOG.md#0180). Use
+  [package migration notes](../../releases/integration/CHANGELOG.md#0180). Use
   `make release-minor` for this batch.
 
 ### Changed

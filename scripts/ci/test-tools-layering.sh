@@ -94,8 +94,10 @@ done <<'CASES'
 ic-build dependencies ic-testkit 0.54.1 forbidden_pattern_matches default
 ic-build dependencies ic-testkit 0.54.1 forbidden_pattern_matches cli
 ic-build dependencies ic-wire 0.6.13 forbidden_pattern_matches default
+ic-build dependencies ic-platform-types 0.1.0 forbidden default
 ic-host-artifacts build-dependencies ic-build 0.12.0 forbidden default
 ic-host-artifacts dependencies ic-platform 0.6.14 forbidden default
+ic-host-artifacts dependencies ic-platform-types 0.1.0 forbidden default
 ic-host-tools dependencies canic 0.1.0 forbidden_pattern_matches default
 CASES
 echo 'Host/Build layering rejects renamed transitive normal/build higher-layer identities'

@@ -6,10 +6,12 @@
 
 PocketIC-oriented test utilities for Internet Computer canister tests.
 
+These dependency examples target the pending IC integration 0.74 release.
+
 ```toml
 [dev-dependencies]
-ic-testkit = "0.66"
-ic-platform = { version = "0.8.1", features = ["pocket-ic"] }
+ic-testkit = "0.74"
+ic-platform = { version = "0.15.1", features = ["pocket-ic"] }
 ```
 
 For typed application calls, enable the `wire` feature and depend directly on
@@ -37,10 +39,10 @@ published support crate solely for target-specific feature isolation. The
 intentional; native Testkit is not a Candid-free profile.
 
 The optional native `wire` feature adds `pic::query_wire` and `pic::update_wire`.
-Enable it on your Testkit dependency and declare `ic-wire = "0.11.0"` for your native
+Enable it on your Testkit dependency and declare `ic-wire = "0.12.1"` for your native
 Serde contracts. Each helper takes an explicit target/caller, a `WireCallSpec`
 with the exported name, method ID and request/response limits, and a borrowed
-request. Align your direct Wire dependency to 0.11 when supplying limits or matching
+request. Align your direct Wire dependency to 0.12 when supplying limits or matching
 typed codec errors. It executes one PocketIC operation without update retries; a refused reply
 does not prove absence of effects. It preserves
 application-level results. `WireCallError` retains typed codec causes, complete
@@ -148,8 +150,9 @@ selects gzip for its reviewed PocketIC server assets; its normal dependency grap
 does not select Host's Wasm-inspection feature. Consumers select the capabilities
 they use rather than inheriting them through Testkit.
 
-The published archive includes [`CHANGELOG.md`](CHANGELOG.md) for historical
-upgrade actions. Current build and artifact-cache contracts belong to IC Build;
+The published archive includes a `CHANGELOG.md` navigation file linking the
+[canonical integration ledger](../../releases/integration/CHANGELOG.md) and its
+historical upgrade actions. Current build and artifact-cache contracts belong to IC Build;
 historical Testkit artifact imports are not current entry points.
 
 Snapshot baselines retain global timer and low-Wasm-memory-hook state through
@@ -198,7 +201,7 @@ Generic Cargo/Wasm builds, retained artifact caches and freshness APIs belong to
 Pass `fixture.pocket_ic()` and `fixture.canister_id()` explicitly to
 `query_wire` or `update_wire` with the `wire` feature. The standalone fixture owns
 installation and lifetime; Wire owns method contracts and codec limits.
-See the [packaged migration notes](CHANGELOG.md).
+See the [canonical migration notes](../../releases/integration/CHANGELOG.md).
 
 Benchmark commands own run identities, provenance, history selection and any
 metadata sidecars. The repository's `benchmark_report` example renders supplied
@@ -298,14 +301,15 @@ No new dependency is selected, and deployed Wasm graphs remain unchanged.
 
 Testkit is part of the IC Tooling workspace. Use the root
 [host guide](../../docs/hosts.md) and [publication guide](../../docs/publishing.md)
-for setup and coordinated releases.
+for setup and group releases.
 
 - `make testkit-check`: Testkit libraries and private driver with the prepared server.
 - `make testkit-wasm-check` and `make testkit-msrv`: deployed profiles.
-- `make testkit-package-check`: all coordinated public archives, including tests.
+- `make testkit-package-check`: all public archives at their own versions, including tests.
 - `make testkit-browser-check`: browser-session support.
 
 The [0.62 migration](../../docs/changelog/0.62.md) replaces the old independent
-Testkit release flow. The root changelog owns new releases; the package changelog
-retains published history. Neither package checking nor ordinary validation
+Testkit release flow. The [integration ledger](../../releases/integration/CHANGELOG.md) now covers Tools,
+Testkit and Native. The root changelog indexes both groups and shared history.
+Neither package checking nor ordinary validation
 authorizes downloads, publication or artifact cleanup.

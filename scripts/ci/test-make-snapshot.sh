@@ -22,7 +22,7 @@ trap 'fixture_finish "$?" "$fixture" "Host Make evidence retained"' EXIT
 export TMPDIR="${fixture%/*}"
 mkdir -p "$fixture/local"
 bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/local" \
-    make/consumer.mk scripts/ci/check-pipe-jobserver.pl scripts/release/editor.sh
+    Makefile make/consumer.mk scripts/ci/check-pipe-jobserver.pl scripts/release/editor.sh
 for input in Makefile make/testkit.mk ci/tool-versions.env ci/release-delivery.txt scripts/ci/check-format-tools.sh \
     ci/tooling-checks.tsv scripts/ci/select-tooling-checks.sh; do
     parent=.
@@ -72,6 +72,7 @@ esac
 STUB
 cat > "$fixture/local/scripts/ci/run-release.sh" <<'STUB'
 #!/usr/bin/env bash
+if [[ "${HOST_MAKE_ASSERT_RELEASE_GROUP:-0}" == 1 ]]; then [[ "${RELEASE_GROUP:-}" == integration ]] || exit 94; fi
 printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
 STUB
 mkdir -p "$fixture/local/scripts/dev"
@@ -111,6 +112,7 @@ for selection in ordinary environment command nested recursive; do
         : > "$HOST_MAKE_EVENTS"
         "${command[@]}" "$target" "FORMAT_CARGO=$PWD/cargo" \
             VERSION=0.9.5 RELEASE_REMOTE=review RELEASE_BRANCH=release-review \
+            RELEASE_GROUP=integration HOST_MAKE_ASSERT_RELEASE_GROUP=1 \
             > "$fixture/$selection-$target.log" 2>&1
         case "$target" in
             help) : > "$fixture/expected" ;;
@@ -278,26 +280,42 @@ mkdir -p "$fixture/local/scripts/publish"
 cat > "$fixture/local/scripts/publish/workspace.sh" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
-[[ "$1" == publish || "$1" == check ]] || exit 1
+[[ "$1" == publish || "$1" == check || "$1" == qualify ]] || exit 1
 printf '%s\0' "$@" > "$HOST_MAKE_EXTERNAL.publication-args"
+mode="$1"
+[[ "$mode" != qualify ]] || mode=check
 if [[ "${HOST_MAKE_PUBLICATION_LINT:-0}" == 1 ]]; then
     make --no-print-directory clippy-workspace
-    cargo "$1"
+    cargo "$mode"
     exit "${HOST_MAKE_PUBLICATION_STATUS:-0}"
 fi
-exec cargo "$1"
+exec cargo "$mode"
 STUB
+# Public effects require an explicit group before any runner/helper is reached.
+for target in release-patch release-minor release-major release-resume publish publish-check; do
+    for invalid_group in '' unknown 'foundation integration'; do
+        : > "$HOST_MAKE_EVENTS"
+        rm -f "$HOST_MAKE_EXTERNAL.publication-args"
+        if PATH="$fixture/local:$PATH" make --no-print-directory "$target" \
+            "RELEASE_GROUP=$invalid_group" PACKAGE=ic-build VERSION=0.1.1 > "$fixture/invalid-group.log" 2>&1; then exit 1; fi
+        [[ ! -s "$HOST_MAKE_EVENTS" && ! -e "$HOST_MAKE_EXTERNAL.publication-args" ]]
+    done
+    : > "$HOST_MAKE_EVENTS"
+    if (unset RELEASE_GROUP; PATH="$fixture/local:$PATH" make --no-print-directory "$target" \
+        PACKAGE=ic-build VERSION=0.1.1) > "$fixture/missing-group.log" 2>&1; then exit 1; fi
+    [[ ! -s "$HOST_MAKE_EVENTS" && ! -e "$HOST_MAKE_EXTERNAL.publication-args" ]]
+done
 # Only command-line PACKAGE requests a batch; values cross the shell literally.
 for target in publish publish-check; do
     mode=publish
     [[ "$target" != publish-check ]] || mode=check
-    PATH="$fixture/local:$PATH" make --no-print-directory "$target" > "$fixture/publication-default.log" 2>&1
+    PATH="$fixture/local:$PATH" make --no-print-directory "$target" RELEASE_GROUP=foundation > "$fixture/publication-default.log" 2>&1
     printf '%s\0' "$mode" > "$fixture/publication-expected"
     cmp "$fixture/publication-expected" "$HOST_MAKE_EXTERNAL.publication-args"
-    PATH="$fixture/local:$PATH" PACKAGE=ic-testkit make --no-print-directory "$target" > "$fixture/publication-environment.log" 2>&1
+    PATH="$fixture/local:$PATH" RELEASE_GROUP=foundation PACKAGE=ic-testkit make --no-print-directory "$target" > "$fixture/publication-environment.log" 2>&1
     cmp "$fixture/publication-expected" "$HOST_MAKE_EXTERNAL.publication-args"
     for selection in 'ic-host-artifacts ic-host-fs' '' 'ic-host-artifacts; touch injected'; do
-        PATH="$fixture/local:$PATH" make --no-print-directory "$target" "PACKAGE=$selection" > "$fixture/publication-selected.log" 2>&1
+        PATH="$fixture/local:$PATH" make --no-print-directory "$target" RELEASE_GROUP=foundation "PACKAGE=$selection" > "$fixture/publication-selected.log" 2>&1
         printf '%s\0' "$mode" --packages "$selection" > "$fixture/publication-expected"
         cmp "$fixture/publication-expected" "$HOST_MAKE_EXTERNAL.publication-args"
         [[ ! -e injected ]] || exit 1
@@ -332,7 +350,7 @@ helper_targets=(publish publish-check dependency-pins-check
     release-adapter-check tooling-command-check publish-command-check)
 for target in "${cargo_targets[@]}" "${helper_targets[@]}"; do
     : > "$HOST_MAKE_EVENTS"
-    PATH="$fixture/local:$PATH" HOST_MAKE_VERIFY_JOBSERVER=1 make "${jobserver_options[@]}" "MAKE=$(command -v make)" "$target" \
+    PATH="$fixture/local:$PATH" HOST_MAKE_VERIFY_JOBSERVER=1 make "${jobserver_options[@]}" "MAKE=$(command -v make)" "$target" RELEASE_GROUP=foundation \
         > "$fixture/jobserver-$target.log" 2>&1
     [[ -s "$HOST_MAKE_EVENTS" ]] || exit 1
 done

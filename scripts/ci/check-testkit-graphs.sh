@@ -10,8 +10,8 @@ cd "$root"
 consumer="$root/"
 host="$(rustc -vV | sed -n 's/^host: //p')"
 test -n "$host"
-policy=(--consumer "$consumer" --require ic-platform=1 --require ic-metrics=1
-    --forbid ic-build --forbid ic-host-text
+policy=(--consumer "$consumer" --require ic-platform=1 --require ic-platform-types=1 --require ic-metrics=1
+    --forbid ic-build --forbid ic-host-text --forbid ic-wire-endpoint
     --forbid ic-agent --forbid candid_parser --forbid ic0 --forbid-pattern '^ic-cdk')
 runtime_policy=("${policy[@]}")
 policy+=(--forbid ic-platform-runtime-guard)

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+unset RELEASE_GROUP
 
 # Real locked/offline Cargo metadata; Git, workspace lint and publication are
 # substitutes. No registry requests, commits, tags or uploads occur.
@@ -32,6 +33,11 @@ capture_metadata() {
         ltrimstr($root) | rtrimstr("/Cargo.toml") else error("fixture manifest escapes root") end)]
     | @tsv
     ' metadata.json > fixture-packages.tsv
+    jq -r --slurpfile policy ci/cargo-release-groups.json '
+        . as $m | .packages[] | select(.id as $id | $m.workspace_members | index($id)) |
+        select(.name as $name | $policy[0].groups[] | select(.name == "foundation") | .members | index($name)) |
+        .name
+    ' metadata.json | LC_ALL=C sort > foundation-packages
 }
 capture_metadata
 cp metadata.json original-metadata.json
@@ -89,8 +95,9 @@ case "$1" in
         [[ "${PUBLISH_PACKAGE_RESULT:-0}" == 0 ]] || exit "$PUBLISH_PACKAGE_RESULT"
         printf '%s\0' "$@" > "$PUBLISH_FIXTURE/package-arguments"
         mkdir -p target/package
-        version="$(jq -r '.packages[0].version' "$PUBLISH_FIXTURE/metadata.json")"
         while IFS=$'\t' read -r package package_root; do
+            case " $* " in *" --package $package@"*) ;; *) continue ;; esac
+            version="$(jq -er --arg name "$package" '.packages[] | select(.name == $name) | .version' "$PUBLISH_FIXTURE/metadata.json")"
             directory="target/package/$package-$version"
             mkdir -p "$directory"
             rm -f "$directory/LICENSE"
@@ -114,7 +121,7 @@ case "$1" in
         jq -r '. as $m | .packages[] | select((.id as $id | $m.workspace_members | index($id)) and .publish != []) | .name' \
             "$PUBLISH_FIXTURE/metadata.json" | LC_ALL=C sort > "$PUBLISH_FIXTURE/metadata-packages"
         for intent in "${intents[@]}"; do
-            tail -n +6 "$intent" | LC_ALL=C sort > "$PUBLISH_FIXTURE/intent-packages"
+            tail -n +5 "$intent" | sed 's/@.*//' | LC_ALL=C sort > "$PUBLISH_FIXTURE/intent-packages"
             [[ -s "$PUBLISH_FIXTURE/intent-packages" ]] || exit 1
             LC_ALL=C sort -u "$PUBLISH_FIXTURE/intent-packages" > "$PUBLISH_FIXTURE/unique-packages"
             cmp "$PUBLISH_FIXTURE/intent-packages" "$PUBLISH_FIXTURE/unique-packages"
@@ -125,10 +132,9 @@ case "$1" in
         [[ -f "${core_intents[0]}" ]] || exit 1
         for intent in "${core_intents[@]}"; do
             tail -n +4 "$intent" | LC_ALL=C sort > "$PUBLISH_FIXTURE/core-packages"
-            version="$(jq -r '.packages[0].version' "$PUBLISH_FIXTURE/metadata.json")"
             core="${intent%/intent}"
-            tail -n +6 "target/publish/admission/${core##*/}/intent" | \
-                sed "s/\$/@$version/" | LC_ALL=C sort > "$PUBLISH_FIXTURE/exact-packages"
+            tail -n +5 "target/publish/admission/${core##*/}/intent" | \
+                LC_ALL=C sort > "$PUBLISH_FIXTURE/exact-packages"
             cmp "$PUBLISH_FIXTURE/core-packages" "$PUBLISH_FIXTURE/exact-packages"
         done
         printf '%s\0' "$@" > "$PUBLISH_FIXTURE/arguments"
@@ -167,6 +173,18 @@ refuse() {
     fi
     [[ ! -s calls ]] || exit 1
 }
+# Both public modes refuse absent/empty/unknown selections before metadata,
+# lint, evidence allocation or any Cargo dispatch. PACKAGE never infers a group.
+for mode in check publish; do
+    : > calls
+    if (unset RELEASE_GROUP; invoke "$mode" --packages ic-build) > missing-group.log 2>&1; then exit 1; fi
+    [[ ! -s calls && ! -e target/publish ]]
+    for invalid_group in '' unknown 'foundation integration'; do
+        if RELEASE_GROUP="$invalid_group" invoke "$mode" > invalid-group.log 2>&1; then exit 1; fi
+        [[ ! -s calls && ! -e target/publish ]]
+    done
+done
+export RELEASE_GROUP=foundation
 # A dry run can review dirty work; an upload cannot admit it.
 PUBLISH_DIRTY=1 refuse publish
 for separator in $'\n' $'\r'; do
@@ -204,9 +222,10 @@ for mode in check publish; do
     if rg --files target/publish | grep '/intent$'; then exit 1; fi
 done
 PUBLISH_DIRTY=1 invoke check > check.log 2>&1
-version="$(jq -r '.packages[0].version' metadata.json)"
 selectors=()
 while IFS=$'\t' read -r package _; do
+    grep -Fx "$package" foundation-packages > /dev/null || continue
+    version="$(jq -er --arg name "$package" '.packages[] | select(.name == $name) | .version' metadata.json)"
     selectors+=(--package "$package@$version")
 done < fixture-packages.tsv
 printf '%s\0' publish --locked --registry crates-io "${selectors[@]}" \
@@ -276,10 +295,10 @@ core="$(sed -n 's/^Publication evidence: //p' logger-failure.log)"
 if PUBLISH_METADATA_RESULT=17 invoke publish > metadata-failure.log 2>&1; then exit 1; fi
 printf 'metadata\n' > expected-calls
 cmp expected-calls calls
-for scenario in disabled mixed-version extra-package wrong-repository; do
+for scenario in disabled invalid-version extra-package wrong-repository; do
     case "$scenario" in
         disabled) jq '.packages[0].publish = []' original-metadata.json > metadata.json ;;
-        mixed-version) jq '.packages[0].version = "99.0.0"' original-metadata.json > metadata.json ;;
+        invalid-version) jq '.packages[0].version = "0.73.0-preview"' original-metadata.json > metadata.json ;;
         extra-package) jq '.packages[0].name = "unexpected-owner"' original-metadata.json > metadata.json ;;
         wrong-repository) jq '.packages[0].repository = "https://github.com/other/repository"' original-metadata.json > metadata.json ;;
     esac
@@ -291,7 +310,7 @@ cp original-metadata.json metadata.json
 # The shared consumer selection must match metadata before lint/package effects.
 policy="$FIXTURE_ROOT/policy"
 mkdir -p "$policy/scripts/publish" "$policy/ci"
-cp "$root/scripts/publish/workspace.sh" "$policy/scripts/publish/"
+bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$policy" scripts/publish/workspace.sh
 for scenario in missing extra private duplicate; do
     cp "$root/ci/public-packages.txt" "$policy/ci/public-packages.txt"
     case "$scenario" in
@@ -303,7 +322,7 @@ for scenario in missing extra private duplicate; do
     : > calls
     if bash "$policy/scripts/publish/workspace.sh" check > "$scenario-selection.log" 2>&1; then exit 1; fi
     cmp expected-calls calls
-    grep -F 'expected selected synchronized crates.io packages' "$scenario-selection.log" >/dev/null
+    grep -F 'expected the complete public crates.io roster' "$scenario-selection.log" >/dev/null
 done
 # Package directories follow real Cargo observations after an allowed layout move.
 mv crates/ic-host-artifacts 'apps/relocated artifacts'
@@ -415,11 +434,14 @@ refuse publish
 rmdir target/publish/lock
 # Explicit batches retain the same pipeline and exact selection in each intent,
 # package preparation, provenance admission and Cargo upload/dry-run dispatch.
-remaining="$(cut -f 1 fixture-packages.tsv | sed '/^ic-host-artifacts$/d' | paste -sd ' ' -)"
-for selection in ic-host-artifacts "$remaining" 'ic-testkit ic-host-fs'; do
+remaining="$(sed '/^ic-host-artifacts$/d' foundation-packages | paste -sd ' ' -)"
+for selection in ic-host-artifacts "$remaining" 'ic-host-fs ic-host-process'; do
     IFS=$' \t' read -r -a selected <<< "$selection"
     batch_selectors=()
-    for package in "${selected[@]}"; do batch_selectors+=(--package "$package@$version"); done
+    for package in "${selected[@]}"; do
+        version="$(jq -er --arg name "$package" '.packages[] | select(.name == $name) | .version' metadata.json)"
+        batch_selectors+=(--package "$package@$version")
+    done
     for mode in check publish; do
         : > calls
         invoke "$mode" --packages "$selection" > "batch-$mode.log" 2>&1
@@ -430,8 +452,8 @@ for selection in ic-host-artifacts "$remaining" 'ic-testkit ic-host-fs'; do
         printf '%s\0' "${batch_arguments[@]}" > expected-arguments
         cmp expected-arguments arguments
         admission="$(sed -n 's/^Publication admission evidence: //p' "batch-$mode.log")"
-        printf '%s\n' "${selected[@]}" > expected-selection
-        tail -n +6 "$admission/intent" > observed-selection
+        printf '%s\n' "${batch_selectors[@]}" | sed '/^--package$/d' > expected-selection
+        tail -n +5 "$admission/intent" > observed-selection
         cmp expected-selection observed-selection
         printf 'metadata\nclippy\n' > expected-calls
         if [[ "$mode" == publish ]]; then
@@ -455,8 +477,36 @@ for selection in '' '  ' ic-testkit-dev unexpected-owner 'ic-host-artifacts ic-h
 done
 [[ ! -e injected ]] || exit 1
 PUBLISH_DIRTY=1 refuse publish --packages ic-host-artifacts
-# A subset does not relax the full synchronized roster contract.
-jq '(.packages[] | select(.name == "ic-testkit").version) = "99.0.0"' original-metadata.json > metadata.json
+# Mixed package versions retain exact selectors and per-archive provenance.
+jq '(.packages[] | select(.name == "ic-testkit" or .name == "ic-host-tools" or .name == "ic-testkit-native").version) = "0.74.0"' \
+    original-metadata.json > metadata.json
+for mode in check publish; do
+    RELEASE_GROUP=foundation invoke "$mode" --packages ic-build > "mixed-foundation-$mode.log" 2>&1
+    tr '\0' '\n' < arguments > mixed-arguments
+    grep -Fx 'ic-build@0.73.0' mixed-arguments
+    RELEASE_GROUP=integration invoke "$mode" --packages ic-testkit > "mixed-integration-$mode.log" 2>&1
+    tr '\0' '\n' < arguments > mixed-arguments
+    grep -Fx 'ic-testkit@0.74.0' mixed-arguments
+done
+RELEASE_GROUP=integration invoke check > integration-group.log 2>&1
+tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' | LC_ALL=C sort > group-packages
+printf '%s\n' ic-host-tools ic-testkit ic-testkit-native > expected-group-packages
+cmp expected-group-packages group-packages
+admission="$(sed -n 's/^Publication admission evidence: //p' integration-group.log)"
+[[ "$(cat "$admission/release-group")" == integration ]]
+RELEASE_GROUP=integration refuse publish --packages ic-build
+RELEASE_GROUP=foundation refuse publish --packages 'ic-build ic-testkit'
+RELEASE_GROUP=unknown refuse check
+# Workspace qualification is explicitly read-only and covers every group. It
+# retains the one lint gate used by combined CI and cannot be selected for upload.
+(unset RELEASE_GROUP; invoke qualify) > qualification.log 2>&1
+tr '\0' '\n' < arguments > qualification-arguments
+grep -Fx -- --dry-run qualification-arguments > /dev/null
+sed -n 's/^\(ic-[^@]*\)@.*/\1/p' qualification-arguments | LC_ALL=C sort > qualified-packages
+cut -f 1 fixture-packages.tsv | LC_ALL=C sort > expected-qualified-packages
+cmp expected-qualified-packages qualified-packages
+# A subset does not relax eligibility of the full roster.
+jq '(.packages[] | select(.name == "ic-testkit").publish) = []' original-metadata.json > metadata.json
 : > calls
 if invoke check --packages ic-host-artifacts > batch-metadata.log 2>&1; then exit 1; fi
 printf 'metadata\n' > expected-calls

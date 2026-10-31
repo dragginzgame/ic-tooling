@@ -11,7 +11,7 @@ rustdoc describe the current API; version-specific contracts below record the
 design at the time. In `0.10`, successful records retain read-only exact-cache
 paths through consumption, and pruning skips retained entries. Configured
 materialization destinations remain mutable. See the
-[retained-artifact migration](../../../../crates/ic-testkit/CHANGELOG.md#0100).
+[retained-artifact migration](../../../../releases/integration/CHANGELOG.md#0100).
 
 Proposed after the released `0.3.5` cache-lifecycle work and updated through
 `0.4.2`. This document consolidates concrete Canic and IcyDB feedback. Complete

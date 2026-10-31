@@ -75,6 +75,10 @@ warning-denied lint gate. CI/release validation runs it before expensive tests
 and builds after prerequisite admission. Publication and its dry run use that
 same gate before packaging or registry dispatch; ordinary package checks keep
 their selected scope. These entrypoint rules do not authorize a full local gate.
+Independent group versions are literal in every member; root Cargo metadata has
+no shared version. Public release and publication Make/CLI commands require an
+explicit group. CI's read-only `workspace.sh qualify` mode still checks every
+public package with one full lint pass; it cannot upload.
 
 `make test-artifacts-minimal` checks the artifact library without optional
 features. `make test-artifacts-wasm` checks inspection without the encoder or
@@ -162,7 +166,7 @@ Host Artifacts and Wasm parsing. The standalone Wasm inspector
 retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.91
 and native Linux/macOS matrix as the existing libraries.
 
-Platform 0.13 embeds the IC system-call and executor implementations. Testkit's
+Platform 0.15 embeds the IC system-call and executor implementations. Testkit's
 Wasm graph excludes external `ic0` and `ic-cdk-executor` packages; the private
 performance probe enables Platform's executor through `cdk`. Wasm compilation
 checks this selection separately from native execution and installed IC behavior.
@@ -170,10 +174,13 @@ Platform selects its internal singleton guard only for executor/runtime
 users. The graph policies exclude it from Host/Tools and Testkit, and require it
 for the private probe's Wasm runtime.
 Consumers exchanging Platform-owned registry principals with Tools must align
-Platform 0.13. Platform has no production Wire or Host Artifacts dependency.
-Consumers needing Platform type schemas must select a compatible Wire integration;
-Wire 0.11's `platform-types` targets Platform 0.12 and does not supply 0.13 schemas.
-This workspace uses only Wire's core codec and does not enable that integration.
+Platform 0.15.1. Its facade reexports canonical `ic-platform-types` 0.15.0 identities.
+Platform has no production Wire or Host Artifacts dependency. Published Wire
+0.12.1's optional `platform-types` schemas still select Types 0.1; matching schemas
+for Types 0.15 are not published yet. This workspace uses only Wire's core codec
+and does not select that bridge or `ic-wire-endpoint`. Platform 0.15.1 restores
+independent Types releases; incompatible Types changes still require explicit
+consumer and schema adoption.
 
 Testkit's benchmark projection uses arithmetic-only Metrics with default features
 disabled. Graph checks require one Metrics identity and no selected Metrics
@@ -187,9 +194,10 @@ common tool/LOC command wiring,
 minimal artifact tests and each selected package with all features in sequence.
 Release metadata backup/install/restoration and receipt custody use pinned Shared
 helpers. Their synthetic failure matrices stay with Shared; Host's adapter fixture
-checks the real rendering, source and committed-payload contracts with substituted
-qualification commands and Git effects. Rendering, gates and recovery decisions
-remain local; see [release custody](releases.md#reusing-metadata-preparation-and-evidence-custody).
+checks real rendering, disposable Git and committed-payload contracts for both
+release groups, with substituted setup/full qualification. Shared owns group
+rendering and transactions; source custody and the complete gates remain local.
+See [release ownership](design/release-groups.md).
 The consumer's [tooling-check roster](../ci/tooling-checks.tsv) selects ordinary
 command checks and the appropriate Make/retention fixtures. Keep behavioral
 assertions independent of that roster when extending a selected check.
@@ -241,9 +249,11 @@ Release preparation uses the admitted IC Build metadata editor with source-bound
 member identities, with rollback qualification in disposable release fixtures.
 `make install-tools` includes the pinned release-only editor; `make tools-check`
 admits it offline. The editor's Rust 1.91 floor is separate from Host's 1.91 MSRV.
+The editor selects published IC Build 0.73.0 with `cli` for group manifest edits.
 Both native CI cache paths include its tool-store entries; its pin participates
-in the cache key. `make release-adapter-check` exercises actual rendering with
-substituted setup/Git effects, including first-use setup and offline refusal.
+in the cache key. `make release-adapter-check` exercises actual rendering and
+disposable Git with substituted setup/full qualification, including first-use
+setup and busy refusal.
 CI runs the release, publication, qualification-record and Make adapter suites
 once through the retention check, using a relative aliased temporary parent.
 Their standalone focused targets remain available; CI does not repeat them in
