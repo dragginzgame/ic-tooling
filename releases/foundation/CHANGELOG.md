@@ -4,7 +4,7 @@ This group covers Artifacts, FS, HTTP, Process, Text, Build and the Wasm inspect
 Build owns the group version. Earlier releases retain their coordinated scope in
 [shared history](../history.md#0730---2026-10-31).
 
-## [0.73.3] - Unreleased
+## [0.73.3] - 2026-10-31
 
 ### ➕ Added
 
