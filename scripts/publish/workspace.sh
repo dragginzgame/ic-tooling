@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/ci/cargo-publication-selection.pl scripts/release/group.sh
 set -euo pipefail
 
 # Cargo workspace publication admission. Requires prepared Cargo 1.99, Git,
@@ -6,9 +7,14 @@ set -euo pipefail
 # Cargo owns packaging, dependency ordering, verification, upload
 # and index waiting. The caller owns credentials and partial-upload recovery.
 mode="${1:-}"
-[[ ( $# == 1 || ( $# == 3 && "$2" == --packages ) ) && ( "$mode" == publish || "$mode" == check ) ]] || {
-    echo 'usage: workspace.sh publish|check [--packages "NAME ..."]' >&2; exit 2;
+[[ ( $# == 1 && "$mode" == qualify ) ||
+   ( ( $# == 1 || ( $# == 3 && "$2" == --packages ) ) && ( "$mode" == publish || "$mode" == check ) ) ]] || {
+    echo 'usage: workspace.sh publish|check [--packages "NAME ..."] | qualify' >&2; exit 2;
 }
+purpose="$mode"
+# Complete workspace qualification is always a dry run. Public publication and
+# its selected-group dry run retain explicit group admission below.
+[[ "$mode" != qualify ]] || mode=check
 fail() { echo "publication refused: $1" >&2; exit 1; }
 tooling_root="${BASH_SOURCE[0]}"
 [[ "$tooling_root" == /* ]] || tooling_root="$PWD/$tooling_root"
@@ -54,6 +60,24 @@ case "$root" in *$'\r'*|*$'\n'*) fail 'directory paths must not contain CR/LF' ;
 cd -P -- "$root"
 root="$PWD"
 case "$root" in *$'\r'*|*$'\n'*) fail 'directory paths must not contain CR/LF' ;; esac
+selected_group=''
+if [[ "$purpose" != qualify ]]; then
+    bash "$tooling_root/scripts/release/group.sh" "$root/ci/cargo-release-groups.json" "${RELEASE_GROUP:-}"
+    selected_group="$RELEASE_GROUP"
+    group_selection="$(jq -er --arg group "$RELEASE_GROUP" --arg public "${public_packages[*]}" '
+        [.groups[] | select(.name == $group)] |
+        (if length != 1 then error("unknown release group") else .[0].members end) as $members |
+        $public | split(" ") | map(select(. as $name | $members | index($name))) |
+        if length == 0 then error("release group has no public packages") else join(" ") end
+    ' ci/cargo-release-groups.json)" || fail 'invalid publication release group'
+    if [[ $# == 1 ]]; then
+        IFS=' ' read -r -a packages <<< "$group_selection"
+    else
+        for package in "${packages[@]}"; do
+            case " $group_selection " in *" $package "*) ;; *) fail "package is outside the selected release group: $package" ;; esac
+        done
+    fi
+fi
 source="$(git rev-parse --verify HEAD)" || exit $?
 [[ "$source" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || fail 'invalid source identity'
 dirty="$(git status --porcelain --untracked-files=all)" || exit $?
@@ -71,6 +95,8 @@ printf '%s\n' "$$" > "$lock/owner"
 attempt="$(mktemp -d "target/publish/admission/$mode.XXXXXX")"
 publication_attempt="$root/target/publish/${attempt##*/}"
 printf '%s\n' "$publication_attempt" > "$attempt/publication-attempt"
+printf '%s\n' "$selected_group" > "$attempt/release-group"
+printf '%s\n' "$purpose" > "$attempt/purpose"
 echo "Publication admission evidence: $root/$attempt"
 printf '%s\n' "$dirty" > "$attempt/working-status"
 cargo metadata --manifest-path "$root/Cargo.toml" --no-deps --format-version 1 \
@@ -80,12 +106,15 @@ jq -e '
     . as $workspace
     | [.packages[] | select(.id as $id | $workspace.workspace_members | index($id))] as $packages
     | ($packages | map(select(.publish != [])) | map(.name) | sort) == ($ARGS.positional | sort)
-      and ($packages | map(.version) | unique | length) == 1
       and ($packages | all(.publish == ["crates-io"] or (.publish == [] and (.name == "ic-testkit-dev" or .name == "ic-testkit-perf-probe"))))
       and ($packages | all(.repository == "https://github.com/dragginzgame/ic-tooling"))
       and ($packages | any(.name == "ic-host-wasm-inspect" and
           any(.targets[]; .name == "ic-host-wasm-inspect" and (.kind | index("bin")))))
-' "$attempt/metadata.json" --args "${public_packages[@]}" > /dev/null || fail 'expected selected synchronized crates.io packages'
+' "$attempt/metadata.json" --args "${public_packages[@]}" > /dev/null || fail 'expected the complete public crates.io roster'
+perl "$tooling_root/scripts/ci/cargo-publication-selection.pl" "$attempt/metadata.json" \
+    "${public_packages[*]}" "${packages[*]}" crates-io > "$attempt/selected-packages"
+selectors=()
+while IFS= read -r -d '' selector; do selectors+=("$selector"); done < "$attempt/selected-packages"
 package_directories=()
 for package in "${packages[@]}"; do
     directory="$(package_path "$package")" || fail "invalid package directory for $package"
@@ -98,21 +127,19 @@ for package in "${packages[@]}"; do
     package_directories+=("$directory")
 done
 repository="$(jq -r '.packages[0].repository' "$attempt/metadata.json")"
-version="$(jq -r '.packages[0].version' "$attempt/metadata.json")"
-[[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || fail 'expected a stable workspace version'
 # Source admission precedes the existing full lint gate. Refusal must stop
 # packaging and registry effects; this path never prepares missing tools.
 make --no-print-directory clippy-workspace
 # Persist Host's admitted package/provenance selection before package preparation.
 # Shared Tooling records the exact Cargo command in its separate fresh attempt.
-printf '%s\n' publication-1 "$mode" "$source" "$version" crates-io \
-    "${packages[@]}" > "$attempt/intent"
+printf '%s\n' publication-2 "$mode" "$source" crates-io \
+    "${selectors[@]}" > "$attempt/intent"
 if [[ "$mode" == publish ]]; then
     # Inspect Cargo's actual package provenance before upload. Package preparation
     # resolves dependencies but does not upload or build; publish still owns
     # compilation, dependency order and all registry effects.
     package_arguments=(package --manifest-path "$root/Cargo.toml")
-    for package in "${packages[@]}"; do package_arguments+=(--package "$package@$version"); done
+    for selector in "${selectors[@]}"; do package_arguments+=(--package "$selector"); done
     package_arguments+=(--registry crates-io --all-features --locked --no-verify --target-dir "$root/target")
     printf '%s\0' "${package_arguments[@]}" > "$attempt/package-arguments"
     cargo "${package_arguments[@]}" > "$attempt/package.log" 2>&1 || fail 'package preparation failed; no upload attempted'
@@ -120,12 +147,13 @@ if [[ "$mode" == publish ]]; then
     for index in "${!packages[@]}"; do
         package="${packages[$index]}"
         directory="${package_directories[$index]}"
-        provenance_arguments+=(--package "$package@$version" "$directory")
+        provenance_arguments+=(--package "${selectors[$index]}" "$directory")
     done
     bash "$tooling_root/scripts/ci/check-cargo-package-provenance.sh" \
         "$attempt/provenance" "$root/target/package" "$repository" "$source" "${provenance_arguments[@]}"
     for index in "${!packages[@]}"; do
         package="${packages[$index]}"
+        version="${selectors[$index]#*@}"
         directory="${package_directories[$index]}"
         perl "$tooling_root/scripts/ci/check-license.pl" --kind mit --file "$root/$directory/LICENSE" \
             --archive "$root/target/package/$package-$version.crate" --member "$package-$version/LICENSE"
@@ -135,7 +163,7 @@ observed_source="$(git rev-parse --verify HEAD)" || exit $?
 observed_dirty="$(git status --porcelain --untracked-files=all)" || exit $?
 [[ "$observed_source" == "$source" && "$observed_dirty" == "$dirty" ]] || fail 'source changed before publication'
 arguments=()
-for package in "${packages[@]}"; do arguments+=(--package "$package@$version"); done
+for selector in "${selectors[@]}"; do arguments+=(--package "$selector"); done
 arguments+=(--manifest-path "$root/Cargo.toml" --target-dir "$root/target" --all-features)
 [[ "$mode" != check ]] || arguments+=(--allow-dirty)
 bash "$tooling_root/scripts/ci/run-cargo-publication.sh" "$mode" "$publication_attempt" \

@@ -1,7 +1,9 @@
 .DEFAULT_GOAL := help
+# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json
 PACKAGE ?= ic-host-artifacts
 MSRV ?= 1.91.0
 RELEASE_DELIVERY ?= direct
+export RELEASE_GROUP
 override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
 # Host commands use this checkout's reviewed snapshot, including parse-time probes.
 override SHARED_TOOLING_ROOT := $(CURDIR)
@@ -13,6 +15,13 @@ IC_TOOLS := wasm-opt
 include make/consumer.mk
 include make/testkit.mk
 export YQ := $(CURDIR)/.tools/host/bin/yq
+
+# Refuse before the shared runner acquires its lock or any publication starts.
+ifneq ($(filter $(SHARED_RELEASE_TARGETS) publish publish-check,$(MAKECMDGOALS)),)
+ifneq ($(shell bash '$(subst ','"'"',$(CURDIR))/scripts/release/group.sh' '$(subst ','"'"',$(CURDIR))/ci/cargo-release-groups.json' '$(subst ','"'"',$(RELEASE_GROUP))' && printf admitted),admitted)
+$(error Explicit RELEASE_GROUP=foundation or integration is required)
+endif
+endif
 
 .PHONY: help check clippy docs-check test test-artifacts-minimal test-tools-default tools-features-check msrv ci install-hooks tooling-command-check shared-tooling-check dependency-pins-check check-doc-links release-adapter-check publish publish-check publish-command-check release-version release-preflight release-verify release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
 help:
@@ -30,9 +39,10 @@ help:
 	@echo 'Source reports: cloc (this workspace); fleet reports run in Shared Tooling'
 	@echo 'Full release validation: ci (workspace Clippy first), msrv-qualification; focused MSRV: msrv PACKAGE=<crate>'
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
-	@echo 'Maintainer releases: release-patch, release-minor, release-major, release-resume VERSION=X.Y.Z'
+	@echo 'Maintainer releases: release-patch/minor/major RELEASE_GROUP=foundation|integration'
+	@echo 'Resume: release-resume RELEASE_GROUP=<same-group> VERSION=X.Y.Z'
 	@echo 'crates.io publication: publish-check (dry run), publish (upload); offline fixture: publish-command-check'
-	@echo 'Publication batches: publish-check/publish PACKAGE="crate ..."; default selects the complete public roster'
+	@echo 'Publication: select RELEASE_GROUP=foundation|integration; PACKAGE="crate ..." narrows that group'
 .PHONY: formatting-hook-check
 .PHONY: install-release-editor release-editor-check check-no-symlinks
 install-release-editor:
@@ -134,7 +144,7 @@ release-adapter-check:
 tooling-command-check:
 	+@checks="$$(bash scripts/ci/select-tooling-checks.sh tooling)" && \
 		for check in $$checks; do printf 'bash %s\n' "$$check"; bash "$$check" || exit $$?; done
-	+bash scripts/ci/check-release-commands.sh "$(CURDIR)" ci/tool-versions.env ci/release-delivery.txt make/consumer.mk make/tools.mk make/testkit.mk make/rust-format.mk make/release.mk make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/check-release-delivery.sh scripts/ci/run-formatting.sh scripts/ci/run-rust-formatting.pl scripts/ci/RustSource.pm
+	+RELEASE_GROUP=foundation bash scripts/ci/check-release-commands.sh "$(CURDIR)" ci/tool-versions.env ci/release-delivery.txt make/consumer.mk make/tools.mk make/testkit.mk make/rust-format.mk make/release.mk make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/check-release-delivery.sh scripts/ci/run-formatting.sh scripts/ci/run-rust-formatting.pl scripts/ci/RustSource.pm
 publish publish-check: export IC_TOOLING_PUBLISH_SELECTION = $(PACKAGE)
 publish:
 	+bash scripts/publish/workspace.sh publish $(if $(filter command line,$(origin PACKAGE)),--packages "$$IC_TOOLING_PUBLISH_SELECTION")
@@ -151,7 +161,7 @@ ci:
 	+$(MAKE) --no-print-directory _ci-checks
 ci-publication:
 	+$(MAKE) --no-print-directory _ci-preflight
-	+$(MAKE) --no-print-directory publish-check
+	+bash scripts/publish/workspace.sh qualify
 	+CARGO_NET_OFFLINE=true $(MAKE) --no-print-directory _ci-checks
 _ci-preflight:
 	+$(MAKE) --no-print-directory shared-tooling-check
@@ -198,7 +208,7 @@ release-prepare-version:
 release-prepared-check:
 	+@bash scripts/release/adapter.sh check
 release-files:
-	@printf '%s\0' Cargo.toml Cargo.lock CHANGELOG.md
+	+@bash scripts/release/adapter.sh files
 release-commit-check:
 	+@bash scripts/release/adapter.sh commit-check
 release-committed-check release-tagged-check release-push-check:

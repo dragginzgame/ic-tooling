@@ -11,6 +11,6 @@ root="${root%/.}"
 # shellcheck source=ci/release-editor.env
 source "$root/ci/release-editor.env"
 arguments=(--consumer "$root" --package ic-build --version "$HOST_RELEASE_EDITOR_VERSION" \
-    --bin ic-build-release-metadata --profile debug)
+    --bin ic-build-release-metadata --profile debug --features cli)
 [[ "$1" != check ]] || arguments+=(--check)
 exec bash "$root/scripts/dev/install-rust-tools.sh" "${arguments[@]}"

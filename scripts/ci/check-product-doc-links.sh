@@ -9,7 +9,7 @@ trap 'rm -f "$inventory"' EXIT
 git ls-files --cached --others --exclude-standard -z -- '*.md' > "$inventory"
 while IFS= read -r -d '' document; do
     case "$document" in
-        README.md|AGENTS.md|CHANGELOG.md|docs/*|crates/*|apps/*|testing/*)
+        README.md|AGENTS.md|CHANGELOG.md|releases/*|docs/*|crates/*|apps/*|testing/*)
             documents+=("$document") ;;
     esac
 done < "$inventory"

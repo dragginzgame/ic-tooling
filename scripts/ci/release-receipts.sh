@@ -5,6 +5,15 @@
 release_receipt_identity() {
     printf '%s\n' "${RELEASE_SOURCE:?}" "${RELEASE_PREVIOUS:?}" "${RELEASE_VERSION:?}" \
         "${RELEASE_DATE:?}" "${RELEASE_REMOTE:?}" "${RELEASE_BRANCH:?}" || return
+    if [[ -n "${RELEASE_GROUP:-}" ]]; then
+        [[ "$RELEASE_GROUP" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || return 1
+        printf 'release-group:%s\n' "$RELEASE_GROUP" || return
+        if [[ -n "${RELEASE_COMMIT:-}" ]]; then
+            git rev-parse --verify "$RELEASE_COMMIT:ci/cargo-release-groups.json" || return
+        else
+            git hash-object -- ci/cargo-release-groups.json || return
+        fi
+    fi
     git remote get-url --push --all "$RELEASE_REMOTE"
 }
 

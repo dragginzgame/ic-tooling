@@ -10,16 +10,35 @@ are rejected before execution;
 the shared runner's optional PR flow is not qualified by this adapter.
 These commands do not publish crates to a registry.
 
+Select `RELEASE_GROUP=foundation` or `RELEASE_GROUP=integration` explicitly on
+every release command and exact-version resume. The
+[group policy](../ci/cargo-release-groups.json) retains one qualification workspace
+with independent version sources and ledgers; see
+[release ownership](design/release-groups.md). For example:
+
+```sh
+make release-minor RELEASE_GROUP=integration
+make release-resume RELEASE_GROUP=integration VERSION=X.Y.Z
+```
+
+Both groups start from their existing 0.73.0 identities. Every package has an
+explicit version owned by its group primary; the root Cargo metadata has no
+version. Root `CHANGELOG.md` indexes the
+[Foundation](../releases/foundation/CHANGELOG.md) and
+[integration](../releases/integration/CHANGELOG.md) ledgers, with original
+coordinated notes retained in [shared history](../releases/history.md).
+Group tags and saved plans are prefixed with the group.
+One repository-wide release lock still excludes overlapping attempts.
+
 Prepare the development toolchain selected in [rust-toolchain.toml](../rust-toolchain.toml),
 then run `make install-tools` and `make tools-check`. Shared Tooling owns
 [common setup and executable storage](local-setup.md). Release preparation uses
 the released IC Build `ic-build-release-metadata` editor, pinned separately in
 `ci/release-editor.env` and selected through its verified tool-store receipt.
-Host admits its
-explicit workspace member paths and reads member identities from the selected
-Git source; IC Build projects owned dependency requirements for live and saved
-manifests. Recovery does not need today's member paths or a reconstructed old
-workspace. It validates candidate TOML and the prepared
+Shared admits explicit group membership and reads member identities from the
+selected source; IC Build projects only the group's owned versions and supplier
+requirements. Committed checks use the selected commit independently of today's
+working files. Preparation validates candidate TOML and the prepared
 locked Cargo graph, restoring original bytes/modes after failure or catchable
 interruption and retaining recovery evidence. Shared retains the preparation
 transaction, receipts and rollback. `make install-tools` includes the release
@@ -28,9 +47,10 @@ can prepare a missing editor after source admission without per-shell exports;
 standalone verification never installs. The editor requires Rust 1.91 or later;
 Host libraries retain MSRV 1.91. No Cargo-edit command renders release metadata.
 
-The read-only `make release-version` query needs prepared host parsers and never
-installs them; missing parsers direct the caller to `make install-tools` and
-`make tools-check`. Explicit server setup fetches locked dependencies before
+The read-only `make release-version RELEASE_GROUP=<group>` query needs prepared
+host parsers and the locked offline Cargo graph; it never installs them. Prepare
+tools with `make install-tools` / `make tools-check` and missing dependencies
+explicitly with `cargo fetch --locked`. Explicit server setup fetches locked dependencies before
 building its setup CLI offline. Selected release preflight prepares the complete toolset and
 fetches the selected dependencies with `cargo fetch --locked` before offline
 validation. Cargo honours explicit offline settings: missing inputs stop the
@@ -42,9 +62,10 @@ the selected dependency versions.
 The complete gate runs `make clippy-workspace` after prerequisite admission and
 before expensive tests or builds, with the existing workspace/all-target/all-feature
 scope and warnings denied. Failure stops later stages under parallel Make too.
-Native hosted CI combines this gate with the publication dry run through
-`make ci-publication`, using publication's source admission and lint once before
-the dry run and the remaining offline CI checks. Standalone `make ci` and
+Native hosted CI combines this gate with read-only workspace qualification through
+`make ci-publication`: `workspace.sh qualify` selects the complete public roster,
+runs one lint gate and Cargo dry run, then the remaining offline CI checks.
+This mode cannot upload or select a subset. Standalone `make ci` and
 `make publish-check` each retain their full lint gate. This combined command
 does not upload packages or authorize publication.
 Release verification and CI both use `make msrv-qualification` for native
@@ -58,27 +79,42 @@ validation receipts, notes and logs before fresh verification. Retain unfinished
 plans, earlier tool installations and failed artifacts; a retry must not relabel
 old evidence as validation of new source. Native qualification belongs to the
 [host guide](hosts.md), independently of release and publication effects.
+Old ungrouped attempts remain under their original identities. Recover them
+using their recorded pre-group source/adapter in an isolated checkout; never
+rename their plans or receipts into a group namespace.
 
 ## Registry publication
 
 The consumer-owned [public package list](../ci/public-packages.txt) selects both
-publication and coordinated archive qualification. Publication checks it against
+publication and archive qualification. Publication checks it against
 Cargo metadata before running lint or packaging; private test packages stay out.
 
-Publication defaults to that complete roster. An explicit command-line
+Publication requires explicit `RELEASE_GROUP=integration` to select
+Tools/Testkit/Native, or `foundation` for its seven public packages.
+Private harnesses are never uploaded. For an ordinary integration release:
+
+```sh
+make publish-check RELEASE_GROUP=integration
+make publish RELEASE_GROUP=integration
+```
+
+An explicit command-line
 `PACKAGE='name ...'` selects a nonempty batch from it for either publication mode:
 
 ```bash
-make publish-check PACKAGE='ic-host-artifacts'
-make publish PACKAGE='ic-host-artifacts'
+make publish-check RELEASE_GROUP=foundation PACKAGE='ic-host-artifacts'
+make publish RELEASE_GROUP=foundation PACKAGE='ic-host-artifacts'
 ```
 
 Unknown/private names, duplicates and an explicitly empty selection are refused.
 The default `PACKAGE` used by development commands, or an environment-only value,
-does not narrow publication. All public workspace metadata must still satisfy
-the synchronized version, registry and repository policy. Each selected archive
+does not narrow publication. Missing, empty or unknown groups are refused before
+validation or effects, including when `PACKAGE` is supplied. A batch must stay
+inside its selected group; cross-group batches are refused. All public workspace metadata must
+still satisfy the complete roster, stable-version, registry and repository policy.
+Each selected archive
 receives the same license and provenance admission, exact version selectors,
-source-drift checks and retained-attempt handling as a complete upload. Coordinated
+source-drift checks and retained-attempt handling as a complete upload. Workspace
 archive qualification still selects the complete roster independently of a batch.
 
 `make publish-check` runs Cargo's publication checks with all features
@@ -96,9 +132,9 @@ Both publication modes require prepared dependencies and pass the same offline
 `make clippy-workspace` gate after source admission, before packaging or registry
 effects. The wrapper never installs tools or fetches missing lint dependencies.
 
-`make publish` uploads the selected packages at the current committed workspace
+`make publish` uploads each selected package at its own current committed
 version to crates.io.
-It requires a clean working tree, synchronized selected publishable packages and
+It requires a clean working tree, eligible selected publishable packages and
 prepared Cargo 1.99, Git, tar and the pinned local jq. Cargo owns dependency ordering,
 package verification and index waiting. Package policy restricts each package to
 crates.io; the wrapper always selects that registry explicitly. Credentials stay
@@ -164,6 +200,10 @@ selectors, source, arguments and working status before its dispatch marker. It
 retains Cargo output plus separate `cargo-status`, `log-status` and combined
 `status` files. Cargo failure takes priority over a logger failure; a logger failure
 after successful Cargo execution also refuses success.
+New admission intent records use `publication-2` with the mode, source, registry
+and exact `NAME@VERSION` selections; `release-group` records the selected group.
+Read-only all-group qualification records an empty group and `purpose=qualify`.
+Older attempt records remain unchanged.
 
 Build/package artifacts and prior attempt evidence remain in `target`; there is
 no artifact cleanup. Host's `target/publish/lock` covers admission through command
@@ -185,7 +225,7 @@ The procedure below remains available for older supplier selections that still
 depend on an unpublished Host change, including Platform's retired gzip facade.
 Use it only after confirming that dependency in the actual selected graph:
 
-1. Prepare the intended coordinated workspace version and commit the foundational
+1. Prepare the intended foundation release and commit the foundational
    changes while upper-layer dependencies still resolve to published releases.
    Batch selection limits package preparation/upload; full workspace metadata and
    the existing lint gate still apply.
@@ -193,7 +233,8 @@ Use it only after confirming that dependency in the actual selected graph:
    commit and finalize its Git release/tag after the last source change. If the
    version is already tagged, finish its remaining packages from that unchanged
    source and put subsequent adoption in the next normal release.
-2. Check and publish the required Host batch with an explicit `PACKAGE` selection,
+2. Check and publish the required Host batch with `RELEASE_GROUP=foundation`
+   and an explicit `PACKAGE` selection,
    as in the example above. Include any other unpublished local dependencies the
    selected packages need. Cargo owns resolution, verification and ordering.
 3. Publish the required Platform and Wire updates through their release flows,

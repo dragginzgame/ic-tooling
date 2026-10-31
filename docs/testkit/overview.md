@@ -104,12 +104,12 @@ PocketIC dependency selection; Testkit owns server and fixture policy.
 
 ## Install
 
-Host-side test crates normally add:
+For the pending IC integration 0.74 release, host-side test crates add:
 
 ```toml
 [dev-dependencies]
-ic-testkit = "0.66"
-ic-platform = { version = "0.6.19", features = ["pocket-ic"] }
+ic-testkit = "0.74"
+ic-platform = { version = "0.15.1", features = ["pocket-ic"] }
 ```
 
 For typed application calls, enable the `wire` feature and depend directly on
@@ -255,7 +255,7 @@ controlled application protocols. Add `ic-wire` alongside it:
 
 ```toml
 [dev-dependencies]
-ic-wire = "0.11.0"
+ic-wire = "0.12.1"
 ```
 
 Both helpers accept an explicit canister, caller, `WireCallSpec` and borrowed
@@ -279,7 +279,7 @@ allocated the reply. It is not network pre-allocation admission or a peak-heap
 bound. Error display omits payloads; use the typed rejection for details and raw
 PocketIC calls for malformed requests or original reply evidence. The feature is
 off by default and adds no Wire dependency to the canister library graph. Align
-direct Wire dependencies to 0.11 when supplying limits or matching typed codec
+direct Wire dependencies to 0.12 when supplying limits or matching typed codec
 causes, since these public types carry Wire's dependency identity.
 
 ## External protocol calls
@@ -703,7 +703,7 @@ One pool owns one recipe. The builder must produce the same Wasm, init arguments
 topology and seeded state whenever invoked. Builders return `std::io::Result<StandaloneCanisterFixture>` and may own
 configuration in a `Send + Sync + 'static` closure. Returned errors keep their
 source and build-stage timings; ordinary construction failures need no panic. Use a fresh instance or a custom recipe for state
-outside the captured canister. See the [0.38 migration](../../crates/ic-testkit/CHANGELOG.md#0380---2026-10-13)
+outside the captured canister. See the [0.38 migration](../../releases/integration/CHANGELOG.md#0380---2026-10-13)
 for the removed standalone-pool interface.
 
 The lease's `Drop` implementation releases a capacity slot, so Clippy can
@@ -1094,14 +1094,15 @@ rustdoc.
 
 Testkit is part of the IC Tooling workspace. Use the root
 [host guide](../hosts.md) and [publication guide](../publishing.md)
-for setup and coordinated releases.
+for setup and group releases.
 
 - `make testkit-check`: Testkit libraries and private driver with the prepared server.
 - `make testkit-wasm-check` and `make testkit-msrv`: deployed profiles.
-- `make testkit-package-check`: all coordinated public archives, including tests.
+- `make testkit-package-check`: all public archives at their own versions, including tests.
 - `make testkit-browser-check`: browser-session support.
 
 The [0.62 migration](../changelog/0.62.md) replaces the old independent
-Testkit release flow. The root changelog owns new releases; the package changelog
-retains published history. Neither package checking nor ordinary validation
+Testkit release flow. The [integration ledger](../../releases/integration/CHANGELOG.md)
+now covers Tools, Testkit and Native; the root indexes both groups and their shared
+history. Neither package checking nor ordinary validation
 authorizes downloads, publication or artifact cleanup.

@@ -8,8 +8,19 @@ set -euo pipefail
     exit 2
 }
 source_root="$1" destination="$2"
-cp "$source_root/Cargo.toml" "$source_root/Cargo.lock" \
+cp "$source_root/Cargo.toml" "$source_root/Cargo.lock" "$source_root/CHANGELOG.md" \
     "$source_root/README.md" "$source_root/LICENSE" "$destination/"
+if [[ -f "$source_root/ci/cargo-release-groups.json" ]]; then
+    mkdir -p "$destination/ci"
+    cp "$source_root/ci/cargo-release-groups.json" "$destination/ci/"
+    jq -er '[.groups[] | .changelog, (.metadata_files // [])[]] + (.shared_metadata_files // []) | unique[]' \
+        "$source_root/ci/cargo-release-groups.json" |
+        while IFS= read -r path; do
+            case "/$path/" in //*|*/../*|*/./*|*//*) echo 'invalid fixture release path' >&2; exit 1 ;; esac
+            if [[ "$path" == */* ]]; then mkdir -p "$destination/${path%/*}"; fi
+            cp "$source_root/$path" "$destination/$path"
+        done
+fi
 cargo metadata --manifest-path "$source_root/Cargo.toml" --no-deps \
     --format-version 1 --locked --offline > "$destination/source-metadata.json"
 jq -r '. as $m | .packages[] |

@@ -1,3 +1,12 @@
+# Release groups: ci/cargo-release-groups.json
+# foundation: ic-host-artifacts, ic-host-fs, ic-host-http, ic-host-process,
+#   ic-host-text, ic-build, ic-host-wasm-inspect
+#   version: crates/ic-build/Cargo.toml package.version
+#   changelog: releases/foundation/CHANGELOG.md
+# integration: ic-host-tools, ic-testkit, ic-testkit-native,
+#   ic-testkit-dev and ic-testkit-perf-probe (private qualification)
+#   version: crates/ic-testkit/Cargo.toml package.version
+#   changelog: releases/integration/CHANGELOG.md
 [workspace]
 members = [
     "apps/ic-host-wasm-inspect",
@@ -18,7 +27,6 @@ resolver = "3"
 [workspace.package]
 edition = "2024"
 rust-version = "1.91.0"
-version = "0.73.0"
 license = "MIT"
 repository = "https://github.com/dragginzgame/ic-tooling"
 authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
@@ -37,9 +45,9 @@ ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.73", defau
 ic-host-fs = { path = "crates/ic-host-fs", version = "0.73", default-features = false }
 ic-host-process = { path = "crates/ic-host-process", version = "0.73", default-features = false }
 ic-host-text = { path = "crates/ic-host-text", version = "0.73", default-features = false }
-ic-metrics = { version = "0.22.0", default-features = false }
-ic-platform = { version = "0.13.0", default-features = false }
-ic-wire = "0.11.0"
+ic-metrics = { version = "0.23.0", default-features = false }
+ic-platform = { version = "0.15.1", default-features = false }
+ic-wire = "0.12.1"
 leb128 = "0.2.5"
 libc = "0.2.190"
 prost = "0.14.3"

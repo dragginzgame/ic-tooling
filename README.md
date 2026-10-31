@@ -6,6 +6,12 @@ Build and Testkit use Host through explicit crate dependencies.
 Private test drivers and the Wasm probe remain unpublished.
 All packages use Rust 1.91 or newer.
 
+Foundation (generic Host libraries, Build and the inspector) and IC integration
+(Tools, Testkit and Native) have independent release versions in this workspace.
+See [release ownership](docs/design/release-groups.md) and the
+[Foundation](releases/foundation/CHANGELOG.md) /
+[integration](releases/integration/CHANGELOG.md) ledgers.
+
 See [the consolidation inventory](docs/design/tooling-consolidation.md),
 [Build documentation](docs/build/README.md) and
 [Testkit documentation](docs/testkit/README.md).

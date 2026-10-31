@@ -1,17 +1,19 @@
-//! Qualify the exact coordinated archives through IC Build's owning engine.
+//! Qualify exact per-package archives through IC Build's owning engine.
 
 use std::{
+    collections::BTreeMap,
     error::Error,
     fmt::Write as _,
     path::Path,
     process::{Command, ExitCode},
 };
 
+use ic_build::cargo::observation::{CargoMetadataSpec, decode_metadata};
 use ic_build::cargo::packages::{
     PackageArchiveSpec, PackageCommandError, PackageQualificationLimits, qualify_package_archives,
 };
 use ic_build::cargo::selection::CargoFeatureSelection;
-use ic_host_process::tool::{OutputLimit, OutputLimits};
+use ic_host_process::tool::{CompletedExecution, OutputLimit, OutputLimits, capture_command};
 
 fn main() -> ExitCode {
     match run() {
@@ -66,15 +68,21 @@ fn run() -> Result<(), Box<dyn Error>> {
         None,
     )?;
     eprintln!("Package qualification evidence: {}", evidence.display());
-    let version = env!("CARGO_PKG_VERSION");
-    let packages = include_str!("../../../../ci/public-packages.txt")
-        .lines()
-        .map(|name| PackageArchiveSpec {
-            name,
-            version,
-            patch_registry: true,
-        })
-        .collect::<Vec<_>>();
+    let limits = PackageQualificationLimits {
+        process: OutputLimits {
+            stdout: OutputLimit::Terminate(64 * 1024 * 1024),
+            stderr: OutputLimit::Terminate(64 * 1024 * 1024),
+            timeout: None,
+        },
+        file_bytes: 16 * 1024 * 1024,
+        source_entries: 8192,
+        source_depth: 64,
+    };
+    let versions = workspace_versions(workspace, &evidence, limits.process)?;
+    let packages = archive_specs(
+        &versions,
+        include_str!("../../../../ci/public-packages.txt"),
+    )?;
     eprintln!(
         "Current archive stage: {}",
         evidence.join("current-stage").display()
@@ -88,16 +96,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             all_features: true,
             ..CargoFeatureSelection::default()
         },
-        PackageQualificationLimits {
-            process: OutputLimits {
-                stdout: OutputLimit::Terminate(64 * 1024 * 1024),
-                stderr: OutputLimit::Terminate(64 * 1024 * 1024),
-                timeout: None,
-            },
-            file_bytes: 16 * 1024 * 1024,
-            source_entries: 8192,
-            source_depth: 64,
-        },
+        limits,
         || {
             let mut command =
                 Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()));
@@ -113,10 +112,128 @@ fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn workspace_versions(
+    workspace: &Path,
+    evidence: &Path,
+    limits: OutputLimits,
+) -> Result<BTreeMap<String, String>, Box<dyn Error>> {
+    let mut command = CargoMetadataSpec {
+        manifest_path: &workspace.join("Cargo.toml"),
+        include_dependencies: false,
+        filter_platform: None,
+        locked: true,
+        offline: true,
+        features: &CargoFeatureSelection::default(),
+    }
+    .command(Command::new(
+        std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()),
+    ))?;
+    let observation = capture_command(&mut command, limits)
+        .and_then(CompletedExecution::require_success)
+        .and_then(CompletedExecution::require_complete);
+    let stdout_path = evidence.join("selection.json");
+    let stderr_path = evidence.join("selection.stderr");
+    let output = observation.map_err(|error| {
+        let mut retention = Vec::new();
+        if let Some(captured) = error.evidence() {
+            for (path, bytes) in [
+                (&stdout_path, &captured.stdout),
+                (&stderr_path, &captured.stderr),
+            ] {
+                if let Err(error) = std::fs::write(path, bytes) {
+                    retention.push(error);
+                }
+            }
+        }
+        PackageCommandError {
+            stage: "workspace-selection".to_owned(),
+            stdout_path: stdout_path.clone(),
+            stderr_path: stderr_path.clone(),
+            execution: Some(error),
+            retention,
+        }
+    })?;
+    std::fs::write(stdout_path, &output.stdout)?;
+    std::fs::write(stderr_path, &output.stderr)?;
+    let metadata = decode_metadata(&output.stdout)?;
+    Ok(metadata
+        .workspace_packages()
+        .into_iter()
+        .map(|package| (package.name.to_string(), package.version.to_string()))
+        .collect())
+}
+
+fn archive_specs<'a>(
+    versions: &'a BTreeMap<String, String>,
+    roster: &'a str,
+) -> Result<Vec<PackageArchiveSpec<'a>>, Box<dyn Error>> {
+    roster
+        .lines()
+        .map(|name| {
+            let version = versions
+                .get(name)
+                .ok_or_else(|| format!("public package is not a workspace member: {name}"))?;
+            Ok(PackageArchiveSpec {
+                name,
+                version,
+                patch_registry: true,
+            })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use ic_host_process::tool::{ExecutionError, ExecutionEvidence, ExecutionFailure, ToolError};
+
+    #[test]
+    fn archive_selection_preserves_mixed_versions_and_refuses_missing_members() {
+        let fixture = ic_host_fs::testing::FixtureDirectory::new(
+            &std::env::temp_dir(),
+            "archive-version-selection",
+        )
+        .unwrap();
+        let root = fixture.path();
+        std::fs::write(
+            root.join("Cargo.toml"),
+            "[workspace]\nmembers = [\"foundation\", \"integration\"]\nresolver = \"3\"\n",
+        )
+        .unwrap();
+        let mut lock = String::from("version = 4\n");
+        for (name, version) in [("foundation", "0.73.0"), ("integration", "0.74.0")] {
+            std::fs::create_dir_all(root.join(name).join("src")).unwrap();
+            std::fs::write(root.join(name).join("src/lib.rs"), "").unwrap();
+            std::fs::write(
+                root.join(name).join("Cargo.toml"),
+                format!(
+                    "[package]\nname = \"{name}\"\nversion = \"{version}\"\nedition = \"2024\"\n"
+                ),
+            )
+            .unwrap();
+            writeln!(
+                lock,
+                "\n[[package]]\nname = \"{name}\"\nversion = \"{version}\""
+            )
+            .unwrap();
+        }
+        std::fs::write(root.join("Cargo.lock"), lock).unwrap();
+        let versions = workspace_versions(
+            root,
+            root,
+            OutputLimits {
+                stdout: OutputLimit::Terminate(1024 * 1024),
+                stderr: OutputLimit::Terminate(16 * 1024),
+                timeout: None,
+            },
+        )
+        .unwrap();
+        let packages = archive_specs(&versions, "foundation\nintegration\n").unwrap();
+        assert_eq!(packages[0].version, "0.73.0");
+        assert_eq!(packages[1].version, "0.74.0");
+        assert!(packages.iter().all(|package| package.patch_registry));
+        assert!(archive_specs(&versions, "missing-member").is_err());
+    }
 
     #[test]
     fn failure_report_preserves_stage_paths_and_bounds_escaped_capture() {

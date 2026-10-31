@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "groups": [
+    {
+      "name": "foundation",
+      "primary": "ic-build",
+      "version": "package",
+      "members": [
+        "ic-host-artifacts", "ic-host-fs", "ic-host-http", "ic-host-process",
+        "ic-host-text", "ic-build", "ic-host-wasm-inspect"
+      ],
+      "changelog": "releases/foundation/CHANGELOG.md",
+      "dependencies": ["ic-host-artifacts", "ic-host-fs", "ic-host-process", "ic-host-text", "ic-build"]
+    },
+    {
+      "name": "integration",
+      "primary": "ic-testkit",
+      "version": "package",
+      "members": [
+        "ic-host-tools", "ic-testkit", "ic-testkit-native",
+        "ic-testkit-dev", "ic-testkit-perf-probe"
+      ],
+      "changelog": "releases/integration/CHANGELOG.md",
+      "dependencies": ["ic-testkit"]
+    }
+  ]
+}

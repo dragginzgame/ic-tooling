@@ -23,12 +23,12 @@ esac
 upper_layers='^(ic-wire(?:-|$)|ic-testkit(?:-|$)|ic-(auth|backup|blob-storage|jobs|metrics|persistence|query|relay|replica-watch|timers)(?:-|$)|canic(?:-|$)|icydb(?:-|$))'
 perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http --forbid ic-build --forbid-pattern "$upper_layers" \
     --target "$target" --require reqwest=1 --require ic-host-artifacts=1 \
-    --forbid-pattern '^(ic-platform|candid|ic-agent|ic-host-(fs|process|tools)|rustls|native-tls|async-compression)$'
+    --forbid-pattern '^(ic-platform|ic-platform-types|candid|ic-agent|ic-host-(fs|process|tools)|rustls|native-tls|async-compression)$'
 perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http \
     --target wasm32-unknown-unknown --forbid-pattern '^(?!ic-host-http$)'
-perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid ic-platform --forbid-pattern "$upper_layers" \
+perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid ic-platform --forbid ic-platform-types --forbid-pattern "$upper_layers" \
     --target "$target" --forbid clap
-perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid ic-platform --forbid-pattern "$upper_layers" \
+perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid ic-platform --forbid ic-platform-types --forbid-pattern "$upper_layers" \
     --target "$target" --features cli --require clap=1
 # Each profile selects its parser exclusions explicitly; labels carry no policy.
 # Repeated dependency families remain local profile vocabulary.
@@ -44,7 +44,7 @@ observe_graph() {
     local arguments=(--consumer "$root" --package "$package" --target "$target")
     arguments+=(--forbid ic-host-http --forbid ic-build --forbid-pattern "$upper_layers")
     # Tools explicitly owns selected Platform profiles; generic Host owners do not.
-    [[ "$package" == ic-host-tools ]] || arguments+=(--forbid ic-platform)
+    [[ "$package" == ic-host-tools ]] || arguments+=(--forbid ic-platform --forbid ic-platform-types)
     arguments+=(--forbid-pattern '^(ciborium|ciborium-io|ciborium-ll)$')
     arguments+=(--forbid-pattern '^(ic-cdk|ic-cdk-macros|ic-cdk-executor|ic-platform-macros|ic-platform-runtime-guard|ic0)$')
     arguments+=(--forbid-pattern '^(serde_yaml_ng|serde_yml|serde-saphyr|granit-parser)$')

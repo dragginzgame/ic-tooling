@@ -1052,7 +1052,7 @@ The Candid signatures require downstream updates when adopting 0.50.0. Traced
 callers include Auth's qualification runner, Timers' PocketIC harness, Storage's
 benchmark, Jobs' consumer recovery tests, Query's Governance testkit, Blob's
 PocketIC fixtures, Canic's qualification helpers/tests and IC Crates' managed
-fixtures. Use the [package migration guide](../../crates/ic-testkit/CHANGELOG.md#0500)
+fixtures. Use the [package migration guide](../../releases/integration/CHANGELOG.md#0500)
 and select budgets for each consumer's actual reply shapes; no global default is
 introduced or pushed into those independent application policies.
 
