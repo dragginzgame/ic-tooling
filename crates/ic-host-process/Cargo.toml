@@ -2,7 +2,7 @@
 name = "ic-host-process"
 edition.workspace = true
 rust-version.workspace = true
-version = "0.73.1"
+version = "0.73.2"
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
