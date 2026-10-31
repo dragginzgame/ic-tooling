@@ -20,6 +20,16 @@ and neither candidate tag nor registry primary version exists. Sibling release
 processes are preserved; no Tooling build was active. No artifact cleanup is
 included in delivery.
 
+PR [#278](https://github.com/dragginzgame/ic-tooling/pull/278) merged at
+`e5037ad348b5b277bead9798eed8d56bf9570e9e`. The first actual Foundation release
+gate stopped before version preparation: new selection logs occupied the empty
+directory required by Build's archive engine. The repair gives Build a fresh
+`archives/` child and keeps the driver's selection logs alongside it. Evidence
+collection retains both scopes and excludes nested Cargo caches, including old
+flat attempts. The failed attempt remains at
+`target/package-qualification-1987543-0/`; full release output is retained in the
+deployment evidence directory. No failed validation is counted as a pass.
+
 Admission, exporter impact/refresh and qualification are retained at
 `/tmp/ic-tooling-shared018.eFTK4d/`. The clean isolated source pins Shared 0.27.18
 at `ceaa1937c95c3d40c4453ca55d8655ebfcdf73f8` (151 payloads). This includes the

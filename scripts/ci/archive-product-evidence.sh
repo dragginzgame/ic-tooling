@@ -29,7 +29,14 @@ for attempt in "$repository"/target/package-qualification-*; do
     fi
     for path in "$attempt"/*; do
         [[ "${path##*/}" != target ]] || continue
-        inputs+=("$repository" "${path#"$repository/"}")
+        if [[ "$path" == "$attempt/archives" && -d "$path" && ! -L "$path" ]]; then
+            for archive_path in "$path"/*; do
+                [[ "${archive_path##*/}" != target ]] || continue
+                inputs+=("$repository" "${archive_path#"$repository/"}")
+            done
+        else
+            inputs+=("$repository" "${path#"$repository/"}")
+        fi
     done
 done
 if [[ ${#inputs[@]} == 0 ]]; then
