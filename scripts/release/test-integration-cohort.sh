@@ -103,7 +103,7 @@ ic-testkit = { path = "../crates/ic-testkit", version = "=$next", features = ["w
 ic-testkit-native = { path = "../crates/ic-testkit-native", version = "=$next", features = ["stable-memory"] }
 ic-platform = { workspace = true, features = ["principal"] }
 ic-platform-types = { version = "=$types_version", default-features = false }
-ic-wire = { workspace = true }
+ic-wire = { workspace = true, features = ["platform-types"] }
 EOF
 cat > "$fixture/consumer/src/lib.rs" <<'RUST'
 #[cfg(test)]
@@ -124,6 +124,9 @@ mod tests {
             ).unwrap();
         let facade: ic_platform::Principal = owner;
         let _: ic_platform_types::Principal = facade;
+        // The consumer opts into metadata; Tooling production profiles do not.
+        assert!(ic_wire::typescript::native_schema::<ic_platform::Principal>().is_ok());
+        assert!(ic_wire::typescript::native_schema::<ic_platform::Account>().is_ok());
         let limits = ic_wire::Limits {
             bytes: 1024, allocation: 16384, nodes: 1024, depth: 16,
         };
