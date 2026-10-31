@@ -15,7 +15,6 @@ pub(super) fn fake_wasm_build_spec(label: &str) -> (PathBuf, super::wasm_cache::
         "pub fn value() -> u8 { 1 }\n",
     )
     .expect("write fixture package");
-    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let wrapper = root.join("cargo.sh");
     let artifact_message = crate::testing::cargo::wasm_artifact_message_script(&root, "target");
     write_executable_script(
@@ -30,18 +29,16 @@ if [ "$1" = build ]; then
     {artifact_message}
     exit 0
 fi
-exec "$REAL_CARGO" "$@"
+exec "${{CARGO:-cargo}}" "$@"
 "#
         ),
     )
     .expect("write executable test script");
-    let mut environment = crate::testing::cargo::environment();
-    environment.insert("REAL_CARGO".into(), cargo);
     let spec = super::wasm_cache::WasmBuildSpec::new(
         &root,
         &root.join("exact"),
         &["fixture"],
-        environment,
+        crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
     .with_isolated_builds()

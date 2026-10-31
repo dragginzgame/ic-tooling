@@ -33,6 +33,8 @@
 
 ### 🩹 Fixed
 
+- Preserve fake Cargo execution when Build tests replace their complete child
+  environment, allowing archive qualification to reach the intended build phases.
 - Fix publication-batch fixture failure with macOS's bundled Bash when validating
   uploads without dry-run options.
 - Align the Wasm encoder/parser and Wat dependency family to eliminate duplicate
