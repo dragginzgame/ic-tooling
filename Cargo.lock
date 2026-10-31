@@ -1615,7 +1615,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-tools"
-version = "0.74.0"
+version = "0.75.0"
 dependencies = [
  "clap",
  "ic-host-artifacts",
@@ -1744,7 +1744,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.74.0"
+version = "0.75.0"
 dependencies = [
  "clap",
  "ic-host-artifacts",
@@ -1762,7 +1762,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit-dev"
-version = "0.74.0"
+version = "0.75.0"
 dependencies = [
  "clap",
  "ic-build",
@@ -1782,14 +1782,14 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit-native"
-version = "0.74.0"
+version = "0.75.0"
 dependencies = [
  "ic-platform",
 ]
 
 [[package]]
 name = "ic-testkit-perf-probe"
-version = "0.74.0"
+version = "0.75.0"
 dependencies = [
  "ic-platform",
  "ic-testkit",
