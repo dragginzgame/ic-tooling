@@ -36,6 +36,50 @@ fn context(root: &Path) -> serde_json::Value {
 }
 
 #[test]
+fn explicit_group_manifest_edits_are_bounded_and_never_infer_another_version() {
+    let fixture = Fixture::new();
+    let root = fixture.0.path();
+    let source = "[package]\nname='endpoint'\nversion='0.1.0' # keep\n";
+    write(root.join("Cargo.toml"), source);
+    write(
+        root.join("selection.json"),
+        r#"{"version":"package","dependencies":[]}"#,
+    );
+    let arguments = [
+        "group-manifest",
+        "Cargo.toml",
+        "0.1.0",
+        "0.2.0",
+        "selection.json",
+    ];
+    let output = fixture.run(8192, &arguments);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        source.replace("'0.1.0'", "\"0.2.0\"")
+    );
+    assert_eq!(fs::read_to_string(root.join("Cargo.toml")).unwrap(), source);
+    for selection in [
+        r#"{"version":"workspace","dependencies":[]}"#,
+        r#"{"version":"package","dependencies":[],"infer":true}"#,
+        r#"{"version":"unknown","dependencies":[]}"#,
+    ] {
+        write(root.join("selection.json"), selection);
+        let refused = fixture.run(8192, &arguments);
+        assert!(!refused.status.success());
+        assert_eq!(refused.stdout, [] as [u8; 0]);
+        assert_eq!(fs::read_to_string(root.join("Cargo.toml")).unwrap(), source);
+    }
+    let refused = fixture.run(4, &arguments);
+    assert!(!refused.status.success());
+    assert_eq!(refused.stdout, [] as [u8; 0]);
+}
+
+#[test]
 fn clap_help_version_and_argument_admission_do_not_read_inputs() {
     let fixture = Fixture::new();
     for arguments in [

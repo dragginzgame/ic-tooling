@@ -423,11 +423,11 @@ for selection in ic-host-artifacts "$remaining" 'ic-testkit ic-host-fs'; do
     for mode in check publish; do
         : > calls
         invoke "$mode" --packages "$selection" > "batch-$mode.log" 2>&1
-        batch_options=()
-        [[ "$mode" != check ]] || batch_options+=(--allow-dirty --dry-run)
-        printf '%s\0' publish --locked --registry crates-io "${batch_selectors[@]}" \
+        batch_arguments=(publish --locked --registry crates-io "${batch_selectors[@]}"
             --manifest-path "$fixture/Cargo.toml" --target-dir "$fixture/target" \
-            --all-features "${batch_options[@]}" > expected-arguments
+            --all-features)
+        [[ "$mode" != check ]] || batch_arguments+=(--allow-dirty --dry-run)
+        printf '%s\0' "${batch_arguments[@]}" > expected-arguments
         cmp expected-arguments arguments
         admission="$(sed -n 's/^Publication admission evidence: //p' "batch-$mode.log")"
         printf '%s\n' "${selected[@]}" > expected-selection

@@ -8,6 +8,14 @@ admits an application release.
 The release-metadata binary is optional. Install it with
 `cargo install --locked --features cli ic-build`, or build it from this workspace
 with `cargo build -p ic-build --features cli --bin ic-build-release-metadata`.
+
+Explicit release groups can use `group-manifest SOURCE PREVIOUS NEXT SELECTION_JSON`
+with the existing positive `--max-input-bytes` allowance. Selection JSON has
+`version` (`workspace`, `package` or `unchanged`) and `dependencies` containing
+exact `alias`, `previous`, `next` workspace requirement projections. The editor
+preserves every unselected byte and infers no group membership, dependency
+ownership or release policy. Shared Tooling admits that policy and the complete
+locked workspace; the existing `lock` operation already selects exact packages.
 Library-only consumers do not enable `cli` and do not depend on Clap.
 
 The optional `test-support` feature exposes `ic_build::testing` for Cargo fixture

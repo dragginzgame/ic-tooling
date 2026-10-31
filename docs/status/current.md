@@ -2,13 +2,14 @@
 
 ## Source and accepted scope
 
-HEAD remains `e2f5e610831175c020d486b1a84a37bffb06a10c` (maintainer commit
-`0.73.0`). Root/package versions still read 0.72.1; pending notes select 0.73.0.
-The latest task adopts Platform and reviews more issues, preserving all pending
-#268/#275 fixes. Only three Platform lock records change from this step's dirty
-admission. Real index and HEAD are unchanged; no staging, commit, own version
-bump, release, tag or publication ran. Earlier startup evidence is preserved at
-admission Git and in the [2026-10-30 archive](archive-2026-10-30.md).
+This integration combines maintainer commit `ead0b753494e689b5d2982057c936848c1050fc4`
+(`fixing`) with merged PR #277 at `20ca31036e0ea22dbc39c2256f1ace7362b0826d`.
+The user authorized conflict resolution and merging. The only textual conflict
+was this handoff; both contributions are retained. Root/package versions remain
+0.72.1 with pending 0.73.0 notes. No release, tag, publication, history rewrite,
+tool download, sibling edit or artifact cleanup ran. Cargo.lock matches merge
+admission. Earlier evidence remains at its existing owners and in the retained
+[2026-10-30 archive](archive-2026-10-30.md).
 
 Platform is now published 0.13.0 with matching macros/runtime guard. It removes
 the gzip facade and Host Artifacts dependency; selected implementation sources
@@ -62,7 +63,7 @@ is `402168f1b08dd09502cc0a5fd713d41344cf461f`.
 
 [#268 — Delegate Testkit scaled benchmark averages to ic-metrics](https://github.com/dragginzgame/ic-tooling/issues/268)
 and [#275 — Keep Wat and direct Wasm encoder selections in one graph identity](https://github.com/dragginzgame/ic-tooling/issues/275)
-have local fixes; closure needs delivered source and applicable qualification.
+are included in the maintainer source; closure needs delivered source and applicable qualification.
 [#274 — Align Testkit typed Wire calls with the Platform 0.12-compatible Wire release](https://github.com/dragginzgame/ic-tooling/issues/274)
 has local adoption, but downstream Tooling publication remains pending. Public
 integration guidance now reflects Platform 0.13/core Wire 0.11 without claiming
@@ -70,8 +71,8 @@ that Wire's optional schema integration targets 0.13.
 
 [#276 — Reduce unrelated Host and Build version churn from integration-only Tooling changes](https://github.com/dragginzgame/ic-tooling/issues/276)
 now records the actual internal requirements, public error/digest identities and
-release/publication constraints. Platform #118 was administratively closed without
-its stable-identity implementation; Wire #36 remains an upstream boundary decision.
+release/publication constraints. Platform #118 was reopened for the unresolved
+stable-identity decision; Wire #36 remains conditional on that boundary.
 Keep the agreed coordinated workspace policy. No independent-version split or
 wide-range dependency workaround was made. Metadata evidence is in this task's
 `cohort-edges.json`; the issue owns the decision and acceptance, not this handoff.
@@ -82,5 +83,26 @@ admission keeps the lower publication runner. Previous adoption evidence is unde
 `/tmp/ic-tooling-wire-adoption.2VwCQY/` and `/tmp/ic-tooling-platform-adoption.6oO1jt/`;
 cleanup evidence is `/tmp/ic-tooling-cleanup-0722.N0q9MJ/`. Preserve failed cases,
 package artifacts, release plans/locks/receipts, supplier clones, migration/
-retirement archives and original Host refs. No tool download, sibling checkout
-edit or artifact cleanup ran. GitHub remains the sole follow-up tracker.
+retirement archives and original Host refs. GitHub remains the sole follow-up tracker.
+
+## Release-group editor integration
+
+PR #277 already merged remotely as `20ca31036e0ea22dbc39c2256f1ace7362b0826d`.
+The local pull merges that source with maintainer commit `ead0b753` (`fixing`),
+which contains the pending adoption and #268/#275 fixes above. The sole textual
+conflict was this handoff; both contributions are preserved. The merge introduces
+bounded `group-manifest` rendering without changing release groups or versions.
+Shared retains group/graph admission, transactional installation and resume.
+Its candidate preparation/rollback/resume fixtures used the unpublished compiled
+editor; consumer activation still requires a published supplying tool.
+
+Merge evidence is `/tmp/ic-tooling-merge277.3LQZJ9/`, retaining the conflicted
+source/index, native CI logs and focused checks. On Rust 1.91 seven renderer and
+six CLI tests pass; selected Build strict Clippy, Testkit graphs and doc links
+pass. Linux CI failed the duplicate-encoder policy already repaired in `ead0b753`.
+Both macOS jobs failed publication fixture expansion of an empty array under Bash
+3.2 nounset. The fixture now constructs a nonempty complete argument array for
+both modes; its actual substitute-effect suite, ShellCheck and syntax checks pass
+on Linux. Native macOS reruns and full hosted qualification remain outstanding;
+the old failed runs are not passes. PR #277 is already merged remotely; there
+were no open Tooling PRs at this integration review.

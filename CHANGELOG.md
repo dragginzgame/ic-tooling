@@ -12,6 +12,13 @@
   local adoption for [#274 — Align Testkit typed Wire calls with the Platform 0.12-compatible Wire release](https://github.com/dragginzgame/ic-tooling/issues/274);
   coordinated Tooling publication remains pending.
 
+### ➕ Added
+
+- Render explicitly selected release-group manifest literals with the managed
+  IC Build editor, preserving unrelated versions and requirements. Shared Tooling
+  retains group/graph admission and transactional installation
+  ([Shared #328 — Support approved Cargo release groups](https://github.com/dragginzgame/shared-tooling/issues/328)).
+
 ### 🧹 Cleanup
 
 - Remove the Platform-to-Host bootstrap exception from the current publication
@@ -26,6 +33,8 @@
 
 ### 🩹 Fixed
 
+- Fix publication-batch fixture failure with macOS's bundled Bash when validating
+  uploads without dry-run options.
 - Align the Wasm encoder/parser and Wat dependency family to eliminate duplicate
   encoder identities without weakening feature boundaries
   ([#275 — Keep Wat and direct Wasm encoder selections in one graph identity](https://github.com/dragginzgame/ic-tooling/issues/275)).
