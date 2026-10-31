@@ -39,6 +39,20 @@ now invokes `/bin/sh` explicitly, preserving `$0`-relative runtime lookup and al
 publication/rejection assertions. Preserve `/tmp/ic-host-fs-test-2523853-64/` and
 `foundation-release.fixed.log`; no versions, tags or registry uploads were made.
 
+PR [#280](https://github.com/dragginzgame/ic-tooling/pull/280) merged the shell
+fixture repair at `cc3908897fe231848915532aacb30490aa719dee`. The complete Linux
+CI and Rust 1.91 gates then passed. Foundation 0.73.1 was committed, tagged and
+atomically pushed at `3b095515ed2b2020d700b5bf0e90c0c4459f5454`
+(`foundation-v0.73.1`); all seven public versions passed the publication dry run
+and were uploaded and independently confirmed on crates.io.
+
+Integration's next gate exposed a hardcoded `ic-build@0.73.0` expectation in the
+publication fixture. The fixture now derives Foundation's real version and a
+distinct integration version, preserving the mixed-version assertion. Production
+publication already selects the actual versions; Foundation is not republished.
+The failed mixed-version attempt remains under
+`/tmp/host-fixture-retention.zuosJ0/`; integration stays at 0.73.0 before retry.
+
 Admission, exporter impact/refresh and qualification are retained at
 `/tmp/ic-tooling-shared018.eFTK4d/`. The clean isolated source pins Shared 0.27.18
 at `ceaa1937c95c3d40c4453ca55d8655ebfcdf73f8` (151 payloads). This includes the
