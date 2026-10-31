@@ -1,5 +1,16 @@
 # Current handoff — 2026-10-31
 
+## Release-group editor contribution
+
+The isolated Shared #328 contribution adds bounded `group-manifest` rendering
+with explicit version/requirement selections; it changes no package versions or
+dependency selections. Rust 1.91 passes seven renderer and six CLI tests. Strict
+affected library/binary/CLI Clippy passes on the pinned 1.99.1 compiler; 1.91
+Clippy encounters an existing unrelated batch-error lint expectation. Shared's
+group preparation/rollback/resume fixtures use this compiled candidate, not a
+published tool. Native macOS and publication remain unqualified by this batch.
+See [Shared #328](https://github.com/dragginzgame/shared-tooling/issues/328).
+
 ## Source and local result
 
 HEAD remains `85f759d7e964568dffecfdef1d6c8a7c6872be52` (Release 0.72.1).

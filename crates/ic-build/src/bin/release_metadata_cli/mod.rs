@@ -2,7 +2,8 @@ use clap::Parser;
 use ic_build::cargo::{
     lock_projection::WorkspaceVersionProjection,
     release_metadata::{
-        DependencyVersionProjection, render_workspace_lock, render_workspace_manifest,
+        DependencyVersionProjection, ManifestVersion, render_group_manifest, render_workspace_lock,
+        render_workspace_manifest,
     },
 };
 use serde::Deserialize;
@@ -43,6 +44,13 @@ struct Selection {
 
 #[derive(clap::Subcommand)]
 enum Operation {
+    /// Render explicitly admitted group version/dependency literals
+    GroupManifest {
+        #[command(flatten)]
+        selection: Selection,
+        #[arg(value_name = "selection-json")]
+        context: PathBuf,
+    },
     /// Render a workspace manifest candidate
     Manifest {
         #[command(flatten)]
@@ -63,7 +71,9 @@ pub fn run() -> Result<()> {
     let arguments = Arguments::parse();
     let limit = arguments.max_input_bytes.get();
     let selection = match &arguments.operation {
-        Operation::Manifest { selection, .. } | Operation::Lock { selection, .. } => selection,
+        Operation::Manifest { selection, .. }
+        | Operation::GroupManifest { selection, .. }
+        | Operation::Lock { selection, .. } => selection,
     };
     let Selection {
         source,
@@ -72,6 +82,29 @@ pub fn run() -> Result<()> {
     } = selection;
     let input = read(source, limit)?;
     let output = match &arguments.operation {
+        Operation::GroupManifest { context, .. } => {
+            let context: GroupSelection = serde_json::from_str(&read(context, limit)?)?;
+            let projections: Vec<_> = context
+                .dependencies
+                .iter()
+                .map(|d| DependencyVersionProjection {
+                    alias: &d.alias,
+                    previous: &d.previous,
+                    next: &d.next,
+                })
+                .collect();
+            render_group_manifest(
+                &input,
+                previous,
+                next,
+                match context.version {
+                    GroupVersion::Workspace => ManifestVersion::Workspace,
+                    GroupVersion::Package => ManifestVersion::Package,
+                    GroupVersion::Unchanged => ManifestVersion::Unchanged,
+                },
+                &projections,
+            )?
+        }
         Operation::Manifest { context, .. } => {
             let dependencies = if let Some(context) = context {
                 let context = serde_json::from_str(&read(context, limit)?)?;
@@ -103,6 +136,29 @@ pub fn run() -> Result<()> {
     };
     std::io::stdout().lock().write_all(output.as_bytes())?;
     Ok(())
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct GroupSelection {
+    version: GroupVersion,
+    dependencies: Vec<GroupDependency>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum GroupVersion {
+    Workspace,
+    Package,
+    Unchanged,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct GroupDependency {
+    alias: String,
+    previous: String,
+    next: String,
 }
 
 fn check_path(path: &Path) -> Result<()> {

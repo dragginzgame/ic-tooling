@@ -2,6 +2,13 @@
 
 ## [0.73.0] - Unreleased
 
+### ➕ Added
+
+- Render explicitly selected release-group manifest literals with the managed
+  IC Build editor, preserving unrelated versions and requirements. Shared Tooling
+  retains group/graph admission and transactional installation
+  ([Shared #328](https://github.com/dragginzgame/shared-tooling/issues/328)).
+
 ### ⚠️ Breaking
 
 - Adopt IC Platform 0.12.0. Consumers exchanging Platform-owned registry

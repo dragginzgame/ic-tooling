@@ -21,6 +21,17 @@ pub struct DependencyVersionProjection<'a> {
     pub next: &'a str,
 }
 
+/// Canonical version literal selected by an admitted release group.
+#[derive(Clone, Copy, Debug)]
+pub enum ManifestVersion {
+    /// The existing coordinated workspace version.
+    Workspace,
+    /// An independently versioned member's package version.
+    Package,
+    /// Dependency requirements only; the manifest's version is unchanged.
+    Unchanged,
+}
+
 /// A candidate could not be rendered; no caller input is changed.
 #[derive(Debug, thiserror::Error)]
 pub enum ReleaseMetadataError {
@@ -93,20 +104,48 @@ pub fn render_workspace_manifest(
     next: &str,
     dependencies: &[DependencyVersionProjection<'_>],
 ) -> Result<String, ReleaseMetadataError> {
+    render_group_manifest(
+        input,
+        previous,
+        next,
+        ManifestVersion::Workspace,
+        dependencies,
+    )
+}
+
+/// Render only an explicitly selected version literal and workspace requirements.
+///
+/// Group membership, dependency ownership and replacement requirements are caller
+/// policy. All nonselected bytes are preserved; no group is inferred from TOML.
+///
+/// # Errors
+/// Refuses malformed TOML, invalid versions, missing/conflicting selected literals
+/// and duplicate dependency aliases. No partial candidate escapes.
+pub fn render_group_manifest(
+    input: &str,
+    previous: &str,
+    next: &str,
+    version: ManifestVersion,
+    dependencies: &[DependencyVersionProjection<'_>],
+) -> Result<String, ReleaseMetadataError> {
     if !stable(previous) || !stable(next) {
         return Err(refuse("expected canonical stable workspace versions"));
     }
     let document = Document::parse(input).map_err(ReleaseMetadataError::Parse)?;
-    let workspace = document
-        .as_item()
-        .get("workspace")
-        .ok_or_else(|| refuse("missing workspace"))?;
-    let version = workspace
-        .get("package")
-        .and_then(|item| item.get("version"))
-        .and_then(Item::as_value)
-        .ok_or_else(|| refuse("missing workspace.package.version"))?;
-    let mut edits = vec![edit(version, previous, next)?];
+    let root = document.as_item();
+    let version_table = match version {
+        ManifestVersion::Workspace => Some(root.get("workspace").and_then(|w| w.get("package"))),
+        ManifestVersion::Package => Some(root.get("package")),
+        ManifestVersion::Unchanged => None,
+    };
+    let mut edits = Vec::new();
+    if let Some(table) = version_table {
+        let literal = table
+            .and_then(|table| table.get("version"))
+            .and_then(Item::as_value)
+            .ok_or_else(|| refuse("missing selected manifest version"))?;
+        edits.push(edit(literal, previous, next)?);
+    }
     let mut seen = HashSet::new();
     for dependency in dependencies {
         if dependency.alias.is_empty()
@@ -116,11 +155,14 @@ pub fn render_workspace_manifest(
         {
             return Err(refuse("invalid or duplicate dependency selection"));
         }
-        let version = workspace
-            .get("dependencies")
-            .and_then(|item| item.get(dependency.alias))
-            .and_then(|item| item.get("version"))
-            .and_then(Item::as_value)
+        let version = root
+            .get("workspace")
+            .and_then(|item| {
+                item.get("dependencies")
+                    .and_then(|item| item.get(dependency.alias))
+                    .and_then(|item| item.get("version"))
+                    .and_then(Item::as_value)
+            })
             .ok_or_else(|| refuse("missing selected dependency version"))?;
         edits.push(edit(version, dependency.previous, dependency.next)?);
     }

@@ -1,5 +1,35 @@
 use super::*;
 
+#[test]
+fn group_candidates_preserve_unselected_versions_and_exact_manifest_bytes() {
+    let input = "# preserved é\n[workspace.package]\nversion='0.11.0'\n[workspace.dependencies]\nendpoint = { path='endpoint', version='=0.1.0' } # keep\nexternal='3'\n";
+    let dependency = DependencyVersionProjection {
+        alias: "endpoint",
+        previous: "=0.1.0",
+        next: "=0.2.0",
+    };
+    let after = render_group_manifest(
+        input,
+        "0.1.0",
+        "0.2.0",
+        ManifestVersion::Unchanged,
+        &[dependency],
+    )
+    .unwrap();
+    assert_eq!(after, input.replace("'=0.1.0'", "\"=0.2.0\""));
+    let member = "[package]\nname='endpoint'\nversion='0.1.0' # canonical\n[dependencies]\ncore={workspace=true}\n";
+    assert_eq!(
+        render_group_manifest(member, "0.1.0", "0.2.0", ManifestVersion::Package, &[]).unwrap(),
+        member.replace("'0.1.0'", "\"0.2.0\"")
+    );
+    assert!(
+        render_group_manifest(member, "0.0.1", "0.2.0", ManifestVersion::Package, &[]).is_err()
+    );
+    assert!(
+        render_group_manifest(member, "0.1.0", "0.2.0", ManifestVersion::Workspace, &[]).is_err()
+    );
+}
+
 const MANIFEST: &str = "# é [workspace.package]\r\n[workspace.package]\r\nversion = \"0.1.0\" # keep\r\n[workspace.dependencies]\r\nrenamed = { package = 'core', path = 'core', version = '^0.1', optional = true }\r\nexternal = '0.1.0'";
 fn changes() -> [WorkspaceVersionProjection<'static>; 2] {
     ["app", "core"].map(|package| WorkspaceVersionProjection {
