@@ -24,3 +24,7 @@ Build owns the group version. Earlier releases retain their coordinated scope in
   Release/publication commands refuse missing group selections before effects;
   workspace-wide CI qualification retains one lint pass. Package numbers stay
   unchanged during adoption. The managed editor remains IC Build 0.73.0.
+
+- Invoke the bundle-selection test's shell fixture through its interpreter,
+  avoiding transient executable-write locks during parallel filesystem tests
+  while preserving relative runtime and rejection checks.
