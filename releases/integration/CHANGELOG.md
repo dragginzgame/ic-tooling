@@ -26,6 +26,9 @@ package version. Earlier releases share the
   [Release ownership](../../docs/design/release-groups.md)
   ([#276 — Reduce unrelated Host and Build version churn](https://github.com/dragginzgame/ic-tooling/issues/276)).
 
+- Derive the publication fixture's Foundation selector from its actual version,
+  so integration qualification continues after independent Foundation patches.
+
 ---
 
 The package-specific Testkit notes below predate the new release groups and are

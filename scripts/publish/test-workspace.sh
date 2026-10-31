@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/ci/next-release-version.sh
 set -euo pipefail
 unset RELEASE_GROUP
 
@@ -478,15 +479,17 @@ done
 [[ ! -e injected ]] || exit 1
 PUBLISH_DIRTY=1 refuse publish --packages ic-host-artifacts
 # Mixed package versions retain exact selectors and per-archive provenance.
-jq '(.packages[] | select(.name == "ic-testkit" or .name == "ic-host-tools" or .name == "ic-testkit-native").version) = "0.74.0"' \
+foundation_version="$(jq -er '.packages[] | select(.name == "ic-build") | .version' original-metadata.json)"
+integration_version="$(bash "$root/scripts/ci/next-release-version.sh" "$foundation_version" minor)"
+jq --arg version "$integration_version" '(.packages[] | select(.name == "ic-testkit" or .name == "ic-host-tools" or .name == "ic-testkit-native").version) = $version' \
     original-metadata.json > metadata.json
 for mode in check publish; do
     RELEASE_GROUP=foundation invoke "$mode" --packages ic-build > "mixed-foundation-$mode.log" 2>&1
     tr '\0' '\n' < arguments > mixed-arguments
-    grep -Fx 'ic-build@0.73.0' mixed-arguments
+    grep -Fx "ic-build@$foundation_version" mixed-arguments
     RELEASE_GROUP=integration invoke "$mode" --packages ic-testkit > "mixed-integration-$mode.log" 2>&1
     tr '\0' '\n' < arguments > mixed-arguments
-    grep -Fx 'ic-testkit@0.74.0' mixed-arguments
+    grep -Fx "ic-testkit@$integration_version" mixed-arguments
 done
 RELEASE_GROUP=integration invoke check > integration-group.log 2>&1
 tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' | LC_ALL=C sort > group-packages
