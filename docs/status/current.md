@@ -24,6 +24,27 @@ Certificate-only profiles exclude registry `ic-certification`; native Agent keep
 its separate external dependency. Metrics remains arithmetic-only, without native
 metadata or Wire entering Testkit's production graph.
 
+## Authorized delivery — Foundation 0.73.5 / Integration 0.76.1
+
+[PR #296](https://github.com/dragginzgame/ic-tooling/pull/296) is merged as
+`7c0f9956`, adding caller-selected checks for already-produced archives while
+preserving the convenience API's packaging and test roster. Its 15 checks passed,
+including Linux, macOS 15 Intel/Apple Silicon and MSRV. Foundation's compatible
+patch is 0.73.5. Integration's compatible Wire adoption follows as 0.76.1.
+Release and publication of both groups are authorized, Foundation first, through
+the standard separate commands and complete gates. Preserve failed evidence and
+leave hosted CI asynchronous; no publication has occurred for these candidates.
+
+The local root catalog now selects published Wire/Derive **0.13.3**. The incoming
+lock already selected both versions and is preserved byte-for-byte; its backup
+and check logs are under `/tmp/ic-tooling-wire0133.QzBFuP/`. Existing public types,
+byte-array representations, frames, budgets and feature boundaries are unchanged,
+so notes select a compatible patch. Own versions await normal release preparation;
+the Wire source is being delivered by PR. Platform/Types and Metrics are unchanged.
+Focused Linux Clippy, nine Wire transport tests and one probe contract test on
+Rust 1.91, the Rust 1.91 probe Wasm build and Testkit graph policies pass.
+Native macOS qualification has not been rerun for this local Wire adoption.
+
 ## Qualification and asynchronous CI
 
 The standard complete local Linux CI and Rust 1.91 release gates passed on merged
@@ -33,12 +54,12 @@ installed stock PocketIC 16.1 checks passed. The separate Integration dry run,
 clean-source admission, remote provenance fetch, package verification and uploads
 then passed at release commit `2973946c`. Git release and publication were separate.
 
-Native macOS evidence is separate from Linux execution. At this handoff, the
+Native macOS evidence is separate from Linux execution. At 0.76.0 delivery, the
 [source PR matrix](https://github.com/dragginzgame/ic-tooling/actions/runs/41296300109)
-has passed native Linux and macOS 15 Apple Silicon; **macOS 15 Intel remains in
+had passed native Linux and macOS 15 Apple Silicon; **macOS 15 Intel was still in
 progress**. Source MSRV and lint/security passed. Separate browser-session,
 PocketIC concurrency and optimizer workflows passed on all three hosts. Those
-separate jobs do not replace the pending Intel native suite. Hosted CI continues
+separate jobs do not replace complete native qualification. Hosted CI continues
 asynchronously; pending or cancelled jobs are never counted as passes.
 
 PR head `8cbf71d7` and merged source `cf75aa44` have identical tree
@@ -48,12 +69,14 @@ handoff CI is distinct evidence, not another completed source qualification.
 
 ## Checkout, evidence and recovery
 
-The ordinary checkout contains released Foundation 0.73.4 / Integration 0.76.0.
-Locked offline metadata passes and the working tree is clean. Incoming source is
-preserved in a recorded stash; all lock records outside the five Integration
-version changes match the reviewed pre-delivery graph exactly. The earlier
-Metrics/Platform lock selections were incorporated into the authorized adoption.
-Do not apply a complete saved patch over the released metadata.
+The ordinary checkout retains Foundation 0.73.4 / Integration 0.76.0 package
+versions, with the pending Wire changes above. This delivery's incoming work and
+original lock are backed up under `/tmp/ic-tooling-deploy0735-0761.ZATSzj/`.
+At 0.76.0 delivery, locked offline
+metadata passed and the tree was clean; incoming source remains in a recorded
+stash, and unrelated lock records were preserved. Earlier Metrics/Platform lock
+selections were incorporated into the authorized adoption. Do not apply a complete
+saved patch over the released metadata.
 
 The canonical completed record is
 `.git/release-state/deployment-integration-0.76.0/delivery-result.json`.

@@ -5,6 +5,14 @@ with the private development/probe packages. Its canonical version is Testkit's
 package version. Earlier releases share the
 [coordinated history through 0.73.0](../history.md#0730---2026-10-31).
 
+## [0.76.1] - Unreleased
+
+### ⬆️ Dependencies
+
+- Adopt Wire/Derive 0.13.3. Preserve the existing public Rust types, byte-array
+  representations, frames, resource budgets and native/Wasm feature boundaries.
+  Platform 0.16.0, canonical Types 0.15.1 and Rust 1.91 remain unchanged.
+
 ## [0.76.0] - 2026-11-01
 
 ### ⚠️ Breaking
