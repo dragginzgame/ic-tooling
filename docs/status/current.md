@@ -19,6 +19,12 @@ is claimed. Foundation proposes 0.73.4; package versions and publication are
 unchanged. The maintainer authorized a scoped PR and normal merge, with issue
 closure after integration. Preserve the unrelated incoming lock records.
 
+Main `6e427279` exposed eight classification-refusal fixture failures on native
+Apple Silicon: Bash 3.2 does not apply `errexit` to `[[ ]]`. Both job guards now
+exit explicitly, and the fixture verifies refusal without `errexit`. The old
+guards reproduce all eight failures locally; the correction passes all 85 cases.
+New native acceptance remains separate from that local regression proof.
+
 ## Delivered Foundation 0.73.3 and integration 0.75.2
 
 The authorized cleanup and Wire adoption are released and published:
