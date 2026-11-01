@@ -4,6 +4,18 @@ This group covers Artifacts, FS, HTTP, Process, Text, Build and the Wasm inspect
 Build owns the group version. Earlier releases retain their coordinated scope in
 [shared history](../history.md#0730---2026-10-31).
 
+## [0.73.7] - Unreleased
+
+### 🔧 Changed
+
+- Adopt Shared's bounded Cargo-tool scratch retention, current consumer
+  requirements and quiescent reclamation preview. Unrelated Linux application
+  updates no longer invalidate common tools or the release editor; source,
+  compiler and receipt admission remain required. Existing generations require
+  explicit migration; this adoption performs no machine cleanup.
+  [Shared #339 — Stop unbounded retention of obsolete tool versions and build caches](https://github.com/dragginzgame/shared-tooling/issues/339)
+  and [Shared #340 — Avoid rebuilding Cargo tools after unrelated OS package changes](https://github.com/dragginzgame/shared-tooling/issues/340).
+
 ## [0.73.6] - 2026-11-01
 
 ### ➕ Added

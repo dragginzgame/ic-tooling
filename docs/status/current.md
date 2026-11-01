@@ -1,5 +1,21 @@
 # Current handoff — 2026-11-01
 
+## Pending Shared retention adoption
+
+The isolated adoption selects Shared 0.27.26 source
+`a2b3c22fe20d4913803244c8e754824ebfc401bf` from
+[Shared PR #341](https://github.com/dragginzgame/shared-tooling/pull/341).
+Common tools and the existing release-editor adapter keep their current pins.
+The new snapshot trims successful tool-build scratch and supplies explicit
+[store maintenance](../tool-store-maintenance.md). No live store or sibling
+working checkout was cleaned. Package versions and lock selections are unchanged.
+
+Focused snapshot/link/dependency checks and the three-group release-adapter fixture
+pass. Actual Linux editor builds at 0.73.0 and 0.73.1 pass offline admission with
+successful compiler scratch absent. An isolated two-consumer refresh/reclamation
+case retires the obsolete generation and handles while preserving the peer's
+selection. Full product gates and native macOS qualification remain separate.
+
 ## Published Foundation 0.73.6 / Tools 0.76.2 / Testkit 0.76.2
 
 All ten public crates are released and published in supplier-first order:
@@ -95,6 +111,6 @@ or consumer deployment should be inferred from that record beyond its receipts.
 [Previous handoff](https://github.com/dragginzgame/ic-tooling/blob/09f7b3d199b5fc7036dc2ea255ba2bac97e93a62/docs/status/current.md)
 preserves the completed Foundation 0.73.5 / joint Integration 0.76.1 and earlier
 delivery/recovery coordinates. Their existing records remain untouched.
-The reviewed Shared snapshot remains 152 files at
-`143a9abb9ae81feae9400ff3844b03b1ddfdd75a` (VERSION/export 0.27.21).
+The released baseline used Shared `143a9abb9ae81feae9400ff3844b03b1ddfdd75a`
+(VERSION/export 0.27.21); the pending adoption above supersedes its tooling files.
 Rust 2024, MSRV 1.91 and the [extraction contract](../extraction.md) remain unchanged.
