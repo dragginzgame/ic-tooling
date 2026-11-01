@@ -6,12 +6,12 @@
 
 PocketIC-oriented test utilities for Internet Computer canister tests.
 
-These dependency examples target the pending IC integration 0.74 release.
+These dependency examples use the current Testkit family; Host Tools releases independently.
 
 ```toml
 [dev-dependencies]
-ic-testkit = "0.74"
-ic-platform = { version = "0.15.1", features = ["pocket-ic"] }
+ic-testkit = "0.76.1"
+ic-platform = { version = "0.16.0", default-features = false, features = ["pocket-ic"] }
 ```
 
 For typed application calls, enable the `wire` feature and depend directly on
@@ -151,7 +151,7 @@ does not select Host's Wasm-inspection feature. Consumers select the capabilitie
 they use rather than inheriting them through Testkit.
 
 The published archive includes a `CHANGELOG.md` navigation file linking the
-[canonical integration ledger](../../releases/integration/CHANGELOG.md) and its
+[canonical Testkit ledger](../../releases/testkit/CHANGELOG.md) and its
 historical upgrade actions. Current build and artifact-cache contracts belong to IC Build;
 historical Testkit artifact imports are not current entry points.
 
@@ -201,7 +201,7 @@ Generic Cargo/Wasm builds, retained artifact caches and freshness APIs belong to
 Pass `fixture.pocket_ic()` and `fixture.canister_id()` explicitly to
 `query_wire` or `update_wire` with the `wire` feature. The standalone fixture owns
 installation and lifetime; Wire owns method contracts and codec limits.
-See the [canonical migration notes](../../releases/integration/CHANGELOG.md).
+See the [canonical migration notes](../../releases/testkit/CHANGELOG.md).
 
 Benchmark commands own run identities, provenance, history selection and any
 metadata sidecars. The repository's `benchmark_report` example renders supplied
@@ -309,7 +309,7 @@ for setup and group releases.
 - `make testkit-browser-check`: browser-session support.
 
 The [0.62 migration](../../docs/changelog/0.62.md) replaces the old independent
-Testkit release flow. The [integration ledger](../../releases/integration/CHANGELOG.md) now covers Tools,
-Testkit and Native. The root changelog indexes both groups and shared history.
+Testkit release flow. The [Testkit ledger](../../releases/testkit/CHANGELOG.md) covers Testkit, Native
+and private qualification packages. Host Tools has its own ledger and release group.
 Neither package checking nor ordinary validation
 authorizes downloads, publication or artifact cleanup.

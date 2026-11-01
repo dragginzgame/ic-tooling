@@ -6,6 +6,7 @@ use crate::cargo::{
     },
     messages::artifact_matches,
     observation::{facts::CargoBuildFacts, metadata_arguments, schema},
+    rustc_recipe::{POLICY_ENV, RECORD_DIRECTORY, RECORD_ENV, RustcRecipe},
     selection::{CargoSelection, is_normal_component},
 };
 use ic_host_fs::owned_directory::{OwnedDirectory, remove_path_if_present};
@@ -84,6 +85,7 @@ pub struct WasmBuildSpec {
     cargo_selection: CargoSelection,
     environment: BTreeMap<OsString, OsString>,
     additional_inputs: Vec<PathBuf>,
+    rustc_recipe: Option<RustcRecipe>,
     target: String,
     cargo_program: OsString,
     rustc_program: OsString,
@@ -108,6 +110,7 @@ impl std::fmt::Debug for WasmBuildSpec {
                 &self.environment.keys().collect::<Vec<_>>(),
             )
             .field("additional_inputs", &self.additional_inputs)
+            .field("rustc_recipe", &self.rustc_recipe)
             .field("target", &self.target)
             .field("cargo_program", &self.cargo_program)
             .field("rustc_program", &self.rustc_program)
@@ -844,6 +847,7 @@ impl WasmBuildSpec {
                 .unwrap_or_else(|| "rustc".into()),
             environment,
             additional_inputs: Vec::new(),
+            rustc_recipe: None,
             target: DEFAULT_TARGET.to_owned(),
             cargo_message_bytes: CARGO_METADATA_BYTES,
             cache_mode: WasmBuildCacheMode::SharedIncremental {
@@ -920,6 +924,20 @@ impl WasmBuildSpec {
     #[must_use]
     pub const fn environment(&self) -> &BTreeMap<OsString, OsString> {
         &self.environment
+    }
+
+    /// Apply an explicitly qualified target cfg recipe after Cargo resolves flags.
+    ///
+    /// The admitted wrapper's bytes and policy contribute to the cache identity.
+    /// Later environment replacement cannot erase this policy. Select
+    /// [`Self::with_isolated_builds`]: a shared Cargo target may reuse objects
+    /// without invoking a wrapper after its private policy changes, so this
+    /// combination is refused. Existing compiler wrappers are also refused.
+    #[must_use]
+    pub fn with_rustc_recipe(mut self, recipe: RustcRecipe) -> Self {
+        self.additional_inputs.push(recipe.wrapper.clone());
+        self.rustc_recipe = Some(recipe);
+        self
     }
 
     /// Add files or directories not discoverable through Cargo's local dependency graph.
@@ -1159,6 +1177,26 @@ impl WasmBuildRecord {
     #[must_use]
     pub fn exact_cache_path(&self) -> &Path {
         self.retention.path()
+    }
+
+    /// Read the original effective compiler recipes, within caller-owned bounds.
+    ///
+    /// Includes native build dependencies unchanged by the target cfg policy.
+    /// Compiler optimization appears in rustc argv; post-link settings belong
+    /// to the caller's separate [`super::ArtifactCacheSpec`] transaction.
+    /// # Errors
+    /// Returns `NotFound` for builds without an opted-in wrapper, or evidence
+    /// read/admission failures. Keep this record alive while consuming results.
+    pub fn rustc_recipe_records(
+        &self,
+        maximum_records: usize,
+        maximum_bytes: usize,
+    ) -> io::Result<Vec<serde_json::Value>> {
+        crate::cargo::rustc_recipe::read_rustc_recipe_records(
+            &self.exact_cache_path().join(RECORD_DIRECTORY),
+            maximum_records,
+            maximum_bytes,
+        )
     }
 
     /// Exact, read-only Wasm paths retained until this record and its clones drop.
@@ -3161,6 +3199,12 @@ fn complete_build_record(
     total_started: Instant,
     progress: &mut ProgressReporter<'_>,
 ) -> Result<WasmBuildRecord, WasmBuildError> {
+    if let Some(recipe) = &spec.rustc_recipe {
+        let directory = input.active_entry.join(RECORD_DIRECTORY);
+        recipe.verify_records(&directory).map_err(|source| {
+            WasmBuildError::io("admit effective rustc recipe evidence", directory, source)
+        })?;
+    }
     let retention = progress.run_phase(WasmBuildPhase::ArtifactPublication, || {
         RetainedCacheEntry::acquire(input.active_entry).map_err(wasm_cache_fs_error)
     })?;
@@ -3359,6 +3403,18 @@ fn wasm_cache_fs_error(error: CacheFsError) -> WasmBuildError {
 }
 
 fn validate_spec(spec: &WasmBuildSpec) -> Result<CachePlan, WasmBuildError> {
+    if let Some(recipe) = &spec.rustc_recipe {
+        recipe
+            .admit(&spec.target, &spec.environment)
+            .map_err(|error| WasmBuildError::InvalidSpec {
+                message: error.to_string(),
+            })?;
+        if !matches!(spec.cache_mode, WasmBuildCacheMode::Isolated) {
+            return Err(WasmBuildError::InvalidSpec {
+                message: "qualified rustc recipes require isolated Cargo builds".to_owned(),
+            });
+        }
+    }
     for (key, value) in &spec.environment {
         let key = key.as_encoded_bytes();
         if key.is_empty()
@@ -3685,10 +3741,18 @@ fn run_cargo_build(
 
 impl WasmBuildSpec {
     fn cargo_invocation(&self) -> CargoInvocation {
+        let mut environment = self.environment.clone();
+        if let Some(recipe) = &self.rustc_recipe {
+            environment.insert(
+                "RUSTC_WRAPPER".into(),
+                recipe.wrapper.clone().into_os_string(),
+            );
+            environment.insert(POLICY_ENV.into(), recipe.policy().into());
+        }
         CargoInvocation {
             cargo_program: self.cargo_program.clone(),
             working_directory: self.workspace_root.clone(),
-            environment: self.environment.clone(),
+            environment,
             target: self.target.clone(),
             selection: self.cargo_selection.clone(),
             packages: self.packages.clone(),
@@ -3717,8 +3781,14 @@ fn cargo_build_command(
     let mut invocation = spec.cargo_invocation();
     invocation.environment.insert(
         "CARGO_TARGET_DIR".into(),
-        absolute_target_dir.into_os_string(),
+        absolute_target_dir.clone().into_os_string(),
     );
+    if spec.rustc_recipe.is_some() {
+        invocation.environment.insert(
+            RECORD_ENV.into(),
+            absolute_target_dir.join(RECORD_DIRECTORY).into_os_string(),
+        );
+    }
     invocation.command().map_err(|source| {
         WasmBuildError::io(
             "render Cargo build invocation",

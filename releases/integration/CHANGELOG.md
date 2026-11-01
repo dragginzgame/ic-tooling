@@ -1,3 +1,6 @@
+> Historical joint Host Tools/Testkit ledger through 0.76.1. New notes belong to
+> [Host Tools](../tools/CHANGELOG.md) or [Testkit](../testkit/CHANGELOG.md).
+
 # IC integration changelog
 
 This group covers `ic-host-tools`, `ic-testkit` and `ic-testkit-native`, together

@@ -140,10 +140,23 @@ pub fn observe_configurations(
     roots: &[PathBuf],
     limits: ConfigurationLimits,
 ) -> Result<Vec<ConfigurationFile>, ConfigurationError> {
+    observe_configurations_admitting(roots, limits, &mut |_, _| Ok(()))
+}
+
+type ConfigurationAdmission<'a> = dyn FnMut(&Path, &Value) -> Result<(), ConfigurationError> + 'a;
+
+// Inspect the same bounded parsed bytes without retaining private config values
+// or introducing a second reader/parser in a recipe's admission path.
+pub(crate) fn observe_configurations_admitting(
+    roots: &[PathBuf],
+    limits: ConfigurationLimits,
+    admit: &mut ConfigurationAdmission<'_>,
+) -> Result<Vec<ConfigurationFile>, ConfigurationError> {
     let mut traversal = ConfigurationTraversal {
         files: Vec::new(),
         active: BTreeSet::new(),
         limits,
+        admit,
     };
     for root in roots {
         traversal.append(root, false, 0)?;
@@ -187,13 +200,14 @@ pub(crate) fn is_recipe_variable(name: &str) -> bool {
             || matches!(name, "CARGO_INCREMENTAL" | "RUSTC_BOOTSTRAP"))
 }
 
-struct ConfigurationTraversal {
+struct ConfigurationTraversal<'a> {
     files: Vec<ConfigurationFile>,
     active: BTreeSet<PathBuf>,
     limits: ConfigurationLimits,
+    admit: &'a mut ConfigurationAdmission<'a>,
 }
 
-impl ConfigurationTraversal {
+impl ConfigurationTraversal<'_> {
     fn append(
         &mut self,
         config: &Path,
@@ -267,20 +281,8 @@ impl ConfigurationTraversal {
         }
         let configuration = toml::from_str::<Value>(&contents)
             .map_err(|_| invalid_configuration(config, "invalid TOML"))?;
-        let compiler_overrides = [
-            "rustc",
-            "rustc-wrapper",
-            "rustc-workspace-wrapper",
-            "rustdoc",
-        ]
-        .into_iter()
-        .filter(|field| {
-            configuration
-                .get("build")
-                .and_then(|build| build.get(field))
-                .is_some()
-        })
-        .collect();
+        (self.admit)(config, &configuration)?;
+        let compiler_overrides = configured_compilers(&configuration);
         self.files.push(ConfigurationFile {
             path: config.to_owned(),
             location: location.clone(),
@@ -379,4 +381,21 @@ fn configuration_recipe(configuration: &Value) -> Option<Sha256Digest> {
     }
     (!selected.is_empty())
         .then(|| Sha256Digest::compute(Value::Table(selected).to_string().as_bytes()))
+}
+
+fn configured_compilers(configuration: &Value) -> Vec<&'static str> {
+    [
+        "rustc",
+        "rustc-wrapper",
+        "rustc-workspace-wrapper",
+        "rustdoc",
+    ]
+    .into_iter()
+    .filter(|field| {
+        configuration
+            .get("build")
+            .and_then(|build| build.get(field))
+            .is_some()
+    })
+    .collect()
 }

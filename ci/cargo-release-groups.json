@@ -6,27 +6,53 @@
       "primary": "ic-build",
       "version": "package",
       "members": [
-        "ic-host-artifacts", "ic-host-fs", "ic-host-http", "ic-host-process",
-        "ic-host-text", "ic-build", "ic-host-wasm-inspect"
+        "ic-host-artifacts",
+        "ic-host-fs",
+        "ic-host-http",
+        "ic-host-process",
+        "ic-host-text",
+        "ic-build",
+        "ic-host-wasm-inspect"
       ],
       "changelog": "releases/foundation/CHANGELOG.md",
       "dependencies": [
-        "ic-build", "ic-host-artifacts", "ic-host-fs", "ic-host-http",
-        "ic-host-process", "ic-host-text", "ic-host-wasm-inspect"
+        "ic-build",
+        "ic-host-artifacts",
+        "ic-host-fs",
+        "ic-host-http",
+        "ic-host-process",
+        "ic-host-text",
+        "ic-host-wasm-inspect"
       ]
     },
     {
-      "name": "integration",
+      "name": "tools",
+      "primary": "ic-host-tools",
+      "version": "package",
+      "members": [
+        "ic-host-tools"
+      ],
+      "changelog": "releases/tools/CHANGELOG.md",
+      "dependencies": [
+        "ic-host-tools"
+      ]
+    },
+    {
+      "name": "testkit",
       "primary": "ic-testkit",
       "version": "package",
       "members": [
-        "ic-host-tools", "ic-testkit", "ic-testkit-native",
-        "ic-testkit-dev", "ic-testkit-perf-probe"
+        "ic-testkit",
+        "ic-testkit-native",
+        "ic-testkit-dev",
+        "ic-testkit-perf-probe"
       ],
-      "changelog": "releases/integration/CHANGELOG.md",
+      "changelog": "releases/testkit/CHANGELOG.md",
       "dependencies": [
-        "ic-host-tools", "ic-testkit", "ic-testkit-dev",
-        "ic-testkit-native", "ic-testkit-perf-probe"
+        "ic-testkit",
+        "ic-testkit-dev",
+        "ic-testkit-native",
+        "ic-testkit-perf-probe"
       ]
     }
   ]

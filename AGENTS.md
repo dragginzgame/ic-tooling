@@ -19,7 +19,7 @@ recorded with exact file digests in [.shared-tooling.snapshot](.shared-tooling.s
   installation policy and paid-operation recovery. Libraries never claim lifecycle ownership.
 - Rust edition is 2024, MSRV is 1.91.0. Use ordinary directory modules and
   inherited workspace dependencies. Every member uses the literal version of its
-  group in `ci/cargo-release-groups.json`; `ic-build` and `ic-testkit` own their
+  group in `ci/cargo-release-groups.json`; `ic-build`, `ic-host-tools` and `ic-testkit` own their
   respective group versions. The root has no shared version. Group ledgers live
   under `releases/<group>/`, with the root changelog as their index.
   See [release ownership](docs/design/release-groups.md). Do not add Python tooling.

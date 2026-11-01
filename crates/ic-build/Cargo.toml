@@ -15,6 +15,11 @@ name = "ic-build-release-metadata"
 path = "src/bin/ic-build-release-metadata.rs"
 required-features = ["cli"]
 
+[[bin]]
+name = "ic-build-rustc-wrapper"
+path = "src/bin/ic-build-rustc-wrapper.rs"
+required-features = ["cli"]
+
 [features]
 default = []
 cli = ["dep:clap", "clap/derive", "serde/derive"]
@@ -82,6 +87,10 @@ required-features = ["test-support"]
 [[test]]
 name = "release_metadata_cli"
 required-features = ["cli"]
+
+[[test]]
+name = "rustc_recipe"
+required-features = ["cli", "test-support"]
 
 [[test]]
 name = "wasm_build"
