@@ -1,100 +1,78 @@
 # Current handoff — 2026-11-01
 
-## Published Foundation 0.73.6 / Tools 0.76.2 / Testkit 0.76.2
-
-All ten public crates are released and published in supplier-first order:
+## Published Foundation 0.73.6 / Tools 0.77.0 / Testkit 0.77.0
 
 | Group | Version | Release commit | Public packages |
 | --- | --- | --- | --- |
 | Foundation | 0.73.6 | `ffafc54b10f1de750fe92526c49aa0ea70e4e124` | Artifacts, FS, HTTP, Process, Text, Build, Wasm inspector |
-| Host Tools | 0.76.2 | `924a7eca13daf67682157b0b45bd2f213625657f` | Host Tools |
-| Testkit | 0.76.2 | `09f7b3d199b5fc7036dc2ea255ba2bac97e93a62` | Testkit, Testkit Native |
+| Host Tools | 0.77.0 | `d2b14582ab0b6dcb3ef6e72094b8f7da4b195c1a` | Host Tools |
+| Testkit | 0.77.0 | `9269e63aebcf6a85b2ae9848b5bf2f505ea9b6f7` | Testkit, Testkit Native |
 
-Tags are `foundation-v0.73.6`, `tools-v0.76.2` and `testkit-v0.76.2`.
-Private Dev and perf probe versions are 0.76.2; neither was uploaded. Independent
-Cargo-index checks confirm every public version live and non-yanked. Downloaded
-registry archives match the actual upload checksums. There is no pending upload
-or increment; do not replay these completed delivery effects.
+Tags are `foundation-v0.73.6`, `tools-v0.77.0` and `testkit-v0.77.0`.
+The three new 0.77.0 registry versions are live and non-yanked. Downloaded
+archives match the upload checksums and each selected release commit. Private
+Dev and perf probe versions are 0.77.0; neither was uploaded. Foundation remains
+unchanged. These delivery effects are complete; do not replay an increment or upload.
 
-## Delivered contracts
+## Platform adoption and consumer contract
 
-[PR #302](https://github.com/dragginzgame/ic-tooling/pull/302), merged as
-`4047979dea917e22c9b5f48f943f25ce0f038490`, implements
-[#299](https://github.com/dragginzgame/ic-tooling/issues/299) and
-[#300](https://github.com/dragginzgame/ic-tooling/issues/300).
+[PR #305](https://github.com/dragginzgame/ic-tooling/pull/305), merged as
+`454a9d95d52da5d54ae3b45cea48f939663d59bb`, adopts published Platform 0.17.0,
+Runtime 0.17.1 and Types 0.16.0. Native Testkit now selects Platform's maintained
+PocketIC client through the existing `ic_platform::pocket_ic` imports. Consumers
+passing clients or client-owned DTOs must align on Platform 0.17. Host Tools'
+exposed Platform principals/certificates require the same dependency alignment.
+See the [Tools](../../releases/tools/CHANGELOG.md) and
+[Testkit](../../releases/testkit/CHANGELOG.md) migration notes.
 
-Host Tools and the Testkit family now release independently. Foundation retains
-its seven-package boundary; Tools owns only Host Tools; Testkit owns Testkit,
-Native and the private Dev/probe packages. See [release groups](../design/release-groups.md).
-The original joint integration ledger remains frozen through 0.76.1, with its
-original scope, dates, tags, receipts and recovery context. Never reinterpret old
-integration attempts under the new policy.
-
-Build 0.73.6 adds opt-in qualified target cfg recipes and the
-`ic-build-rustc-wrapper` CLI. It preserves Cargo's effective flags, refuses
-conflicts unless explicitly qualified, and retains bounded compiler identities
-and arguments in exact artifact caches. This opt-in requires isolated compiler
-state and refuses ambiguous wrappers/custody overrides; ordinary recipes retain
-their selected behavior. Post-link work reuses the existing admitted-tool and
-transactional cache boundary. [Effective recipes](../build/effective-recipes.md)
-records concrete Canic/Auth adoption, constraints and measured final-Wasm results.
-No consumer checkout, deployment profile or tool pin was changed. Consumers can
-now select the published Foundation library and wrapper under their own policy.
+The PocketIC server remains pinned to 16.1.0. Wasm graphs exclude the native
+client; system calls and the private probe use the independent Runtime owner,
+with the existing executor singleton. Host/Tools graphs exclude the runtime and
+native client implementation. No consumer checkout or server pin was changed.
+The [three release groups](../design/release-groups.md), extraction boundaries,
+Rust 2024 and MSRV 1.91 remain unchanged.
 
 ## Qualification
 
-Each group ran the complete local Linux CI and Rust 1.91 gate before version
-preparation: Foundation on source `4047979d`, Tools on `ffafc54b`, Testkit on
-`924a7eca`. Each gate qualified all ten normalized public archives, feature
-boundaries, deployed Wasm and installed stock PocketIC 16.1 behavior. Each separate
-publication dry run passed, followed by clean-source/remote provenance admission,
-verification, upload and independent index/download readback. Release and registry
-publication remained separate commands.
+Both selected groups ran complete local Linux CI and Rust 1.91 qualification
+before version preparation: Tools on source `454a9d95`, Testkit on `d2b14582`.
+Each gate includes all ten normalized public archives, feature boundaries,
+installed PocketIC behavior and deployed Wasm compilation. Each publication
+then passed its separate dry run, clean-source/remote provenance admission,
+verification, upload and independent registry/archive readback.
 
-Focused implementation evidence also covers three-group rollback/receipts and
-unselected metadata preservation; independent Tools/Testkit source and normalized
-archive consumers on Rust 1.99.1/1.91; actual old certificate identity refusal;
-real Cargo config/ordinary/encoded flags, conflicts, explicit overrides, native
-isolation, profile settings and exact cache reuse. Fresh Platform-maintained
-ECDSA vectors passed eight cases with three samples per backend in stock
-PocketIC. Compiler/optimizer identities, ordered arguments, raw/final Wasm,
-uncompressed module/code bytes and IC instruction counts remain under
-`/tmp/ic-tooling-300-qualification-final/` and in the delivery evidence bundle.
+Native hosted evidence is separate from local Linux. All fifteen source checks
+passed on PR head `71d9bb7de9bcf77a893a76114ace27a1e09210c9`, including
+[Linux](https://github.com/dragginzgame/ic-tooling/actions/runs/41323510659/job/124898559843),
+[macOS 15 Intel](https://github.com/dragginzgame/ic-tooling/actions/runs/41323510659/job/124898559840)
+and [macOS 15 Apple Silicon](https://github.com/dragginzgame/ic-tooling/actions/runs/41323510659/job/124898559836).
+That head and merged source `454a9d95` share tree
+`9380b4d024972784be572c2c0c811ecb256209f0`. Later release commits change only
+selected group metadata; their CI is separate from this source qualification.
 
-Native hosted evidence is separate from local Linux. Source PR head
-`ea1e5645d16611a83d1668c96925007b1aa84cb3` and merged source `4047979d` have
-identical tree `d402f89883cf9e9ab4a87dc24f67528e4566b6b4`. All fifteen source checks passed, including native
-Linux, MSRV, [macOS 15 Apple Silicon](https://github.com/dragginzgame/ic-tooling/actions/runs/41309896915/job/124857910951) and
-[macOS 15 Intel](https://github.com/dragginzgame/ic-tooling/actions/runs/41309896915/job/124857910970).
-Native macOS execution is separate from local Linux evidence. Later release
-commits change only selected group metadata; their CI is separate from this
-source proof. #299 and #300 are implemented, qualified and published.
+## Ordinary checkout and durable evidence
 
-## Ordinary checkout, evidence and recovery
+The ordinary checkout contains the released versions. Its only working-tree
+change is Cargo.lock: incoming Metrics 0.24.5, Wire/Derive 0.13.5 and Thiserror
+2.0.21 selections remain outside the released source batch. All 458 external
+lock records were preserved exactly; only five owned package versions changed.
+Full locked offline metadata passes. The preservation stash is
+`19c01f315b83cc5943cf477c2eb3c68104241f9c`; do not apply its complete old metadata
+patch over the delivered versions.
 
-The ordinary checkout contains Foundation 0.73.6 / Tools 0.76.2 / Testkit 0.76.2.
-Full locked offline metadata passes. Its only remaining working-tree change is
-Cargo.lock: Metrics 0.24.5 and Wire/Derive 0.13.4 were preserved outside this
-source batch. Every unrelated lock record matches the incoming local selection;
-only the twelve owned package versions changed. Published source retains its
-prior Metrics 0.24.4 / Wire 0.13.3 requirements and lock selections.
+Durable evidence is under
+`.git/release-state/deployment-tools-0.77.0-testkit-0.77.0/`:
+release plans/receipts, complete gates and publication logs, downloaded registry
+archives, source CI results, lock-preservation records and checksum-verified
+`product-evidence.tar.gz` excluding compilation caches. The isolated release
+checkout and its build artifacts remain there too. No cleanup was performed.
+An initial `/tmp` checkout lost Git metadata/logs during qualification for an
+unconfirmed reason. Remote/index checks established no release or publication
+before fresh recovery in this durable location; its surviving fragments are not
+the recovery authority.
 
-The original source/index/lock recovery stash is
-`762c5098a5c73353616b23d97dd1399e12e7dbf5`. Complete incoming/source patches and working-file archives remain
-under `/tmp/ic-tooling-publish-299-300.LIasr2/`. Do not apply the whole saved patch over released metadata.
-The isolated release checkout remains at `/tmp/ic-tooling-publish-299-300.LIasr2/release/`; build artifacts
-and failed/successful evidence were preserved without cleanup.
-
-The durable completion record is
-`.git/release-state/deployment-foundation-0.73.6-tools-0.76.2-testkit-0.76.2/delivery-result.json`.
-It retains all three plans/receipts, full gate/publication logs, upload/readback
-archives, source qualification, work-preservation records and a checksum-verified
-product evidence bundle excluding compilation caches. No publication, cleanup
-or consumer deployment should be inferred from that record beyond its receipts.
-
-[Previous handoff](https://github.com/dragginzgame/ic-tooling/blob/09f7b3d199b5fc7036dc2ea255ba2bac97e93a62/docs/status/current.md)
-preserves the completed Foundation 0.73.5 / joint Integration 0.76.1 and earlier
-delivery/recovery coordinates. Their existing records remain untouched.
+The [previous handoff](https://github.com/dragginzgame/ic-tooling/blob/580b0306b8ecee1e735496c49b031cf09548412a/docs/status/current.md)
+retains the completed Foundation 0.73.6 / Tools-Testkit 0.76.2 delivery and older
+recovery coordinates. Existing release ledgers and durable records remain untouched.
 The reviewed Shared snapshot remains 152 files at
 `143a9abb9ae81feae9400ff3844b03b1ddfdd75a` (VERSION/export 0.27.21).
-Rust 2024, MSRV 1.91 and the [extraction contract](../extraction.md) remain unchanged.
