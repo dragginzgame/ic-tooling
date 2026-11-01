@@ -26,9 +26,13 @@ while (my $line = <STDIN>) {
     chomp $line;
     if ($format eq 'dpkg') {
         my @fields = split /\t/, $line, -1;
-        my ($package,$release) = @fields;
-        @fields==2 && $package =~ /\A[a-zA-Z0-9][a-zA-Z0-9.+:-]*\z/ && $release =~ /\A[^\s]+\z/
+        my ($status,$package,$release) = @fields;
+        @fields==3 && $status =~ /\A[a-zA-Z][a-zA-Z][ R]\z/
+            && $package =~ /\A[a-zA-Z0-9][a-zA-Z0-9.+:-]*\z/ && $release =~ /\A[^\s]+\z/
             or die "malformed native package record\n";
+        # The second status byte is the installed state. Held packages (hi)
+        # and packages selected for removal but still installed remain inputs.
+        next unless substr($status,1,1) eq 'i';
         my $list = "$info/$package.list";
         # Some single-architecture packages omit the architecture in info paths.
         if (!-e $list) { (my $plain=$package) =~ s/:[^:]+\z//; $list="$info/$plain.list"; }

@@ -3,7 +3,7 @@
 ## Pending Shared retention adoption
 
 The isolated adoption selects Shared 0.27.26 source
-`a2b3c22fe20d4913803244c8e754824ebfc401bf` from
+`022480c1aae2ed28a7b37247bab0a55d6dcf9ca6` from
 [Shared PR #341](https://github.com/dragginzgame/shared-tooling/pull/341).
 Common tools and the existing release-editor adapter keep their current pins.
 The new snapshot trims successful tool-build scratch and supplies explicit
@@ -15,6 +15,9 @@ pass. Actual Linux editor builds at 0.73.0 and 0.73.1 pass offline admission wit
 successful compiler scratch absent. An isolated two-consumer refresh/reclamation
 case retires the obsolete generation and handles while preserving the peer's
 selection. Full product gates and native macOS qualification remain separate.
+The final Shared policy refresh also rebuilds and admits the editor and converges back
+to one generation. Main's Platform adoption PR #305 is preserved, and its changed
+manifests/ledgers pass a fresh three-group adapter fixture.
 
 ## Published Foundation 0.73.6 / Tools 0.76.2 / Testkit 0.76.2
 

@@ -15,7 +15,6 @@ cargo_native_identity() (
         Linux)
             if [[ -x /usr/bin/dpkg-query ]]; then
                 /usr/bin/dpkg-query -W -f='${db:Status-Abbrev}\t${binary:Package}\t${Version}\n' |
-                    awk -F '\t' '$1 ~ /^ii/ {print $2 "\t" $3}' |
                     perl "$ROOT/scripts/dev/native-package-inputs.pl" dpkg /var/lib/dpkg/info
             elif [[ -x /usr/bin/rpm ]]; then
                 /usr/bin/rpm -qa --qf 'PACKAGE\t%{NAME}\t%{EPOCHNUM}:%{VERSION}-%{RELEASE}.%{ARCH}\n[%{FILENAMES}\n]' |

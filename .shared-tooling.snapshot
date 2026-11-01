@@ -2,7 +2,7 @@
 # version	0.27.26
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	a2b3c22fe20d4913803244c8e754824ebfc401bf
+revision	022480c1aae2ed28a7b37247bab0a55d6dcf9ca6
 # entrypoint	.githooks/pre-commit
 # entrypoint	.github/actions/prepare-common-tools/action.yml
 # entrypoint	.github/actions/retain-failure-evidence/action.yml
@@ -250,7 +250,7 @@ file	60061c6787d8a36916c7bbefd808eb856099cc1b5007203d7c96b44d7528f4ed	x	scripts/
 file	c96e7f919c1f0b88155316f79567438fd5e1fc0c07a31b308170dbc8adf91b11	-	docs/node-tools.md
 file	e00937f22bd31231993ae9c1d7eda844227b39529466d017de44dbc1f0618026	-	scripts/ci/cargo-workspace-members.jq
 file	fed2573258080a0c89c7db113208a774f615ca29c372e62c1d2334e58c165654	x	scripts/ci/compare-stable-versions.pl
-file	b93cf334465a4f4d6d7bb848003a9387f76f8ede2b7f2aa83154838f4305f845	-	scripts/dev/cargo-tool-build.sh
+file	2dd5d5da3a78a6b982f7eadb2c175cef9270d6e17753990817e5759f34fa1b7d	-	scripts/dev/cargo-tool-build.sh
 file	0ef2b424b2a6c78ae4078a9b61f719b7e0b0337a56a4aabcd72f42f259c6cadc	-	scripts/dev/tool-store.sh
 file	b32efafd147ca5bc96bbeaeab67ad175e34dfc441b14c16f3c2b7a5c70b67dca	-	ci/external-ic-dependencies.txt
 file	c10514df9c63541c1e86633c6311d9448d06426cd33b93e4dd289e743fc2e4c6	-	scripts/ci/select-rust-formatting-sources.sh
@@ -269,9 +269,9 @@ file	c8693a4bc058f31c1592c86e7037f0ed02a9719a8a0269038e0a45e16ca93c0b	-	scripts/
 file	eeeca9e6e7b92b888fd6547733d6136f0e7e9859d37c983f8048e60551a15c39	-	scripts/ci/StableVersion.pm
 file	4cfa90a020aefc5115fe5f7103eb5857f837acb9e0cf91f6362947a4abea211c	x	scripts/ci/describe-tool-selection.pl
 file	ebf236f1db579744a13bc995ec1c58c2ee87e34caed23088a6d9b75e638dd27f	x	scripts/ci/verify-evidence-checksums.sh
-file	84652d57110da6ecbf510c9b2847695656f879b1f2d45bf917b1c1c412534533	-	scripts/dev/tool-store-maintenance.pl
+file	20c3e770dd540a74f9b8b16fd2c5aa0b39514d8809eb2a7e355a2334fc0ae0f3	-	scripts/dev/tool-store-maintenance.pl
 file	cf560ad98f288a2c90761dfa68459d86263a0bb8175e40a1f04aee82780cca1c	-	scripts/ci/cargo-release-groups.jq
 file	d7db019a2c4576e4af02b50009418ecf819f1091dc29b6f72dcc236ef34db097	-	scripts/ci/cargo-publication-adapter.sh
 file	ce27820fc6256fc417d3606dfcc8b850256c3f36a1a29132be587d49aceb82d4	-	scripts/ci/RustSource.pm
 file	6d99677e86759273a88fb4149cbd4c14f2aacc99e1838a0db343d76c776f1aba	-	scripts/ci/ic-tool-pins.awk
-file	28e66beaf1d217ae7415f0657a4932a201ee855d2f46adc9674270bc6a10f63b	-	scripts/dev/native-package-inputs.pl
+file	ee9ec8f9f45ff2e61ed0287fcac6b2b3c151e802565cacd29c6eeacf32c3b97f	-	scripts/dev/native-package-inputs.pl

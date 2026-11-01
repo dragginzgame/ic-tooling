@@ -58,6 +58,8 @@ sub marker {
     my ($p)=@_;
     my $v=read_json($p);
     ref($v) eq 'HASH' && ($v->{schema}//0)==1 or die "invalid maintenance schema: $p\n";
+    !exists($v->{complete}) || JSON::PP::is_bool($v->{complete})
+        or die "invalid completion marker: $p\n";
     return $v;
 }
 sub inventory {
