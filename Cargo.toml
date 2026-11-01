@@ -26,13 +26,13 @@ description = "Host-side artifact, filesystem, process and IC tooling"
 [workspace.dependencies]
 # Foundation
 # Changelog : releases/foundation/CHANGELOG.md
-ic-build = { path = "crates/ic-build", version = "0.73.4", default-features = false }
-ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.73.4", default-features = false }
-ic-host-fs = { path = "crates/ic-host-fs", version = "0.73.4", default-features = false }
-ic-host-http = { path = "crates/ic-host-http", version = "0.73.4", default-features = false }
-ic-host-process = { path = "crates/ic-host-process", version = "0.73.4", default-features = false }
-ic-host-text = { path = "crates/ic-host-text", version = "0.73.4", default-features = false }
-ic-host-wasm-inspect = { path = "apps/ic-host-wasm-inspect", version = "0.73.4" }
+ic-build = { path = "crates/ic-build", version = "0.73.5", default-features = false }
+ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.73.5", default-features = false }
+ic-host-fs = { path = "crates/ic-host-fs", version = "0.73.5", default-features = false }
+ic-host-http = { path = "crates/ic-host-http", version = "0.73.5", default-features = false }
+ic-host-process = { path = "crates/ic-host-process", version = "0.73.5", default-features = false }
+ic-host-text = { path = "crates/ic-host-text", version = "0.73.5", default-features = false }
+ic-host-wasm-inspect = { path = "apps/ic-host-wasm-inspect", version = "0.73.5" }
 
 # Integration (Dev and perf probe are private qualification crates)
 # Changelog : releases/integration/CHANGELOG.md
