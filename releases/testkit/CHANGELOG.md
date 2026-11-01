@@ -4,6 +4,15 @@ This ledger owns Testkit, Testkit Native and the private development/probe packa
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.78.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Align optional Wire transport with IC Wire 0.14. Consumers passing limits to
+  `WireCallSpec` or inspecting codec errors must select Wire 0.14 too. This also
+  aligns the optional Platform Types bridge with Platform 0.17's owned types;
+  frame formats and caller-selected limits remain unchanged.
+
 ## [0.77.0] - 2026-11-01
 
 ### ⚠️ Breaking
