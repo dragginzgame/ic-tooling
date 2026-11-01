@@ -34,9 +34,11 @@ ic-host-process = { path = "crates/ic-host-process", version = "0.73.5", default
 ic-host-text = { path = "crates/ic-host-text", version = "0.73.5", default-features = false }
 ic-host-wasm-inspect = { path = "apps/ic-host-wasm-inspect", version = "0.73.5" }
 
-# Integration (Dev and perf probe are private qualification crates)
-# Changelog : releases/integration/CHANGELOG.md
+# Host Tools
+# Changelog : releases/tools/CHANGELOG.md
 ic-host-tools = { path = "crates/ic-host-tools", version = "0.76.1", default-features = false }
+# Testkit (Dev and perf probe are private qualification crates)
+# Changelog : releases/testkit/CHANGELOG.md
 ic-testkit = { path = "crates/ic-testkit", version = "0.76.1", default-features = false }
 ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.76.1" }
 ic-testkit-native = { path = "crates/ic-testkit-native", version = "0.76.1", default-features = false }

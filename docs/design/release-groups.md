@@ -1,153 +1,98 @@
-# Foundation and IC integration releases
+# Release ownership
 
-The maintainer approved two release groups for
-[#276 — Reduce unrelated Host and Build version churn](https://github.com/dragginzgame/ic-tooling/issues/276)
-on 2026-10-31. They share one workspace, dependency catalog, lockfile and complete
-qualification gate. Package locations, public APIs, features and published history
-retain their existing ownership.
+One workspace, dependency catalog and lockfile retain three independent release
+families. This implements [#299](https://github.com/dragginzgame/ic-tooling/issues/299)
+without changing package versions or public APIs.
 
-## Version ownership
-
-| Group | Public packages | Private members | Canonical version | Ledger |
+| Group | Public packages | Private packages | Primary version | Ledger |
 | --- | --- | --- | --- | --- |
-| Foundation | `ic-host-artifacts`, `ic-host-fs`, `ic-host-http`, `ic-host-process`, `ic-host-text`, `ic-build`, `ic-host-wasm-inspect` | None | `ic-build` package version | [Foundation](../../releases/foundation/CHANGELOG.md) |
-| IC integration | `ic-host-tools`, `ic-testkit`, `ic-testkit-native` | `ic-testkit-dev`, `ic-testkit-perf-probe` | `ic-testkit` package version | [IC integration](../../releases/integration/CHANGELOG.md) |
+| foundation | Artifacts, FS, HTTP, Process, Text, Build, Wasm inspector | none | ic-build | [Foundation](../../releases/foundation/CHANGELOG.md) |
+| tools | ic-host-tools | none | ic-host-tools | [Host Tools](../../releases/tools/CHANGELOG.md) |
+| testkit | ic-testkit, ic-testkit-native | ic-testkit-dev, ic-testkit-perf-probe | ic-testkit | [Testkit](../../releases/testkit/CHANGELOG.md) |
 
-[The executable policy](../../ci/cargo-release-groups.json) covers every member
-exactly once. Every member uses an explicit literal version equal to its group's
-primary package. Neither primary owns the other group; root Cargo metadata has
-no version. Dependencies, edition 2024 and Rust 1.91 remain inherited. Group maps
-in root Cargo comments name the canonical packages and release ledgers.
+## Dependency and type ownership
 
-Both groups began with their existing 0.73.0 identities. Foundation 0.73.1 and
-integration 0.75.0 are now published. Pending notes select Foundation 0.73.2 for
-release-admission changes and integration 0.75.1 for arithmetic-only Metrics
-adoption. Neither change breaks its packages' public API. Pending notes do not
-prepare numeric versions.
-Root `CHANGELOG.md` indexes both groups and
-[coordinated history through 0.73.0](../../releases/history.md). Existing Testkit
-package-specific history remains in the integration ledger with its original
-scope; the old crate-local changelog is a packaged navigation pointer.
+Host Tools' normal/build graph uses Foundation and optional Platform capabilities;
+it does not depend on any Testkit package. Its public registry principals and
+certificate/hash-tree results belong to Platform. Certificate changes therefore
+classify the Tools release at that public boundary, independently of Testkit.
 
-Tools belongs with Testkit because its registry signatures expose Platform
-principals. Native's optional memory integration uses Platform stable structures.
-Seven foundation packages can keep their compatible generation during an
-integration-only minor. Selected upload batches alone could not achieve this
-under the old adapter: all identities and internal requirements advanced together.
-Ten independently versioned packages would add decisions without helping this case.
+Testkit's normal/build graph uses Foundation, arithmetic-only Metrics, optional
+Wire and Platform's PocketIC/system capabilities. It does not use Host Tools.
+Its public transport APIs expose Wire limits/errors and external PocketIC DTOs.
+Native's optional memory adapter exposes Platform stable-memory traits. These
+Testkit-family contracts retain their own compatibility assessment; changing a
+supplier does not automatically imply that all public identities changed.
 
-## Existing release machinery
+The private development driver depends on Build, Testkit and the private probe;
+it has no Host Tools dependency. The probe supplies Testkit's installed fixtures
+and uses Wire/Platform for Wasm. Both stay in the Testkit family. Native remains
+in that existing measurement/testing family; this split does not create one group
+per crate. Canonical Types 0.15.1 remains shared through Platform and opt-in Wire
+metadata, without a Tools/Testkit dependency or a duplicated owner.
 
-The reviewed Shared 0.27.21 snapshot at `143a9abb9ae81feae9400ff3844b03b1ddfdd75a`
-supplies the [group contract](../releases.md#explicit-cargo-release-groups),
-graph admission, selected manifest/lock edits and transaction. The managed editor
-is published IC Build 0.73.0 with `cli`, selected through normal tool-store admission.
-No local renderer or second release runner owns these decisions.
+Foundation error/artifact types still cross genuine package boundaries. A real
+Foundation break can require independently classified downstream releases and
+Foundation-first publication. The root catalog's inherited minimums track the
+supplier contract; package numbers do not need to match across groups.
 
-The consumer adapter retains source admission, full CI/MSRV qualification and
-receipts. It permits only the selected ledger before qualification; preparation
-then owns the group's exact declared manifest/lock/ledger files. Validation binds
-source, group, policy, version and destination. The saved prepared payload binds
-the exact selected file bytes; committed checks read the named commit, independently
-of later working edits. Failed rendering/graph admission rolls back selected files.
-A failed payload-receipt write retains prepared metadata and refuses subsequent
-commit/delivery until explicitly reconciled.
+## Selection, history and recovery
 
-Maintainer commands require an explicit group:
+Select `RELEASE_GROUP=foundation`, `tools` or `testkit` explicitly for the standard
+release, resume, publication and publication dry-run commands. For example:
 
 ```sh
-make release-minor RELEASE_GROUP=integration
-make publish-check RELEASE_GROUP=integration
-make publish RELEASE_GROUP=integration
-# Exact-attempt recovery uses the same group and saved version:
-make release-resume RELEASE_GROUP=integration VERSION=X.Y.Z
+make release-patch RELEASE_GROUP=tools
+make publish-check RELEASE_GROUP=tools
+make publish RELEASE_GROUP=tools
+make release-resume RELEASE_GROUP=tools VERSION=X.Y.Z
 ```
 
-Select `foundation` for a foundation release. These commands retain their ordinary
-effect authorization: release pushes Git refs; publication uploads separately.
-Group tags are `foundation-vX.Y.Z` or `integration-vX.Y.Z`; journals and receipts
-use the same group prefix. One repository-wide release lock protects all groups.
-No group selection narrows the complete workspace/release gate.
+These commands retain separate effect authorization and complete release gates.
+One repository-wide lock coordinates all groups. Tags and journal namespaces use
+`foundation-`, `tools-` or `testkit-` prefixes. Publication selects only the chosen
+group's public members; `PACKAGE` may narrow it but cannot infer a group or cross
+its boundary. The read-only workspace qualification still covers every public
+package and never uploads. Cargo owns publication dependency order.
 
-Public release, resume and publication commands refuse missing, empty or unknown
-groups before setup, validation or effects. Both command-line and environment
-selections are explicit; `PACKAGE` never infers a group. A selected group includes
-its public members only, and `PACKAGE='name ...'` can narrow it. Cross-group batches
-are refused. Every package uses its own exact version in Cargo selectors, archive names,
-license/provenance checks and recorded intent. Source, registry and roster checks
-still cover the workspace. The private archive driver also obtains individual
-versions from locked offline metadata before invoking Build's existing engine.
+Published versions remain Foundation 0.73.5 and Tools/Testkit 0.76.1. No reset,
+new baseline tag or publication is implied by this policy change. Pending notes
+are compatible patches because the contributor release interface changes while
+library consumer APIs and build requirements remain unchanged.
 
-The separate `workspace.sh qualify` mode is read-only workspace qualification:
-it always checks the complete public roster with Cargo's dry run and one full
-lint gate. Combined native CI uses it before the remaining checks. It cannot
-upload or accept a package subset; ordinary publication always requires a group.
+[Joint integration history through 0.76.1](../../releases/integration/CHANGELOG.md)
+remains frozen once, with original dates, contents and release scope. Both new
+ledgers link that published baseline. [Earlier coordinated history](../../releases/history.md)
+also remains intact. Root CHANGELOG.md indexes the three current ledgers.
 
-## Qualification
+The old `integration` selection is intentionally refused by the new policy.
+Existing `integration-*` tags, journals, receipts, partial-upload records and
+backups retain their original meaning. Never migrate or reinterpret them under
+this roster. Recover a specific old attempt with its recorded source, original
+adapter and destination in its preserved isolated checkout. An occupied lock is
+still an ownership/recovery condition, not permission to switch groups.
 
-The normal [release adapter fixture](../../scripts/release/test-adapter.sh)
-exercises both actual group plans with real disposable Git, locked metadata,
-published managed rendering and receipt custody. Setup and full CI/MSRV commands
-are substitutes; their required routing and failures are checked. It checks
-unselected versions/ledgers, rollback, wrong-group receipts, tampered prepared
-bytes and committed-source checks. The publication fixture checks mixed package
-versions, group/batch selection, licenses, provenance, interruption and retention.
-Shared retains its generic group runner/journal and failure matrices.
+## Existing mechanics and focused qualification
 
-The opt-in [archive consumer fixture](../../scripts/release/test-integration-cohort.sh)
-checks actual public source and normalized archives against the current published
-foundation. With prepared dependencies and an already published foundation version:
+The reviewed Shared snapshot and managed Build 0.73.0 metadata editor still own
+graph admission, selected edits and transactional preparation. No local renderer
+or parallel release runner is added. Each root member retains its full literal
+version and path. Unselected versions, ledgers and irrelevant minimums remain
+unchanged; a workspace qualification refresh alone is not a release requirement.
 
-```sh
-editor="$(bash scripts/release/editor.sh check)"
-YQ="$PWD/.tools/host/bin/yq" bash scripts/release/test-integration-cohort.sh "$editor"
-```
+`bash scripts/release/test-adapter.sh` exercises all three plans, rollback,
+wrong-group receipts (including equal Tools/Testkit numbers), exact payloads,
+unselected metadata and source/commit custody. Setup and full gates are simulated;
+this fixture cannot release or publish. The publication and Make fixtures verify
+exact selection, rejection of the retired group and cross-group refusals.
 
-Its disposable integration minor never changes actual versions or uploads. Rust
-1.91 consumer tests compose the next Tools/Testkit/Native minor with the current
-published Foundation version. Build's original public error types,
-canonical registry/facade identities, direct Wire limits and Native memory traits
-remain compatible. Bounded core Wire frames round-trip the selected Principal
-and Account types; the consumer explicitly enables their optional Wire schemas
-and verifies canonical metadata support. Production features remain unchanged.
-The fixture retains candidate manifests, exact package archives,
-metadata and logs. It is opt-in because a foundation version under preparation
-need not already exist in the registry; it is not a pre-publication gate.
+The opt-in `scripts/release/test-integration-cohort.sh EDITOR [tools|testkit]`
+qualifies one disposable next minor at a time against the actual published
+Foundation and unchanged integration peer. Without a group it checks both.
+Current and Rust 1.91 callers run against source and real normalized archives.
+The certificate type mismatch control uses the actual old Platform identity and
+must fail compilation. Fixture preparation never edits real package versions or
+uploads. Native macOS execution remains distinct from local Linux evidence.
 
-Local activation evidence is `/tmp/ic-tooling-276-activation.Gjb80U/`; actual
-archive consumer evidence with Platform 0.15.1 is `/tmp/integration-cohort.xlmg5c/`;
-supplier-update qualification is `/tmp/ic-tooling-platform015.v8GsIj/`. Earlier dependency
-qualification, including refusal/error behavior and Wasm checks, remains at
-`/tmp/ic-tooling-268-274-276.m4ejqy/`. New native macOS qualification is outstanding;
-released 0.73.0 CI evidence is a separate historical result.
-
-## Remaining coupling and recovery
-
-Groups do not make incompatible public identities interchangeable. Process
-consumes Artifacts digests; Build errors carry Artifacts/Process errors. A real
-foundation break can require an integration upgrade and foundation-first
-publication. Cross-group requirements track their supplier's contract and need
-not numerically match the consumer. Updating a workspace requirement is not
-publication of a changed declaration under an already published consumer version.
-Every member has a root catalog entry with its full current version and local
-path, including private and unused entries. Contiguous group blocks name their
-ledgers; each alias belongs to that group's policy roster. Admission checks both
-groups and actual paths; preparation updates selected requirements transactionally,
-preserving existing operators. Unused catalog entries introduce no graph edges.
-
-Tools exposes Platform principals and certificate/hash-tree types, Testkit exposes
-Wire limits/errors, and Native optionally exposes Platform memory traits. Their
-direct consumers must align those suppliers after incompatible changes.
-Platform 0.16.0 and Types 0.15.1 keep
-their independent release ownership. Wire 0.13.0's optional bridge selects the
-same Types generation. The consumer fixture checks registry/facade type ownership,
-core Wire limits and the explicitly selected schema pairing. Tooling production
-profiles do not enable that bridge or Endpoint. A future
-incompatible Types release still requires explicit integration adoption.
-
-Existing ungrouped tags, receipts, plans and partial-publication evidence retain
-their original identities. Never copy them into a group namespace or reinterpret
-them as group qualification. If an old attempt needs recovery, use its recorded
-pre-group source and original adapter in an isolated checkout, with explicit
-recovery authorization and the existing saved evidence. An occupied global lock
-still requires owner/result reconciliation; changing groups cannot bypass it.
+[Prior design and qualification](https://github.com/dragginzgame/ic-tooling/blob/722c88c22f738c75f74546ba01bf1e8a0e461661/docs/design/release-groups.md)
+preserves the original Foundation/integration split and historical recovery paths.

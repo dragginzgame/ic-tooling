@@ -54,7 +54,7 @@ if [[ "$1" == fetch ]]; then
     exit 0
 fi
 if [[ "$1" == metadata && "${ADAPTER_CONTROL:-}" == graph &&
-      "$("$YQ" -p toml '.package.version' crates/ic-testkit/Cargo.toml)" == "$RELEASE_VERSION" ]]; then
+      "$("$YQ" -p toml '.package.version' "$ADAPTER_PRIMARY_MANIFEST")" == "$RELEASE_VERSION" ]]; then
     "$ADAPTER_REAL_CARGO" "$@"
     exit 37
 fi
@@ -92,7 +92,7 @@ invoke() { bash "$adapter" "$@"; }
 refuse() {
     if "$@"; then echo 'Unexpected release adapter admission' >&2; exit 1; fi
 }
-for selected_group in integration foundation; do
+for selected_group in tools testkit foundation; do
     checkout="$fixture/$selected_group checkout"
     mkdir "$checkout"
     bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$root" "$checkout"
@@ -103,6 +103,8 @@ for selected_group in integration foundation; do
     git config user.email fixture@example.invalid
     git config core.hooksPath /dev/null
     git remote add origin https://example.invalid/tooling-fixture.git
+    ADAPTER_PRIMARY_MANIFEST="crates/$(jq -r --arg group "$selected_group" '.groups[] | select(.name == $group) | .primary' ci/cargo-release-groups.json)/Cargo.toml"
+    export ADAPTER_PRIMARY_MANIFEST
     export RELEASE_GROUP="$selected_group" ADAPTER_EVENTS="$fixture/$selected_group.events"
     export ADAPTER_EDITOR_READY="$fixture/$selected_group.editor-ready"
     export RELEASE_PREVIOUS RELEASE_VERSION RELEASE_SOURCE
@@ -158,10 +160,8 @@ for selected_group in integration foundation; do
     # and unselected metadata at the qualified source.
     ADAPTER_CONTROL=render refuse invoke prepare > "$fixture/$selected_group.render.log" 2>&1
     git diff --exit-code -- > /dev/null
-    if [[ "$selected_group" == integration ]]; then
-        ADAPTER_CONTROL=graph refuse invoke prepare > "$fixture/$selected_group.graph.log" 2>&1
-        git diff --exit-code -- > /dev/null
-    fi
+    ADAPTER_CONTROL=graph refuse invoke prepare > "$fixture/$selected_group.graph.log" 2>&1
+    git diff --exit-code -- > /dev/null
     invoke prepare > "$fixture/$selected_group.prepare.log" 2>&1
     invoke check > "$fixture/$selected_group.check.log" 2>&1
     sed "/^## \\[$RELEASE_VERSION\\]/d" "$ledger" > "$fixture/$selected_group.prepared-body"
@@ -190,7 +190,7 @@ for selected_group in integration foundation; do
     ' "$fixture/$selected_group.metadata.json" > /dev/null
     # Copying receipts to another group's namespace cannot authorize it even
     # with identical numeric versions and a real successful source receipt.
-    if [[ "$selected_group" == integration ]]; then other_group=foundation; else other_group=integration; fi
+    if [[ "$selected_group" == tools ]]; then other_group=testkit; else other_group=tools; fi
     other_state=".git/release-state/$other_group-$RELEASE_VERSION.validation"
     cp "$state" "$other_state"
     cp "$state.notes" "$other_state.notes"
@@ -219,4 +219,4 @@ for selected_group in integration foundation; do
     unset RELEASE_COMMIT
 done
 fixture_complete=true
-echo 'Release adapter checks passed (both groups; setup and full qualification substituted).'
+echo 'Release adapter checks passed (all three groups; setup and full qualification substituted).'

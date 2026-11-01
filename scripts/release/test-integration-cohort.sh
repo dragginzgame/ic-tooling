@@ -3,10 +3,17 @@ set -euo pipefail
 
 # Opt-in archive consumer proof against the current published foundation.
 # Candidate versions exist only in a disposable workspace; no release/upload.
-[[ $# == 1 && -x "$1" ]] || {
-    echo 'usage: test-integration-cohort.sh BUILT_RELEASE_EDITOR' >&2
+[[ ( $# == 1 || $# == 2 ) && -x "$1" ]] || {
+    echo 'usage: test-integration-cohort.sh BUILT_RELEASE_EDITOR [tools|testkit]' >&2
     exit 2
 }
+if [[ $# == 1 ]]; then
+    bash "$0" "$1" tools
+    bash "$0" "$1" testkit
+    exit
+fi
+selected_group="$2"
+[[ "$selected_group" == tools || "$selected_group" == testkit ]] || exit 2
 editor="$1"
 [[ "$editor" == /* ]] || editor="$PWD/$editor"
 root="${BASH_SOURCE[0]}"
@@ -24,10 +31,20 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/target}"
 parser="${YQ:-yq}"
 "$parser" -p toml -o json '.' "$root/Cargo.toml" > "$fixture/source.json"
 foundation="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-build/Cargo.toml" | jq -er '.')"
-previous="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-testkit/Cargo.toml" | jq -er '.')"
+primary="$(jq -r --arg group "$selected_group" '.groups[] | select(.name == $group) | .primary' "$root/ci/cargo-release-groups.json")"
+previous="$("$parser" -p toml -o json '.package.version' "$root/crates/$primary/Cargo.toml" | jq -er '.')"
+tools_version="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-host-tools/Cargo.toml" | jq -er '.')"
+testkit_version="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-testkit/Cargo.toml" | jq -er '.')"
 next="$(bash "$root/scripts/ci/next-release-version.sh" "$previous" minor)"
-(cd "$root"; RELEASE_VERSION="$next" bash scripts/ci/cargo-release-group.sh plan integration) \
+(cd "$root"; RELEASE_VERSION="$next" bash scripts/ci/cargo-release-group.sh plan "$selected_group") \
     > "$fixture/group-plan.json"
+if [[ "$selected_group" == tools ]]; then tools_version="$next"; else testkit_version="$next"; fi
+selected_packages=()
+while IFS= read -r package; do
+    case "$package" in ic-testkit-dev|ic-testkit-perf-probe) continue ;; esac
+    selected_packages+=("$package")
+done < <(jq -r '.members[]' "$fixture/group-plan.json")
+printf '%s\n' "${selected_packages[@]}" | jq -Rs 'split("\n") | map(select(length > 0))' > "$fixture/selected-packages.json"
 
 mkdir -p "$fixture/crates" "$fixture/consumer/src" "$fixture/before"
 mkdir -p "$fixture/serializer/src"
@@ -63,8 +80,8 @@ cp -a "$root/crates/ic-host-tools" "$root/crates/ic-testkit" "$root/crates/ic-te
 cp "$root/README.md" "$root/LICENSE" "$fixture/"
 # An archive consumer uses registry foundation packages, as Cargo's normalized
 # publication manifests do. Preserve their actual requirement literals.
-jq '
-    .workspace.members = ["crates/ic-host-tools", "crates/ic-testkit", "crates/ic-testkit-native", "consumer"]
+jq --slurpfile selected "$fixture/selected-packages.json" '
+    .workspace.members = (["consumer"] + ($selected[0] | map("crates/" + .)))
     | del(.workspace["default-members"])
     | reduce ["ic-host-artifacts", "ic-host-fs", "ic-host-process", "ic-host-text", "ic-build"][] as $name
         (. ; del(.workspace.dependencies[$name].path))
@@ -76,7 +93,7 @@ jq '.manifests[] | select(.path == "Cargo.toml") | {version,dependencies}' \
     "$previous" "$next" "$fixture/root-selection.json" > "$fixture/root.candidate"
 mv "$fixture/root.candidate" "$fixture/Cargo.toml"
 printf '%s\n' '{"version":"package","dependencies":[]}' > "$fixture/member-selection.json"
-for package in ic-host-tools ic-testkit ic-testkit-native; do
+for package in "${selected_packages[@]}"; do
     manifest="$fixture/crates/$package/Cargo.toml"
     # Both real groups already own literal package versions.
     cp "$manifest" "$fixture/before/$package.toml"
@@ -88,6 +105,13 @@ for package in ic-host-tools ic-testkit ic-testkit-native; do
         jq -e --slurpfile before "$fixture/before/member.json" \
             'del(.package.version) == ($before[0] | del(.package.version))' > /dev/null
 done
+tools_path='' testkit_path='' native_path=''
+if [[ "$selected_group" == tools ]]; then
+    tools_path='path = "../crates/ic-host-tools", '
+else
+    testkit_path='path = "../crates/ic-testkit", '
+    native_path='path = "../crates/ic-testkit-native", '
+fi
 cat > "$fixture/consumer/Cargo.toml" <<EOF
 [package]
 name = "integration-cohort-consumer"
@@ -98,10 +122,10 @@ publish = false
 ic-build = "=$foundation"
 ic-host-artifacts = "=$foundation"
 ic-host-process = "=$foundation"
-ic-host-tools = { path = "../crates/ic-host-tools", version = "=$next", features = ["registry"] }
-ic-testkit = { path = "../crates/ic-testkit", version = "=$next", features = ["wire"] }
-ic-testkit-native = { path = "../crates/ic-testkit-native", version = "=$next", features = ["stable-memory"] }
-ic-platform = { workspace = true, features = ["principal"] }
+ic-host-tools = { ${tools_path}version = "=$tools_version", features = ["registry", "certificate"] }
+ic-testkit = { ${testkit_path}version = "=$testkit_version", features = ["wire"] }
+ic-testkit-native = { ${native_path}version = "=$testkit_version", features = ["stable-memory"] }
+ic-platform = { workspace = true, features = ["principal", "certification"] }
 ic-platform-types = { version = "=$types_version", default-features = false }
 ic-wire = { workspace = true, features = ["platform-types"] }
 EOF
@@ -118,6 +142,9 @@ mod tests {
 
     #[test]
     fn integration_callers_share_canonical_identity_and_core_wire_limits() {
+        let _: fn(&[u8], ic_host_tools::certificate::DecodeLimits)
+            -> Result<ic_platform::certification::Certificate, ic_host_tools::certificate::DecodeError>
+            = ic_host_tools::certificate::decode_certificate;
         let owner: ic_platform_types::Principal =
             ic_host_tools::registry::routing_shards::canister_range_start_from_key(
                 "prefix/", "prefix/00000000000000000101",
@@ -157,10 +184,10 @@ cargo +1.91.0 generate-lockfile --offline --manifest-path "$fixture/Cargo.toml" 
     > "$fixture/lock.log" 2>&1
 cargo +1.91.0 metadata --locked --offline --format-version 1 --manifest-path "$fixture/Cargo.toml" \
     > "$fixture/metadata.json" 2> "$fixture/metadata.stderr"
-jq -e --arg next "$next" '
+jq -e --arg next "$next" --slurpfile selected "$fixture/selected-packages.json" '
     . as $m
     | [.packages[] | select(.id as $id | $m.workspace_members | index($id)) | select(.publish != [])]
-        | (map(.name) | sort) == ["ic-host-tools", "ic-testkit", "ic-testkit-native"] and all(.[]; .version == $next)
+        | (map(.name) | sort) == ($selected[0] | sort) and all(.[]; .version == $next)
 ' "$fixture/metadata.json" > /dev/null
 jq -e --arg types "$types_version" '
     [.packages[] | select(.name == "ic-platform-types")] |
@@ -174,25 +201,35 @@ jq -e --arg foundation "$foundation" '
 ' "$fixture/metadata.json" > /dev/null
 "$parser" -p toml -o json '.' "$fixture/Cargo.toml" > "$fixture/candidate.json"
 "$parser" -p toml -o json '.' "$fixture/before/Cargo.toml" > "$fixture/before.json"
-jq -e --slurpfile before "$fixture/before.json" '
+jq -e --slurpfile before "$fixture/before.json" --slurpfile plan "$fixture/group-plan.json" '
+    def untouched: .workspace.dependencies | delpaths($plan[0].dependencies | map([.alias,"version"]));
     (.workspace.package | has("version") | not)
-    and ([.workspace.dependencies | del(.["ic-testkit"].version)]
-        == [$before[0].workspace.dependencies | del(.["ic-testkit"].version)])
+    and (untouched == ($before[0] | untouched))
 ' "$fixture/candidate.json" > /dev/null
-cargo +1.91.0 test --locked --offline --manifest-path "$fixture/Cargo.toml" \
-    -p integration-cohort-consumer > "$fixture/consumer.log" 2>&1
+for toolchain in 1.99.1 1.91.0; do
+    cargo +"$toolchain" test --locked --offline --manifest-path "$fixture/Cargo.toml" \
+        -p integration-cohort-consumer > "$fixture/consumer-$toolchain.log" 2>&1
+done
+# Unselected integration peers must be the real published packages.
+jq -e --arg group "$selected_group" --arg tools "$tools_version" --arg testkit "$testkit_version" '
+    .packages as $p |
+    (if $group == "tools" then ["ic-testkit", "ic-testkit-native"] else ["ic-host-tools"] end) |
+    all(.[]; . as $name | [$p[] | select(.name == $name)] |
+        length == 1 and all(.[]; (.source | startswith("registry+")) and
+            .version == (if $name == "ic-host-tools" then $tools else $testkit end)))
+' "$fixture/metadata.json" > /dev/null
 # Package each real candidate, then compile the same public callers against
 # the extracted normalized manifests, without any workspace source patches.
 archive_consumer="$fixture/archive-consumer"
 mkdir -p "$archive_consumer/consumer/src" "$archive_consumer/extracted"
-for package in ic-host-tools ic-testkit ic-testkit-native; do
+for package in "${selected_packages[@]}"; do
     cargo +1.91.0 package --locked --offline --allow-dirty --no-verify \
         --manifest-path "$fixture/Cargo.toml" --target-dir "$fixture/archives" -p "$package" \
         >> "$fixture/package.log" 2>&1
     tar -xzf "$fixture/archives/package/$package-$next.crate" -C "$archive_consumer/extracted"
 done
-jq --arg next "$next" '
-    .workspace.members = (["consumer"] + (["ic-host-tools","ic-testkit","ic-testkit-native"] | map("extracted/" + . + "-" + $next)))
+jq --arg next "$next" --slurpfile selected "$fixture/selected-packages.json" '
+    .workspace.members = (["consumer"] + ($selected[0] | map("extracted/" + . + "-" + $next)))
     | del(.workspace.dependencies["ic-testkit"].path, .workspace.dependencies["ic-testkit-perf-probe"])
 ' "$fixture/candidate.json" | "$serializer" > "$archive_consumer/Cargo.toml"
 sed -e "s|../crates/ic-host-tools|../extracted/ic-host-tools-$next|g" \
@@ -202,10 +239,31 @@ sed -e "s|../crates/ic-host-tools|../extracted/ic-host-tools-$next|g" \
 cp "$fixture/consumer/src/lib.rs" "$archive_consumer/consumer/src/"
 cargo +1.91.0 generate-lockfile --offline --manifest-path "$archive_consumer/Cargo.toml" \
     > "$fixture/archive-lock.log" 2>&1
-cargo +1.91.0 test --locked --offline --manifest-path "$archive_consumer/Cargo.toml" \
-    -p integration-cohort-consumer > "$fixture/archive-consumer.log" 2>&1
-jq --arg foundation "$foundation" --arg integration "$next" '
-    {foundation:$foundation, integration:$integration,
+for toolchain in 1.99.1 1.91.0; do
+    cargo +"$toolchain" test --locked --offline --manifest-path "$archive_consumer/Cargo.toml" \
+        -p integration-cohort-consumer > "$fixture/archive-consumer-$toolchain.log" 2>&1
+done
+# A real old certificate identity must refuse at the unchanged Tools boundary.
+cat >> "$archive_consumer/consumer/Cargo.toml" <<'TOML'
+[dependencies.legacy-platform]
+package = "ic-platform"
+version = "=0.15.3"
+default-features = false
+features = ["certification"]
+TOML
+cat >> "$archive_consumer/consumer/src/lib.rs" <<'RUST'
+fn incompatible(bytes: &[u8]) -> legacy_platform::certification::Certificate {
+    ic_host_tools::certificate::decode_certificate(bytes, ic_host_tools::certificate::DecodeLimits { bytes: 1024 }).unwrap()
+}
+RUST
+cargo +1.91.0 generate-lockfile --offline --manifest-path "$archive_consumer/Cargo.toml" > "$fixture/mismatch-lock.log" 2>&1
+if cargo +1.91.0 check --locked --offline --manifest-path "$archive_consumer/Cargo.toml" \
+    -p integration-cohort-consumer > "$fixture/mismatch.log" 2>&1; then
+    echo 'Unexpected certificate identity admission' >&2; exit 1
+fi
+grep -F 'mismatched types' "$fixture/mismatch.log" > /dev/null
+jq --arg foundation "$foundation" --arg group "$selected_group" --arg next "$next" '
+    {foundation:$foundation, selected_group:$group, selected_version:$next,
      packages:[.packages[] | select(.source == null and .publish != []) | {name,version}],
      status:"disposable source and archive consumer proof; no release or publication"}
 ' "$fixture/metadata.json" > "$fixture/publication-plan.json"

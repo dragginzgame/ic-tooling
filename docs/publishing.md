@@ -10,23 +10,25 @@ are rejected before execution;
 the shared runner's optional PR flow is not qualified by this adapter.
 These commands do not publish crates to a registry.
 
-Select `RELEASE_GROUP=foundation` or `RELEASE_GROUP=integration` explicitly on
+Select `RELEASE_GROUP=foundation`, `RELEASE_GROUP=tools` or `RELEASE_GROUP=testkit` explicitly on
 every release command and exact-version resume. The
 [group policy](../ci/cargo-release-groups.json) retains one qualification workspace
 with independent version sources and ledgers; see
 [release ownership](design/release-groups.md). For example:
 
 ```sh
-make release-minor RELEASE_GROUP=integration
-make release-resume RELEASE_GROUP=integration VERSION=X.Y.Z
+make release-minor RELEASE_GROUP=tools
+make release-resume RELEASE_GROUP=tools VERSION=X.Y.Z
 ```
 
-Both groups start from their existing 0.73.0 identities. Every package has an
+The split preserves Foundation 0.73.5 and Tools/Testkit 0.76.1. Every package has an
 explicit version owned by its group primary; the root Cargo metadata has no
 version. Root `CHANGELOG.md` indexes the
-[Foundation](../releases/foundation/CHANGELOG.md) and
-[integration](../releases/integration/CHANGELOG.md) ledgers, with original
-coordinated notes retained in [shared history](../releases/history.md).
+[Foundation](../releases/foundation/CHANGELOG.md),
+[Host Tools](../releases/tools/CHANGELOG.md) and
+[Testkit](../releases/testkit/CHANGELOG.md) ledgers. Original joint integration
+notes remain in the [frozen ledger](../releases/integration/CHANGELOG.md), with
+earlier coordinated notes retained in [shared history](../releases/history.md).
 Group tags and saved plans are prefixed with the group.
 One repository-wide release lock still excludes overlapping attempts.
 
@@ -79,7 +81,7 @@ validation receipts, notes and logs before fresh verification. Retain unfinished
 plans, earlier tool installations and failed artifacts; a retry must not relabel
 old evidence as validation of new source. Native qualification belongs to the
 [host guide](hosts.md), independently of release and publication effects.
-Old ungrouped attempts remain under their original identities. Recover them
+Old ungrouped and joint `integration` attempts remain under their original identities. Recover them
 using their recorded pre-group source/adapter in an isolated checkout; never
 rename their plans or receipts into a group namespace.
 
@@ -89,13 +91,13 @@ The consumer-owned [public package list](../ci/public-packages.txt) selects both
 publication and archive qualification. Publication checks it against
 Cargo metadata before running lint or packaging; private test packages stay out.
 
-Publication requires explicit `RELEASE_GROUP=integration` to select
-Tools/Testkit/Native, or `foundation` for its seven public packages.
-Private harnesses are never uploaded. For an ordinary integration release:
+Publication requires explicit `RELEASE_GROUP=tools` for Host Tools,
+`testkit` for Testkit/Native, or `foundation` for its seven public packages.
+Private Testkit harnesses are never uploaded. For a Host Tools release:
 
 ```sh
-make publish-check RELEASE_GROUP=integration
-make publish RELEASE_GROUP=integration
+make publish-check RELEASE_GROUP=tools
+make publish RELEASE_GROUP=tools
 ```
 
 An explicit command-line

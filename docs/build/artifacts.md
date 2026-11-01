@@ -535,6 +535,11 @@ that broader transformation is deliberately refused by this strict contract.
 
 ## Inherited Cargo Rust flags
 
+For target requirements that must survive configuration/environment precedence,
+use the opt-in [effective recipe](effective-recipes.md) boundary. It observes
+actual compiler arguments and keeps post-link optimization separate. The helper
+below composes only the environment values explicitly supplied to it.
+
 Release 0.16 uses `cargo::flags::combined_encoded_rustflags(encoded, ordinary, &extra_flags)`.
 Pass each additional argument as a separate `String`; when it returns `Some`,
 set that value as `CARGO_ENCODED_RUSTFLAGS` on the Cargo command. An empty slice

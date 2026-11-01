@@ -19,7 +19,7 @@ export YQ := $(CURDIR)/.tools/host/bin/yq
 # Refuse before the shared runner acquires its lock or any publication starts.
 ifneq ($(filter $(SHARED_RELEASE_TARGETS) publish publish-check,$(MAKECMDGOALS)),)
 ifneq ($(shell bash '$(subst ','"'"',$(CURDIR))/scripts/release/group.sh' '$(subst ','"'"',$(CURDIR))/ci/cargo-release-groups.json' '$(subst ','"'"',$(RELEASE_GROUP))' && printf admitted),admitted)
-$(error Explicit RELEASE_GROUP=foundation or integration is required)
+$(error Explicit RELEASE_GROUP=foundation, tools or testkit is required)
 endif
 endif
 
@@ -39,10 +39,10 @@ help:
 	@echo 'Source reports: cloc (this workspace); fleet reports run in Shared Tooling'
 	@echo 'Full release validation: ci (workspace Clippy first), msrv-qualification; focused MSRV: msrv PACKAGE=<crate>'
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
-	@echo 'Maintainer releases: release-patch/minor/major RELEASE_GROUP=foundation|integration'
+	@echo 'Maintainer releases: release-patch/minor/major RELEASE_GROUP=foundation|tools|testkit'
 	@echo 'Resume: release-resume RELEASE_GROUP=<same-group> VERSION=X.Y.Z'
 	@echo 'crates.io publication: publish-check (dry run), publish (upload); offline fixture: publish-command-check'
-	@echo 'Publication: select RELEASE_GROUP=foundation|integration; PACKAGE="crate ..." narrows that group'
+	@echo 'Publication: select RELEASE_GROUP=foundation|tools|testkit; PACKAGE="crate ..." narrows that group'
 .PHONY: formatting-hook-check
 .PHONY: install-release-editor release-editor-check check-no-symlinks
 install-release-editor:

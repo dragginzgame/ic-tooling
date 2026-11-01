@@ -487,17 +487,24 @@ for mode in check publish; do
     RELEASE_GROUP=foundation invoke "$mode" --packages ic-build > "mixed-foundation-$mode.log" 2>&1
     tr '\0' '\n' < arguments > mixed-arguments
     grep -Fx "ic-build@$foundation_version" mixed-arguments
-    RELEASE_GROUP=integration invoke "$mode" --packages ic-testkit > "mixed-integration-$mode.log" 2>&1
+    RELEASE_GROUP=testkit invoke "$mode" --packages ic-testkit > "mixed-integration-$mode.log" 2>&1
     tr '\0' '\n' < arguments > mixed-arguments
     grep -Fx "ic-testkit@$integration_version" mixed-arguments
 done
-RELEASE_GROUP=integration invoke check > integration-group.log 2>&1
+RELEASE_GROUP=testkit invoke check > integration-group.log 2>&1
 tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' | LC_ALL=C sort > group-packages
-printf '%s\n' ic-host-tools ic-testkit ic-testkit-native > expected-group-packages
+printf '%s\n' ic-testkit ic-testkit-native > expected-group-packages
 cmp expected-group-packages group-packages
 admission="$(sed -n 's/^Publication admission evidence: //p' integration-group.log)"
-[[ "$(cat "$admission/release-group")" == integration ]]
-RELEASE_GROUP=integration refuse publish --packages ic-build
+[[ "$(cat "$admission/release-group")" == testkit ]]
+RELEASE_GROUP=tools invoke check > tools-group.log 2>&1
+tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' > tools-packages
+printf '%s\n' ic-host-tools > expected-tools-packages
+cmp expected-tools-packages tools-packages
+RELEASE_GROUP=testkit refuse publish --packages ic-host-tools
+RELEASE_GROUP=tools refuse publish --packages ic-testkit
+RELEASE_GROUP=integration refuse check
+RELEASE_GROUP=testkit refuse publish --packages ic-build
 RELEASE_GROUP=foundation refuse publish --packages 'ic-build ic-testkit'
 RELEASE_GROUP=unknown refuse check
 # Workspace qualification is explicitly read-only and covers every group. It

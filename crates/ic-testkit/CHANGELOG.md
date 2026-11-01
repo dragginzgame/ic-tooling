@@ -1,7 +1,7 @@
-# IC integration release notes
+# Testkit release notes
 
-Tools, Testkit and Native share the
-[canonical integration ledger](https://github.com/dragginzgame/ic-tooling/blob/main/releases/integration/CHANGELOG.md).
+Testkit, Native and private qualification packages share the
+[canonical Testkit ledger](https://github.com/dragginzgame/ic-tooling/blob/main/releases/testkit/CHANGELOG.md).
 Earlier coordinated releases remain in
 [shared history](https://github.com/dragginzgame/ic-tooling/blob/main/releases/history.md).
 

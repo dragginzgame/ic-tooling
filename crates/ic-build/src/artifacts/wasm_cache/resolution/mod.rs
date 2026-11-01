@@ -598,28 +598,41 @@ pub(super) fn append_cargo_configuration_inputs(
         .iter()
         .filter_map(|directory| crate::cargo::environment::preferred_configuration(directory))
         .collect();
-    let observed =
-        crate::cargo::environment::observe_configurations(&roots, spec.configuration_limits)
-            .map_err(|error| match error {
-                crate::cargo::environment::ConfigurationError::Io {
-                    operation,
-                    path,
-                    source,
-                } => WasmBuildError::Io {
-                    operation,
-                    path,
-                    source,
-                },
-                crate::cargo::environment::ConfigurationError::Read { path, source } => {
-                    WasmBuildError::InvalidCargoConfiguration {
-                        path,
-                        message: source.to_string(),
+    let observed = crate::cargo::environment::observe_configurations_admitting(
+        &roots,
+        spec.configuration_limits,
+        &mut |path, configuration| {
+            if spec.rustc_recipe.is_some() {
+                super::RustcRecipe::admit_configuration(configuration).map_err(|error| {
+                    crate::cargo::environment::ConfigurationError::Invalid {
+                        path: path.to_owned(),
+                        message: error.to_string(),
                     }
-                }
-                crate::cargo::environment::ConfigurationError::Invalid { path, message } => {
-                    WasmBuildError::InvalidCargoConfiguration { path, message }
-                }
-            })?;
+                })?;
+            }
+            Ok(())
+        },
+    )
+    .map_err(|error| match error {
+        crate::cargo::environment::ConfigurationError::Io {
+            operation,
+            path,
+            source,
+        } => WasmBuildError::Io {
+            operation,
+            path,
+            source,
+        },
+        crate::cargo::environment::ConfigurationError::Read { path, source } => {
+            WasmBuildError::InvalidCargoConfiguration {
+                path,
+                message: source.to_string(),
+            }
+        }
+        crate::cargo::environment::ConfigurationError::Invalid { path, message } => {
+            WasmBuildError::InvalidCargoConfiguration { path, message }
+        }
+    })?;
     let mut hasher = InputHasher::new("cargo-observed-configuration-recipe-v1");
     for config in observed {
         if let Some(identity) = config.recipe_sha256 {

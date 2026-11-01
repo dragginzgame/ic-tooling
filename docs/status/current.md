@@ -1,5 +1,57 @@
 # Current handoff — 2026-11-01
 
+## Source implementation of #299 and #300
+
+This source batch implements
+[#299](https://github.com/dragginzgame/ic-tooling/issues/299) and
+[#300](https://github.com/dragginzgame/ic-tooling/issues/300). Implementation preserves existing package versions, tags, journals and consumer
+deployment profiles. Source integration and each group's release/publication
+remain separate delivery steps.
+
+Release selection now has three groups: `foundation` (unchanged seven public
+packages), `tools` (Host Tools), and `testkit` (Testkit/Native plus private Dev and
+perf probe). Primaries are Build, Host Tools and Testkit respectively. Current
+versions remain 0.73.5 / 0.76.1 / 0.76.1. New Tools/Testkit ledgers link the frozen
+joint integration history through 0.76.1; no published history was rewritten.
+Old integration attempts must retain their original source/adapter for recovery.
+See [release groups](../design/release-groups.md) for concrete dependency/type
+ownership, publication ordering and explicit selection.
+
+Build adds an opt-in qualified rustc recipe and CLI wrapper. It preserves Cargo's
+effective flags, applies requirements only to the selected Wasm target, refuses
+conflicts unless explicitly qualified, and retains bounded compiler arguments
+and identities with exact artifacts. Existing wrappers, compiler-custody config
+overrides and shared compiler state are refused for this opt-in. Default recipes
+retain their existing behavior. Post-link work reuses the existing admitted-tool
+and transactional cache boundary. [Effective recipes](../build/effective-recipes.md)
+records concrete Auth/Canic adoption and fresh final-Wasm measurements. Their
+active checkouts and tool pins remain unchanged; persistent consumer adoption
+follows a published Foundation version.
+
+Focused local Linux checks passed: all-three-group preparation/rollback/receipt
+fixtures, publication selection and Make routing; source and real normalized
+Tools/Testkit archives with published peers on Rust 1.99.1 and 1.91.0; deliberate
+old certificate identity refusal; Build Clippy (all targets/features, warnings
+denied); four real-Cargo compiler recipe fixtures on current/MSRV; 78 Cargo and
+77 Wasm-cache regression tests. Archive evidence is retained in
+`/tmp/integration-cohort.2NUZza/` (Tools) and
+`/tmp/integration-cohort.RPVDn3/` (Testkit).
+
+The complete installed qualification is under
+`/tmp/ic-tooling-300-qualification-final/`: Platform-maintained vectors, published
+Platform 0.16/K256 0.14/crypto-bigint 0.7.10, Rust 1.91, Binaryen 132 and prepared
+stock PocketIC 16.1.0. All eight cases passed three samples per backend. Compiler
+recipes, ordered optimizer arguments, raw/final Wasm, uncompressed module/code
+bytes, IC instruction counts, locks and checked source/tool/result hashes remain
+there. Earlier failed attempts remain under `/tmp/ic-tooling-300-qualification-*`;
+the final run completed without substituting their evidence.
+
+Native macOS evidence for these local changes is still pending; the published
+source qualification below does not qualify this new source. Full release gates run under the separate delivery workflow; the focused
+checks above do not substitute for them. The ordinary checkout's separate
+Metrics 0.24.5 and Wire/Derive 0.13.4 lock selections are preserved outside this
+source batch. This delivery checkout retains the committed dependency selections.
+
 ## Published Foundation 0.73.5 / Integration 0.76.1
 
 Both authorized patches are released and published, Foundation first:
@@ -12,7 +64,8 @@ Both authorized patches are released and published, Foundation first:
 
 All ten public versions are independently confirmed live and non-yanked in the
 Cargo index. Downloaded registry archives match the actual upload checksums.
-No further release increment or upload is pending. Do not replay delivery effects.
+Those completed release effects must not be replayed; the source batch above
+has its own subsequent group delivery.
 
 ## Delivered contracts
 
@@ -60,8 +113,9 @@ and handoff CI continues asynchronously and is distinct from that source proof.
 
 ## Ordinary checkout, evidence and recovery
 
-The ordinary checkout contains Foundation 0.73.5 / Integration 0.76.1. Its working
-tree is clean and full locked offline metadata passes. All unrelated lock records
+Before the local issue work above, the ordinary checkout contained Foundation
+0.73.5 / Integration 0.76.1 with a clean tree and passing full locked offline
+metadata. All unrelated lock records from that completed delivery
 match the incoming graph exactly; only the twelve owned package versions changed.
 Incoming source is retained in the recorded recovery stash and backups. Do not
 apply a complete saved patch over the released metadata.

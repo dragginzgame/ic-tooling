@@ -115,6 +115,11 @@ retains raw bounded evidence; consumers own normalization, grammar and publicati
 The [deployable-Wasm LTO guidance](../../docs/build/artifacts.md#deployable-wasm-lto) records
 measurements without imposing a shared application optimization profile.
 
+The [effective recipe guide](../../docs/build/effective-recipes.md) describes opt-in
+target cfg requirements applied after Cargo resolves flags, retained compiler
+arguments and separate post-link provenance. Callers select qualified policies,
+wrapper tools and evidence bounds; ordinary builds retain their selected flags.
+
 ## Development
 
 Build shares IC Tooling's [host qualification](../../docs/hosts.md) and

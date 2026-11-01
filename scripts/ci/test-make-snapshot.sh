@@ -72,7 +72,7 @@ esac
 STUB
 cat > "$fixture/local/scripts/ci/run-release.sh" <<'STUB'
 #!/usr/bin/env bash
-if [[ "${HOST_MAKE_ASSERT_RELEASE_GROUP:-0}" == 1 ]]; then [[ "${RELEASE_GROUP:-}" == integration ]] || exit 94; fi
+if [[ "${HOST_MAKE_ASSERT_RELEASE_GROUP:-0}" == 1 ]]; then [[ "${RELEASE_GROUP:-}" == testkit ]] || exit 94; fi
 printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
 STUB
 mkdir -p "$fixture/local/scripts/dev"
@@ -112,7 +112,7 @@ for selection in ordinary environment command nested recursive; do
         : > "$HOST_MAKE_EVENTS"
         "${command[@]}" "$target" "FORMAT_CARGO=$PWD/cargo" \
             VERSION=0.9.5 RELEASE_REMOTE=review RELEASE_BRANCH=release-review \
-            RELEASE_GROUP=integration HOST_MAKE_ASSERT_RELEASE_GROUP=1 \
+            RELEASE_GROUP=testkit HOST_MAKE_ASSERT_RELEASE_GROUP=1 \
             > "$fixture/$selection-$target.log" 2>&1
         case "$target" in
             help) : > "$fixture/expected" ;;

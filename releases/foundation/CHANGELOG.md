@@ -4,6 +4,25 @@ This group covers Artifacts, FS, HTTP, Process, Text, Build and the Wasm inspect
 Build owns the group version. Earlier releases retain their coordinated scope in
 [shared history](../history.md#0730---2026-10-31).
 
+## [0.73.6] - Unreleased
+
+### ➕ Added
+
+- Build supports caller-qualified target cfg recipes after Cargo resolves flags,
+  preserving ordinary/config/encoded selections and refusing conflicts unless
+  an explicit qualified override is selected. The optional CLI wrapper records
+  actual compiler arguments/identities in the existing exact cache; isolated
+  compiler state prevents stale shared objects from claiming new settings.
+  Separate post-link cache/tool evidence and installed Platform ECDSA vectors
+  qualify the final Wasm. No consumer tool pin or deployment profile changes.
+  ([#300](https://github.com/dragginzgame/ic-tooling/issues/300))
+
+### 🔧 Changed
+
+- Keep Foundation release ownership while splitting Host Tools and Testkit into
+  independent groups. Preserve existing versions, requirements and historical
+  release custody. ([#299](https://github.com/dragginzgame/ic-tooling/issues/299))
+
 ## [0.73.5] - 2026-11-01
 
 ### ➕ Added
