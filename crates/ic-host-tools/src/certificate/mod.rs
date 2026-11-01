@@ -2,6 +2,10 @@
 //!
 //! Caller owns trust roots, signatures, combined evidence budgets, commitment
 //! verification and application leaf meanings. Original bytes stay caller-owned.
+//!
+//! Returned certificates and trees use Platform's maintained identities. Native
+//! Agent consumers enable `agent` and use Platform's explicit `From`/`Into`
+//! conversions when passing them to the Agent's external certificate types.
 
 use ic_platform::certification::{
     Certificate, Delegation, HashTree, empty, fork, labeled, leaf, pruned,
@@ -50,7 +54,7 @@ pub enum DecodeError {
     #[error("{0}")]
     Cbor(#[source] ParseError),
 }
-/// Decode one certificate into owned upstream IC-format values.
+/// Decode one certificate into Platform-owned IC-format values.
 ///
 /// Required tree/signature and optional delegation fields are strict: duplicate,
 /// unknown or incorrectly typed fields refuse. Signatures, labels, leaves and
@@ -78,7 +82,7 @@ pub fn decode_certificate(bytes: &[u8], limits: DecodeLimits) -> Result<Certific
 /// Enforces exact tags 0–4 and node arities, byte-string payloads and exactly
 /// 32 bytes for pruned digests. Both definite and indefinite arrays are checked.
 /// Container nesting follows the IC Agent codec's built-in recursion limit.
-/// Storage uses ordinary upstream Vec/Box allocations; the input bound is not an
+/// Storage uses ordinary Vec/Box allocations; the input bound is not an
 /// allocation quota.
 /// Does not authenticate a tree or verify its commitment against a certificate.
 ///

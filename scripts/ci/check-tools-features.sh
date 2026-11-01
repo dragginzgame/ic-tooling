@@ -80,16 +80,16 @@ check_graph ic-host-wasm-inspect --forbid-pattern "$parser_free" \
     --require ic-host-artifacts=1 --require ic-host-fs=1
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features certificate \
     --forbid-pattern "^(${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-agent|reqwest|minicbor)$" \
-    --require ic-platform=1 --require serde_cbor=1 --require ic-certification=1
+    --require ic-platform=1 --require serde_cbor=1 --forbid ic-certification
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features ic-interface,certificate \
     --forbid-pattern "^(${codec}|ic-host-(fs|process|text)|ic-agent|reqwest|minicbor)$" \
-    --require ic-platform=1 --require serde_cbor=1 --require ic-certification=1 --require ic-host-artifacts=1 --require wasmparser=1
+    --require ic-platform=1 --require serde_cbor=1 --forbid ic-certification --require ic-host-artifacts=1 --require wasmparser=1
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features candid \
     --forbid-pattern "^(ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$" \
     --require ic-platform=1 --require candid=1 --require candid_parser=1
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features candid,ic-interface,certificate \
     --forbid-pattern '^(ic-host-(fs|process|text)|ic-agent|reqwest|minicbor)$' \
-    --require ic-platform=1 --require candid_parser=1 --require serde_cbor=1 --require ic-certification=1 --require ic-host-artifacts=1 --require wasmparser=1
+    --require ic-platform=1 --require candid_parser=1 --require serde_cbor=1 --forbid ic-certification --require ic-host-artifacts=1 --require wasmparser=1
 check_graph ic-host-tools --forbid-pattern "$yaml_allowed" --no-default-features --all-features \
     --forbid-pattern '^(ic-host-(fs|process)|ic-stable-structures|icrc-ledger-types|icrc-cbor)$' \
     --require ic-platform=1 --require candid_parser=1 --require serde_cbor=1 --require ic-certification=1 --require ic-host-artifacts=1 --require wasmparser=1 --require ic-agent=1 --require reqwest=1 --require ic-host-text=1 --require yaml_serde=1 --require libyaml-rs=1 --require prost=1

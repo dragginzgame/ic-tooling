@@ -54,12 +54,26 @@ in Platform is separate from this Foundation publication.
 ## Ordinary checkout, baseline and recovery
 
 The ordinary checkout contains Foundation 0.73.4 with Integration 0.75.2.
-Its unrelated incoming lock selections remain Metrics **0.24.3** and
-Platform/macros/runtime guard **0.15.3**, outside this release. Every non-Foundation
-lock record is preserved exactly, and locked offline metadata passes; that alone
-does not qualify these supplier changes for publication. The delivery record owns
-the incoming lock/patch backups and stash identity. Do not apply a complete saved
-working patch over the integrated source.
+The subsequent authorized supplier adoption is local and unpublished: the root
+catalog and lock now select Metrics **0.24.4** and Platform/macros/runtime guard
+**0.16.0**. Wire/Derive 0.13.2 and canonical Types 0.15.1 remain unchanged.
+Pending Integration **0.76.0** notes reflect Tools' public certificate/hash-tree
+return identities moving into Platform. Callers align Platform and use explicit
+conversions when exchanging certificates with native Agent; CBOR admission and
+authentication ownership stay unchanged. Certificate-only graph policy now
+excludes registry `ic-certification`. No own package version has been advanced.
+
+Focused Linux qualification passes: affected-package Clippy, Tools/Testkit graph
+policies, nine certificate and 23 benchmark tests on Rust 1.91, and Rust 1.91
+Testkit/Native/probe Wasm builds. Formatting and documentation links pass.
+Native macOS has not been rerun for this local supplier adoption; the earlier
+matrix above qualifies the published Foundation source only.
+
+The incoming lock already selected Metrics 0.24.4 and Platform 0.15.3; all records
+outside the requested Platform cohort are preserved exactly. This adoption's
+incoming lock/patch are retained under `/tmp/ic-tooling-supplier-adoption.p90SdL/`.
+The earlier delivery record retains its own incoming lock backups and stash
+identity. Do not apply a complete saved patch over the integrated source.
 
 The Shared snapshot is 152 files at
 `143a9abb9ae81feae9400ff3844b03b1ddfdd75a`, including the added classifier.
