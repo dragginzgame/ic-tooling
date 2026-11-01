@@ -173,4 +173,6 @@ above produced these observations:
 
 Module sizes are uncompressed; code bytes are code-section payload bytes.
 These are probe observations, not Canic/Auth deployment measurements. Native
-macOS qualification of these changes remains separate and has not run locally.
+macOS 15 Intel and Apple Silicon qualification passed in source PR #302 CI; that
+evidence is separate from this Linux vector run and is linked in the
+[current handoff](../status/current.md).

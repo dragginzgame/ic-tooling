@@ -63,12 +63,12 @@ uncompressed module/code bytes and IC instruction counts remain under
 
 Native hosted evidence is separate from local Linux. Source PR head
 `ea1e5645d16611a83d1668c96925007b1aa84cb3` and merged source `4047979d` have
-identical tree `d402f89883cf9e9ab4a87dc24f67528e4566b6b4`. Fourteen source checks passed, including native Linux,
-MSRV and [macOS 15 Apple Silicon](https://github.com/dragginzgame/ic-tooling/actions/runs/41309896915/job/124857910951).
-[macOS 15 Intel](https://github.com/dragginzgame/ic-tooling/actions/runs/41309896915/job/124857910970) remains in progress and is not counted as
-passing. Hosted qualification continues asynchronously; completed local release
-gates do not establish native Intel success. Later release commits change only
-selected group metadata; their CI is separate from this source proof.
+identical tree `d402f89883cf9e9ab4a87dc24f67528e4566b6b4`. All fifteen source checks passed, including native
+Linux, MSRV, [macOS 15 Apple Silicon](https://github.com/dragginzgame/ic-tooling/actions/runs/41309896915/job/124857910951) and
+[macOS 15 Intel](https://github.com/dragginzgame/ic-tooling/actions/runs/41309896915/job/124857910970).
+Native macOS execution is separate from local Linux evidence. Later release
+commits change only selected group metadata; their CI is separate from this
+source proof. #299 and #300 are implemented, qualified and published.
 
 ## Ordinary checkout, evidence and recovery
 
