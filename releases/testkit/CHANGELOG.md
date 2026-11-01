@@ -4,6 +4,15 @@ This ledger owns Testkit, Testkit Native and the private development/probe packa
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.77.0]
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.17 and its maintained PocketIC client. Consumers passing client,
+  builder or rejection values to Testkit must use the same Platform generation;
+  the published server remains PocketIC 16.1.0. Managed startup bounds, cleanup
+  and retained diagnostics keep their existing contracts.
+
 ## [0.76.2] - 2026-11-01
 
 ### 🔧 Changed

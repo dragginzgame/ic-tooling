@@ -1,5 +1,50 @@
 # Current handoff — 2026-11-01
 
+## Platform 0.17 adoption proposal — publication blocked
+
+The isolated cross-repository contribution selects published Platform **0.17.0**,
+owned PocketIC client **0.17.0**, Runtime/macros/guard **0.17.1** and Types
+**0.16.0**. No product Rust source or package version changes. The undated Tools
+and Testkit **0.77.0** notes record the breaking owned Principal/client identities.
+Consumers exchanging these values must align their Platform generation. Managed
+startup bounds, cleanup, output retention and stock PocketIC **16.1.0** remain.
+Native graphs exclude the runtime; Wasm graphs admit the owned runtime and keep
+external IC0/executor and simulator clients excluded as before.
+
+This is not release-ready. The optional `platform-types` bridge in selected Wire
+**0.13.3** still implements `Wire` for Types **0.15.1**. The existing integration
+archive consumer enables that bridge and expects the canonical new Principal and
+Account; a minimal registry probe fails with E0277 for both. Keep that acceptance
+contract intact. Wire's matching Types adoption and compatible published bridge
+are required before final archive/release qualification. Relevant owner work is
+[Wire PR #41](https://github.com/dragginzgame/ic-wire/pull/41).
+
+Evidence is `/tmp/backup-platform-adopt.oex0l5i7/`: official/checksum-verified
+Platform/Types/client archives, before/after source and manifests, typed mismatch
+probes, isolated Tooling and unchanged Backup candidate copies, and command logs.
+Full locked metadata, external dependency boundaries, Cargo inheritance, strict
+all-target/all-feature Clippy for all five affected packages, native Tools/Testkit
+and Wasm profile graphs, formatting, snapshot integrity and local links pass.
+Rust **1.91** Wasm checks pass for Testkit all-features and the private runtime
+probe. All **34 startup tests** pass, including real managed server construction,
+plus **three registry golden/admission tests**.
+
+An isolated copy of Backup's unchanged Rust sources passes strict both-package
+Clippy, **two real Core capture/restore/resume/replay cases** and **one independent
+normal Agent consumer's authenticated cold capture/restore/terminal replay**.
+Core evidence remains `/tmp/ic-backup-pocketic-1549532-{0,1}`; Agent evidence is
+`/tmp/ic-backup-agent-pocketic-1576068-1`, with its independent graph/build at
+`/tmp/ic-backup-agent-independent-build-1576068-0`. Initial candidate preparation
+failures from missing copied schemas/helper scripts are retained; supplying the
+original fixture inputs made the affected checks pass without Rust edits.
+This is candidate source proof, not a published Testkit/Backup adoption.
+
+No full CI, normalized package acceptance, fresh native macOS matrix, version
+bump, merge, release or publication occurred. Previous release receipts retain
+their original sources and supplier identities. The normal sibling checkouts
+were inspected read-only and their dirty changes preserved.
+
+
 ## Published Foundation 0.73.6 / Tools 0.76.2 / Testkit 0.76.2
 
 All ten public crates are released and published in supplier-first order:

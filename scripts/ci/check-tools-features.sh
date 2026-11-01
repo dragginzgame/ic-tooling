@@ -46,7 +46,7 @@ observe_graph() {
     # Tools explicitly owns selected Platform profiles; generic Host owners do not.
     [[ "$package" == ic-host-tools ]] || arguments+=(--forbid ic-platform --forbid ic-platform-types)
     arguments+=(--forbid-pattern '^(ciborium|ciborium-io|ciborium-ll)$')
-    arguments+=(--forbid-pattern '^(ic-cdk|ic-cdk-macros|ic-cdk-executor|ic-platform-macros|ic-platform-runtime-guard|ic0)$')
+    arguments+=(--forbid-pattern '^(ic-cdk|ic-cdk-macros|ic-cdk-executor|ic-platform-macros|ic-platform-runtime|ic-platform-runtime-guard|ic-platform-pocket-ic|pocket-ic|ic0)$')
     arguments+=(--forbid-pattern '^(serde_yaml|unsafe-libyaml|serde_yaml_ng|serde_yml|serde-saphyr|granit-parser)$')
     perl "$root/scripts/ci/check-cargo-graph.pl" "${arguments[@]}" "$@"
 }

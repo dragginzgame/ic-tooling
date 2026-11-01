@@ -10,8 +10,8 @@ These dependency examples use the current Testkit family; Host Tools releases in
 
 ```toml
 [dev-dependencies]
-ic-testkit = "0.76.1"
-ic-platform = { version = "0.16.0", default-features = false, features = ["pocket-ic"] }
+ic-testkit = "0.77.0"
+ic-platform = { version = "0.17.0", default-features = false, features = ["pocket-ic"] }
 ```
 
 For typed application calls, enable the `wire` feature and depend directly on

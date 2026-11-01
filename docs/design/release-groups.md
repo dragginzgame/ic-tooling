@@ -28,8 +28,8 @@ The private development driver depends on Build, Testkit and the private probe;
 it has no Host Tools dependency. The probe supplies Testkit's installed fixtures
 and uses Wire/Platform for Wasm. Both stay in the Testkit family. Native remains
 in that existing measurement/testing family; this split does not create one group
-per crate. Canonical Types 0.15.1 remains shared through Platform and opt-in Wire
-metadata, without a Tools/Testkit dependency or a duplicated owner.
+per crate. Platform selects canonical Types 0.16.0; opt-in Wire metadata must
+align that identity without a Tools/Testkit dependency or a duplicated owner.
 
 Foundation error/artifact types still cross genuine package boundaries. A real
 Foundation break can require independently classified downstream releases and

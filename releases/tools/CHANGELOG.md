@@ -4,6 +4,14 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.77.0]
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.17 and its canonical Types 0.16 Principal identity. Consumers
+  exchanging owned registry principals must align their Platform/Types selections.
+  Native external SDK and certificate identities retain their existing contracts.
+
 ## [0.76.2] - 2026-11-01
 
 ### 🔧 Changed

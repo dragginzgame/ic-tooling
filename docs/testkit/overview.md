@@ -104,12 +104,12 @@ PocketIC dependency selection; Testkit owns server and fixture policy.
 
 ## Install
 
-For the pending IC integration 0.74 release, host-side test crates add:
+For the Platform 0.17 Testkit family, host-side test crates add:
 
 ```toml
 [dev-dependencies]
-ic-testkit = "0.74"
-ic-platform = { version = "0.15.1", features = ["pocket-ic"] }
+ic-testkit = "0.77.0"
+ic-platform = { version = "0.17.0", default-features = false, features = ["pocket-ic"] }
 ```
 
 For typed application calls, enable the `wire` feature and depend directly on
