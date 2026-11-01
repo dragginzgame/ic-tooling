@@ -137,11 +137,12 @@ runtime reject codes. Testkit's probe already supplies explicit Wire codecs;
 its PocketIC-facing reject codes and DTOs retain the original external identities.
 The signature features are not selected. No local replacement API is needed.
 
-Platform also owns the native PocketIC client and DTO dependency; callers import
+Platform also maintains the native PocketIC client and client-owned DTOs; callers import
 its explicit module directly. Testkit retains
 provisioning, server admission, startup/teardown, transport classification and
-fixture policy. The upstream client remains 16.1.0, with its own management DTOs
-0.8.0. The library's Wasm normal/build graph must exclude PocketIC, Candid, CDK
+fixture policy. Platform 0.17's client preserves the PocketIC 16.1 protocol and
+management DTOs 0.8.0; the server remains pinned to 16.1.0. The library's Wasm
+normal/build graph must exclude the native client implementation, Candid, CDK
 and host transport; the test probe's runtime graph is a separate intentional selection.
 
 The 0.64 hard cut removes Testkit's forwarding module and convenience aliases.

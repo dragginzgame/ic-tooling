@@ -181,7 +181,8 @@ Host Artifacts and Wasm parsing. The standalone Wasm inspector
 retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.91
 and native Linux/macOS matrix as the existing libraries.
 
-Platform 0.16 embeds the IC system-call and executor implementations. Testkit's
+Platform 0.17 delegates IC system calls and the executor to independent Runtime
+0.17.1. Testkit's
 Wasm graph excludes external `ic0` and `ic-cdk-executor` packages; the private
 performance probe enables Platform's executor through `cdk`. Wasm compilation
 checks this selection separately from native execution and installed IC behavior.
@@ -189,18 +190,24 @@ Platform selects its internal singleton guard only for executor/runtime
 users. The graph policies exclude it from Host/Tools and Testkit, and require it
 for the private probe's Wasm runtime.
 Consumers exchanging Platform-owned registry principals with Tools must align
-the canonical `ic-platform-types` 0.15.1 identity exposed by Platform 0.16.0.
+the canonical `ic-platform-types` 0.16.0 identity exposed by Platform 0.17.0.
 Tools' certificate decoders now return Platform-owned certificate/hash-tree
 identities. Enable `agent` and use Platform's explicit `From`/`Into` conversions
 when exchanging them with native Agent certificates. Certificate-only profiles
 exclude registry `ic-certification`; native Agent still owns its separate dependency.
-Platform has no production Wire or Host Artifacts dependency. Wire 0.13.0's optional
+Platform has no production Wire or Host Artifacts dependency. Wire's optional
 `platform-types` schemas share that Types generation. The archive consumer fixture
 opts into those schemas and checks Principal/Account metadata alongside core frames.
 Production profiles use only Wire's core codec and do not select that bridge or
 `ic-wire-endpoint`. Platform's separate groups preserve
 independent Types releases; incompatible Types changes still require explicit
 consumer and schema adoption.
+
+Native Testkit uses Platform's maintained `ic-platform-pocket-ic` 0.17 client
+through the existing `ic_platform::pocket_ic` imports. Its exposed client and
+client-owned DTO identities require callers to align on Platform 0.17; the
+registry `pocket-ic` package is excluded. Wasm graphs exclude the native client
+implementation as well. The installed PocketIC server remains pinned to 16.1.0.
 
 Testkit's benchmark projection uses arithmetic-only Metrics 0.24.4 with default features
 disabled. Graph checks require one Metrics identity and no selected Metrics

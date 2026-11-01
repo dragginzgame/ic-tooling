@@ -19,7 +19,7 @@ classify the Tools release at that public boundary, independently of Testkit.
 
 Testkit's normal/build graph uses Foundation, arithmetic-only Metrics, optional
 Wire and Platform's PocketIC/system capabilities. It does not use Host Tools.
-Its public transport APIs expose Wire limits/errors and external PocketIC DTOs.
+Its public transport APIs expose Wire limits/errors and Platform-owned PocketIC DTOs.
 Native's optional memory adapter exposes Platform stable-memory traits. These
 Testkit-family contracts retain their own compatibility assessment; changing a
 supplier does not automatically imply that all public identities changed.
@@ -28,8 +28,9 @@ The private development driver depends on Build, Testkit and the private probe;
 it has no Host Tools dependency. The probe supplies Testkit's installed fixtures
 and uses Wire/Platform for Wasm. Both stay in the Testkit family. Native remains
 in that existing measurement/testing family; this split does not create one group
-per crate. Canonical Types 0.15.1 remains shared through Platform and opt-in Wire
-metadata, without a Tools/Testkit dependency or a duplicated owner.
+per crate. Platform supplies canonical Types 0.16.0 without a Tools/Testkit
+dependency or a duplicated owner. Consumers enabling Wire's optional Platform
+metadata must align its Types selection separately.
 
 Foundation error/artifact types still cross genuine package boundaries. A real
 Foundation break can require independently classified downstream releases and
