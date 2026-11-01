@@ -13,6 +13,12 @@ Joint history through 0.76.1 remains there once, with its original scope.
   aligns the optional Platform Types bridge with Platform 0.17's owned types;
   frame formats and caller-selected limits remain unchanged.
 
+### 🔧 Changed
+
+- Adopt Metrics 0.25 for benchmark averages with default features disabled.
+  Preserve exact scaled averages and Testkit's existing error types without
+  enabling Metrics' native Wire metadata.
+
 ## [0.77.0] - 2026-11-01
 
 ### ⚠️ Breaking
