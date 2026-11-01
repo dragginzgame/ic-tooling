@@ -4,7 +4,7 @@
 
 # PocketIC upstream boundary
 
-This is maintained against Platform 0.6's selected `pocket-ic` 16.1 client and Testkit's
+This is maintained against Platform 0.17's owned PocketIC 16.1 client and Testkit's
 current public interfaces. Recheck the relevant capabilities when changing that
 dependency. Historical decisions remain in the
 [design records](README.md#historical-design-records) and
@@ -14,12 +14,12 @@ has shipped.
 
 ## Ownership
 
-PocketIC owns the simulator, management operations, client runtime types and
-its default server discovery/download path. Platform owns the explicit native
-client and DTO exports and their upstream dependency selection. Import those
+PocketIC owns the simulator and server protocol. Platform maintains the native
+client implementation, client-owned DTO identities and default server discovery
+behavior in `ic-platform-pocket-ic`, exposed through its facade. Import those
 types directly from `ic_platform::pocket_ic`; Testkit supplies no forwarding
 module or convenience aliases. Testkit does not mirror the upstream simulator API.
-Additional upstream types must be exposed by Platform rather than copied here.
+Additional client types must be exposed by Platform rather than copied here.
 
 Testkit owns explicit server provisioning and fixture lifecycle policy. It adds
 bounded startup, server/instance custody, contextual calls, installation policy,
