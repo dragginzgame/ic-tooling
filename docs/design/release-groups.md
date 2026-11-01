@@ -135,9 +135,10 @@ ledgers; each alias belongs to that group's policy roster. Admission checks both
 groups and actual paths; preparation updates selected requirements transactionally,
 preserving existing operators. Unused catalog entries introduce no graph edges.
 
-Tools exposes Platform principals, Testkit exposes Wire limits/errors, and Native
-optionally exposes Platform memory traits. Their direct consumers must align
-those suppliers after incompatible changes. Platform 0.15.2 and Types 0.15.1 keep
+Tools exposes Platform principals and certificate/hash-tree types, Testkit exposes
+Wire limits/errors, and Native optionally exposes Platform memory traits. Their
+direct consumers must align those suppliers after incompatible changes.
+Platform 0.16.0 and Types 0.15.1 keep
 their independent release ownership. Wire 0.13.0's optional bridge selects the
 same Types generation. The consumer fixture checks registry/facade type ownership,
 core Wire limits and the explicitly selected schema pairing. Tooling production

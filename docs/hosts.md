@@ -181,7 +181,7 @@ Host Artifacts and Wasm parsing. The standalone Wasm inspector
 retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.91
 and native Linux/macOS matrix as the existing libraries.
 
-Platform 0.15 embeds the IC system-call and executor implementations. Testkit's
+Platform 0.16 embeds the IC system-call and executor implementations. Testkit's
 Wasm graph excludes external `ic0` and `ic-cdk-executor` packages; the private
 performance probe enables Platform's executor through `cdk`. Wasm compilation
 checks this selection separately from native execution and installed IC behavior.
@@ -189,7 +189,11 @@ Platform selects its internal singleton guard only for executor/runtime
 users. The graph policies exclude it from Host/Tools and Testkit, and require it
 for the private probe's Wasm runtime.
 Consumers exchanging Platform-owned registry principals with Tools must align
-Platform 0.15.2. Its facade reexports canonical `ic-platform-types` 0.15.1 identities.
+the canonical `ic-platform-types` 0.15.1 identity exposed by Platform 0.16.0.
+Tools' certificate decoders now return Platform-owned certificate/hash-tree
+identities. Enable `agent` and use Platform's explicit `From`/`Into` conversions
+when exchanging them with native Agent certificates. Certificate-only profiles
+exclude registry `ic-certification`; native Agent still owns its separate dependency.
 Platform has no production Wire or Host Artifacts dependency. Wire 0.13.0's optional
 `platform-types` schemas share that Types generation. The archive consumer fixture
 opts into those schemas and checks Principal/Account metadata alongside core frames.
@@ -198,7 +202,7 @@ Production profiles use only Wire's core codec and do not select that bridge or
 independent Types releases; incompatible Types changes still require explicit
 consumer and schema adoption.
 
-Testkit's benchmark projection uses arithmetic-only Metrics with default features
+Testkit's benchmark projection uses arithmetic-only Metrics 0.24.4 with default features
 disabled. Graph checks require one Metrics identity and no selected Metrics
 features in native all-feature and Wasm profiles. Default native and all-feature
 Wasm Testkit still exclude Wire; Host/Build retain their Metrics exclusions.

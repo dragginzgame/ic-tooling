@@ -5,6 +5,22 @@ with the private development/probe packages. Its canonical version is Testkit's
 package version. Earlier releases share the
 [coordinated history through 0.73.0](../history.md#0730---2026-10-31).
 
+## [0.76.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.16.0. Tools' certificate decoders return Platform-owned
+  `Certificate` and `HashTree` identities. Consumers exchanging these values
+  must align their Platform dependency; native Agent callers enable `agent`
+  and use Platform's explicit `From`/`Into` conversions at that boundary.
+  Strict CBOR admission, encoded bytes and caller-owned authentication remain
+  unchanged. Certificate-only graphs no longer select registry `ic-certification`.
+
+### ⬆️ Dependencies
+
+- Adopt arithmetic-only Metrics 0.24.4 with defaults disabled. Keep Wire/Derive
+  0.13.2, canonical Platform Types 0.15.1, Rust 1.91 and native/Wasm boundaries.
+
 ## [0.75.2] - 2026-10-31
 
 ### ⬆️ Dependencies
