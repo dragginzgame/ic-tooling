@@ -114,6 +114,10 @@ fn guard() -> Result<(), String> {
     }
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "Platform's decode_with callback receives an owned argument buffer"
+)]
 fn decode<Request: DeserializeOwned, const ID: u64>(bytes: Vec<u8>) -> Request {
     native::decode_request(ID, &bytes, protocol::LIMITS).expect("bounded perf probe Wire request")
 }

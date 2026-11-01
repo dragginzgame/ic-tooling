@@ -188,7 +188,7 @@ restored or validated.
 
 | Area | Main surface | Value added by ic-testkit |
 | --- | --- | --- |
-| PocketIC runtime | `ic_platform::pocket_ic` | Import the upstream client and DTOs directly from their dependency owner |
+| PocketIC runtime | `ic_platform::pocket_ic` | Import Platform's maintained client and DTOs directly from their dependency owner |
 | Startup | `PocketIcStartupConfig`, `PocketIcManagedServer` | Explicit bounded spawn/connect policy, owned shared-server lifecycle, and structured failures |
 | Calls | `query_wire`, `update_wire` (feature `wire`) | Method-bound encoding/decoding, contextual errors, preserved rejections |
 | Raw operations | `try_pocket_ic_operation` | Return recognized synchronous transport panics without retrying or changing upstream results |
