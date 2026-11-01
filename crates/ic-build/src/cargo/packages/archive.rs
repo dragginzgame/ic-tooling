@@ -155,11 +155,85 @@ pub fn qualify_package_archives(
         features,
         limits,
     )
-    .and_then(|prepared| prepared.run(&mut cargo, &mut extractor))
+    .and_then(|prepared| {
+        prepared.run(&mut cargo, &mut extractor, true, |root, features, cargo| {
+            qualify_default(root, features, cargo, limits.process)
+        })
+    })
     .map_err(|cause| PackageQualificationError {
         evidence: evidence.to_owned(),
         cause,
     })
+}
+
+/// Qualify already-produced archives with caller-owned checks over the admitted graph.
+///
+/// This does not run Cargo packaging or choose test targets, toolchains or Wasm
+/// profiles. It admits and extracts exactly the selected archives, constructs a
+/// verification workspace with frozen external selections, then calls `qualify`
+/// with its root. Consumers may create separate consumer fixtures beneath that
+/// root and run explicit checks; the admitted root manifest/lock and extracted
+/// sources must remain unchanged. Success rechecks all original source, archive,
+/// extracted-file and admitted-graph identities after the callback.
+///
+/// Tool factories, selection, features, limits and empty private evidence-directory
+/// requirements match [`qualify_package_archives`]. All output/evidence is retained
+/// on failure. A callback error is returned as the original cause; it never counts
+/// as successful qualification. This supplies no release or publication authority.
+///
+/// # Errors
+/// Returns source, archive, graph or callback failure with retained evidence.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "archive custody, tools, limits and the consumer qualification policy remain explicit"
+)]
+pub fn qualify_existing_package_archives(
+    workspace: &Path,
+    archive_root: &Path,
+    evidence: &Path,
+    packages: &[PackageArchiveSpec<'_>],
+    features: &CargoFeatureSelection,
+    limits: PackageQualificationLimits,
+    mut cargo: impl FnMut() -> Command,
+    mut extractor: impl FnMut(&Path, &Path) -> Command,
+    qualify: impl FnOnce(&Path) -> Result<(), Box<dyn Error>>,
+) -> Result<(), PackageQualificationError> {
+    PreparedQualification::prepare(
+        workspace,
+        archive_root,
+        evidence,
+        packages,
+        features,
+        limits,
+    )
+    .and_then(|prepared| {
+        prepared.run(&mut cargo, &mut extractor, false, |root, _, _| {
+            qualify(root)
+        })
+    })
+    .map_err(|cause| PackageQualificationError {
+        evidence: evidence.to_owned(),
+        cause,
+    })
+}
+
+// The existing convenience API retains its exact all-target/doctest roster.
+fn qualify_default(
+    evidence: &Path,
+    features: &CargoFeatureSelection,
+    cargo: &mut dyn FnMut() -> Command,
+    limits: OutputLimits,
+) -> Result<(), Cause> {
+    for (label, selection) in [("test-targets", "--all-targets"), ("test-docs", "--doc")] {
+        let mut command = cargo();
+        command
+            .args(["test", "--offline", "--locked", "--manifest-path"])
+            .arg(evidence.join("Cargo.toml"))
+            .args(["--workspace", selection])
+            .args(features.arguments());
+        execute(&mut command, evidence, label, limits)?;
+    }
+    Ok(())
 }
 
 // Paths and selection are admitted before the attempt writes evidence or runs commands.
@@ -227,6 +301,12 @@ impl<'a> PreparedQualification<'a> {
         self,
         cargo: &mut impl FnMut() -> Command,
         extractor: &mut impl FnMut(&Path, &Path) -> Command,
+        package_archives: bool,
+        qualify: impl FnOnce(
+            &Path,
+            &CargoFeatureSelection,
+            &mut dyn FnMut() -> Command,
+        ) -> Result<(), Cause>,
     ) -> Result<(), Cause> {
         let Self {
             workspace,
@@ -262,19 +342,21 @@ impl<'a> PreparedQualification<'a> {
         for (index, bytes) in originals.values().enumerate() {
             fs::write(evidence.join(format!("entry-manifest-{index}")), bytes)?;
         }
-        let mut command = cargo();
-        command.current_dir(&workspace).args([
-            "package",
-            "--offline",
-            "--locked",
-            "--allow-dirty",
-            "--no-verify",
-        ]);
-        for spec in packages {
-            command.args(["-p", spec.name]);
+        if package_archives {
+            let mut command = cargo();
+            command.current_dir(&workspace).args([
+                "package",
+                "--offline",
+                "--locked",
+                "--allow-dirty",
+                "--no-verify",
+            ]);
+            for spec in packages {
+                command.args(["-p", spec.name]);
+            }
+            command.args(features.arguments());
+            execute(&mut command, &evidence, "package", limits.process)?;
         }
-        command.args(features.arguments());
-        execute(&mut command, &evidence, "package", limits.process)?;
         let mut archives = BTreeMap::new();
         for (index, spec) in packages.iter().enumerate() {
             let path = archive_root.join(format!("{}.crate", spec.directory_name()));
@@ -328,15 +410,7 @@ impl<'a> PreparedQualification<'a> {
             verification_manifest: manifest,
             admitted_lock,
         };
-        for (label, selection) in [("test-targets", "--all-targets"), ("test-docs", "--doc")] {
-            let mut command = verification_cargo();
-            command
-                .args(["test", "--offline", "--locked", "--manifest-path"])
-                .arg(&manifest_path)
-                .args(["--workspace", selection])
-                .args(features.arguments());
-            execute(&mut command, &evidence, label, limits.process)?;
-        }
+        qualify(&evidence, features, &mut verification_cargo)?;
         baseline.verify(&evidence, packages, limits)
     }
 }

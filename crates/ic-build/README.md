@@ -133,3 +133,17 @@ Use `make testkit-package-check` for coordinated archive qualification.
 Consumer recipes, tool selections, budgets and lifecycle stay with their owners.
 The [source inventory](../../docs/design/tooling-consolidation.md) records original
 histories and the remaining external issues.
+
+### Consumer-owned archive checks
+
+On Unix, `cargo::packages::qualify_existing_package_archives` admits already-built
+archives without repackaging them or selecting tests. It constructs the admitted
+verification workspace, freezes external lock selections and invokes the caller's
+checks with that workspace root. Consumers can create separate native/MSRV/Wasm
+fixtures beneath the root. Extracted source bytes, admitted manifest/lock and
+original source/archive identities must remain unchanged on success. The caller
+owns check coverage, tools, budgets, retention and any subsequent release policy.
+
+`qualify_package_archives` retains its existing packaging, all-target and doctest
+convenience flow. A successful custom callback is followed by the same custody
+verification; a callback failure retains its original cause and attempt directory.
