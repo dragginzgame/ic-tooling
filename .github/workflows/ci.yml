@@ -85,7 +85,7 @@ jobs:
           CLASSIFICATION_RESULT: ${{ needs.change-scope.result }}
           CHANGE_SCOPE: ${{ needs.change-scope.outputs.scope }}
         run: |
-          [[ "$CLASSIFICATION_RESULT" == success ]]
+          [[ "$CLASSIFICATION_RESULT" == success ]] || exit 1
           case "$CHANGE_SCOPE" in docs|full) ;; *) exit 1 ;; esac
       - name: Validate documentation only
         if: ${{ needs.change-scope.outputs.scope == 'docs' }}
@@ -172,7 +172,7 @@ jobs:
           CLASSIFICATION_RESULT: ${{ needs.change-scope.result }}
           CHANGE_SCOPE: ${{ needs.change-scope.outputs.scope }}
         run: |
-          [[ "$CLASSIFICATION_RESULT" == success ]]
+          [[ "$CLASSIFICATION_RESULT" == success ]] || exit 1
           case "$CHANGE_SCOPE" in docs|full) ;; *) exit 1 ;; esac
       - name: Validate documentation only
         if: ${{ needs.change-scope.outputs.scope == 'docs' }}

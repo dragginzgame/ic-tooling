@@ -128,7 +128,8 @@ for my $command (@guards) {
     for my $result (qw(success failure skipped)) {
         for my $scope ('docs', 'full', '', 'unknown') {
             local @ENV{qw(CLASSIFICATION_RESULT CHANGE_SCOPE)} = ($result, $scope);
-            my $passed = system('bash', '-e', '-o', 'pipefail', '-c', $command) == 0;
+            # Refusal must be explicit: Bash 3.2 does not apply errexit to [[ ]].
+            my $passed = system('bash', '-o', 'pipefail', '-c', $command) == 0;
             is($passed, $result eq 'success' && ($scope eq 'docs' || $scope eq 'full'), 'actual job guard fails closed');
         }
     }

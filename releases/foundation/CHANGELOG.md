@@ -20,6 +20,8 @@ Build owns the group version. Earlier releases retain their coordinated scope in
   retaining stable CI job names, lint/security, fail-closed classification and
   full native/MSRV qualification for code. Release gates remain complete.
   ([#287](https://github.com/dragginzgame/ic-tooling/issues/287))
+- Explicitly refuse failed classification on Bash 3.2; qualify the guards without
+  relying on shell `errexit` behavior.
 
 ## [0.73.3] - 2026-10-31
 
