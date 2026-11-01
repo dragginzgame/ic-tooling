@@ -209,7 +209,7 @@ client-owned DTO identities require callers to align on Platform 0.17; the
 registry `pocket-ic` package is excluded. Wasm graphs exclude the native client
 implementation as well. The installed PocketIC server remains pinned to 16.1.0.
 
-Testkit's benchmark projection uses arithmetic-only Metrics 0.24.4 with default features
+Testkit's benchmark projection uses arithmetic-only Metrics 0.25.0 with default features
 disabled. Graph checks require one Metrics identity and no selected Metrics
 features in native all-feature and Wasm profiles. Default native and all-feature
 Wasm Testkit still exclude Wire; Host/Build retain their Metrics exclusions.

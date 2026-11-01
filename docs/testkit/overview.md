@@ -255,7 +255,7 @@ controlled application protocols. Add `ic-wire` alongside it:
 
 ```toml
 [dev-dependencies]
-ic-wire = "0.12.1"
+ic-wire = "0.14.0"
 ```
 
 Both helpers accept an explicit canister, caller, `WireCallSpec` and borrowed
@@ -279,7 +279,7 @@ allocated the reply. It is not network pre-allocation admission or a peak-heap
 bound. Error display omits payloads; use the typed rejection for details and raw
 PocketIC calls for malformed requests or original reply evidence. The feature is
 off by default and adds no Wire dependency to the canister library graph. Align
-direct Wire dependencies to 0.12 when supplying limits or matching typed codec
+direct Wire dependencies to 0.14 when supplying limits or matching typed codec
 causes, since these public types carry Wire's dependency identity.
 
 ## External protocol calls
