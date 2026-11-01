@@ -4,7 +4,7 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
-## [0.77.0] - Unreleased
+## [0.77.0] - 2026-11-01
 
 ### ⚠️ Breaking
 
