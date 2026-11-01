@@ -177,7 +177,8 @@ capture limits, funding and lifecycle. Its byte-limit argument is unchanged; the
 parser is absent from defaults. See the [0.31 migration](docs/changelog/0.31.md).
 
 Text's opt-in `yaml` feature provides `yaml::from_slice::<T>` with caller-selected
-input-byte admission and tag/merge policy. It uses ICP CLI's serde_yaml backend,
+input-byte admission and tag/merge policy. Its private `yaml_serde` backend uses
+the maintained YAML Organization fork and its `libyaml-rs` backend,
 checks the complete document before projecting an owned Serde schema, and performs
 no IO or external expansion. Parser types stay private; applications retain
 schemas, configuration discovery, redaction and public errors. The byte allowance

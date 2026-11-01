@@ -137,9 +137,14 @@ Qualify YAML with `cargo +1.91.0 test -p ic-host-text
 `--features icp-project` selection. Tests cover ignored-field duplicate/tag/merge
 policy, UTF-8/byte admission, alias handling and no external expansion. The byte
 allowance is not a parser memory/CPU budget; backend recursion/repetition checks
-are retained. The dependency guard confines serde_yaml to Text, rejects competing
-frontends and excludes YAML from defaults and unrelated profiles. serde_yaml's
-unsafe-libyaml backend remains selected in YAML-enabled graphs. All-feature MSRV
+are retained. The dependency guard confines `yaml_serde` to Text, rejects competing
+and retired frontends and excludes YAML from defaults and unrelated profiles.
+YAML-enabled graphs require the maintained `libyaml-rs` backend and exclude
+`serde_yaml` and `unsafe-libyaml`. This is the YAML Organization's maintained
+fork of the same low-level Rust port, not a rewrite that eliminates unsafe Rust.
+Both licenses and compiler floors were reviewed: `yaml_serde` is MIT/Apache-2.0
+with Rust 1.82; `libyaml-rs` is MIT with Rust 1.60. The public Host contract stays
+on Rust 1.91. All-feature MSRV
 checks, including YAML, use the same 1.91 compiler and existing CI lane.
 
 Certificate tests compare recursion refusal, semantic tags and indefinite byte
@@ -392,6 +397,17 @@ headroom over the 0.66.3 run (native Intel macOS about 35 minutes, runtime about
 7 minutes, optimizer about 2 minutes); they do not impose library deadlines.
 Runtime fixtures live below `runner.temp/portable-fixtures`, with command output
 in `portable-regression.log`, so the shared failure collector can retain them.
+
+The main CI workflow uses Shared's [change classifier](ci-change-selection.md)
+and the exact product prose paths in `ci/docs-only-paths.txt`. Admitted prose
+changes run document links under the existing native/MSRV job names, without
+compiler setup, Cargo caches, product tests or native qualification receipts.
+Their summaries explicitly identify documentation-only validation. Lint/security
+still runs. A failed classification fails dependent jobs; unknown, code, mixed,
+policy and packaged-document changes retain full qualification on all three
+native hosts. Release gates and the separate product workflows remain unchanged.
+`bash scripts/ci/test-product-ci-selection.sh` exercises the actual workflow
+commands and fail-closed guards in disposable Git history.
 
 `make tools-report` runs every existing offline tool check and retains all failures;
 `make tools-check` remains the fail-fast admission gate. Installer `--describe`

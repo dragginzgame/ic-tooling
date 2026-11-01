@@ -18,6 +18,32 @@ defaults:
     shell: /bin/bash --noprofile --norc -e -o pipefail {0}
 
 jobs:
+  change-scope:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      scope: ${{ steps.classify.outputs.scope }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify the exact tested change
+        id: classify
+        env:
+          CHANGE_EVENT: ${{ github.event_name }}
+          CHANGE_REF: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.base_ref) || github.ref }}
+          CHANGE_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          CHANGE_HEAD: ${{ github.sha }}
+        run: |
+          scope="$(perl scripts/ci/classify-ci-change.pl --event "$CHANGE_EVENT" --ref "$CHANGE_REF" \
+            --base "$CHANGE_BASE" --head "$CHANGE_HEAD" --policy ci/docs-only-paths.txt)"
+          case "$scope" in docs|full) ;; *) exit 1 ;; esac
+          if [[ "$scope" == docs ]]; then
+            git diff --check "$CHANGE_BASE...$CHANGE_HEAD" --
+          fi
+          echo "scope=$scope" >> "$GITHUB_OUTPUT"
+
   lint-and-security:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -32,6 +58,8 @@ jobs:
         run: make lint check-secrets
 
   native:
+    needs: change-scope
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       matrix:
@@ -52,6 +80,18 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           persist-credentials: false
+      - name: Require a successful classification
+        env:
+          CLASSIFICATION_RESULT: ${{ needs.change-scope.result }}
+          CHANGE_SCOPE: ${{ needs.change-scope.outputs.scope }}
+        run: |
+          [[ "$CLASSIFICATION_RESULT" == success ]]
+          case "$CHANGE_SCOPE" in docs|full) ;; *) exit 1 ;; esac
+      - name: Validate documentation only
+        if: ${{ needs.change-scope.outputs.scope == 'docs' }}
+        run: |
+          bash scripts/ci/check-product-doc-links.sh
+          echo 'Documentation checks passed; native qualification was not run.' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify native host
         env:
           EXPECTED_OS: ${{ matrix.os }}
@@ -66,10 +106,12 @@ jobs:
             echo /bin >> "$GITHUB_PATH"
           fi
       - name: Prepare declared development compiler and Wasm target
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         run: |
           rustup toolchain install --profile minimal --no-self-update
           rustup target add wasm32-unknown-unknown
       - name: Restore ordinary workspace compilation cache
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
         timeout-minutes: 3
         continue-on-error: true
@@ -82,36 +124,42 @@ jobs:
             target/wasm32-unknown-unknown/debug
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Prepare locked dependency cache
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         run: cargo fetch --locked
       - name: Prepare pinned local tools with the shared Cargo cache
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         uses: ./.github/actions/prepare-common-tools
         with:
           cache: 'true'
           cache-save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           cache-extra-key: ${{ hashFiles('ci/release-editor.env') }}
       - name: Run native CI and publication qualification
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         env:
           TMPDIR: ${{ runner.temp }}/portable-fixtures
         run: |
           mkdir -p "$TMPDIR"
           make ci-publication
       - name: Retain successful native qualification
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         uses: ./.github/actions/retain-qualification
         with:
           profile: native
           name: native-qualification-${{ matrix.runner }}-${{ github.run_attempt }}
       - name: Retain failure evidence
-        if: ${{ failure() }}
+        if: ${{ failure() && needs.change-scope.outputs.scope == 'full' }}
         uses: ./.github/actions/retain-failure-evidence
         with:
           name: native-failure-${{ matrix.runner }}-${{ github.run_attempt }}
           temp-root: ${{ runner.temp }}
           repository-root: ${{ github.workspace }}
       - name: Retain product qualification evidence
-        if: ${{ failure() && !cancelled() }}
+        if: ${{ failure() && !cancelled() && needs.change-scope.outputs.scope == 'full' }}
         uses: ./.github/actions/retain-product-evidence
 
   msrv:
+    needs: change-scope
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -119,12 +167,26 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           persist-credentials: false
+      - name: Require a successful classification
+        env:
+          CLASSIFICATION_RESULT: ${{ needs.change-scope.result }}
+          CHANGE_SCOPE: ${{ needs.change-scope.outputs.scope }}
+        run: |
+          [[ "$CLASSIFICATION_RESULT" == success ]]
+          case "$CHANGE_SCOPE" in docs|full) ;; *) exit 1 ;; esac
+      - name: Validate documentation only
+        if: ${{ needs.change-scope.outputs.scope == 'docs' }}
+        run: |
+          bash scripts/ci/check-product-doc-links.sh
+          echo 'Documentation checks passed; MSRV qualification was not run.' >> "$GITHUB_STEP_SUMMARY"
       # dtolnay/rust-toolchain v1
       - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         with:
           toolchain: 1.91.0
           targets: wasm32-unknown-unknown
       - name: Restore MSRV compilation cache
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
         env:
           RUSTUP_TOOLCHAIN: 1.91.0
@@ -139,10 +201,13 @@ jobs:
             target/wasm32-unknown-unknown/debug
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Prepare locked dependency cache
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         run: cargo fetch --locked
       - name: Check declared MSRV
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         run: CARGO_NET_OFFLINE=true make msrv-qualification
       - name: Retain successful MSRV qualification
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
         uses: ./.github/actions/retain-qualification
         env:
           RUSTUP_TOOLCHAIN: 1.91.0

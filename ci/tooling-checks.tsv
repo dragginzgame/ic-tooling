@@ -1,5 +1,6 @@
 scripts/ci/test-qualification-record.sh	make-stub,retention,relative
 scripts/ci/test-tools-layering.sh	tooling,make-stub
+scripts/ci/test-product-ci-selection.sh	tooling,make-stub
 scripts/ci/test-product-evidence.sh	tooling,make-stub
 scripts/ci/test-host-fixture-retention.sh	tooling,make-stub,retention
 scripts/ci/test-make-snapshot.sh	make-stub,retention,relative

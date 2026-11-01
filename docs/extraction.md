@@ -203,7 +203,8 @@ no longer owns an `ic-limits` profile or a reference-policy CLI example.
   The private YAML backend is owned here; schemas, filesystem/includes and
   application configuration rules remain with consumers. Tools' `icp-project`
   selects this Text feature rather than another parser implementation. Its private
-  serde_yaml backend matches ICP CLI; all Text profiles retain Rust 1.91. Text also owns
+  maintained `yaml_serde` backend uses `libyaml-rs`; all Text profiles
+  retain Rust 1.91. Text also owns
   explicit column clipping, Unicode display-width tables and pure single-line
   progress frames. Its `timestamp` module owns canonical UTC second spelling and
   Gregorian conversion, formatting unsigned Unix seconds and parsing zero through
