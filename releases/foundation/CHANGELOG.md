@@ -4,6 +4,16 @@ This group covers Artifacts, FS, HTTP, Process, Text, Build and the Wasm inspect
 Build owns the group version. Earlier releases retain their coordinated scope in
 [shared history](../history.md#0730---2026-10-31).
 
+## [0.73.5] - Unreleased
+
+### ➕ Added
+
+- Build can qualify already-produced package archives with caller-selected
+  checks over the admitted extracted graph. Preserve frozen external selections,
+  bounded source traversal and final source/archive/graph custody. The existing
+  convenience API retains packaging and its all-target/doctest roster; this new
+  boundary does not grant release/publication authority or select consumer gates.
+
 ## [0.73.4] - 2026-11-01
 
 ### ⬆️ Dependencies
