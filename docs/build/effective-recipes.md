@@ -40,8 +40,9 @@ entries remain Cargo-owned and their resulting compiler arguments are recorded.
 Prepare/admit the wrapper from the same Build source/version under the consumer's
 tool policy. The new executable is available through Build's existing `cli`
 feature; this source change does not install it or change any consumer tool pin.
-Until the next Foundation publication, use a source-qualified local build for
-experiments, not a pin to an unpublished version.
+Foundation 0.73.6 publishes both the library support and this executable.
+Consumers select and admit that published tool under their own installation
+policy; this delivery does not change their existing pins.
 
 ```rust,ignore
 use ic_build::cargo::rustc_recipe::{RustcRecipe, RustcRecipeLimits};
