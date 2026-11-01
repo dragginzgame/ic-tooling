@@ -39,10 +39,10 @@ ic-host-wasm-inspect = { path = "apps/ic-host-wasm-inspect", version = "0.73.6" 
 ic-host-tools = { path = "crates/ic-host-tools", version = "0.77.0", default-features = false }
 # Testkit (Dev and perf probe are private qualification crates)
 # Changelog : releases/testkit/CHANGELOG.md
-ic-testkit = { path = "crates/ic-testkit", version = "0.77.0", default-features = false }
-ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.77.0" }
-ic-testkit-native = { path = "crates/ic-testkit-native", version = "0.77.0", default-features = false }
-ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.77.0" }
+ic-testkit = { path = "crates/ic-testkit", version = "0.78.0", default-features = false }
+ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.78.0" }
+ic-testkit-native = { path = "crates/ic-testkit-native", version = "0.78.0", default-features = false }
+ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.78.0" }
 
 # External production dependencies
 cap-fs-ext = "4.0.2"
