@@ -36,7 +36,7 @@ ic-host-wasm-inspect = { path = "apps/ic-host-wasm-inspect", version = "0.73.6" 
 
 # Host Tools
 # Changelog : releases/tools/CHANGELOG.md
-ic-host-tools = { path = "crates/ic-host-tools", version = "0.76.1", default-features = false }
+ic-host-tools = { path = "crates/ic-host-tools", version = "0.76.2", default-features = false }
 # Testkit (Dev and perf probe are private qualification crates)
 # Changelog : releases/testkit/CHANGELOG.md
 ic-testkit = { path = "crates/ic-testkit", version = "0.76.1", default-features = false }

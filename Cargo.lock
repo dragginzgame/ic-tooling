@@ -1615,7 +1615,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-tools"
-version = "0.76.1"
+version = "0.76.2"
 dependencies = [
  "clap",
  "ic-host-artifacts",
