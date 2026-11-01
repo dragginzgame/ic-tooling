@@ -1,4 +1,23 @@
-# Current handoff — 2026-10-31
+# Current handoff — 2026-11-01
+
+## YAML and CI issue fixes
+
+The maintainer requested resolving Tooling #285, #286 and #287. #286 is closed
+on delivered-main qualification below. This source implements the other two:
+Host Text selects maintained `yaml_serde 0.10.7` / `libyaml-rs 0.3.0` behind its
+unchanged optional API, and main CI uses Shared's exact prose classifier while
+preserving stable job names, fail-closed guards and full code/release gates.
+The 152-file snapshot adds the classifier from the already adopted revision;
+there is no broader Shared refresh or tool-pin change.
+
+Focused current/MSRV YAML and ICP projection tests, strict selected Clippy,
+old/new parser comparisons, feature graphs, actual workflow selection/guard
+fixtures, Make wiring and source/metadata checks pass. Evidence and incoming
+lock backups remain under `/tmp/ic-tooling-issues.yA2Mdb`. The backend remains a
+maintained low-level Rust port with unsafe internals; no memory-safety rewrite
+is claimed. Foundation proposes 0.73.4; package versions and publication are
+unchanged. The maintainer authorized a scoped PR and normal merge, with issue
+closure after integration. Preserve the unrelated incoming lock records.
 
 ## Delivered Foundation 0.73.3 and integration 0.75.2
 
@@ -42,21 +61,22 @@ The release graph selects Wire/Derive **0.13.2**, Metrics **0.24.0** and Platfor
 **0.15.2**, with canonical Types **0.15.1**. Wire's patch preserves public type
 identity, codec behavior and budgets; no consumer code migration is required.
 
-Native macOS qualification remains separate from Linux evidence. Hosted CI is
-asynchronous; consult the delivery record and latest retained main run before
-claiming full qualification of this release. Source-PR browser, optimizer and
-PocketIC-concurrency checks passed on both macOS hosts; those passes do not prove
-the full native workspace matrix. Prior source `a7369dc2` has a complete successful
-[Linux/macOS run](https://github.com/dragginzgame/ic-tooling/actions/runs/41228142298).
+Native macOS qualification remains separate from Linux evidence. Delivered main
+`13aad1e5` has a complete successful
+[Linux/macOS run](https://github.com/dragginzgame/ic-tooling/actions/runs/41238240245),
+including native macOS 15 Intel and Apple Silicon, MSRV and lint/security.
+This closes #286's delivered qualification criterion; it does not qualify the
+new YAML or CI changes above. Hosted development CI remains asynchronous.
 GitHub issues remain the sole follow-up tracker.
 
 ## Preserved ordinary checkout and baseline
 
-The ordinary checkout contains both released groups. Its only local change is
-`Cargo.lock`: Metrics **0.24.1** and Platform/macros/runtime guard **0.15.3**.
-Those unrelated selections were restored after fast-forwarding main and were
-excluded from this deployment. Locked offline metadata passes for that checkout;
-this does not qualify all its supplier changes for release.
+The ordinary checkout contains both released groups. The issue batch's incoming
+`Cargo.lock` selects Metrics **0.24.3** and Platform/macros/runtime guard **0.15.3**;
+its exact pre-edit bytes are retained with the issue evidence above. Preserve
+those unrelated selections outside the scoped PR. The earlier deployment restored
+Metrics 0.24.1 and Platform 0.15.3 outside its release graph. Locked offline
+metadata alone does not qualify those supplier changes for release.
 The complete incoming work is retained in stash
 `bcfc98c4c7b7412237d4475c407e1097fa8752ca` and the deployment's incoming patch/lock
 backups. The earlier stash `9eadfae0d0593d35183b82bd951c9d1a4bf35848` remains.

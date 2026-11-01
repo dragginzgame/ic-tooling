@@ -1,0 +1,10 @@
+# Exact reviewed product prose. No packaged README, ledger, companion declaration
+# or build/generation input belongs here. New paths and policy changes use full CI.
+docs/capability-fs.md
+docs/design/release-groups.md
+docs/design/tooling-consolidation.md
+docs/design/wasm-cache-hashing.md
+docs/extraction.md
+docs/file-cli.md
+docs/hosts.md
+docs/publishing.md

@@ -118,6 +118,7 @@ revision	143a9abb9ae81feae9400ff3844b03b1ddfdd75a
 # entrypoint	audits/ci-release-integrity.md
 # entrypoint	scripts/ci/cargo-release-group.sh
 # entrypoint	scripts/ci/cargo-publication-selection.pl
+# entrypoint	scripts/ci/classify-ci-change.pl
 file	f6d100137dcf1097c807286fc5e028e9a49e15725164488ccc903643ceee4f45	x	.githooks/pre-commit
 file	4f8004bdbb5052394b8f313a6f65d30e8230a12a019c666c6d412cd3779b8df0	-	.github/actions/prepare-common-tools/action.yml
 file	26a269c0e63125e8bd939578a64a6a67dbc5280cd3fbfd7da8b9c8e4d44cc6d5	-	.github/actions/retain-failure-evidence/action.yml
@@ -233,6 +234,7 @@ file	2bfeff4a50d41815600825d5f5d0c2c17ad03326d2b7664efd19a706891f4e19	-	tasks/to
 file	f74b4d59bdeb66381cbd80acd5b8f8a716062542f6c2934528d73715ca29de14	-	audits/ci-release-integrity.md
 file	9fd250f349e3d6d297b9950a526b44dd586e3fd06ec2ca0a607e583af59905f3	-	scripts/ci/cargo-release-group.sh
 file	ec46c51af7fc2b7ef2959343331e6aa9efb40904d55f5c5b5a43cb446736f9a8	-	scripts/ci/cargo-publication-selection.pl
+file	fbc7073fccaa24936e45382690c96ba6fbd72ec4e3350fae0098fb281f0ed772	-	scripts/ci/classify-ci-change.pl
 file	1bd5a58249f8a3ddb24a59337868183e845a8b051091d18b137d8f378a221139	-	rules/engineering-details.md
 file	e3aed908dd9b08bf93255328bb056bed57298dab39944e3726aad2726548e653	-	rules/rpc-budgets.md
 file	7f8a58cc55f1cea0546b39bf97b64fee0a0a0e7fe2aaf31712c158cc43b6320c	-	docs/rust-toolchains.md

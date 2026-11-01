@@ -12,12 +12,12 @@ publish = ["crates-io"]
 
 [features]
 default = []
-yaml = ["dep:serde", "dep:serde_yaml"]
+yaml = ["dep:serde", "dep:yaml_serde"]
 
 [dependencies]
 serde = { workspace = true, features = ["std"], optional = true }
-serde_yaml = { workspace = true, optional = true }
 unicode-width.workspace = true
+yaml_serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde = { workspace = true, features = ["derive", "std"] }

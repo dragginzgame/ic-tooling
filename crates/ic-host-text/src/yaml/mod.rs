@@ -1,6 +1,6 @@
 //! Single-document UTF-8 YAML decoding with caller-owned byte admission and schemas.
 //!
-//! The private `serde_yaml` backend matches ICP CLI's package selection. Its built-in
+//! The private `yaml_serde` backend uses the maintained YAML Organization fork. Its built-in
 //! recursion/repetition checks are retained; input-byte admission is not a bound
 //! on parser memory, CPU or custom deserializer work. No IO or external expansion
 //! is performed. Duplicate keys are rejected before typed schema projection.
@@ -88,20 +88,20 @@ pub fn from_slice<T: DeserializeOwned>(
         });
     }
     let source = std::str::from_utf8(bytes).map_err(DecodeError::Utf8)?;
-    let document: serde_yaml::Value =
-        serde_yaml::from_str(source).map_err(|error| parse_error(&error))?;
+    let document: yaml_serde::Value =
+        yaml_serde::from_str(source).map_err(|error| parse_error(&error))?;
     admit_document(&document, policy)?;
-    serde_yaml::from_value(document).map_err(|error| parse_error(&error))
+    yaml_serde::from_value(document).map_err(|error| parse_error(&error))
 }
 
-fn parse_error(error: &serde_yaml::Error) -> DecodeError {
+fn parse_error(error: &yaml_serde::Error) -> DecodeError {
     DecodeError::InvalidDocument {
         message: error.to_string(),
     }
 }
 
-fn admit_document(document: &serde_yaml::Value, policy: DecodePolicy) -> Result<(), DecodeError> {
-    use serde_yaml::Value;
+fn admit_document(document: &yaml_serde::Value, policy: DecodePolicy) -> Result<(), DecodeError> {
+    use yaml_serde::Value;
 
     let mut pending = vec![document];
     while let Some(value) = pending.pop() {

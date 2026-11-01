@@ -327,6 +327,7 @@ PATH="$fixture/local:$PATH" make --no-print-directory tooling-command-check > "$
 awk '{ print $1, $2 }' "$HOST_MAKE_EVENTS" > "$fixture/tooling-observed"
 cat > "$fixture/expected" <<'EVENTS'
 fixture scripts/ci/test-tools-layering.sh
+fixture scripts/ci/test-product-ci-selection.sh
 fixture scripts/ci/test-product-evidence.sh
 fixture scripts/ci/test-host-fixture-retention.sh
 fixture scripts/ci/check-release-commands.sh

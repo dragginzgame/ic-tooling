@@ -35,9 +35,9 @@ perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --for
 codec='candid|candid_parser'
 agent='ic-agent|reqwest|url'
 serialization='serde_cbor|minicbor'
-parser_free='^(serde_yaml|unsafe-libyaml|wat|wast)$'
+parser_free='^(yaml_serde|libyaml-rs|serde_yaml|unsafe-libyaml|wat|wast)$'
 yaml_allowed='^(wat|wast)$'
-wat_allowed='^(serde_yaml|unsafe-libyaml)$'
+wat_allowed='^(yaml_serde|libyaml-rs|serde_yaml|unsafe-libyaml)$'
 observe_graph() {
     local package="$1"
     shift
@@ -47,7 +47,7 @@ observe_graph() {
     [[ "$package" == ic-host-tools ]] || arguments+=(--forbid ic-platform --forbid ic-platform-types)
     arguments+=(--forbid-pattern '^(ciborium|ciborium-io|ciborium-ll)$')
     arguments+=(--forbid-pattern '^(ic-cdk|ic-cdk-macros|ic-cdk-executor|ic-platform-macros|ic-platform-runtime-guard|ic0)$')
-    arguments+=(--forbid-pattern '^(serde_yaml_ng|serde_yml|serde-saphyr|granit-parser)$')
+    arguments+=(--forbid-pattern '^(serde_yaml|unsafe-libyaml|serde_yaml_ng|serde_yml|serde-saphyr|granit-parser)$')
     perl "$root/scripts/ci/check-cargo-graph.pl" "${arguments[@]}" "$@"
 }
 check_graph() {
@@ -62,7 +62,7 @@ check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features 
     --forbid-pattern "^(ic-platform|${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$"
 check_graph ic-host-tools --forbid-pattern "$yaml_allowed" --no-default-features --features icp-project \
     --forbid-pattern "^(ic-platform|${codec}|ic-host-(artifacts|fs|process)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$" \
-    --require ic-host-text=1 --require serde_yaml=1 --require unsafe-libyaml=1
+    --require ic-host-text=1 --require yaml_serde=1 --require libyaml-rs=1
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features ledger-evidence \
     --forbid-pattern '^(candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-agent|reqwest|ic-stable-structures|icrc-ledger-types|icrc-cbor)$' \
     --require ic-platform=1 --require candid=1
@@ -92,13 +92,13 @@ check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features 
     --require ic-platform=1 --require candid_parser=1 --require serde_cbor=1 --require ic-certification=1 --require ic-host-artifacts=1 --require wasmparser=1
 check_graph ic-host-tools --forbid-pattern "$yaml_allowed" --no-default-features --all-features \
     --forbid-pattern '^(ic-host-(fs|process)|ic-stable-structures|icrc-ledger-types|icrc-cbor)$' \
-    --require ic-platform=1 --require candid_parser=1 --require serde_cbor=1 --require ic-certification=1 --require ic-host-artifacts=1 --require wasmparser=1 --require ic-agent=1 --require reqwest=1 --require ic-host-text=1 --require serde_yaml=1 --require unsafe-libyaml=1 --require prost=1
+    --require ic-platform=1 --require candid_parser=1 --require serde_cbor=1 --require ic-certification=1 --require ic-host-artifacts=1 --require wasmparser=1 --require ic-agent=1 --require reqwest=1 --require ic-host-text=1 --require yaml_serde=1 --require libyaml-rs=1 --require prost=1
 check_graph ic-host-text --forbid-pattern "$parser_free" \
     --forbid-pattern "^(ic-host-(artifacts|fs|process|tools)|ic-platform|candid_parser|ic-agent|ic-certification|${serialization}|serde)$" \
     --require unicode-width=1
 check_graph ic-host-text --forbid-pattern "$yaml_allowed" --no-default-features --features yaml \
     --forbid-pattern "^(ic-host-(artifacts|fs|process|tools)|ic-platform|${codec}|ic-agent|ic-certification|${serialization})$" \
-    --require unicode-width=1 --require serde=1 --require serde_yaml=1 --require unsafe-libyaml=1
+    --require unicode-width=1 --require serde=1 --require yaml_serde=1 --require libyaml-rs=1
 check_graph ic-host-artifacts --forbid-pattern "$parser_free" \
     --forbid-pattern '^(ic-host-process|wasm-encoder|wasmparser|clap)$'
 for profile in wasm wasm-validation wasm-encoding wasm-text wasm-encoding,wasm-validation wasm-text,wasm-validation; do

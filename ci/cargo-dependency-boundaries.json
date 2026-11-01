@@ -1,6 +1,8 @@
 [
   {"dependency": "flate2", "allowed_packages": ["ic-host-artifacts"]},
-  {"dependency": "serde_yaml", "allowed_packages": ["ic-host-text"]},
+  {"dependency": "serde_yaml", "allowed_packages": []},
+  {"dependency": "unsafe-libyaml", "allowed_packages": []},
+  {"dependency": "yaml_serde", "allowed_packages": ["ic-host-text"]},
   {"dependency": "serde-saphyr", "allowed_packages": []},
   {"dependency": "serde_yaml_ng", "allowed_packages": []},
   {"dependency": "serde_yml", "allowed_packages": []},

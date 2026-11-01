@@ -4,6 +4,23 @@ This group covers Artifacts, FS, HTTP, Process, Text, Build and the Wasm inspect
 Build owns the group version. Earlier releases retain their coordinated scope in
 [shared history](../history.md#0730---2026-10-31).
 
+## [0.73.4] - Unreleased
+
+### ⬆️ Dependencies
+
+- Replace the deprecated YAML parser with maintained `yaml_serde` and
+  `libyaml-rs` behind Host Text's existing optional API. Preserve byte admission,
+  duplicate-key refusal and explicit tag/merge policies; remove `serde_yaml` and
+  `unsafe-libyaml` from the selected graph.
+  ([#285](https://github.com/dragginzgame/ic-tooling/issues/285))
+
+### 🧪 Testing
+
+- Select document-only validation for explicitly admitted prose changes while
+  retaining stable CI job names, lint/security, fail-closed classification and
+  full native/MSRV qualification for code. Release gates remain complete.
+  ([#287](https://github.com/dragginzgame/ic-tooling/issues/287))
+
 ## [0.73.3] - 2026-10-31
 
 ### ➕ Added
