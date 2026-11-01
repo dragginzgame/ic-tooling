@@ -55,7 +55,7 @@ group's public members; `PACKAGE` may narrow it but cannot infer a group or cros
 its boundary. The read-only workspace qualification still covers every public
 package and never uploads. Cargo owns publication dependency order.
 
-Published versions remain Foundation 0.73.5 and Tools/Testkit 0.76.1. No reset,
+At the split, published versions are Foundation 0.73.5 and Tools/Testkit 0.76.1. No reset,
 new baseline tag or publication is implied by this policy change. Pending notes
 are compatible patches because the contributor release interface changes while
 library consumer APIs and build requirements remain unchanged.

@@ -1,6 +1,6 @@
 # Testkit family changelog
 
-This ledger owns Testkit, Testkit Native and the private development/probe packages. Current published versions remain 0.76.1,
+This ledger owns Testkit, Testkit Native and the private development/probe packages. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
