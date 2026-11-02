@@ -38,7 +38,7 @@ ic-build = { path = "crates/ic-build", version = "0.74.0", default-features = fa
 
 # Text
 # Changelog : releases/text/CHANGELOG.md
-ic-host-text = { path = "crates/ic-host-text", version = "0.73.6", default-features = false }
+ic-host-text = { path = "crates/ic-host-text", version = "0.74.0", default-features = false }
 
 # Host Tools
 # Changelog : releases/tools/CHANGELOG.md
