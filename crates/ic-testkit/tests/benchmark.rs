@@ -402,6 +402,13 @@ fn wide_means_preserve_integer_differences_and_explicit_projection_errors() {
         row.average(0),
         Err(ic_testkit::benchmark::BenchmarkAverageError::ZeroDenominator)
     );
+    // The scaled whole part fits, but adding the fractional part overflows.
+    row.runs = 3;
+    row.total.instructions = u128::MAX / 2 + 1;
+    assert_eq!(
+        row.average(6),
+        Err(ic_testkit::benchmark::BenchmarkAverageError::Overflow)
+    );
 }
 
 fn boundary_spans(

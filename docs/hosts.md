@@ -208,10 +208,10 @@ client-owned DTO identities require callers to align on Platform 0.18; the
 registry `pocket-ic` package is excluded. Wasm graphs exclude the native client
 implementation as well. The installed PocketIC server remains pinned to 16.1.0.
 
-Testkit's native benchmark projection uses arithmetic-only Metrics 0.26.0 with
-default features disabled. Graph checks require one Metrics identity with no
-selected features on native; Wasm excludes Metrics. Default native and all-feature
-Wasm Testkit still exclude Wire; Host/Build retain their Metrics exclusions.
+Testkit owns its native benchmark-average projection with checked integer
+arithmetic. Native and Wasm graphs exclude Metrics; the library has no recording
+or instrumentation dependency. Default native and all-feature Wasm Testkit still
+exclude Wire; Host/Build retain their Metrics exclusions.
 
 Native CI prepares pinned Rust and the complete common toolsets, then verifies
 the shared snapshot, declarations, formatter prerequisites, actual hook behavior,
@@ -433,5 +433,4 @@ Read-only admission waits are explicit at the shared installer interface; see
 The optional artifact profile targets run their own Wasm inspection, encoding or
 text tests with defaults disabled. Minimal core tests run once; the complete
 workspace suite separately covers all-feature composition. Native Testkit owns
-benchmark analysis and Metrics arithmetic; the Wasm marker-only library excludes
-Metrics.
+benchmark analysis and checked averages; native and Wasm graphs exclude Metrics.

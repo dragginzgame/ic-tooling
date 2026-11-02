@@ -6,6 +6,17 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.80.1] - Unreleased
+
+### 🧹 Cleanup
+
+- Remove the Metrics dependency from Testkit's native benchmark analysis. Keep
+  checked scaled averages private to that analysis, preserving exact floor
+  rounding, zero-denominator precedence, representable wide intermediates and
+  overflow errors. Enforce Metrics-free native/Wasm dependency graphs.
+  Ownership follow-up: [Shared #347](https://github.com/dragginzgame/shared-tooling/issues/347)
+  and [Metrics #127](https://github.com/dragginzgame/ic-observability/issues/127).
+
 ## [0.80.0] - 2026-11-02
 
 ### ⚠️ Breaking

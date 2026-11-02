@@ -19,12 +19,18 @@ fn checked_scaled_average(
     runs: u64,
     scale: u64,
 ) -> Result<u128, BenchmarkAverageError> {
-    ic_metrics::checked_scaled_ratio(total, runs, scale).map_err(|error| match error {
-        ic_metrics::MeasurementRatioError::ZeroDenominator => {
-            BenchmarkAverageError::ZeroDenominator
-        }
-        ic_metrics::MeasurementRatioError::Overflow => BenchmarkAverageError::Overflow,
-    })
+    if runs == 0 {
+        return Err(BenchmarkAverageError::ZeroDenominator);
+    }
+    let runs = u128::from(runs);
+    let scale = u128::from(scale);
+    // Divide before scaling so an overflowing total * scale does not reject
+    // a representable average. Remainder and scale fit u64, so their product
+    // fits u128; checked operations admit the final result.
+    (total / runs)
+        .checked_mul(scale)
+        .and_then(|whole| whole.checked_add((total % runs) * scale / runs))
+        .ok_or(BenchmarkAverageError::Overflow)
 }
 
 /// A comparison refuses ambiguous row identities or unrepresentable means.

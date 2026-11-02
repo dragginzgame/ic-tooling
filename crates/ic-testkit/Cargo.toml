@@ -37,7 +37,6 @@ clap = { workspace = true, features = ["string"], optional = true }
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
 ic-host-fs = { workspace = true }
 ic-host-process = { workspace = true }
-ic-metrics.workspace = true
 # Held fixtures adapt the external management HTTP protocol on native targets only.
 ic-platform = { workspace = true, features = ["pocket-ic", "candid", "management-canister-types"] }
 ic-wire = { workspace = true, optional = true }
