@@ -1,21 +1,26 @@
 # Current handoff — 2026-11-02
 
-## Withdrawn delivery request — 2026-11-02
+## Authorized five-group delivery
 
-The maintainer corrected the five-group release prompt: it was intended for the
-Tooling agent, not this Platform session. This session stopped delivery work.
-No source commit, release, tag, push or registry upload was performed. Local
-publishing-guide corrections and the Rust 1.99 const-helper lint fix remain.
-Full Clippy passes; preliminary full CI stopped at the formatting-hook fixture
-because its selected swap moves a group label. Preserve logs under
-`.git/release-state/deployment-five-groups-20261102/`. The Tooling owner must
-use its own current delivery authorization and qualify the final batch.
+This Tooling session has explicit authorization to qualify, release and publish
+Foundation 0.74.0, Build 0.74.0, Text 0.74.0, Tools 0.78.0 and Testkit 0.79.0,
+sequentially. No Platform, Blob, simulator, npm or application release is included.
+Source integration is committed as `f6f6e7d9`; unrelated Cargo.lock selections
+remain dirty in the ordinary checkout. Delivery uses the isolated checkout named
+by `.git/release-state/deployment-five-groups-20261102/release-checkout-path`.
+That directory retains source/lock preservation records, setup and gate logs.
+The formatting fixture now keeps Foundation's labelled first entry fixed.
+
+The first Foundation validation was interrupted on request before preparation
+to adopt Shared Tooling 0.27.27. It changed no versions and uploaded nothing.
+Group-scoped validation remains opt-in until Tooling qualifies its stage mapping;
+this cross-cutting compiler/release batch retains the full gate.
 
 ## Local Shared Tooling and compiler adoption
 
-The working tree adopts Shared Tooling 0.27.26 at
-`e84252f5740bacd708359580455ea2b6fd67df38` through the canonical exporter;
-all 159 managed payloads verify. Common tool pins are unchanged. The temporary
+The working tree adopts Shared Tooling 0.27.27 at
+`651f5f7acb2e3055abd51ba5f835a2112801666a` through the canonical exporter;
+all 162 managed payloads verify. Common tool pins are unchanged. The temporary
 revision-bound policy override in AGENTS.md is superseded by the installed core.
 No sibling working checkout was edited.
 
@@ -35,7 +40,7 @@ inspection; no repository settings were changed. Hosted integration remains asyn
 
 The earlier cleanup remains present. Foundation, Build and Text 0.74, Host Tools
 0.78 and Testkit 0.79 have pending breaking-change notes; package versions remain
-unchanged. Changes are uncommitted; no release, upload, tag or push was performed.
+unchanged. Integration is committed; no release, upload, tag or push was performed.
 Deliver changed suppliers before their consumers when releasing.
 
 Metrics 0.26.0 is adopted locally from the published registry release, matching

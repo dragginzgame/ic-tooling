@@ -76,6 +76,9 @@ Release verification and CI use the same Rust 1.99.1 qualification: native
 workspace checks, isolated feature profiles, Testkit Wasm and unsupported-filesystem
 compilation. `make compiler-check` admits the actual compiler; `make ci` retains
 the complete gate without the retired `msrv-qualification` target.
+Shared Tooling's [group validation plans](release-group-validation.md) are opt-in.
+Tooling keeps its full release gate until its own stage mapping and receipt
+integration are qualified; selecting a group alone does not omit validation.
 Both numbered pending-heading spellings, `## [X.Y.Z]` and
 `## [X.Y.Z] - Unreleased`, are finalized to the saved UTC date during preparation.
 
