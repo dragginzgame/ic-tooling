@@ -1,8 +1,40 @@
 # Foundation changelog
 
-This group covers Artifacts, FS, HTTP, Process, Text, Build and the Wasm inspector.
-Build owns the group version. Earlier releases retain their coordinated scope in
-[shared history](../history.md#0730---2026-10-31).
+This group covers Artifacts, FS, HTTP, Process and the Wasm inspector.
+Artifacts owns its version. Build and Text now have their own
+[Build](../build/CHANGELOG.md) and [Text](../text/CHANGELOG.md) ledgers.
+History through 0.73.6 below retains the original seven-package Foundation scope;
+earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
+
+## [0.74.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Require Rust 1.99.1 and pin contributor/release compilation to that version.
+  Native qualification now owns the former compiler-lane feature and Wasm
+  obligations; the stable MSRV status reuses its results. Older compiler support
+  is retired; package release groups remain independent.
+  [#313 — Adopt Rust 1.99.1 and consolidate compiler qualification](https://github.com/dragginzgame/ic-tooling/issues/313).
+
+- Process owns isolated libtest execution. Replace FS's `testing::run_isolated`
+  with `ic_host_process::testing::run_isolated` under its `test-support` feature,
+  supplying caller-selected output limits and timeout. Children are captured and
+  reaped with explicit process custody; FS's normal library graph stays unchanged.
+
+### 🧹 Cleanup
+
+- Use the standard integer bit-width operation for custom-section LEB length
+  admission, preserving zero handling and exact size checks on Rust 1.99.1.
+
+- Release Build and Text independently from Foundation, preserving package
+  versions, dependency requirements and historical release custody.
+
+- Move detailed Host API contracts into a linked reference; keep workspace
+  ownership, setup and focused validation visible in the root README.
+
+- Keep optional artifact-profile tests focused on their own behaviour and reuse
+  release-group membership selection during publication admission. Public-package
+  allowlisting and source, registry and recovery checks remain independent.
 
 ## [0.73.6] - 2026-11-01
 

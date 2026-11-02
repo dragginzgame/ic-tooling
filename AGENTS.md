@@ -1,26 +1,19 @@
 # IC Tooling Agent Rules
 
-Read docs/status/current.md first, then [DRAGGINZGAME.md](DRAGGINZGAME.md).
-The baseline is Shared Tooling 0.27.21 revision 143a9abb9ae81feae9400ff3844b03b1ddfdd75a,
-recorded with exact file digests in [.shared-tooling.snapshot](.shared-tooling.snapshot).
+Read [the current handoff](docs/status/current.md) and the installed
+[baseline](DRAGGINZGAME.md). [.shared-tooling.snapshot](.shared-tooling.snapshot)
+records the exact adopted files and revision.
 
 ## Local rules
 
-- Preserve sibling working checkouts. Task-relevant inspection is authorized;
-  relevant cross-repository fixes use the standing
-  [isolated PR workflow](rules/contributions.md#cross-repository-pull-requests),
-  including its exclusions. No repeated per-step permission is needed.
-- Follow [the contribution rules](rules/contributions.md). Ordinary fixes remain
-  local; delegated delivery includes its necessary Git, release and publication
-  steps. Preserve target restrictions, protections and tool-download authority.
 - Keep the Host, Build and Testkit crate boundaries in [the extraction contract](docs/extraction.md).
   Do not add compatibility reexports for moved APIs or duplicate production owners.
 - Consumers own product-tool pins, byte budgets, credentials, targets, retries, schemas,
   installation policy and paid-operation recovery. Libraries never claim lifecycle ownership.
-- Rust edition is 2024, MSRV is 1.91.0. Use ordinary directory modules and
+- Rust edition is 2024. Use ordinary directory modules and
   inherited workspace dependencies. Every member uses the literal version of its
-  group in `ci/cargo-release-groups.json`; `ic-build`, `ic-host-tools` and `ic-testkit` own their
-  respective group versions. The root has no shared version. Group ledgers live
+  group in `ci/cargo-release-groups.json`; each group's `primary` owns its version.
+  The root has no shared version. Group ledgers live
   under `releases/<group>/`, with the root changelog as their index.
   See [release ownership](docs/design/release-groups.md). Do not add Python tooling.
 - Preserve dirty source and artifacts. Check for active Cargo/rustc processes

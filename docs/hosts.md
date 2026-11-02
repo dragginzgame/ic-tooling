@@ -3,8 +3,7 @@
 Host profiles below remain independent. Build and Testkit share the root
 workspace and release matrix, with separate optimizer, browser-session and
 PocketIC lifecycle workflow jobs. `make testkit-check` runs aggregate Testkit
-qualification using the prepared server; `make testkit-wasm-check` and
-`make testkit-msrv` qualify deployed profiles. `make testkit-package-check`
+qualification using the prepared server; `make testkit-wasm-check` qualifies deployed profiles. `make testkit-package-check`
 qualifies all ten public archives through Build. Private packages remain
 excluded from publication. Native macOS results must come from native runners.
 The driver's retained attempt holds selection diagnostics beside Build's
@@ -25,17 +24,19 @@ failure stops subsequent stages even under parallel Make. Standalone `make ci`
 retains its own full lint gate and does not run the publication dry run.
 Both are full qualification commands, subject to the shared validation policy.
 
-`make msrv-qualification` is the shared CI/release MSRV gate. It runs the native
-workspace, deployed Testkit Wasm profiles and unsupported-filesystem compilation
-sequentially on Rust 1.91. Prepare that toolchain and its Wasm target first.
+The workspace minimum and pinned development/release compiler are Rust 1.99.1.
+`make compiler-check` reads the workspace manifest and toolchain pin and requires
+matching actual Cargo/rustc identities. Native CI and release qualification run
+that admission once, then retain native, isolated-feature, Testkit Wasm and
+unsupported-filesystem checks on the same compiler. The existing GitHub `msrv`
+status depends on all native results; it performs no duplicate build or cache setup.
 
 Required hosts are Linux x86-64 and macOS 15 on Intel and Apple Silicon.
-Successful native and MSRV jobs retain small `*-qualification-*` artifacts with
-the clean source revision, exact Cargo.lock, compiler/Cargo identities, actual
+Successful native jobs retain small `*-qualification-*` artifacts with
+the clean source revision, exact Cargo.lock, compiler/Cargo identities and declared policy, actual
 OS/architecture/version, selected profile and completion marker. These are
 produced after the job gates pass and retained for 14 days; cache restoration
-does not itself qualify a source or host. MSRV caches use a separate key and
-exclude attempt-specific archive targets. Hosted uploads/cache effectiveness
+does not itself qualify a source or host. Compilation caches exclude attempt-specific archive targets. Hosted uploads/cache effectiveness
 remain distinct from local script qualification.
 Native CI explicitly adds `wasm32-unknown-unknown` to the declared development
 compiler after preparing it, before running the deployed Testkit profile checks.
@@ -54,16 +55,15 @@ descriptor-only APIs stay Unix-gated. This makes no promise of usable filesystem
 IO in a canister, and downstream Wasm graphs should continue excluding Host FS
 and native Build/Testkit harnesses. `make check-fs-non-unix` compiles the library, CLI,
 test-support feature and non-Unix lock admission test without executing them.
-It requires the Wasm standard-library target to be prepared explicitly; MSRV CI
-selects that target during its existing toolchain setup.
-That CI step scopes `RUSTUP_TOOLCHAIN=1.91.0` so Cargo uses the same compiler and
-target installation, rather than the repository's independent development pin.
+It requires the Wasm standard-library target to be prepared explicitly. Native
+CI installs that target for the repository pin and includes this unsupported-target
+compilation alongside the deployed Testkit profiles.
 
 Select one changed crate with `PACKAGE=<crate>` for `make check`, `make clippy`,
 `make docs-check` or `make test`. Artifact checks use its actual enabled gzip,
 and Wasm features; production filesystem dependencies select none of them.
 Check target-directory ownership before compilation. Preserve failure logs and artifacts.
-The Testkit, feature-graph and MSRV qualification targets above are aggregates;
+The Testkit and feature-graph qualification targets above are aggregates;
 select the affected Cargo test or profile below for ordinary development.
 Build integration tests using shared helpers require `test-support`; Make/CI
 all-feature selections retain them. A focused invocation is `cargo test -p ic-build
@@ -128,11 +128,11 @@ selection, then run that feature's tests. Default and combined profiles retain
 their complete suites; shared response/ICP cases need not repeat in each feature.
 For Tools' independent `icp-ledger` profile, run `cargo test -p ic-host-tools
 --no-default-features --features icp-ledger --lib icp_ledger::tests --locked
---offline` and the same selection on Rust 1.91. Its fixtures encode the official
+--offline` using the pinned compiler. Its fixtures encode the official
 fields independently; the feature graph excludes Platform, Candid and Agent.
 
-Text's optional `yaml` feature and Tools' `icp-project` retain Rust 1.91.
-Qualify YAML with `cargo +1.91.0 test -p ic-host-text
+Text's optional `yaml` feature and Tools' `icp-project` require Rust 1.99.1.
+Qualify YAML with `cargo test -p ic-host-text
 --features yaml --all-targets --locked --offline` and the equivalent Tools
 `--features icp-project` selection. Tests cover ignored-field duplicate/tag/merge
 policy, UTF-8/byte admission, alias handling and no external expansion. The byte
@@ -144,8 +144,8 @@ YAML-enabled graphs require the maintained `libyaml-rs` backend and exclude
 fork of the same low-level Rust port, not a rewrite that eliminates unsafe Rust.
 Both licenses and compiler floors were reviewed: `yaml_serde` is MIT/Apache-2.0
 with Rust 1.82; `libyaml-rs` is MIT with Rust 1.60. The public Host contract stays
-on Rust 1.91. All-feature MSRV
-checks, including YAML, use the same 1.91 compiler and existing CI lane.
+on Rust 1.99.1. All-feature and isolated YAML checks use the same pinned compiler
+and native CI lane.
 
 Certificate tests compare recursion refusal, semantic tags and indefinite byte
 chunks with the same `serde_cbor` decoder used by IC Agent. Strict Host field,
@@ -178,7 +178,7 @@ Native CI includes these profiles. Only explicit `candid` selects Platform's par
 Agent and ledger evidence retain their required codec dependencies without it.
 Registry selects Platform principal types without the codec. `ic-interface` adds
 Host Artifacts and Wasm parsing. The standalone Wasm inspector
-retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.91
+retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.99.1
 and native Linux/macOS matrix as the existing libraries.
 
 Platform 0.17 delegates IC system calls and the executor to independent Runtime
@@ -209,9 +209,9 @@ client-owned DTO identities require callers to align on Platform 0.17; the
 registry `pocket-ic` package is excluded. Wasm graphs exclude the native client
 implementation as well. The installed PocketIC server remains pinned to 16.1.0.
 
-Testkit's benchmark projection uses arithmetic-only Metrics 0.25.0 with default features
-disabled. Graph checks require one Metrics identity and no selected Metrics
-features in native all-feature and Wasm profiles. Default native and all-feature
+Testkit's native benchmark projection uses arithmetic-only Metrics 0.26.0 with
+default features disabled. Graph checks require one Metrics identity with no
+selected features on native; Wasm excludes Metrics. Default native and all-feature
 Wasm Testkit still exclude Wire; Host/Build retain their Metrics exclusions.
 
 Native CI prepares pinned Rust and the complete common toolsets, then verifies
@@ -275,7 +275,8 @@ install a toolchain or replace the offline verification of installed tools.
 Release preparation uses the admitted IC Build metadata editor with source-bound
 member identities, with rollback qualification in disposable release fixtures.
 `make install-tools` includes the pinned release-only editor; `make tools-check`
-admits it offline. The editor's Rust 1.91 floor is separate from Host's 1.91 MSRV.
+admits it offline. The published editor retains its own Rust 1.91 floor; the current workspace
+requires and builds with Rust 1.99.1.
 The editor selects published IC Build 0.73.0 with `cli` for group manifest edits.
 Both native CI cache paths include its tool-store entries; its pin participates
 in the cache key. `make release-adapter-check` exercises actual rendering and
@@ -397,13 +398,12 @@ Native macOS and deployment evidence remain distinct from graph checks.
 
 The focused `test-tools-icp-project`, `test-tools-icp-ledger`,
 `test-tools-ledger-evidence` and `test-text-yaml` targets exercise each named
-feature with default features disabled. `ci` runs them with development Rust;
-`msrv-qualification` runs the same targets with the actual selected MSRV compiler.
-For a focused MSRV check, prefix the selected target with
-`RUSTUP_TOOLCHAIN=1.91.0 make`.
+feature with default features disabled. `ci` runs them once on the admitted minimum/development compiler. For a focused
+check, run `make compiler-check` and the selected target from this checkout.
 
 CI outer job ceilings are 90 minutes for native qualification, 45 minutes for
-MSRV, runtime and optimizer jobs, and 10 minutes for browser fixtures. These allow
+runtime and optimizer jobs, and 10 minutes for browser fixtures. The status-only compiler gate has a
+5-minute ceiling. These allow
 headroom over the 0.66.3 run (native Intel macOS about 35 minutes, runtime about
 7 minutes, optimizer about 2 minutes); they do not impose library deadlines.
 Runtime fixtures live below `runner.temp/portable-fixtures`, with command output
@@ -430,3 +430,9 @@ Offline Cargo-tool admission returns status 75 for an admitted busy selected
 slot. The release adapter preserves that refusal without dispatching setup.
 Read-only admission waits are explicit at the shared installer interface; see
 [the bounded wait contract](local-setup.md#standard-cargo-tool-build-environment).
+
+The optional artifact profile targets run their own Wasm inspection, encoding or
+text tests with defaults disabled. Minimal core tests run once; the complete
+workspace suite separately covers all-feature composition. Native Testkit owns
+benchmark analysis and Metrics arithmetic; the Wasm marker-only library excludes
+Metrics.

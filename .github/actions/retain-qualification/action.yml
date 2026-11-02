@@ -2,7 +2,7 @@ name: Retain successful IC Tooling qualification
 description: Record the exact clean source, lockfile, compiler and native host after the caller's job gates pass.
 inputs:
   profile:
-    description: Native workspace qualification or the Rust 1.91 MSRV profile.
+    description: Native workspace qualification including the declared compiler floor and pin.
     required: true
   name:
     description: Artifact identity including host and attempt.

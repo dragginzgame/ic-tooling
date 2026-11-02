@@ -157,60 +157,24 @@ jobs:
         if: ${{ failure() && !cancelled() && needs.change-scope.outputs.scope == 'full' }}
         uses: ./.github/actions/retain-product-evidence
 
+  # Keep the existing status name, reusing native's compiler-support proof.
   msrv:
-    needs: change-scope
+    needs: [change-scope, native]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 5
     steps:
-      # actions/checkout v6
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
-        with:
-          persist-credentials: false
       - name: Require a successful classification
         env:
           CLASSIFICATION_RESULT: ${{ needs.change-scope.result }}
           CHANGE_SCOPE: ${{ needs.change-scope.outputs.scope }}
+          NATIVE_RESULT: ${{ needs.native.result }}
         run: |
-          [[ "$CLASSIFICATION_RESULT" == success ]] || exit 1
+          [[ "$CLASSIFICATION_RESULT" == success && "$NATIVE_RESULT" == success ]] || exit 1
           case "$CHANGE_SCOPE" in docs|full) ;; *) exit 1 ;; esac
       - name: Validate documentation only
         if: ${{ needs.change-scope.outputs.scope == 'docs' }}
-        run: |
-          bash scripts/ci/check-product-doc-links.sh
-          echo 'Documentation checks passed; MSRV qualification was not run.' >> "$GITHUB_STEP_SUMMARY"
-      # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
+        run: echo 'Documentation checks passed in native jobs; compiler qualification was not run.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Reuse native compiler qualification
         if: ${{ needs.change-scope.outputs.scope == 'full' }}
-        with:
-          toolchain: 1.91.0
-          targets: wasm32-unknown-unknown
-      - name: Restore MSRV compilation cache
-        if: ${{ needs.change-scope.outputs.scope == 'full' }}
-        uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
-        env:
-          RUSTUP_TOOLCHAIN: 1.91.0
-        timeout-minutes: 3
-        continue-on-error: true
-        with:
-          key: msrv-1.91.0
-          cache-targets: false
-          cache-bin: false
-          cache-directories: |
-            target/debug
-            target/wasm32-unknown-unknown/debug
-          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-      - name: Prepare locked dependency cache
-        if: ${{ needs.change-scope.outputs.scope == 'full' }}
-        run: cargo fetch --locked
-      - name: Check declared MSRV
-        if: ${{ needs.change-scope.outputs.scope == 'full' }}
-        run: CARGO_NET_OFFLINE=true make msrv-qualification
-      - name: Retain successful MSRV qualification
-        if: ${{ needs.change-scope.outputs.scope == 'full' }}
-        uses: ./.github/actions/retain-qualification
-        env:
-          RUSTUP_TOOLCHAIN: 1.91.0
-        with:
-          profile: msrv
-          name: msrv-qualification-${{ runner.os }}-${{ runner.arch }}-${{ github.run_attempt }}
+        run: echo 'The pinned compiler, native/Wasm and isolated consumer checks passed in all required native jobs. See their qualification artifacts.' >> "$GITHUB_STEP_SUMMARY"

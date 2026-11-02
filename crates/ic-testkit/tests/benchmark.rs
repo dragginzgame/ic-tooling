@@ -42,7 +42,8 @@ fn marker_formatter_uses_compact_tuple_shape() {
             heap_bytes: 2,
             memory_bytes: 3,
         },
-    );
+    )
+    .expect("valid marker");
 
     assert_eq!(line, "ICTK|app/myfunc/something:start|1|2|3");
 }
@@ -708,7 +709,7 @@ fn comparisons_preserve_order_missing_rows_and_refuse_duplicates() {
 
 #[test]
 fn checked_markers_round_trip_and_refuse_ambiguous_fields_before_emission() {
-    use ic_testkit::benchmark::{BenchmarkMarkerError, try_format_marker};
+    use ic_testkit::benchmark::{BenchmarkMarkerError, format_marker};
     let counters = BenchmarkCounters {
         instructions: u128::MAX,
         heap_bytes: 0,
@@ -716,7 +717,7 @@ fn checked_markers_round_trip_and_refuse_ambiguous_fields_before_emission() {
     };
     for prefix in ["", "bad|prefix", "bad\nprefix", "bad\rprefix"] {
         assert_eq!(
-            try_format_marker(prefix, "suite/run:start", counters),
+            format_marker(prefix, "suite/run:start", counters),
             Err(BenchmarkMarkerError::InvalidPrefix)
         );
     }
@@ -730,13 +731,12 @@ fn checked_markers_round_trip_and_refuse_ambiguous_fields_before_emission() {
         "suite\rrun:end",
     ] {
         assert_eq!(
-            try_format_marker("ICTK", label, counters),
+            format_marker("ICTK", label, counters),
             Err(BenchmarkMarkerError::InvalidLabel)
         );
     }
     for label in ["suite/界:start", "suite/with spaces:end"] {
-        let marker = try_format_marker(DEFAULT_PREFIX, label, counters).unwrap();
-        assert_eq!(marker, format_marker(DEFAULT_PREFIX, label, counters));
+        let marker = format_marker(DEFAULT_PREFIX, label, counters).unwrap();
         let parsed = parse_benchmark_events(&marker, &BenchmarkParserConfig::default());
         assert_eq!(
             parsed.malformed_markers,
@@ -748,8 +748,8 @@ fn checked_markers_round_trip_and_refuse_ambiguous_fields_before_emission() {
 }
 
 #[test]
-fn origin_pairing_preserves_legacy_pairing_and_separates_prefixes_and_streams() {
-    use ic_testkit::benchmark::pair_benchmark_spans_by_origin;
+fn pairing_separates_prefixes_and_streams() {
+    use ic_testkit::benchmark::pair_benchmark_spans;
     let config = BenchmarkParserConfig {
         prefixes: vec!["A".into(), "B".into()],
         ..BenchmarkParserConfig::default()
@@ -772,8 +772,7 @@ fn origin_pairing_preserves_legacy_pairing_and_separates_prefixes_and_streams() 
             )
             .events,
         );
-        assert_eq!(pair_benchmark_spans(&events).spans.len(), 1);
-        let strict = pair_benchmark_spans_by_origin(&events);
+        let strict = pair_benchmark_spans(&events);
         assert_eq!(
             strict.spans,
             [] as [ic_testkit::benchmark::BenchmarkSpan; 0]
@@ -781,7 +780,7 @@ fn origin_pairing_preserves_legacy_pairing_and_separates_prefixes_and_streams() 
         assert_eq!(strict.unpaired_markers.len(), 2);
     }
     let events = parse_benchmark_events_from_source("A|suite/run:start|1|2|3\nB|suite/run:start|10|20|30\nA|suite/run:end|4|5|6\nB|suite/run:end|14|25|36", &config, BenchmarkEventSource::FetchedLog).events;
-    let strict = pair_benchmark_spans_by_origin(&events);
+    let strict = pair_benchmark_spans(&events);
     assert_eq!(
         strict.unpaired_markers,
         [] as [ic_testkit::benchmark::RawBenchmarkEvent; 0]

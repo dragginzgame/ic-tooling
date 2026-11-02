@@ -7,7 +7,8 @@ not a replacement issue tracker. No API cleanup belongs in this migration.
 
 The maintainer selected `dragginzgame/ic-tooling`, retaining the Host repository's
 history, issues and protections. GitHub has been renamed. Existing package names
-remain unchanged. Rust 1.91 is the approved common minimum; changing declarations
+remain unchanged. Rust 1.91 was the consolidation baseline; current compiler policy is in
+[the host guide](../hosts.md). Changing declarations
 and qualifying that minimum remain part of workspace integration.
 
 Host owns filesystem, process, artifact, text and IC interpretation mechanics.
@@ -118,7 +119,7 @@ Testkit 0.61.0 was published while this inventory was being prepared. Its exact
 release source is now imported through a separate history-preserving refresh;
 the imported tree matches the source tree. No Rust implementation changed.
 Host's declared MSRV, CI compiler selection, Make routing fixture and current
-support documentation now select Rust 1.91. Historical release notes and Shared's
+support documentation selected Rust 1.91 for the original consolidation. Historical release notes and Shared's
 own tool-compiler requirements retain their original values.
 
 The original checkout still has an unrelated crc32fast lock update; it has not

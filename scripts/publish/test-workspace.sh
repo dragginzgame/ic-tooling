@@ -186,6 +186,16 @@ for mode in check publish; do
     done
 done
 export RELEASE_GROUP=foundation
+# Malformed membership refuses before Cargo, lint or attempt allocation.
+cp ci/cargo-release-groups.json original-group-policy.json
+for invalid_members in null '[]' '[1]' '["ic-build\nescape"]'; do
+    jq --argjson members "$invalid_members" '
+        .groups |= map(if .name == "foundation" then .members = $members else . end)
+    ' original-group-policy.json > ci/cargo-release-groups.json
+    refuse check
+    [[ ! -e target/publish ]]
+done
+mv original-group-policy.json ci/cargo-release-groups.json
 # A dry run can review dirty work; an upload cannot admit it.
 PUBLISH_DIRTY=1 refuse publish
 for separator in $'\n' $'\r'; do
@@ -195,7 +205,8 @@ for separator in $'\n' $'\r'; do
     rg 'CR/LF' refusal.log > /dev/null
 done
 # Package license checks follow metadata admission and precede package/upload.
-IFS=$'\t' read -r _ notice_root < fixture-packages.tsv
+notice_package="$(head -n 1 foundation-packages)"
+notice_root="$(awk -F '\t' -v package="$notice_package" '$1 == package {print $2}' fixture-packages.tsv)"
 notice="$notice_root/LICENSE"
 for scenario in missing changed symlink; do
     case "$scenario" in
@@ -479,14 +490,15 @@ done
 [[ ! -e injected ]] || exit 1
 PUBLISH_DIRTY=1 refuse publish --packages ic-host-artifacts
 # Mixed package versions retain exact selectors and per-archive provenance.
-foundation_version="$(jq -er '.packages[] | select(.name == "ic-build") | .version' original-metadata.json)"
+foundation_version="$(jq -er '.packages[] | select(.name == "ic-host-artifacts") | .version' original-metadata.json)"
+build_version="$(jq -er '.packages[] | select(.name == "ic-build") | .version' original-metadata.json)"
 integration_version="$(bash "$root/scripts/ci/next-release-version.sh" "$foundation_version" minor)"
 jq --arg version "$integration_version" '(.packages[] | select(.name == "ic-testkit" or .name == "ic-host-tools" or .name == "ic-testkit-native").version) = $version' \
     original-metadata.json > metadata.json
 for mode in check publish; do
-    RELEASE_GROUP=foundation invoke "$mode" --packages ic-build > "mixed-foundation-$mode.log" 2>&1
+    RELEASE_GROUP=build invoke "$mode" --packages ic-build > "mixed-build-$mode.log" 2>&1
     tr '\0' '\n' < arguments > mixed-arguments
-    grep -Fx "ic-build@$foundation_version" mixed-arguments
+    grep -Fx "ic-build@$build_version" mixed-arguments
     RELEASE_GROUP=testkit invoke "$mode" --packages ic-testkit > "mixed-integration-$mode.log" 2>&1
     tr '\0' '\n' < arguments > mixed-arguments
     grep -Fx "ic-testkit@$integration_version" mixed-arguments
@@ -501,6 +513,19 @@ RELEASE_GROUP=tools invoke check > tools-group.log 2>&1
 tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' > tools-packages
 printf '%s\n' ic-host-tools > expected-tools-packages
 cmp expected-tools-packages tools-packages
+# Build and Text select only their own package despite sharing the old baseline.
+for group in build text; do
+    case "$group" in build) expected_package=ic-build ;; text) expected_package=ic-host-text ;; esac
+    RELEASE_GROUP="$group" invoke check > "$group-group.log" 2>&1
+    tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' > "$group-packages"
+    printf '%s\n' "$expected_package" > "expected-$group-packages"
+    cmp "expected-$group-packages" "$group-packages"
+done
+RELEASE_GROUP=foundation refuse publish --packages ic-build
+RELEASE_GROUP=foundation refuse publish --packages ic-host-text
+RELEASE_GROUP=build refuse publish --packages ic-host-artifacts
+RELEASE_GROUP=build refuse publish --packages ic-host-text
+RELEASE_GROUP=text refuse publish --packages ic-build
 RELEASE_GROUP=testkit refuse publish --packages ic-host-tools
 RELEASE_GROUP=tools refuse publish --packages ic-testkit
 RELEASE_GROUP=integration refuse check

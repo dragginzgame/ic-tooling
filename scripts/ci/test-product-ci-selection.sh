@@ -38,13 +38,15 @@ is($classifier->{env}{CHANGE_EVENT}, '${{ github.event_name }}', 'classification
 is($classifier->{env}{CHANGE_BASE}, q~${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}~, 'comparison starts at the event base');
 is($classifier->{env}{CHANGE_REF}, q~${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.base_ref) || github.ref }}~, 'comparison uses the exact branch or tag ref');
 is($workflow->{jobs}{'change-scope'}{steps}[0]{with}{'fetch-depth'}, 0, 'classification has complete comparison history');
+ok(!grep({ exists $_->{uses} } @{$workflow->{jobs}{msrv}{steps}}), "compiler gate performs no duplicate setup or compilation");
 my $full = q|${{ needs.change-scope.outputs.scope == 'full' }}|;
 my $docs = q|${{ needs.change-scope.outputs.scope == 'docs' }}|;
 my @guards;
 my @documentation;
 for my $name (qw(native msrv)) {
     my $job = $workflow->{jobs}{$name};
-    is($job->{needs}, 'change-scope', "$name depends on classification");
+    if ($name eq "native") { is($job->{needs}, "change-scope", "native depends on classification"); }
+    else { is_deeply($job->{needs}, ["change-scope", "native"], "compiler gate depends on classification and all native proofs"); }
     is($job->{if}, '${{ !cancelled() }}', "$name does not silently skip failed classification");
     for my $step (@{$job->{steps}}) {
         my $label = $step->{name} // $step->{uses};
@@ -54,7 +56,7 @@ for my $name (qw(native msrv)) {
             push @guards, $step->{run};
         } elsif ($label eq 'Validate documentation only') {
             is($step->{if}, $docs, "$name selects the documentation command");
-            push @documentation, $step->{run};
+            push @documentation, $step->{run} if $name eq "native";
         } elsif ($label =~ /^actions\/checkout\@/ || $label eq 'Verify native host') {
             # Checkout and host identity are cheap and run for both profiles.
         } elsif ($label =~ /^Retain .*evidence$/) {
@@ -65,7 +67,7 @@ for my $name (qw(native msrv)) {
     }
 }
 is(scalar @guards, 2, 'both stable jobs guard classification');
-is(scalar @documentation, 2, 'both stable jobs validate documents');
+is(scalar @documentation, 1, 'native owns document validation; compiler status reuses that result');
 is_deeply($workflow->{jobs}{native}{strategy}{matrix}{include}, [
     {runner => 'ubuntu-24.04', os => 'Linux', architecture => 'x86_64'},
     {runner => 'macos-15-intel', os => 'Darwin', architecture => 'x86_64'},
@@ -127,12 +129,18 @@ for my $command (@documentation) {
 for my $command (@guards) {
     for my $result (qw(success failure skipped)) {
         for my $scope ('docs', 'full', '', 'unknown') {
-            local @ENV{qw(CLASSIFICATION_RESULT CHANGE_SCOPE)} = ($result, $scope);
+            local @ENV{qw(CLASSIFICATION_RESULT CHANGE_SCOPE NATIVE_RESULT)} = ($result, $scope, "success");
             # Refusal must be explicit: Bash 3.2 does not apply errexit to [[ ]].
             my $passed = system('bash', '-o', 'pipefail', '-c', $command) == 0;
             is($passed, $result eq 'success' && ($scope eq 'docs' || $scope eq 'full'), 'actual job guard fails closed');
         }
     }
+}
+my ($compiler_guard) = grep { /NATIVE_RESULT/ } @guards;
+ok($compiler_guard, 'compiler status admits native qualification results');
+for my $native_result ('failure', 'cancelled', 'skipped', '') {
+    local @ENV{qw(CLASSIFICATION_RESULT CHANGE_SCOPE NATIVE_RESULT)} = ('success', 'full', $native_result);
+    isnt(system('bash', '-o', 'pipefail', '-c', $compiler_guard), 0, 'compiler status rejects absent or failed native proof');
 }
 restore_base(); write_file('src/lib.rs', "// changed\n");
 is(scope($base, commit()), 'full', 'code change retains full qualification');

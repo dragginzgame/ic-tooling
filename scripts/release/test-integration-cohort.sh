@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml
 set -euo pipefail
 
-# Opt-in archive consumer proof against the current published foundation.
+# Opt-in archive consumer proof against published Foundation and Build suppliers.
 # Candidate versions exist only in a disposable workspace; no release/upload.
 [[ ( $# == 1 || $# == 2 ) && -x "$1" ]] || {
     echo 'usage: test-integration-cohort.sh BUILT_RELEASE_EDITOR [tools|testkit]' >&2
@@ -20,6 +21,9 @@ root="${BASH_SOURCE[0]}"
 [[ "$root" == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
+toolchain="$("${YQ:-yq}" -r -p toml -o yaml '.toolchain.channel' "$root/rust-toolchain.toml")"
+export RUSTUP_TOOLCHAIN="$toolchain"
+bash "$root/scripts/ci/check-rust-toolchain.sh" "$root"
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$root/scripts/ci/fixture-lifecycle.sh"
 fixture="$(fixture_create "${TMPDIR:-/tmp}/integration-cohort.XXXXXX")"
@@ -30,7 +34,8 @@ export RUSTUP_AUTO_INSTALL=0 CARGO_NET_OFFLINE=true
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/target}"
 parser="${YQ:-yq}"
 "$parser" -p toml -o json '.' "$root/Cargo.toml" > "$fixture/source.json"
-foundation="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-build/Cargo.toml" | jq -er '.')"
+foundation="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-host-artifacts/Cargo.toml" | jq -er '.')"
+build_version="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-build/Cargo.toml" | jq -er '.')"
 primary="$(jq -r --arg group "$selected_group" '.groups[] | select(.name == $group) | .primary' "$root/ci/cargo-release-groups.json")"
 previous="$("$parser" -p toml -o json '.package.version' "$root/crates/$primary/Cargo.toml" | jq -er '.')"
 tools_version="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-host-tools/Cargo.toml" | jq -er '.')"
@@ -73,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 RUST
-cargo +1.91.0 build --offline --manifest-path "$fixture/serializer/Cargo.toml" \
+cargo build --offline --manifest-path "$fixture/serializer/Cargo.toml" \
     > "$fixture/serializer.log" 2>&1
 serializer="$CARGO_TARGET_DIR/debug/cohort-fixture-serializer"
 cp -a "$root/crates/ic-host-tools" "$root/crates/ic-testkit" "$root/crates/ic-testkit-native" "$fixture/crates/"
@@ -119,7 +124,7 @@ version = "$foundation"
 edition = "2024"
 publish = false
 [dependencies]
-ic-build = "=$foundation"
+ic-build = "=$build_version"
 ic-host-artifacts = "=$foundation"
 ic-host-process = "=$foundation"
 ic-host-tools = { ${tools_path}version = "=$tools_version", features = ["registry", "certificate"] }
@@ -180,9 +185,9 @@ mod tests {
 RUST
 
 # Resolve the proposed consumer, not the real workspace or its release state.
-cargo +1.91.0 generate-lockfile --offline --manifest-path "$fixture/Cargo.toml" \
+cargo generate-lockfile --offline --manifest-path "$fixture/Cargo.toml" \
     > "$fixture/lock.log" 2>&1
-cargo +1.91.0 metadata --locked --offline --format-version 1 --manifest-path "$fixture/Cargo.toml" \
+cargo metadata --locked --offline --format-version 1 --manifest-path "$fixture/Cargo.toml" \
     > "$fixture/metadata.json" 2> "$fixture/metadata.stderr"
 jq -e --arg next "$next" --slurpfile selected "$fixture/selected-packages.json" '
     . as $m
@@ -193,11 +198,12 @@ jq -e --arg types "$types_version" '
     [.packages[] | select(.name == "ic-platform-types")] |
     length == 1 and all(.[]; .version == $types)
 ' "$fixture/metadata.json" > /dev/null
-jq -e --arg foundation "$foundation" '
+jq -e --arg foundation "$foundation" --arg build "$build_version" '
     .packages as $packages
-    | all(["ic-build", "ic-host-artifacts", "ic-host-process", "ic-host-fs"][];
+    | all(["ic-host-artifacts", "ic-host-process", "ic-host-fs"][];
         . as $name | [$packages[] | select(.name == $name)]
         | length == 1 and all(.[]; .version == $foundation and (.source | startswith("registry+"))))
+    and ([$packages[] | select(.name == "ic-build")] | length == 1 and all(.[]; .version == $build and (.source | startswith("registry+"))))
 ' "$fixture/metadata.json" > /dev/null
 "$parser" -p toml -o json '.' "$fixture/Cargo.toml" > "$fixture/candidate.json"
 "$parser" -p toml -o json '.' "$fixture/before/Cargo.toml" > "$fixture/before.json"
@@ -206,10 +212,8 @@ jq -e --slurpfile before "$fixture/before.json" --slurpfile plan "$fixture/group
     (.workspace.package | has("version") | not)
     and (untouched == ($before[0] | untouched))
 ' "$fixture/candidate.json" > /dev/null
-for toolchain in 1.99.1 1.91.0; do
-    cargo +"$toolchain" test --locked --offline --manifest-path "$fixture/Cargo.toml" \
+cargo test --locked --offline --manifest-path "$fixture/Cargo.toml" \
         -p integration-cohort-consumer > "$fixture/consumer-$toolchain.log" 2>&1
-done
 # Unselected integration peers must be the real published packages.
 jq -e --arg group "$selected_group" --arg tools "$tools_version" --arg testkit "$testkit_version" '
     .packages as $p |
@@ -223,7 +227,7 @@ jq -e --arg group "$selected_group" --arg tools "$tools_version" --arg testkit "
 archive_consumer="$fixture/archive-consumer"
 mkdir -p "$archive_consumer/consumer/src" "$archive_consumer/extracted"
 for package in "${selected_packages[@]}"; do
-    cargo +1.91.0 package --locked --offline --allow-dirty --no-verify \
+    cargo package --locked --offline --allow-dirty --no-verify \
         --manifest-path "$fixture/Cargo.toml" --target-dir "$fixture/archives" -p "$package" \
         >> "$fixture/package.log" 2>&1
     tar -xzf "$fixture/archives/package/$package-$next.crate" -C "$archive_consumer/extracted"
@@ -237,12 +241,10 @@ sed -e "s|../crates/ic-host-tools|../extracted/ic-host-tools-$next|g" \
     -e "s|../crates/ic-testkit|../extracted/ic-testkit-$next|g" \
     "$fixture/consumer/Cargo.toml" > "$archive_consumer/consumer/Cargo.toml"
 cp "$fixture/consumer/src/lib.rs" "$archive_consumer/consumer/src/"
-cargo +1.91.0 generate-lockfile --offline --manifest-path "$archive_consumer/Cargo.toml" \
+cargo generate-lockfile --offline --manifest-path "$archive_consumer/Cargo.toml" \
     > "$fixture/archive-lock.log" 2>&1
-for toolchain in 1.99.1 1.91.0; do
-    cargo +"$toolchain" test --locked --offline --manifest-path "$archive_consumer/Cargo.toml" \
-        -p integration-cohort-consumer > "$fixture/archive-consumer-$toolchain.log" 2>&1
-done
+cargo test --locked --offline --manifest-path "$archive_consumer/Cargo.toml" \
+    -p integration-cohort-consumer > "$fixture/archive-consumer-$toolchain.log" 2>&1
 # A real old certificate identity must refuse at the unchanged Tools boundary.
 cat >> "$archive_consumer/consumer/Cargo.toml" <<'TOML'
 [dependencies.legacy-platform]
@@ -256,14 +258,14 @@ fn incompatible(bytes: &[u8]) -> legacy_platform::certification::Certificate {
     ic_host_tools::certificate::decode_certificate(bytes, ic_host_tools::certificate::DecodeLimits { bytes: 1024 }).unwrap()
 }
 RUST
-cargo +1.91.0 generate-lockfile --offline --manifest-path "$archive_consumer/Cargo.toml" > "$fixture/mismatch-lock.log" 2>&1
-if cargo +1.91.0 check --locked --offline --manifest-path "$archive_consumer/Cargo.toml" \
+cargo generate-lockfile --offline --manifest-path "$archive_consumer/Cargo.toml" > "$fixture/mismatch-lock.log" 2>&1
+if cargo check --locked --offline --manifest-path "$archive_consumer/Cargo.toml" \
     -p integration-cohort-consumer > "$fixture/mismatch.log" 2>&1; then
     echo 'Unexpected certificate identity admission' >&2; exit 1
 fi
 grep -F 'mismatched types' "$fixture/mismatch.log" > /dev/null
-jq --arg foundation "$foundation" --arg group "$selected_group" --arg next "$next" '
-    {foundation:$foundation, selected_group:$group, selected_version:$next,
+jq --arg foundation "$foundation" --arg build "$build_version" --arg group "$selected_group" --arg next "$next" '
+    {foundation:$foundation, build:$build, selected_group:$group, selected_version:$next,
      packages:[.packages[] | select(.source == null and .publish != []) | {name,version}],
      status:"disposable source and archive consumer proof; no release or publication"}
 ' "$fixture/metadata.json" > "$fixture/publication-plan.json"

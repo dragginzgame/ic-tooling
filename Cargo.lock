@@ -1576,6 +1576,7 @@ dependencies = [
  "cap-std",
  "clap",
  "ic-host-artifacts",
+ "ic-host-process",
  "rustix",
  "serde",
  "serde_json",
@@ -1666,9 +1667,9 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.25.0"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eea9c9b6ab6a0c0bc1cba1461127074208a0615f1ba8e37e14724855af44bacf"
+checksum = "bcf4b14637c36d28c3ebe9cf2601b2a498e8be9fc67b173e36923c81dc2fdfed"
 dependencies = [
  "serde",
 ]
@@ -1687,9 +1688,7 @@ dependencies = [
  "ic-agent",
  "ic-certification",
  "ic-management-canister-types 0.11.0",
- "ic-platform-macros",
  "ic-platform-pocket-ic",
- "ic-platform-runtime",
  "ic-platform-types",
  "ic-stable-structures",
  "ic_principal",
@@ -1750,6 +1749,7 @@ version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67e0cef9c254622a92fadff2cc0ef287fa4fe2a489328a97ac4740de00a71f04"
 dependencies = [
+ "ic-platform-macros",
  "ic-platform-runtime-guard",
  "ic-platform-types",
  "pin-project-lite",
@@ -1796,6 +1796,8 @@ dependencies = [
  "ic-host-process",
  "ic-metrics",
  "ic-platform",
+ "ic-platform-runtime",
+ "ic-platform-types",
  "ic-wire",
  "libc",
  "serde",
@@ -1836,7 +1838,7 @@ dependencies = [
 name = "ic-testkit-perf-probe"
 version = "0.78.0"
 dependencies = [
- "ic-platform",
+ "ic-platform-runtime",
  "ic-testkit",
  "ic-wire",
  "serde",

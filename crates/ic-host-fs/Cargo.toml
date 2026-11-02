@@ -33,6 +33,9 @@ clap = { workspace = true, features = ["derive"], optional = true }
 ic-host-artifacts.workspace = true
 thiserror.workspace = true
 
+[target.'cfg(unix)'.dev-dependencies]
+ic-host-process = { workspace = true, features = ["test-support"] }
+
 [dev-dependencies]
 clap = { workspace = true, features = ["derive"] }
 ic-host-artifacts = { workspace = true, features = ["gzip"] }

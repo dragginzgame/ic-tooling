@@ -1,5 +1,5 @@
 use ic_platform::pocket_ic::PocketIc;
-use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 use super::{PocketIcInstance, PocketIcOperationError};
 
@@ -117,7 +117,7 @@ impl std::fmt::Debug for StandaloneCanisterInstallError {
 
 #[cfg(test)]
 mod tests {
-    use ic_platform::principal::ExternalPrincipal as Principal;
+    use ic_platform_types::principal::ExternalPrincipal as Principal;
 
     use super::CanisterInstallError;
 

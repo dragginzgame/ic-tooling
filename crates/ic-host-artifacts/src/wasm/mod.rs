@@ -293,7 +293,7 @@ const fn unsigned_width(value: u32) -> u32 {
     if value == 0 {
         1
     } else {
-        (u32::BITS - value.leading_zeros()).div_ceil(7)
+        value.bit_width().div_ceil(7)
     }
 }
 

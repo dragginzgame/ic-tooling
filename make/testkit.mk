@@ -1,6 +1,6 @@
 # Testkit owns simulator setup and native/Wasm qualification.
 SERVER_CLI := $(CURDIR)/target/debug/ic-testkit-server
-.PHONY: build-server-cli install-server server-check testkit-graph-check testkit-wasm-check testkit-msrv testkit-check testkit-browser-check testkit-package-check testkit-installed-check
+.PHONY: build-server-cli install-server server-check testkit-graph-check testkit-wasm-check testkit-check testkit-browser-check testkit-package-check testkit-installed-check
 build-server-cli:
 	+cargo build -p ic-testkit --features cli --locked --offline --bin ic-testkit-server
 install-server:
@@ -13,8 +13,6 @@ server-check:
 testkit-wasm-check:
 	+cargo check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures,ic-testkit-native/stable-memory --locked --offline --target wasm32-unknown-unknown
 	+cargo check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
-testkit-msrv:
-	+RUSTUP_TOOLCHAIN="$(MSRV)" $(MAKE) --no-print-directory testkit-wasm-check
 testkit-browser-check:
 	node --test testing/browser/session.test.mjs
 testkit-check: build-server-cli

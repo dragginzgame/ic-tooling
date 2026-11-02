@@ -6,7 +6,7 @@ mod support;
 use ic_host_process::testing::http::{HttpContentLength, capture_http_request};
 use ic_platform::pocket_ic::common::rest::{CreateInstanceResponse, RawCanisterId, Topology};
 use ic_platform::pocket_ic::{PocketIc, PocketIcBuilder};
-use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     CanisterDiagnosticsRequest, CanisterInstallError, CanisterLogRenderLimits, InstallSpec,
     PocketIcCallFailure, PocketIcDiagnosticsExt, PocketIcInstance, PocketIcStartupConfig,

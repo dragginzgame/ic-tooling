@@ -8,7 +8,7 @@ This is maintained against Platform 0.17's owned PocketIC 16.1 client and Testki
 current public interfaces. Recheck the relevant capabilities when changing that
 dependency. Historical decisions remain in the
 [design records](README.md#historical-design-records) and
-[qualification receipts](hosts.md#historical-qualification-receipts).
+[qualification receipts](qualification-history.md#historical-qualification-receipts).
 Those records do not define current APIs or imply that a proposed upstream change
 has shipped.
 

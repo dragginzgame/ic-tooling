@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Real consumer policy, Cargo metadata, Git, rendering and receipts. Tool setup
-# and the complete CI/MSRV gates are substitutes; no release or delivery runs.
+# and the complete CI gate are substituted; no release or delivery runs.
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES RELEASE_COMMIT RELEASE_GROUP
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE
 export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null
@@ -66,9 +66,8 @@ set -euo pipefail
 printf 'make %s\n' "$*" >> "$ADAPTER_EVENTS"
 case "$*" in
     '--no-print-directory install-tools') : > "$ADAPTER_EDITOR_READY" ;;
-    '--no-print-directory tools-check'|'--no-print-directory dependency-pins-check') ;;
+    '--no-print-directory tools-check'|'--no-print-directory compiler-check'|'--no-print-directory dependency-pins-check') ;;
     '--no-print-directory ci') exit "${ADAPTER_GATE_RESULT:-0}" ;;
-    '--no-print-directory msrv-qualification') exit "${ADAPTER_MSRV_RESULT:-0}" ;;
     *) echo "Unexpected Make operation: $*" >&2; exit 2 ;;
 esac
 STUB
@@ -92,7 +91,7 @@ invoke() { bash "$adapter" "$@"; }
 refuse() {
     if "$@"; then echo 'Unexpected release adapter admission' >&2; exit 1; fi
 }
-for selected_group in tools testkit foundation; do
+for selected_group in foundation build text tools testkit; do
     checkout="$fixture/$selected_group checkout"
     mkdir "$checkout"
     bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$root" "$checkout"
@@ -141,15 +140,11 @@ for selected_group in tools testkit foundation; do
     git restore -- README.md
     invoke preflight > "$fixture/$selected_group.preflight.log" 2>&1
     [[ "$(grep -c '^make --no-print-directory install-tools$' "$ADAPTER_EVENTS")" == 1 ]]
-    # The real consumer always asks for both complete gates. These stand-ins
-    # are the sole qualification substitution, never the source/group checks.
+    # The complete native/Wasm gate is substituted, never source/group checks.
     refuse env ADAPTER_GATE_RESULT=29 bash "$adapter" verify > "$fixture/$selected_group.gate.log" 2>&1
-    [[ ! -e "$state" ]]
-    refuse env ADAPTER_MSRV_RESULT=30 bash "$adapter" verify > "$fixture/$selected_group.msrv.log" 2>&1
     [[ ! -e "$state" ]]
     invoke verify > "$fixture/$selected_group.verify.log" 2>&1
     grep -Fx 'make --no-print-directory ci' "$ADAPTER_EVENTS" > /dev/null
-    grep -Fx 'make --no-print-directory msrv-qualification' "$ADAPTER_EVENTS" > /dev/null
     # Valid-looking output from a failed Git observation grants no custody.
     ADAPTER_GIT_CONTROL='head' refuse invoke prepare > "$fixture/$selected_group.failed-head.log" 2>&1
     ADAPTER_GIT_CONTROL='diff' refuse invoke verify > "$fixture/$selected_group.failed-diff.log" 2>&1
@@ -190,7 +185,13 @@ for selected_group in tools testkit foundation; do
     ' "$fixture/$selected_group.metadata.json" > /dev/null
     # Copying receipts to another group's namespace cannot authorize it even
     # with identical numeric versions and a real successful source receipt.
-    if [[ "$selected_group" == tools ]]; then other_group=testkit; else other_group=tools; fi
+    case "$selected_group" in
+        foundation) other_group=build ;;
+        build) other_group=text ;;
+        text) other_group=foundation ;;
+        tools) other_group=testkit ;;
+        testkit) other_group=tools ;;
+    esac
     other_state=".git/release-state/$other_group-$RELEASE_VERSION.validation"
     cp "$state" "$other_state"
     cp "$state.notes" "$other_state.notes"
@@ -219,4 +220,4 @@ for selected_group in tools testkit foundation; do
     unset RELEASE_COMMIT
 done
 fixture_complete=true
-echo 'Release adapter checks passed (all three groups; setup and full qualification substituted).'
+echo 'Release adapter checks passed (all five groups; setup and full qualification substituted).'

@@ -50,15 +50,13 @@ if [[ "${HOST_MAKE_ASSERT_POCKET_IC:-0}" == 1 && "$1" == test ]]; then
     [[ "${POCKET_IC_BIN:-}" == '/prepared/pocket ic' ]] || exit 91
 fi
 case "$*" in
+    '--version') printf 'cargo 1.99.1 (fixture)\n' ;;
     'sort --version') printf 'cargo-sort %s\n' "$HOST_MAKE_SORT_VERSION" ;;
     'fmt --version') echo rustfmt ;;
     *)
         printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
         if [[ "$1" == fixture ]]; then exit "${HOST_MAKE_FIXTURE_STATUS:-0}"; fi
         if [[ "$1" == fetch ]]; then exit "${HOST_MAKE_FETCH_STATUS:-0}"; fi
-        if [[ "${HOST_MAKE_ASSERT_MSRV:-0}" == 1 && "$1" == check ]]; then
-            [[ "${RUSTUP_TOOLCHAIN:-}" == 1.91.0 ]] || exit 92
-        fi
         if [[ "$1" == clippy && "$*" == *--workspace* ]]; then
             exit "${HOST_MAKE_CLIPPY_STATUS:-0}"
         fi
@@ -83,6 +81,8 @@ printf '%s %s\n' "${0##*/}" "$*" >> "$HOST_MAKE_EVENTS"
 STUB
 done
 chmod +x "$fixture/local/cargo"
+mkdir -p "$fixture/local/.tools/host/bin"
+ln -s "$root/.tools/host/bin/yq" "$fixture/local/.tools/host/bin/yq"
 # shellcheck source=/dev/null
 . "$root/ci/tool-versions.env"
 export HOST_MAKE_SORT_VERSION="$SHARED_TOOLING_CARGO_SORT_VERSION"
@@ -346,7 +346,7 @@ if make --help | grep -q -- --jobserver-style; then
 fi
 cargo_targets=(check clippy clippy-workspace docs-check test test-artifacts-minimal check-fs-non-unix
     test-tools-default test-tools-interface
-    test-wasm-inspection msrv msrv-workspace msrv-qualification)
+    test-wasm-inspection)
 helper_targets=(publish publish-check dependency-pins-check
     release-adapter-check tooling-command-check publish-command-check)
 for target in "${cargo_targets[@]}" "${helper_targets[@]}"; do
@@ -390,21 +390,13 @@ PATH="$fixture/local:$PATH" RUNNER_TEMP="$fixture" HOST_MAKE_PUBLICATION_LINT=1 
     > "$fixture/ci-publication-refusal.log" 2>&1 || status=$?
 [[ "$status" == 2 && "$(tail -n 1 "$HOST_MAKE_EVENTS")" == check ]] || exit 1
 if grep -E '^(sort |fmt )' "$HOST_MAKE_EVENTS"; then exit 1; fi
-# Every package retains the same floor, including optional YAML.
-for package in ic-host-text ic-host-tools; do
-    : > "$HOST_MAKE_EVENTS"
-    PATH="$fixture/local:$PATH" make --no-print-directory msrv "PACKAGE=$package" > "$fixture/msrv-$package.log" 2>&1
-    grep -F -- "+1.91.0 check -p $package --all-targets --all-features" "$HOST_MAKE_EVENTS" >/dev/null
-done
+# One pinned compiler covers native, isolated-feature and Wasm obligations.
 : > "$HOST_MAKE_EVENTS"
-PATH="$fixture/local:$PATH" make --no-print-directory msrv-workspace > "$fixture/msrv-workspace.log" 2>&1
-grep -F -- '+1.91.0 check --workspace --all-targets --all-features' "$HOST_MAKE_EVENTS" >/dev/null
-# CI and release share the same native, Testkit Wasm and unsupported FS floor.
+PATH="$fixture/local:$PATH" make --no-print-directory compiler-check > "$fixture/compiler-check.log" 2>&1
+# Execute the distinct graph/feature obligations formerly owned by the second compiler lane.
 : > "$HOST_MAKE_EVENTS"
-PATH="$fixture/local:$PATH" HOST_MAKE_ASSERT_MSRV=1 make --no-print-directory -j4 \
-    msrv-qualification "MAKE=$(command -v make)" > "$fixture/msrv-qualification.log" 2>&1
+PATH="$fixture/local:$PATH" make --no-print-directory "MAKE=$(command -v make)" testkit-wasm-check check-fs-non-unix isolated-features-check > "$fixture/compiler-profiles.log" 2>&1
 cat > "$fixture/expected" <<'EVENTS'
-+1.91.0 check --workspace --all-targets --all-features --locked --offline
 check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures,ic-testkit-native/stable-memory --locked --offline --target wasm32-unknown-unknown
 check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 check -p ic-host-fs --lib --bins --test unsupported_lock --all-features --target wasm32-unknown-unknown --locked --offline
@@ -414,6 +406,10 @@ test -p ic-host-tools --no-default-features --features ledger-evidence --all-tar
 test -p ic-host-text --no-default-features --features yaml --lib --locked --offline yaml::
 EVENTS
 cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
+# Native CI must actually call the unsupported-FS obligation after consolidation.
+awk '/^_ci-checks:/ { selected=1; next } selected && /^[^[:space:]#]/ { exit } selected { print }' Makefile > "$fixture/native-checks"
+grep -F 'check-fs-non-unix' "$fixture/native-checks" > /dev/null
+
 # Actual Host formatting stops after sorter failure and points at complete logs.
 for target in fmt fmt-check; do
     : > "$HOST_MAKE_EVENTS"

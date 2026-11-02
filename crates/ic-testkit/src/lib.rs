@@ -13,7 +13,8 @@
 //! - deterministic test principals through [`fake_principal`].
 //!
 //! The `pic` helpers are unavailable
-//! when compiling for `wasm32`; benchmark data types and marker emission remain
+//! when compiling for `wasm32`; parsing and analysis are native-only. Benchmark
+//! data types, checked marker formatting and marker emission remain
 //! available to canister code.
 
 pub mod benchmark;
@@ -24,7 +25,7 @@ pub mod pic;
 #[cfg(target_arch = "wasm32")]
 pub mod performance;
 
-use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 /// Deterministically derive a test [`Principal`] from `seed`.
 ///

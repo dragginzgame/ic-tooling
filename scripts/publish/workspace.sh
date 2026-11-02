@@ -62,14 +62,15 @@ root="$PWD"
 case "$root" in *$'\r'*|*$'\n'*) fail 'directory paths must not contain CR/LF' ;; esac
 selected_group=''
 if [[ "$purpose" != qualify ]]; then
-    bash "$tooling_root/scripts/release/group.sh" "$root/ci/cargo-release-groups.json" "${RELEASE_GROUP:-}"
+    group_members="$(bash "$tooling_root/scripts/release/group.sh" "$root/ci/cargo-release-groups.json" "${RELEASE_GROUP:-}" members)"
     selected_group="$RELEASE_GROUP"
-    group_selection="$(jq -er --arg group "$RELEASE_GROUP" --arg public "${public_packages[*]}" '
-        [.groups[] | select(.name == $group)] |
-        (if length != 1 then error("unknown release group") else .[0].members end) as $members |
-        $public | split(" ") | map(select(. as $name | $members | index($name))) |
+    # Early group admission owns membership selection; the independent public
+    # allowlist and complete Cargo/source admission remain below.
+    group_selection="$(jq -ner --arg members "$group_members" --arg public "${public_packages[*]}" '
+        $members | split("\n") as $selected |
+        $public | split(" ") | map(select(. as $name | $selected | index($name))) |
         if length == 0 then error("release group has no public packages") else join(" ") end
-    ' ci/cargo-release-groups.json)" || fail 'invalid publication release group'
+    ')" || fail 'release group has no public packages'
     if [[ $# == 1 ]]; then
         IFS=' ' read -r -a packages <<< "$group_selection"
     else

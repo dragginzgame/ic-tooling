@@ -332,50 +332,7 @@ fn install(
 mod tests {
     use super::*;
     use ic_host_artifacts::artifact::encode_gzip;
-    use ic_host_process::{
-        child::OwnedChild,
-        tool::{SuccessfulExit, communicate_child},
-    };
     use std::os::unix::fs::symlink;
-
-    fn run_in_subprocess() -> bool {
-        let current = std::thread::current();
-        let name = current.name().expect("registered asset test name");
-        if std::env::var("IC_TESTKIT_ASSET_CASE").as_deref() == Ok(name) {
-            return false;
-        }
-        // A library sibling's fork can retain a writable executable descriptor.
-        // Re-exec before writing fixtures so only this case owns their lifetime.
-        let mut child = OwnedChild::spawn(
-            Command::new(std::env::current_exe().expect("library test executable"))
-                .args(["--exact", name, "--nocapture"])
-                .env("IC_TESTKIT_ASSET_CASE", name)
-                .stdin(Stdio::null())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped()),
-            CleanupPolicy::KillAndWait,
-        )
-        .expect("spawn isolated asset test");
-        let completed = communicate_child(
-            &mut child,
-            None,
-            OutputLimits {
-                stdout: OutputLimit::Terminate(64 * 1024),
-                stderr: OutputLimit::Terminate(64 * 1024),
-                timeout: Some(Duration::from_secs(120)),
-            },
-            SuccessfulExit::Cleanup,
-            &mut || false,
-        )
-        .expect("capture and reap isolated asset test");
-        assert!(
-            completed.status.success(),
-            "isolated asset test failed: stdout={} stderr={}",
-            String::from_utf8_lossy(&completed.stdout),
-            String::from_utf8_lossy(&completed.stderr),
-        );
-        true
-    }
 
     struct Fixture {
         root: ic_host_fs::testing::FixtureDirectory,
@@ -405,7 +362,15 @@ mod tests {
 
     #[test]
     fn authenticated_setup_reuses_offline_and_refuses_changed_bytes_before_execution() {
-        if run_in_subprocess() {
+        if ic_host_process::testing::run_isolated(
+            "IC_TESTKIT_ASSET_CASE",
+            "server asset test",
+            ic_host_process::tool::OutputLimits {
+                stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                timeout: Some(std::time::Duration::from_secs(120)),
+            },
+        ) {
             return;
         }
         let root = Fixture::new();
@@ -449,7 +414,15 @@ mod tests {
     fn offline_check_authenticates_before_decoding_and_rejects_invalid_gzip() {
         use ic_host_artifacts::artifact::{ArtifactError, GzipError};
 
-        if run_in_subprocess() {
+        if ic_host_process::testing::run_isolated(
+            "IC_TESTKIT_ASSET_CASE",
+            "server asset test",
+            ic_host_process::tool::OutputLimits {
+                stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                timeout: Some(std::time::Duration::from_secs(120)),
+            },
+        ) {
             return;
         }
 
@@ -503,7 +476,15 @@ mod tests {
     fn setup_rejects_corrupt_payloads_without_execution_or_publication() {
         use ic_host_artifacts::artifact::GzipError;
 
-        if run_in_subprocess() {
+        if ic_host_process::testing::run_isolated(
+            "IC_TESTKIT_ASSET_CASE",
+            "server asset test",
+            ic_host_process::tool::OutputLimits {
+                stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                timeout: Some(std::time::Duration::from_secs(120)),
+            },
+        ) {
             return;
         }
         let root = Fixture::new();
@@ -544,7 +525,15 @@ mod tests {
 
     #[test]
     fn failed_setup_retains_evidence_and_previous_bundles_then_can_retry() {
-        if run_in_subprocess() {
+        if ic_host_process::testing::run_isolated(
+            "IC_TESTKIT_ASSET_CASE",
+            "server asset test",
+            ic_host_process::tool::OutputLimits {
+                stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                timeout: Some(std::time::Duration::from_secs(120)),
+            },
+        ) {
             return;
         }
         let root = Fixture::new();
@@ -603,7 +592,15 @@ mod tests {
 
     #[test]
     fn digest_decode_and_version_failures_never_publish() {
-        if run_in_subprocess() {
+        if ic_host_process::testing::run_isolated(
+            "IC_TESTKIT_ASSET_CASE",
+            "server asset test",
+            ic_host_process::tool::OutputLimits {
+                stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                timeout: Some(std::time::Duration::from_secs(120)),
+            },
+        ) {
             return;
         }
         for mode in [0, 1, 2] {
@@ -629,7 +626,15 @@ mod tests {
 
     #[test]
     fn redirected_paths_are_refused_without_touching_the_target() {
-        if run_in_subprocess() {
+        if ic_host_process::testing::run_isolated(
+            "IC_TESTKIT_ASSET_CASE",
+            "server asset test",
+            ic_host_process::tool::OutputLimits {
+                stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                timeout: Some(std::time::Duration::from_secs(120)),
+            },
+        ) {
             return;
         }
         let root = Fixture::new();
@@ -656,7 +661,15 @@ mod tests {
 
     #[test]
     fn replaced_staging_directory_is_not_published() {
-        if run_in_subprocess() {
+        if ic_host_process::testing::run_isolated(
+            "IC_TESTKIT_ASSET_CASE",
+            "server asset test",
+            ic_host_process::tool::OutputLimits {
+                stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                timeout: Some(std::time::Duration::from_secs(120)),
+            },
+        ) {
             return;
         }
         let root = Fixture::new();
@@ -682,7 +695,15 @@ mod tests {
 
     #[test]
     fn occupied_destination_preserves_both_bundle_and_verified_staging() {
-        if run_in_subprocess() {
+        if ic_host_process::testing::run_isolated(
+            "IC_TESTKIT_ASSET_CASE",
+            "server asset test",
+            ic_host_process::tool::OutputLimits {
+                stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                timeout: Some(std::time::Duration::from_secs(120)),
+            },
+        ) {
             return;
         }
         let root = Fixture::new();
@@ -712,7 +733,15 @@ mod tests {
 
     #[test]
     fn concurrent_setups_download_once_and_recheck_under_the_lock() {
-        if run_in_subprocess() {
+        if ic_host_process::testing::run_isolated(
+            "IC_TESTKIT_ASSET_CASE",
+            "server asset test",
+            ic_host_process::tool::OutputLimits {
+                stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+                timeout: Some(std::time::Duration::from_secs(120)),
+            },
+        ) {
             return;
         }
         let root = Fixture::new();

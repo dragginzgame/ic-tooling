@@ -18,8 +18,8 @@ use ic_platform::{
         PocketIc,
         common::rest::{CanisterHttpReply, CanisterHttpResponse, MockCanisterHttpResponse},
     },
-    principal::ExternalPrincipal as Principal,
 };
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 use std::{collections::BTreeMap, fmt::Write};
 use thiserror::Error;
 

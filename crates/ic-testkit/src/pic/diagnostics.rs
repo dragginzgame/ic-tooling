@@ -5,7 +5,7 @@ use std::{
 
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
 use ic_platform::pocket_ic::{CanisterLogRecord, CanisterStatusResult, PocketIc};
-use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 use super::{
     PocketIcCallFailure,
@@ -450,7 +450,7 @@ mod tests {
 
     use ic_host_artifacts::batch::BatchLabelError;
     use ic_platform::pocket_ic::CanisterLogRecord;
-    use ic_platform::principal::ExternalPrincipal as Principal;
+    use ic_platform_types::principal::ExternalPrincipal as Principal;
 
     use super::{
         CanisterDiagnosticsReport, CanisterDiagnosticsRequest, CanisterLogRenderLimits,

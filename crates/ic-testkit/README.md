@@ -6,25 +6,30 @@
 
 PocketIC-oriented test utilities for Internet Computer canister tests.
 
-These dependency examples use the current Testkit family; Host Tools releases independently.
+Host-side tests select Testkit and Platform’s native client. Host Tools releases independently.
 
-```toml
-[dev-dependencies]
-ic-testkit = "0.76.1"
-ic-platform = { version = "0.16.0", default-features = false, features = ["pocket-ic"] }
+```bash
+cargo add --dev ic-testkit
+cargo add --dev ic-platform --no-default-features --features pocket-ic
 ```
+
+Cargo records the selected versions in the consuming manifest and lockfile.
+When aligning an existing stack, select its qualified versions explicitly.
 
 For typed application calls, enable the `wire` feature and depend directly on
 `ic-wire` for method contracts. Testkit does not own Candid codecs or call helpers.
 
-The published MSRV is Rust 1.91, and the selected PocketIC line is 16.
+The minimum and pinned development compiler is Rust 1.99.1, and the selected PocketIC line is 16.
 Canisters using benchmark markers can add the crate under `[dependencies]`.
-The Wasm library uses Platform's raw counters and marker logging,
-without a canister SDK or Candid; `fake_principal` retains PocketIC’s principal identity through
-`ic_platform::principal::ExternalPrincipal`, without enabling Candid on Wasm.
+The Wasm library selects `ic-platform-runtime` directly for raw IC0 counters and
+marker logging, without the facade, executor or Candid. `fake_principal` selects
+`ic-platform-types` directly and retains the same external Principal identity.
+The private performance probe selects Runtime's entrypoint macros directly;
+native Candid and PocketIC adapters retain their existing Platform dependency.
 `pic` is host-only. `performance` is Wasm-only;
-`benchmark` counters, parsing and aggregation, and `fake_principal` are available on both
-targets. Native CSV and Markdown directory output lives in the repository's
+`benchmark` counters, checked marker formatting and `fake_principal` are available
+on both targets. Parsing, pairing, aggregation and comparison are native-only.
+Native CSV and Markdown directory output lives in the repository's
 `benchmark_report` example. Standalone recipe builders return
 `std::io::Result<StandaloneCanisterFixture>`.
 
@@ -304,7 +309,7 @@ Testkit is part of the IC Tooling workspace. Use the root
 for setup and group releases.
 
 - `make testkit-check`: Testkit libraries and private driver with the prepared server.
-- `make testkit-wasm-check` and `make testkit-msrv`: deployed profiles.
+- `make testkit-wasm-check`: deployed profiles.
 - `make testkit-package-check`: all public archives at their own versions, including tests.
 - `make testkit-browser-check`: browser-session support.
 

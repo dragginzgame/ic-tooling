@@ -22,6 +22,16 @@ timeout, decoding, redaction or retention policy. Existing Host/Build/Testkit
 packages do not depend on it. Query and Blob retain their distinct status and
 failure-evidence contracts; consumer adoption is separate from this implementation.
 
+## Direct Types and Runtime owners
+
+Testkit selects published `ic-platform-types` 0.16 for its existing external
+Principal identity and `ic-platform-runtime` 0.17.1 for Wasm IC0. The raw Wasm
+library excludes the facade, executor, macros and Candid. The private performance
+probe selects Runtime's `cdk` entrypoints and one guarded executor directly.
+Native Candid/management/PocketIC adapters continue to select the facade.
+These paths preserve canonical identities and behavior; the earlier facade-owned
+runtime descriptions below are historical, not an additional execution owner.
+
 ## Fleet Candid/CDK boundary
 
 The maintainer's 2026-10-18 direction is one controlled dependency boundary for

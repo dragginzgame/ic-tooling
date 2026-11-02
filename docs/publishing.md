@@ -10,7 +10,7 @@ are rejected before execution;
 the shared runner's optional PR flow is not qualified by this adapter.
 These commands do not publish crates to a registry.
 
-Select `RELEASE_GROUP=foundation`, `RELEASE_GROUP=tools` or `RELEASE_GROUP=testkit` explicitly on
+Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools` or `testkit` explicitly on
 every release command and exact-version resume. The
 [group policy](../ci/cargo-release-groups.json) retains one qualification workspace
 with independent version sources and ledgers; see
@@ -21,10 +21,12 @@ make release-minor RELEASE_GROUP=tools
 make release-resume RELEASE_GROUP=tools VERSION=X.Y.Z
 ```
 
-The split preserves Foundation 0.73.5 and Tools/Testkit 0.76.1. Every package has an
+The current split preserves Foundation, Build and Text at 0.73.6, Tools at 0.77.0
+and Testkit at 0.78.0. Every package has an
 explicit version owned by its group primary; the root Cargo metadata has no
 version. Root `CHANGELOG.md` indexes the
 [Foundation](../releases/foundation/CHANGELOG.md),
+[Build](../releases/build/CHANGELOG.md), [Text](../releases/text/CHANGELOG.md),
 [Host Tools](../releases/tools/CHANGELOG.md) and
 [Testkit](../releases/testkit/CHANGELOG.md) ledgers. Original joint integration
 notes remain in the [frozen ledger](../releases/integration/CHANGELOG.md), with
@@ -46,8 +48,8 @@ interruption and retaining recovery evidence. Shared retains the preparation
 transaction, receipts and rollback. `make install-tools` includes the release
 editor; `make tools-check`/`make release-editor-check` admit it offline. Preflight
 can prepare a missing editor after source admission without per-shell exports;
-standalone verification never installs. The editor requires Rust 1.91 or later;
-Host libraries retain MSRV 1.91. No Cargo-edit command renders release metadata.
+standalone verification never installs. Workspace libraries and release
+qualification require the pinned Rust 1.99.1 compiler. No Cargo-edit command renders release metadata.
 
 The read-only `make release-version RELEASE_GROUP=<group>` query needs prepared
 host parsers and the locked offline Cargo graph; it never installs them. Prepare
@@ -70,8 +72,10 @@ runs one lint gate and Cargo dry run, then the remaining offline CI checks.
 This mode cannot upload or select a subset. Standalone `make ci` and
 `make publish-check` each retain their full lint gate. This combined command
 does not upload packages or authorize publication.
-Release verification and CI both use `make msrv-qualification` for native
-workspace, Testkit Wasm and unsupported-filesystem compilation at Rust 1.91.
+Release verification and CI use the same Rust 1.99.1 qualification: native
+workspace checks, isolated feature profiles, Testkit Wasm and unsupported-filesystem
+compilation. `make compiler-check` admits the actual compiler; `make ci` retains
+the complete gate without the retired `msrv-qualification` target.
 Both numbered pending-heading spellings, `## [X.Y.Z]` and
 `## [X.Y.Z] - Unreleased`, are finalized to the saved UTC date during preparation.
 
@@ -91,8 +95,9 @@ The consumer-owned [public package list](../ci/public-packages.txt) selects both
 publication and archive qualification. Publication checks it against
 Cargo metadata before running lint or packaging; private test packages stay out.
 
-Publication requires explicit `RELEASE_GROUP=tools` for Host Tools,
-`testkit` for Testkit/Native, or `foundation` for its seven public packages.
+Publication requires explicit `RELEASE_GROUP=foundation` for its five public
+packages, `build` for IC Build, `text` for Host Text, `tools` for Host Tools, or
+`testkit` for Testkit/Native.
 Private Testkit harnesses are never uploaded. For a Host Tools release:
 
 ```sh
@@ -122,9 +127,10 @@ archive qualification still selects the complete roster independently of a batch
 `make publish-check` runs Cargo's publication checks with all features
 and `--locked --registry crates-io --dry-run`. It packages and verifies the selected
 workspace packages through exact `--package NAME@VERSION` selectors without
-uploading. The default selection is the six Host libraries, `ic-build`, `ic-testkit`,
-`ic-testkit-native` and the `ic-host-wasm-inspect` CLI. The development driver
-and Wasm probe remain private. It admits working edits so packaging can be reviewed
+uploading. The default selection is the chosen group's public members. Across
+all five groups, the roster remains six Host libraries, `ic-build`, `ic-testkit`,
+`ic-testkit-native` and the `ic-host-wasm-inspect` CLI. The development driver and
+Wasm probe remain private. It admits working edits so packaging can be reviewed
 before committing. It can access the registry; set `CARGO_NET_OFFLINE=true` for
 an offline attempt against already prepared caches. Registry lookup can require
 network access even with cached dependencies. Offline failure never triggers an
@@ -244,19 +250,22 @@ Use it only after confirming that dependency in the actual selected graph:
    Keep the already uploaded packages' version and source intact. Each batch
    records its own committed source; no release tags or versions are changed by
    the publisher.
-4. Check and publish only the remaining packages. For an Artifacts-only first
-   batch, the current remaining public roster is:
+4. Check and publish only the remaining packages within each intended group.
+   For an Artifacts-only first batch, the remaining Foundation batch is:
 
    ```bash
-   remaining=(ic-build ic-host-fs ic-host-http ic-host-process ic-host-text
-              ic-host-tools ic-host-wasm-inspect ic-testkit ic-testkit-native)
-   make publish-check PACKAGE="${remaining[*]}"
-   make publish PACKAGE="${remaining[*]}"
+   remaining=(ic-host-fs ic-host-http ic-host-process ic-host-wasm-inspect)
+   make publish-check RELEASE_GROUP=foundation PACKAGE="${remaining[*]}"
+   make publish RELEASE_GROUP=foundation PACKAGE="${remaining[*]}"
    ```
+
+   Build, Text, Tools and Testkit require their own explicit group selection;
+   release only groups with pending changes, after their actual suppliers.
 
 Use an already published compatible Host version when possible; that needs no
 bootstrap batch. After any partial publication, use explicit remaining selections:
-an unqualified `make publish` still requests the complete roster. The wrapper never
+the default within a selected group still requests that group's complete public
+roster. The wrapper never
 looks up registry state, automatically skips versions or retries an upload.
 
 ### Partial-upload recovery

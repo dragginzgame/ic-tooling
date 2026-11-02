@@ -3,26 +3,46 @@
   "groups": [
     {
       "name": "foundation",
-      "primary": "ic-build",
+      "primary": "ic-host-artifacts",
       "version": "package",
       "members": [
         "ic-host-artifacts",
         "ic-host-fs",
         "ic-host-http",
         "ic-host-process",
-        "ic-host-text",
-        "ic-build",
         "ic-host-wasm-inspect"
       ],
       "changelog": "releases/foundation/CHANGELOG.md",
       "dependencies": [
-        "ic-build",
         "ic-host-artifacts",
         "ic-host-fs",
         "ic-host-http",
         "ic-host-process",
-        "ic-host-text",
         "ic-host-wasm-inspect"
+      ]
+    },
+    {
+      "name": "build",
+      "primary": "ic-build",
+      "version": "package",
+      "members": [
+        "ic-build"
+      ],
+      "changelog": "releases/build/CHANGELOG.md",
+      "dependencies": [
+        "ic-build"
+      ]
+    },
+    {
+      "name": "text",
+      "primary": "ic-host-text",
+      "version": "package",
+      "members": [
+        "ic-host-text"
+      ],
+      "changelog": "releases/text/CHANGELOG.md",
+      "dependencies": [
+        "ic-host-text"
       ]
     },
     {

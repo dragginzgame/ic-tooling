@@ -1672,13 +1672,9 @@ impl WasmBuildInputSnapshotState {
                     .ok_or(index)
             })
             .collect::<Result<Vec<_>, _>>()?;
-        #[allow(
-            deprecated,
-            reason = "fetch_update is deprecated only on newer compilers; try_update is unstable at the Rust 1.91 MSRV"
-        )]
         let _ = self
             .reader_reuses
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
                 Some(current.saturating_add(matched.len()))
             });
         Ok(matched)
@@ -2671,17 +2667,23 @@ fn batch_prepared_invalidation(
     batch_resolution.and_then(|(resolver, _)| resolver.prepared_invalidation())
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 enum CachePlan {
     Isolated,
-    Shared,
-    MaintainedShared(SharedIncrementalTargetMaintenanceConfig),
+    Shared {
+        target_dir: PathBuf,
+        maintenance: Option<SharedIncrementalTargetMaintenanceConfig>,
+    },
 }
 
 #[derive(Clone, Copy)]
 enum SharedAcquisition<'a> {
-    Scheduled(SharedIncrementalTargetMaintenanceConfig),
+    Scheduled {
+        target_dir: &'a Path,
+        config: SharedIncrementalTargetMaintenanceConfig,
+    },
     Miss {
+        target_dir: &'a Path,
         resolved: &'a ResolvedCargoBuildInputs,
         first_lock_wait: Duration,
     },
@@ -2698,13 +2700,23 @@ fn build_wasm_canisters_cached_internal(
     // The batch tracker supplies maintenance only for the first specification
     // of a distinct shared target, after refusing per-spec ownership conflicts.
     // Keep ordinary spec admission and its failure order before this projection.
-    let plan = batch_maintenance.map_or(validate_spec(spec)?, CachePlan::MaintainedShared);
+    let mut plan = validate_spec(spec)?;
+    if let (CachePlan::Shared { maintenance, .. }, Some(config)) = (&mut plan, batch_maintenance) {
+        *maintenance = Some(config);
+    }
     let prepared_invalidation = batch_prepared_invalidation(batch_resolution.as_ref());
     progress.emit(WasmBuildProgressEvent::Started);
-    if let CachePlan::MaintainedShared(config) = plan {
+    if let CachePlan::Shared {
+        target_dir,
+        maintenance: Some(config),
+    } = &plan
+    {
         let outcome = build_wasm_with_shared_incremental(
             spec,
-            SharedAcquisition::Scheduled(config),
+            SharedAcquisition::Scheduled {
+                target_dir,
+                config: *config,
+            },
             prepared_invalidation,
             total_started,
             progress,
@@ -2736,11 +2748,12 @@ fn build_wasm_canisters_cached_internal(
             fingerprint: resolved.fingerprint,
         });
 
-        if matches!(plan, CachePlan::Shared) {
+        if let CachePlan::Shared { target_dir, .. } = plan {
             drop(cache_lock);
             build_wasm_with_shared_incremental(
                 spec,
                 SharedAcquisition::Miss {
+                    target_dir: &target_dir,
                     resolved: &resolved,
                     first_lock_wait,
                 },
@@ -2775,13 +2788,17 @@ fn build_wasm_with_shared_incremental(
     batch_resolution: Option<(&mut WasmBuildBatchInputResolver<'_, '_>, usize)>,
     mut spawn: &mut dyn FnMut(&mut Command) -> io::Result<OwnedChild>,
 ) -> Result<WasmBuildOutcome, WasmBuildError> {
+    let target_dir = match acquisition {
+        SharedAcquisition::Scheduled { target_dir, .. }
+        | SharedAcquisition::Miss { target_dir, .. } => target_dir,
+    };
     let (shared_lock, shared_lock_wait, shared_target) =
-        lock_shared_incremental_target_with_progress(spec, progress)?;
+        lock_shared_incremental_target_with_progress(target_dir, progress)?;
     let (_cache_lock, second_lock_wait) =
         lock_wasm_build_cache_with_progress(&spec.target_dir, progress)?;
     ensure_cache_directory_tag(&spec.target_dir)?;
 
-    let emit_cache_miss = matches!(&acquisition, SharedAcquisition::Scheduled(_));
+    let emit_cache_miss = matches!(&acquisition, SharedAcquisition::Scheduled { .. });
     // Scheduled maintenance resolves under both locks. An ordinary miss must
     // resolve again after changing lock order, unless a prepared lease excludes
     // source mutation. Retain both observations' timing in that case.
@@ -2790,16 +2807,18 @@ fn build_wasm_with_shared_incremental(
         SharedAcquisition::Miss {
             resolved,
             first_lock_wait,
+            ..
         } if prepared_invalidation.is_some() => (resolved, first_lock_wait, None),
         SharedAcquisition::Miss {
             resolved,
             first_lock_wait,
+            ..
         } => {
             refreshed = resolve_initial_inputs(spec, None, progress)?;
             refreshed.timings.include(resolved.timings);
             (&refreshed, first_lock_wait, None)
         }
-        SharedAcquisition::Scheduled(config) => {
+        SharedAcquisition::Scheduled { config, .. } => {
             refreshed = resolve_initial_inputs(spec, batch_resolution, progress)?;
             (&refreshed, Duration::ZERO, Some(config))
         }
@@ -3318,17 +3337,21 @@ fn lock_wasm_build_cache_with_progress(
 fn lock_shared_incremental_target(
     spec: &WasmBuildSpec,
 ) -> Result<(File, Duration, PathBuf), WasmBuildError> {
-    lock_shared_incremental_target_internal(spec, &mut ProgressReporter::silent())
+    let target_dir =
+        shared_incremental_target(spec).ok_or_else(|| WasmBuildError::InvalidSpec {
+            message: "shared incremental target is not configured".to_owned(),
+        })?;
+    lock_shared_incremental_target_internal(&target_dir, &mut ProgressReporter::silent())
 }
 
 fn lock_shared_incremental_target_with_progress(
-    spec: &WasmBuildSpec,
+    target_dir: &Path,
     progress: &mut ProgressReporter<'_>,
 ) -> Result<(File, Duration, PathBuf), WasmBuildError> {
-    let target_dir = shared_incremental_target(spec)
-        .expect("validated shared acquisition must have a shared Cargo target");
-    progress.emit(WasmBuildProgressEvent::SharedTargetLockStarted { target_dir });
-    let (lock, wait, canonical) = lock_shared_incremental_target_internal(spec, progress)?;
+    progress.emit(WasmBuildProgressEvent::SharedTargetLockStarted {
+        target_dir: target_dir.to_owned(),
+    });
+    let (lock, wait, canonical) = lock_shared_incremental_target_internal(target_dir, progress)?;
     progress.emit(WasmBuildProgressEvent::SharedTargetLockAcquired {
         target_dir: canonical.clone(),
         wait,
@@ -3337,23 +3360,19 @@ fn lock_shared_incremental_target_with_progress(
 }
 
 fn lock_shared_incremental_target_internal(
-    spec: &WasmBuildSpec,
+    target_dir: &Path,
     progress: &mut ProgressReporter<'_>,
 ) -> Result<(File, Duration, PathBuf), WasmBuildError> {
     progress.begin_phase(WasmBuildPhase::SharedTargetCoordination);
-    let target_dir =
-        shared_incremental_target(spec).ok_or_else(|| WasmBuildError::InvalidSpec {
-            message: "shared incremental target is not configured".to_owned(),
-        })?;
     create_dir_all(
-        &target_dir,
+        target_dir,
         "create shared incremental Cargo target directory",
     )?;
-    ensure_cache_tag(&target_dir).map_err(wasm_cache_fs_error)?;
+    ensure_cache_tag(target_dir).map_err(wasm_cache_fs_error)?;
     let canonical = target_dir.canonicalize().map_err(|source| {
         WasmBuildError::io(
             "resolve shared incremental Cargo target directory",
-            target_dir.clone(),
+            target_dir.to_owned(),
             source,
         )
     })?;
@@ -3463,13 +3482,16 @@ fn validate_spec(spec: &WasmBuildSpec) -> Result<CachePlan, WasmBuildError> {
             message: "shared incremental Cargo target directory must not be empty".to_owned(),
         });
     }
-    match (&spec.cache_mode, spec.shared_incremental_maintenance_config) {
-        (WasmBuildCacheMode::Isolated, None) => Ok(CachePlan::Isolated),
-        (WasmBuildCacheMode::SharedIncremental { .. }, None) => Ok(CachePlan::Shared),
-        (WasmBuildCacheMode::SharedIncremental { .. }, Some(config)) => {
-            Ok(CachePlan::MaintainedShared(config))
-        }
-        (WasmBuildCacheMode::Isolated, Some(_)) => Err(WasmBuildError::InvalidSpec {
+    match (
+        shared_incremental_target(spec),
+        spec.shared_incremental_maintenance_config,
+    ) {
+        (None, None) => Ok(CachePlan::Isolated),
+        (Some(target_dir), maintenance) => Ok(CachePlan::Shared {
+            target_dir,
+            maintenance,
+        }),
+        (None, Some(_)) => Err(WasmBuildError::InvalidSpec {
             message:
                 "scheduled shared-target maintenance requires a shared incremental Cargo target"
                     .to_owned(),

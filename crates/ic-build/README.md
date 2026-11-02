@@ -51,7 +51,7 @@ Batch label errors use `ic_host_artifacts::batch::BatchLabelError`.
 
 ## Use
 
-IC Build requires Rust 1.91.0 or newer:
+IC Build requires Rust 1.99.1 or newer:
 
 ```toml
 [dependencies]
@@ -125,7 +125,7 @@ wrapper tools and evidence bounds; ordinary builds retain their selected flags.
 Build shares IC Tooling's [host qualification](../../docs/hosts.md) and
 [release/publication flow](../../docs/publishing.md). For focused work use
 `make check PACKAGE=ic-build`, `make test PACKAGE=ic-build`,
-`make clippy PACKAGE=ic-build` and `make msrv PACKAGE=ic-build`.
+`make clippy PACKAGE=ic-build` and `make compiler-check`.
 The separate optimizer workflow retains real Wasm transformation qualification.
 
 Integration tests using shared Build helpers require `test-support`; Make and CI
@@ -144,7 +144,7 @@ histories and the remaining external issues.
 On Unix, `cargo::packages::qualify_existing_package_archives` admits already-built
 archives without repackaging them or selecting tests. It constructs the admitted
 verification workspace, freezes external lock selections and invokes the caller's
-checks with that workspace root. Consumers can create separate native/MSRV/Wasm
+checks with that workspace root. Consumers can create separate native/isolated-feature/Wasm
 fixtures beneath the root. Extracted source bytes, admitted manifest/lock and
 original source/archive identities must remain unchanged on success. The caller
 owns check coverage, tools, budgets, retention and any subsequent release policy.

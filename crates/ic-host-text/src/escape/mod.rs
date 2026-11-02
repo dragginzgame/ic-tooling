@@ -43,7 +43,7 @@ pub(crate) fn escaped_chars(value: &str) -> impl Iterator<Item = char> + '_ {
     })
 }
 
-fn needs_escape(character: char) -> bool {
+const fn needs_escape(character: char) -> bool {
     character.is_control()
         || matches!(character, '\u{061c}' | '\u{200e}' | '\u{200f}'
         | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')

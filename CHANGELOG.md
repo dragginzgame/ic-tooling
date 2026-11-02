@@ -2,7 +2,9 @@
 
 | Release group | Packages | Release notes |
 | --- | --- | --- |
-| Foundation | Generic Host libraries, Build and the Wasm inspector | [Foundation ledger](releases/foundation/CHANGELOG.md) |
+| Foundation | Artifacts, FS, HTTP, Process and the Wasm inspector | [Foundation ledger](releases/foundation/CHANGELOG.md) |
+| Build | Cargo/Wasm builds and artifact caches | [Build ledger](releases/build/CHANGELOG.md) |
+| Text | Bounded text, Unicode and optional YAML | [Text ledger](releases/text/CHANGELOG.md) |
 | Host Tools | IC inspection, Agent, certificate and ledger helpers | [Host Tools ledger](releases/tools/CHANGELOG.md) |
 | Testkit | Testkit, Native and private development/probe packages | [Testkit ledger](releases/testkit/CHANGELOG.md) |
 

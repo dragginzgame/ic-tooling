@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/ci/check-rust-toolchain.sh
 set -euo pipefail
-[[ $# == 3 ]] || { echo 'usage: record-qualification.sh REPOSITORY NEW-DIRECTORY native|msrv' >&2; exit 2; }
+[[ $# == 3 ]] || { echo 'usage: record-qualification.sh REPOSITORY NEW-DIRECTORY native' >&2; exit 2; }
 repository="$1" output="$2" profile="$3"
-case "$profile" in native|msrv) ;; *) exit 2 ;; esac
+tooling_root="$(cd "${BASH_SOURCE[0]%/*}/../.." && pwd -P)"
+case "$profile" in native) ;; *) exit 2 ;; esac
 cd -- "$repository"
 source="$(git rev-parse --verify HEAD)"
 [[ "$source" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || exit 1
@@ -12,11 +14,7 @@ printf '%s\n' "$source" > "$output/source-revision"
 git status --porcelain --untracked-files=all > "$output/source-status"
 [[ ! -s "$output/source-status" ]] || { echo 'qualification requires a clean source tree' >&2; exit 1; }
 printf '%s\n' "$profile" > "$output/profile"
-rustc -vV > "$output/rustc.txt"
-cargo --version > "$output/cargo.txt"
-if [[ "$profile" == msrv ]]; then
-    grep -Fx 'release: 1.91.0' "$output/rustc.txt" > /dev/null
-fi
+bash "$tooling_root/scripts/ci/check-rust-toolchain.sh" "$PWD" "$output"
 uname -s > "$output/os"
 uname -m > "$output/architecture"
 case "$(cat "$output/os")" in

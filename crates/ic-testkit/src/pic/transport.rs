@@ -427,7 +427,7 @@ mod tests {
 
     #[test]
     fn snapshot_and_install_wrappers_preserve_transport_causes() {
-        let canister_id = ic_platform::principal::ExternalPrincipal::anonymous();
+        let canister_id = ic_platform_types::principal::ExternalPrincipal::anonymous();
         for message in [REFUSED, RESET, "unrelated application panic"] {
             let expected = message != "unrelated application panic";
             let capture = ControllerSnapshotError::CaptureFailed {
@@ -523,8 +523,8 @@ mod tests {
         use super::super::{WireCallContext, WireCallError};
         let context = WireCallContext {
             operation: "query_call",
-            canister_id: ic_platform::principal::ExternalPrincipal::anonymous(),
-            caller: ic_platform::principal::ExternalPrincipal::anonymous(),
+            canister_id: ic_platform_types::principal::ExternalPrincipal::anonymous(),
+            caller: ic_platform_types::principal::ExternalPrincipal::anonymous(),
             method: REFUSED,
             method_id: 1,
         };

@@ -31,7 +31,7 @@ acquiring PocketIC or canister dependencies.
   <a href="https://docs.rs/ic-testkit"><img src="https://docs.rs/ic-testkit/badge.svg" alt="Docs.rs"></a>
   <a href="https://crates.io/crates/ic-testkit"><img src="https://img.shields.io/crates/d/ic-testkit.svg" alt="Downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
-  <a href="Cargo.toml"><img src="https://img.shields.io/badge/MSRV-1.91.0-blue.svg" alt="MSRV"></a>
+  <a href="Cargo.toml"><img src="https://img.shields.io/badge/MSRV-1.99.1-blue.svg" alt="MSRV"></a>
   <a href="README.md#toolchains-and-checks"><img src="https://img.shields.io/badge/internal%20rust-1.99.1-orange.svg" alt="Internal Rust"></a>
   <a href="Cargo.toml"><img src="https://img.shields.io/badge/edition-2024-purple.svg" alt="Rust edition"></a>
   <a href="Cargo.toml"><img src="https://img.shields.io/badge/PocketIC-16.1-green.svg" alt="PocketIC"></a>
@@ -104,26 +104,25 @@ PocketIC dependency selection; Testkit owns server and fixture policy.
 
 ## Install
 
-For the pending IC integration 0.74 release, host-side test crates add:
-
-```toml
-[dev-dependencies]
-ic-testkit = "0.74"
-ic-platform = { version = "0.15.1", features = ["pocket-ic"] }
-```
+Use the [package installation example](../../crates/ic-testkit/README.md#ic-testkit)
+for the current native dependencies. This guide describes the source API; see the
+[Testkit release ledger](../../releases/testkit/CHANGELOG.md) for pending changes.
 
 For typed application calls, enable the `wire` feature and depend directly on
 `ic-wire` for method contracts. Testkit does not own Candid codecs or call helpers.
 
-Canister crates that emit benchmark markers can add the same version under
+Canister crates that emit benchmark markers can add Testkit under
 `[dependencies]` and use `ic_testkit::performance`.
 
-The crate supports Rust 1.91 and uses PocketIC 16. The `pic` helpers
+The crate supports Rust 1.99.1 and uses PocketIC 16. The `pic` helpers
 are host-only; `performance` emits markers on Wasm. Benchmark counters,
-marker parsing, aggregation and `fake_principal` are available on native and Wasm targets.
-The Wasm library uses Platform's raw counters and marker logging,
-without a canister SDK or Candid; `fake_principal` retains PocketIC’s principal identity through
-`ic_platform::principal::ExternalPrincipal`, without enabling Candid on Wasm.
+and `fake_principal` are available on native and Wasm targets. Marker parsing,
+aggregation and comparison are native-only.
+The Wasm library selects `ic-platform-runtime` directly for raw IC0 counters and
+marker logging, without the facade, executor or Candid. `fake_principal` selects
+`ic-platform-types` directly and retains the same external Principal identity.
+The private performance probe selects Runtime's entrypoint macros directly;
+native Candid and PocketIC adapters retain their existing Platform dependency.
 Native CSV/Markdown directory output is provided by the repository's
 `benchmark_report` example; applications own provenance and output policy.
 
@@ -948,15 +947,15 @@ directory; existing reports remain historical evidence and are not converted.
 
 
 The Wasm-only `performance` module uses Platform's raw counters and marker logging. Native
-producers use `benchmark::try_format_marker` with their own counters. Canister code
+producers use `benchmark::format_marker` with their own counters. Canister code
 emits compact markers around the measured region:
 
 ```rust,no_run
 use ic_testkit::performance;
 
-performance::try_measure("storage/write:start").expect("static benchmark label");
+performance::measure("storage/write:start").expect("static benchmark label");
 // measured work
-performance::try_measure("storage/write:end").expect("static benchmark label");
+performance::measure("storage/write:end").expect("static benchmark label");
 ```
 
 The default line format is:
@@ -966,10 +965,9 @@ ICTK|<label>:<start-or-end>|<instructions>|<heap_bytes>|<memory_bytes>
 ```
 
 Checked emission refuses empty prefixes, pipe/CR/LF fields and missing or empty
-start/end span labels before printing. Raw `format_marker` and `measure` remain
-available with their existing behavior. For separately captured streams or multiple
-prefixes, use `pair_benchmark_spans_by_origin` to keep starts/ends within the same
-prefix and stream. The original pairing function continues grouping by suite and
+start/end span labels before printing. `format_marker` and `performance::measure`
+both return a grammar error before producing malformed output.
+`pair_benchmark_spans` keeps starts/ends within the same prefix, stream, suite and
 label. Origins do not authenticate producers or distinguish independent canisters
 that share all those fields; callers retain that separation and aggregation policy.
 
@@ -1097,7 +1095,7 @@ Testkit is part of the IC Tooling workspace. Use the root
 for setup and group releases.
 
 - `make testkit-check`: Testkit libraries and private driver with the prepared server.
-- `make testkit-wasm-check` and `make testkit-msrv`: deployed profiles.
+- `make testkit-wasm-check`: deployed profiles.
 - `make testkit-package-check`: all public archives at their own versions, including tests.
 - `make testkit-browser-check`: browser-session support.
 

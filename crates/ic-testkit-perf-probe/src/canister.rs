@@ -2,7 +2,7 @@ use crate::protocol::{
     self, BENCHMARK_ONCE, BENCHMARK_TRAP, INSPECT_STATE, MUTATE_STATE, PING, QUERY_CALLER,
     SEED_STATE, State, UPDATE_CALLER,
 };
-use ic_platform::cdk::{query, update};
+use ic_platform_runtime::cdk::{query, update};
 use ic_testkit::performance;
 use ic_wire::{Bytes, Text, native};
 use serde::{Serialize, de::DeserializeOwned};
@@ -64,14 +64,14 @@ fn ping() -> Text<4> {
     encode_with = "encode::<u64, {BENCHMARK_ONCE.id}>"
 )]
 fn benchmark_once() -> u64 {
-    performance::try_measure("probe/benchmark_once:start").expect("static benchmark label");
+    performance::measure("probe/benchmark_once:start").expect("static benchmark label");
 
     let mut acc = 0_u64;
     for n in 0..1_000 {
         acc = acc.wrapping_add(n * 3);
     }
 
-    performance::try_measure("probe/benchmark_once:end").expect("static benchmark label");
+    performance::measure("probe/benchmark_once:end").expect("static benchmark label");
     acc
 }
 
@@ -81,9 +81,8 @@ fn benchmark_once() -> u64 {
     encode_with = "encode_unit::<{BENCHMARK_TRAP.id}>"
 )]
 fn benchmark_start_then_trap() {
-    performance::try_measure("probe/benchmark_start_then_trap:start")
-        .expect("static benchmark label");
-    ic_platform::ic0::trap(b"intentional perf probe trap");
+    performance::measure("probe/benchmark_start_then_trap:start").expect("static benchmark label");
+    ic_platform_runtime::ic0::trap(b"intentional perf probe trap");
 }
 
 #[query(
@@ -92,8 +91,12 @@ fn benchmark_start_then_trap() {
     encode_with = "encode::<Bytes<29>, {QUERY_CALLER.id}>"
 )]
 fn fixture_query_caller() -> Bytes<29> {
-    Bytes::new(ic_platform::cdk::api::msg_caller().as_slice().to_vec())
-        .expect("principal byte bound")
+    Bytes::new(
+        ic_platform_runtime::cdk::api::msg_caller()
+            .as_slice()
+            .to_vec(),
+    )
+    .expect("principal byte bound")
 }
 
 #[update(
@@ -102,12 +105,16 @@ fn fixture_query_caller() -> Bytes<29> {
     encode_with = "encode::<Bytes<29>, {UPDATE_CALLER.id}>"
 )]
 fn fixture_update_caller() -> Bytes<29> {
-    Bytes::new(ic_platform::cdk::api::msg_caller().as_slice().to_vec())
-        .expect("principal byte bound")
+    Bytes::new(
+        ic_platform_runtime::cdk::api::msg_caller()
+            .as_slice()
+            .to_vec(),
+    )
+    .expect("principal byte bound")
 }
 
 fn guard() -> Result<(), String> {
-    if ic_platform::ic0::msg_arg_data_size() > protocol::FRAME_BYTES {
+    if ic_platform_runtime::ic0::msg_arg_data_size() > protocol::FRAME_BYTES {
         Err("perf probe Wire request exceeds limit".into())
     } else {
         Ok(())

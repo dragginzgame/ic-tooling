@@ -4,6 +4,16 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.78.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Require Rust 1.99.1 and pin contributor/release compilation to that version.
+  Native qualification now owns the former compiler-lane feature and Wasm
+  obligations; the stable MSRV status reuses its results. Older compiler support
+  is retired; package release groups remain independent.
+  [#313 — Adopt Rust 1.99.1 and consolidate compiler qualification](https://github.com/dragginzgame/ic-tooling/issues/313).
+
 ## [0.77.0] - 2026-11-01
 
 ### ⚠️ Breaking

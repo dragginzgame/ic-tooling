@@ -14,7 +14,7 @@ use std::{
 };
 
 use ic_platform::pocket_ic::PocketIcBuilder;
-use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolError, BaselinePoolOutcome, BaselinePoolPreparationError,
     BaselinePreparationStage, CachedPocketIcBaseline, CachedPocketIcBaselinePool,

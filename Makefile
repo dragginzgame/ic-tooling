@@ -1,7 +1,6 @@
 .DEFAULT_GOAL := help
-# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json
+# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml
 PACKAGE ?= ic-host-artifacts
-MSRV ?= 1.91.0
 RELEASE_DELIVERY ?= direct
 export RELEASE_GROUP
 override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
@@ -19,13 +18,13 @@ export YQ := $(CURDIR)/.tools/host/bin/yq
 # Refuse before the shared runner acquires its lock or any publication starts.
 ifneq ($(filter $(SHARED_RELEASE_TARGETS) publish publish-check,$(MAKECMDGOALS)),)
 ifneq ($(shell bash '$(subst ','"'"',$(CURDIR))/scripts/release/group.sh' '$(subst ','"'"',$(CURDIR))/ci/cargo-release-groups.json' '$(subst ','"'"',$(RELEASE_GROUP))' && printf admitted),admitted)
-$(error Explicit RELEASE_GROUP=foundation, tools or testkit is required)
+$(error Explicit RELEASE_GROUP=foundation, build, text, tools or testkit is required)
 endif
 endif
 
-.PHONY: help check clippy docs-check test test-artifacts-minimal test-tools-default tools-features-check msrv ci install-hooks tooling-command-check shared-tooling-check dependency-pins-check check-doc-links release-adapter-check publish publish-check publish-command-check release-version release-preflight release-verify release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
+.PHONY: help check clippy docs-check test test-artifacts-minimal test-tools-default tools-features-check compiler-check ci install-hooks tooling-command-check shared-tooling-check dependency-pins-check check-doc-links release-adapter-check publish publish-check publish-command-check release-version release-preflight release-verify release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
 help:
-	@echo 'Selected package: check, clippy, docs-check, test, msrv (PACKAGE=<crate>)'
+	@echo 'Selected package: check, clippy, docs-check, test (PACKAGE=<crate>)'
 	@echo 'Artifact profiles: test-artifacts-minimal, test-artifacts-wasm, test-artifacts-encoding, test-artifacts-text'
 	@echo 'Filesystem profiles: test-fs-minimal, test-fs-capability, test-fs-temporary-file'
 	@echo 'Unsupported-target compile contract: check-fs-non-unix (prepared Wasm target required)'
@@ -37,12 +36,12 @@ help:
 	@echo 'Offline setup checks: tools-check (complete set), host-tools-check, ic-tools-check, rust-tools-check'
 	@echo 'Individual setup: install-host-tools, install-ic-tools, install-rust-tools'
 	@echo 'Source reports: cloc (this workspace); fleet reports run in Shared Tooling'
-	@echo 'Full release validation: ci (workspace Clippy first), msrv-qualification; focused MSRV: msrv PACKAGE=<crate>'
+	@echo 'Full release validation: ci (pinned compiler, workspace Clippy, native/Wasm and isolated features); compiler-check admits identities'
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
-	@echo 'Maintainer releases: release-patch/minor/major RELEASE_GROUP=foundation|tools|testkit'
+	@echo 'Maintainer releases: release-patch/minor/major RELEASE_GROUP=foundation|build|text|tools|testkit'
 	@echo 'Resume: release-resume RELEASE_GROUP=<same-group> VERSION=X.Y.Z'
 	@echo 'crates.io publication: publish-check (dry run), publish (upload); offline fixture: publish-command-check'
-	@echo 'Publication: select RELEASE_GROUP=foundation|tools|testkit; PACKAGE="crate ..." narrows that group'
+	@echo 'Publication: select RELEASE_GROUP=foundation|build|text|tools|testkit; PACKAGE="crate ..." narrows that group'
 .PHONY: formatting-hook-check
 .PHONY: install-release-editor release-editor-check check-no-symlinks
 install-release-editor:
@@ -75,12 +74,14 @@ test-fs-temporary-file:
 	+cargo test -p ic-host-fs --no-default-features --features temporary-file --lib scratch::temporary:: --locked --offline
 .PHONY: test-artifacts-wasm test-artifacts-encoding
 test-artifacts-wasm:
-	+cargo test -p ic-host-artifacts --no-default-features --features wasm --all-targets --locked --offline
+	+cargo test -p ic-host-artifacts --no-default-features --features wasm --lib --locked --offline wasm::
+	+cargo test -p ic-host-artifacts --no-default-features --features wasm --test consumer_contracts --locked --offline
 test-artifacts-encoding:
-	+cargo test -p ic-host-artifacts --no-default-features --features wasm-encoding --all-targets --locked --offline
+	+cargo test -p ic-host-artifacts --no-default-features --features wasm-encoding --lib --locked --offline wasm_encoding::
+	+cargo test -p ic-host-artifacts --no-default-features --features wasm-encoding --test wasm_encoding --locked --offline
 .PHONY: test-artifacts-text
 test-artifacts-text:
-	+cargo test -p ic-host-artifacts --no-default-features --features wasm-text --all-targets --locked --offline
+	+cargo test -p ic-host-artifacts --no-default-features --features wasm-text --lib --locked --offline wasm_text::
 .PHONY: check-fs-non-unix
 check-fs-non-unix:
 	+cargo check -p ic-host-fs --lib --bins --test unsupported_lock --all-features --target wasm32-unknown-unknown --locked --offline
@@ -124,17 +125,8 @@ test-text-yaml:
 	+cargo test -p ic-host-text --no-default-features --features yaml --lib --locked --offline yaml::
 tools-features-check:
 	+bash scripts/ci/check-tools-features.sh
-msrv:
-	+cargo +$(MSRV) check -p $(PACKAGE) --all-targets --all-features --locked --offline
-.PHONY: msrv-workspace
-msrv-workspace:
-	+cargo +$(MSRV) check --workspace --all-targets --all-features --locked --offline
-.PHONY: msrv-qualification
-msrv-qualification:
-	+$(MAKE) --no-print-directory msrv-workspace
-	+$(MAKE) --no-print-directory testkit-msrv
-	+RUSTUP_TOOLCHAIN="$(MSRV)" $(MAKE) --no-print-directory check-fs-non-unix
-	+RUSTUP_TOOLCHAIN="$(MSRV)" $(MAKE) --no-print-directory isolated-features-check
+compiler-check:
+	+bash scripts/ci/check-rust-toolchain.sh "$(CURDIR)"
 dependency-pins-check:
 	+bash scripts/ci/check-dependency-pins.sh --cargo-inheritance
 check-doc-links:
@@ -167,6 +159,7 @@ _ci-preflight:
 	+$(MAKE) --no-print-directory shared-tooling-check
 	+$(MAKE) --no-print-directory check-no-symlinks
 	+$(MAKE) --no-print-directory tools-check
+	+$(MAKE) --no-print-directory compiler-check
 	+$(MAKE) --no-print-directory dependency-pins-check
 _ci-checks:
 	+$(MAKE) --no-print-directory fmt-check
@@ -182,7 +175,7 @@ _ci-checks:
 	+$(MAKE) --no-print-directory test-artifacts-text
 	+$(MAKE) --no-print-directory tools-features-check
 	+$(MAKE) --no-print-directory isolated-features-check
-	+$(MAKE) --no-print-directory testkit-graph-check testkit-wasm-check
+	+$(MAKE) --no-print-directory testkit-graph-check testkit-wasm-check check-fs-non-unix
 	+$(MAKE) --no-print-directory testkit-installed-check
 	+$(MAKE) --no-print-directory testkit-package-check
 	+$(MAKE) --no-print-directory test-tools-default

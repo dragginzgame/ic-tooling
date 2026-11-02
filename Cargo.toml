@@ -17,7 +17,7 @@ resolver = "3"
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.91.0"
+rust-version = "1.99.1"
 license = "MIT"
 repository = "https://github.com/dragginzgame/ic-tooling"
 authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
@@ -26,17 +26,24 @@ description = "Host-side artifact, filesystem, process and IC tooling"
 [workspace.dependencies]
 # Foundation
 # Changelog : releases/foundation/CHANGELOG.md
-ic-build = { path = "crates/ic-build", version = "0.73.6", default-features = false }
 ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.73.6", default-features = false }
 ic-host-fs = { path = "crates/ic-host-fs", version = "0.73.6", default-features = false }
 ic-host-http = { path = "crates/ic-host-http", version = "0.73.6", default-features = false }
 ic-host-process = { path = "crates/ic-host-process", version = "0.73.6", default-features = false }
-ic-host-text = { path = "crates/ic-host-text", version = "0.73.6", default-features = false }
 ic-host-wasm-inspect = { path = "apps/ic-host-wasm-inspect", version = "0.73.6" }
+
+# Build
+# Changelog : releases/build/CHANGELOG.md
+ic-build = { path = "crates/ic-build", version = "0.73.6", default-features = false }
+
+# Text
+# Changelog : releases/text/CHANGELOG.md
+ic-host-text = { path = "crates/ic-host-text", version = "0.73.6", default-features = false }
 
 # Host Tools
 # Changelog : releases/tools/CHANGELOG.md
 ic-host-tools = { path = "crates/ic-host-tools", version = "0.77.0", default-features = false }
+
 # Testkit (Dev and perf probe are private qualification crates)
 # Changelog : releases/testkit/CHANGELOG.md
 ic-testkit = { path = "crates/ic-testkit", version = "0.78.0", default-features = false }
@@ -50,8 +57,10 @@ cap-std = "4.0.2"
 cargo_metadata = "0.23.1"
 command-fds = "0.3.3"
 flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
-ic-metrics = { version = "0.25.0", default-features = false }
+ic-metrics = { version = "0.26.0", default-features = false }
 ic-platform = { version = "0.17.0", default-features = false }
+ic-platform-runtime = { version = "0.17.1", default-features = false }
+ic-platform-types = { version = "0.16.0", default-features = false }
 libc = "0.2.190"
 prost = "0.14.3"
 rustix = { version = "1.1.4", default-features = false, features = ["std", "fs"] }

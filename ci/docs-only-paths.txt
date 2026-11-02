@@ -8,3 +8,4 @@ docs/extraction.md
 docs/file-cli.md
 docs/hosts.md
 docs/publishing.md
+docs/testkit/qualification-history.md

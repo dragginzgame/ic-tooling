@@ -1053,7 +1053,15 @@ fn scheduled_pruning_skips_an_immediate_second_acquisition() {
 #[test]
 fn pruning_removes_abandoned_staging_without_touching_active_transactions() {
     const CHILD_ENV: &str = "IC_TESTKIT_STAGING_PRUNING_CHILD";
-    if ic_host_fs::testing::run_isolated(CHILD_ENV, "staging pruning") {
+    if ic_host_process::testing::run_isolated(
+        CHILD_ENV,
+        "staging pruning",
+        ic_host_process::tool::OutputLimits {
+            stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+            stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
+            timeout: Some(std::time::Duration::from_secs(120)),
+        },
+    ) {
         return;
     }
 

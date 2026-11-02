@@ -2,7 +2,7 @@
 
 use super::{PocketIcCallFailure, transport};
 use ic_platform::pocket_ic::{PocketIc, RejectResponse};
-use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_wire::{Limits, native};
 use serde::{Serialize, de::DeserializeOwned};
 

@@ -120,7 +120,7 @@ Other consumers follow the same steps: inventory actual ECDSA deployment graphs,
 admit the matching Platform recommendation, supply the qualified wrapper/policy,
 then measure their final Wasm and installed behavior. This task does not change
 Canic/Auth active checkouts, tool pins or deployment profiles. Their persistent
-adoption can follow a published Foundation version using isolated consumer PRs.
+adoption can follow a published Build version using isolated consumer PRs.
 
 ## Reproduce qualification
 

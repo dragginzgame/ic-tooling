@@ -109,6 +109,7 @@ case "$operation" in
         awk -v version="$RELEASE_VERSION" -v previous="$RELEASE_PREVIOUS" -v date="$RELEASE_DATE" \
             -f "$tooling_root/scripts/ci/finalize-release-changelog.awk" "$changelog" > /dev/null
         if [[ "$fresh_tool_setup" == true && "$editor_setup" == false ]]; then make --no-print-directory install-tools; fi
+        CARGO_NET_OFFLINE=true make --no-print-directory compiler-check
         CARGO_NET_OFFLINE=true make --no-print-directory tools-check
         cargo sort --workspace --grouped --check
         CARGO_NET_OFFLINE=true make --no-print-directory dependency-pins-check
@@ -123,7 +124,6 @@ case "$operation" in
             {
                 receipt_header
                 CARGO_NET_OFFLINE=true make --no-print-directory ci
-                CARGO_NET_OFFLINE=true make --no-print-directory msrv-qualification
             } 2>&1 | tee -a "$receipt.log"
             observed_source="$(git rev-parse HEAD)"
             after="$(git diff --binary HEAD | git hash-object --stdin)"

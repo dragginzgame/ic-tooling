@@ -2,7 +2,7 @@
 mod support;
 
 use ic_platform::pocket_ic::CanisterSettings;
-use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     CanisterSnapshotTarget, ControllerSnapshotError, PocketIcCallFailure, PocketIcSnapshotExt,
     SnapshotRestoreFunding,

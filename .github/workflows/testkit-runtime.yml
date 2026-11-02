@@ -33,6 +33,7 @@ jobs:
       - name: Prepare and admit PocketIC
         shell: bash
         run: |
+          make install-host-tools compiler-check
           make install-server 2>&1 | tee -a "$RUNNER_TEMP/portable-regression.log"
           server="$(target/debug/ic-testkit-server check)"
           echo "POCKET_IC_BIN=$server" >> "$GITHUB_ENV"

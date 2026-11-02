@@ -1,99 +1,98 @@
 # Release ownership
 
-One workspace, dependency catalog and lockfile retain three independent release
-families. This implements [#299](https://github.com/dragginzgame/ic-tooling/issues/299)
-without changing package versions or public APIs.
+One workspace, dependency catalog and lockfile retain five independent release
+groups. Build and Text leave the original Foundation group without changing
+crate names, package versions, APIs, feature boundaries or dependency requirements.
 
 | Group | Public packages | Private packages | Primary version | Ledger |
 | --- | --- | --- | --- | --- |
-| foundation | Artifacts, FS, HTTP, Process, Text, Build, Wasm inspector | none | ic-build | [Foundation](../../releases/foundation/CHANGELOG.md) |
+| foundation | Artifacts, FS, HTTP, Process, Wasm inspector | none | ic-host-artifacts | [Foundation](../../releases/foundation/CHANGELOG.md) |
+| build | ic-build | none | ic-build | [Build](../../releases/build/CHANGELOG.md) |
+| text | ic-host-text | none | ic-host-text | [Text](../../releases/text/CHANGELOG.md) |
 | tools | ic-host-tools | none | ic-host-tools | [Host Tools](../../releases/tools/CHANGELOG.md) |
 | testkit | ic-testkit, ic-testkit-native | ic-testkit-dev, ic-testkit-perf-probe | ic-testkit | [Testkit](../../releases/testkit/CHANGELOG.md) |
 
 ## Dependency and type ownership
 
-Host Tools' normal/build graph uses Foundation and optional Platform capabilities;
-it does not depend on any Testkit package. Its public registry principals and
-certificate/hash-tree results belong to Platform. Certificate changes therefore
-classify the Tools release at that public boundary, independently of Testkit.
+Foundation retains the cohesive artifact/filesystem/process primitives and their
+inspector. These packages share real error/artifact types. Build depends on
+Artifacts, FS and Process; none of those packages depends on Build. A Build API
+break therefore advances Build alone unless a separate supplier change is needed.
 
-Testkit's normal/build graph uses Foundation, arithmetic-only Metrics, optional
-Wire and Platform's PocketIC/system capabilities. It does not use Host Tools.
-Its public transport APIs expose Wire limits/errors and Platform-owned PocketIC DTOs.
-Native's optional memory adapter exposes Platform stable-memory traits. These
-Testkit-family contracts retain their own compatibility assessment; changing a
-supplier does not automatically imply that all public identities changed.
+Text has no internal production dependencies. Its bounded decoding, Unicode and
+optional YAML contracts evolve independently of Build and Foundation. Host Tools'
+optional ICP-project adapter and the private Testkit driver consume it explicitly.
+A Text-only change does not advance unrelated filesystem or build packages.
 
-The private development driver depends on Build, Testkit and the private probe;
-it has no Host Tools dependency. The probe supplies Testkit's installed fixtures
-and uses Wire/Platform for Wasm. Both stay in the Testkit family. Native remains
-in that existing measurement/testing family; this split does not create one group
-per crate. Platform supplies canonical Types 0.16.0 without a Tools/Testkit
-dependency or a duplicated owner. Consumers enabling Wire's optional Platform
-metadata must align its Types selection separately.
+Host Tools' normal/build graph uses selected Foundation, Text and optional Platform
+capabilities, without Testkit. Its public principal/certificate types belong to
+Platform. Testkit uses Foundation, arithmetic-only Metrics, optional Wire and
+Platform's PocketIC/system capabilities, without Host Tools. Its private driver
+also consumes Build and Text; those testing edges do not become public Testkit
+production dependencies. The Wasm probe remains in Testkit's existing family.
 
-Foundation error/artifact types still cross genuine package boundaries. A real
-Foundation break can require independently classified downstream releases and
-Foundation-first publication. The root catalog's inherited minimums track the
-supplier contract; package numbers do not need to match across groups.
+Real supplier changes can still require independently classified consumer changes.
+Publicly exposed supplier types and minimum requirements retain their actual
+identities; independent groups do not hide an incompatible dependency. Publish
+needed Foundation before Build, and any changed Foundation/Text supplier before
+its Tools or Testkit consumer. Text itself does not need Foundation publication.
+Do not release unchanged groups merely because workspace qualification ran.
 
 ## Selection, history and recovery
 
-Select `RELEASE_GROUP=foundation`, `tools` or `testkit` explicitly for the standard
-release, resume, publication and publication dry-run commands. For example:
+Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools` or `testkit` explicitly
+for release, resume, publication and publication dry-run commands. For example:
 
 ```sh
-make release-patch RELEASE_GROUP=tools
-make publish-check RELEASE_GROUP=tools
-make publish RELEASE_GROUP=tools
-make release-resume RELEASE_GROUP=tools VERSION=X.Y.Z
+make release-minor RELEASE_GROUP=build
+make publish-check RELEASE_GROUP=build
+make publish RELEASE_GROUP=build
+make release-resume RELEASE_GROUP=build VERSION=X.Y.Z
 ```
 
 These commands retain separate effect authorization and complete release gates.
-One repository-wide lock coordinates all groups. Tags and journal namespaces use
-`foundation-`, `tools-` or `testkit-` prefixes. Publication selects only the chosen
-group's public members; `PACKAGE` may narrow it but cannot infer a group or cross
-its boundary. The read-only workspace qualification still covers every public
-package and never uploads. Cargo owns publication dependency order.
+The standard runner, editor and one repository-wide lock serve every group.
+Tags and journals use the selected group prefix. Publication selects that group's
+public members; `PACKAGE` can narrow it, never infer or cross the group. Read-only
+archive qualification still covers all ten public packages. Cargo owns registry
+publication dependency order.
 
-At the split, published versions are Foundation 0.73.5 and Tools/Testkit 0.76.1. No reset,
-new baseline tag or publication is implied by this policy change. Pending notes
-are compatible patches because the contributor release interface changes while
-library consumer APIs and build requirements remain unchanged.
+Build and Text start at their existing published 0.73.6 version. Foundation stays
+0.73.6, Tools 0.77.0 and Testkit 0.78.0. No version reset, new baseline tag, release
+or upload is implied by the split. The independent pending 0.74 notes for these
+three former Foundation owners include the already-approved compiler-floor change;
+future Build-only changes need not advance Foundation or Text.
 
-[Joint integration history through 0.76.1](../../releases/integration/CHANGELOG.md)
-remains frozen once, with original dates, contents and release scope. Both new
-ledgers link that published baseline. [Earlier coordinated history](../../releases/history.md)
-also remains intact. Root CHANGELOG.md indexes the three current ledgers.
+Published [Foundation history through 0.73.6](../../releases/foundation/CHANGELOG.md#0736---2026-11-01)
+retains its original seven-package scope once. New Build/Text ledgers link it.
+The [joint integration ledger](../../releases/integration/CHANGELOG.md),
+[earlier coordinated history](../../releases/history.md), imported Git histories
+and old tags remain untouched. Root CHANGELOG.md indexes the five current ledgers.
 
-The old `integration` selection is intentionally refused by the new policy.
-Existing `integration-*` tags, journals, receipts, partial-upload records and
-backups retain their original meaning. Never migrate or reinterpret them under
-this roster. Recover a specific old attempt with its recorded source, original
-adapter and destination in its preserved isolated checkout. An occupied lock is
-still an ownership/recovery condition, not permission to switch groups.
+Old `foundation-*` attempts may describe the original seven members. Never
+reinterpret or migrate their saved plans, receipts, partial uploads or tags under
+the current roster. Recover an old attempt with its recorded source and original
+adapter in the preserved isolated checkout. Source/group/payload checks refuse
+changed ownership; an occupied lock remains a recovery condition. The retired
+`integration` selector remains refused, while its original evidence is preserved.
 
-## Existing mechanics and focused qualification
+## Focused qualification
 
-The reviewed Shared snapshot and managed Build 0.73.0 metadata editor still own
-graph admission, selected edits and transactional preparation. No local renderer
-or parallel release runner is added. Each root member retains its full literal
-version and path. Unselected versions, ledgers and irrelevant minimums remain
-unchanged; a workspace qualification refresh alone is not a release requirement.
+The reviewed Shared snapshot and pinned Build metadata editor own admission,
+selected edits and rollback; this change adds no renderer or release runner.
+Every root catalog entry retains its literal version/path and one owning block.
 
-`bash scripts/release/test-adapter.sh` exercises all three plans, rollback,
-wrong-group receipts (including equal Tools/Testkit numbers), exact payloads,
-unselected metadata and source/commit custody. Setup and full gates are simulated;
-this fixture cannot release or publish. The publication and Make fixtures verify
-exact selection, rejection of the retired group and cross-group refusals.
+`bash scripts/release/test-adapter.sh` exercises all five plans, rollback,
+source/commit custody, unselected versions/requirements/ledgers and wrong-group
+receipts, including equal-version Foundation/Build/Text owners. Setup and full
+gates are substituted; the fixture cannot release or publish. Publication and
+Make fixtures check exact selection and cross-group refusals.
 
 The opt-in `scripts/release/test-integration-cohort.sh EDITOR [tools|testkit]`
-qualifies one disposable next minor at a time against the actual published
-Foundation and unchanged integration peer. Without a group it checks both.
-Current and Rust 1.91 callers run against source and real normalized archives.
-The certificate type mismatch control uses the actual old Platform identity and
-must fail compilation. Fixture preparation never edits real package versions or
-uploads. Native macOS execution remains distinct from local Linux evidence.
+qualifies source and normalized archives against independently selected published
+Foundation and Build versions and the unchanged integration peer, using the pinned
+compiler. Its old certificate identity control must still fail compilation.
+Native macOS execution remains separate from local metadata/fixture evidence.
 
-[Prior design and qualification](https://github.com/dragginzgame/ic-tooling/blob/722c88c22f738c75f74546ba01bf1e8a0e461661/docs/design/release-groups.md)
-preserves the original Foundation/integration split and historical recovery paths.
+[The original three-group design](https://github.com/dragginzgame/ic-tooling/blob/405b27ad13d95962d729b5e756634ee866c760a8/docs/design/release-groups.md)
+records the earlier split and its historical recovery coordinates.

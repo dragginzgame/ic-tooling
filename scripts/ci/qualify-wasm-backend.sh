@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml
 set -euo pipefail
 # Manual qualification against caller-selected prepared tools and Platform vectors.
 # No installation, publication, sibling edit or application profile change.
@@ -7,6 +8,9 @@ set -euo pipefail
     exit 2
 }
 root="$(cd "$(dirname "$0")/../.." && pwd -P)"
+toolchain="$("${YQ:-yq}" -r -p toml -o yaml '.toolchain.channel' "$root/rust-toolchain.toml")"
+export RUSTUP_TOOLCHAIN="$toolchain"
+bash "$root/scripts/ci/check-rust-toolchain.sh" "$root"
 platform="$(cd "$1" && pwd -P)"
 mkdir -p "$2"
 evidence="$(cd "$2" && pwd -P)"
@@ -74,23 +78,23 @@ ic-testkit = "=0.76.1"
 MANIFEST
 export RUSTUP_AUTO_INSTALL=0 CARGO_NET_OFFLINE=true
 for package in probe driver vectors; do
-    cargo +1.91.0 generate-lockfile --offline --manifest-path "$evidence/$package/Cargo.toml" \
+    cargo generate-lockfile --offline --manifest-path "$evidence/$package/Cargo.toml" \
         > "$evidence/$package-lock.log" 2>&1
-    cargo +1.91.0 metadata --frozen --format-version 1 --manifest-path "$evidence/$package/Cargo.toml" \
+    cargo metadata --frozen --format-version 1 --manifest-path "$evidence/$package/Cargo.toml" \
         > "$evidence/$package-metadata.json" 2> "$evidence/$package-metadata.log"
 done
 # Exact supplier admission belongs to this crypto-specific fixture, not Build.
 jq -ne --slurpfile graph "$evidence/probe-metadata.json" \
     'all([["ic-platform", "0.16.0"], ["k256", "0.14.0"], ["crypto-bigint", "0.7.10"]][];
     . as $required | [$graph[0].packages[] | select(.name == $required[0]) | .version] == [$required[1]])' > /dev/null
-CARGO_TARGET_DIR="$host_target" cargo +1.91.0 clippy --frozen \
+CARGO_TARGET_DIR="$host_target" cargo clippy --frozen \
     --manifest-path "$evidence/driver/Cargo.toml" -- -D warnings > "$evidence/driver-clippy.log" 2>&1
 for package in driver vectors; do
-    CARGO_TARGET_DIR="$host_target" cargo +1.91.0 build --frozen \
+    CARGO_TARGET_DIR="$host_target" cargo build --frozen \
         --manifest-path "$evidence/$package/Cargo.toml" > "$evidence/$package-build.log" 2>&1
 done
-CARGO="$(rustup which --toolchain 1.91.0 cargo)" RUSTC="$(rustup which --toolchain 1.91.0 rustc)" \
-    RUSTUP_TOOLCHAIN=1.91.0 "$host_target/debug/tooling-qualify-wasm-recipe" \
+CARGO="$(rustup which cargo)" RUSTC="$(rustup which rustc)" \
+    "$host_target/debug/tooling-qualify-wasm-recipe" \
     --output "$evidence" --wrapper "$wrapper" --optimizer "$optimizer" > "$evidence/build-recipes.log" 2>&1
 POCKET_IC_BIN="$server" "$host_target/debug/tooling-ecdsa-vectors" \
     64 "$evidence/cpubits-64.optimized.wasm" 32 "$evidence/cpubits-32.optimized.wasm" \

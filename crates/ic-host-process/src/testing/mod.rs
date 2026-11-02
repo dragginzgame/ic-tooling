@@ -103,3 +103,49 @@ pub fn write_executable_script(path: &Path, contents: impl AsRef<[u8]>) -> io::R
 
 #[cfg(all(test, unix))]
 mod tests;
+
+/// Re-execute the current libtest case with bounded output and child custody.
+///
+/// Returns true in the parent after the isolated case passes, and false in the
+/// selected child. The caller selects a unique environment guard, context and
+/// process limits. Re-execution isolates descriptor-owning parallel test threads;
+/// it does not change the test's fixture or admission policy.
+///
+/// # Panics
+/// Panics outside a named test thread or if spawning, capture, cleanup or the
+/// child test fails. Captured output is bounded by the supplied limits.
+#[cfg(unix)]
+#[must_use]
+pub fn run_isolated(driver: &str, context: &str, limits: crate::tool::OutputLimits) -> bool {
+    let thread = std::thread::current();
+    let name = thread.name().expect("libtest names each test thread");
+    if std::env::var(driver).as_deref() == Ok(name) {
+        return false;
+    }
+    let mut child = OwnedChild::spawn(
+        Command::new(std::env::current_exe().expect("current test executable"))
+            .args([
+                "--exact",
+                name,
+                "--include-ignored",
+                "--test-threads=1",
+                "--nocapture",
+            ])
+            .env(driver, name)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped()),
+        CleanupPolicy::KillAndWait,
+    )
+    .expect("spawn isolated test");
+    crate::tool::communicate_child(
+        &mut child,
+        None,
+        limits,
+        crate::tool::SuccessfulExit::Cleanup,
+        &mut || false,
+    )
+    .and_then(crate::tool::CompletedExecution::require_success)
+    .unwrap_or_else(|error| panic!("{}", crate::tool::format_failure_evidence(context, &error)));
+    true
+}

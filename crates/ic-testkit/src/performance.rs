@@ -1,25 +1,15 @@
 //! Canister-side benchmark marker emission using IC execution counters.
 
-use crate::benchmark::{
-    BenchmarkCounters, BenchmarkMarkerError, DEFAULT_PREFIX, format_marker, try_format_marker,
-};
-
+use crate::benchmark::{BenchmarkCounters, BenchmarkMarkerError, DEFAULT_PREFIX, format_marker};
 const WASM_PAGE_BYTES: u128 = 65_536;
 
-/// Print one `ICTK` marker for `label` using the current counters.
-///
-/// Pair labels ending in `:start` and `:end` for host-side span analysis.
-pub fn measure(label: &str) {
-    ic_platform::ic0::debug_print(format_marker(DEFAULT_PREFIX, label, counters()).as_bytes());
-}
-
-/// Admit a start/end label, then print one complete `ICTK` marker.
+/// Admit a start/end label, then print one complete benchmark marker.
 ///
 /// # Errors
 /// Returns the marker grammar refusal before printing any bytes.
-pub fn try_measure(label: &str) -> Result<(), BenchmarkMarkerError> {
-    let marker = try_format_marker(DEFAULT_PREFIX, label, counters())?;
-    ic_platform::ic0::debug_print(marker.as_bytes());
+pub fn measure(label: &str) -> Result<(), BenchmarkMarkerError> {
+    let marker = format_marker(DEFAULT_PREFIX, label, counters())?;
+    ic_platform_runtime::ic0::debug_print(marker.as_bytes());
     Ok(())
 }
 
@@ -27,9 +17,9 @@ pub fn try_measure(label: &str) -> Result<(), BenchmarkMarkerError> {
 #[must_use]
 pub fn counters() -> BenchmarkCounters {
     BenchmarkCounters {
-        instructions: u128::from(ic_platform::ic0::performance_counter(1)),
+        instructions: u128::from(ic_platform_runtime::ic0::performance_counter(1)),
         heap_bytes: wasm_memory_size_bytes(),
-        memory_bytes: u128::from(ic_platform::ic0::stable64_size()) * WASM_PAGE_BYTES,
+        memory_bytes: u128::from(ic_platform_runtime::ic0::stable64_size()) * WASM_PAGE_BYTES,
     }
 }
 

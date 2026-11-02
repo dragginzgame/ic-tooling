@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use ic_platform::pocket_ic::{PocketIc, RejectResponse};
-use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 use super::{PocketIcCallFailure, transport};
 
@@ -361,7 +361,7 @@ mod tests {
             cleanup_captured_snapshots,
         };
         use ic_platform::pocket_ic::{ErrorCode, RejectCode, RejectResponse};
-        use ic_platform::principal::ExternalPrincipal as Principal;
+        use ic_platform_types::principal::ExternalPrincipal as Principal;
 
         let ids = [1, 2, 3, 4].map(|byte| Principal::from_slice(&[byte]));
         let sender = Some(Principal::anonymous());
