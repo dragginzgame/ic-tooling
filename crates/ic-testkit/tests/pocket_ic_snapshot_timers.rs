@@ -8,9 +8,9 @@ use ic_platform::{
         CanisterTimer, ReadCanisterSnapshotMetadataArgs, ReadCanisterSnapshotMetadataResult,
         SnapshotSource,
     },
-    pocket_ic::{CanisterSettings, PocketIc, common::rest::RawEffectivePrincipal},
     principal::ExternalPrincipal as Principal,
 };
+use ic_platform_pocket_ic::{CanisterSettings, PocketIc, common::rest::RawEffectivePrincipal};
 use ic_testkit::pic::{CachedPocketIcBaseline, CanisterSnapshotTarget, SnapshotRestoreFunding};
 use std::time::Duration;
 

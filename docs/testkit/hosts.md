@@ -42,11 +42,11 @@ not leak into the published Wasm library. The maintained feature contracts are:
 | --- | --- | --- |
 | Native `ic-testkit-native` | All features | Only its own package identity; no normal/build dependencies |
 | Wasm `ic-testkit-native` | All features | No exported APIs or normal/build dependencies |
-| Native `ic-testkit` | Default | PocketIC/Candid allowed; no Wire, executor, Build, Host Text, Agent, parser or full CDK |
+| Native `ic-testkit` | Default | Direct PocketIC client; separate Platform Candid/management adapters without its `pocket-ic` feature; no Wire, executor, Build, Host Text, Agent, parser or full CDK |
 | Native `ic-testkit` | All features (`cli,wire,held-reply-fixtures`) | One Wire identity; otherwise the same native exclusions |
-| Native `ic-testkit-dev` | All features | One Build, Platform, PocketIC and each Host package identity; tooling is intentional |
-| Wasm `ic-testkit` | All features | One Platform/ic0 identity; no Metrics, Candid, PocketIC, Wire, Host, Build, Agent, parser, full CDK or executor |
-| Wasm `ic-testkit-perf-probe` | Default | One Platform/Wire/executor/ic0 identity; no Candid, PocketIC, Host, Build, Agent, parser or full CDK |
+| Native `ic-testkit-dev` | All features | One Build, Platform, direct PocketIC client and each Host package identity; no Platform `pocket-ic` feature; tooling is intentional |
+| Wasm `ic-testkit` | All features | One Types/Runtime identity with IC0; no facade, Metrics, Candid, PocketIC, Wire, Host, Build, Agent, parser, full CDK or executor |
+| Wasm `ic-testkit-perf-probe` | Default | One Types/Runtime/Wire identity with executor and IC0; no facade, Candid, PocketIC, Host, Build, Agent, parser or full CDK |
 
 Platform's private entrypoint macros are intentional in the probe graph. The
 library's Wasm graph must also omit those macros. Check each selected native host
@@ -102,12 +102,15 @@ typed Host cause and I/O error classification; incomplete output is never decode
 
 ### Published Platform boundary
 
-Testkit selects registry `ic-platform` 0.5.0 with no default features. Its native
-target enables `candid` and `pocket-ic`; the Wasm library selects `ic0` for marker logging,
-execution counters and stable-page counts alongside the unconditional external principal identity. Candid, CDK
-and host parsing stay out of that graph. The published library selects no executor,
-certification, Agent, management DTO or `candid-parser` feature. Native PocketIC and other dependencies still
-require transitive Candid; removing direct declarations does not remove that code.
+Testkit selects `ic-platform-pocket-ic` 0.18 directly for native simulator APIs.
+The separate `ic-platform` 0.18 dependency enables `candid` and
+`management-canister-types`, without `pocket-ic`. The Wasm library instead selects
+`ic-platform-runtime` 0.18 for IC0 marker logging, execution counters and stable-page
+counts, alongside `ic-platform-types` 0.17 for external principal identity. It
+excludes the facade, native client, Candid and executor. Native PocketIC still
+requires transitive Candid; direct client adoption does not remove that code.
+
+The following decoder adoption records describe earlier releases.
 
 The published archive checksum is
 `071793369ed93c3a42dae9a19eedfa76856ca2d0b31f03de7167ae7905bdc4f4`,
@@ -137,11 +140,11 @@ runtime reject codes. Testkit's probe already supplies explicit Wire codecs;
 its PocketIC-facing reject codes and DTOs retain the original external identities.
 The signature features are not selected. No local replacement API is needed.
 
-Platform also maintains the native PocketIC client and client-owned DTOs; callers import
-its explicit module directly. Testkit retains
+The independent `ic-platform-pocket-ic` package owns the native client and
+client-owned DTOs; callers import `ic_platform_pocket_ic` directly. Testkit retains
 provisioning, server admission, startup/teardown, transport classification and
-fixture policy. Platform 0.17's client preserves the PocketIC 16.1 protocol and
-management DTOs 0.8.0; the server remains pinned to 16.1.0. The library's Wasm
+fixture policy. Client 0.18 preserves the PocketIC 16.1 protocol; the server
+remains pinned to 16.1.0. The library's Wasm
 normal/build graph must exclude the native client implementation, Candid, CDK
 and host transport; the test probe's runtime graph is a separate intentional selection.
 
@@ -149,7 +152,7 @@ The 0.64 hard cut removes Testkit's forwarding module and convenience aliases.
 Platform supplies placement, effective-principal, message-ID, HTTP gateway and
 HTTP response identities directly. The former server-free tests of Testkit's
 forwarding surface are retired; maintained fixture/lifecycle callers now compile
-against Platform directly, preserving PocketIC's management 0.8 identity.
+against the client owner directly, preserving its management DTO identity.
 Platform's separate management feature selects a different upstream DTO family;
 those identities are not interchangeable. Compiling local callers does not
 qualify the siblings' installed-IC journeys or native macOS execution.

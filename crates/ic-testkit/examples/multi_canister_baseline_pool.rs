@@ -8,8 +8,8 @@
 
 use std::{error::Error, fmt, num::NonZeroUsize, time::Duration};
 
-use ic_platform::pocket_ic::PocketIcBuilder;
 use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform_pocket_ic::PocketIcBuilder;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePreparationStage, CachedPocketIcBaseline,
     CachedPocketIcBaselinePool, CanisterSnapshotTarget, ControllerSnapshotError,
@@ -29,7 +29,7 @@ struct TopologyMetadata {
 }
 
 fn lifecycle(
-    call: impl FnOnce() -> Result<(), ic_platform::pocket_ic::RejectResponse>,
+    call: impl FnOnce() -> Result<(), ic_platform_pocket_ic::RejectResponse>,
 ) -> Result<(), RecipeError> {
     ic_testkit::pic::try_pocket_ic_call(call).map_err(RecipeError::Lifecycle)
 }

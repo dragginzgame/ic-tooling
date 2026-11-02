@@ -71,6 +71,27 @@ mod transaction_batch;
 mod wasm_batch;
 mod wasm_cache;
 
+/// Shared accounting for successful cache acquisitions; failures stay in reports.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct CacheOutcomeCounts {
+    built: usize,
+    reused: usize,
+}
+
+impl CacheOutcomeCounts {
+    const fn record(&mut self, reused: bool) {
+        if reused {
+            self.reused += 1;
+        } else {
+            self.built += 1;
+        }
+    }
+
+    const fn succeeded(self) -> usize {
+        self.built + self.reused
+    }
+}
+
 fn sum_optional_durations(
     left: Option<std::time::Duration>,
     right: Option<std::time::Duration>,

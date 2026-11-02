@@ -1,3 +1,4 @@
+use super::CacheOutcomeCounts;
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
 
 use std::time::{Duration, Instant};
@@ -75,8 +76,7 @@ pub enum ArtifactCacheBatchFailure<E> {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct ArtifactCacheBatchMetrics {
     entries: usize,
-    built: usize,
-    reused: usize,
+    counts: CacheOutcomeCounts,
     successful_timings: ArtifactCacheTimings,
     total: Duration,
 }
@@ -158,11 +158,7 @@ impl<E> ArtifactCacheBatchReport<E> {
             .iter()
             .filter_map(ArtifactCacheBatchEntry::outcome)
         {
-            if outcome.is_reused() {
-                metrics.reused += 1;
-            } else {
-                metrics.built += 1;
-            }
+            metrics.counts.record(outcome.is_reused());
             metrics.successful_timings = metrics
                 .successful_timings
                 .saturating_add(outcome.record().timings());
@@ -292,7 +288,7 @@ impl ArtifactCacheBatchMetrics {
     /// Number of successful specifications.
     #[must_use]
     pub const fn succeeded(self) -> usize {
-        self.built + self.reused
+        self.counts.succeeded()
     }
 
     /// Number of failed specifications.
@@ -304,13 +300,13 @@ impl ArtifactCacheBatchMetrics {
     /// Number of newly built artifact sets.
     #[must_use]
     pub const fn built(self) -> usize {
-        self.built
+        self.counts.built
     }
 
     /// Number of artifact sets reused from the exact cache.
     #[must_use]
     pub const fn reused(self) -> usize {
-        self.reused
+        self.counts.reused
     }
 
     /// Sum of timings from successful acquisitions.

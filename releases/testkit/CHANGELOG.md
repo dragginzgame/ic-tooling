@@ -6,6 +6,25 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.80.2]
+
+### 🧹 Cleanup
+
+- Select `ic-platform-pocket-ic` directly for native simulator operations, so
+  client adoption can follow its independent release group. Keep Platform for
+  Candid and management adapters without its `pocket-ic` feature. Existing client
+  and DTO identities and the PocketIC 16.1.0 server pin are unchanged.
+- Keep server custody and final admission together during blocking and async
+  instance construction, preserving cancellation cleanup and the original error
+  evidence. Separate benchmark input/provenance preparation from run scheduling.
+- Reuse Wasm fixture preparation without merging the distinct held-reply and
+  cycle-refund programs. Generate the published integration consumer's manifest
+  and identity checks from one selection, retaining registry-only admission and
+  the facade's existing version exception.
+- Match held-reply releases against raw pending requests without allocating all
+  pending tokens. Preserve exact request/fixture identity, admission and transport
+  error precedence, and consumption before uncertain dispatch.
+
 ## [0.80.1] - 2026-11-02
 
 ### 🧹 Cleanup

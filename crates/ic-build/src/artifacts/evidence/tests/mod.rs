@@ -100,8 +100,11 @@ fn raw_input_changes_and_mismatched_recipe_fingerprints_refuse_evidence() {
     changed.extend_from_slice(b"\n# unrelated workspace edit\n");
     fs::write(root.join("Cargo.toml"), changed).unwrap();
     let current = resolve_cargo_build_inputs(&spec).unwrap();
-    assert_eq!(current.fingerprint(), evidence.fingerprint);
-    assert_ne!(current.validation_digest(), evidence.validation_digest);
+    assert_eq!(current.fingerprint(), evidence.identity.fingerprint);
+    assert_ne!(
+        current.validation_digest(),
+        evidence.identity.validation_digest
+    );
     assert!(evidence.verify_current().is_err());
     fs::write(root.join("Cargo.toml"), original).unwrap();
     fs::create_dir_all(root.join(".cargo")).unwrap();

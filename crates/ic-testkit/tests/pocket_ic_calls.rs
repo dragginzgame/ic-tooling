@@ -3,7 +3,7 @@
 
 mod support;
 
-use ic_platform::pocket_ic::{ErrorCode, RejectCode};
+use ic_platform_pocket_ic::{ErrorCode, RejectCode};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{PocketIcCallFailure, WireCallError, WireCallSpec, query_wire, update_wire};
 use ic_wire::Limits;

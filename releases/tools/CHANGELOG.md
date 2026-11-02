@@ -4,6 +4,14 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.78.1]
+
+### 🧹 Cleanup
+
+- Select canonical Types directly for registry principals. Registry-only native
+  and Wasm consumers no longer need the Platform facade; public Principal
+  identity and the existing protocol and feature boundaries are unchanged.
+
 ## [0.78.0] - 2026-11-02
 
 ### ⚠️ Breaking

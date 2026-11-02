@@ -6,6 +6,20 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.74.1]
+
+### 🧹 Cleanup
+
+- Keep Wasm progress and shared-target maintenance with their private owners,
+  and use one input-identity comparison across cache acquisition, transactions
+  and retained evidence. Preserve mutation checks, lock order, failure attribution
+  and public receipts.
+- Share successful batch outcome counting while retaining separate artifact and
+  Wasm reports. Build fixtures now declare their protocol output and script hooks
+  directly, avoiding edits tied to the generated shell script's layout.
+- Derive Wasm stamp admission length from its encoder so cache reads and writes
+  follow the same format.
+
 ## [0.74.0] - 2026-11-02
 
 ### ⚠️ Breaking

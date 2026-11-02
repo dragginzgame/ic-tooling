@@ -91,9 +91,7 @@ fn install_probe() -> StandaloneCanisterFixture {
     StandaloneCanisterFixture::try_install(
         ic_testkit::pic::PocketIcStartupConfig::from_env(std::time::Duration::from_secs(30))
             .expect("configure prepared PocketIC")
-            .build_instance(
-                ic_platform::pocket_ic::PocketIcBuilder::new().with_application_subnet(),
-            )
+            .build_instance(ic_platform_pocket_ic::PocketIcBuilder::new().with_application_subnet())
             .expect("construct explicitly configured test instance"),
         InstallSpec {
             wasm,

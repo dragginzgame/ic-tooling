@@ -3,18 +3,13 @@
 
 mod support;
 
-use ic_host_artifacts::{
-    wasm::validate,
-    wasm_text::{CompileLimits, compile},
-};
-use ic_platform::{
-    pocket_ic::{PocketIc, PocketIcBuilder},
-    principal::ExternalPrincipal as Principal,
-};
+use ic_host_artifacts::wasm::validate;
+use ic_platform_pocket_ic::{PocketIc, PocketIcBuilder};
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::fixtures::{
     RawReplyLimits, RawReplyMethod, ReplyMode, cycle_reply_canister, held::HeldReplyFixture,
 };
-use std::{fmt::Write, time::Duration};
+use std::time::Duration;
 
 const ATTACHED: u128 = 10_000;
 const BARRIER_CYCLES: u128 = 50_000_000_000;
@@ -285,10 +280,7 @@ fn assert_result(result: &[u8], refunded: u128, rejected: bool, reply: &[u8]) {
 
 fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
     let consumer = funded(pic);
-    let mut principal = String::new();
-    for byte in provider.as_slice() {
-        write!(principal, "\\{byte:02x}").unwrap();
-    }
+    let principal = support::wat_bytes(provider.as_slice());
     // The test transport returns IC-observed refunded cycles, rejection code and
     // exact provider bytes. No journal observation or application DTO is injected.
     let source = format!(
@@ -324,16 +316,7 @@ fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
  (if (call $perform) (then unreachable))))"#,
         length = provider.as_slice().len()
     );
-    let wasm = compile(
-        &source,
-        CompileLimits {
-            source_bytes: source.len(),
-            module_bytes: 10_000,
-        },
-    )
-    .unwrap();
-    validate(&wasm, 10_000).unwrap();
-    pic.install_canister(consumer, wasm, vec![], None);
+    support::install_wat(pic, consumer, &source, 10_000);
     consumer
 }
 

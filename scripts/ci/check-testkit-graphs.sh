@@ -15,7 +15,8 @@ policy=(--consumer "$consumer" --require ic-platform-types=1 --forbid ic-metrics
     --forbid ic-agent --forbid candid_parser --forbid ic0 --forbid pocket-ic --forbid-pattern '^ic-cdk')
 runtime_policy=("${policy[@]}")
 policy+=(--forbid ic-platform-runtime-guard)
-native_policy=("${policy[@]}" --require ic-platform=1 --require ic-platform-pocket-ic=1 --forbid ic-platform-runtime)
+native_policy=("${policy[@]}" --require ic-platform=1 --require ic-platform-pocket-ic=1
+    --forbid-feature ic-platform/pocket-ic --forbid ic-platform-runtime)
 
 perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --package ic-testkit-native --target "$host" --all-features \
@@ -35,6 +36,7 @@ perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
 perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --package ic-testkit-dev --target "$host" --all-features \
     --require ic-build=1 --require ic-platform=1 --require ic-platform-pocket-ic=1 \
+    --forbid-feature ic-platform/pocket-ic \
     --forbid pocket-ic --forbid ic-metrics --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
     --require ic-host-artifacts=1 --require ic-host-fs=1 \
     --require ic-host-process=1 --require ic-host-text=1

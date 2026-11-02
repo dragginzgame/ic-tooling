@@ -1,13 +1,13 @@
 //! Interpret Registry canister-range shard keys and explicit interval bounds.
 
 use super::proto::{CanisterId, RoutingTable};
-use ic_platform::Principal;
+use ic_platform_types::Principal;
 
 /// Decode one nonempty lowercase-hex key suffix into a routable canister principal.
 ///
 /// The caller supplies the prefix and owns namespace selection and Registry trust.
-/// Returns Platform's owned principal. Select Platform's `principal-external`
-/// feature to convert explicitly to `ic_platform::principal::ExternalPrincipal`
+/// Returns Types' owned principal. Select Types' `principal-external`
+/// feature to convert explicitly to `ic_platform_types::principal::ExternalPrincipal`
 /// for external SDK calls.
 /// # Errors
 /// Refuses malformed suffixes and non-routable principal encodings.

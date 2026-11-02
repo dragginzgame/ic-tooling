@@ -1,4 +1,4 @@
-use ic_platform::pocket_ic::PocketIc;
+use ic_platform_pocket_ic::PocketIc;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 use super::{CanisterInstallExt, InstallSpec, PocketIcInstance, StandaloneCanisterInstallError};

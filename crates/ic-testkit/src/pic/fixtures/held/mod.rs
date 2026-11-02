@@ -14,9 +14,11 @@ use ic_host_artifacts::wasm_text::{CompileError, CompileLimits, compile};
 use ic_platform::{
     candid::contract::encode_one,
     management_canister_types::{HttpMethod, HttpRequestArgs},
-    pocket_ic::{
-        PocketIc,
-        common::rest::{CanisterHttpReply, CanisterHttpResponse, MockCanisterHttpResponse},
+};
+use ic_platform_pocket_ic::{
+    PocketIc,
+    common::rest::{
+        CanisterHttpReply, CanisterHttpRequest, CanisterHttpResponse, MockCanisterHttpResponse,
     },
 };
 use ic_platform_types::principal::ExternalPrincipal as Principal;
@@ -200,15 +202,8 @@ impl HeldReplyFixture {
         Ok(try_pocket_ic_operation(|| pic.get_canister_http())?
             .into_iter()
             .filter_map(|request| {
-                let slot = request
-                    .url
-                    .strip_prefix(&self.prefix)?
-                    .parse::<usize>()
-                    .ok()?;
-                (slot < self.released.len()
-                    && !self.released[slot]
-                    && request.body == (slot as u64).to_le_bytes())
-                .then_some(HeldRequest {
+                let slot = self.pending_slot(&request)?;
+                Some(HeldRequest {
                     server: self.server.clone(),
                     instance: self.instance,
                     fixture: self.prefix.clone(),
@@ -230,7 +225,23 @@ impl HeldReplyFixture {
     /// # Errors
     /// Rejects unknown or consumed request tokens and preserves transport failures.
     pub fn release(&mut self, pic: &PocketIc, request: &HeldRequest) -> Result<(), HeldReplyError> {
-        if !self.pending(pic)?.contains(request) {
+        self.admit(pic)?;
+        // Observe the server before rejecting a token, retaining admission and
+        // transport error precedence without constructing every pending token.
+        let pending = try_pocket_ic_operation(|| pic.get_canister_http())?;
+        let owner = (self.server.as_str(), self.instance, self.prefix.as_str());
+        let requested_owner = (
+            request.server.as_str(),
+            request.instance,
+            request.fixture.as_str(),
+        );
+        if requested_owner != owner
+            || !pending.iter().any(|observed| {
+                self.pending_slot(observed) == Some(request.slot)
+                    && observed.subnet_id == request.subnet
+                    && observed.request_id == request.request
+            })
+        {
             return Err(HeldReplyError::UnknownRequest);
         }
         self.released[request.slot] = true;
@@ -247,6 +258,18 @@ impl HeldReplyFixture {
             });
         })?;
         Ok(())
+    }
+
+    fn pending_slot(&self, request: &CanisterHttpRequest) -> Option<usize> {
+        let slot = request
+            .url
+            .strip_prefix(&self.prefix)?
+            .parse::<usize>()
+            .ok()?;
+        (slot < self.released.len()
+            && !self.released[slot]
+            && request.body == (slot as u64).to_le_bytes())
+        .then_some(slot)
     }
 
     fn admit(&self, pic: &PocketIc) -> Result<(), HeldReplyError> {

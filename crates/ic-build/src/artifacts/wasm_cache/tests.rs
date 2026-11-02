@@ -42,7 +42,7 @@ use std::{
 };
 
 #[cfg(unix)]
-use crate::artifacts::test_support::fake_wasm_build_spec;
+use crate::artifacts::test_support::{FakeWasmCargo, fake_wasm_build_spec, write_fake_wasm_cargo};
 #[cfg(unix)]
 use std::{
     fs::FileTimes,
@@ -66,11 +66,14 @@ fn outcome_facts_are_retained_without_additional_identity_probes() {
     let (root, spec) = fake_wasm_build_spec("outcome-facts");
     let cargo = root.join("cargo.sh");
     let log = root.join("cargo-invocations");
-    let script = fs::read_to_string(&cargo).unwrap().replace(
-        "set -eu\n",
-        &format!("set -eu\nprintf '%s\\n' \"$1\" >> '{}'\n", log.display()),
+    write_fake_wasm_cargo(
+        &root,
+        &root,
+        FakeWasmCargo {
+            before_dispatch: &format!("printf '%s\\n' \"$1\" >> '{}'", log.display()),
+            ..FakeWasmCargo::default()
+        },
     );
-    write_executable_script(&cargo, script).unwrap();
     let cold = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
     let warm = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
     assert!(!cold.is_reused());
@@ -92,26 +95,19 @@ fn outcome_facts_are_retained_without_additional_identity_probes() {
 #[test]
 fn caller_selected_environment_reaches_build_and_preserves_cache_identity() {
     let (root, spec) = fake_wasm_build_spec("merged-environment");
-    let wrapper = root.join("cargo.sh");
-    let producer = root.join("producer.sh");
-    fs::rename(&wrapper, &producer).unwrap();
-    let quoted_producer = format!("'{}'", producer.to_string_lossy().replace('\'', "'\"'\"'"));
-    write_executable_script(
-        &wrapper,
-        format!(
-            r#"#!/bin/sh
-set -eu
-if [ "$1" = build ]; then
+    write_fake_wasm_cargo(
+        &root,
+        &root,
+        FakeWasmCargo {
+            before_build: r#"
     [ "$LEFT" = 'left value' ]
     [ "$RIGHT" = 'right value' ]
     [ "$DUP" = 'last value' ]
     printf '%s\n' "$LEFT" "$RIGHT" "$DUP" > merged-environment
-fi
-exec {quoted_producer} "$@"
-"#
-        ),
-    )
-    .expect("write environment-checking Cargo wrapper");
+"#,
+            ..FakeWasmCargo::default()
+        },
+    );
     let mut selected =
         crate::testing::cargo::environment_with([("LEFT", "left value"), ("DUP", "first value")]);
     selected.extend([
@@ -667,16 +663,7 @@ fn relative_exact_target_is_shared_by_cargo_and_cache_operations() {
     .expect("move workspace manifest");
     fs::rename(root.join("fixture"), spec.workspace_root.join("fixture"))
         .expect("move workspace package");
-    let wrapper = root.join("cargo.sh");
-    let script = fs::read_to_string(&wrapper).unwrap();
-    fs::write(
-        &wrapper,
-        script.replace(
-            root.to_str().unwrap(),
-            spec.workspace_root.to_str().unwrap(),
-        ),
-    )
-    .unwrap();
+    write_fake_wasm_cargo(&root, &spec.workspace_root, FakeWasmCargo::default());
     // Reach an owned /tmp target using a relative path without changing the
     // process-wide working directory or creating test output in the checkout.
     spec.target_dir = caller_dir
@@ -991,11 +978,14 @@ fn public_cargo_input_snapshot_detects_local_source_changes() {
 fn observed_facts_retain_probe_bytes_without_io_and_redact_debug() {
     let (root, spec) = fake_wasm_build_spec("observed-build-facts");
     let cargo = PathBuf::from(&spec.cargo_program);
-    let script = fs::read_to_string(&cargo).unwrap().replace(
-        "set -eu\n",
-        "set -eu\nif [ \"$1\" = --version ]; then printf 'cargo-observed\\n'; printf 'cargo-stderr\\n' >&2; exit 0; fi\n",
+    write_fake_wasm_cargo(
+        &root,
+        &root,
+        FakeWasmCargo {
+            before_dispatch: "if [ \"$1\" = --version ]; then printf 'cargo-observed\\n'; printf 'cargo-stderr\\n' >&2; exit 0; fi",
+            ..FakeWasmCargo::default()
+        },
     );
-    write_executable_script(&cargo, script).unwrap();
     let compiler = root.join("compiler-identity");
     write_executable_script(
         &compiler,
@@ -2861,7 +2851,13 @@ fn failed_build_removes_its_incomplete_fingerprint_directory() {
     );
 
     assert!(matches!(result, Err(WasmBuildError::InvalidSpec { .. })));
-    assert!(progress.failure_timings.cleanup().is_some());
+    assert!(
+        progress
+            .failure_details(Duration::ZERO)
+            .timings()
+            .cleanup()
+            .is_some()
+    );
     assert!(!fingerprint_dir.exists());
     fs::remove_dir_all(target_dir).expect("remove cleanup test directory");
 }
@@ -3713,36 +3709,36 @@ fn cargo_artifact_protocol_refuses_bad_evidence_after_child_completion() {
         "failed",
     ] {
         let (root, mut spec) = fake_wasm_build_spec(&format!("cargo-message-{case}"));
-        let resolved = resolve_cargo_build_inputs(&spec).unwrap();
-        let wrapper = root.join("cargo.sh");
-        let original = fs::read_to_string(&wrapper).unwrap();
-        let record = original
-            .lines()
-            .find(|line| line.contains("compiler-artifact"))
-            .unwrap();
-        let changed = match case {
-            "missing" => original.replace(record, ""),
-            "package" => original.replace(
-                &resolved.wasm_outputs().unwrap().targets[0].package_id,
-                "unrelated-package",
-            ),
-            "kind" => original.replace("\"kind\":[\"cdylib\"]", "\"kind\":[\"lib\"]"),
-            "relative" => original.replace("'\"$target\"'", "relative"),
-            "duplicate" => original.replace(record, &format!("{record}\n{record}")),
-            "ambiguous" => original.replace("fixture.wasm\"]", "fixture.wasm\",\"/extra.wasm\"]"),
-            "no-wasm" => original.replace("fixture.wasm\"]", "fixture.rlib\"]"),
-            "crate-type" => {
-                original.replace("\"crate_types\":[\"cdylib\"]", "\"crate_types\":[\"lib\"]")
-            }
-            "malformed" => original.replace(record, "printf '%s\\n' '{invalid}'"),
-            _ => original.clone(),
+        let mut message = crate::testing::cargo::wasm_artifact_message(&root);
+        match case {
+            "package" => message["package_id"] = "unrelated-package".into(),
+            "kind" => message["target"]["kind"] = serde_json::json!(["lib"]),
+            "relative" => message["filenames"] = serde_json::json!(["relative/fixture.wasm"]),
+            "ambiguous" => message["filenames"]
+                .as_array_mut()
+                .unwrap()
+                .push("/extra.wasm".into()),
+            "no-wasm" => message["filenames"] = serde_json::json!(["@TARGET@/fixture.rlib"]),
+            "crate-type" => message["target"]["crate_types"] = serde_json::json!(["lib"]),
+            _ => {}
+        }
+        let record = crate::testing::cargo::artifact_message_script(&message, "target");
+        let records = match case {
+            "missing" => String::new(),
+            "duplicate" => format!("{record}{record}"),
+            "malformed" => "printf '%s\\n' '{invalid}'".to_owned(),
+            _ => record,
         };
-        let exit = if case == "failed" { 23 } else { 0 };
-        let changed = changed.replace(
-            "exit 0",
-            &format!("printf completed > completed\n    exit {exit}"),
+        write_fake_wasm_cargo(
+            &root,
+            &root,
+            FakeWasmCargo {
+                artifact_messages: Some(&records),
+                after_build: "printf completed > completed",
+                exit_status: if case == "failed" { 23 } else { 0 },
+                ..FakeWasmCargo::default()
+            },
         );
-        fs::write(&wrapper, changed).unwrap();
         if matches!(case, "oversized" | "failed") {
             spec = spec.with_cargo_message_bytes(8);
         }
@@ -3851,11 +3847,19 @@ fn separate_tool_phases_keep_aggregate_identity_timings() {
     progress.record_phase(WasmBuildPhase::CargoIdentity, Duration::from_secs(2));
     progress.record_phase(WasmBuildPhase::RustcIdentity, Duration::from_secs(3));
     assert_eq!(
-        progress.failure_timings.input_resolution().tool_identity(),
+        progress
+            .failure_details(Duration::ZERO)
+            .timings()
+            .input_resolution()
+            .tool_identity(),
         Duration::from_secs(5)
     );
     assert_eq!(
-        progress.failure_timings.input_resolution().total(),
+        progress
+            .failure_details(Duration::ZERO)
+            .timings()
+            .input_resolution()
+            .total(),
         Duration::from_secs(5)
     );
     assert_eq!(

@@ -101,6 +101,10 @@ pub fn write_nested_workspace_fixture(root: &Path) -> io::Result<()> {
 /// Panics if Cargo metadata fails, is malformed or omits the fixture's cdylib target.
 #[must_use]
 pub fn wasm_artifact_message_script(root: &Path, variable: &str) -> String {
+    artifact_message_script(&wasm_artifact_message(root), variable)
+}
+
+pub(crate) fn wasm_artifact_message(root: &Path) -> serde_json::Value {
     let output =
         std::process::Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
             .current_dir(root)
@@ -137,7 +141,7 @@ pub fn wasm_artifact_message_script(root: &Path, variable: &str) -> String {
                 .any(|kind| kind == "cdylib")
         })
         .unwrap();
-    let message = artifact_message(
+    artifact_message(
         package["id"].as_str().unwrap(),
         target,
         &[Path::new(
@@ -145,8 +149,10 @@ pub fn wasm_artifact_message_script(root: &Path, variable: &str) -> String {
         )],
         None,
     )
-    .to_string();
-    let quoted = format!("'{}'", message.replace('\'', "'\"'\"'"));
+}
+
+pub(crate) fn artifact_message_script(message: &serde_json::Value, variable: &str) -> String {
+    let quoted = format!("'{}'", message.to_string().replace('\'', "'\"'\"'"));
     let quoted = quoted.replace("@TARGET@", &format!("'\"${variable}\"'"));
     format!("printf '%s\\n' {quoted}\n")
 }

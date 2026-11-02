@@ -176,7 +176,8 @@ from default, certificate-only and interface-only normal/build graphs, including
 parser-free combination; all-feature tests retain the DID/Wasm comparison.
 Native CI includes these profiles. Only explicit `candid` selects Platform's parser;
 Agent and ledger evidence retain their required codec dependencies without it.
-Registry selects Platform principal types without the codec. `ic-interface` adds
+Registry selects `ic-platform-types` directly, without the facade or codec. Its
+native and Wasm graph policies retain one canonical Principal identity. `ic-interface` adds
 Host Artifacts and Wasm parsing. The standalone Wasm inspector
 retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.99.1
 and native Linux/macOS matrix as the existing libraries.
@@ -202,10 +203,12 @@ profiles use only Wire's core codec and do not select its optional metadata brid
 independent Types releases; incompatible Types changes still require explicit
 consumer and schema adoption.
 
-Native Testkit uses Platform's maintained `ic-platform-pocket-ic` 0.18 client
-through the existing `ic_platform::pocket_ic` imports. Its exposed client and
-client-owned DTO identities require callers to align on Platform 0.18; the
-registry `pocket-ic` package is excluded. Wasm graphs exclude the native client
+Native Testkit selects the independent `ic-platform-pocket-ic` 0.18 client
+directly, with imports from `ic_platform_pocket_ic`. Its exposed client and
+client-owned DTO identities require callers to align on the client package;
+the separate Platform dependency supplies Candid and management adapters without
+its `pocket-ic` feature. The registry `pocket-ic` package is excluded.
+Wasm graphs exclude the native client
 implementation as well. The installed PocketIC server remains pinned to 16.1.0.
 
 Testkit owns its native benchmark-average projection with checked integer

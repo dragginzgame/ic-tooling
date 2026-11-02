@@ -1,7 +1,7 @@
 //! Integration checks for pocket ic snapshots behavior.
 mod support;
 
-use ic_platform::pocket_ic::CanisterSettings;
+use ic_platform_pocket_ic::CanisterSettings;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     CanisterSnapshotTarget, ControllerSnapshotError, PocketIcCallFailure, PocketIcSnapshotExt,
@@ -214,7 +214,7 @@ fn failed_snapshot_set_capture_cleans_up_earlier_snapshots() {
     let remaining = pocket_ic
         .list_canister_snapshots(captured_first, None)
         .expect("list snapshots after rollback");
-    assert_eq!(remaining, [] as [ic_platform::pocket_ic::Snapshot; 0]);
+    assert_eq!(remaining, [] as [ic_platform_pocket_ic::Snapshot; 0]);
 }
 
 #[test]

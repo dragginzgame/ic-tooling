@@ -13,7 +13,7 @@ use std::{
     time::Duration,
 };
 
-use ic_platform::pocket_ic::PocketIcBuilder;
+use ic_platform_pocket_ic::PocketIcBuilder;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolError, BaselinePoolOutcome, BaselinePoolPreparationError,
@@ -65,7 +65,7 @@ struct TwoCanisterMetadata {
 }
 
 fn lifecycle(
-    call: impl FnOnce() -> Result<(), ic_platform::pocket_ic::RejectResponse>,
+    call: impl FnOnce() -> Result<(), ic_platform_pocket_ic::RejectResponse>,
 ) -> Result<(), TestRecipeError> {
     ic_testkit::pic::try_pocket_ic_call(call).map_err(TestRecipeError::Lifecycle)
 }

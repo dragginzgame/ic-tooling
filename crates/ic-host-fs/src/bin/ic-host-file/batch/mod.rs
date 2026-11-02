@@ -33,7 +33,7 @@ pub fn run(maximum: usize, max_list_bytes: usize, max_files: usize) -> Result<()
     output.try_reserve_exact(capacity)?;
     for path in paths {
         let identity = hash_file_no_follow(Path::new(OsStr::from_bytes(path)), maximum as u64)?;
-        output.extend_from_slice(identity.sha256.to_string().as_bytes());
+        output.extend_from_slice(&identity.sha256.hex_bytes());
         output.push(b'\t');
         output.extend_from_slice(path);
         output.push(0);

@@ -71,10 +71,6 @@ where
         self.checksum.record_file(file, relative)
     }
 
-    fn enter_directory(&mut self, _relative: &Path, _display: &Path) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
     fn leave_directory(
         &mut self,
         fd: &OwnedFd,

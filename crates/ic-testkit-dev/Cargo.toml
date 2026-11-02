@@ -14,7 +14,8 @@ ic-host-artifacts = { workspace = true }
 ic-host-fs = { workspace = true, features = ["temporary-file"] }
 ic-host-process = { workspace = true }
 ic-host-text = { workspace = true }
-ic-platform = { workspace = true, features = ["pocket-ic"] }
+ic-platform-pocket-ic = { workspace = true }
+ic-platform-types = { workspace = true, features = ["principal-external"] }
 ic-testkit = { workspace = true, features = ["wire"] }
 ic-testkit-perf-probe = { workspace = true }
 libc = { workspace = true }
@@ -28,7 +29,7 @@ rustix = { workspace = true, features = ["process"] }
 [dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }
 ic-host-tools = { workspace = true, features = ["registry", "certificate"] }
-ic-platform-types.workspace = true
+ic-platform = { workspace = true, features = ["principal", "certification"] }
 ic-wire.workspace = true
 
 [lints]

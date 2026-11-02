@@ -4,7 +4,7 @@ use std::{
 };
 
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
-use ic_platform::pocket_ic::{CanisterLogRecord, CanisterStatusResult, PocketIc};
+use ic_platform_pocket_ic::{CanisterLogRecord, CanisterStatusResult, PocketIc};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 use super::{
@@ -449,7 +449,7 @@ mod tests {
     use std::cell::Cell;
 
     use ic_host_artifacts::batch::BatchLabelError;
-    use ic_platform::pocket_ic::CanisterLogRecord;
+    use ic_platform_pocket_ic::CanisterLogRecord;
     use ic_platform_types::principal::ExternalPrincipal as Principal;
 
     use super::{

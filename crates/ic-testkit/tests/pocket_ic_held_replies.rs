@@ -3,20 +3,15 @@
 
 mod support;
 
-use ic_host_artifacts::{
-    wasm::validate,
-    wasm_text::{CompileLimits, compile},
-};
-use ic_platform::{
-    pocket_ic::{PocketIc, common::rest::RawMessageId},
-    principal::ExternalPrincipal as Principal,
-};
+use ic_host_artifacts::wasm::validate;
+use ic_platform_pocket_ic::{PocketIc, common::rest::RawMessageId};
+use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::fixtures::{
     RawReplyLimits, RawReplyMethod, ReplyMode,
     held::{HeldReplyError, HeldReplyFixture, HeldRequest},
 };
 
-use std::{fmt::Write, time::Duration};
+use std::time::Duration;
 
 #[test]
 fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
@@ -129,10 +124,7 @@ fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
     // Its independent update commits while provider replies remain held.
     let consumer = pic.create_canister();
     pic.add_cycles(consumer, 10_000_000_000_000);
-    let mut principal = String::new();
-    for byte in provider.as_slice() {
-        write!(principal, "\\{byte:02x}").unwrap();
-    }
+    let principal = support::wat_bytes(provider.as_slice());
     let source = format!(
         r#"(module
       (import "ic0" "call_new" (func $new (param i32 i32 i32 i32 i32 i32 i32 i32)))
@@ -161,16 +153,7 @@ fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
         (call $append (i32.const 100) (i32.const 4)) (call $reply)))"#,
         length = provider.as_slice().len()
     );
-    let wasm = compile(
-        &source,
-        CompileLimits {
-            source_bytes: source.len(),
-            module_bytes: 10_000,
-        },
-    )
-    .unwrap();
-    validate(&wasm, 10_000).unwrap();
-    pic.install_canister(consumer, wasm, vec![], None);
+    support::install_wat(pic, consumer, &source, 10_000);
 
     consumer
 }

@@ -1,4 +1,5 @@
 //! Retained Wasm acquisition and bounded evidence export for host consumers.
+use super::wasm_cache::CargoInputIdentity;
 use super::{
     CapturedArtifact, InputDigest, WasmBuildOutcome, WasmBuildRecord, WasmBuildSpec,
     build_wasm_canisters_cached, resolve_cargo_build_inputs,
@@ -16,9 +17,8 @@ use std::{fs, io, path::Path, process::Command};
 #[derive(Debug)]
 pub struct WasmBuildEvidence {
     spec: WasmBuildSpec,
-    fingerprint: InputDigest,
+    identity: CargoInputIdentity,
     input_digest: InputDigest,
-    validation_digest: InputDigest,
     build: WasmBuildOutcome,
 }
 
@@ -51,9 +51,8 @@ impl WasmBuildEvidence {
         let build = build_wasm_canisters_cached(&spec, spawn).map_err(io::Error::other)?;
         let evidence = Self {
             spec,
-            fingerprint: inputs.fingerprint(),
+            identity: inputs.identity(),
             input_digest: inputs.input_digest(),
-            validation_digest: inputs.validation_digest(),
             build,
         };
         evidence.verify_current()?;
@@ -76,9 +75,8 @@ impl WasmBuildEvidence {
     /// Returns input-observation errors or `InvalidData` for mismatched evidence.
     pub fn verify_current(&self) -> io::Result<()> {
         let current = resolve_cargo_build_inputs(&self.spec).map_err(io::Error::other)?;
-        if self.build.record().fingerprint() != self.fingerprint
-            || current.fingerprint() != self.fingerprint
-            || current.validation_digest() != self.validation_digest
+        if self.build.record().fingerprint() != self.identity.fingerprint
+            || self.identity.difference(current.identity()).is_some()
         {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -135,7 +133,7 @@ impl WasmBuildEvidence {
             wasm_sha256: identity.sha256.to_string(),
             build_fingerprint: record.fingerprint().to_string(),
             input_digest: self.input_digest.to_string(),
-            validation_digest: self.validation_digest.to_string(),
+            validation_digest: self.identity.validation_digest.to_string(),
         })
     }
 }

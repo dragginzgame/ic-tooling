@@ -69,9 +69,12 @@ check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features 
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features icp-ledger \
     --forbid-pattern "^(ic-platform|${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$" \
     --require prost=1
-check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features registry \
-    --forbid-pattern "^(${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|ic_principal|sha2)$" \
-    --require ic-platform=1 --require prost=1
+for registry_target in "$target" wasm32-unknown-unknown; do
+    check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features registry \
+        --target "$registry_target" \
+        --forbid-pattern "^(ic-platform|${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|ic_principal|sha2)$" \
+        --require ic-platform-types=1 --require prost=1
+done
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features ic-interface \
     --forbid-pattern "^(ic-platform|${codec}|ic-host-(fs|process|text)|${serialization}|wasm-encoder)$" \
     --require ic-host-artifacts=1 --require wasmparser=1

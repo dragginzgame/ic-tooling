@@ -9,8 +9,7 @@ use crate::cargo::{
     rustc_recipe::{POLICY_ENV, RECORD_DIRECTORY, RECORD_ENV, RustcRecipe},
     selection::{CargoSelection, is_normal_component},
 };
-use ic_host_fs::owned_directory::{OwnedDirectory, remove_path_if_present};
-use ic_host_fs::read::directory_logical_size;
+use ic_host_fs::owned_directory::OwnedDirectory;
 use ic_host_process::{
     child::{CleanupPolicy, OwnedChild},
     tool::{
@@ -29,26 +28,34 @@ use std::{
     sync::{
         Arc, RwLock,
         atomic::{AtomicUsize, Ordering},
-        mpsc::{self, RecvTimeoutError},
     },
-    thread,
     time::{Duration, Instant, SystemTime},
 };
 
+mod maintenance;
 mod outputs;
+mod progress;
 mod resolution;
 mod source_inputs;
+#[cfg(test)]
+use maintenance::integrated_shared_maintenance_result;
+use maintenance::{
+    SharedIncrementalTargetMaintenanceSchedule, maintain_shared_incremental_target_locked,
+    observe_shared_target, perform_configured_shared_incremental_target_maintenance,
+    perform_due_shared_incremental_target_maintenance,
+    schedule_shared_incremental_target_maintenance,
+};
 use outputs::{ResolvedWasmOutputs, WasmArtifactTarget};
+use progress::ProgressReporter;
 use resolution::{ParsedCargoMetadata, digest_resolved_local_inputs, resolve_local_inputs};
 
 use super::{
     cache_fs::{
         ArtifactCacheMaintenance, ArtifactCachePruneReport, CacheFsError, CacheRetentionLimits,
-        RetainedCacheEntry, cache_entry_last_used, cache_maintenance_due,
-        canonicalize_allow_missing, ensure_cache_directory_tag as ensure_cache_tag,
-        is_sha256_directory, lock_cache_file, lock_cache_file_with_wait_observer,
-        perform_scheduled_cache_maintenance, prune_direct_child_directories,
-        record_cache_entry_use as record_entry_use, record_cache_maintenance,
+        RetainedCacheEntry, canonicalize_allow_missing,
+        ensure_cache_directory_tag as ensure_cache_tag, is_sha256_directory, lock_cache_file,
+        lock_cache_file_with_wait_observer, perform_scheduled_cache_maintenance,
+        prune_direct_child_directories, record_cache_entry_use as record_entry_use,
         remove_unretained_entry,
     },
     digest::{
@@ -525,170 +532,6 @@ impl WasmBuildProgressConfig {
     #[must_use]
     pub const fn emits_cargo_output(self) -> bool {
         self.emit_cargo_output
-    }
-}
-
-struct ProgressObservation<'a> {
-    config: WasmBuildProgressConfig,
-    observer: &'a mut dyn FnMut(WasmBuildProgressEvent),
-    last_event: Instant,
-}
-
-struct ProgressReporter<'a> {
-    observation: Option<ProgressObservation<'a>>,
-    failure_phase: WasmBuildPhase,
-    failure_timings: WasmBuildFailureTimings,
-}
-
-impl<'a> ProgressReporter<'a> {
-    fn silent() -> Self {
-        Self {
-            observation: None,
-            failure_phase: WasmBuildPhase::Specification,
-            failure_timings: WasmBuildFailureTimings::default(),
-        }
-    }
-
-    fn new(
-        observation: Option<(
-            WasmBuildProgressConfig,
-            &'a mut dyn FnMut(WasmBuildProgressEvent),
-        )>,
-    ) -> Result<Self, WasmBuildError> {
-        let Some((config, observer)) = observation else {
-            return Ok(Self::silent());
-        };
-        if config.heartbeat_interval == Some(Duration::ZERO) {
-            return Err(WasmBuildError::InvalidSpec {
-                message: "Wasm build progress heartbeat interval must be greater than zero"
-                    .to_owned(),
-            });
-        }
-        Ok(Self {
-            observation: Some(ProgressObservation {
-                config,
-                observer,
-                last_event: Instant::now(),
-            }),
-            ..Self::silent()
-        })
-    }
-
-    fn emit(&mut self, event: WasmBuildProgressEvent) {
-        if let Some(observation) = &mut self.observation {
-            (observation.observer)(event);
-            observation.last_event = Instant::now();
-        }
-    }
-
-    fn heartbeat_due_in(&self) -> Option<Duration> {
-        self.observation.as_ref().and_then(|observation| {
-            observation
-                .config
-                .heartbeat_interval
-                .map(|interval| interval.saturating_sub(observation.last_event.elapsed()))
-        })
-    }
-
-    fn emit_heartbeat(&mut self, phase: WasmBuildPhase, elapsed: Duration) {
-        self.emit(WasmBuildProgressEvent::Heartbeat { phase, elapsed });
-    }
-
-    fn emit_heartbeat_if_due(&mut self, phase: WasmBuildPhase, elapsed: Duration) {
-        if self.heartbeat_due_in() == Some(Duration::ZERO) {
-            self.emit_heartbeat(phase, elapsed);
-        }
-    }
-
-    fn run_phase<T, F>(&mut self, phase: WasmBuildPhase, operation: F) -> T
-    where
-        T: Send,
-        F: FnOnce() -> T + Send,
-    {
-        let started = Instant::now();
-        self.begin_phase(phase);
-        let result = if self.heartbeat_due_in().is_none() {
-            operation()
-        } else {
-            thread::scope(|scope| {
-                let (finished, completion) = mpsc::sync_channel(0);
-                let worker = scope.spawn(move || {
-                    let result = operation();
-                    let _ = finished.send(());
-                    result
-                });
-                loop {
-                    let wait = self
-                        .heartbeat_due_in()
-                        .expect("observed phase must have a heartbeat interval");
-                    match completion.recv_timeout(wait) {
-                        Ok(()) | Err(RecvTimeoutError::Disconnected) => {
-                            return worker
-                                .join()
-                                .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
-                        }
-                        Err(RecvTimeoutError::Timeout) => {
-                            self.emit_heartbeat(phase, started.elapsed());
-                        }
-                    }
-                }
-            })
-        };
-        self.record_phase(phase, started.elapsed());
-        result
-    }
-
-    const fn begin_phase(&mut self, phase: WasmBuildPhase) {
-        self.failure_phase = phase;
-    }
-
-    fn record_phase(&mut self, phase: WasmBuildPhase, elapsed: Duration) {
-        self.failure_phase = phase;
-        let timings = &mut self.failure_timings;
-        // Select the authoritative timing slot once. Optional slots distinguish
-        // an unrun phase from one that completed with zero elapsed time.
-        let timing = match phase {
-            WasmBuildPhase::Specification => return,
-            WasmBuildPhase::ExactCacheCoordination => &mut timings.exact_cache_coordination,
-            WasmBuildPhase::CargoIdentity | WasmBuildPhase::RustcIdentity => {
-                &mut timings.input_resolution.tool_identity
-            }
-            WasmBuildPhase::CargoMetadata => &mut timings.input_resolution.cargo_metadata,
-            WasmBuildPhase::InputDiscovery => &mut timings.input_resolution.input_discovery,
-            WasmBuildPhase::ContentHashing => &mut timings.input_resolution.content_hashing,
-            WasmBuildPhase::SharedTargetCoordination => timings
-                .shared_target_coordination
-                .get_or_insert(Duration::ZERO),
-            WasmBuildPhase::SharedTargetMaintenance => timings
-                .shared_target_maintenance
-                .get_or_insert(Duration::ZERO),
-            WasmBuildPhase::CargoBuild => timings.cargo_build.get_or_insert(Duration::ZERO),
-            WasmBuildPhase::ArtifactPublication => {
-                timings.artifact_publication.get_or_insert(Duration::ZERO)
-            }
-            WasmBuildPhase::ExactCacheMaintenance => timings
-                .exact_cache_maintenance
-                .get_or_insert(Duration::ZERO),
-            WasmBuildPhase::Cleanup => timings.cleanup.get_or_insert(Duration::ZERO),
-        };
-        *timing = timing.saturating_add(elapsed);
-        if matches!(
-            phase,
-            WasmBuildPhase::CargoIdentity
-                | WasmBuildPhase::RustcIdentity
-                | WasmBuildPhase::CargoMetadata
-                | WasmBuildPhase::InputDiscovery
-                | WasmBuildPhase::ContentHashing
-        ) {
-            timings.input_resolution.total = timings.input_resolution.total.saturating_add(elapsed);
-        }
-    }
-
-    const fn failure_details(&self, total: Duration) -> WasmBuildFailureDetails {
-        let phase = self.failure_phase;
-        let mut timings = self.failure_timings;
-        timings.total = total;
-        WasmBuildFailureDetails { phase, timings }
     }
 }
 
@@ -1440,7 +1283,32 @@ pub struct CargoInputProbePolicy<'a> {
     pub cancelled: &'a mut (dyn FnMut() -> bool + Send),
 }
 
+/// Exact acquisition identity, with conservative mutation evidence checked first.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct CargoInputIdentity {
+    pub(super) fingerprint: InputDigest,
+    pub(super) validation_digest: InputDigest,
+}
+
+impl CargoInputIdentity {
+    pub(super) fn difference(self, current: Self) -> Option<(InputDigest, InputDigest)> {
+        [
+            (self.validation_digest, current.validation_digest),
+            (self.fingerprint, current.fingerprint),
+        ]
+        .into_iter()
+        .find(|(before, after)| before != after)
+    }
+}
+
 impl ResolvedCargoBuildInputs {
+    pub(super) const fn identity(&self) -> CargoInputIdentity {
+        CargoInputIdentity {
+            fingerprint: self.fingerprint,
+            validation_digest: self.validation_digest,
+        }
+    }
+
     /// Borrow the recipe and tool observations used by this snapshot, without I/O.
     #[must_use]
     pub const fn facts(&self) -> &CargoBuildFacts {
@@ -2387,156 +2255,6 @@ pub fn maintain_shared_incremental_target_at_most_every(
     perform_due_shared_incremental_target_maintenance(&canonical, policy, lock_wait, schedule)
 }
 
-enum SharedIncrementalTargetMaintenanceSchedule {
-    Skipped(SharedIncrementalTargetMaintenanceOutcome),
-    Due(DueSharedIncrementalTargetMaintenance),
-}
-
-struct DueSharedIncrementalTargetMaintenance {
-    schedule_root: PathBuf,
-    maintenance_identity: String,
-    schedule_check: Duration,
-}
-
-fn schedule_shared_incremental_target_maintenance(
-    canonical: &Path,
-    policy: CacheRetentionLimits,
-    minimum_interval: Duration,
-    lock_wait: Duration,
-) -> Result<SharedIncrementalTargetMaintenanceSchedule, WasmBuildError> {
-    let schedule_root = canonical.join(".ic-testkit");
-    let maintenance_identity = policy.maintenance_identity();
-    let schedule_started = Instant::now();
-    let due = cache_maintenance_due(&schedule_root, minimum_interval, &maintenance_identity)
-        .map_err(wasm_cache_fs_error)?;
-    let schedule_check = schedule_started.elapsed();
-    if !due {
-        return Ok(SharedIncrementalTargetMaintenanceSchedule::Skipped(
-            SharedIncrementalTargetMaintenanceOutcome::Skipped {
-                target_dir: canonical.to_owned(),
-                lock_wait,
-                schedule_check,
-            },
-        ));
-    }
-    Ok(SharedIncrementalTargetMaintenanceSchedule::Due(
-        DueSharedIncrementalTargetMaintenance {
-            schedule_root,
-            maintenance_identity,
-            schedule_check,
-        },
-    ))
-}
-
-fn perform_due_shared_incremental_target_maintenance(
-    canonical: &Path,
-    policy: CacheRetentionLimits,
-    lock_wait: Duration,
-    due: DueSharedIncrementalTargetMaintenance,
-) -> Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError> {
-    let DueSharedIncrementalTargetMaintenance {
-        schedule_root,
-        maintenance_identity,
-        schedule_check,
-    } = due;
-    let maintenance = maintain_shared_incremental_target_locked(canonical, policy, lock_wait)?;
-    record_cache_maintenance(&schedule_root, &maintenance_identity).map_err(wasm_cache_fs_error)?;
-    Ok(SharedIncrementalTargetMaintenanceOutcome::Performed {
-        maintenance,
-        schedule_check,
-    })
-}
-
-fn maintain_shared_incremental_target_locked(
-    canonical: &Path,
-    policy: CacheRetentionLimits,
-    lock_wait: Duration,
-) -> Result<SharedIncrementalTargetMaintenance, WasmBuildError> {
-    let started = Instant::now();
-    let (logical_size_bytes_before, last_used_before) = observe_shared_target(
-        canonical,
-        "measure shared incremental Cargo target before maintenance",
-        "read shared incremental Cargo target use time before maintenance",
-    )?;
-    let expired = policy.max_age().is_some_and(|max_age| {
-        SystemTime::now()
-            .duration_since(last_used_before)
-            .is_ok_and(|age| age > max_age)
-    });
-    let oversized = policy
-        .max_size_bytes()
-        .is_some_and(|max_size_bytes| logical_size_bytes_before > max_size_bytes);
-    let cleared = expired || oversized;
-    if cleared {
-        clear_shared_incremental_target_contents(canonical)?;
-        record_cache_entry_use(canonical)?;
-    }
-    let logical_size_bytes_after = if cleared {
-        directory_logical_size(canonical).map_err(|source| {
-            WasmBuildError::io(
-                "measure shared incremental Cargo target after maintenance",
-                canonical.to_owned(),
-                source,
-            )
-        })?
-    } else {
-        logical_size_bytes_before
-    };
-    Ok(SharedIncrementalTargetMaintenance {
-        target_dir: canonical.to_owned(),
-        logical_size_bytes_before,
-        logical_size_bytes_after,
-        last_used_before,
-        cleared,
-        lock_wait,
-        maintenance: started.elapsed(),
-    })
-}
-
-// Both callers hold the target lock; keep size/use-time observation order and
-// their operation-specific diagnostic context at this shared read boundary.
-fn observe_shared_target(
-    target: &Path,
-    size_operation: &'static str,
-    use_operation: &'static str,
-) -> Result<(u64, SystemTime), WasmBuildError> {
-    let size = directory_logical_size(target)
-        .map_err(|source| WasmBuildError::io(size_operation, target.to_owned(), source))?;
-    let last_used = cache_entry_last_used(target)
-        .map_err(|source| WasmBuildError::io(use_operation, target.to_owned(), source))?;
-    Ok((size, last_used))
-}
-
-fn clear_shared_incremental_target_contents(target_dir: &Path) -> Result<(), WasmBuildError> {
-    let entries = fs::read_dir(target_dir).map_err(|source| {
-        WasmBuildError::io(
-            "read shared incremental Cargo target for maintenance",
-            target_dir.to_owned(),
-            source,
-        )
-    })?;
-    for entry in entries {
-        let path = entry
-            .map_err(|source| {
-                WasmBuildError::io(
-                    "read shared incremental Cargo target entry for maintenance",
-                    target_dir.to_owned(),
-                    source,
-                )
-            })?
-            .path();
-        let preserved = path
-            .file_name()
-            .is_some_and(|name| name == ".ic-testkit" || name == "CACHEDIR.TAG");
-        if !preserved {
-            remove_path_if_present(&path).map_err(|source| {
-                WasmBuildError::io("clear shared incremental Cargo target entry", path, source)
-            })?;
-        }
-    }
-    Ok(())
-}
-
 /// Build or reuse one exact set of Cargo Wasm artifacts.
 ///
 /// The operation takes an exclusive process lock scoped to `target_dir`, then
@@ -2869,62 +2587,6 @@ fn build_wasm_with_shared_incremental(
     outcome
 }
 
-fn perform_configured_shared_incremental_target_maintenance(
-    config: SharedIncrementalTargetMaintenanceConfig,
-    shared_target: &Path,
-    lock_wait: Duration,
-    progress: &mut ProgressReporter<'_>,
-) -> Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError> {
-    progress.emit(WasmBuildProgressEvent::SharedTargetMaintenanceStarted {
-        target_dir: shared_target.to_owned(),
-    });
-    let result = progress.run_phase(WasmBuildPhase::SharedTargetMaintenance, || {
-        let schedule = schedule_shared_incremental_target_maintenance(
-            shared_target,
-            config.policy,
-            config.minimum_interval,
-            lock_wait,
-        )?;
-        match schedule {
-            SharedIncrementalTargetMaintenanceSchedule::Skipped(outcome) => Ok(outcome),
-            SharedIncrementalTargetMaintenanceSchedule::Due(due) => {
-                perform_due_shared_incremental_target_maintenance(
-                    shared_target,
-                    config.policy,
-                    lock_wait,
-                    due,
-                )
-            }
-        }
-    });
-    let outcome = integrated_shared_maintenance_result(config, shared_target, lock_wait, result)?;
-    progress.emit(WasmBuildProgressEvent::SharedTargetMaintenanceFinished {
-        outcome: outcome.clone(),
-    });
-    Ok(outcome)
-}
-
-fn integrated_shared_maintenance_result(
-    config: SharedIncrementalTargetMaintenanceConfig,
-    shared_target: &Path,
-    lock_wait: Duration,
-    result: Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError>,
-) -> Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError> {
-    match result {
-        Ok(outcome) => Ok(outcome),
-        Err(error)
-            if config.failure_mode == SharedIncrementalTargetMaintenanceFailureMode::BestEffort =>
-        {
-            Ok(SharedIncrementalTargetMaintenanceOutcome::Failed {
-                target_dir: shared_target.to_owned(),
-                lock_wait,
-                message: error.to_string(),
-            })
-        }
-        Err(error) => Err(error),
-    }
-}
-
 fn resolve_initial_inputs(
     spec: &WasmBuildSpec,
     batch_resolution: Option<(&mut WasmBuildBatchInputResolver<'_, '_>, usize)>,
@@ -3080,13 +2742,8 @@ fn verify_resolved_inputs(
     progress: &mut ProgressReporter<'_>,
 ) -> Result<ResolvedCargoBuildInputs, WasmBuildError> {
     let verified = resolve_initial_inputs(spec, None, progress)?;
-    for (before, after) in [
-        (resolved.validation_digest, verified.validation_digest),
-        (resolved.fingerprint, verified.fingerprint),
-    ] {
-        if before != after {
-            return Err(WasmBuildError::InputsChangedDuringAcquisition { before, after });
-        }
+    if let Some((before, after)) = resolved.identity().difference(verified.identity()) {
+        return Err(WasmBuildError::InputsChangedDuringAcquisition { before, after });
     }
     Ok(verified)
 }
@@ -3303,13 +2960,13 @@ fn cleanup_failed_fingerprint_build(
     progress: &mut ProgressReporter<'_>,
 ) -> WasmBuildError {
     let path = incomplete_directory.path().to_owned();
-    let primary_phase = progress.failure_phase;
+    let primary_phase = progress.failure_details(Duration::ZERO).phase();
     let cleanup_started = Instant::now();
     let cleanup = incomplete_directory.cleanup();
     progress.record_phase(WasmBuildPhase::Cleanup, cleanup_started.elapsed());
     match cleanup {
         Ok(()) => {
-            progress.failure_phase = primary_phase;
+            progress.begin_phase(primary_phase);
             build_error
         }
         Err(source) => WasmBuildError::FailedBuildCleanup {
@@ -3392,19 +3049,15 @@ fn lock_cache_file_with_progress(
 ) -> Result<(File, Duration), WasmBuildError> {
     let started = Instant::now();
     progress.begin_phase(phase);
-    let result = progress
-        .observation
-        .as_ref()
-        .and_then(|observation| observation.config.heartbeat_interval)
-        .map_or_else(
-            || lock_cache_file(lock_path).map_err(wasm_cache_fs_error),
-            |interval| {
-                lock_cache_file_with_wait_observer(lock_path, interval, |elapsed| {
-                    progress.emit_heartbeat_if_due(phase, elapsed);
-                })
-                .map_err(wasm_cache_fs_error)
-            },
-        );
+    let result = progress.heartbeat_interval().map_or_else(
+        || lock_cache_file(lock_path).map_err(wasm_cache_fs_error),
+        |interval| {
+            lock_cache_file_with_wait_observer(lock_path, interval, |elapsed| {
+                progress.emit_heartbeat_if_due(phase, elapsed);
+            })
+            .map_err(wasm_cache_fs_error)
+        },
+    );
     progress.record_phase(phase, started.elapsed());
     result
 }
@@ -3863,17 +3516,7 @@ fn communicate_cargo_build(
             false
         },
         |stream, bytes| {
-            let mut progress = progress.borrow_mut();
-            if progress
-                .observation
-                .as_ref()
-                .is_some_and(|observation| observation.config.emit_cargo_output)
-            {
-                progress.emit(WasmBuildProgressEvent::CargoOutput {
-                    stream,
-                    bytes: bytes.to_vec(),
-                });
-            }
+            progress.borrow_mut().emit_cargo_output(stream, bytes);
             Ok(())
         },
         &mut collect,
@@ -4047,9 +3690,8 @@ fn validated_artifact_set(
     fingerprint: InputDigest,
 ) -> Option<Vec<VerifiedWasmArtifact>> {
     let header = artifact_stamp_header(fingerprint);
-    // The artifact digest has a fixed hex width, followed by one newline.
-    let stamp_len =
-        header.len() + ARTIFACT_STAMP_DIGEST_LABEL.len() + fingerprint.as_bytes().len() * 2 + 1;
+    // Every digest has the same width. Derive admission from the actual encoder.
+    let stamp_len = artifact_stamp_contents(&header, fingerprint).len();
     artifacts
         .into_iter()
         .map(|(artifact, public_path)| {

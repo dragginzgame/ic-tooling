@@ -1,7 +1,7 @@
 use super::{WireCallError, WireCallSpec, call_wire, context};
 
 use crate::pic::{PocketIcCallFailure, is_dead_pocket_ic_transport_error};
-use ic_platform::pocket_ic::{ErrorCode, RejectCode, RejectResponse};
+use ic_platform_pocket_ic::{ErrorCode, RejectCode, RejectResponse};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_wire::{Limits, native};
 

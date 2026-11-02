@@ -3,7 +3,7 @@ use std::{
     panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
 };
 
-use ic_platform::pocket_ic::RejectResponse;
+use ic_platform_pocket_ic::RejectResponse;
 
 /// Captured `PocketIC` operation failure, retaining transport classification.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
@@ -57,7 +57,7 @@ pub(super) fn capture_operation<T>(
 /// bound a blocked request, or catch errors while polling a returned future.
 ///
 /// ```no_run
-/// use ic_platform::pocket_ic::PocketIc;
+/// use ic_platform_pocket_ic::PocketIc;
 /// use ic_testkit::pic::{PocketIcOperationError, try_pocket_ic_operation};
 ///
 /// fn tick(pic: &PocketIc) -> Result<(), PocketIcOperationError> {
@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn typed_call_preserves_values_rejections_and_panic_policy_without_replay() {
-        use ic_platform::pocket_ic::{ErrorCode, RejectCode, RejectResponse};
+        use ic_platform_pocket_ic::{ErrorCode, RejectCode, RejectResponse};
         use std::{panic::catch_unwind, sync::Arc};
 
         assert_eq!(super::try_pocket_ic_call(|| Ok(17)).unwrap(), 17);
@@ -335,10 +335,10 @@ mod tests {
     #[test]
     fn raw_operations_preserve_values_and_rejections() {
         assert_eq!(try_pocket_ic_operation(|| 42), Ok(42));
-        let rejection = ic_platform::pocket_ic::RejectResponse {
-            reject_code: ic_platform::pocket_ic::RejectCode::CanisterReject,
+        let rejection = ic_platform_pocket_ic::RejectResponse {
+            reject_code: ic_platform_pocket_ic::RejectCode::CanisterReject,
             reject_message: "application rejection".into(),
-            error_code: ic_platform::pocket_ic::ErrorCode::CanisterRejectedMessage,
+            error_code: ic_platform_pocket_ic::ErrorCode::CanisterRejectedMessage,
             certified: false,
         };
         let result = try_pocket_ic_operation(|| Err::<(), _>(rejection))
@@ -347,7 +347,7 @@ mod tests {
         assert_eq!(rejection.reject_message, "application rejection");
         assert_eq!(
             rejection.reject_code,
-            ic_platform::pocket_ic::RejectCode::CanisterReject
+            ic_platform_pocket_ic::RejectCode::CanisterReject
         );
     }
 
@@ -557,10 +557,10 @@ mod tests {
                 WireCallError::Call {
                     context: Box::new(context),
                     source: Box::new(PocketIcCallFailure::Rejected(
-                        ic_platform::pocket_ic::RejectResponse {
-                            reject_code: ic_platform::pocket_ic::RejectCode::CanisterReject,
+                        ic_platform_pocket_ic::RejectResponse {
+                            reject_code: ic_platform_pocket_ic::RejectCode::CanisterReject,
                             reject_message: REFUSED.into(),
-                            error_code: ic_platform::pocket_ic::ErrorCode::CanisterRejectedMessage,
+                            error_code: ic_platform_pocket_ic::ErrorCode::CanisterRejectedMessage,
                             certified: false,
                         },
                     )),

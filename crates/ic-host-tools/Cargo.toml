@@ -25,7 +25,7 @@ ledger-evidence = [
     "ic-platform/icrc-ledger-types",
     "serde/derive",
 ]
-registry = ["dep:ic-platform", "ic-platform/principal", "dep:prost"]
+registry = ["dep:ic-platform-types", "dep:prost"]
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 url = { workspace = true, optional = true }
@@ -34,6 +34,7 @@ url = { workspace = true, optional = true }
 ic-host-artifacts = { workspace = true, optional = true }
 ic-host-text = { workspace = true, optional = true }
 ic-platform = { workspace = true, optional = true }
+ic-platform-types = { workspace = true, optional = true }
 prost = { workspace = true, optional = true }
 serde = { workspace = true, features = ["std"] }
 serde_cbor = { workspace = true, optional = true }

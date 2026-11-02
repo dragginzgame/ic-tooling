@@ -1,7 +1,7 @@
 //! Integration checks for pocket ic diagnostics behavior.
 mod support;
 
-use ic_platform::pocket_ic::CanisterSettings;
+use ic_platform_pocket_ic::CanisterSettings;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     CanisterDiagnosticsRequest, CanisterLogRenderLimits, LabeledCanisterDiagnosticsRequest,

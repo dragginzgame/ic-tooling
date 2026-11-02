@@ -972,18 +972,11 @@ fn revalidate_cargo_build_input_fingerprints(
                 source,
             }
         })?;
-        let before_validation = cargo_input.resolved.validation_digest();
-        let after_validation = current.validation_digest();
-        if after_validation != before_validation {
-            return Err(ArtifactCacheError::CargoBuildInputsChanged {
-                label: cargo_input.label.clone(),
-                before: before_validation,
-                after: after_validation,
-            });
-        }
-        let before = cargo_input.resolved.fingerprint();
-        let after = current.fingerprint();
-        if after != before {
+        if let Some((before, after)) = cargo_input
+            .resolved
+            .identity()
+            .difference(current.identity())
+        {
             return Err(ArtifactCacheError::CargoBuildInputsChanged {
                 label: cargo_input.label.clone(),
                 before,

@@ -1,4 +1,4 @@
-use ic_platform::pocket_ic::PocketIc;
+use ic_platform_pocket_ic::PocketIc;
 use std::{task::Poll, time::Duration};
 
 /// A caller-owned readiness check failed or exhausted its simulated round budget.

@@ -125,9 +125,6 @@ impl TreeVisitor for ChecksumVisitor {
     fn file(&mut self, fd: &OwnedFd, relative: &Path, _display: &Path) -> Result<(), Self::Error> {
         self.record_file(fd, relative)
     }
-    fn enter_directory(&mut self, _relative: &Path, _display: &Path) -> Result<(), Self::Error> {
-        Ok(())
-    }
     fn unsupported(&self, display: &Path, kind: FileType) -> Self::Error {
         TreeChecksumError::UnsupportedEntry {
             path: display.to_path_buf(),

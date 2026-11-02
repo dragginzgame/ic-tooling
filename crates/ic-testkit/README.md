@@ -6,11 +6,11 @@
 
 PocketIC-oriented test utilities for Internet Computer canister tests.
 
-Host-side tests select Testkit and Platform’s native client. Host Tools releases independently.
+Host-side tests select Testkit and the independent PocketIC client. Host Tools releases independently.
 
 ```bash
 cargo add --dev ic-testkit
-cargo add --dev ic-platform --no-default-features --features pocket-ic
+cargo add --dev ic-platform-pocket-ic@0.18 --no-default-features
 ```
 
 Cargo records the selected versions in the consuming manifest and lockfile.
@@ -25,7 +25,8 @@ The Wasm library selects `ic-platform-runtime` directly for raw IC0 counters and
 marker logging, without the facade, executor or Candid. `fake_principal` selects
 `ic-platform-types` directly and retains the same external Principal identity.
 The private performance probe selects Runtime's entrypoint macros directly;
-native Candid and PocketIC adapters retain their existing Platform dependency.
+native simulator operations select `ic-platform-pocket-ic` directly. Testkit keeps
+its separate Platform dependency for Candid and management adapters.
 `pic` is host-only. `performance` is Wasm-only;
 `benchmark` counters, checked marker formatting and `fake_principal` are available
 on both targets. Parsing, pairing, aggregation and comparison are native-only.
@@ -34,7 +35,8 @@ Native CSV and Markdown directory output lives in the repository's
 `std::io::Result<StandaloneCanisterFixture>`.
 
 External interfaces that require Candid remain caller-owned: use a direct
-Platform dependency for encoding/decoding and PocketIC's raw byte operations.
+Platform dependency for encoding/decoding, then send the bytes through the
+independent PocketIC client's raw operations.
 PocketIC retains its upstream Candid dependencies; Testkit's Wasm profile remains
 Candid-free. Native Testkit also selects Platform's Candid and management DTO
 capabilities used by held fixtures, even when that fixture feature is disabled.
@@ -95,8 +97,8 @@ Explicit `server_assets::setup` takes a caller-owned cancellation predicate.
 Tests normally retain one
 `PocketIcInstance<PocketIc>` and use `owned.instance()` for simulator operations;
 focused extension traits provide reusable harness behavior. Import all upstream
-client and DTO identities directly from `ic_platform::pocket_ic`; Testkit owns no
-parallel import path. Platform owns additions to that explicit surface.
+client and DTO identities directly from `ic_platform_pocket_ic`; Testkit owns no
+parallel import path. The independent PocketIC package owns that surface.
 The client and managed server remain privately paired. Use `server()` for shared
 server inspection and `into_parts()` only when taking over teardown ordering.
 Wrap a client on an externally owned server with

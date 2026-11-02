@@ -29,10 +29,14 @@ pub trait TreeVisitor {
     /// Returns the caller's file-processing error.
     fn file(&mut self, fd: &OwnedFd, relative: &Path, display: &Path) -> Result<(), Self::Error>;
     /// Enter a directory before visiting its children.
+    /// Observation-only visitors need no entry work by default. Override this
+    /// when directory admission or traversal budgets must be enforced.
     ///
     /// # Errors
     /// Returns the caller's directory-entry error.
-    fn enter_directory(&mut self, relative: &Path, display: &Path) -> Result<(), Self::Error>;
+    fn enter_directory(&mut self, _relative: &Path, _display: &Path) -> Result<(), Self::Error> {
+        Ok(())
+    }
     /// Leave a directory after visiting its children, including the root.
     ///
     /// Observation-only visitors need no completion work by default. Writers

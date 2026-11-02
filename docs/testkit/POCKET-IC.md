@@ -4,7 +4,7 @@
 
 # PocketIC upstream boundary
 
-This is maintained against Platform 0.17's owned PocketIC 16.1 client and Testkit's
+This is maintained against `ic-platform-pocket-ic` 0.18's PocketIC 16.1 client and Testkit's
 current public interfaces. Recheck the relevant capabilities when changing that
 dependency. Historical decisions remain in the
 [design records](README.md#historical-design-records) and
@@ -16,10 +16,11 @@ has shipped.
 
 PocketIC owns the simulator and server protocol. Platform maintains the native
 client implementation, client-owned DTO identities and default server discovery
-behavior in `ic-platform-pocket-ic`, exposed through its facade. Import those
-types directly from `ic_platform::pocket_ic`; Testkit supplies no forwarding
+behavior in the independent `ic-platform-pocket-ic` package. Import those
+types directly from `ic_platform_pocket_ic`; Testkit supplies no forwarding
 module or convenience aliases. Testkit does not mirror the upstream simulator API.
-Additional client types must be exposed by Platform rather than copied here.
+Client adoption follows that package's release group. Testkit's separate Platform
+dependency supplies Candid and management adapters, without its `pocket-ic` feature.
 
 Testkit owns explicit server provisioning and fixture lifecycle policy. It adds
 bounded startup, server/instance custody, contextual calls, installation policy,

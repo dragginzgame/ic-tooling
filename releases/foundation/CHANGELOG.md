@@ -14,6 +14,13 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
   Avoid assuming immediate nonblocking readiness on macOS; production socket
   behavior is unchanged.
 
+### 🧹 Cleanup
+
+- Let observation-only tree visitors use the default directory-entry callback,
+  retaining explicit admission and budget callbacks where needed. Batch file
+  hashing writes canonical digest bytes directly with unchanged output and
+  all-or-nothing admission.
+
 ## [0.74.1] - 2026-11-02
 
 ### 🩹 Fixed

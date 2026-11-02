@@ -9,8 +9,8 @@ use ic_platform::{
         SnapshotDataOffset, UploadCanisterSnapshotDataArgs, UploadCanisterSnapshotMetadataArgs,
         UploadCanisterSnapshotMetadataResult,
     },
-    pocket_ic::common::rest::RawEffectivePrincipal,
 };
+use ic_platform_pocket_ic::common::rest::RawEffectivePrincipal;
 
 // One MiB leaves room for Candid framing within the management message limit.
 // Total work follows the already captured canister state; no whole heap buffer,

@@ -15,7 +15,7 @@ use std::os::unix::fs::OpenOptionsExt as _;
 
 use ic_host_fs::{directory::create_unique_directory, owned_directory::OwnedDirectory};
 use ic_host_process::child::{CleanupError, CleanupPolicy, OwnedChild};
-use ic_platform::pocket_ic::{PocketIc, PocketIcBuilder};
+use ic_platform_pocket_ic::{PocketIc, PocketIcBuilder};
 
 use super::transport;
 
@@ -453,7 +453,7 @@ impl PocketIcStartupConfig {
     /// never claims the external server. See [`PocketIcInstance`] for drop limits.
     ///
     /// ```no_run
-    /// use ic_platform::pocket_ic::PocketIcBuilder;
+    /// use ic_platform_pocket_ic::PocketIcBuilder;
     /// use ic_testkit::pic::PocketIcStartupConfig;
     /// use std::{path::Path, time::Duration};
     /// # fn run(binary: &Path) -> Result<(), ic_testkit::pic::PocketIcStartupError> {
@@ -501,7 +501,7 @@ impl PocketIcStartupConfig {
     /// reconciliation. The deadline covers construction, not subsequent deletion.
     ///
     /// ```no_run
-    /// use ic_platform::pocket_ic::PocketIcBuilder;
+    /// use ic_platform_pocket_ic::PocketIcBuilder;
     /// use ic_testkit::pic::PocketIcStartupConfig;
     /// use std::{path::Path, time::Duration};
     /// # async fn run(binary: &Path) -> Result<(), ic_testkit::pic::PocketIcStartupError> {
@@ -521,7 +521,7 @@ impl PocketIcStartupConfig {
     pub async fn build_instance_async(
         self,
         builder: PocketIcBuilder,
-    ) -> Result<PocketIcInstance<ic_platform::pocket_ic::nonblocking::PocketIc>, PocketIcStartupError>
+    ) -> Result<PocketIcInstance<ic_platform_pocket_ic::nonblocking::PocketIc>, PocketIcStartupError>
     {
         let startup = StartupDeadline::new(&self)?;
         let (server, server_url) = match self {
@@ -848,14 +848,55 @@ fn startup_deadline(started: Instant, timeout: Duration) -> Result<Instant, Pock
     })
 }
 
+/// Instance construction owns server custody until admission or failure.
+struct InstanceStartup<'a> {
+    deadline: &'a StartupDeadline,
+    server_url: &'a str,
+    server: Option<ManagedServer>,
+}
+
+impl InstanceStartup<'_> {
+    fn configure_builder(
+        &mut self,
+        builder: PocketIcBuilder,
+    ) -> Result<PocketIcBuilder, PocketIcStartupError> {
+        configured_builder(builder, self.server_url).map_err(|error| self.fail(error))
+    }
+
+    fn check_deadline(&mut self) -> Result<Instant, PocketIcStartupError> {
+        self.deadline.check_instance_deadline(&mut self.server)
+    }
+
+    fn wait_interval(&self, now: Instant) -> Duration {
+        self.deadline.wait_interval(now, self.server.is_some())
+    }
+
+    fn check_server(&mut self) -> Result<(), PocketIcStartupError> {
+        check_server(&mut self.server)
+    }
+
+    fn admit<T>(&mut self, instance: T) -> Result<PocketIcInstance<T>, PocketIcStartupError> {
+        self.deadline
+            .admit_instance(instance, self.server_url, &mut self.server)
+    }
+
+    fn fail(&mut self, error: PocketIcStartupError) -> PocketIcStartupError {
+        finalize_failure(error, None, self.server.take())
+    }
+}
+
 fn build_bounded(
     builder: PocketIcBuilder,
     server_url: &str,
     startup: &StartupDeadline,
-    mut server: Option<ManagedServer>,
+    server: Option<ManagedServer>,
 ) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
-    let builder = configured_builder(builder, server_url)
-        .map_err(|error| finalize_failure(error, None, server.take()))?;
+    let mut startup = InstanceStartup {
+        deadline: startup,
+        server_url,
+        server,
+    };
+    let builder = startup.configure_builder(builder)?;
     let (sender, receiver) = mpsc::sync_channel(1);
     if let Err(source) = thread::Builder::new()
         .name("ic-testkit-pocket-ic-startup".to_owned())
@@ -864,13 +905,11 @@ fn build_bounded(
             let _ = sender.send(result);
         })
     {
-        return Err(finalize_failure(
-            PocketIcStartupError::new(PocketIcStartupFailure::BuilderThreadSpawn { source }),
-            None,
-            server,
-        ));
+        return Err(startup.fail(PocketIcStartupError::new(
+            PocketIcStartupFailure::BuilderThreadSpawn { source },
+        )));
     }
-    await_builder(receiver, server_url, startup, &mut server)
+    await_builder(receiver, &mut startup)
 }
 
 #[expect(
@@ -879,33 +918,27 @@ fn build_bounded(
 )]
 fn await_builder(
     receiver: mpsc::Receiver<Result<PocketIc, super::PocketIcOperationError>>,
-    server_url: &str,
-    startup: &StartupDeadline,
-    server: &mut Option<ManagedServer>,
+    startup: &mut InstanceStartup<'_>,
 ) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
     loop {
-        let now = startup.check_instance_deadline(server)?;
-        let wait = startup.wait_interval(now, server.is_some());
+        let now = startup.check_deadline()?;
+        let wait = startup.wait_interval(now);
         match receiver.recv_timeout(wait) {
             Ok(Ok(pocket_ic)) => {
-                return startup.admit_instance(pocket_ic, server_url, server);
+                return startup.admit(pocket_ic);
             }
             Ok(Err(source)) => {
-                return Err(finalize_failure(
-                    PocketIcStartupError::new(PocketIcStartupFailure::BuilderPanicked { source }),
-                    None,
-                    server.take(),
-                ));
+                return Err(startup.fail(PocketIcStartupError::new(
+                    PocketIcStartupFailure::BuilderPanicked { source },
+                )));
             }
             Err(RecvTimeoutError::Disconnected) => {
-                return Err(finalize_failure(
-                    PocketIcStartupError::new(PocketIcStartupFailure::BuilderDisconnected),
-                    None,
-                    server.take(),
-                ));
+                return Err(startup.fail(PocketIcStartupError::new(
+                    PocketIcStartupFailure::BuilderDisconnected,
+                )));
             }
             Err(RecvTimeoutError::Timeout) => {
-                check_server(server)?;
+                startup.check_server()?;
             }
         }
     }
@@ -939,10 +972,14 @@ async fn build_async_bounded(
     builder: PocketIcBuilder,
     server_url: &str,
     startup: &StartupDeadline,
-    mut server: Option<ManagedServer>,
-) -> Result<PocketIcInstance<ic_platform::pocket_ic::nonblocking::PocketIc>, PocketIcStartupError> {
-    let builder = configured_builder(builder, server_url)
-        .map_err(|error| finalize_failure(error, None, server.take()))?;
+    server: Option<ManagedServer>,
+) -> Result<PocketIcInstance<ic_platform_pocket_ic::nonblocking::PocketIc>, PocketIcStartupError> {
+    let mut startup = InstanceStartup {
+        deadline: startup,
+        server_url,
+        server,
+    };
+    let builder = startup.configure_builder(builder)?;
     let mut construction = std::pin::pin!(builder.build_async());
     let mut construction = std::pin::pin!(std::future::poll_fn(|context| {
         match transport::capture_operation(|| construction.as_mut().poll(context)) {
@@ -953,16 +990,16 @@ async fn build_async_bounded(
         }
     }));
     // Drop this local before the pending upstream future on cancellation.
-    let mut server = server;
+    let mut startup = startup;
     loop {
-        let now = startup.check_instance_deadline(&mut server)?;
-        check_server(&mut server)?;
-        let next_check = now + startup.wait_interval(now, server.is_some());
+        let now = startup.check_deadline()?;
+        startup.check_server()?;
+        let next_check = now + startup.wait_interval(now);
         match tokio::time::timeout_at(next_check.into(), construction.as_mut()).await {
             Ok(Ok(instance)) => {
-                return startup.admit_instance(instance, server_url, &mut server);
+                return startup.admit(instance);
             }
-            Ok(Err(error)) => return Err(finalize_failure(error, None, server)),
+            Ok(Err(error)) => return Err(startup.fail(error)),
             Err(_) => {}
         }
     }
@@ -1279,7 +1316,7 @@ mod tests {
         OwnedDirectory, PocketIcStartupConfig, PocketIcStartupError, PocketIcStartupFailure,
         StartupFiles, create_unique_directory,
     };
-    use ic_platform::pocket_ic::PocketIcBuilder;
+    use ic_platform_pocket_ic::PocketIcBuilder;
 
     #[cfg(unix)]
     use ic_host_process::testing::write_executable_script;
@@ -1443,13 +1480,15 @@ mod tests {
             drop(sender);
             let error = super::await_builder(
                 receiver,
-                "http://127.0.0.1:34567/",
-                &super::StartupDeadline {
-                    started: Instant::now(),
-                    deadline: Instant::now() + Duration::from_secs(2),
-                    timeout: Duration::from_secs(2),
+                &mut super::InstanceStartup {
+                    deadline: &super::StartupDeadline {
+                        started: Instant::now(),
+                        deadline: Instant::now() + Duration::from_secs(2),
+                        timeout: Duration::from_secs(2),
+                    },
+                    server_url: "http://127.0.0.1:34567/",
+                    server: Some(managed.server),
                 },
-                &mut Some(managed.server),
             )
             .err()
             .unwrap();

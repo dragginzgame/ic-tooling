@@ -43,30 +43,35 @@ publish = false
 [workspace]
 [dependencies]
 TOML
-# These are new registry-only inputs, never edits to release metadata or root lock.
-jq -er '.workspace.dependencies as $d |
+# Keep manifest generation and identity assertions on the same selected inputs.
+# The facade may coexist with another version; canonical Types/Wire remain singleton.
+jq -e '.workspace.dependencies as $d |
     ["ic-build", "ic-host-artifacts", "ic-host-process", "ic-host-tools",
-     "ic-testkit", "ic-platform", "ic-platform-types", "ic-wire"][] |
-    . as $name | $d[$name].version as $version |
-    if ($version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) then
-        ($name + " = { version = \"=" + $version + "\", default-features = false" +
-        (if $name == "ic-host-tools" then ", features = [\"registry\", \"certificate\"]"
-         elif $name == "ic-testkit" then ", features = [\"wire\"]"
-         elif $name == "ic-platform" then ", features = [\"principal\", \"certification\"]"
-         else "" end) + " }")
-    else error("expected a literal selected version for " + $name) end' \
-    "$fixture/catalog.json" >> "$fixture/Cargo.toml"
+     "ic-testkit", "ic-platform", "ic-platform-types", "ic-wire"] |
+    map(. as $name | {
+        name: $name, version: $d[$name].version, singleton: ($name != "ic-platform"),
+        features: (if $name == "ic-host-tools" then ["registry", "certificate"]
+            elif $name == "ic-testkit" then ["wire"]
+            elif $name == "ic-platform" then ["principal", "certification"]
+            else [] end)
+    })' "$fixture/catalog.json" > "$fixture/selection.json"
+# These are new registry-only inputs, never edits to release metadata or root lock.
+jq -er '.[] |
+    if (.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) then
+        (.name + " = { version = \"=" + .version + "\", default-features = false" +
+        (if (.features | length) > 0 then ", features = " + (.features | tojson) else "" end) + " }")
+    else error("expected a literal selected version for " + .name) end' \
+    "$fixture/selection.json" >> "$fixture/Cargo.toml"
 # Online resolution is explicit at invocation: CARGO_NET_OFFLINE=false bash ...
 cargo generate-lockfile --manifest-path "$fixture/Cargo.toml" > "$fixture/lock.log" 2>&1
 cargo fetch --locked --manifest-path "$fixture/Cargo.toml" > "$fixture/fetch.log" 2>&1
 cargo metadata --locked --offline --format-version 1 --manifest-path "$fixture/Cargo.toml" \
     > "$fixture/metadata.json" 2> "$fixture/metadata.stderr"
-jq -e --slurpfile catalog "$fixture/catalog.json" '
-    .packages as $packages | $catalog[0].workspace.dependencies as $d |
-    all(["ic-build", "ic-host-artifacts", "ic-host-process", "ic-host-tools", "ic-testkit",
-         "ic-platform-types", "ic-wire"][];
-        . as $name | [$packages[] | select(.name == $name)] |
-        length == 1 and all(.[]; .version == $d[$name].version and (.source | startswith("registry+"))))
+jq -e --slurpfile selection "$fixture/selection.json" '
+    .packages as $packages |
+    all($selection[0][] | select(.singleton);
+        . as $selected | [$packages[] | select(.name == $selected.name)] |
+        length == 1 and all(.[]; .version == $selected.version and (.source | startswith("registry+"))))
     and all($packages[]; .name == "integration-cohort-consumer" or (.source | startswith("registry+")))
 ' "$fixture/metadata.json" > /dev/null
 host="$(rustc -vV | sed -n 's/^host: //p')"

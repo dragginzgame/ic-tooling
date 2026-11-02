@@ -1,3 +1,4 @@
+use super::CacheOutcomeCounts;
 use super::cache_fs::{CacheRetentionLimits, canonicalize_allow_missing};
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
 
@@ -298,8 +299,7 @@ impl WasmBuildBatchEntry {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct WasmBuildBatchMetrics {
     specifications: usize,
-    built: usize,
-    reused: usize,
+    counts: CacheOutcomeCounts,
     input_resolution_runs: usize,
     input_resolution_reuses: usize,
     input_resolution_prepared_reuses: usize,
@@ -413,11 +413,7 @@ impl WasmBuildBatchReport {
             ..WasmBuildBatchMetrics::default()
         };
         for outcome in self.entries.iter().filter_map(WasmBuildBatchEntry::outcome) {
-            if outcome.is_reused() {
-                metrics.reused += 1;
-            } else {
-                metrics.built += 1;
-            }
+            metrics.counts.record(outcome.is_reused());
             metrics.successful_timings = metrics
                 .successful_timings
                 .saturating_add(outcome.record().timings());
@@ -436,7 +432,7 @@ impl WasmBuildBatchMetrics {
     /// Number of successful specifications.
     #[must_use]
     pub const fn succeeded(self) -> usize {
-        self.built + self.reused
+        self.counts.succeeded()
     }
 
     /// Number of failed specifications.
@@ -448,13 +444,13 @@ impl WasmBuildBatchMetrics {
     /// Number of newly built Wasm artifact sets.
     #[must_use]
     pub const fn built(self) -> usize {
-        self.built
+        self.counts.built
     }
 
     /// Number of Wasm artifact sets reused from the exact cache.
     #[must_use]
     pub const fn reused(self) -> usize {
-        self.reused
+        self.counts.reused
     }
 
     /// Number of workspace/toolchain input-resolution snapshots performed.
