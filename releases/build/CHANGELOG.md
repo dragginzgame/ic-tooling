@@ -6,7 +6,7 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
-## [0.74.1]
+## [0.74.1] - 2026-11-02
 
 ### 🧹 Cleanup
 
