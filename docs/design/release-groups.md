@@ -1,6 +1,6 @@
 # Release ownership
 
-One workspace, dependency catalog and lockfile retain five independent release
+One workspace, dependency catalog and lockfile retain six independent release
 groups. Build and Text leave the original Foundation group without changing
 crate names, package versions, APIs, feature boundaries or dependency requirements.
 
@@ -10,7 +10,8 @@ crate names, package versions, APIs, feature boundaries or dependency requiremen
 | build | ic-build | none | ic-build | [Build](../../releases/build/CHANGELOG.md) |
 | text | ic-host-text | none | ic-host-text | [Text](../../releases/text/CHANGELOG.md) |
 | tools | ic-host-tools | none | ic-host-tools | [Host Tools](../../releases/tools/CHANGELOG.md) |
-| testkit | ic-testkit, ic-testkit-native | ic-testkit-dev, ic-testkit-perf-probe | ic-testkit | [Testkit](../../releases/testkit/CHANGELOG.md) |
+| testkit | ic-testkit | ic-testkit-dev, ic-testkit-perf-probe | ic-testkit | [Testkit](../../releases/testkit/CHANGELOG.md) |
+| native | ic-testkit-native | none | ic-testkit-native | [Native](../../releases/native/CHANGELOG.md) |
 
 ## Dependency and type ownership
 
@@ -31,6 +32,15 @@ Platform's PocketIC/system capabilities, without Host Tools. Its private driver
 also consumes Build and Text; those testing edges do not become public Testkit
 production dependencies. The Wasm probe remains in Testkit's existing family.
 
+Native owns std-only allocation measurement and has no production dependencies.
+Its independent baseline is the already-published 0.79.0; creating this group does
+not change package versions or tags. IC Storage owns memory IO metering under
+its `test-support` feature. Native's next minor removes the old memory module and
+feature, so neither Storage trait changes nor simulator changes advance this group.
+Historical Testkit plans and receipts retain their original roster, including Native;
+never replay them with the new ownership policy. Whole-workspace qualification
+remains unchanged; the split does not establish a narrower validation gate.
+
 Real supplier changes can still require independently classified consumer changes.
 Publicly exposed supplier types and minimum requirements retain their actual
 identities; independent groups do not hide an incompatible dependency. Publish
@@ -40,7 +50,7 @@ Do not release unchanged groups merely because workspace qualification ran.
 
 ## Selection, history and recovery
 
-Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools` or `testkit` explicitly
+Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools`, `testkit` or `native` explicitly
 for release, resume, publication and publication dry-run commands. For example:
 
 ```sh
@@ -67,7 +77,7 @@ Published [Foundation history through 0.73.6](../../releases/foundation/CHANGELO
 retains its original seven-package scope once. New Build/Text ledgers link it.
 The [joint integration ledger](../../releases/integration/CHANGELOG.md),
 [earlier coordinated history](../../releases/history.md), imported Git histories
-and old tags remain untouched. Root CHANGELOG.md indexes the five current ledgers.
+and old tags remain untouched. Root CHANGELOG.md indexes the six current ledgers.
 
 Old `foundation-*` attempts may describe the original seven members. Never
 reinterpret or migrate their saved plans, receipts, partial uploads or tags under
@@ -82,14 +92,14 @@ The reviewed Shared snapshot and pinned Build metadata editor own admission,
 selected edits and rollback; this change adds no renderer or release runner.
 Every root catalog entry retains its literal version/path and one owning block.
 
-`bash scripts/release/test-adapter.sh` exercises all five plans, rollback,
+`bash scripts/release/test-adapter.sh` exercises all declared plans, rollback,
 source/commit custody, unselected versions/requirements/ledgers and wrong-group
 receipts, including equal-version Foundation/Build/Text owners. Setup and full
 gates are substituted; the fixture cannot release or publish. Publication and
 Make fixtures check exact selection and cross-group refusals.
 
 The private Dev `public_contracts` test requires shared public error, principal,
-certificate, core Wire and backing-memory identities during ordinary qualification.
+certificate and core Wire identities during ordinary qualification.
 The standard package check independently qualifies normalized archives of all ten
 public packages. After both integration groups are published, opt in to
 `CARGO_NET_OFFLINE=false bash scripts/release/test-integration-cohort.sh` for the

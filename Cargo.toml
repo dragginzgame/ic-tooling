@@ -48,8 +48,11 @@ ic-host-tools = { path = "crates/ic-host-tools", version = "0.78.0", default-fea
 # Changelog : releases/testkit/CHANGELOG.md
 ic-testkit = { path = "crates/ic-testkit", version = "0.79.0", default-features = false }
 ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.79.0" }
-ic-testkit-native = { path = "crates/ic-testkit-native", version = "0.79.0", default-features = false }
 ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.79.0" }
+
+# Native allocation measurement
+# Changelog : releases/native/CHANGELOG.md
+ic-testkit-native = { path = "crates/ic-testkit-native", version = "0.79.0" }
 
 # External production dependencies
 cap-fs-ext = "4.0.2"
@@ -57,7 +60,6 @@ cap-std = "4.0.2"
 cargo_metadata = "0.23.1"
 command-fds = "0.3.3"
 flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
-ic-memory = { version = "0.63.0", default-features = false }
 ic-metrics = { version = "0.26.0", default-features = false }
 ic-platform = { version = "0.18.0", default-features = false }
 ic-platform-runtime = { version = "0.18.0", default-features = false }
@@ -80,7 +82,7 @@ yaml_serde = "0.10.7"
 
 # External mixed production/test dependencies
 clap = { version = "4.6.7", default-features = false, features = ["std", "help", "usage", "error-context"] }
-ic-wire = "0.14.0"
+ic-wire = "0.15.0"
 leb128 = "0.2.5"
 reqwest = { version = "0.13.5", default-features = false }
 serde = { version = "1.0.228", default-features = false }

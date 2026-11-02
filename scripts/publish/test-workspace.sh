@@ -505,7 +505,7 @@ for mode in check publish; do
 done
 RELEASE_GROUP=testkit invoke check > integration-group.log 2>&1
 tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' | LC_ALL=C sort > group-packages
-printf '%s\n' ic-testkit ic-testkit-native > expected-group-packages
+printf '%s\n' ic-testkit > expected-group-packages
 cmp expected-group-packages group-packages
 admission="$(sed -n 's/^Publication admission evidence: //p' integration-group.log)"
 [[ "$(cat "$admission/release-group")" == testkit ]]
@@ -514,8 +514,8 @@ tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' > tools-packages
 printf '%s\n' ic-host-tools > expected-tools-packages
 cmp expected-tools-packages tools-packages
 # Build and Text select only their own package despite sharing the old baseline.
-for group in build text; do
-    case "$group" in build) expected_package=ic-build ;; text) expected_package=ic-host-text ;; esac
+for group in build text native; do
+    case "$group" in build) expected_package=ic-build ;; text) expected_package=ic-host-text ;; native) expected_package=ic-testkit-native ;; esac
     RELEASE_GROUP="$group" invoke check > "$group-group.log" 2>&1
     tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' > "$group-packages"
     printf '%s\n' "$expected_package" > "expected-$group-packages"
@@ -526,6 +526,8 @@ RELEASE_GROUP=foundation refuse publish --packages ic-host-text
 RELEASE_GROUP=build refuse publish --packages ic-host-artifacts
 RELEASE_GROUP=build refuse publish --packages ic-host-text
 RELEASE_GROUP=text refuse publish --packages ic-build
+RELEASE_GROUP=testkit refuse publish --packages ic-testkit-native
+RELEASE_GROUP=native refuse publish --packages ic-testkit
 RELEASE_GROUP=testkit refuse publish --packages ic-host-tools
 RELEASE_GROUP=tools refuse publish --packages ic-testkit
 RELEASE_GROUP=integration refuse check

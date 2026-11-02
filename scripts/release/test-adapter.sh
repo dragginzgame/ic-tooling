@@ -91,7 +91,7 @@ invoke() { bash "$adapter" "$@"; }
 refuse() {
     if "$@"; then echo 'Unexpected release adapter admission' >&2; exit 1; fi
 }
-for selected_group in foundation build text tools testkit; do
+for selected_group in foundation build text tools testkit native; do
     checkout="$fixture/$selected_group checkout"
     mkdir "$checkout"
     bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$root" "$checkout"
@@ -190,7 +190,8 @@ for selected_group in foundation build text tools testkit; do
         build) other_group=text ;;
         text) other_group=foundation ;;
         tools) other_group=testkit ;;
-        testkit) other_group=tools ;;
+        testkit) other_group=native ;;
+        native) other_group=testkit ;;
     esac
     other_state=".git/release-state/$other_group-$RELEASE_VERSION.validation"
     cp "$state" "$other_state"
@@ -220,4 +221,4 @@ for selected_group in foundation build text tools testkit; do
     unset RELEASE_COMMIT
 done
 fixture_complete=true
-echo 'Release adapter checks passed (all five groups; setup and full qualification substituted).'
+echo 'Release adapter checks passed (all six groups; setup and full qualification substituted).'

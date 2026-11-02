@@ -40,8 +40,7 @@ not leak into the published Wasm library. The maintained feature contracts are:
 
 | Package and target | Feature selection | Required boundary |
 | --- | --- | --- |
-| Native `ic-testkit-native` | Default | Only its own package identity; no normal/build dependencies |
-| Native `ic-testkit-native` | `stable-memory` | Platform and stable structures; no PocketIC client |
+| Native `ic-testkit-native` | All features | Only its own package identity; no normal/build dependencies |
 | Wasm `ic-testkit-native` | All features | No exported APIs or normal/build dependencies |
 | Native `ic-testkit` | Default | PocketIC/Candid allowed; no Wire, executor, Build, Host Text, Agent, parser or full CDK |
 | Native `ic-testkit` | All features (`cli,wire,held-reply-fixtures`) | One Wire identity; otherwise the same native exclusions |

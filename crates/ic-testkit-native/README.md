@@ -1,6 +1,6 @@
 # IC Testkit Native
 
-Std-only native allocation measurement by default. This package has no PocketIC,
+Std-only native allocation measurement. This package has no PocketIC,
 Host or canister dependencies and exposes no APIs on wasm32.
 
 Install `MeasuredAllocator::new(System)` as the test binary's global allocator,
@@ -14,13 +14,9 @@ Allocations freed during the scope may predate it: net bytes are signed and the
 peak is relative to the scope's starting point. Nested measurement refuses before
 running its operation. Unwinding disables measurement; the original panic remains.
 
-Enable `stable-memory` for `memory::MeteredMemory` and `MemoryIoCounts`, using
-IC Memory 0.63's backing `Memory` and `VectorMemory` identities. This optional
-profile includes IC Memory's codec dependencies; its Platform 0.17 stable-memory
-backend selects no Principal, runtime or client capabilities. Clones share
-backing bytes and counters; `reset()` clears observations without clearing bytes.
-Read/write attempts and completed growth calls retain the backing's behavior,
-including specialized unsafe reads and refused growth. Check `overflowed` and
-refuse exact reports when set; counters saturate rather than wrap. These are
-native IO observations, not IC instructions or cycle costs. Workloads, corruption
-injection and production memory governance remain caller-owned.
+This package has its own `native` release group, independent of PocketIC/Testkit.
+
+Memory IO metering belongs to IC Storage's `test-support` surface. Migrate
+`ic_testkit_native::memory::{MeteredMemory, MemoryIoCounts}` imports to
+`ic_storage::testing::{MeteredMemory, MemoryIoCounts}` with Storage 0.64.1 or a later release
+containing those helpers. The `stable-memory` feature is removed.

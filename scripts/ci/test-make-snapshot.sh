@@ -397,7 +397,7 @@ PATH="$fixture/local:$PATH" make --no-print-directory compiler-check > "$fixture
 : > "$HOST_MAKE_EVENTS"
 PATH="$fixture/local:$PATH" make --no-print-directory "MAKE=$(command -v make)" testkit-wasm-check check-fs-non-unix isolated-features-check > "$fixture/compiler-profiles.log" 2>&1
 cat > "$fixture/expected" <<'EVENTS'
-check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures,ic-testkit-native/stable-memory --locked --offline --target wasm32-unknown-unknown
+check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
 check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 check -p ic-host-fs --lib --bins --test unsupported_lock --all-features --target wasm32-unknown-unknown --locked --offline
 test -p ic-host-tools --no-default-features --features icp-project --all-targets --locked --offline icp_project::

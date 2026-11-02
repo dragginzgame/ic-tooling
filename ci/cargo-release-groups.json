@@ -63,7 +63,6 @@
       "version": "package",
       "members": [
         "ic-testkit",
-        "ic-testkit-native",
         "ic-testkit-dev",
         "ic-testkit-perf-probe"
       ],
@@ -71,8 +70,19 @@
       "dependencies": [
         "ic-testkit",
         "ic-testkit-dev",
-        "ic-testkit-native",
         "ic-testkit-perf-probe"
+      ]
+    },
+    {
+      "name": "native",
+      "primary": "ic-testkit-native",
+      "version": "package",
+      "members": [
+        "ic-testkit-native"
+      ],
+      "changelog": "releases/native/CHANGELOG.md",
+      "dependencies": [
+        "ic-testkit-native"
       ]
     }
   ]

@@ -11,7 +11,7 @@ server-check:
 	@test -x "$(SERVER_CLI)" || { echo 'Run make install-server during explicit setup.' >&2; exit 1; }
 	"$(SERVER_CLI)" check
 testkit-wasm-check:
-	+cargo check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures,ic-testkit-native/stable-memory --locked --offline --target wasm32-unknown-unknown
+	+cargo check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
 	+cargo check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 testkit-browser-check:
 	node --test testing/browser/session.test.mjs

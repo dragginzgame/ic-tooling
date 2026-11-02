@@ -6,7 +6,8 @@
 | Build | Cargo/Wasm builds and artifact caches | [Build ledger](releases/build/CHANGELOG.md) |
 | Text | Bounded text, Unicode and optional YAML | [Text ledger](releases/text/CHANGELOG.md) |
 | Host Tools | IC inspection, Agent, certificate and ledger helpers | [Host Tools ledger](releases/tools/CHANGELOG.md) |
-| Testkit | Testkit, Native and private development/probe packages | [Testkit ledger](releases/testkit/CHANGELOG.md) |
+| Testkit | Simulator integration and private development/probe packages | [Testkit ledger](releases/testkit/CHANGELOG.md) |
+| Native | Dependency-free native allocation measurement | [Native ledger](releases/native/CHANGELOG.md) |
 
 Each group owns its package versions and release notes. See
 [release ownership](docs/design/release-groups.md) for commands and boundaries.

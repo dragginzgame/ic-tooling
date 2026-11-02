@@ -7,14 +7,8 @@ version = "0.79.0"
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Native allocation measurement and optional memory IO observations for tests"
+description = "Native allocation measurement for tests"
 readme = "README.md"
-
-[features]
-stable-memory = ["dep:ic-memory"]
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-ic-memory = { workspace = true, optional = true }
 
 [lints]
 workspace = true

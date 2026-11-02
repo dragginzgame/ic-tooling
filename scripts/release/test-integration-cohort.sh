@@ -46,13 +46,12 @@ TOML
 # These are new registry-only inputs, never edits to release metadata or root lock.
 jq -er '.workspace.dependencies as $d |
     ["ic-build", "ic-host-artifacts", "ic-host-process", "ic-host-tools",
-     "ic-testkit", "ic-testkit-native", "ic-platform", "ic-platform-types", "ic-memory", "ic-wire"][] |
+     "ic-testkit", "ic-platform", "ic-platform-types", "ic-wire"][] |
     . as $name | $d[$name].version as $version |
     if ($version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) then
         ($name + " = { version = \"=" + $version + "\", default-features = false" +
         (if $name == "ic-host-tools" then ", features = [\"registry\", \"certificate\"]"
          elif $name == "ic-testkit" then ", features = [\"wire\"]"
-         elif $name == "ic-testkit-native" then ", features = [\"stable-memory\"]"
          elif $name == "ic-platform" then ", features = [\"principal\", \"certification\"]"
          else "" end) + " }")
     else error("expected a literal selected version for " + $name) end' \
@@ -65,7 +64,7 @@ cargo metadata --locked --offline --format-version 1 --manifest-path "$fixture/C
 jq -e --slurpfile catalog "$fixture/catalog.json" '
     .packages as $packages | $catalog[0].workspace.dependencies as $d |
     all(["ic-build", "ic-host-artifacts", "ic-host-process", "ic-host-tools", "ic-testkit",
-         "ic-testkit-native", "ic-platform-types", "ic-memory", "ic-wire"][];
+         "ic-platform-types", "ic-wire"][];
         . as $name | [$packages[] | select(.name == $name)] |
         length == 1 and all(.[]; .version == $d[$name].version and (.source | startswith("registry+"))))
     and all($packages[]; .name == "integration-cohort-consumer" or (.source | startswith("registry+")))
@@ -73,7 +72,7 @@ jq -e --slurpfile catalog "$fixture/catalog.json" '
 host="$(rustc -vV | sed -n 's/^host: //p')"
 perl scripts/ci/check-cargo-graph.pl --consumer "$fixture" \
     --package integration-cohort-consumer --target "$host" \
-    --require ic-platform-types=1 --require ic-memory=1 \
+    --require ic-platform-types=1 \
     --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
     --forbid pocket-ic --json --observations > "$fixture/native-graph.json"
 cargo test --locked --offline --manifest-path "$fixture/Cargo.toml" \

@@ -4,7 +4,8 @@
 
 Native allocator workloads can use the separate std-only
 [`ic-testkit-native`](../../crates/ic-testkit-native/README.md) package without
-acquiring PocketIC or canister dependencies.
+acquiring PocketIC or canister dependencies. It releases independently under
+`RELEASE_GROUP=native`; memory IO metering belongs to IC Storage's `test-support` API.
 
 <!-- helper-navigation:start -->
 <p align="center">

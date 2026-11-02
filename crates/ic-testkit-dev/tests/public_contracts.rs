@@ -10,7 +10,7 @@ fn build_keeps_its_public_foundation_error_identities() {
 }
 
 #[test]
-fn tooling_callers_share_principal_wire_and_backing_memory_contracts() {
+fn tooling_callers_share_principal_and_wire_contracts() {
     let _: fn(
         &[u8],
         ic_host_tools::certificate::DecodeLimits,
@@ -53,7 +53,4 @@ fn tooling_callers_share_principal_wire_and_backing_memory_contracts() {
         ic_wire::native::decode_response(call.method_id, &response, limits).unwrap();
     assert_eq!(decoded, account);
     assert!(decoded.subaccount.is_none());
-    let memory: ic_testkit_native::memory::MeteredMemory =
-        ic_testkit_native::memory::MeteredMemory::default();
-    assert_eq!(ic_memory::Memory::size(&memory), 0);
 }

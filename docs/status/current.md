@@ -1,81 +1,88 @@
 # Current handoff — 2026-11-02
 
-## Completed five-group delivery
+## Authorized Testkit 0.80 deployment
 
-The maintainer authorized the cleanup delivery, corrective Foundation 0.74.1,
-and the upper groups once matching Types 0.17 suppliers were published.
-All five groups are now live, unyanked and independently registry-verified:
+The maintainer requested deployment after adopting IC Wire 0.15. Release and
+publish Testkit 0.80.0 through the normal selected-group workflow. Native's new
+independent group remains at 0.79.0 with 0.80.0 pending notes: its memory API
+removal waits for a published replacement helper. Live Storage remains 0.64.0;
+planned 0.64.1 is not yet published. No Storage or Scheduling release is authorized.
+Tools, Foundation, Build and Text do not need another publication for this batch.
 
-| Group | Version | Release/source commit | Public packages |
-| --- | --- | --- | --- |
-| Foundation | 0.74.1 | `7992cfd183888096c2ec922479836dc1ab0fbef1` | Artifacts, FS, HTTP, Process, Wasm inspector |
-| Build | 0.74.0 | `5bff8453ac5c5d42a162c68486c498f5c1d41944` | ic-build |
-| Text | 0.74.0 | `a60051341edc59216143c5dcce94db4c2c6da26b` | ic-host-text |
-| Tools | 0.78.0 | `3c5ce4c732275922f404069ea2def690453dd74b` | ic-host-tools |
-| Testkit | 0.79.0 | `f64b6c719438ba56c35d53f68e14e410927673e2` | ic-testkit, ic-testkit-native |
+Tooling source now has six groups. Testkit retains the private Dev/probe packages;
+Native is allocation-only and dependency-free. Its memory module/feature and the
+IC Memory/old Platform/stable-structures graph are removed from main's pending
+Native source, with the registry Native 0.79 API unchanged until its own release.
+Old Testkit journals preserve their original Native roster. Do not replay them
+under the new policy. All ten public packages retain archive qualification.
 
-Every standard release passed its complete Linux gate and atomically delivered
-main plus its annotated group tag. Every upload followed a publication dry run;
-independent sparse-index/archive readback matches the uploaded checksum and clean
-release source. Do not repeat increments/uploads. Foundation 0.74.0 remains
-immutable, Git-only and unpublished. Its dry run exposed the repaired FS/Process
-dev cycle. Build and Text have independent release groups.
+Wire/derive 0.15 changes public Limits/Error identities. Consumers passing those
+types to Testkit must adopt Wire 0.15. Core bytes/budgets and the native-only
+optional transport boundary remain unchanged; no metadata bridge is enabled.
+Focused native/Wasm-library Clippy, nine transport cases, one protocol case,
+two public contract tests and graph policies pass before release. Native
+allocation tests, six-group adapter/publication/Make fixtures, sorting and docs
+also pass. Fixtures substitute release/upload effects; they are not live delivery.
+The new deployment still requires its full standard release gate and dry run.
 
-Upper adoption is in `cd40bdb5`. Tools/Testkit select Types 0.17 and
-Runtime/facade/PocketIC client 0.18. Consumers exchanging public principal,
-certificate or client-owned DTO identities must align those suppliers. The
-PocketIC server remains 16.1.0. Independent direct client adoption stays separate.
-Native's optional memory feature uses IC Memory 0.63's published backing interface.
-Its legacy facade 0.17 backend is stable-only, selecting no Types/runtime/client;
-IC Memory's codec dependencies stay in this optional native profile. Native's
-default and Wasm profiles remain dependency-free.
+## Delivery checkout and preservation
 
-## Evidence and pending hosted qualification
+The retained integration checkout is `/tmp/ic-tooling-five-groups.iOEuyP/checkout`.
+It uses the scoped release lock, leaving ordinary-checkout unrelated dependency
+refreshes outside delivery commits. New source/evidence/preservation inputs are
+in `/tmp/ic-tooling-testkit-080.OPJk8Q/`; durable deployment evidence belongs at
+`.git/release-state/deployment-testkit-0.80.0/` in the ordinary checkout.
+Preserve new dirty work, artifacts and failed attempts. No cleanup is authorized.
+After successful delivery, fast-forward the ordinary checkout while preserving
+its unrelated lock selections and any new user edits. Do not apply old entire
+locks or historical stashes over the new owned package versions.
 
-Both upper releases passed full Linux/native/Wasm/installed/package qualification.
-Public caller tests pass in private Dev. The same tests pass against exact current
-registry packages, without source patches: error/principal/certificate identities,
-core Wire frames/limits and backing-memory traits. Evidence is retained at
-`/tmp/ic-tooling-five-groups.iOEuyP/checkout/target/published-integration.LagfoN`.
-The verifier accepts string/table dependencies; its initial failed fixture is
-retained separately at `published-integration.eiaS3h`. No repeat upload was needed.
+Current Wire adoption evidence is `/tmp/ic-tooling-wire-015.FU6Gbv/`. Its lock
+changes only Wire/derive 0.14.2 to 0.15.0, preserving 454 other registry records.
+The preceding Native split pruned exactly IC Memory 0.63.1, Platform 0.17.0 and
+stable-structures 0.7.2; its unrelated records were preserved. The isolated release
+lock instead retains the original external patch selections. Do not publish
+those unrelated ordinary lock edits as part of this deployment.
 
-Native macOS evidence is separate. Older core source `a6005134` passed Linux and
-macOS 15 Intel in CI run 41448255449. Apple Silicon exposed a Process test's
-immediate nonblocking accept assumption. The bounded accept/peer-identity repair
-passes Linux and is delivered in `cd40bdb5`; Foundation 0.74.2 has test-only pending
-notes and is not released. Testkit 0.79.1 notes cover the verifier-only repair;
-no further package release is implied by these pending notes.
+## Prepared sibling contributions
 
-Hosted qualification of the latest delivered source remains asynchronous.
-The Testkit release's CI run is 41477500722; at observation it was queued,
-Browser passed, and optimizer/runtime were running. Final bookkeeping/verifier
-source delivery starts a superseding run. Report its actual status; do not wait
-solely for the matrix or treat pending/cancelled jobs as passes. The older Intel
-pass does not qualify the new SDK source on either macOS architecture.
+Storage's additive helper is prepared independently of its dirty B-tree/SDK work:
+`/tmp/ic-tooling-native-split.w9WGNC/storage-contribution` is a clean-base
+contribution with pending Storage 0.64.1 notes and unchanged actual package versions.
+Native `ic_storage::testing::{MeteredMemory, MemoryIoCounts}` under `test-support`
+meters Storage's owned Memory trait and delegates physical MemoryBacking identity.
+Shared counters/reset, refused growth and overflow retain focused coverage.
+Production APIs/formats are unchanged. Five tests and strict Clippy pass.
 
-## Checkouts and recovery custody
+The isolated Scheduling migration at
+`/tmp/ic-tooling-native-split.w9WGNC/scheduling` requires Storage 0.64.1, replaces
+its trait bridge and drops the old Native/unused facade selections. Full graph
+resolution, 48 native cases and strict Clippy pass against a projected compatible
+Storage source, retaining all Wasm dependency declarations. The only projection
+changes are supplier version/source path; actual Rust source identity is verified.
+No live IC or new native macOS qualification was run for those contributions.
 
-The retained release checkout is `/tmp/ic-tooling-five-groups.iOEuyP/checkout`.
-Its scoped release lock excludes the ordinary checkout's unrelated dependency
-refreshes. The ordinary checkout is being fast-forwarded after final delivery;
-retain its incoming lock selections while resolving the intended SDK/group updates.
-Its lock backup and exact unrelated delta are under `preservation/before-upper-sync/`.
-Preserve any new user work. No artifact cleanup or sibling release is authorized.
+Only scoped sibling changes are in `patches/storage-0.64.1.patch` and
+`patches/scheduling-metered-memory.patch` beneath that split evidence directory.
+Original sibling checkouts were never edited. Do not commit their unrelated
+pending work. Publish the helper at its supplying owner before adopting the real
+registry lock in Scheduling or publishing Native's breaking removal.
 
-Durable logs, plans/receipts, registry archives/readback checksums, supplier
-observations, CI observations and preservation evidence live under the ordinary
-checkout's `.git/release-state/deployment-five-groups-20261102/`.
-`release-checkout-path` identifies the retained checkout; its isolated release
-state is copied into that evidence. Completed controllers must not be replayed.
-The historical stash `bc5e544bb9adfea1e0b0a0aac77945ca573321d2` is not a patch
-to apply over current metadata. Preserve failed artifacts and saved source custody.
+## Prior completed releases and host evidence
 
-## Adopted policy
+Prior main is `b248f5d41b50f3a2e10cf83a3258f03783ec57ca`. Foundation 0.74.1
+(`7992cfd1`), Build 0.74.0 (`5bff8453`), Text 0.74.0 (`a6005134`), Tools 0.78.0
+(`3c5ce4c7`) and Testkit/Native 0.79.0 (`f64b6c71`) are published and independently
+registry-readback verified. Do not increment/upload them again. Foundation
+0.74.0 is Git-only. Prior plans/archives/checksums remain under
+`.git/release-state/deployment-five-groups-20261102/`.
 
-Shared Tooling 0.27.27 at `651f5f7acb2e3055abd51ba5f835a2112801666a` is
-adopted with all 162 managed payloads intact. Rust floor/development pin is
-1.99.1. Metrics 0.26 stays native/arithmetic-only and absent from Testkit Wasm.
-Full release gates remain mandatory: no narrower group mapping is activated.
-Hosted CI runs asynchronously; local release qualification and publication are
-separate effects. No Platform, Memory, Wire or other sibling release is authorized.
+Base CI run 41477907607 completed successfully on Linux x86-64, macOS 15 Intel
+and Apple Silicon, including lint/security and compiler status. Those native
+macOS passes qualify `b248f5d4`, not the new uncommitted Wire/split source.
+Run hosted CI asynchronously after delivery; report pending results without
+waiting solely for that matrix. Full local release qualification remains required.
+
+Shared Tooling 0.27.27 (`651f5f7`) and Rust floor/pin 1.99.1 remain unchanged.
+Metrics stays native/arithmetic-only and absent from Testkit Wasm. No narrower
+group validation mapping is activated; source, archive and recovery custody remain.

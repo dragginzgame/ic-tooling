@@ -10,7 +10,7 @@ are rejected before execution;
 the shared runner's optional PR flow is not qualified by this adapter.
 These commands do not publish crates to a registry.
 
-Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools` or `testkit` explicitly on
+Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools`, `testkit` or `native` explicitly on
 every release command and exact-version resume. The
 [group policy](../ci/cargo-release-groups.json) retains one qualification workspace
 with independent version sources and ledgers; see
@@ -21,14 +21,13 @@ make release-minor RELEASE_GROUP=tools
 make release-resume RELEASE_GROUP=tools VERSION=X.Y.Z
 ```
 
-The current split preserves Foundation, Build and Text at 0.73.6, Tools at 0.77.0
-and Testkit at 0.78.0. Every package has an
-explicit version owned by its group primary; the root Cargo metadata has no
-version. Root `CHANGELOG.md` indexes the
+Every package has an explicit version owned by its group primary; the root
+Cargo metadata has no version. Root `CHANGELOG.md` indexes the
 [Foundation](../releases/foundation/CHANGELOG.md),
 [Build](../releases/build/CHANGELOG.md), [Text](../releases/text/CHANGELOG.md),
-[Host Tools](../releases/tools/CHANGELOG.md) and
-[Testkit](../releases/testkit/CHANGELOG.md) ledgers. Original joint integration
+[Host Tools](../releases/tools/CHANGELOG.md),
+[Testkit](../releases/testkit/CHANGELOG.md) and
+[Native](../releases/native/CHANGELOG.md) ledgers. Original joint integration
 notes remain in the [frozen ledger](../releases/integration/CHANGELOG.md), with
 earlier coordinated notes retained in [shared history](../releases/history.md).
 Group tags and saved plans are prefixed with the group.
@@ -100,7 +99,7 @@ Cargo metadata before running lint or packaging; private test packages stay out.
 
 Publication requires explicit `RELEASE_GROUP=foundation` for its five public
 packages, `build` for IC Build, `text` for Host Text, `tools` for Host Tools, or
-`testkit` for Testkit/Native.
+`testkit` for Testkit, or `native` for Native allocation measurement.
 Private Testkit harnesses are never uploaded. For a Host Tools release:
 
 ```sh
@@ -131,7 +130,7 @@ archive qualification still selects the complete roster independently of a batch
 and `--locked --registry crates-io --dry-run`. It packages and verifies the selected
 workspace packages through exact `--package NAME@VERSION` selectors without
 uploading. The default selection is the chosen group's public members. Across
-all five groups, the roster remains six Host libraries, `ic-build`, `ic-testkit`,
+all six groups, the roster remains six Host libraries, `ic-build`, `ic-testkit`,
 `ic-testkit-native` and the `ic-host-wasm-inspect` CLI. The development driver and
 Wasm probe remain private. It admits working edits so packaging can be reviewed
 before committing. It can access the registry; set `CARGO_NET_OFFLINE=true` for

@@ -1,10 +1,25 @@
 # Testkit family changelog
 
-This ledger owns Testkit, Testkit Native and the private development/probe packages. The published baseline at the split is 0.76.1,
+This ledger owns Testkit and the private development/probe packages. Native's
+[separate ledger](../native/CHANGELOG.md) owns subsequent releases; its history
+through 0.79.0 retains its original scope below. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
-## [0.79.1] - Unreleased
+## [0.80.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt IC Wire 0.15 for native transport and the private Wasm performance probe.
+  Consumers exchanging `WireCallSpec` limits or matching typed codec errors must
+  select Wire 0.15 too. Preserve the core frames, caller-selected budgets and
+  optional native transport boundary; no metadata bridge is enabled.
+
+### 🔧 Changed
+
+- Release Native allocation measurement independently with `RELEASE_GROUP=native`.
+  Testkit releases no longer bump Native; the private interoperability fixture
+  no longer depends on Storage-specific memory metering.
 
 ### 🩹 Fixed
 

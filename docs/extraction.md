@@ -5,8 +5,9 @@
 The Host primitives retain the existing boundaries below, plus the explicitly
 approved optional HTTP boundary described here. `ic-build` now shares
 this repository and owns generic Cargo execution, build input evidence and
-retained artifact caches. `ic-testkit` and `ic-testkit-native` own simulator
-integration and native test measurement. `ic-testkit-dev` and
+retained artifact caches. `ic-testkit` owns simulator integration; independently released
+`ic-testkit-native` owns dependency-free native allocation measurement.
+IC Storage owns backing-memory IO metering in its test-support API. `ic-testkit-dev` and
 `ic-testkit-perf-probe` are private qualification packages. Build and Testkit
 depend on Host; Host does not depend on either. The private Testkit driver
 may also depend on Build. One workspace contains independently versioned
