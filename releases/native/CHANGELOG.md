@@ -9,7 +9,7 @@ remains in the original Testkit ledger with its original package scope.
 ### ⚠️ Breaking
 
 - Remove the `stable-memory` feature and `memory::{MeteredMemory, MemoryIoCounts}`.
-  Use IC Storage's `test-support` helpers at `ic_storage::testing` for backing IO
+  Use IC Storage 0.65's `test-support` helpers at `ic_storage::testing` for backing IO
   metering. The generic allocation API is unchanged and has no dependencies.
 
 ### 🔧 Changed

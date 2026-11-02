@@ -18,5 +18,4 @@ This package has its own `native` release group, independent of PocketIC/Testkit
 
 Memory IO metering belongs to IC Storage's `test-support` surface. Migrate
 `ic_testkit_native::memory::{MeteredMemory, MemoryIoCounts}` imports to
-`ic_storage::testing::{MeteredMemory, MemoryIoCounts}` with Storage 0.64.1 or a later release
-containing those helpers. The `stable-memory` feature is removed.
+`ic_storage::testing::{MeteredMemory, MemoryIoCounts}` with Storage 0.65 and its `test-support` feature. The `stable-memory` feature is removed.
