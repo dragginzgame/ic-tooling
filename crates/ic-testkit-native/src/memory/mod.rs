@@ -1,6 +1,6 @@
 //! Native backing-memory IO counters; workloads and failure injection stay local.
 
-use ic_platform::stable_structures::{Memory, VectorMemory};
+use ic_memory::{Memory, VectorMemory};
 use std::{cell::Cell, rc::Rc};
 
 ///

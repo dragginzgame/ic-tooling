@@ -11,10 +11,10 @@ description = "Native allocation measurement and optional memory IO observations
 readme = "README.md"
 
 [features]
-stable-memory = ["dep:ic-platform", "ic-platform/stable-structures"]
+stable-memory = ["dep:ic-memory"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-ic-platform = { workspace = true, optional = true }
+ic-memory = { workspace = true, optional = true }
 
 [lints]
 workspace = true

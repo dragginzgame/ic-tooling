@@ -15,7 +15,9 @@ peak is relative to the scope's starting point. Nested measurement refuses befor
 running its operation. Unwinding disables measurement; the original panic remains.
 
 Enable `stable-memory` for `memory::MeteredMemory` and `MemoryIoCounts`, using
-Platform 0.6.2's upstream `Memory` and `VectorMemory` identities. Clones share
+IC Memory 0.63's backing `Memory` and `VectorMemory` identities. This optional
+profile includes IC Memory's codec dependencies; its Platform 0.17 stable-memory
+backend selects no Principal, runtime or client capabilities. Clones share
 backing bytes and counters; `reset()` clears observations without clearing bytes.
 Read/write attempts and completed growth calls retain the backing's behavior,
 including specialized unsafe reads and refused growth. Check `overflowed` and

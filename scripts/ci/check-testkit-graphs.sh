@@ -20,10 +20,17 @@ native_policy=("${policy[@]}" --require ic-platform=1 --require ic-metrics=1 --r
 perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --package ic-testkit-native --target "$host" \
     --require ic-testkit-native=1 --forbid-pattern '^(?!ic-testkit-native$)'
-perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
+native_memory="$(perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --package ic-testkit-native --target "$host" --all-features \
-    --require ic-platform=1 --require ic-stable-structures=1 \
-    --forbid-pattern '^(?!ic-testkit-native$|ic-platform$|ic-stable-structures$|ic_principal$)'
+    --require ic-memory=1 --require ic-platform=1 --require ic-stable-structures=1 \
+    --forbid ic-platform-types --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
+    --forbid candid --forbid ic-agent --forbid ic-platform-pocket-ic --forbid ic-metrics \
+    --forbid-pattern '^(ic-host-|ic-build$|ic-cdk)' --json --observations)"
+# IC Memory owns the backing interface. Its current compatibility backend and
+# record codec stay confined to this optional native profile.
+jq -e 'any(.observations[]; .name == "ic-platform" and .features == ["stable-structures"]) and
+    any(.observations[]; .name == "ic-memory" and .features == []) and
+    any(.observations[]; .name == "ic-wire" and .features == [])' <<< "$native_memory" > /dev/null
 perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --forbid clap --forbid ic-wire \
     --forbid wat --forbid wast --forbid wasm-encoder

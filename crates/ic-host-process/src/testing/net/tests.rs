@@ -26,14 +26,17 @@ fn bounded_accept_preserves_peer_and_request_bytes() {
 #[test]
 fn elapsed_accept_deadline_leaves_queued_connection_unconsumed() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let _client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+    let client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
     assert_eq!(
         accept_tcp_until(&listener, Instant::now())
             .unwrap_err()
             .kind(),
         io::ErrorKind::TimedOut
     );
-    listener.accept().unwrap();
+    // Nonblocking connect completion need not make accept ready immediately on macOS.
+    let deadline = Instant::now().checked_add(Duration::from_secs(5)).unwrap();
+    let (_, peer) = accept_tcp_until(&listener, deadline).unwrap();
+    assert_eq!(peer, client.local_addr().unwrap());
 }
 
 #[test]

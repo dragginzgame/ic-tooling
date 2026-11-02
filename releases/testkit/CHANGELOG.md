@@ -8,6 +8,14 @@ Joint history through 0.76.1 remains there once, with its original scope.
 
 ### ⚠️ Breaking
 
+- Adopt canonical Types 0.17 and Runtime 0.18 directly, with Platform/PocketIC
+  client 0.18 for native adapters. Align consumers passing client-owned DTOs or
+  principals. The installed PocketIC server remains 16.1.0.
+- Native's optional stable-memory adapter uses IC Memory 0.63's public backing
+  interface, retaining the upstream Memory trait identity. Its native-only
+  dependency closure includes IC Memory's record codec and stable-only Platform
+  0.17 backend; default Native and Wasm remain dependency-free.
+
 - Require Rust 1.99.1 and pin contributor/release compilation to that version.
   Native qualification now owns the former compiler-lane feature and Wasm
   obligations; the stable MSRV status reuses its results. Older compiler support
@@ -30,14 +38,17 @@ Joint history through 0.76.1 remains there once, with its original scope.
   native arithmetic-only benchmark averages, existing errors and the Metrics-free
   Wasm graph; no transport features are enabled.
 
-- Select published Types 0.16 directly for the existing external Principal identity.
-  Select Runtime 0.17.1 directly for Wasm IC0 and the private performance probe
+- Select published Types 0.17 directly for the external Principal identity.
+  Select Runtime 0.18 directly for Wasm IC0 and the private performance probe
   entrypoints. Testkit and probe Wasm graphs now exclude the Platform facade;
   raw Testkit remains executor-free. Native Candid/PocketIC adapters, marker
   formats and caller-owned policies are unchanged.
 
 ### 🧹 Cleanup
 
+- Require shared public caller contracts in private Dev qualification and reuse
+  those tests for registry-only post-publication verification. Remove the manual
+  integration fixture's duplicate release rendering and obsolete peer assumptions.
 - Reuse bounded process-test isolation for server-asset qualification. Keep
   setup cancellation, authentication, retained failure evidence and child reaping.
 - Keep current host guidance separate from the preserved qualification archive,

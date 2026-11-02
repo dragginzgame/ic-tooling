@@ -2,273 +2,80 @@
 # Shared companions: scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml
 set -euo pipefail
 
-# Opt-in archive consumer proof against published Foundation and Build suppliers.
-# Candidate versions exist only in a disposable workspace; no release/upload.
-[[ ( $# == 1 || $# == 2 ) && -x "$1" ]] || {
-    echo 'usage: test-integration-cohort.sh BUILT_RELEASE_EDITOR [tools|testkit]' >&2
-    exit 2
-}
-if [[ $# == 1 ]]; then
-    bash "$0" "$1" tools
-    bash "$0" "$1" testkit
-    exit
-fi
-selected_group="$2"
-[[ "$selected_group" == tools || "$selected_group" == testkit ]] || exit 2
-editor="$1"
-[[ "$editor" == /* ]] || editor="$PWD/$editor"
+# Post-publication proof of the same public contracts required in private Dev.
+[[ $# == 0 ]] || { echo 'usage: test-integration-cohort.sh' >&2; exit 2; }
 root="${BASH_SOURCE[0]}"
 [[ "$root" == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
-toolchain="$("${YQ:-yq}" -r -p toml -o yaml '.toolchain.channel' "$root/rust-toolchain.toml")"
-export RUSTUP_TOOLCHAIN="$toolchain"
-bash "$root/scripts/ci/check-rust-toolchain.sh" "$root"
+cd "$root"
+parser="${YQ:-$root/.tools/host/bin/yq}"
+YQ="$parser" bash scripts/ci/check-rust-toolchain.sh "$root"
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
-fixture="$(fixture_create "${TMPDIR:-/tmp}/integration-cohort.XXXXXX")"
+source scripts/ci/fixture-lifecycle.sh
+mkdir -p "$root/target"
+fixture="$(fixture_create "$root/target/published-integration.XXXXXX")"
 fixture_complete=false
-# Retain successful candidates too: these are a reviewable publication plan.
-trap 'status=$?; fixture_completion_status "$status" "$fixture_complete" || status=$?; printf "Integration cohort evidence: %s\n" "$fixture" >&2; exit "$status"' EXIT
-export RUSTUP_AUTO_INSTALL=0 CARGO_NET_OFFLINE=true
+# Keep successful readback evidence as well as failures; never clean this fixture.
+finish() {
+    local status="$1"
+    fixture_completion_status "$status" "$fixture_complete" || status=$?
+    if [[ "$status" != 0 ]]; then
+        fixture_replay_logs "$fixture/lock.log" "$fixture/fetch.log" "$fixture/consumer.log"
+    fi
+    printf 'Published integration evidence: %s\n' "$fixture" >&2
+    exit "$status"
+}
+trap 'finish "$?"' EXIT
+export RUSTUP_AUTO_INSTALL=0
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/target}"
-parser="${YQ:-yq}"
-"$parser" -p toml -o json '.' "$root/Cargo.toml" > "$fixture/source.json"
-foundation="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-host-artifacts/Cargo.toml" | jq -er '.')"
-build_version="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-build/Cargo.toml" | jq -er '.')"
-primary="$(jq -r --arg group "$selected_group" '.groups[] | select(.name == $group) | .primary' "$root/ci/cargo-release-groups.json")"
-previous="$("$parser" -p toml -o json '.package.version' "$root/crates/$primary/Cargo.toml" | jq -er '.')"
-tools_version="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-host-tools/Cargo.toml" | jq -er '.')"
-testkit_version="$("$parser" -p toml -o json '.package.version' "$root/crates/ic-testkit/Cargo.toml" | jq -er '.')"
-next="$(bash "$root/scripts/ci/next-release-version.sh" "$previous" minor)"
-(cd "$root"; RELEASE_VERSION="$next" bash scripts/ci/cargo-release-group.sh plan "$selected_group") \
-    > "$fixture/group-plan.json"
-if [[ "$selected_group" == tools ]]; then tools_version="$next"; else testkit_version="$next"; fi
-selected_packages=()
-while IFS= read -r package; do
-    case "$package" in ic-testkit-dev|ic-testkit-perf-probe) continue ;; esac
-    selected_packages+=("$package")
-done < <(jq -r '.members[]' "$fixture/group-plan.json")
-printf '%s\n' "${selected_packages[@]}" | jq -Rs 'split("\n") | map(select(length > 0))' > "$fixture/selected-packages.json"
-
-mkdir -p "$fixture/crates" "$fixture/consumer/src" "$fixture/before"
-mkdir -p "$fixture/serializer/src"
-# Construct fixtures with the existing TOML serializer; the Build editor below
-# remains the owner of selected release edits. No ad-hoc TOML writer is used.
-"$parser" -p toml -o json '.' "$root/Cargo.lock" > "$fixture/source-lock.json"
-toml_version="$(jq -er '.package[] | select(.name == "toml" and (.version | startswith("1."))) | .version | split("+")[0]' "$fixture/source-lock.json")"
-json_version="$(jq -er '.package[] | select(.name == "serde_json") | .version' "$fixture/source-lock.json")"
-types_version="$(jq -er '[.package[] | select(.name == "ic-platform-types")] |
-    if length == 1 then .[0].version else error("expected one canonical Types supplier") end' "$fixture/source-lock.json")"
-cat > "$fixture/serializer/Cargo.toml" <<EOF
+"$parser" -p toml -o json '.' Cargo.toml > "$fixture/catalog.json"
+mkdir "$fixture/src"
+cp crates/ic-testkit-dev/tests/public_contracts.rs "$fixture/src/lib.rs"
+cat > "$fixture/Cargo.toml" <<'TOML'
 [package]
-name = "cohort-fixture-serializer"
+name = "integration-cohort-consumer"
 version = "0.0.0"
 edition = "2024"
 publish = false
 [workspace]
 [dependencies]
-toml = "=$toml_version"
-serde_json = "=$json_version"
-EOF
-cat > "$fixture/serializer/src/main.rs" <<'RUST'
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let value: serde_json::Value = serde_json::from_reader(std::io::stdin().lock())?;
-    print!("{}", toml::to_string_pretty(&value)?);
-    Ok(())
-}
-RUST
-cargo build --offline --manifest-path "$fixture/serializer/Cargo.toml" \
-    > "$fixture/serializer.log" 2>&1
-serializer="$CARGO_TARGET_DIR/debug/cohort-fixture-serializer"
-cp -a "$root/crates/ic-host-tools" "$root/crates/ic-testkit" "$root/crates/ic-testkit-native" "$fixture/crates/"
-cp "$root/README.md" "$root/LICENSE" "$fixture/"
-# An archive consumer uses registry foundation packages, as Cargo's normalized
-# publication manifests do. Preserve their actual requirement literals.
-jq --slurpfile selected "$fixture/selected-packages.json" '
-    .workspace.members = (["consumer"] + ($selected[0] | map("crates/" + .)))
-    | del(.workspace["default-members"])
-    | reduce ["ic-host-artifacts", "ic-host-fs", "ic-host-process", "ic-host-text", "ic-build"][] as $name
-        (. ; del(.workspace.dependencies[$name].path))
-' "$fixture/source.json" | "$serializer" > "$fixture/Cargo.toml"
-cp "$fixture/Cargo.toml" "$fixture/before/Cargo.toml"
-jq '.manifests[] | select(.path == "Cargo.toml") | {version,dependencies}' \
-    "$fixture/group-plan.json" > "$fixture/root-selection.json"
-"$editor" --max-input-bytes 8388608 group-manifest "$fixture/Cargo.toml" \
-    "$previous" "$next" "$fixture/root-selection.json" > "$fixture/root.candidate"
-mv "$fixture/root.candidate" "$fixture/Cargo.toml"
-printf '%s\n' '{"version":"package","dependencies":[]}' > "$fixture/member-selection.json"
-for package in "${selected_packages[@]}"; do
-    manifest="$fixture/crates/$package/Cargo.toml"
-    # Both real groups already own literal package versions.
-    cp "$manifest" "$fixture/before/$package.toml"
-    "$editor" --max-input-bytes 8388608 group-manifest "$manifest" \
-        "$previous" "$next" "$fixture/member-selection.json" > "$manifest.candidate"
-    mv "$manifest.candidate" "$manifest"
-    "$parser" -p toml -o json '.' "$fixture/before/$package.toml" > "$fixture/before/member.json"
-    "$parser" -p toml -o json '.' "$manifest" |
-        jq -e --slurpfile before "$fixture/before/member.json" \
-            'del(.package.version) == ($before[0] | del(.package.version))' > /dev/null
-done
-tools_path='' testkit_path='' native_path=''
-if [[ "$selected_group" == tools ]]; then
-    tools_path='path = "../crates/ic-host-tools", '
-else
-    testkit_path='path = "../crates/ic-testkit", '
-    native_path='path = "../crates/ic-testkit-native", '
-fi
-cat > "$fixture/consumer/Cargo.toml" <<EOF
-[package]
-name = "integration-cohort-consumer"
-version = "$foundation"
-edition = "2024"
-publish = false
-[dependencies]
-ic-build = "=$build_version"
-ic-host-artifacts = "=$foundation"
-ic-host-process = "=$foundation"
-ic-host-tools = { ${tools_path}version = "=$tools_version", features = ["registry", "certificate"] }
-ic-testkit = { ${testkit_path}version = "=$testkit_version", features = ["wire"] }
-ic-testkit-native = { ${native_path}version = "=$testkit_version", features = ["stable-memory"] }
-ic-platform = { workspace = true, features = ["principal", "certification"] }
-ic-platform-types = { version = "=$types_version", default-features = false }
-ic-wire = { workspace = true, features = ["platform-types"] }
-EOF
-cat > "$fixture/consumer/src/lib.rs" <<'RUST'
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn published_build_keeps_its_public_foundation_error_identities() {
-        use ic_build::artifacts::candid::ExtractionError;
-        let _: fn(ic_host_artifacts::artifact::ArtifactError) -> ExtractionError =
-            ExtractionError::Input;
-        let _: fn(ic_host_process::tool::ToolError) -> ExtractionError = ExtractionError::Tool;
-    }
-
-    #[test]
-    fn integration_callers_share_canonical_identity_and_core_wire_limits() {
-        let _: fn(&[u8], ic_host_tools::certificate::DecodeLimits)
-            -> Result<ic_platform::certification::Certificate, ic_host_tools::certificate::DecodeError>
-            = ic_host_tools::certificate::decode_certificate;
-        let owner: ic_platform_types::Principal =
-            ic_host_tools::registry::routing_shards::canister_range_start_from_key(
-                "prefix/", "prefix/00000000000000000101",
-            ).unwrap();
-        let facade: ic_platform::Principal = owner;
-        let _: ic_platform_types::Principal = facade;
-        // The consumer opts into metadata; Tooling production profiles do not.
-        assert!(ic_wire::typescript::native_schema::<ic_platform::Principal>().is_ok());
-        assert!(ic_wire::typescript::native_schema::<ic_platform::Account>().is_ok());
-        let limits = ic_wire::Limits {
-            bytes: 1024, allocation: 16384, nodes: 1024, depth: 16,
-        };
-        let call = ic_testkit::pic::WireCallSpec {
-            method: "probe", method_id: 1,
-            request_limits: limits, response_limits: limits,
-        };
-        let _: ic_wire::Limits = call.request_limits;
-        let _: ic_wire::Limits = call.response_limits;
-        let request = ic_wire::native::encode_request(call.method_id, &facade, limits).unwrap();
-        let decoded: ic_platform::Principal =
-            ic_wire::native::decode_request(call.method_id, &request, limits).unwrap();
-        assert_eq!(decoded, facade);
-        let account = ic_platform::Account { owner: facade, subaccount: None };
-        let response = ic_wire::native::encode_response(call.method_id, &account, limits).unwrap();
-        let decoded: ic_platform::Account =
-            ic_wire::native::decode_response(call.method_id, &response, limits).unwrap();
-        assert_eq!(decoded, account);
-        assert!(decoded.subaccount.is_none());
-        let memory: ic_testkit_native::memory::MeteredMemory = Default::default();
-        assert_eq!(ic_platform::stable_structures::Memory::size(&memory), 0);
-    }
-}
-RUST
-
-# Resolve the proposed consumer, not the real workspace or its release state.
-cargo generate-lockfile --offline --manifest-path "$fixture/Cargo.toml" \
-    > "$fixture/lock.log" 2>&1
+TOML
+# These are new registry-only inputs, never edits to release metadata or root lock.
+jq -er '.workspace.dependencies as $d |
+    ["ic-build", "ic-host-artifacts", "ic-host-process", "ic-host-tools",
+     "ic-testkit", "ic-testkit-native", "ic-platform", "ic-platform-types", "ic-memory", "ic-wire"][] |
+    . as $name | $d[$name].version as $version |
+    if ($version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) then
+        ($name + " = { version = \"=" + $version + "\", default-features = false" +
+        (if $name == "ic-host-tools" then ", features = [\"registry\", \"certificate\"]"
+         elif $name == "ic-testkit" then ", features = [\"wire\"]"
+         elif $name == "ic-testkit-native" then ", features = [\"stable-memory\"]"
+         elif $name == "ic-platform" then ", features = [\"principal\", \"certification\"]"
+         else "" end) + " }")
+    else error("expected a literal selected version for " + $name) end' \
+    "$fixture/catalog.json" >> "$fixture/Cargo.toml"
+# Online resolution is explicit at invocation: CARGO_NET_OFFLINE=false bash ...
+cargo generate-lockfile --manifest-path "$fixture/Cargo.toml" > "$fixture/lock.log" 2>&1
+cargo fetch --locked --manifest-path "$fixture/Cargo.toml" > "$fixture/fetch.log" 2>&1
 cargo metadata --locked --offline --format-version 1 --manifest-path "$fixture/Cargo.toml" \
     > "$fixture/metadata.json" 2> "$fixture/metadata.stderr"
-jq -e --arg next "$next" --slurpfile selected "$fixture/selected-packages.json" '
-    . as $m
-    | [.packages[] | select(.id as $id | $m.workspace_members | index($id)) | select(.publish != [])]
-        | (map(.name) | sort) == ($selected[0] | sort) and all(.[]; .version == $next)
+jq -e --slurpfile catalog "$fixture/catalog.json" '
+    .packages as $packages | $catalog[0].workspace.dependencies as $d |
+    all(["ic-build", "ic-host-artifacts", "ic-host-process", "ic-host-tools", "ic-testkit",
+         "ic-testkit-native", "ic-platform-types", "ic-memory", "ic-wire"][];
+        . as $name | [$packages[] | select(.name == $name)] |
+        length == 1 and all(.[]; .version == $d[$name].version and (.source | startswith("registry+"))))
+    and all($packages[]; .name == "integration-cohort-consumer" or (.source | startswith("registry+")))
 ' "$fixture/metadata.json" > /dev/null
-jq -e --arg types "$types_version" '
-    [.packages[] | select(.name == "ic-platform-types")] |
-    length == 1 and all(.[]; .version == $types)
-' "$fixture/metadata.json" > /dev/null
-jq -e --arg foundation "$foundation" --arg build "$build_version" '
-    .packages as $packages
-    | all(["ic-host-artifacts", "ic-host-process", "ic-host-fs"][];
-        . as $name | [$packages[] | select(.name == $name)]
-        | length == 1 and all(.[]; .version == $foundation and (.source | startswith("registry+"))))
-    and ([$packages[] | select(.name == "ic-build")] | length == 1 and all(.[]; .version == $build and (.source | startswith("registry+"))))
-' "$fixture/metadata.json" > /dev/null
-"$parser" -p toml -o json '.' "$fixture/Cargo.toml" > "$fixture/candidate.json"
-"$parser" -p toml -o json '.' "$fixture/before/Cargo.toml" > "$fixture/before.json"
-jq -e --slurpfile before "$fixture/before.json" --slurpfile plan "$fixture/group-plan.json" '
-    def untouched: .workspace.dependencies | delpaths($plan[0].dependencies | map([.alias,"version"]));
-    (.workspace.package | has("version") | not)
-    and (untouched == ($before[0] | untouched))
-' "$fixture/candidate.json" > /dev/null
+host="$(rustc -vV | sed -n 's/^host: //p')"
+perl scripts/ci/check-cargo-graph.pl --consumer "$fixture" \
+    --package integration-cohort-consumer --target "$host" \
+    --require ic-platform-types=1 --require ic-memory=1 \
+    --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
+    --forbid pocket-ic --json --observations > "$fixture/native-graph.json"
 cargo test --locked --offline --manifest-path "$fixture/Cargo.toml" \
-        -p integration-cohort-consumer > "$fixture/consumer-$toolchain.log" 2>&1
-# Unselected integration peers must be the real published packages.
-jq -e --arg group "$selected_group" --arg tools "$tools_version" --arg testkit "$testkit_version" '
-    .packages as $p |
-    (if $group == "tools" then ["ic-testkit", "ic-testkit-native"] else ["ic-host-tools"] end) |
-    all(.[]; . as $name | [$p[] | select(.name == $name)] |
-        length == 1 and all(.[]; (.source | startswith("registry+")) and
-            .version == (if $name == "ic-host-tools" then $tools else $testkit end)))
-' "$fixture/metadata.json" > /dev/null
-# Package each real candidate, then compile the same public callers against
-# the extracted normalized manifests, without any workspace source patches.
-archive_consumer="$fixture/archive-consumer"
-mkdir -p "$archive_consumer/consumer/src" "$archive_consumer/extracted"
-for package in "${selected_packages[@]}"; do
-    cargo package --locked --offline --allow-dirty --no-verify \
-        --manifest-path "$fixture/Cargo.toml" --target-dir "$fixture/archives" -p "$package" \
-        >> "$fixture/package.log" 2>&1
-    tar -xzf "$fixture/archives/package/$package-$next.crate" -C "$archive_consumer/extracted"
-done
-jq --arg next "$next" --slurpfile selected "$fixture/selected-packages.json" '
-    .workspace.members = (["consumer"] + ($selected[0] | map("extracted/" + . + "-" + $next)))
-    | del(.workspace.dependencies["ic-testkit"].path, .workspace.dependencies["ic-testkit-perf-probe"])
-' "$fixture/candidate.json" | "$serializer" > "$archive_consumer/Cargo.toml"
-sed -e "s|../crates/ic-host-tools|../extracted/ic-host-tools-$next|g" \
-    -e "s|../crates/ic-testkit-native|../extracted/ic-testkit-native-$next|g" \
-    -e "s|../crates/ic-testkit|../extracted/ic-testkit-$next|g" \
-    "$fixture/consumer/Cargo.toml" > "$archive_consumer/consumer/Cargo.toml"
-cp "$fixture/consumer/src/lib.rs" "$archive_consumer/consumer/src/"
-cargo generate-lockfile --offline --manifest-path "$archive_consumer/Cargo.toml" \
-    > "$fixture/archive-lock.log" 2>&1
-cargo test --locked --offline --manifest-path "$archive_consumer/Cargo.toml" \
-    -p integration-cohort-consumer > "$fixture/archive-consumer-$toolchain.log" 2>&1
-# A real old certificate identity must refuse at the unchanged Tools boundary.
-cat >> "$archive_consumer/consumer/Cargo.toml" <<'TOML'
-[dependencies.legacy-platform]
-package = "ic-platform"
-version = "=0.15.3"
-default-features = false
-features = ["certification"]
-TOML
-cat >> "$archive_consumer/consumer/src/lib.rs" <<'RUST'
-fn incompatible(bytes: &[u8]) -> legacy_platform::certification::Certificate {
-    ic_host_tools::certificate::decode_certificate(bytes, ic_host_tools::certificate::DecodeLimits { bytes: 1024 }).unwrap()
-}
-RUST
-cargo generate-lockfile --offline --manifest-path "$archive_consumer/Cargo.toml" > "$fixture/mismatch-lock.log" 2>&1
-if cargo check --locked --offline --manifest-path "$archive_consumer/Cargo.toml" \
-    -p integration-cohort-consumer > "$fixture/mismatch.log" 2>&1; then
-    echo 'Unexpected certificate identity admission' >&2; exit 1
-fi
-grep -F 'mismatched types' "$fixture/mismatch.log" > /dev/null
-jq --arg foundation "$foundation" --arg build "$build_version" --arg group "$selected_group" --arg next "$next" '
-    {foundation:$foundation, build:$build, selected_group:$group, selected_version:$next,
-     packages:[.packages[] | select(.source == null and .publish != []) | {name,version}],
-     status:"disposable source and archive consumer proof; no release or publication"}
-' "$fixture/metadata.json" > "$fixture/publication-plan.json"
-cat "$fixture/publication-plan.json"
-echo 'Selected integration manifests, packaged consumers and published foundation passed'
+    > "$fixture/consumer.log" 2>&1
+cat "$fixture/consumer.log"
+echo 'Published packages share the qualified public contracts'
 fixture_complete=true

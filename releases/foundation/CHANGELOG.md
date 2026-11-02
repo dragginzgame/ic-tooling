@@ -6,6 +6,14 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.74.2] - Unreleased
+
+### 🩹 Fixed
+
+- Bound the deadline-preservation socket test's final accept and verify its peer.
+  Avoid assuming immediate nonblocking readiness on macOS; production socket
+  behavior is unchanged.
+
 ## [0.74.1] - 2026-11-02
 
 ### 🩹 Fixed

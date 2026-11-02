@@ -1,90 +1,79 @@
 # Current handoff — 2026-11-02
 
-## Authorized corrective delivery
+## Delivery scope
 
-This Tooling session is authorized to qualify, release and publish Foundation,
-Build, Text, Tools and Testkit sequentially. No Platform, Blob, simulator, npm or
-application release is included. The current user additionally requested Shared
-Tooling adoption before continuation; that adoption is complete.
+The maintainer authorized the five-group cleanup delivery, approved corrective
+Foundation 0.74.1, and held Tools/Testkit for Types 0.17. Matching suppliers are
+now published; the scoped upper-group release authorization continues.
+No sibling releases or artifact cleanup are authorized.
 
-Integration source is `f6f6e7d9`; Shared Tooling adoption is `99ed3437`.
-Foundation 0.74.0 passed its complete Linux/native/Wasm/installed/package gate,
-was committed as `6e446a61f08fc8f01ad36d653c6a051b45f401f7`, and was atomically
-pushed with `foundation-v0.74.0`. No Foundation crate has been uploaded.
-The publication dry run exposed FS's dev dependency on Process, whose normal
-FS dependency makes Cargo's publication order cyclic. Do not repeat that upload.
+Already published and independently registry-readback verified:
 
-A repair is prepared in the isolated delivery checkout: run the three
-FD-sensitive FS cases in separate libtest executables and remove FS's Process
-dev dependency. No production API or dependency is added. The three tests,
-strict workspace Clippy and complete Foundation publication dry run pass.
-The proposed next Foundation ledger entry is 0.74.1; package versions remain
-0.74.0 in that checkout, and the existing Git tag is unchanged.
+| Group | Version | Release/source commit |
+| --- | --- | --- |
+| Foundation | 0.74.1 | `7992cfd183888096c2ec922479836dc1ab0fbef1` |
+| Build | 0.74.0 | `5bff8453ac5c5d42a162c68486c498f5c1d41944` |
+| Text | 0.74.0 | `a60051341edc59216143c5dcce94db4c2c6da26b` |
 
-The maintainer approved publishing corrective Foundation 0.74.1, then continuing
-Build 0.74.0, Text 0.74.0, Tools 0.78.0 and Testkit 0.79.0. Preserve the existing
-0.74.0 Git tag; run the standard patch release from the committed repair.
-Those four remaining group releases have not started. Update the stopped
-controller to Foundation 0.74.1 before publication; retain earlier failed logs.
-The maintainer also requested new Types 0.17. Its matching Runtime/facade
-releases are not published yet; keep the compatible Types 0.16 selection while
-independent Foundation/Build/Text delivery proceeds. Qualify the new singleton
-graph before Tools/Testkit release. Never release another repository here.
+Do not repeat these increments/uploads. Foundation 0.74.0 remains immutable,
+Git-only and unpublished. Its dry run exposed the repaired FS/Process dev cycle.
+The test-only macOS socket-readiness repair has pending 0.74.2 notes; it does
+not require another Foundation publication for this delivery.
 
-## Checkout and evidence custody
+## Qualified upper adoption; releases next
 
-The ordinary checkout remains on integration commit `99ed3437`, with unrelated
-Cargo.lock selections preserved outside both integration commits. This handoff
-is an additional local documentation edit. Final synchronization must preserve
-the lock selections and any new user work; do not restore its whole pre-release
-lock over updated workspace versions. No artifact cleanup is authorized.
+Tools 0.77.0 has pending 0.78.0 notes. Testkit/Native and private Dev/probe remain
+0.78.0 with pending 0.79.0 notes. Use standard minor release, publication dry run,
+publication and independent registry readback for Tools, then Testkit.
+Full release gates remain mandatory; no group validation mapping is activated.
 
-`.git/release-state/deployment-five-groups-20261102/release-checkout-path` names
-the isolated checkout under `/tmp/ic-tooling-five-groups.iOEuyP/checkout`.
-Its `.git/release-state` contains the exact completed Foundation plan/receipts;
-keep it for recovery. The ordinary Git directory's delivery evidence retains
-setup and gate logs, failed dry-run evidence, the original input patch, scoped
-lock delta, source identities and registry observations. Its `delivery-repair/`
-contains the reviewable fix patch and passing focused/dry-run evidence.
+The source selects Types 0.17 and Runtime/facade/PocketIC client 0.18.
+Real-source strict Clippy and focused public caller tests pass. Tools feature
+and Testkit native/Wasm graphs pass: one Types identity, executor only in the
+private Wasm probe, arithmetic-only Metrics 0.26 on native and none on Wasm.
+The PocketIC server remains 16.1.0. Native client imports remain through the
+current facade; independent direct client adoption is separate.
 
-The original Foundation validation was intentionally interrupted before metadata
-preparation to adopt Shared Tooling. Its retained log is not a completed pass.
-The later `foundation-release-02727.log` is the successful complete release gate.
-Publication attempt `check.7a4XAG` failed on the cycle without uploading. Repair
-attempt `check.jdkzZs` stopped only on sandbox DNS; the subsequent network-enabled
-repair dry run passed for all five Foundation packages. All attempts are retained.
+Platform 0.18 removed stable-structures. Native's optional memory profile now
+uses IC Memory 0.63's published backing Memory interface. Its selected legacy
+facade 0.17 is stable-only, with no Types/runtime/client capabilities. IC Memory's
+core codec dependencies are confined to that optional native profile. Native's
+default and Wasm profiles remain dependency-free. Do not hide duplicate Types
+or relax the executor singleton to admit incompatible suppliers.
 
-## Adopted source contracts
+Private Dev now requires shared public error, principal, certificate, Wire and
+memory contracts. The standard package gate still qualifies all ten public
+archives. After both upper groups publish, run the opt-in registry-only
+`CARGO_NET_OFFLINE=false bash scripts/release/test-integration-cohort.sh` for the
+same tests with exact published inputs; retain its target evidence.
+
+## Checkouts and custody
+
+The isolated delivery checkout is `/tmp/ic-tooling-five-groups.iOEuyP/checkout`.
+Use its scoped lock for delivery. The ordinary checkout's unrelated Cargo.lock
+selections must stay outside commits and survive final fast-forward. Its current
+local handoff also records the previous hold; preserve any new user edits when
+updating it. No cleanup is authorized.
+
+Durable logs, plans/receipts, upload/readback checksums, supplier observations and
+preservation evidence live under
+`.git/release-state/deployment-five-groups-20261102/` in the ordinary checkout.
+Its `release-checkout-path` points to the isolated checkout. The prepared upper
+controller may run after the scoped adoption is committed; it must not rerun
+completed core releases. Keep failed artifacts and saved release state.
+The historical stash `bc5e544bb9adfea1e0b0a0aac77945ca573321d2` is not a patch
+to apply over current release metadata.
+
+## Policy and native evidence
 
 Shared Tooling 0.27.27 at `651f5f7acb2e3055abd51ba5f835a2112801666a` is
-exported canonically; all 162 managed payloads verify. Make routing, actual
-formatting hooks and all documentation links pass. The consumer explicitly
-includes the linked validation-runner guide. Tool pins and lock selections are
-unchanged by the snapshot refresh. Group validation plans are opt-in: Tooling
-has no qualified narrow-stage mapping, so this cross-cutting batch keeps full
-gates. Repository-wide hosted CI stays unchanged.
+adopted with all 162 managed payloads intact. Rust floor/development pin is
+1.99.1. Build and Text have independent groups. Full Linux release gates include
+native/Wasm/installed/package qualification; publication is a separate effect.
 
-All twelve packages use Rust 1.99.1, matching the pinned compiler. Metrics 0.26
-is native/arithmetic-only and absent from Testkit Wasm. Testkit selects Types
-0.16 and Runtime 0.17.1 directly; native PocketIC remains on Platform 0.17 and
-server 16.1.0. Build and Text have independent groups; Foundation owns the five
-lower-level packages, with Artifacts as primary. Old release histories and
-plans retain their original scope. The publishing guide's retired Rust 1.91 and
-msrv-qualification instructions are corrected.
-
-The completed local release gate is Linux evidence. Hosted CI started for the
-Foundation commit; native macOS 15 Intel/Apple Silicon results must be observed
-and reported separately. No macOS pass is established by local Linux evidence.
-
-## Older published baseline and supplier boundary
-
-Before this delivery the registry baseline remains Foundation/Build/Text 0.73.6,
-Tools 0.77.0 and Testkit 0.78.0. The ten public packages exist; the two private
-Testkit helpers are never uploaded. Completed Testkit 0.78 receipts remain in
-`.git/release-state/deployment-testkit-0.78.0/`; do not replay its increment/upload.
-The earlier preservation stash is `bc5e544bb9adfea1e0b0a0aac77945ca573321d2`.
-Do not apply its complete old metadata patch over delivered versions.
-
-[Platform #134](https://github.com/dragginzgame/ic-platform/issues/134) owns typed
-PocketIC transport errors and remains outside this delivery. No supplier or
-consumer repository is released by this Tooling request.
+Native macOS evidence is separate. Core-source CI run 41448255449 at `a6005134`
+passed Linux and macOS 15 Intel. Apple Silicon failed the Process elapsed-deadline
+socket test on an immediate nonblocking accept (`WouldBlock`); the new test-only
+repair bounds that accept and verifies the original peer. Its Linux-focused test
+passes; fresh hosted native evidence must still be observed asynchronously.
+Do not call pending/cancelled jobs passes or substitute Linux for native macOS.

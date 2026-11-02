@@ -88,11 +88,15 @@ receipts, including equal-version Foundation/Build/Text owners. Setup and full
 gates are substituted; the fixture cannot release or publish. Publication and
 Make fixtures check exact selection and cross-group refusals.
 
-The opt-in `scripts/release/test-integration-cohort.sh EDITOR [tools|testkit]`
-qualifies source and normalized archives against independently selected published
-Foundation and Build versions and the unchanged integration peer, using the pinned
-compiler. Its old certificate identity control must still fail compilation.
-Native macOS execution remains separate from local metadata/fixture evidence.
+The private Dev `public_contracts` test requires shared public error, principal,
+certificate, core Wire and backing-memory identities during ordinary qualification.
+The standard package check independently qualifies normalized archives of all ten
+public packages. After both integration groups are published, opt in to
+`CARGO_NET_OFFLINE=false bash scripts/release/test-integration-cohort.sh` for the
+same public caller tests against exact current registry versions, without source
+patches or root-lock edits. Evidence remains under `target/published-integration.*`.
+Wire's optional metadata bridge belongs to its producer and is not selected by
+Tooling's core RPC profiles. Native macOS evidence remains separate.
 
 [The original three-group design](https://github.com/dragginzgame/ic-tooling/blob/405b27ad13d95962d729b5e756634ee866c760a8/docs/design/release-groups.md)
 records the earlier split and its historical recovery coordinates.

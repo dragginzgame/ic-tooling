@@ -8,6 +8,9 @@ Joint history through 0.76.1 remains there once, with its original scope.
 
 ### ⚠️ Breaking
 
+- Adopt Platform 0.18 and canonical Types 0.17. Align consumer dependencies when
+  exchanging public principal or certificate identities with Host Tools.
+
 - Require Rust 1.99.1 and pin contributor/release compilation to that version.
   Native qualification now owns the former compiler-lane feature and Wasm
   obligations; the stable MSRV status reuses its results. Older compiler support
