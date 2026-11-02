@@ -20,14 +20,9 @@ impl Mode {
     }
 }
 
-#[derive(clap::Parser)]
-#[command(
-    name = "fixture_reuse_benchmark",
-    about = "Run one fixture-reuse benchmark workload",
-    version,
-    no_binary_name = true
-)]
-pub struct WorkerArguments {
+/// Typed workload selection, independent of executable and artifact paths.
+#[derive(clap::Args)]
+pub struct Workload {
     #[arg(value_name = "mode")]
     pub mode: Mode,
     #[arg(value_name = "capacity")]
@@ -38,6 +33,31 @@ pub struct WorkerArguments {
     pub workers: NonZeroUsize,
     #[arg(value_name = "state_bytes")]
     pub state_bytes: u32,
+}
+
+impl Workload {
+    pub(super) const fn admit_concurrency(
+        workers: NonZeroUsize,
+        iterations: NonZeroUsize,
+    ) -> Result<(), &'static str> {
+        if workers.get() > iterations.get() {
+            Err("workers must not exceed iterations")
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(clap::Parser)]
+#[command(
+    name = "fixture_reuse_benchmark",
+    about = "Run one fixture-reuse benchmark workload",
+    version,
+    no_binary_name = true
+)]
+pub struct WorkerArguments {
+    #[command(flatten)]
+    pub workload: Workload,
     #[arg(value_name = "wasm", allow_hyphen_values = true)]
     pub wasm: PathBuf,
     #[arg(value_name = "server", allow_hyphen_values = true)]
@@ -50,12 +70,8 @@ impl TryFrom<Vec<OsString>> for WorkerArguments {
     fn try_from(args: Vec<OsString>) -> Result<Self, Self::Error> {
         use clap::{CommandFactory, Parser, error::ErrorKind};
         let result = Self::try_parse_from(args)?;
-        if result.workers > result.iterations {
-            return Err(Self::command().error(
-                ErrorKind::ValueValidation,
-                "workers must not exceed iterations",
-            ));
-        }
+        Workload::admit_concurrency(result.workload.workers, result.workload.iterations)
+            .map_err(|message| Self::command().error(ErrorKind::ValueValidation, message))?;
         Ok(result)
     }
 }
@@ -63,11 +79,11 @@ impl TryFrom<Vec<OsString>> for WorkerArguments {
 impl From<&WorkerArguments> for [OsString; 7] {
     fn from(args: &WorkerArguments) -> Self {
         [
-            args.mode.as_str().into(),
-            args.capacity.to_string().into(),
-            args.iterations.to_string().into(),
-            args.workers.to_string().into(),
-            args.state_bytes.to_string().into(),
+            args.workload.mode.as_str().into(),
+            args.workload.capacity.to_string().into(),
+            args.workload.iterations.to_string().into(),
+            args.workload.workers.to_string().into(),
+            args.workload.state_bytes.to_string().into(),
             args.wasm.as_os_str().to_owned(),
             args.server.as_os_str().to_owned(),
         ]
@@ -93,11 +109,11 @@ mod tests {
             ]
             .map(OsString::from);
             let parsed = WorkerArguments::try_from(args.to_vec()).unwrap();
-            assert_eq!(parsed.mode, mode);
-            assert_eq!(parsed.capacity.get(), 2);
-            assert_eq!(parsed.iterations.get(), 4);
-            assert_eq!(parsed.workers.get(), 2);
-            assert_eq!(parsed.state_bytes, 0);
+            assert_eq!(parsed.workload.mode, mode);
+            assert_eq!(parsed.workload.capacity.get(), 2);
+            assert_eq!(parsed.workload.iterations.get(), 4);
+            assert_eq!(parsed.workload.workers.get(), 2);
+            assert_eq!(parsed.workload.state_bytes, 0);
             assert_eq!(<[OsString; 7]>::from(&parsed), args);
         }
     }

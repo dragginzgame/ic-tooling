@@ -3,7 +3,7 @@
 use ic_host_process::tool::{OutputLimit, OutputLimits};
 use std::{ffi::OsString, num::NonZeroUsize, path::PathBuf};
 
-use crate::fixture_reuse_protocol::{Mode, WorkerArguments};
+use crate::fixture_reuse_protocol::{Mode, WorkerArguments, Workload};
 use clap::{CommandFactory, Parser, error::ErrorKind};
 
 pub(super) const RSS_COMMAND_LIMITS: OutputLimits = OutputLimits {
@@ -65,11 +65,13 @@ impl Case {
         server: PathBuf,
     ) -> WorkerArguments {
         WorkerArguments {
-            mode: self.mode,
-            capacity: self.capacity,
-            iterations: options.iterations,
-            workers: options.workers,
-            state_bytes: options.state_bytes,
+            workload: Workload {
+                mode: self.mode,
+                capacity: self.capacity,
+                iterations: options.iterations,
+                workers: options.workers,
+                state_bytes: options.state_bytes,
+            },
             wasm,
             server,
         }
@@ -112,12 +114,8 @@ pub(super) fn parse_arguments(
     let mut command = Options::command();
     // Clap owns parsing and individual value constraints. These relationships
     // compare independently typed values and select a unique workload matrix.
-    if options.workers > options.iterations {
-        return Err(command.error(
-            ErrorKind::ValueValidation,
-            "workers must not exceed iterations",
-        ));
-    }
+    Workload::admit_concurrency(options.workers, options.iterations)
+        .map_err(|message| command.error(ErrorKind::ValueValidation, message))?;
     if options
         .modes
         .iter()

@@ -6,6 +6,12 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.80.3]
+
+### 🧹 Cleanup
+
+- Share typed benchmark workload settings and concurrency admission between the
+
 ## [0.80.2] - 2026-11-02
 
 ### 🧹 Cleanup

@@ -790,19 +790,12 @@ impl ArtifactBuildTransaction {
         let output_info = inspect_complete_output_set(&self.spec, self.staging_directory.path())?;
         self.timings.output_validation = validation_started.elapsed();
 
-        let capture_started = Instant::now();
-        revalidate_cargo_build_input_fingerprints(&self.spec)?;
-        let verified = resolve_key(&self.spec)?;
-        self.timings.input_capture = self
-            .timings
-            .input_capture
-            .saturating_add(capture_started.elapsed());
-        if verified.input_digest != self.resolved.input_digest {
-            return Err(ArtifactCacheError::InputsChangedDuringAcquisition {
-                before: self.resolved.input_digest,
-                after: verified.input_digest,
-            });
-        }
+        verify_inputs(
+            &self.spec,
+            self.resolved.input_digest,
+            &mut self.timings.input_capture,
+            InputCheck::BeforeCommit,
+        )?;
 
         let publication_started = Instant::now();
         ic_host_fs::durable::write_with(
@@ -897,17 +890,12 @@ pub fn prepare_artifact_cache(
         lock_cache_file(&content_lock_path).map_err(artifact_cache_fs_error)?;
     timings.content_lock_wait = timings.content_lock_wait.saturating_add(content_wait);
 
-    let verification_started = Instant::now();
-    let verified = resolve_key(spec)?;
-    timings.input_capture = timings
-        .input_capture
-        .saturating_add(verification_started.elapsed());
-    if resolved.input_digest != verified.input_digest {
-        return Err(ArtifactCacheError::InputsChangedDuringPreparation {
-            before: resolved.input_digest,
-            after: verified.input_digest,
-        });
-    }
+    verify_inputs(
+        spec,
+        resolved.input_digest,
+        &mut timings.input_capture,
+        InputCheck::AfterContentLock,
+    )?;
 
     let entry_directory = entry_directory(&namespace_directory, resolved.key);
     let namespace_lock_path = namespace_lock_path_for_id(&spec.cache_root, &namespace_id);
@@ -926,18 +914,12 @@ pub fn prepare_artifact_cache(
         timings.materialization = timings
             .materialization
             .saturating_add(materialization_started.elapsed());
-        let after_started = Instant::now();
-        revalidate_cargo_build_input_fingerprints(spec)?;
-        let after = resolve_key(spec)?;
-        timings.input_capture = timings
-            .input_capture
-            .saturating_add(after_started.elapsed());
-        if after.input_digest != resolved.input_digest {
-            return Err(ArtifactCacheError::InputsChangedDuringPreparation {
-                before: resolved.input_digest,
-                after: after.input_digest,
-            });
-        }
+        verify_inputs(
+            spec,
+            resolved.input_digest,
+            &mut timings.input_capture,
+            InputCheck::AfterMaterialization,
+        )?;
         return Ok(ArtifactCachePreparation::Reused(complete_cache_record(
             spec,
             resolved,
@@ -960,6 +942,40 @@ pub fn prepare_artifact_cache(
         total_started,
         caller_build_started: Instant::now(),
     }))
+}
+
+// These are the existing observation boundaries, not caller-selected policies.
+// Lock acquisition checks content again; later boundaries also re-resolve Cargo.
+#[derive(Clone, Copy)]
+enum InputCheck {
+    AfterContentLock,
+    AfterMaterialization,
+    BeforeCommit,
+}
+
+fn verify_inputs(
+    spec: &ArtifactCacheSpec,
+    before: InputDigest,
+    timing: &mut Duration,
+    check: InputCheck,
+) -> Result<(), ArtifactCacheError> {
+    let started = Instant::now();
+    if !matches!(check, InputCheck::AfterContentLock) {
+        revalidate_cargo_build_input_fingerprints(spec)?;
+    }
+    let after = resolve_key(spec)?.input_digest;
+    *timing = timing.saturating_add(started.elapsed());
+    if before == after {
+        return Ok(());
+    }
+    Err(match check {
+        InputCheck::AfterContentLock | InputCheck::AfterMaterialization => {
+            ArtifactCacheError::InputsChangedDuringPreparation { before, after }
+        }
+        InputCheck::BeforeCommit => {
+            ArtifactCacheError::InputsChangedDuringAcquisition { before, after }
+        }
+    })
 }
 
 fn revalidate_cargo_build_input_fingerprints(

@@ -2,7 +2,7 @@
 //! See docs/fixture-reuse-benchmark.md for the workload and measurement boundaries.
 
 use crate::{
-    fixture_reuse_protocol::{Mode, WorkerArguments},
+    fixture_reuse_protocol::{Mode, WorkerArguments, Workload},
     probe_wire_spec,
 };
 use std::{
@@ -362,11 +362,14 @@ pub fn run(arguments: WorkerArguments) -> Result<()> {
     let _shutdown_handler = install_shutdown_handler()?;
     check_shutdown()?;
     let WorkerArguments {
-        mode,
-        capacity,
-        iterations,
-        workers,
-        state_bytes,
+        workload:
+            Workload {
+                mode,
+                capacity,
+                iterations,
+                workers,
+                state_bytes,
+            },
         wasm,
         server,
     } = arguments;

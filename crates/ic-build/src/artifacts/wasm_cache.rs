@@ -284,11 +284,15 @@ struct BatchResolutionGroup {
 
 struct DiscoveredBatchInputs {
     index: usize,
+    discovered: DiscoveredBuildInputs,
+}
+
+struct DiscoveredBuildInputs {
     inputs: ResolvedLocalInputs,
     exclusions: Vec<PathBuf>,
 }
 
-struct HashedBatchInputs {
+struct HashedBuildInputs {
     inputs: ResolvedLocalInputs,
     exclusions: Vec<PathBuf>,
     input_digest: InputDigest,
@@ -302,6 +306,40 @@ struct ResolvedLocalInputs {
     workspace_projection: Option<InputDigest>,
     configuration_identity: InputDigest,
     wasm_targets: Result<Vec<WasmArtifactTarget>, String>,
+}
+
+impl DiscoveredBuildInputs {
+    fn resolve(
+        spec: &WasmBuildSpec,
+        metadata: &ParsedCargoMetadata<'_>,
+    ) -> Result<Self, WasmBuildError> {
+        let (inputs, exclusions) = resolve_local_inputs(spec, metadata)?;
+        Ok(Self { inputs, exclusions })
+    }
+
+    fn hash(
+        mut self,
+        cache: &mut LabeledPathDigestCache,
+        declarations: &mut source_inputs::WorkspaceDeclarations,
+        workspace_root: &Path,
+        operations: (&'static str, &'static str),
+    ) -> Result<HashedBuildInputs, WasmBuildError> {
+        let (input_digest, validation_digest) = digest_resolved_local_inputs(
+            &self.inputs,
+            &mut self.exclusions,
+            cache,
+            declarations,
+            workspace_root,
+            operations.0,
+            operations.1,
+        )?;
+        Ok(HashedBuildInputs {
+            inputs: self.inputs,
+            exclusions: self.exclusions,
+            input_digest,
+            validation_digest,
+        })
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -1317,13 +1355,16 @@ impl ResolvedCargoBuildInputs {
 
     fn assemble(
         spec: &WasmBuildSpec,
-        inputs: ResolvedLocalInputs,
-        exclusions: Vec<PathBuf>,
-        input_digest: InputDigest,
-        validation_digest: InputDigest,
+        hashed: HashedBuildInputs,
         facts: CargoBuildFacts,
         timings: impl FnOnce() -> WasmInputResolutionTimings,
     ) -> Self {
+        let HashedBuildInputs {
+            inputs,
+            exclusions,
+            input_digest,
+            validation_digest,
+        } = hashed;
         Self {
             fingerprint: finish_build_fingerprint(spec, &facts, input_digest),
             recipe_identity: resolution::recipe_identity(
@@ -1679,30 +1720,23 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
         let mut declarations = source_inputs::WorkspaceDeclarations::new();
         let digest_cache = &mut batch_digest_cache;
         let workspace_root = &active.workspace_root;
-        let resolved_inputs =
-            progress.run_phase(WasmBuildPhase::ContentHashing, || {
-                discovered
-                    .into_iter()
-                    .map(|mut discovered| {
-                        let result = digest_resolved_local_inputs(
-                            &discovered.inputs,
-                            &mut discovered.exclusions,
-                            digest_cache,
-                            &mut declarations,
-                            workspace_root,
+        let resolved_inputs = progress.run_phase(WasmBuildPhase::ContentHashing, || {
+            discovered
+                .into_iter()
+                .map(|discovered| {
+                    let result = discovered.discovered.hash(
+                        digest_cache,
+                        &mut declarations,
+                        workspace_root,
+                        (
                             "hash batched Wasm build inputs",
                             "hash batched semantic Wasm build inputs",
-                        )
-                        .map(|(input_digest, validation_digest)| HashedBatchInputs {
-                            inputs: discovered.inputs,
-                            exclusions: discovered.exclusions,
-                            input_digest,
-                            validation_digest,
-                        });
-                        (discovered.index, result)
-                    })
-                    .collect::<Vec<_>>()
-            });
+                        ),
+                    );
+                    (discovered.index, result)
+                })
+                .collect::<Vec<_>>()
+        });
         let content_hashing = hashing_started.elapsed();
         timings.input_discovery = input_discovery;
         timings.content_hashing = content_hashing;
@@ -1730,10 +1764,7 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
             let spec = self.entries[index].spec;
             let resolved = ResolvedCargoBuildInputs::assemble(
                 spec,
-                hashed.inputs,
-                hashed.exclusions,
-                hashed.input_digest,
-                hashed.validation_digest,
+                hashed,
                 spec.cargo_invocation()
                     .facts(facts.cargo_identity.clone(), facts.rustc_identity.clone()),
                 || {
@@ -1769,12 +1800,11 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
                 let result = parsed
                     .as_ref()
                     .map_err(|message| invalid_metadata(message))
-                    .and_then(|parsed| resolve_local_inputs(entry.spec, parsed));
+                    .and_then(|parsed| DiscoveredBuildInputs::resolve(entry.spec, parsed));
                 match result {
-                    Ok((inputs, exclusions)) => discovered.push(DiscoveredBatchInputs {
+                    Ok(inputs) => discovered.push(DiscoveredBatchInputs {
                         index,
-                        inputs,
-                        exclusions,
+                        discovered: inputs,
                     }),
                     Err(error) => {
                         entry.resolved = Some(Err((WasmBuildPhase::InputDiscovery, error)));
@@ -2150,11 +2180,12 @@ pub fn resolve_cargo_build_inputs_with_probe_policy(
 pub fn inspect_shared_incremental_target(
     spec: &WasmBuildSpec,
 ) -> Result<Option<SharedIncrementalTargetInspection>, WasmBuildError> {
-    if !shared_incremental_target_exists(spec, "inspect shared incremental Cargo target")? {
+    let target_dir = configured_shared_incremental_target(spec)?;
+    if !shared_incremental_target_exists(&target_dir, "inspect shared incremental Cargo target")? {
         return Ok(None);
     }
 
-    let (_lock, lock_wait, canonical) = lock_shared_incremental_target(spec)?;
+    let (_lock, lock_wait, canonical) = lock_shared_incremental_target(&target_dir)?;
     let (logical_size_bytes, last_used) = observe_shared_target(
         &canonical,
         "measure shared incremental Cargo target",
@@ -2189,8 +2220,9 @@ pub fn maintain_shared_incremental_target(
     spec: &WasmBuildSpec,
     policy: CacheRetentionLimits,
 ) -> Result<Option<SharedIncrementalTargetMaintenance>, WasmBuildError> {
+    let target_dir = configured_shared_incremental_target(spec)?;
     if !shared_incremental_target_exists(
-        spec,
+        &target_dir,
         "inspect shared incremental Cargo target before maintenance",
     )? {
         return Ok(None);
@@ -2200,7 +2232,7 @@ pub fn maintain_shared_incremental_target(
     // a target that overlaps Cargo sources, configuration, or additional
     // inputs. The target itself is excluded as generated state during hashing.
     let _ = resolve_cargo_build_inputs(spec)?;
-    let (_lock, lock_wait, canonical) = lock_shared_incremental_target(spec)?;
+    let (_lock, lock_wait, canonical) = lock_shared_incremental_target(&target_dir)?;
     maintain_shared_incremental_target_locked(&canonical, policy, lock_wait).map(Some)
 }
 
@@ -2226,18 +2258,15 @@ pub fn maintain_shared_incremental_target_at_most_every(
     policy: CacheRetentionLimits,
     minimum_interval: Duration,
 ) -> Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError> {
-    let target_dir =
-        shared_incremental_target(spec).ok_or_else(|| WasmBuildError::InvalidSpec {
-            message: "shared incremental target is not configured".to_owned(),
-        })?;
+    let target_dir = configured_shared_incremental_target(spec)?;
     if !shared_incremental_target_exists(
-        spec,
+        &target_dir,
         "inspect shared incremental Cargo target before scheduled maintenance",
     )? {
         return Ok(SharedIncrementalTargetMaintenanceOutcome::Missing { target_dir });
     }
 
-    let (_lock, lock_wait, canonical) = lock_shared_incremental_target(spec)?;
+    let (_lock, lock_wait, canonical) = lock_shared_incremental_target(&target_dir)?;
     let schedule = schedule_shared_incremental_target_maintenance(
         &canonical,
         policy,
@@ -2992,13 +3021,9 @@ fn lock_wasm_build_cache_with_progress(
 }
 
 fn lock_shared_incremental_target(
-    spec: &WasmBuildSpec,
+    target_dir: &Path,
 ) -> Result<(File, Duration, PathBuf), WasmBuildError> {
-    let target_dir =
-        shared_incremental_target(spec).ok_or_else(|| WasmBuildError::InvalidSpec {
-            message: "shared incremental target is not configured".to_owned(),
-        })?;
-    lock_shared_incremental_target_internal(&target_dir, &mut ProgressReporter::silent())
+    lock_shared_incremental_target_internal(target_dir, &mut ProgressReporter::silent())
 }
 
 fn lock_shared_incremental_target_with_progress(
@@ -3192,27 +3217,23 @@ fn build_fingerprint_with_policy(
     let (facts, metadata, mut timings) = observe_cargo_resolution(spec, progress, policy)?;
 
     let discovery_started = Instant::now();
-    let (inputs, mut exclusions) = progress.run_phase(WasmBuildPhase::InputDiscovery, || {
+    let discovered = progress.run_phase(WasmBuildPhase::InputDiscovery, || {
         let parsed =
             ParsedCargoMetadata::parse(&metadata).map_err(|message| invalid_metadata(&message))?;
-        resolve_local_inputs(spec, &parsed)
+        DiscoveredBuildInputs::resolve(spec, &parsed)
     })?;
     let input_discovery = discovery_started.elapsed();
 
     let hashing_started = Instant::now();
-    let (input_digest, validation_digest) =
-        progress.run_phase(WasmBuildPhase::ContentHashing, || {
-            let mut cache = LabeledPathDigestCache::default();
-            digest_resolved_local_inputs(
-                &inputs,
-                &mut exclusions,
-                &mut cache,
-                &mut source_inputs::WorkspaceDeclarations::new(),
-                &spec.workspace_root,
-                "hash Wasm build inputs",
-                "hash semantic Wasm build inputs",
-            )
-        })?;
+    let hashed = progress.run_phase(WasmBuildPhase::ContentHashing, || {
+        let mut cache = LabeledPathDigestCache::default();
+        discovered.hash(
+            &mut cache,
+            &mut source_inputs::WorkspaceDeclarations::new(),
+            &spec.workspace_root,
+            ("hash Wasm build inputs", "hash semantic Wasm build inputs"),
+        )
+    })?;
     let content_hashing = hashing_started.elapsed();
 
     timings.input_discovery = input_discovery;
@@ -3220,10 +3241,7 @@ fn build_fingerprint_with_policy(
 
     Ok(ResolvedCargoBuildInputs::assemble(
         spec,
-        inputs,
-        exclusions,
-        input_digest,
-        validation_digest,
+        hashed,
         facts,
         || {
             timings.total = total_started.elapsed();
@@ -3371,15 +3389,17 @@ pub(super) fn shared_incremental_target(spec: &WasmBuildSpec) -> Option<PathBuf>
     })
 }
 
+fn configured_shared_incremental_target(spec: &WasmBuildSpec) -> Result<PathBuf, WasmBuildError> {
+    shared_incremental_target(spec).ok_or_else(|| WasmBuildError::InvalidSpec {
+        message: "shared incremental target is not configured".to_owned(),
+    })
+}
+
 fn shared_incremental_target_exists(
-    spec: &WasmBuildSpec,
+    target_dir: &Path,
     operation: &'static str,
 ) -> Result<bool, WasmBuildError> {
-    let target_dir =
-        shared_incremental_target(spec).ok_or_else(|| WasmBuildError::InvalidSpec {
-            message: "shared incremental target is not configured".to_owned(),
-        })?;
-    match fs::symlink_metadata(&target_dir) {
+    match fs::symlink_metadata(target_dir) {
         Ok(metadata) if metadata.is_dir() => Ok(true),
         Ok(_) => Err(WasmBuildError::InvalidSpec {
             message: format!(
