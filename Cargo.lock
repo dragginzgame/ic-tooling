@@ -1757,7 +1757,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.80.1"
+version = "0.80.2"
 dependencies = [
  "clap",
  "ic-host-artifacts",
@@ -1777,7 +1777,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit-dev"
-version = "0.80.1"
+version = "0.80.2"
 dependencies = [
  "clap",
  "ic-build",
@@ -1805,7 +1805,7 @@ version = "0.80.0"
 
 [[package]]
 name = "ic-testkit-perf-probe"
-version = "0.80.1"
+version = "0.80.2"
 dependencies = [
  "ic-platform-runtime",
  "ic-testkit",
