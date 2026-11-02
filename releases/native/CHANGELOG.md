@@ -4,7 +4,7 @@ This ledger owns `ic-testkit-native`, independently of Testkit. Its published
 baseline is 0.79.0; [history through that release](../testkit/CHANGELOG.md#0790---2026-11-02)
 remains in the original Testkit ledger with its original package scope.
 
-## [0.80.0] - Unreleased
+## [0.80.0] - 2026-11-02
 
 ### ⚠️ Breaking
 

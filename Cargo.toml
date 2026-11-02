@@ -52,7 +52,7 @@ ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.80
 
 # Native allocation measurement
 # Changelog : releases/native/CHANGELOG.md
-ic-testkit-native = { path = "crates/ic-testkit-native", version = "0.79.0" }
+ic-testkit-native = { path = "crates/ic-testkit-native", version = "0.80.0" }
 
 # External production dependencies
 cap-fs-ext = "4.0.2"
