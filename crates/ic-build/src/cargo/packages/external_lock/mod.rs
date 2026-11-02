@@ -6,6 +6,11 @@ use std::{collections::BTreeMap, error::Error};
 
 type ExternalRows = BTreeMap<(String, String, String), Option<String>>;
 
+struct LockSelections {
+    package_count: usize,
+    external: ExternalRows,
+}
+
 /// External lockfile comparison failed without changing either input.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -100,22 +105,20 @@ pub fn verify_external_lock_subset(
     }
     let original = external_rows(original, "original")?;
     let candidate = external_rows(candidate, "candidate")?;
-    verify_rows(&original, &candidate)
+    verify_rows(&original.external, &candidate.external)
 }
 
-fn external_rows(bytes: &[u8], input: &'static str) -> Result<ExternalRows, ExternalLockError> {
+fn external_rows(bytes: &[u8], input: &'static str) -> Result<LockSelections, ExternalLockError> {
     let text =
         std::str::from_utf8(bytes).map_err(|source| ExternalLockError::Utf8 { input, source })?;
     let lock: toml::Value =
         toml::from_str(text).map_err(|source| ExternalLockError::Parse { input, source })?;
     let mut rows = BTreeMap::new();
-    for (index, package) in lock
+    let packages = lock
         .get("package")
         .and_then(toml::Value::as_array)
-        .ok_or(ExternalLockError::MissingPackages { input })?
-        .iter()
-        .enumerate()
-    {
+        .ok_or(ExternalLockError::MissingPackages { input })?;
+    for (index, package) in packages.iter().enumerate() {
         let invalid = |reason| ExternalLockError::InvalidPackage {
             input,
             index,
@@ -150,7 +153,10 @@ fn external_rows(bytes: &[u8], input: &'static str) -> Result<ExternalRows, Exte
             });
         }
     }
-    Ok(rows)
+    Ok(LockSelections {
+        package_count: packages.len(),
+        external: rows,
+    })
 }
 
 fn verify_rows(original: &ExternalRows, candidate: &ExternalRows) -> Result<(), ExternalLockError> {
@@ -169,10 +175,10 @@ fn verify_rows(original: &ExternalRows, candidate: &ExternalRows) -> Result<(), 
 pub(super) fn admit_lock(entry: &[u8], payload: &[u8]) -> Result<(), Box<dyn Error>> {
     let entry = external_rows(entry, "original")?;
     let payload = external_rows(payload, "candidate")?;
-    if payload.is_empty() {
-        return Err("empty package external graph".into());
+    if payload.package_count == 0 {
+        return Err("empty package graph".into());
     }
-    verify_rows(&entry, &payload)?;
+    verify_rows(&entry.external, &payload.external)?;
     Ok(())
 }
 

@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    fixture_reuse_protocol::WorkerArguments,
+    fixture_reuse_protocol::Workload,
     fixture_reuse_report::{Phases, WorkerReport},
     statistics::{SampleStatistics, summarize_samples},
 };
@@ -64,7 +64,7 @@ pub(super) struct RssMeasurements {
 impl MeasuredRun {
     pub(super) fn from_worker(
         metrics: WorkerReport,
-        request: &WorkerArguments,
+        request: &Workload,
         rss: RssMeasurements,
     ) -> Result<Self, Error> {
         let invalid_duration = |value: f64| !value.is_finite() || value < 0.0;
@@ -246,11 +246,9 @@ mod tests {
         .unwrap();
         let run = MeasuredRun::from_worker(
             serde_json::from_value(Value::Object(worker_report())).unwrap(),
-            &options.benchmark_cases()[0].worker_arguments(
-                &options,
-                PathBuf::new(),
-                PathBuf::new(),
-            ),
+            &options.benchmark_cases()[0]
+                .worker_arguments(&options, PathBuf::new(), PathBuf::new())
+                .workload,
             RssMeasurements {
                 sampled_peak_tree_rss_bytes: 1024,
                 peak_tree_process_count: 2,
@@ -271,11 +269,9 @@ mod tests {
         second.fixture_wall_ms = 7.0;
         let second = MeasuredRun::from_worker(
             second,
-            &options.benchmark_cases()[0].worker_arguments(
-                &options,
-                PathBuf::new(),
-                PathBuf::new(),
-            ),
+            &options.benchmark_cases()[0]
+                .worker_arguments(&options, PathBuf::new(), PathBuf::new())
+                .workload,
             RssMeasurements {
                 sampled_peak_tree_rss_bytes: 2048,
                 peak_tree_process_count: 2,
@@ -337,11 +333,9 @@ mod tests {
         metrics.wall_ms = f64::from_bits(1);
         let run = MeasuredRun::from_worker(
             metrics,
-            &options.benchmark_cases()[0].worker_arguments(
-                &options,
-                PathBuf::new(),
-                PathBuf::new(),
-            ),
+            &options.benchmark_cases()[0]
+                .worker_arguments(&options, PathBuf::new(), PathBuf::new())
+                .workload,
             RssMeasurements::default(),
         )
         .unwrap();
@@ -387,7 +381,7 @@ mod tests {
         let request = case.worker_arguments(&options, PathBuf::new(), PathBuf::new());
         let admit = |raw| {
             let metrics = serde_json::from_value(Value::Object(raw))?;
-            MeasuredRun::from_worker(metrics, &request, RssMeasurements::default())
+            MeasuredRun::from_worker(metrics, &request.workload, RssMeasurements::default())
         };
         let mut raw = worker_report();
         raw.insert("mode".into(), json!("pooled"));

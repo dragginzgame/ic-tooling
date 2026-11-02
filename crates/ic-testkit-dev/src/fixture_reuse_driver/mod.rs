@@ -312,7 +312,8 @@ pub fn run() -> Result<(), Error> {
                     .current_dir(&inputs.root),
                 || sampling::snapshot(64 * 1024, options.rss_limits()),
             )?;
-            let measured = MeasuredRun::from_worker(captured.report, &invocation, captured.rss)?;
+            let measured =
+                MeasuredRun::from_worker(captured.report, &invocation.workload, captured.rss)?;
             runs.push(measured);
         }
     }

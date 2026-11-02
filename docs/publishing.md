@@ -54,8 +54,9 @@ The read-only `make release-version RELEASE_GROUP=<group>` query needs prepared
 host parsers and the locked offline Cargo graph; it never installs them. Prepare
 tools with `make install-tools` / `make tools-check` and missing dependencies
 explicitly with `cargo fetch --locked`. Explicit server setup fetches locked dependencies before
-building its setup CLI offline. Selected release preflight prepares the complete toolset and
-fetches the selected dependencies with `cargo fetch --locked` before offline
+building its setup CLI offline. Selected release preflight admits its
+[validation plan](design/release-validation.md), prepares the applicable tools and
+fetches workspace dependencies with `cargo fetch --locked` before offline
 validation. Cargo honours explicit offline settings: missing inputs stop the
 release without an online retry. Standalone `make release-verify` checks prepared
 inputs offline and requires the runner's selected release environment; it is not
@@ -71,25 +72,31 @@ runs one lint gate and Cargo dry run, then the remaining offline CI checks.
 This mode cannot upload or select a subset. Standalone `make ci` and
 `make publish-check` each retain their full lint gate. This combined command
 does not upload packages or authorize publication.
-Release verification and CI use the same Rust 1.99.1 qualification: native
+Full release verification and CI use the same Rust 1.99.1 qualification: native
 workspace checks, isolated feature profiles, Testkit Wasm and unsupported-filesystem
 compilation. `make compiler-check` admits the actual compiler; `make ci` retains
 the complete gate without the retired `msrv-qualification` target.
-Shared Tooling's [group validation plans](release-group-validation.md) are opt-in.
-Tooling keeps its full release gate until its own stage mapping and receipt
-integration are qualified; selecting a group alone does not omit validation.
+Release verification uses Tooling's [source-bound group plans](design/release-validation.md)
+through Shared's [plan runner](release-group-validation.md). Foundation, Build,
+Tools and Testkit retain the complete gate. Native and Text may narrow only from
+an admitted complete three-host baseline with unchanged shared inputs and bounded
+consumer relationships. Missing evidence, shared changes or uncertain scope select
+the complete gate; selecting a group alone never omits qualification. Ordinary CI
+and publication qualification keep their complete workspace gates.
 Both numbered pending-heading spellings, `## [X.Y.Z]` and
 `## [X.Y.Z] - Unreleased`, are finalized to the saved UTC date during preparation.
 
 Follow the [shared recovery procedure](releases.md#source-changes-after-saved-preparation-intent)
 for interrupted preparation and exact-version resume. Host preserves prior
-validation receipts, notes and logs before fresh verification. Retain unfinished
+validation receipts, notes, gate directories and logs before fresh verification. Retain unfinished
 plans, earlier tool installations and failed artifacts; a retry must not relabel
 old evidence as validation of new source. Native qualification belongs to the
 [host guide](hosts.md), independently of release and publication effects.
 Old ungrouped and joint `integration` attempts remain under their original identities. Recover them
 using their recorded pre-group source/adapter in an isolated checkout; never
 rename their plans or receipts into a group namespace.
+Earlier `tooling-release-validation-2` receipts likewise retain their original
+full-gate adapter. Never reinterpret them as version-3 plan receipts.
 
 ## Registry publication
 

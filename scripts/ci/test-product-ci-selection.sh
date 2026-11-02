@@ -76,6 +76,55 @@ is_deeply($workflow->{jobs}{native}{strategy}{matrix}{include}, [
 ok(!exists $workflow->{on}{pull_request}{paths} && !exists $workflow->{on}{push}{paths}, 'no workflow path filters');
 ok(!exists $workflow->{jobs}{'lint-and-security'}{if}, 'lint and security remain active');
 
+# Execute the actual full/focused workflow bodies, substituting only the tools.
+# A required failure must stop later owners and archive retention.
+{
+    my ($complete) = grep { ($_->{name} // '') eq 'Run native CI and publication qualification' } @{$workflow->{jobs}{native}{steps}};
+    my ($focused) = grep { ($_->{name} // '') eq 'Qualify focused release contracts' } @{$workflow->{jobs}{native}{steps}};
+    my $checkout = "$fixture/matched inputs";
+    make_path("$checkout/bin", "$checkout/ci", "$checkout/scripts/ci");
+    copy("$root/ci/release-validation.json", "$checkout/ci/release-validation.json") or die $!;
+    write_file("$checkout/bin/make", <<'SH');
+#!/usr/bin/env bash
+set -euo pipefail
+[[ "$*" == ci-publication ]]
+printf 'workspace\n' >> "$WORKFLOW_EVENTS"
+[[ ${WORKFLOW_FAIL:-} != workspace ]] || exit 29
+SH
+    write_file("$checkout/scripts/ci/run-validation-targets.sh", <<'SH');
+#!/usr/bin/env bash
+set -euo pipefail
+[[ $VALIDATION_LOG_DIR == "$RUNNER_TEMP/release-validation/$RELEASE_GROUP" ]]
+printf '%s\t%s\n' "$RELEASE_GROUP" "$*" >> "$WORKFLOW_EVENTS"
+[[ ${WORKFLOW_FAIL:-} != "$RELEASE_GROUP" ]] || exit 29
+SH
+    write_file("$checkout/scripts/ci/archive-product-evidence.sh", <<'SH');
+#!/usr/bin/env bash
+set -euo pipefail
+[[ $# == 3 && $1 == "$PWD" && $2 == "$RUNNER_TEMP" && $3 == "$RUNNER_TEMP/release-validation/archives.tar.gz" ]]
+printf 'archives\n' >> "$WORKFLOW_EVENTS"
+SH
+    chmod 0755, "$checkout/bin/make" or die $!;
+    write_file("$checkout/qualify.sh", "$complete->{run}\n$focused->{run}");
+    local $ENV{PATH} = "$checkout/bin:$ENV{PATH}";
+    local $ENV{WORKFLOW_EVENTS} = "$checkout/events";
+    local $ENV{RUNNER_TEMP} = "$checkout/runner";
+    local $ENV{TMPDIR} = "$checkout/temporary";
+    my $targets = join ' ', map { "release-scope-$_" } qw(tools-check lint graphs tests docs archives);
+    my @expected = ('workspace', "native\t$targets", "text\t$targets", 'archives');
+    chdir $checkout or die $!;
+    for my $failure ('', qw(workspace native text)) {
+        local $ENV{WORKFLOW_FAIL} = $failure;
+        write_file($ENV{WORKFLOW_EVENTS}, '');
+        my $status = system('bash', '-e', '-o', 'pipefail', "$checkout/qualify.sh");
+        is($status >> 8, $failure ? 29 : 0, "matched-input workflow propagates $failure status");
+        my @events = split /\n/, read_file($ENV{WORKFLOW_EVENTS});
+        my $count = $failure eq 'workspace' ? 1 : $failure eq 'native' ? 2 : $failure eq 'text' ? 3 : 4;
+        is_deeply(\@events, [@expected[0 .. $count-1]], "matched-input workflow stops at $failure boundary");
+    }
+    chdir $root or die $!;
+}
+
 local @ENV{qw(GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL)} =
     ('/dev/null', 1, 'CI fixture', 'fixture@example.invalid', 'CI fixture', 'fixture@example.invalid');
 delete @ENV{qw(GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES)};
