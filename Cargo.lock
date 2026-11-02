@@ -1576,7 +1576,6 @@ dependencies = [
  "cap-std",
  "clap",
  "ic-host-artifacts",
- "ic-host-process",
  "rustix",
  "serde",
  "serde_json",

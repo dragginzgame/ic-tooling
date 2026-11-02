@@ -33,9 +33,6 @@ clap = { workspace = true, features = ["derive"], optional = true }
 ic-host-artifacts.workspace = true
 thiserror.workspace = true
 
-[target.'cfg(unix)'.dev-dependencies]
-ic-host-process = { workspace = true, features = ["test-support"] }
-
 [dev-dependencies]
 clap = { workspace = true, features = ["derive"] }
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
@@ -48,3 +45,15 @@ workspace = true
 [[test]]
 name = "file_cli"
 required-features = ["cli"]
+
+[[test]]
+name = "isolated_descriptor_lock"
+required-features = ["test-support"]
+
+[[test]]
+name = "isolated_executable_admission"
+required-features = ["test-support"]
+
+[[test]]
+name = "isolated_private_lock"
+required-features = ["test-support"]

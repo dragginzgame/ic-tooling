@@ -479,60 +479,6 @@ fn descriptor_publication_preserves_sync_state_and_foreign_stage_cleanup_evidenc
 }
 
 #[test]
-fn closed_writer_admission_executes_before_replacing_the_destination() {
-    const DRIVER: &str = "IC_HOST_FS_EXECUTABLE_ADMISSION_DRIVER";
-    // Re-exec before opening descriptors so unrelated test forks cannot retain them.
-    if ic_host_process::testing::run_isolated(
-        DRIVER,
-        "executable admission",
-        ic_host_process::tool::OutputLimits {
-            stdout: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
-            stderr: ic_host_process::tool::OutputLimit::Terminate(64 * 1024),
-            timeout: Some(std::time::Duration::from_secs(120)),
-        },
-    ) {
-        return;
-    }
-    let fixture = fixture();
-    let output = fixture.path().join("executable with spaces");
-    fs::write(&output, b"old").unwrap();
-    let value = write_validated_with(
-        &output,
-        WriteOptions {
-            permissions: 0o700,
-            ..REPLACE
-        },
-        |file| -> io::Result<_> {
-            let mut source = fs::File::open("/bin/sh")?;
-            io::copy(&mut source, file)?;
-            Ok(42)
-        },
-        |stage, value| -> io::Result<()> {
-            assert!(stage.is_absolute());
-            assert_eq!(*value, 42);
-            assert_eq!(fs::read(&output)?, b"old");
-            assert!(
-                std::process::Command::new(stage)
-                    .args(["-c", "exit 0"])
-                    .status()?
-                    .success()
-            );
-            Ok(())
-        },
-    )
-    .unwrap();
-    assert_eq!(value, 42);
-    assert!(
-        std::process::Command::new(&output)
-            .args(["-c", "exit 0"])
-            .status()
-            .unwrap()
-            .success()
-    );
-    assert_eq!(fs::read_dir(fixture.path()).unwrap().count(), 1);
-}
-
-#[test]
 fn admission_rejection_and_identity_replacement_preserve_previous_output() {
     let fixture = fixture();
     let output = fixture.path().join("output");
