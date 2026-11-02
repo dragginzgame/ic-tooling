@@ -29,7 +29,9 @@ finish() {
 trap 'finish "$?"' EXIT
 export RUSTUP_AUTO_INSTALL=0
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/target}"
-"$parser" -p toml -o json '.' Cargo.toml > "$fixture/catalog.json"
+"$parser" -p toml -o json '.' Cargo.toml |
+    jq '.workspace.dependencies |= with_entries(
+        .value |= if type == "string" then {version: .} else . end)' > "$fixture/catalog.json"
 mkdir "$fixture/src"
 cp crates/ic-testkit-dev/tests/public_contracts.rs "$fixture/src/lib.rs"
 cat > "$fixture/Cargo.toml" <<'TOML'

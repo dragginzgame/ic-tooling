@@ -4,6 +4,13 @@ This ledger owns Testkit, Testkit Native and the private development/probe packa
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.79.1] - Unreleased
+
+### 🩹 Fixed
+
+- Accept Cargo's version-string and table dependency declarations in the
+  registry-only integration verifier. Preserve exact versions and readback evidence.
+
 ## [0.79.0] - 2026-11-02
 
 ### ⚠️ Breaking
