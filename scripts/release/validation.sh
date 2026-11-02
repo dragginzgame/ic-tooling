@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Shared companions: scripts/release/select-validation.pl scripts/release/validation-baseline.sh scripts/release/validation-proof.pl scripts/release/validation-stage.sh scripts/release/validation-focus.sh ci/release-validation.json ci/release-validation-coverage.json make/release-validation-local.mk scripts/ci/run-validation-targets.sh
+set -euo pipefail
+[[ $# == 2 || ( $# == 3 && $1 == fork ) ]] || { echo 'usage: validation.sh plan|run|receipt POINTER' >&2; exit 2; }
+operation=$1 pointer=$2
+root="${BASH_SOURCE[0]}"
+[[ $root == /* ]] || root="$PWD/$root"
+root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
+root="${root%/.}"
+source_sha=${RELEASE_SOURCE:?} group=${RELEASE_GROUP:?}
+gate_directory() {
+    local state
+    state=$(git rev-parse --git-path release-state)
+    # Shared checkpoints use checkout-relative paths. Linked worktrees keep their
+    # gate artifacts under target rather than traversing an external Git dir.
+    [[ $state == .git/release-state ]] || state=target/release-validation
+    mkdir -p "$state"
+    mktemp -d "$state/$group-gate.XXXXXX"
+}
+case $operation in
+    plan)
+        [[ ! -e $pointer && ! -L $pointer ]]
+        directory=$(gate_directory)
+        bash "$root/scripts/release/validation-baseline.sh" "$source_sha" "$directory/baseline.json"
+        perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
+            "$directory/baseline.json" "$directory/plan.json" "$directory/context.json"
+        rustc -vV > "$directory/rustc.txt"
+        cargo -V > "$directory/cargo.txt"
+        uname -srm > "$directory/host.txt"
+        jq -cnS --arg source "$source_sha" --arg group "$group" --arg directory "$directory" \
+            '{schema:1,source:$source,group:$group,directory:$directory}' > "$pointer"
+        ;;
+    fork)
+        destination=$3
+        [[ ! -e $destination && ! -L $destination ]]
+        previous=$(jq -er --arg source "$source_sha" --arg group "$group" \
+            'select(.schema == 1 and .source == $source and .group == $group) | .directory' "$pointer")
+        perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
+            "$previous/baseline.json" "$previous/plan.json" "$previous/context.json" --check
+        directory=$(gate_directory)
+        cp -p "$previous/baseline.json" "$directory/baseline.json"
+        perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
+            "$directory/baseline.json" "$directory/plan.json" "$directory/context.json"
+        rustc -vV > "$directory/rustc.txt"
+        cargo -V > "$directory/cargo.txt"
+        uname -srm > "$directory/host.txt"
+        jq -cnS --arg source "$source_sha" --arg group "$group" --arg directory "$directory" \
+            '{schema:1,source:$source,group:$group,directory:$directory}' > "$destination"
+        ;;
+    run)
+        directory=$(jq -er --arg source "$source_sha" --arg group "$group" \
+            'select(.schema == 1 and .source == $source and .group == $group) | .directory' "$pointer")
+        perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
+            "$directory/baseline.json" "$directory/plan.json" "$directory/context.json" --check
+        CARGO_NET_OFFLINE=true VALIDATION_REPOSITORY_ROOT="$PWD" VALIDATION_LOG_DIR="$directory/logs" \
+            bash "$root/scripts/ci/run-validation-targets.sh" --plan "$directory/plan.json"
+        ;;
+    receipt)
+        perl "$root/scripts/release/validation-proof.pl" "$source_sha" "$group" "$pointer" > /dev/null
+        directory=$(jq -er .directory "$pointer")
+        perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
+            "$directory/baseline.json" "$directory/plan.json" "$directory/context.json" --check > /dev/null
+        [[ $(rustc -vV) == "$(cat "$directory/rustc.txt")" && $(cargo -V) == "$(cat "$directory/cargo.txt")" &&
+            $(uname -srm) == "$(cat "$directory/host.txt")" ]] || { echo 'gate host/compiler context changed' >&2; exit 1; }
+        perl "$root/scripts/release/validation-proof.pl" "$source_sha" "$group" "$pointer"
+        ;;
+    *) exit 2 ;;
+esac

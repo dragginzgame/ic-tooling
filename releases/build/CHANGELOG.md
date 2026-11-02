@@ -8,9 +8,28 @@ reset, release, tag or upload is implied by establishing this group.
 
 ## [0.74.2]
 
+### 🛠️ Fixes
+
+- Qualify dependency-free package archives while still rejecting empty package
+  graphs, malformed locks and changed external identities/checksums.
+
 ### 🧹 Cleanup
 
 - Share standalone/batch input hashing and artifact verification decisions while
+  preserving fingerprints, mutation observation points, lock order and failure
+  attribution. Carry each configured shared target through its maintenance
+  operation while retaining fresh filesystem admission.
+- Bind release verification to exhaustive group plans and retained stage evidence.
+  Native/Text-only releases can narrow from a complete three-host baseline;
+  shared changes and the four wider groups retain the full gate.
+  [#314](https://github.com/dragginzgame/ic-tooling/issues/314).
+- Keep release-stage inventory and three-host baseline admission with one owner
+  each, retaining independent Make dispatch checks and saved-evidence revalidation.
+- Compare full and focused qualification on the same native CI inputs, retaining
+  stage timing and installed-archive evidence. Narrow release admission requires
+  that proof on Linux and both macOS hosts.
+- Trim unused Shared producer regression fixtures from the consumer snapshot;
+  retain the same adopted revision and local consumer qualification suites.
 
 ## [0.74.1] - 2026-11-02
 

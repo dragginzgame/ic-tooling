@@ -38,8 +38,10 @@ not change package versions or tags. IC Storage owns memory IO metering under
 its `test-support` feature. Native's next minor removes the old memory module and
 feature, so neither Storage trait changes nor simulator changes advance this group.
 Historical Testkit plans and receipts retain their original roster, including Native;
-never replay them with the new ownership policy. Whole-workspace qualification
-remains unchanged; the split does not establish a narrower validation gate.
+never replay them with the new ownership policy. Repository CI and publication
+qualification retain their whole-workspace gates. The separately reviewed
+[release-validation mapping](release-validation.md) governs any narrower release
+gate; the group split alone does not establish one.
 
 Real supplier changes can still require independently classified consumer changes.
 Publicly exposed supplier types and minimum requirements retain their actual
@@ -97,6 +99,13 @@ source/commit custody, unselected versions/requirements/ledgers and wrong-group
 receipts, including equal-version Foundation/Build/Text owners. Setup and full
 gates are substituted; the fixture cannot release or publish. Publication and
 Make fixtures check exact selection and cross-group refusals.
+
+`bash scripts/release/test-validation.sh` compares every group's full fallback
+against the existing CI roster on matched fixture inputs. It exercises focused
+Native/Text selection, baseline discovery, exclusions, required failures, source
+drift and receipt custody using substituted Make effects. Real package, archive
+and native-host execution remain distinct proofs; see the
+[mapping and evidence contract](release-validation.md).
 
 The private Dev `public_contracts` test requires shared public error, principal,
 certificate and core Wire identities during ordinary qualification.

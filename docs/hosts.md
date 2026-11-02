@@ -16,6 +16,9 @@ Release receipts and durable deployment logs under `.git/release-state/` survive
 that cleanup; separate `.tools` selections, the shared tool store and explicitly
 chosen fixture roots retain their own cleanup scope. Cargo's normal workspace
 target is unchanged, and operator target/profile/package selections remain valid.
+Linked-worktree [release-plan artifacts](design/release-validation.md) live under
+`target/release-validation/`; preserve them with their receipts before cleanup.
+Deleting those artifacts invalidates that qualification evidence.
 
 Native hosted CI uses `make ci-publication`: prerequisite admission, publication's
 source and workspace lint gate, then the publication dry run, followed by the
@@ -70,7 +73,7 @@ all-feature selections retain them. A focused invocation is `cargo test -p ic-bu
 --features test-support --test artifact_helpers --locked --offline`; select `cli`
 alone for its release-metadata CLI target. Default unit tests need no feature.
 Tooling changes use the affected consumer check: `make release-adapter-check`,
-`bash scripts/ci/test-make-snapshot.sh` or
+`make release-validation-plan-check`, `bash scripts/ci/test-make-snapshot.sh` or
 `bash scripts/ci/test-host-fixture-retention.sh`. The shared
 [validation policy](../DRAGGINZGAME.md#validation-and-evidence) owns execution cadence.
 
@@ -85,6 +88,11 @@ warning-denied lint gate. CI/release validation runs it before expensive tests
 and builds after prerequisite admission. Publication and its dry run use that
 same gate before packaging or registry dispatch; ordinary package checks keep
 their selected scope. These entrypoint rules do not authorize a full local gate.
+Native/Text-only release plans can select package/consumer lint and the
+[focused contracts](design/release-validation.md) after baseline admission;
+the other groups and uncertain/shared changes retain the full gate. CI and
+publication keep their complete gates. The `release-scope-*` targets in that
+guide expose the selected owner checks without executing a release.
 Independent group versions are literal in every member; root Cargo metadata has
 no shared version. Public release and publication Make/CLI commands require an
 explicit group. CI's read-only `workspace.sh qualify` mode still checks every
@@ -101,8 +109,8 @@ Select `--features wasm-encoding,wasm-validation` for full instruction/type
 validation of encoder fixtures. All-feature tests include both. The feature guard
 checks these profiles on Linux and both macOS target graphs, including exclusion
 of wasmparser's validation feature unless explicitly requested. These graph checks
-do not replace native qualification. Both new capabilities require actual Rust
-1.91 and native Linux/macOS evidence; native macOS remains separately reported.
+do not replace native qualification. Both capabilities require the declared
+compiler and native Linux/macOS evidence; native macOS remains separately reported.
 The direct-dependency policy restricts cap-std, cap-fs-ext and tempfile to FS,
 and wasmparser, wasm-encoder and wat to Artifacts, including dev/build and aliases.
 All normal/build profiles except explicitly selected text compilation exclude

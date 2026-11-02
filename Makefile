@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml
+# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml make/release-validation-local.mk
 PACKAGE ?= ic-host-artifacts
 RELEASE_DELIVERY ?= direct
 export RELEASE_GROUP
@@ -13,6 +13,7 @@ include ci/tool-versions.env
 IC_TOOLS := wasm-opt
 include make/consumer.mk
 include make/testkit.mk
+include make/release-validation-local.mk
 export YQ := $(CURDIR)/.tools/host/bin/yq
 
 # Refuse before the shared runner acquires its lock or any publication starts.
@@ -188,7 +189,12 @@ _ci-checks:
 	+$(MAKE) --no-print-directory test-tools-encoding
 	+$(MAKE) --no-print-directory test-tools-registry
 	+$(MAKE) --no-print-directory test-wasm-inspection
+	+$(MAKE) --no-print-directory docs-workspace
+	+$(MAKE) --no-print-directory test-workspace-installed
+.PHONY: docs-workspace test-workspace-installed
+docs-workspace:
 	+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --locked --offline --no-deps
+test-workspace-installed:
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --workspace --all-targets --all-features --locked --offline
 release-version:
 	+@bash scripts/release/adapter.sh version

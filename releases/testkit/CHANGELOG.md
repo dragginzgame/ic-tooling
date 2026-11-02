@@ -11,6 +11,11 @@ Joint history through 0.76.1 remains there once, with its original scope.
 ### 🧹 Cleanup
 
 - Share typed benchmark workload settings and concurrency admission between the
+  driver and worker. Report admission uses only the requested workload, retaining
+  the existing command syntax, strict report schema and measurement boundaries.
+- Allow the private archive qualification driver to select explicit public
+  packages for group plans. Its default retains the complete public roster;
+  unknown, private and duplicate selections refuse before creating artifacts.
 
 ## [0.80.2] - 2026-11-02
 

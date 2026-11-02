@@ -19,6 +19,8 @@ trap 'fixture_finish "$?" "$fixture" "Release adapter fixtures retained"' EXIT
 # Shared retains failed group observations. Keep controlled failure probes
 # beneath this owned fixture so a successful fixture owns their cleanup too.
 export TMPDIR="$fixture"
+ADAPTER_REAL_MAKE="$(command -v make)"
+export ADAPTER_REAL_MAKE
 export ADAPTER_REAL_CARGO ADAPTER_REAL_BASH ADAPTER_REAL_GIT ADAPTER_REAL_EDITOR ADAPTER_SELECTED_EDITOR
 ADAPTER_REAL_CARGO="$(command -v cargo)"
 ADAPTER_REAL_BASH="$(command -v bash)"
@@ -63,8 +65,10 @@ STUB
 cat > "$fixture/bin/make" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "$*" == '--no-print-directory -f - MAKEFILES=' ]]; then exec "$ADAPTER_REAL_MAKE" "$@"; fi
 printf 'make %s\n' "$*" >> "$ADAPTER_EVENTS"
 case "$*" in
+    *'-- release-stage-'*) exit "${ADAPTER_GATE_RESULT:-0}" ;;
     '--no-print-directory install-tools') : > "$ADAPTER_EDITOR_READY" ;;
     '--no-print-directory tools-check'|'--no-print-directory compiler-check'|'--no-print-directory dependency-pins-check') ;;
     '--no-print-directory ci') exit "${ADAPTER_GATE_RESULT:-0}" ;;
@@ -95,6 +99,7 @@ for selected_group in foundation build text tools testkit native; do
     checkout="$fixture/$selected_group checkout"
     mkdir "$checkout"
     bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$root" "$checkout"
+    bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$checkout"
     mv "$checkout/source-metadata.json" "$fixture/$selected_group.source-metadata.json"
     cd "$checkout"
     git init -q -b main
@@ -119,7 +124,7 @@ for selected_group in foundation build text tools testkit native; do
         END { if (!selected) exit 1 }
     ' "$ledger" > "$fixture/$selected_group.notes"
     cp "$fixture/$selected_group.notes" "$ledger"
-    git add -- Cargo.toml Cargo.lock CHANGELOG.md releases ci crates apps README.md LICENSE
+    git add -- .
     git commit -qm fixture
     RELEASE_SOURCE="$(git rev-parse HEAD)"
     state=".git/release-state/$RELEASE_GROUP-$RELEASE_VERSION.validation"
@@ -144,7 +149,7 @@ for selected_group in foundation build text tools testkit native; do
     refuse env ADAPTER_GATE_RESULT=29 bash "$adapter" verify > "$fixture/$selected_group.gate.log" 2>&1
     [[ ! -e "$state" ]]
     invoke verify > "$fixture/$selected_group.verify.log" 2>&1
-    grep -Fx 'make --no-print-directory ci' "$ADAPTER_EVENTS" > /dev/null
+    grep 'release-stage-clippy-workspace' "$ADAPTER_EVENTS" > /dev/null
     # Valid-looking output from a failed Git observation grants no custody.
     ADAPTER_GIT_CONTROL='head' refuse invoke prepare > "$fixture/$selected_group.failed-head.log" 2>&1
     ADAPTER_GIT_CONTROL='diff' refuse invoke verify > "$fixture/$selected_group.failed-diff.log" 2>&1

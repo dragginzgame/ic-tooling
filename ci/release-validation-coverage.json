@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "common": [
+    "shared-tooling-check",
+    "check-no-symlinks",
+    "compiler-check",
+    "dependency-pins-check",
+    "fmt-check",
+    "check-doc-links"
+  ],
+  "focused": [
+    "native",
+    "text"
+  ],
+  "fallback": {
+    "foundation": "Foundation primitives have Build, Tools and Testkit reverse consumers, including installed and Wasm contracts.",
+    "build": "Build changes require artifact, editor and optimizer owner qualification plus archive and private-driver contracts.",
+    "tools": "Tools owns distinct external adapters and public identities; retain all isolated profiles and consumers.",
+    "testkit": "Testkit owns simulator lifecycle, Wasm/probe singletons and installed/server contracts."
+  },
+  "exclusions": [
+    {
+      "targets": [
+        "tools-check"
+      ],
+      "reason": "Focused tool admission retains host parsers, Cargo tools and the release editor. No selected contract installs the simulator or optimizer."
+    },
+    {
+      "targets": [
+        "clippy-workspace",
+        "docs-workspace",
+        "test-workspace-installed"
+      ],
+      "reason": "Focused lint, documentation and runtime tests retain the selected package and its admitted direct/reverse consumer contracts. Simulator-backed workspace tests have no edge to this scope."
+    },
+    {
+      "targets": [
+        "formatting-hook-check",
+        "tooling-command-check"
+      ],
+      "reason": "Shared scripts, hooks, recipes and fixtures are unchanged from the complete three-host baseline; source/configuration changes select the full gate."
+    },
+    {
+      "targets": [
+        "test-artifacts-minimal",
+        "test-fs-minimal",
+        "test-fs-capability",
+        "test-fs-temporary-file",
+        "test-artifacts-wasm",
+        "test-artifacts-encoding",
+        "test-artifacts-text",
+        "check-fs-non-unix"
+      ],
+      "reason": "Foundation and Build implementations, dependencies and feature contracts are unchanged and have no production edge to Native or Text."
+    },
+    {
+      "targets": [
+        "tools-features-check",
+        "isolated-features-check"
+      ],
+      "reason": "Native has no dependency or reverse consumer. Text retains its feature/graph checks, YAML profile and actual Tools icp-project consumer in the focused graph/test stages."
+    },
+    {
+      "targets": [
+        "testkit-graph-check",
+        "testkit-wasm-check",
+        "testkit-installed-check"
+      ],
+      "reason": "Public Testkit, simulator/server lifecycle and Wasm probe contracts do not consume Native or Text. The private driver’s Text rendering is exercised in focused tests."
+    },
+    {
+      "targets": [
+        "testkit-package-check"
+      ],
+      "reason": "Focused archive qualification uses the same IC Build archive engine, exact selected public package, normalized source/lock admission and installed archive tests."
+    },
+    {
+      "targets": [
+        "test-tools-default",
+        "test-tools-interface",
+        "test-tools-certificate",
+        "test-tools-candid",
+        "test-tools-combined",
+        "test-tools-agent",
+        "test-tools-encoding",
+        "test-tools-registry"
+      ],
+      "reason": "Native has no Tools consumer. Text’s runtime caller is confined to icp-project, exercised separately; the remaining IC adapters do not use Text and are unchanged."
+    },
+    {
+      "targets": [
+        "test-wasm-inspection"
+      ],
+      "reason": "Wasm inspection does not depend on Native or Text; its source, graph and public identities are unchanged."
+    }
+  ]
+}

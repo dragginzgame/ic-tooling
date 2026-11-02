@@ -85,9 +85,6 @@ revision	651f5f7acb2e3055abd51ba5f835a2112801666a
 # entrypoint	scripts/ci/run-formatting.sh
 # entrypoint	scripts/ci/run-release.sh
 # entrypoint	scripts/ci/run-validation-targets.sh
-# entrypoint	scripts/ci/test-cargo-publication-attempt.sh
-# entrypoint	scripts/ci/test-cargo-release-metadata.sh
-# entrypoint	scripts/ci/test-release-runner.sh
 # entrypoint	scripts/ci/verify-file-checksum.sh
 # entrypoint	scripts/ci/verify-shared-tooling-snapshot.sh
 # entrypoint	scripts/dev/check-cargo-tool-versions.pl
@@ -202,9 +199,6 @@ file	ebb267fa5bf0b326b6b96ed6a4c362f5f3dbcfc5805d30c20e880288ec3001d0	x	scripts/
 file	4ff0a961d5fb8639edf798d64bbe3abc0fcd83c6f703d7a6875c6f5174e76201	x	scripts/ci/run-formatting.sh
 file	ffdcce5cf9c3871d45a6a7da24b38851ffd233729faacea4c3d1a5cc4305beac	x	scripts/ci/run-release.sh
 file	0022db47979ef444df034030d501b83aa994b25c1f1ec78d8d8ad336c20bfa39	x	scripts/ci/run-validation-targets.sh
-file	8294bfc37449e5d9518fb7772c356d3833ef514c965a21db643dc1c52f58e0d1	x	scripts/ci/test-cargo-publication-attempt.sh
-file	b17184c1c732e169350d7cd43e6ebbed7b8149e683a7faa382b80a346a510a78	x	scripts/ci/test-cargo-release-metadata.sh
-file	6cb38f7497e2ee1c9cf6b050396c8e0843330e8c33315f9b6e78da1f570dcdcc	x	scripts/ci/test-release-runner.sh
 file	36f36552df36ea6e082f1fd1f14661d40b281ea01294ffda2eb6c6ec91bc6907	x	scripts/ci/verify-file-checksum.sh
 file	9495336bbafd7a82d7446246c85571e5ccb5f17674ad92c83f008275f11c1201	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	35b356fa090cd2fc498fc53d13a1b3926ddacb0db5944aa92bbbbc8f53dfe76c	x	scripts/dev/check-cargo-tool-versions.pl

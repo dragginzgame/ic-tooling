@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: ci/release-delivery.txt ci/release-editor.env scripts/release/editor.sh scripts/release/group.sh scripts/ci/check-release-delivery.sh scripts/ci/check-release-source.sh scripts/ci/next-release-version.sh scripts/ci/finalize-release-changelog.awk scripts/ci/release-receipts.sh scripts/ci/cargo-release-group.sh
+# Shared companions: ci/release-delivery.txt ci/release-editor.env scripts/release/editor.sh scripts/release/group.sh scripts/release/validation.sh scripts/ci/check-release-delivery.sh scripts/ci/check-release-source.sh scripts/ci/next-release-version.sh scripts/ci/finalize-release-changelog.awk scripts/ci/release-receipts.sh scripts/ci/cargo-release-group.sh
 set -euo pipefail
 export RUSTUP_AUTO_INSTALL=0
 
@@ -31,6 +31,8 @@ identity="$RELEASE_GROUP-$RELEASE_VERSION"
 receipt="$state/$identity.validation"
 notes="$receipt.notes"
 payload="$receipt.payload"
+selection="$receipt.selection"
+gate="$receipt.gate"
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/tooling-release-adapter.XXXXXX")"
 finish() {
     local status=$?
@@ -64,8 +66,9 @@ admit_files() {
         fail 'commit refused source paths before releasing'
 }
 receipt_header() {
-    printf '%s\n' tooling-release-validation-2 "$RELEASE_KIND" || return
-    release_receipt_identity
+    printf '%s\n' tooling-release-validation-3 "$RELEASE_KIND" || return
+    release_receipt_identity || return
+    bash "$tooling_root/scripts/release/validation.sh" receipt "$gate"
 }
 check_receipt() {
     [[ -f "$notes" && ! -L "$notes" ]] || fail 'source-bound validation notes are missing'
@@ -91,6 +94,21 @@ case "$operation" in
         [[ "$observed_source" == "$RELEASE_SOURCE" ]] || fail 'source changed'
         [[ "$observed_version" == "$RELEASE_PREVIOUS" ]] || fail 'selected group version changed'
         admit_files
+        if [[ "$operation" == preflight ]]; then
+            bash "$tooling_root/scripts/release/validation.sh" plan "$scratch/selection"
+            current_selection="$scratch/selection"
+        else
+            current_selection="$selection"
+            [[ -f "$current_selection" && ! -L "$current_selection" ]] || fail 'source-bound preflight selection is missing; run the saved source preflight'
+        fi
+        selected_context="$(jq -er '.directory + "/context.json"' "$current_selection")"
+        scope="$(jq -er --arg source "$RELEASE_SOURCE" --arg group "$RELEASE_GROUP" \
+            'select(.source == $source and .group == $group) | .selection' "$selected_context")"
+        case "$scope" in focused|full) ;; *) fail 'invalid gate selection' ;; esac
+        setup_tools() {
+            if [[ "$scope" == focused ]]; then make --no-print-directory install-host-tools install-rust-tools install-release-editor
+            else make --no-print-directory install-tools; fi
+        }
         fresh_tool_setup=false
         if [[ "$operation" == preflight && ! -e "$state/$identity.plan" && ! -L "$state/$identity.plan" ]]; then
             fresh_tool_setup=true
@@ -101,29 +119,35 @@ case "$operation" in
             select_editor || editor_status=$?
             [[ "$editor_status" != 75 ]] || exit "$editor_status"
             if [[ "$editor_status" != 0 ]]; then
-                make --no-print-directory install-tools
+                setup_tools
                 editor_setup=true
                 select_editor
             fi
         else select_editor; fi
         awk -v version="$RELEASE_VERSION" -v previous="$RELEASE_PREVIOUS" -v date="$RELEASE_DATE" \
             -f "$tooling_root/scripts/ci/finalize-release-changelog.awk" "$changelog" > /dev/null
-        if [[ "$fresh_tool_setup" == true && "$editor_setup" == false ]]; then make --no-print-directory install-tools; fi
+        if [[ "$fresh_tool_setup" == true && "$editor_setup" == false ]]; then setup_tools; fi
         CARGO_NET_OFFLINE=true make --no-print-directory compiler-check
-        CARGO_NET_OFFLINE=true make --no-print-directory tools-check
+        if [[ "$scope" == focused ]]; then
+            CARGO_NET_OFFLINE=true make --no-print-directory release-scope-tools-check
+        else CARGO_NET_OFFLINE=true make --no-print-directory tools-check; fi
         cargo sort --workspace --grouped --check
         CARGO_NET_OFFLINE=true make --no-print-directory dependency-pins-check
         if [[ "$fresh_tool_setup" == true ]]; then cargo fetch --locked
         else cargo fetch --locked --offline; fi
-        if [[ "$operation" == verify ]]; then
+        if [[ "$operation" == preflight ]]; then
+            release_receipt_write "$selection" cat "$current_selection"
+        else
             mkdir -p "$state"
             cp -p "$changelog" "$scratch/notes"
             before="$(git diff --binary HEAD | git hash-object --stdin)"
             release_receipt_archive "$state/$identity.validation-attempt.XXXXXX" \
-                "$receipt" "$notes" "$receipt.log" "$payload"
+                "$receipt" "$notes" "$receipt.log" "$payload" "$gate"
+            bash "$tooling_root/scripts/release/validation.sh" fork "$current_selection" "$scratch/gate"
+            release_receipt_write "$gate" cat "$scratch/gate"
             {
-                receipt_header
-                CARGO_NET_OFFLINE=true make --no-print-directory ci
+                # The receipt is written only after every required plan stage passes.
+                CARGO_NET_OFFLINE=true bash "$tooling_root/scripts/release/validation.sh" run "$gate"
             } 2>&1 | tee -a "$receipt.log"
             observed_source="$(git rev-parse HEAD)"
             after="$(git diff --binary HEAD | git hash-object --stdin)"

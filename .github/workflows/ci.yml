@@ -139,7 +139,33 @@ jobs:
           TMPDIR: ${{ runner.temp }}/portable-fixtures
         run: |
           mkdir -p "$TMPDIR"
+          mkdir -p "$RUNNER_TEMP/release-validation"
+          started=$SECONDS
           make ci-publication
+          printf 'workspace\tPASS\t%s\n' "$((SECONDS-started))" > "$RUNNER_TEMP/release-validation/full-gate.tsv"
+      - name: Qualify focused release contracts
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
+        env:
+          TMPDIR: ${{ runner.temp }}/portable-fixtures
+        run: |
+          targets=()
+          jq -er '.stages[] | sub("^release-stage-"; "") | select(startswith("release-scope-"))' \
+            ci/release-validation.json > "$RUNNER_TEMP/release-validation/targets"
+          while IFS= read -r target; do targets+=("$target"); done < "$RUNNER_TEMP/release-validation/targets"
+          for group in native text; do
+            RELEASE_GROUP="$group" VALIDATION_LOG_DIR="$RUNNER_TEMP/release-validation/$group" \
+              bash scripts/ci/run-validation-targets.sh "${targets[@]}"
+          done
+          bash scripts/ci/archive-product-evidence.sh "$PWD" "$RUNNER_TEMP" \
+            "$RUNNER_TEMP/release-validation/archives.tar.gz"
+      - name: Retain release-validation comparison
+        if: ${{ needs.change-scope.outputs.scope == 'full' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-validation-comparison-${{ matrix.runner }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/release-validation
+          if-no-files-found: error
+          retention-days: 14
       - name: Retain successful native qualification
         if: ${{ needs.change-scope.outputs.scope == 'full' }}
         uses: ./.github/actions/retain-qualification

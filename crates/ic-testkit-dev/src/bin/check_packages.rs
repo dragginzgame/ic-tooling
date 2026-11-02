@@ -52,10 +52,24 @@ fn failure_report(error: &(dyn Error + 'static)) -> String {
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
-    clap::Command::new("check_packages")
+    let arguments = clap::Command::new("check_packages")
         .about("Qualify the selected workspace package archives through IC Build")
         .version(env!("CARGO_PKG_VERSION"))
+        .arg(
+            clap::Arg::new("package")
+                .long("package")
+                .value_name("PUBLIC_PACKAGE")
+                .action(clap::ArgAction::Append),
+        )
         .get_matches();
+    let roster = selected_roster(
+        include_str!("../../../../ci/public-packages.txt"),
+        arguments
+            .get_many::<String>("package")
+            .into_iter()
+            .flatten()
+            .map(String::as_str),
+    )?;
     let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(Path::parent)
@@ -80,10 +94,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         source_depth: 64,
     };
     let versions = workspace_versions(workspace, &evidence, limits.process)?;
-    let packages = archive_specs(
-        &versions,
-        include_str!("../../../../ci/public-packages.txt"),
-    )?;
+    let packages = archive_specs(&versions, &roster)?;
     // Build owns an initially empty evidence directory; selection diagnostics
     // remain alongside it in the driver's retained attempt.
     let archives = evidence.join("archives");
@@ -115,6 +126,27 @@ fn run() -> Result<(), Box<dyn Error>> {
         },
     )?;
     Ok(())
+}
+
+fn selected_roster<'a>(
+    roster: &str,
+    requested: impl Iterator<Item = &'a str>,
+) -> Result<String, Box<dyn Error>> {
+    let mut selected = Vec::new();
+    for name in requested {
+        if !roster.lines().any(|eligible| eligible == name) {
+            return Err(format!("unknown or private archive package: {name}").into());
+        }
+        if selected.contains(&name) {
+            return Err(format!("duplicate archive package: {name}").into());
+        }
+        selected.push(name);
+    }
+    Ok(if selected.is_empty() {
+        roster.to_owned()
+    } else {
+        selected.join("\n")
+    })
 }
 
 fn workspace_versions(
@@ -172,6 +204,19 @@ fn archive_specs<'a>(
 mod tests {
     use super::*;
     use ic_host_process::tool::{ExecutionError, ExecutionEvidence, ExecutionFailure, ToolError};
+
+    #[test]
+    fn explicit_archive_selection_preserves_default_and_refuses_private_or_duplicate_names() {
+        let roster = "ic-host-text\nic-testkit-native\n";
+        assert_eq!(selected_roster(roster, std::iter::empty()).unwrap(), roster);
+        assert_eq!(
+            selected_roster(roster, ["ic-testkit-native"].into_iter()).unwrap(),
+            "ic-testkit-native"
+        );
+        assert!(selected_roster(roster, ["ic-testkit-dev"].into_iter()).is_err());
+        assert!(selected_roster(roster, ["unknown"].into_iter()).is_err());
+        assert!(selected_roster(roster, ["ic-host-text", "ic-host-text"].into_iter()).is_err());
+    }
 
     #[test]
     fn archive_selection_preserves_mixed_versions_and_refuses_missing_members() {

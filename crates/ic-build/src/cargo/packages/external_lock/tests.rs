@@ -130,10 +130,13 @@ fn bounds_and_malformed_inputs_preserve_role_and_original_error_sources() {
 }
 
 #[test]
-fn archive_admission_keeps_its_nonempty_rule_on_the_shared_comparison() {
+fn archive_admission_requires_packages_but_allows_dependency_free_packages() {
     verify_external_lock_subset(REGISTRY.as_bytes(), b"package=[]", 4096).unwrap();
     let empty = admit_lock(REGISTRY.as_bytes(), b"package=[]").unwrap_err();
-    assert_eq!(empty.to_string(), "empty package external graph");
+    assert_eq!(empty.to_string(), "empty package graph");
+    let local = b"[[package]]\nname='allocation'\nversion='0.1.0'\n";
+    admit_lock(REGISTRY.as_bytes(), local).unwrap();
+    admit_lock(local, local).unwrap();
     admit_lock(REGISTRY.as_bytes(), REGISTRY.as_bytes()).unwrap();
     let changed = REGISTRY.replace("1.0.0", "1.0.1");
     let changed = admit_lock(REGISTRY.as_bytes(), changed.as_bytes()).unwrap_err();
