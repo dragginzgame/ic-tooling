@@ -6,6 +6,7 @@ pub mod duration;
 pub mod escape;
 pub mod normalize;
 pub mod progress;
+pub mod quantity;
 pub mod table;
 pub mod timestamp;
 pub mod width;

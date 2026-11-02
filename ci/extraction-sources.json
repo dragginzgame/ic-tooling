@@ -291,6 +291,17 @@
           "selection": "generic no-follow, mode, missing-path, retained-parent and create-race regressions adapted to Host fixture custody; Query cache/schema/lease tests remain consumer-owned"
         }
       ]
+    },
+    {
+      "repository": "https://github.com/dragginzgame/ic-query",
+      "revision": "0bb5b9303a42618450d9daa35677314aceb0a881",
+      "files": [
+        {
+          "path": "crates/ic-query-text/src/human_quantity.rs",
+          "sha256": "15a97a8b558f7b94daa57507b6a171cb3d2e71a5ecd0c651a9ec52ecc49a9b77",
+          "selection": "scaled_quantity_text, quantity_text and rounded_parts integer formatting mechanics; adapted to typed unit-table admission and u64-bounded divisors. Query retains decimal cycle and binary byte units, decimal-string admission, fallback evidence and report presentation policy."
+        }
+      ]
     }
   ]
 }
