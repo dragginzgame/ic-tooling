@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Shared companions: scripts/ci/test-workspace-validation.sh
 set -euo pipefail
+selection=all
+if [[ $# != 0 ]]; then
+    [[ $# == 2 && $1 == --case && $2 == tooling-roster ]] || {
+        echo 'usage: test-make-snapshot.sh [--case tooling-roster]' >&2; exit 2;
+    }
+    selection=tooling-roster
+fi
 
 # Qualify Host's checkout-local routing using its actual Makefile and snapshot.
 # Formatter, tool setup/check and release effects use disposable substitutes.
@@ -88,6 +95,51 @@ ln -s "$root/.tools/host/bin/yq" "$fixture/local/.tools/host/bin/yq"
 . "$root/ci/tool-versions.env"
 export HOST_MAKE_SORT_VERSION="$SHARED_TOOLING_CARGO_SORT_VERSION"
 cd "$fixture/local"
+
+prepare_tooling_stubs() {
+    local helpers helper
+    helpers="$(bash "$root/scripts/ci/select-tooling-checks.sh" make-stub)"
+    while IFS= read -r helper; do
+        mkdir -p "$fixture/local/${helper%/*}"
+        printf '#!/usr/bin/env bash\nexec cargo fixture %s "$@"\n' "$helper" > "$fixture/local/$helper"
+    done <<< "$helpers"
+}
+
+# Frozen membership/order independently checks the production discovery roster.
+check_tooling_roster() {
+    local status
+    : > "$HOST_MAKE_EVENTS"
+    PATH="$fixture/local:$PATH" make --no-print-directory tooling-command-check > "$fixture/tooling-order.log" 2>&1
+    awk '{ print $1, $2 }' "$HOST_MAKE_EVENTS" > "$fixture/tooling-observed"
+    cat > "$fixture/expected" <<'EVENTS'
+fixture scripts/ci/test-qualification-record.sh
+fixture scripts/ci/test-tools-layering.sh
+fixture scripts/ci/test-product-ci-selection.sh
+fixture scripts/ci/test-product-evidence.sh
+fixture scripts/ci/test-host-fixture-retention.sh
+fixture scripts/ci/test-make-snapshot.sh
+fixture scripts/release/test-adapter.sh
+fixture scripts/release/test-validation.sh
+fixture scripts/publish/test-workspace.sh
+fixture scripts/ci/check-release-commands.sh
+EVENTS
+    cmp "$fixture/expected" "$fixture/tooling-observed"
+    : > "$HOST_MAKE_EVENTS"
+    status=0
+    PATH="$fixture/local:$PATH" HOST_MAKE_FIXTURE_STATUS=23 make --no-print-directory tooling-command-check \
+        > "$fixture/tooling-failure.log" 2>&1 || status=$?
+    [[ "$status" == 2 ]] || exit 1
+    printf '%s\n' 'fixture scripts/ci/test-qualification-record.sh' > "$fixture/expected"
+    cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
+}
+
+if [[ $selection == tooling-roster ]]; then
+    prepare_tooling_stubs
+    check_tooling_roster
+    fixture_complete=true
+    echo 'Explicit tooling fixture roster and first-failure stopping passed'
+    exit 0
+fi
 printf 'override RELEASE_REMOTE := recursive\n' > overrides.mk
 recursive_make="$(command -v make) --no-print-directory -f Makefile -f overrides.mk"
 for selection in ordinary environment command nested recursive; do
@@ -272,11 +324,7 @@ printf '%s\n' 'install-rust-tools.sh preflight' > "$fixture/expected"
 cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
 [[ ! -e "$HOST_MAKE_EXTERNAL" ]] || exit 1
 # Real pipe-descriptor admission in substituted Cargo, without compiling.
-helpers="$(bash "$root/scripts/ci/select-tooling-checks.sh" make-stub)"
-while IFS= read -r helper; do
-    mkdir -p "$fixture/local/${helper%/*}"
-    printf '#!/usr/bin/env bash\nexec cargo fixture %s "$@"\n' "$helper" > "$fixture/local/$helper"
-done <<< "$helpers"
+prepare_tooling_stubs
 mkdir -p "$fixture/local/scripts/publish"
 cat > "$fixture/local/scripts/publish/workspace.sh" <<'STUB'
 #!/usr/bin/env bash
@@ -322,25 +370,7 @@ for target in publish publish-check; do
         [[ ! -e injected ]] || exit 1
     done
 done
-# Membership/order expectations are independent of the discovery roster.
-: > "$HOST_MAKE_EVENTS"
-PATH="$fixture/local:$PATH" make --no-print-directory tooling-command-check > "$fixture/tooling-order.log" 2>&1
-awk '{ print $1, $2 }' "$HOST_MAKE_EVENTS" > "$fixture/tooling-observed"
-cat > "$fixture/expected" <<'EVENTS'
-fixture scripts/ci/test-tools-layering.sh
-fixture scripts/ci/test-product-ci-selection.sh
-fixture scripts/ci/test-product-evidence.sh
-fixture scripts/ci/test-host-fixture-retention.sh
-fixture scripts/ci/check-release-commands.sh
-EVENTS
-cmp "$fixture/expected" "$fixture/tooling-observed"
-: > "$HOST_MAKE_EVENTS"
-status=0
-PATH="$fixture/local:$PATH" HOST_MAKE_FIXTURE_STATUS=23 make --no-print-directory tooling-command-check \
-    > "$fixture/tooling-failure.log" 2>&1 || status=$?
-[[ "$status" == 2 ]] || exit 1
-printf '%s\n' 'fixture scripts/ci/test-tools-layering.sh' > "$fixture/expected"
-cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
+check_tooling_roster
 jobserver_options=(--no-print-directory -j4)
 if make --help | grep -q -- --jobserver-style; then
     jobserver_options+=(--jobserver-style=pipe)
