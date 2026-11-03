@@ -41,6 +41,29 @@ installed-archive evidence; cache targets are excluded.
 Discovery reads at most ten recent successful runs once during fresh preflight;
 it does not poll or wait for CI. Offline mode, unavailable GitHub access or absent
 qualified ancestry selects the full gate. Raw discovery observations are retained.
+Successful pushes and explicit `workflow_dispatch` qualification are eligible;
+PRs, other branches/workflows/repositories and incomplete jobs remain ineligible.
+
+Routine workflow/ref runs retain newest-revision cancellation. For a qualification
+comparison that must finish while delivery continues, dispatch the existing four
+workflows on main at one selected revision:
+
+```sh
+gh workflow run ci.yml --ref main
+gh workflow run build-optimizer.yml --ref main
+gh workflow run testkit-runtime.yml --ref main
+gh workflow run browser-session.yml --ref main
+```
+
+Explicit dispatches have their own run identity and do not cancel or get cancelled
+by routine pushes. CI dispatch always selects the complete gate, even for prose;
+the required hosts, focused comparison, compiler status and archive custody are
+unchanged. Record and verify the actual returned run SHAs: branch dispatch reads
+main at each request, so mixed-source runs do not form one qualification record.
+This is asynchronous qualification, not a release/publication command. A qualified
+ancestor remains useful after a later push; current source changes still broaden
+the release plan as below. Do not require a moving branch tip to stay unchanged
+solely to recognize completed issue evidence.
 
 Relative to that baseline, narrowing allows only the selected package's source,
 tests and README, group ledgers/handoff, and release-owned version-only manifest

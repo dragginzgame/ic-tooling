@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches: [main]
@@ -9,9 +10,9 @@ permissions:
   contents: read
 
 concurrency:
-  # A newer run replaces queued and running checks for this workflow and ref.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Routine revisions supersede each other; explicit qualification runs finish.
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && format('qualification-{0}', github.run_id) || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 defaults:
   run:

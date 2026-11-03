@@ -98,12 +98,21 @@ set -euo pipefail
 printf '%s\n' "$*" >> "$TMPDIR/discovery-events"
 case "$*" in
     *workflows*)
-        jq -cn --arg source "$BASELINE_SOURCE" '{workflow_runs:[{id:17,head_sha:$source,
-            status:"completed",conclusion:"success",head_branch:"main",event:"push",
-            path:".github/workflows/ci.yml",repository:{full_name:"dragginzgame/ic-tooling"}}]}' ;;
+        event=push branch=main path=.github/workflows/ci.yml repository=dragginzgame/ic-tooling
+        case ${BASELINE_TEST_MODE:?} in
+            dispatch) event=workflow_dispatch ;;
+            pr) event=pull_request ;;
+            dispatch-branch) event=workflow_dispatch branch=topic ;;
+            dispatch-workflow) event=workflow_dispatch path=.github/workflows/other.yml ;;
+            dispatch-repository) event=workflow_dispatch repository=other/tooling ;;
+        esac
+        jq -cn --arg source "$BASELINE_SOURCE" --arg event "$event" --arg branch "$branch" \
+            --arg path "$path" --arg repository "$repository" \
+            '{workflow_runs:[{id:17,head_sha:$source,status:"completed",conclusion:"success",
+            head_branch:$branch,event:$event,path:$path,repository:{full_name:$repository}}]}' ;;
     *jobs*)
         case ${BASELINE_TEST_MODE:?} in
-            valid) jq '.jobs' "$TMPDIR/baseline.json" ;;
+            valid|dispatch) jq '.jobs' "$TMPDIR/baseline.json" ;;
             docs) jq '.jobs | .jobs |= map(.steps = [])' "$TMPDIR/baseline.json" ;;
             partial) jq '.jobs | .jobs[1].conclusion = "failure"' "$TMPDIR/baseline.json" ;;
             truncated) jq '.jobs | .total_count += 1' "$TMPDIR/baseline.json" ;;
@@ -123,10 +132,11 @@ git remote set-url origin https://github.com/dragginzgame/ic-tooling.git
 BASELINE_TEST_MODE=valid bash scripts/release/validation-baseline.sh "$baseline" "$fixture/offline.json"
 [[ ! -s "$fixture/discovery-events" ]]
 jq -e '. == null' "$fixture/offline.json" >/dev/null
-for mode in valid docs partial truncated source compiler unqualified unretained malformed failed; do
+for mode in valid dispatch pr dispatch-branch dispatch-workflow dispatch-repository \
+    docs partial truncated source compiler unqualified unretained malformed failed; do
     CARGO_NET_OFFLINE=false BASELINE_TEST_MODE="$mode" bash scripts/release/validation-baseline.sh \
         "$baseline" "$fixture/discovery-$mode.json"
-    if [[ $mode == valid ]]; then
+    if [[ $mode == valid || $mode == dispatch ]]; then
         jq -e --arg source "$baseline" '.source == $source and .run == 17' "$fixture/discovery-$mode.json" >/dev/null
     else jq -e '. == null' "$fixture/discovery-$mode.json" >/dev/null; fi
 done

@@ -14,10 +14,11 @@ case "$remote" in
 esac
 scratch=$(mktemp -d "${output}.discovery.XXXXXX")
 # Keep remote observations, including failures, with this attempt's evidence.
-if ! gh api 'repos/dragginzgame/ic-tooling/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=10' \
+if ! gh api 'repos/dragginzgame/ic-tooling/actions/workflows/ci.yml/runs?branch=main&status=success&per_page=10' \
     > "$scratch/runs.json" 2> "$scratch/discovery.log"; then exit 0; fi
 jq -er '.workflow_runs[] | select(.status == "completed" and .conclusion == "success" and
-    .head_branch == "main" and .event == "push" and .path == ".github/workflows/ci.yml" and
+    .head_branch == "main" and (.event == "push" or .event == "workflow_dispatch") and
+    .path == ".github/workflows/ci.yml" and
     .repository.full_name == "dragginzgame/ic-tooling") | [.id,.head_sha] | @tsv' \
     "$scratch/runs.json" > "$scratch/candidates.tsv" 2>> "$scratch/discovery.log" || exit 0
 while IFS=$'\t' read -r run revision; do

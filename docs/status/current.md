@@ -93,9 +93,12 @@ paths. Incoming source/lock changes were also preserved in a named Git stash.
 hard-coded Text fixture version. Group plans retain all obligations for Tools,
 Testkit, Foundation, Build and uncertain/shared changes; Native/Text narrow only
 from a complete admitted three-host baseline. Receipts bind source, environment,
-executed/excluded stages and recovery evidence. The #314 closure checker follows
-main and requires actual full/focused native steps and retained artifacts before
-closing; its status is under the adoption evidence's `issue-314-closure/`.
+executed/excluded stages and recovery evidence. Routine main pushes repeatedly
+cancelled the slower native comparisons. Explicit qualification dispatches now
+finish independently while routine CI retains newest-revision cancellation.
+Qualification must bind one source across all four workflows and retain actual
+full/focused native steps and artifacts; later main pushes do not erase completed
+ancestor evidence. See the [qualification procedure](../design/release-validation.md).
 
 [Platform #134](https://github.com/dragginzgame/ic-platform/issues/134) shipped
 typed failures and is closed. [#136](https://github.com/dragginzgame/ic-platform/issues/136)
