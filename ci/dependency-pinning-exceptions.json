@@ -4,7 +4,7 @@
     "file": "Cargo.toml",
     "subject": "ic-management-canister-types",
     "value": "=0.11.0",
-    "reason": "The PocketIC 16.1 client and Platform 0.20 must share the qualified 0.11.0 management DTO identity and snapshot/status/settings schemas until a joint adapter upgrade is qualified.",
+    "reason": "The PocketIC 16.1 client and Platform 0.21 must share the qualified 0.11.0 management DTO identity and snapshot/status/settings schemas until a joint adapter upgrade is qualified.",
     "evidence": "AGENTS.md#management-dto-identity"
   }
 ]

@@ -1,5 +1,24 @@
 # Current handoff — 2026-11-03
 
+## Platform 0.21 adoption and requested deployment
+
+The root catalog now selects published Platform 0.21.0. Types 0.18.0,
+Runtime 0.19.0, Wire 0.16 and server 16.1.0 remain selected. The pending release
+groups are Tools 0.81.0 (exposed Platform-owned certificate/hash-tree and Candid
+limit identities) and Testkit 0.84.1 (unchanged public client and external DTO/error
+identities). Package versions still identify the delivered baseline below;
+release preparation and publication have not started for this adoption.
+
+Focused Linux checks passed: native/Wasm feature graphs, affected Tools/Testkit/Dev
+Clippy, public certificate/Principal/Wire exchanges, direct-client/facade management
+DTO identity, installed management/snapshot behavior and six snapshot-helper cases.
+New full release gates and native macOS qualification remain separate.
+Evidence and incoming lock backup are in `target/platform021-adoption/`.
+The canonical delivery lock changes only Platform's version and checksum.
+Working-lock package versions/checksums are preserved except Platform; Cargo
+normalized eleven stale Windows dependency links. The original working bytes
+remain in `Cargo.lock.incoming` beside the normalized selection and comparison proof.
+
 ## Delivered cleanup and client ownership
 
 The accepted five-part cleanup is integrated through
@@ -83,14 +102,15 @@ not passes. Explicit final-source qualification was dispatched asynchronously:
 [optimizer 41681215793](https://github.com/dragginzgame/ic-tooling/actions/runs/41681215793),
 [runtime 41681221801](https://github.com/dragginzgame/ic-tooling/actions/runs/41681221801), and
 [browser 41681227057](https://github.com/dragginzgame/ic-tooling/actions/runs/41681227057).
-Full final-source native CI was still pending at handoff; no new full macOS
-qualification is claimed. [#324](https://github.com/dragginzgame/ic-tooling/issues/324) retains
-its supported-host acceptance obligation; Platform's companion #139 remains
-outside this delivery.
+All four final-source workflows passed, including full native CI/publication
+qualification on Linux x86-64, macOS 15 Intel and macOS 15 Apple Silicon, plus the
+compiler status job. [#324](https://github.com/dragginzgame/ic-tooling/issues/324)
+is closed with that acceptance evidence. These results qualify the delivered
+Testkit 0.84.0 source, separately from the new Platform 0.21 adoption above.
 
 ## Checkout and evidence custody
 
-The ordinary checkout is on merged main with Build 0.74.2 and Testkit 0.84.0.
+The ordinary checkout's delivered baseline is merged main with Build 0.74.2 and Testkit 0.84.0.
 Its unrelated Cargo.lock registry selections are preserved; only local package
 versions were aligned to the released groups. They remain uncommitted and were
 excluded from all delivered source/release commits.

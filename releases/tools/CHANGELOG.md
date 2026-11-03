@@ -4,6 +4,15 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.81.0]
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.21 for external IC adapters. Align direct consumer Platform
+  dependencies when exchanging Platform-owned certificate, hash-tree or Candid
+  decoder-limit types with Host Tools. Types 0.18, Runtime 0.19 and the existing
+  feature and protocol boundaries remain unchanged.
+
 ## [0.80.0] - 2026-11-03
 
 ### ⚠️ Breaking
