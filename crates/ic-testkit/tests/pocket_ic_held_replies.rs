@@ -18,8 +18,8 @@ fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
     let owned = support::pocket_ic();
     let pic = owned.instance();
     let caller = Principal::anonymous();
-    let provider = pic.create_canister();
-    pic.add_cycles(provider, 10_000_000_000_000);
+    let provider = pic.create_canister().unwrap();
+    pic.add_cycles(provider, 10_000_000_000_000).unwrap();
     let replies: [&[u8]; 3] = [
         b"original first\0",
         b"original second\xff",
@@ -47,7 +47,8 @@ fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
     )
     .unwrap();
     validate(fixture.wasm(), 100_000).unwrap();
-    pic.install_canister(provider, fixture.wasm().to_vec(), vec![], None);
+    pic.install_canister(provider, fixture.wasm().to_vec(), vec![], None)
+        .unwrap();
 
     let consumer = install_consumer(pic, provider);
 
@@ -56,7 +57,7 @@ fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
         calls.push(pic.submit_call(consumer, caller, "start", vec![]).unwrap());
         let mut observed = false;
         for _ in 0..20 {
-            pic.tick();
+            pic.tick().unwrap();
             if fixture
                 .pending(pic)
                 .unwrap()
@@ -78,10 +79,10 @@ fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
         1_u32.to_le_bytes()
     );
     for _ in 0..5 {
-        pic.tick();
+        pic.tick().unwrap();
     }
     for call in &calls {
-        assert!(pic.ingress_status(call.clone()).is_none());
+        assert!(pic.ingress_status(call.clone()).unwrap().is_none());
     }
 
     for slot in [1, 0, 2] {
@@ -96,7 +97,11 @@ fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
         ));
         assert_eq!(pic.await_call(calls[slot].clone()).unwrap(), replies[slot]);
         for held in fixture.pending(pic).unwrap() {
-            assert!(pic.ingress_status(calls[held.slot()].clone()).is_none());
+            assert!(
+                pic.ingress_status(calls[held.slot()].clone())
+                    .unwrap()
+                    .is_none()
+            );
         }
     }
     assert_eq!(fixture.pending(pic).unwrap(), vec![]);
@@ -105,25 +110,29 @@ fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
         "slots are never reused"
     );
 
+    assert_fixture_admission(pic, &fixture);
+}
+
+fn assert_fixture_admission(pic: &PocketIc, fixture: &HeldReplyFixture) {
     // Same server, distinct instance must not accept the controller/token.
     let other = support::pocket_ic();
     assert!(matches!(
         fixture.pending(other.instance()),
         Err(HeldReplyError::WrongInstance)
     ));
-    pic.auto_progress();
+    pic.auto_progress().unwrap();
     assert!(matches!(
         fixture.pending(pic),
         Err(HeldReplyError::AutomaticProgress)
     ));
-    pic.stop_progress();
+    pic.stop_progress().unwrap();
 }
 
 fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
     // A real consumer canister retains its ingress context across a provider call.
     // Its independent update commits while provider replies remain held.
-    let consumer = pic.create_canister();
-    pic.add_cycles(consumer, 10_000_000_000_000);
+    let consumer = pic.create_canister().unwrap();
+    pic.add_cycles(consumer, 10_000_000_000_000).unwrap();
     let principal = support::wat_bytes(provider.as_slice());
     let source = format!(
         r#"(module
@@ -171,8 +180,8 @@ fn expired_and_foreign_requests_never_release_another_original() {
     let mut fixtures = vec![];
     let mut calls = vec![];
     for _ in 0..2 {
-        let id = pic.create_canister();
-        pic.add_cycles(id, 10_000_000_000_000);
+        let id = pic.create_canister().unwrap();
+        pic.add_cycles(id, 10_000_000_000_000).unwrap();
         let fixture = HeldReplyFixture::new(
             pic,
             id,
@@ -186,7 +195,8 @@ fn expired_and_foreign_requests_never_release_another_original() {
             10_000,
         )
         .unwrap();
-        pic.install_canister(id, fixture.wasm().to_vec(), vec![], None);
+        pic.install_canister(id, fixture.wasm().to_vec(), vec![], None)
+            .unwrap();
         calls.push(pic.submit_call(id, caller, "hold", vec![]).unwrap());
         fixtures.push(fixture);
     }
@@ -194,7 +204,7 @@ fn expired_and_foreign_requests_never_release_another_original() {
     for fixture in &fixtures {
         let mut pending = vec![];
         for _ in 0..20 {
-            pic.tick();
+            pic.tick().unwrap();
             pending = fixture.pending(pic).unwrap();
             if !pending.is_empty() {
                 break;
@@ -208,16 +218,12 @@ fn expired_and_foreign_requests_never_release_another_original() {
         Err(HeldReplyError::UnknownRequest)
     ));
     for call in &calls {
-        assert!(pic.ingress_status(call.clone()).is_none());
+        assert!(pic.ingress_status(call.clone()).unwrap().is_none());
     }
-    pic.advance_time(Duration::from_secs(61));
+    pic.advance_time(Duration::from_secs(61)).unwrap();
     for call in calls {
         let rejection = pic.await_call(call).unwrap_err();
-        assert!(
-            rejection
-                .reject_message
-                .contains("held reply barrier failed")
-        );
+        assert!(rejection.to_string().contains("held reply barrier failed"));
     }
     for (fixture, request) in fixtures.iter_mut().zip(requests) {
         assert_eq!(fixture.pending(pic).unwrap(), vec![]);

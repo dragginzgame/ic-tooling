@@ -1,7 +1,7 @@
 use super::{WireCallError, WireCallSpec, call_wire, context};
 
-use crate::pic::{PocketIcCallFailure, is_dead_pocket_ic_transport_error};
-use ic_platform_pocket_ic::{ErrorCode, RejectCode, RejectResponse};
+use crate::pic::is_dead_pocket_ic_transport_error;
+use ic_platform_pocket_ic::{ClientError, ErrorCode, RejectCode, RejectResponse};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_wire::{Limits, native};
 
@@ -286,7 +286,7 @@ fn rejection_remains_structured_and_is_never_retried() {
     let mut calls = 0;
     let error = call_wire::<u32, Result<u64, ()>>(ctx.clone(), SAMPLE, &1, |_| {
         calls += 1;
-        Err(response.clone())
+        Err(ClientError::Canister(response.clone()))
     })
     .unwrap_err();
     assert_eq!(calls, 1);
@@ -295,7 +295,7 @@ fn rejection_remains_structured_and_is_never_retried() {
         panic!("call failure required")
     };
     assert_eq!(*context, ctx);
-    assert!(matches!(*source, PocketIcCallFailure::Rejected(saved) if saved == response));
+    assert!(matches!(*source, ClientError::Canister(saved) if saved == response));
 }
 
 #[test]
@@ -307,9 +307,12 @@ fn transport_classification_and_original_unrelated_panics_are_preserved() {
         Principal::anonymous(),
     );
     let error = call_wire::<u32, Result<u64, ()>>(ctx.clone(), SAMPLE, &1, |_| {
-        panic!("HTTP failure: reqwest::Error {{ kind: Request, url: \"http://127.0.0.1:1234/instances/0/read/query\", source: ConnectError(\"tcp connect error\",BORROWED.method_id, BAD_REPLY.method_id, BAD_REQUEST.method_id, SAMPLE.method_id,  Os {{ code: 111, kind: ConnectionRefused, message: \"Connection refused\" }}) }}")
-    }).unwrap_err();
-    assert!(is_dead_pocket_ic_transport_error(&error));
+        Err(ClientError::Protocol(
+            "application worker channel closed".into(),
+        ))
+    })
+    .unwrap_err();
+    assert!(!is_dead_pocket_ic_transport_error(&error));
     let payload = Box::new(9_u8);
     let original = std::ptr::from_ref(payload.as_ref());
     let error = std::panic::catch_unwind(|| {

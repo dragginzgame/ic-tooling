@@ -1,4 +1,5 @@
 //! Integration checks for pocket ic baseline pool behavior.
+use ic_platform_pocket_ic::ClientError;
 mod support;
 
 use std::{
@@ -65,14 +66,14 @@ struct TwoCanisterMetadata {
 }
 
 fn lifecycle(
-    call: impl FnOnce() -> Result<(), ic_platform_pocket_ic::RejectResponse>,
+    call: impl FnOnce() -> Result<(), ic_platform_pocket_ic::ClientError>,
 ) -> Result<(), TestRecipeError> {
-    ic_testkit::pic::try_pocket_ic_call(call).map_err(TestRecipeError::Lifecycle)
+    call().map_err(TestRecipeError::Lifecycle)
 }
 
 #[derive(Debug)]
 enum TestRecipeError {
-    Lifecycle(ic_testkit::pic::PocketIcCallFailure),
+    Lifecycle(ClientError),
     Snapshot(ControllerSnapshotError),
     Startup(PocketIcStartupError),
     DomainMutation(&'static str),
@@ -146,13 +147,14 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             support::pocket_ic()
         };
         let canister_ids = [
-            pocket_ic.instance().create_canister(),
-            pocket_ic.instance().create_canister(),
+            pocket_ic.instance().create_canister().unwrap(),
+            pocket_ic.instance().create_canister().unwrap(),
         ];
         for canister_id in canister_ids {
             pocket_ic
                 .instance()
-                .install_canister(canister_id, EMPTY_WASM.to_vec(), vec![], None);
+                .install_canister(canister_id, EMPTY_WASM.to_vec(), vec![], None)
+                .unwrap();
             lifecycle(|| pocket_ic.instance().stop_canister(canister_id, None))?;
         }
 
@@ -172,8 +174,13 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
         for id in canister_ids {
             lifecycle(|| baseline.pocket_ic().start_canister(id, None))?;
         }
-        let baseline_time_nanos = baseline.pocket_ic().get_time().as_nanos_since_unix_epoch();
-        let baseline_cycles = canister_ids.map(|id| baseline.pocket_ic().cycle_balance(id));
+        let baseline_time_nanos = baseline
+            .pocket_ic()
+            .get_time()
+            .unwrap()
+            .as_nanos_since_unix_epoch();
+        let baseline_cycles =
+            canister_ids.map(|id| baseline.pocket_ic().cycle_balance(id).unwrap());
         let metadata = baseline.metadata_mut();
         metadata.baseline_time_nanos = baseline_time_nanos;
         metadata.baseline_cycles = baseline_cycles;
@@ -195,7 +202,7 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             let current_cycles = baseline
                 .metadata()
                 .canister_ids
-                .map(|id| baseline.pocket_ic().cycle_balance(id));
+                .map(|id| baseline.pocket_ic().cycle_balance(id).unwrap());
             if current_cycles != baseline.metadata().baseline_cycles {
                 return Err(TestRecipeError::DomainMutation("canister-cycles"));
             }
@@ -224,7 +231,11 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
         match self.guarded_domain {
             None | Some(GuardedDomain::Cycles) => Ok(ResetReceipt::default()),
             Some(GuardedDomain::Time) => {
-                if baseline.pocket_ic().get_time().as_nanos_since_unix_epoch()
+                if baseline
+                    .pocket_ic()
+                    .get_time()
+                    .unwrap()
+                    .as_nanos_since_unix_epoch()
                     != baseline.metadata().baseline_time_nanos
                 {
                     return Err(TestRecipeError::DomainMutation("pocket-ic-time"));
@@ -721,7 +732,10 @@ fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations() {
         let controls = RecipeControls::default();
         let pool = guarded_pool(controls.clone(), GuardedDomain::Time);
         let (baseline, _) = pool.acquire().expect("time-guarded baseline should build");
-        baseline.pocket_ic().advance_time(Duration::from_secs(1));
+        baseline
+            .pocket_ic()
+            .advance_time(Duration::from_secs(1))
+            .unwrap();
         drop(baseline);
 
         let (baseline, outcome) = pool
@@ -737,7 +751,10 @@ fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations() {
         let pool = guarded_pool(controls.clone(), GuardedDomain::Cycles);
         let (baseline, _) = pool.acquire().expect("cycle-guarded baseline should build");
         let canister_id = baseline.metadata().canister_ids[0];
-        let _ = baseline.pocket_ic().add_cycles(canister_id, 1_000_000);
+        let _ = baseline
+            .pocket_ic()
+            .add_cycles(canister_id, 1_000_000)
+            .unwrap();
         drop(baseline);
 
         let (baseline, outcome) = pool
@@ -754,7 +771,7 @@ fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations() {
         let (baseline, _) = pool
             .acquire()
             .expect("extra-canister-guarded baseline should build");
-        let extra_canister = baseline.pocket_ic().create_canister();
+        let extra_canister = baseline.pocket_ic().create_canister().unwrap();
         *controls
             .tracked_extra_canister
             .lock()

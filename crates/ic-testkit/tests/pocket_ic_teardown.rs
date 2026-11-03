@@ -1,5 +1,6 @@
 //! Controlled reproduction of `PocketIC`'s synchronous instance-deletion wait.
 //! The parent owns a synthetic HTTP peer and can always kill/reap the probe.
+use ic_platform_pocket_ic::ClientError;
 
 mod support;
 
@@ -9,8 +10,8 @@ use ic_platform_pocket_ic::{PocketIc, PocketIcBuilder};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     CanisterDiagnosticsRequest, CanisterInstallError, CanisterLogRenderLimits, InstallSpec,
-    PocketIcCallFailure, PocketIcDiagnosticsExt, PocketIcInstance, PocketIcStartupConfig,
-    StandaloneCanisterFixture, is_dead_pocket_ic_transport_error, try_pocket_ic_operation,
+    PocketIcDiagnosticsExt, PocketIcInstance, PocketIcStartupConfig, StandaloneCanisterFixture,
+    is_dead_pocket_ic_transport_error,
 };
 #[cfg(unix)]
 use std::os::fd::AsRawFd as _;
@@ -206,9 +207,11 @@ fn raw_instance_request_probe() {
     std::io::stdin()
         .read_exact(&mut [0])
         .expect("parent releases raw call");
-    let error = try_pocket_ic_operation(|| owned.instance().get_time())
+    let error = owned
+        .instance()
+        .get_time()
         .expect_err("raw request peer is gone");
-    assert!(error.is_transport());
+    assert!(matches!(error, ClientError::Transport { .. }));
     assert!(is_dead_pocket_ic_transport_error(&error));
     drop(owned);
 }
@@ -221,16 +224,15 @@ fn refused_instance_request_probe() {
     std::io::stdin()
         .read_exact(&mut [0])
         .expect("parent releases refused call");
-    let error = try_pocket_ic_operation(|| {
-        pic.query_call(
+    let error = pic
+        .query_call(
             Principal::anonymous(),
             Principal::anonymous(),
             "get",
             vec![],
         )
-    })
-    .expect_err("peer is gone");
-    assert!(error.is_transport());
+        .expect_err("peer is gone");
+    assert!(matches!(error, ClientError::Transport { .. }));
     assert!(is_dead_pocket_ic_transport_error(&error));
     let error = std::io::Error::other(error);
     assert!(is_dead_pocket_ic_transport_error(&error));
@@ -246,10 +248,7 @@ fn refused_instance_request_probe() {
         report.status.expect_err("status peer is gone"),
         report.logs.expect_err("log peer is gone"),
     ] {
-        assert!(matches!(
-            &error,
-            PocketIcCallFailure::Operation(source) if source.is_transport()
-        ));
+        assert!(matches!(&error, ClientError::Transport { .. }));
         assert!(is_dead_pocket_ic_transport_error(&error));
         let error = std::io::Error::other(error);
         assert!(is_dead_pocket_ic_transport_error(&error));
@@ -284,7 +283,7 @@ fn refused_creation_probe() {
     let (pic, install_error) = error.into_parts();
     assert_eq!(pic.instance().instance_id(), instance_id);
     assert!(
-        matches!(install_error, CanisterInstallError::CreateCanister { source, .. } if source.is_transport())
+        matches!(install_error, CanisterInstallError::CreateCanister { source, .. } if matches!(source, ClientError::Transport { .. }))
     );
     drop(pic);
 }
@@ -298,7 +297,7 @@ fn synthetic_instance() -> PocketIcInstance<PocketIc> {
     .build_instance(
         PocketIcBuilder::new()
             .with_application_subnet()
-            .with_max_request_time_ms(Some(1)),
+            .with_max_request_time_ms(Some(1_000)),
     )
     .expect("construct synthetic instance through bounded startup")
 }

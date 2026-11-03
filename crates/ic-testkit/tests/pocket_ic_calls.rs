@@ -1,11 +1,12 @@
 //! Integration checks for pocket ic calls behavior.
 #![cfg(feature = "wire")]
+use ic_platform_pocket_ic::ClientError;
 
 mod support;
 
 use ic_platform_pocket_ic::{ErrorCode, RejectCode};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
-use ic_testkit::pic::{PocketIcCallFailure, WireCallError, WireCallSpec, query_wire, update_wire};
+use ic_testkit::pic::{WireCallError, WireCallSpec, query_wire, update_wire};
 use ic_wire::Limits;
 
 const PROBE: WireCallSpec = WireCallSpec {
@@ -94,7 +95,7 @@ fn wire_calls_preserve_codec_refusals_and_error_identity() {
 fn wire_call_errors_preserve_live_pocket_ic_rejections() {
     let owned = support::pocket_ic();
     let pic = owned.instance();
-    let removed = pic.create_canister();
+    let removed = pic.create_canister().unwrap();
     pic.stop_canister(removed, None).unwrap();
     pic.delete_canister(removed, None).unwrap();
     for caller in [Principal::anonymous(), Principal::management_canister()] {
@@ -113,7 +114,7 @@ fn wire_call_errors_preserve_live_pocket_ic_rejections() {
             let WireCallError::Call { context, source } = error else {
                 panic!("expected call failure");
             };
-            let PocketIcCallFailure::Rejected(rejection) = *source else {
+            let ClientError::Canister(rejection) = *source else {
                 panic!("expected rejection");
             };
             assert_eq!(rejection.reject_code, RejectCode::DestinationInvalid);

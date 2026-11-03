@@ -1656,9 +1656,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d30f602f1c07916c28ad455050a68b47a71a5ada61a26f163ec8195f6f2acbda"
+checksum = "4c09ed6a8bafe4ba7f13b4ba12091839e85095766fad7b7dcd1640e81b53b346"
 dependencies = [
  "candid",
  "candid_parser",
@@ -1669,20 +1669,18 @@ dependencies = [
  "ic-certification",
  "ic-management-canister-types",
  "ic-platform-types",
- "ic_principal",
  "num-bigint",
  "num-traits",
  "serde",
  "serde_bytes",
  "sha2 0.10.9",
- "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "ic-platform-macros"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "510b03d62a3834122a99c0aac95c0b8751d6797273c95728d02e7fc27cc58860"
+checksum = "8a814cb418a98240e616fc3836f70c542ab80c67646b72682a31fddd274b62b1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1691,12 +1689,12 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-pocket-ic"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2cbf0577257c1aae8666801e9f1eab887762b6d16140a3e1c861c27b824bc15"
+checksum = "929bfd49f776299d7c48e690543b06af02a76cce305360e828bf8d4346abf7b7"
 dependencies = [
  "backon",
- "base64 0.22.1",
+ "base64 0.23.1",
  "candid",
  "flate2",
  "hex",
@@ -1723,9 +1721,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-runtime"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fdb0b3fee215166a704b9eb6be076adbf9d406e1b9156e65a9ee53abe6b5489"
+checksum = "057fa82ee19481d210707f379c088d41bf5d5ae44132d4cb5d50488dce339638"
 dependencies = [
  "ic-platform-macros",
  "ic-platform-runtime-guard",
@@ -1738,20 +1736,21 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-runtime-guard"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "090fa416214c28a07a51cb87da73e4dc125f32b9fdbb05cd5af7907ec890b414"
+checksum = "d5833c1847deb7fcd326b77a48ecaf96ecde90dcf2c2fb3d3cedb7a7e67d2159"
 
 [[package]]
 name = "ic-platform-types"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93be2c8e9d20de7c0b45960689a5f0cf759a385b470affc7cad5bbf43fb1d892"
+checksum = "f95791d7eff0804a23182f131b976293f0f0184b237a63cfb741c1f63a60fb91"
 dependencies = [
  "crc32fast",
  "data-encoding",
  "ic_principal",
  "serde",
+ "serde_bytes",
  "thiserror 2.0.18",
 ]
 
@@ -3511,23 +3510,22 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
-version = "0.26.3"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
+checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
 dependencies = [
  "strum_macros",
 ]
 
 [[package]]
 name = "strum_macros"
-version = "0.26.4"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+checksum = "ab85eea0270ee17587ed4156089e10b9e6880ee688791d45a905f5b1ca36f664"
 dependencies = [
  "heck",
  "proc-macro2",
  "quote",
- "rustversion",
  "syn 2.0.119",
 ]
 

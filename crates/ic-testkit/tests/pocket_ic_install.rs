@@ -31,9 +31,8 @@ fn fallible_install_preserves_the_original_failure_for_caller_diagnostics() {
     };
     assert_eq!(label.as_deref(), Some("invalid-wasm"));
     assert!(
-        source.message().contains("CanisterInvalidWasm"),
-        "original PocketIC rejection should be preserved: {}",
-        source.message()
+        source.to_string().contains("CanisterInvalidWasm"),
+        "original PocketIC rejection should be preserved: {source}"
     );
     let report = pocket_ic.collect_canister_diagnostics(CanisterDiagnosticsRequest {
         canister_id: *canister_id,
@@ -45,7 +44,7 @@ fn fallible_install_preserves_the_original_failure_for_caller_diagnostics() {
         report.status.is_ok(),
         "the failed install's canister remains inspectable"
     );
-    assert!(source.message().contains("CanisterInvalidWasm"));
+    assert!(source.to_string().contains("CanisterInvalidWasm"));
 }
 
 #[test]

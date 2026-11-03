@@ -78,9 +78,9 @@ fn recipe_error(error: impl Error + Send + Sync + 'static) -> RecipeError {
 }
 
 fn lifecycle(
-    call: impl FnOnce() -> std::result::Result<(), ic_platform_pocket_ic::RejectResponse>,
+    call: impl FnOnce() -> std::result::Result<(), ic_platform_pocket_ic::ClientError>,
 ) -> std::result::Result<(), RecipeError> {
-    ic_testkit::pic::try_pocket_ic_call(call).map_err(recipe_error)
+    call().map_err(recipe_error)
 }
 
 impl Recipe {
@@ -99,13 +99,16 @@ impl Recipe {
         )
         .map_err(recipe_error)?;
         let ids = [
-            pic.instance().create_canister(),
-            pic.instance().create_canister(),
+            pic.instance().create_canister().map_err(recipe_error)?,
+            pic.instance().create_canister().map_err(recipe_error)?,
         ];
         for id in ids {
-            pic.instance().add_cycles(id, 5_000_000_000_000);
             pic.instance()
-                .install_canister(id, self.wasm.to_vec(), vec![], None);
+                .add_cycles(id, 5_000_000_000_000)
+                .map_err(recipe_error)?;
+            pic.instance()
+                .install_canister(id, self.wasm.to_vec(), vec![], None)
+                .map_err(recipe_error)?;
             update_wire::<u32, ()>(
                 pic.instance(),
                 id,

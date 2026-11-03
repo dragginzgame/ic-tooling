@@ -1,6 +1,7 @@
 //! Convert a native snapshot to metadata-upload semantics without shared files.
+use ic_platform_pocket_ic::ClientError;
 
-use super::{PocketIc, PocketIcCallFailure, Principal, transport};
+use super::{PocketIc, Principal};
 use ic_platform::{
     candid::contract::{self, ArgumentDecoder, CandidType, DecoderConfig},
     management_canister_types::{
@@ -18,13 +19,13 @@ use ic_platform_pocket_ic::common::rest::RawEffectivePrincipal;
 const CHUNK_BYTES: u64 = 1024 * 1024;
 
 pub(super) enum Failure {
-    Call(PocketIcCallFailure),
+    Call(ClientError),
     Codec(contract::Error),
     Invalid(&'static str),
 }
 
-impl From<PocketIcCallFailure> for Failure {
-    fn from(error: PocketIcCallFailure) -> Self {
+impl From<ClientError> for Failure {
+    fn from(error: ClientError) -> Self {
         Self::Call(error)
     }
 }
@@ -37,15 +38,13 @@ fn call<A: CandidType, R: for<'de> ArgumentDecoder<'de>>(
     args: A,
 ) -> Result<R, Failure> {
     let args = contract::encode_args((args,)).map_err(Failure::Codec)?;
-    let reply = transport::capture_call(|| {
-        pic.update_call_with_effective_principal(
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or_else(Principal::anonymous),
-            method,
-            args,
-        )
-    })?;
+    let reply = pic.update_call_with_effective_principal(
+        Principal::management_canister(),
+        RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
+        sender.unwrap_or_else(Principal::anonymous),
+        method,
+        args,
+    )?;
     decode_reply(&reply)
 }
 

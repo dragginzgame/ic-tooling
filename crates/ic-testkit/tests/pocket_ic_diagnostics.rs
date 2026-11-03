@@ -1,11 +1,12 @@
 //! Integration checks for pocket ic diagnostics behavior.
+use ic_platform_pocket_ic::ClientError;
 mod support;
 
 use ic_platform_pocket_ic::CanisterSettings;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     CanisterDiagnosticsRequest, CanisterLogRenderLimits, LabeledCanisterDiagnosticsRequest,
-    PocketIcCallFailure, PocketIcDiagnosticsExt, is_dead_pocket_ic_transport_error,
+    PocketIcDiagnosticsExt, is_dead_pocket_ic_transport_error,
 };
 
 #[test]
@@ -15,13 +16,15 @@ fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() {
     let status_sender = Principal::from_slice(&[41]);
     let log_sender = Principal::from_slice(&[42]);
     let outsider = Principal::from_slice(&[43]);
-    let canister_id = pocket_ic.create_canister_with_settings(
-        None,
-        Some(CanisterSettings {
-            controllers: Some(vec![status_sender, log_sender]),
-            ..CanisterSettings::default()
-        }),
-    );
+    let canister_id = pocket_ic
+        .create_canister_with_settings(
+            None,
+            Some(CanisterSettings {
+                controllers: Some(vec![status_sender, log_sender]),
+                ..CanisterSettings::default()
+            }),
+        )
+        .unwrap();
 
     let request = CanisterDiagnosticsRequest {
         canister_id,
@@ -67,11 +70,11 @@ fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() {
     let denied = &batch.entries[0].report;
     assert!(matches!(
         denied.status.as_ref(),
-        Err(PocketIcCallFailure::Rejected(_))
+        Err(ClientError::Canister(_))
     ));
     assert!(matches!(
         denied.logs.as_ref(),
-        Err(PocketIcCallFailure::Rejected(_))
+        Err(ClientError::Canister(_))
     ));
     for error in [
         denied.status.as_ref().unwrap_err(),

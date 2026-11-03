@@ -6,7 +6,20 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
-## [0.80.3]
+## [0.81.0]
+
+### ⚠️ Breaking
+
+- Adopt Platform, PocketIC and Runtime 0.19 with canonical Types 0.18.
+  Client operations now return upstream `ClientError` directly, preserving
+  request context and accepted operation/ingress identities. Remove Testkit's
+  `PocketIcOperationError`, `PocketIcCallFailure`, `try_pocket_ic_operation` and
+  `try_pocket_ic_call` panic-string adapters. Startup uses `BuilderFailed`.
+- Make simulated advancement, install cooldowns and retries fallible. Stop on
+  client/cooldown failure; retry only explicit install-rate-limit rejections.
+  Diagnostics retain typed status/log failures and writer I/O errors; unrelated
+  collection/formatting/writer panics propagate. Align direct consumer dependencies
+  to the selected family. The caller-selected PocketIC server remains 16.1.0.
 
 ### 🧹 Cleanup
 

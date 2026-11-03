@@ -1,7 +1,7 @@
 //! Native typed transport; IC Wire remains the sole frame and codec owner.
+use ic_platform_pocket_ic::ClientError;
 
-use super::{PocketIcCallFailure, transport};
-use ic_platform_pocket_ic::{PocketIc, RejectResponse};
+use ic_platform_pocket_ic::PocketIc;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_wire::{Limits, native};
 use serde::{Serialize, de::DeserializeOwned};
@@ -57,7 +57,7 @@ pub enum WireCallError {
         /// Target, caller, operation and method identity.
         context: Box<WireCallContext>,
         /// Complete rejection or original classified operation failure.
-        source: Box<PocketIcCallFailure>,
+        source: Box<ClientError>,
     },
     /// The returned bytes failed the selected method's response admission.
     Decode {
@@ -79,13 +79,13 @@ impl std::fmt::Display for WireCallError {
             }
             Self::Call { context, source } => {
                 match source.as_ref() {
-                    PocketIcCallFailure::Rejected(response) => write!(
+                    ClientError::Canister(response) => write!(
                         f,
                         "PocketIC call rejected ({:?}, {:?})",
                         response.reject_code, response.error_code
                     )?,
-                    PocketIcCallFailure::Operation(_) => {
-                        f.write_str("PocketIC transport failed")?;
+                    _ => {
+                        f.write_str("PocketIC client failed")?;
                     }
                 }
                 context
@@ -124,7 +124,7 @@ impl std::error::Error for WireCallError {
 ///
 /// The caller supplies the exact name, identity and request/response limits.
 /// Explicit anonymous callers are permitted. Application-level results are returned
-/// unchanged. Known `PocketIC` transport failures are captured; unrelated panics resume.
+/// unchanged. The upstream typed client failure is retained unchanged.
 /// Requests may borrow their input; responses must own their decoded data because
 /// the helper releases `PocketIC`'s reply buffer before returning.
 /// IC Wire owns native frame admission, primitive validation and traversal limits.
@@ -198,7 +198,7 @@ fn call_wire<Request, Response>(
     context: WireCallContext,
     spec: WireCallSpec,
     request: &Request,
-    call: impl FnOnce(Vec<u8>) -> Result<Vec<u8>, RejectResponse>,
+    call: impl FnOnce(Vec<u8>) -> Result<Vec<u8>, ClientError>,
 ) -> Result<Response, WireCallError>
 where
     Request: Serialize + ?Sized,
@@ -211,11 +211,10 @@ where
                 source,
             }
         })?;
-    let reply =
-        transport::try_pocket_ic_call(|| call(request)).map_err(|source| WireCallError::Call {
-            context: Box::new(context.clone()),
-            source: Box::new(source),
-        })?;
+    let reply = call(request).map_err(|source| WireCallError::Call {
+        context: Box::new(context.clone()),
+        source: Box::new(source),
+    })?;
     native::decode_response(spec.method_id, &reply, spec.response_limits).map_err(|source| {
         WireCallError::Decode {
             context: Box::new(context),

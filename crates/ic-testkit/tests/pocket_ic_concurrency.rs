@@ -1,4 +1,5 @@
 //! Integration checks for pocket ic concurrency behavior.
+use ic_platform_pocket_ic::ClientError;
 mod support;
 
 use std::{
@@ -434,8 +435,8 @@ fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition() {
                 source,
             },
             ..
-        } if matches!(source.get_ref().and_then(|error| error.downcast_ref::<ic_testkit::pic::PocketIcCallFailure>()),
-            Some(ic_testkit::pic::PocketIcCallFailure::Rejected(_)))
+        } if matches!(source.get_ref().and_then(|error| error.downcast_ref::<ClientError>()),
+            Some(ClientError::Canister(_)))
     ));
 
     let (fixture, outcome) = pool
@@ -464,7 +465,10 @@ fn single_canister_recipe_applies_funding_before_warm_restore() {
     let (baseline, first) = pool.acquire().unwrap();
     assert!(matches!(first.disposition, BaselinePoolDisposition::Built));
     let instance = baseline.pocket_ic().instance_id();
-    let initial_cycles = baseline.pocket_ic().cycle_balance(*baseline.metadata());
+    let initial_cycles = baseline
+        .pocket_ic()
+        .cycle_balance(*baseline.metadata())
+        .unwrap();
     baseline
         .pocket_ic()
         .uninstall_canister(*baseline.metadata(), None)
@@ -477,7 +481,13 @@ fn single_canister_recipe_applies_funding_before_warm_restore() {
         BaselinePoolDisposition::Restored
     ));
     assert_eq!(baseline.pocket_ic().instance_id(), instance);
-    assert!(baseline.pocket_ic().cycle_balance(*baseline.metadata()) > initial_cycles);
+    assert!(
+        baseline
+            .pocket_ic()
+            .cycle_balance(*baseline.metadata())
+            .unwrap()
+            > initial_cycles
+    );
     assert!(
         baseline
             .pocket_ic()
@@ -750,9 +760,13 @@ fn run_worker<F>(
     while let Ok(command) = commands.recv() {
         match command {
             Command::Initialize => {
-                let id = pocket_ic.create_canister();
-                pocket_ic.install_canister(id, EMPTY_WASM.to_vec(), vec![], None);
-                let balance = pocket_ic.add_cycles(id, (worker as u128 + 1) * 1_000_000);
+                let id = pocket_ic.create_canister().unwrap();
+                pocket_ic
+                    .install_canister(id, EMPTY_WASM.to_vec(), vec![], None)
+                    .unwrap();
+                let balance = pocket_ic
+                    .add_cycles(id, (worker as u128 + 1) * 1_000_000)
+                    .unwrap();
                 canister_id = Some(id);
                 if events
                     .send(Event::Initialized {

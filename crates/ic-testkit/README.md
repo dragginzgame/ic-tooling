@@ -10,7 +10,7 @@ Host-side tests select Testkit and the independent PocketIC client. Host Tools r
 
 ```bash
 cargo add --dev ic-testkit
-cargo add --dev ic-platform-pocket-ic@0.18 --no-default-features
+cargo add --dev ic-platform-pocket-ic@0.19 --no-default-features
 ```
 
 Cargo records the selected versions in the consuming manifest and lockfile.
@@ -46,15 +46,15 @@ published support crate solely for target-specific feature isolation. The
 intentional; native Testkit is not a Candid-free profile.
 
 The optional native `wire` feature adds `pic::query_wire` and `pic::update_wire`.
-Enable it on your Testkit dependency and declare `ic-wire = "0.14.0"` for your native
+Enable it on your Testkit dependency and declare `ic-wire = "0.15.0"` for your native
 Serde contracts. Each helper takes an explicit target/caller, a `WireCallSpec`
 with the exported name, method ID and request/response limits, and a borrowed
-request. Align your direct Wire dependency to 0.14 when supplying limits or matching
+request. Align your direct Wire dependency to 0.15 when supplying limits or matching
 typed codec errors. It executes one PocketIC operation without update retries; a refused reply
 does not prove absence of effects. It preserves
 application-level results. `WireCallError` retains typed codec causes, complete
-structured rejections and the existing transport classification. Unrelated panic
-payloads resume. Display omits payloads; raw calls remain available for malformed
+upstream `ClientError` values, including request context and accepted operation/ingress
+identities. Callers retain reconciliation policy; unrelated panics propagate. Display omits payloads; raw calls remain available for malformed
 requests and original-byte evidence. Reply admission follows PocketIC's allocation,
 so it supplies no network pre-allocation or peak-heap guarantee. The feature is off
 by default and adds no Wire dependency to the canister library graph.
@@ -72,8 +72,7 @@ See the [0.65 migration](../../docs/changelog/0.65.md).
 This is the PocketIC package in the IC Tooling workspace. It provides:
 
 - optional typed Wire query/update helpers with contextual, structured errors
-- `try_pocket_ic_operation` for recognized synchronous transport panics, preserving
-  upstream results and unrelated panics without automatic replay
+- typed upstream client failures, with no panic-string adapters or automatic replay
 - canister install and retry helpers
 - explicit PocketIC startup, retained server/instance ownership, fallible async construction, and
   structured child/readiness failures
@@ -83,8 +82,8 @@ This is the PocketIC package in the IC Tooling workspace. It provides:
 - one recipe baseline pool for single- and multi-canister PocketIC reuse
 - deterministic fake principals
 - controller-aware, caller-labeled collect-all diagnostics
-- explicit diagnostic reporting to a caller-selected writer, containing secondary
-  collection and output panics
+- explicit diagnostic reporting to a caller-selected writer; status/log failures
+  stay in the report and writer I/O errors return unchanged
 - compact benchmark marker parsing, aggregation and comparison
 - canister-side `performance::measure` marker emission
 

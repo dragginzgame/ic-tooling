@@ -12,15 +12,13 @@ use ic_host_process::{
     tool::{CompletedExecution, OutputLimit, OutputLimits, capture_command},
 };
 use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform_pocket_ic::ClientError;
 use ic_testkit::{
     benchmark::{
         BenchmarkEventSource, BenchmarkParserConfig, pair_benchmark_spans,
         parse_benchmark_events_from_source,
     },
-    pic::{
-        InstallSpec, PocketIcCallFailure, StandaloneCanisterFixture, WireCallError, query_wire,
-        update_wire,
-    },
+    pic::{InstallSpec, StandaloneCanisterFixture, WireCallError, query_wire, update_wire},
 };
 use ic_testkit_dev::probe_wire_spec;
 use ic_testkit_perf_probe::protocol::{
@@ -176,7 +174,7 @@ fn assert_probe_trap(fixture: &StandaloneCanisterFixture) {
         panic!("structured rejection required")
     };
     assert!(
-        matches!(*source, PocketIcCallFailure::Rejected(response) if response.reject_message.contains("intentional perf probe trap"))
+        matches!(*source, ClientError::Canister(response) if response.reject_message.contains("intentional perf probe trap"))
     );
     assert_eq!(
         query_wire::<_, ic_wire::Text<4>>(
@@ -273,7 +271,7 @@ fn assert_probe_contract(fixture: &StandaloneCanisterFixture) {
         if oversized {
             assert!(
                 error
-                    .reject_message
+                    .to_string()
                     .contains("perf probe Wire request exceeds limit")
             );
         }

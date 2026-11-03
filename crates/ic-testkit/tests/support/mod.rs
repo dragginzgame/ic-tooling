@@ -43,5 +43,5 @@ pub fn install_wat(
     )
     .unwrap();
     ic_host_artifacts::wasm::validate(&wasm, module_bytes).unwrap();
-    pic.install_canister(canister, wasm, vec![], None);
+    pic.install_canister(canister, wasm, vec![], None).unwrap();
 }

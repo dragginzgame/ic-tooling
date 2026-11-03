@@ -202,7 +202,7 @@ fn async_instance_wait_timeout_exit_and_cancellation_keep_ownership() {
                 } else if mode == "exit" {
                     assert!(matches!(error.failure(), PocketIcStartupFailure::ServerExited { status, .. } if status.code() == Some(23)));
                 } else {
-                    assert!(matches!(error.failure(), PocketIcStartupFailure::BuilderPanicked { .. }));
+                    assert!(matches!(error.failure(), PocketIcStartupFailure::BuilderFailed { .. }));
                 }
                 assert_eq!(error.output().stderr(), "instance diagnostic");
                 assert!(error.server_cleanup().is_none());
@@ -239,7 +239,7 @@ fn async_borrowed_failure_leaves_server_authority_with_the_caller() {
         .unwrap();
     assert!(matches!(
         error.failure(),
-        PocketIcStartupFailure::BuilderPanicked { .. }
+        PocketIcStartupFailure::BuilderFailed { .. }
     ));
     assert_eq!(error.output(), &PocketIcManagedServerOutput::default());
     assert!(error.server_cleanup().is_none());
@@ -342,10 +342,10 @@ fn owned_sync_instance_preserves_topology_and_scoped_server_lifetime() {
     let server = owned.server().unwrap();
     let pid = server.process_id();
     let directory = server.server.files.directory.path().to_path_buf();
-    assert!(owned.instance().topology().get_nns().is_some());
+    assert!(owned.instance().topology().unwrap().get_nns().is_some());
     assert!(process_state(pid).is_some());
-    let canister = owned.instance().create_canister();
-    assert!(owned.instance().canister_exists(canister));
+    let canister = owned.instance().create_canister().unwrap();
+    assert!(owned.instance().canister_exists(canister).unwrap());
     let borrowed = PocketIcStartupConfig::Connect {
         server_url: (server.url()).into(),
         timeout: Duration::from_secs(30),
@@ -354,7 +354,7 @@ fn owned_sync_instance_preserves_topology_and_scoped_server_lifetime() {
     .unwrap();
     assert!(borrowed.server().is_none());
     drop(borrowed);
-    assert!(owned.instance().canister_exists(canister));
+    assert!(owned.instance().canister_exists(canister).unwrap());
     drop(owned);
     assert_eq!(process_state(pid), None);
     assert!(!directory.exists());
@@ -380,8 +380,8 @@ fn explicit_transfer_preserves_the_external_server_and_client_identity() {
     let borrowed = PocketIcInstance::from_borrowed_server(instance);
     assert!(borrowed.server().is_none());
     assert_eq!(borrowed.instance().instance_id(), id);
-    let canister = borrowed.instance().create_canister();
-    assert!(borrowed.instance().canister_exists(canister));
+    let canister = borrowed.instance().create_canister().unwrap();
+    assert!(borrowed.instance().canister_exists(canister).unwrap());
     drop(borrowed);
     assert!(
         process_state(pid).is_some(),
@@ -395,8 +395,8 @@ fn explicit_transfer_preserves_the_external_server_and_client_identity() {
     }
     .build_instance(PocketIcBuilder::new().with_application_subnet())
     .unwrap();
-    let canister = other.instance().create_canister();
-    assert!(other.instance().canister_exists(canister));
+    let canister = other.instance().create_canister().unwrap();
+    assert!(other.instance().canister_exists(canister).unwrap());
     drop(other);
     drop(server);
     assert_eq!(process_state(pid), None);
@@ -426,9 +426,17 @@ fn owned_async_instance_and_borrowed_connections_preserve_lifetimes() {
         let server = owned.server().unwrap();
         let pid = server.process_id();
         let directory = server.server.files.directory.path().to_path_buf();
-        assert!(owned.instance().topology().await.get_nns().is_some());
-        let canister = owned.instance().create_canister().await;
-        assert!(owned.instance().canister_exists(canister).await);
+        assert!(
+            owned
+                .instance()
+                .topology()
+                .await
+                .unwrap()
+                .get_nns()
+                .is_some()
+        );
+        let canister = owned.instance().create_canister().await.unwrap();
+        assert!(owned.instance().canister_exists(canister).await.unwrap());
         let borrowed = PocketIcStartupConfig::Connect {
             server_url: (server.url()).into(),
             timeout: Duration::from_secs(30),
@@ -438,11 +446,11 @@ fn owned_async_instance_and_borrowed_connections_preserve_lifetimes() {
         .unwrap();
         assert!(borrowed.server().is_none());
         let (borrowed, external_server) = borrowed.into_parts();
-        borrowed.drop().await;
+        borrowed.drop().await.unwrap();
         drop(external_server);
-        assert!(owned.instance().canister_exists(canister).await);
+        assert!(owned.instance().canister_exists(canister).await.unwrap());
         let (instance, server) = owned.into_parts();
-        instance.drop().await;
+        instance.drop().await.unwrap();
         assert!(process_state(pid).is_some());
         drop(server);
         assert_eq!(process_state(pid), None);
@@ -490,7 +498,7 @@ fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
         panic!("invalid Wasm must fail at installation: {error}");
     };
     assert_eq!(label.as_deref(), Some("invalid-owned-wasm"));
-    assert!(source.message().contains("CanisterInvalidWasm"));
+    assert!(source.to_string().contains("CanisterInvalidWasm"));
     error
         .pocket_ic()
         .canister_status(*canister_id, None)
