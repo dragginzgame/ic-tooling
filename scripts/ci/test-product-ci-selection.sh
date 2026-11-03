@@ -166,6 +166,7 @@ write_file($paths[0], "Updated prose\n");
 my $doc_head = commit();
 is(scope($base, $doc_head), 'docs', 'actual PR classifier command selects product prose');
 is(scope($base, $doc_head, 'push'), 'docs', 'actual push classifier command selects product prose');
+is(scope($base, $doc_head, 'workflow_dispatch'), 'full', 'explicit qualification retains the complete gate even for prose');
 is(scope($base, $doc_head, 'push', 'refs/tags/foundation-v1.0.0'), 'full', 'tags retain full checks');
 is(scope('0' x 40, $doc_head), 'full', 'missing history retains full checks');
 for my $command (@documentation) {

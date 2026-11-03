@@ -12,6 +12,11 @@ reset, release, tag or upload is implied by establishing this group.
 
 - Qualify dependency-free package archives while still rejecting empty package
   graphs, malformed locks and changed external identities/checksums.
+- Let explicit CI qualification dispatches finish independently of newer routine
+  pushes, preserving normal newest-revision cancellation and all native checks.
+  Accept a fully qualified main-branch dispatch as a release-plan baseline, with
+  the same source, host, step and recovery requirements. This prevents #314's
+  matched-input comparison from being repeatedly cancelled during delivery.
 
 ### 🧹 Cleanup
 
