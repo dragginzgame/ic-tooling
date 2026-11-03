@@ -6,6 +6,17 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.82.0]
+
+### ⚠️ Breaking
+
+- Adopt IC Wire 0.16 for native typed calls and the private Wasm probe. Align
+  direct consumer dependencies to Wire 0.16 when supplying `WireCallSpec` limits
+  or matching Wire error causes; these are exposed dependency identities.
+  Keep the existing feature boundaries and private control method IDs/budgets.
+  Tooling does not select Wire's optional Platform schemas or send Account DTOs;
+  consumers using Account must follow Wire/Types' own byte and identity migration.
+
 ## [0.81.0] - 2026-11-03
 
 ### ⚠️ Breaking

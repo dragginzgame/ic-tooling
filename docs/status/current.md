@@ -1,5 +1,22 @@
 # Current handoff — 2026-11-03
 
+## Wire adoption prepared
+
+Local source selects published Wire/Core and derive 0.16.0. The registry archive
+checksum is verified; Core's only runtime source change from 0.15.1 is its optional
+Platform schema adapter. Tooling retains its existing primitive/local probe DTOs,
+method IDs, limits and feature boundaries without selecting that adapter.
+Testkit exposes Wire `Limits`/`Error` identities, so pending notes select a
+Testkit 0.82.0 minor and require matching direct Wire 0.16 dependencies. Package
+versions and registry publication remain at the delivered state below.
+
+All 466 non-Wire package records in the incoming lock remain unchanged. Native
+and Wasm affected-package Clippy, nine Wire tests, the protocol-bound test, live
+PocketIC calls and the rebuilt Wasm benchmark probe pass. Native/Wasm graph,
+manifest-formatting and document-link checks pass. Evidence is retained under
+`/tmp/ic-tooling-wire-adoption.RCFp41/`. Native macOS qualification of this local
+Wire update has not run.
+
 ## Platform delivery
 
 [PR #317](https://github.com/dragginzgame/ic-tooling/pull/317) merged Platform,
@@ -12,11 +29,11 @@ Testkit removed panic-string adapters and returns typed failures through calls,
 installation, diagnostics, snapshots and bounded startup. Simulated progression
 and install cooldowns are fallible; only explicit rate-limit rejections permit
 another installation attempt. Unrelated application panics propagate. The
-PocketIC server remains 16.1.0. The release lock retains Wire 0.15.0 without its
+PocketIC server remains 16.1.0. That release lock retained Wire 0.15.0 without its
 optional `platform-types` feature; exercised graphs contain one Types 0.18 owner.
-The ordinary checkout preserves its separate incoming Wire 0.15.1 selection and
-other unrelated lockfile selections. No old Account schema compatibility is
-implied by that feature choice.
+The ordinary checkout's incoming Wire 0.15.1 selection is advanced above while
+other unrelated lockfile selections remain preserved. No old Account schema
+compatibility is implied by that feature choice.
 
 ## Published groups
 
