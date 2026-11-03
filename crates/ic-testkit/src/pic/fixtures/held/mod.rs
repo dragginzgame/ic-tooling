@@ -9,14 +9,13 @@
 //! test-control facility, not a deployed service or an authorization boundary.
 
 use super::{CatalogBudget, RawReplyError, RawReplyLimits, RawReplyMethod, ReplyMode, charge};
-use crate::pic::{PocketIcOperationError, try_pocket_ic_operation};
 use ic_host_artifacts::wasm_text::{CompileError, CompileLimits, compile};
 use ic_platform::{
     candid::contract::encode_one,
     management_canister_types::{HttpMethod, HttpRequestArgs},
 };
 use ic_platform_pocket_ic::{
-    PocketIc,
+    ClientError, PocketIc,
     common::rest::{
         CanisterHttpReply, CanisterHttpRequest, CanisterHttpResponse, MockCanisterHttpResponse,
     },
@@ -71,9 +70,9 @@ pub enum HeldReplyError {
     /// Host could not compile the admitted fixture.
     #[error(transparent)]
     Compile(#[from] CompileError),
-    /// The `PocketIC` client lost its transport.
+    /// The `PocketIC` client returned a typed failure.
     #[error(transparent)]
-    Operation(#[from] PocketIcOperationError),
+    Operation(#[from] ClientError),
 }
 
 /// Native controller and generated Wasm for a single fixture installation.
@@ -199,7 +198,8 @@ impl HeldReplyFixture {
     /// Returns an admission or transport error when the instance cannot be inspected.
     pub fn pending(&self, pic: &PocketIc) -> Result<Vec<HeldRequest>, HeldReplyError> {
         self.admit(pic)?;
-        Ok(try_pocket_ic_operation(|| pic.get_canister_http())?
+        Ok(pic
+            .get_canister_http()?
             .into_iter()
             .filter_map(|request| {
                 let slot = self.pending_slot(&request)?;
@@ -228,7 +228,7 @@ impl HeldReplyFixture {
         self.admit(pic)?;
         // Observe the server before rejecting a token, retaining admission and
         // transport error precedence without constructing every pending token.
-        let pending = try_pocket_ic_operation(|| pic.get_canister_http())?;
+        let pending = pic.get_canister_http()?;
         let owner = (self.server.as_str(), self.instance, self.prefix.as_str());
         let requested_owner = (
             request.server.as_str(),
@@ -245,17 +245,15 @@ impl HeldReplyFixture {
             return Err(HeldReplyError::UnknownRequest);
         }
         self.released[request.slot] = true;
-        try_pocket_ic_operation(|| {
-            pic.mock_canister_http_response(MockCanisterHttpResponse {
-                subnet_id: request.subnet,
-                request_id: request.request,
-                response: CanisterHttpResponse::CanisterHttpReply(CanisterHttpReply {
-                    status: 200,
-                    headers: vec![],
-                    body: vec![],
-                }),
-                additional_responses: vec![],
-            });
+        pic.mock_canister_http_response(MockCanisterHttpResponse {
+            subnet_id: request.subnet,
+            request_id: request.request,
+            response: CanisterHttpResponse::CanisterHttpReply(CanisterHttpReply {
+                status: 200,
+                headers: vec![],
+                body: vec![],
+            }),
+            additional_responses: vec![],
         })?;
         Ok(())
     }
@@ -281,7 +279,7 @@ impl HeldReplyFixture {
 }
 
 fn manual(pic: &PocketIc) -> Result<(), HeldReplyError> {
-    if try_pocket_ic_operation(|| pic.auto_progress_enabled())? {
+    if pic.auto_progress_enabled()? {
         return Err(HeldReplyError::AutomaticProgress);
     }
     Ok(())

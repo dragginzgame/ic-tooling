@@ -1,18 +1,19 @@
+use ic_platform_pocket_ic::ClientError;
 use ic_platform_pocket_ic::PocketIc;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 
-use super::{PocketIcInstance, PocketIcOperationError};
+use super::PocketIcInstance;
 
 /// Failed creation, funding, or installation with its original operation error.
 #[non_exhaustive]
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub enum CanisterInstallError {
     /// Canister creation failed before an id was returned.
     CreateCanister {
         /// Optional caller-provided install label.
         label: Option<String>,
         /// Original upstream operation failure.
-        source: PocketIcOperationError,
+        source: ClientError,
     },
     /// Cycle funding failed for the created canister.
     AddCycles {
@@ -21,7 +22,7 @@ pub enum CanisterInstallError {
         /// Optional caller-provided install label.
         label: Option<String>,
         /// Original upstream operation failure.
-        source: PocketIcOperationError,
+        source: ClientError,
     },
     /// Wasm installation failed for the created canister.
     InstallCode {
@@ -30,7 +31,7 @@ pub enum CanisterInstallError {
         /// Optional caller-provided install label.
         label: Option<String>,
         /// Original upstream operation failure.
-        source: PocketIcOperationError,
+        source: ClientError,
     },
 }
 
@@ -117,6 +118,7 @@ impl std::fmt::Debug for StandaloneCanisterInstallError {
 
 #[cfg(test)]
 mod tests {
+    use ic_platform_pocket_ic::ClientError;
     use ic_platform_types::principal::ExternalPrincipal as Principal;
 
     use super::CanisterInstallError;
@@ -126,8 +128,11 @@ mod tests {
         let err = CanisterInstallError::InstallCode {
             canister_id: Principal::anonymous(),
             label: Some("authority".into()),
-            source: super::PocketIcOperationError::new("trap"),
+            source: ClientError::Protocol("trap".into()),
         };
-        assert!(err.to_string().contains("(authority): trap"));
+        assert!(
+            err.to_string()
+                .contains("(authority): invalid PocketIC response: trap")
+        );
     }
 }

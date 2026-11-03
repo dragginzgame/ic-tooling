@@ -59,7 +59,9 @@ where
 
     fn build(&self) -> Result<CachedPocketIcBaseline<Principal>, io::Error> {
         let (pocket_ic, canister_id) = (self.build)()?.into_parts();
-        super::transport::capture_call(|| pocket_ic.instance().stop_canister(canister_id, None))
+        pocket_ic
+            .instance()
+            .stop_canister(canister_id, None)
             .map_err(|source| {
                 io::Error::other(super::ControllerSnapshotError::CaptureFailed {
                     canister_id,
@@ -92,24 +94,20 @@ where
         &self,
         baseline: &CachedPocketIcBaseline<Principal>,
     ) -> Result<(), io::Error> {
-        super::transport::capture_call(|| {
-            baseline
-                .pocket_ic()
-                .stop_canister(*baseline.metadata(), None)
-        })
-        .map_err(io::Error::other)
+        baseline
+            .pocket_ic()
+            .stop_canister(*baseline.metadata(), None)
+            .map_err(io::Error::other)
     }
 
     fn drive_to_readiness(
         &self,
         baseline: &CachedPocketIcBaseline<Principal>,
     ) -> Result<(), io::Error> {
-        super::transport::capture_call(|| {
-            baseline
-                .pocket_ic()
-                .start_canister(*baseline.metadata(), None)
-        })
-        .map_err(io::Error::other)
+        baseline
+            .pocket_ic()
+            .start_canister(*baseline.metadata(), None)
+            .map_err(io::Error::other)
     }
 
     fn validate(

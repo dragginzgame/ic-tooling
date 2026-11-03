@@ -1,7 +1,6 @@
 use std::{
     fmt::Write as _,
     fs::{self, File, OpenOptions},
-    future::Future as _,
     io,
     path::{Path, PathBuf},
     process::{Command, ExitStatus, Stdio},
@@ -15,9 +14,7 @@ use std::os::unix::fs::OpenOptionsExt as _;
 
 use ic_host_fs::{directory::create_unique_directory, owned_directory::OwnedDirectory};
 use ic_host_process::child::{CleanupError, CleanupPolicy, OwnedChild};
-use ic_platform_pocket_ic::{PocketIc, PocketIcBuilder};
-
-use super::transport;
+use ic_platform_pocket_ic::{ClientError, PocketIc, PocketIcBuilder};
 
 const STARTUP_POLL_INTERVAL: Duration = Duration::from_millis(20);
 const SERVER_OUTPUT_LIMIT: usize = 16 * 1024;
@@ -331,11 +328,11 @@ pub enum PocketIcStartupFailure {
         /// Underlying operation failure.
         source: io::Error,
     },
-    /// Upstream `PocketIC` construction panicked before returning an instance.
-    #[error("PocketIC startup panicked: {source}")]
-    BuilderPanicked {
+    /// Upstream `PocketIC` construction failed before returning an instance.
+    #[error("PocketIC startup failed: {source}")]
+    BuilderFailed {
         /// Underlying operation failure.
-        source: super::PocketIcOperationError,
+        source: ClientError,
     },
     /// The bounded builder worker ended without returning a result.
     #[error("PocketIC builder worker disconnected without a result")]
@@ -456,11 +453,11 @@ impl PocketIcStartupConfig {
     /// use ic_platform_pocket_ic::PocketIcBuilder;
     /// use ic_testkit::pic::PocketIcStartupConfig;
     /// use std::{path::Path, time::Duration};
-    /// # fn run(binary: &Path) -> Result<(), ic_testkit::pic::PocketIcStartupError> {
+    /// # fn run(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
     /// let owned = PocketIcStartupConfig::Spawn { server_binary: binary.into(), timeout: Duration::from_secs(60), server_hard_ttl: None, server_idle_ttl: None, server_output_files: None }
     ///     .build_instance(PocketIcBuilder::new().with_application_subnet())?;
-    /// let canister = owned.instance().create_canister();
-    /// assert!(owned.instance().canister_exists(canister));
+    /// let canister = owned.instance().create_canister()?;
+    /// assert!(owned.instance().canister_exists(canister)?);
     /// // Drop deletes the instance, then terminates and reaps the owned server.
     /// # Ok(())
     /// # }
@@ -485,7 +482,7 @@ impl PocketIcStartupConfig {
 
     /// Construct an upstream nonblocking instance on the caller's Tokio runtime.
     ///
-    /// Uses the same deadline, readiness checks, typed panic/exit failures and
+    /// Uses the same deadline, readiness checks, typed client/exit failures and
     /// bounded output as [`Self::build_instance`], without running the synchronous
     /// instance constructor. Requires a Tokio runtime with its time driver enabled.
     /// Readiness and instance waits yield; process spawning and small file reads
@@ -504,13 +501,13 @@ impl PocketIcStartupConfig {
     /// use ic_platform_pocket_ic::PocketIcBuilder;
     /// use ic_testkit::pic::PocketIcStartupConfig;
     /// use std::{path::Path, time::Duration};
-    /// # async fn run(binary: &Path) -> Result<(), ic_testkit::pic::PocketIcStartupError> {
+    /// # async fn run(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
     /// let owned = PocketIcStartupConfig::Spawn { server_binary: binary.into(), timeout: Duration::from_secs(60), server_hard_ttl: None, server_idle_ttl: None, server_output_files: None }
     ///     .build_instance_async(PocketIcBuilder::new().with_application_subnet()).await?;
-    /// let canister = owned.instance().create_canister().await;
-    /// assert!(owned.instance().canister_exists(canister).await);
+    /// let canister = owned.instance().create_canister().await?;
+    /// assert!(owned.instance().canister_exists(canister).await?);
     /// let (instance, server) = owned.into_parts();
-    /// instance.drop().await;
+    /// instance.drop().await?;
     /// drop(server);
     /// # Ok(())
     /// # }
@@ -901,7 +898,7 @@ fn build_bounded(
     if let Err(source) = thread::Builder::new()
         .name("ic-testkit-pocket-ic-startup".to_owned())
         .spawn(move || {
-            let result = transport::capture_operation(|| builder.build());
+            let result = builder.build();
             let _ = sender.send(result);
         })
     {
@@ -917,7 +914,7 @@ fn build_bounded(
     reason = "consume the receiver so failed startup disconnects late builders"
 )]
 fn await_builder(
-    receiver: mpsc::Receiver<Result<PocketIc, super::PocketIcOperationError>>,
+    receiver: mpsc::Receiver<Result<PocketIc, ClientError>>,
     startup: &mut InstanceStartup<'_>,
 ) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
     loop {
@@ -929,7 +926,7 @@ fn await_builder(
             }
             Ok(Err(source)) => {
                 return Err(startup.fail(PocketIcStartupError::new(
-                    PocketIcStartupFailure::BuilderPanicked { source },
+                    PocketIcStartupFailure::BuilderFailed { source },
                 )));
             }
             Err(RecvTimeoutError::Disconnected) => {
@@ -981,14 +978,6 @@ async fn build_async_bounded(
     };
     let builder = startup.configure_builder(builder)?;
     let mut construction = std::pin::pin!(builder.build_async());
-    let mut construction = std::pin::pin!(std::future::poll_fn(|context| {
-        match transport::capture_operation(|| construction.as_mut().poll(context)) {
-            Ok(poll) => poll.map(Ok),
-            Err(source) => std::task::Poll::Ready(Err(PocketIcStartupError::new(
-                PocketIcStartupFailure::BuilderPanicked { source },
-            ))),
-        }
-    }));
     // Drop this local before the pending upstream future on cancellation.
     let mut startup = startup;
     loop {
@@ -999,7 +988,11 @@ async fn build_async_bounded(
             Ok(Ok(instance)) => {
                 return startup.admit(instance);
             }
-            Ok(Err(error)) => return Err(startup.fail(error)),
+            Ok(Err(source)) => {
+                return Err(startup.fail(PocketIcStartupError::new(
+                    PocketIcStartupFailure::BuilderFailed { source },
+                )));
+            }
             Err(_) => {}
         }
     }
@@ -1304,6 +1297,7 @@ impl std::error::Error for PocketIcStartupError {
 
 #[cfg(test)]
 mod tests {
+    use ic_platform_pocket_ic::ClientError;
     mod instances;
 
     use std::{
@@ -1358,6 +1352,7 @@ mod tests {
 
     #[test]
     fn original_failure_output_and_both_typed_cleanup_reports_survive_projection() {
+        use ic_platform_pocket_ic::ClientError;
         use std::error::Error as _;
         for failure in [
             PocketIcStartupFailure::ReadinessTimeout {
@@ -1371,8 +1366,8 @@ mod tests {
                 server_binary: "server".into(),
                 value: "invalid".into(),
             },
-            PocketIcStartupFailure::BuilderPanicked {
-                source: super::super::PocketIcOperationError::new("original-panic"),
+            PocketIcStartupFailure::BuilderFailed {
+                source: ClientError::Protocol("original-client-failure".into()),
             },
             PocketIcStartupFailure::BuilderDisconnected,
             PocketIcStartupFailure::BuilderThreadSpawn {
@@ -1429,14 +1424,15 @@ mod tests {
                     Some(9)
                 );
             }
-            if let PocketIcStartupFailure::BuilderPanicked { source } = error.failure() {
-                assert_eq!(
+            if let PocketIcStartupFailure::BuilderFailed { source } = error.failure() {
+                assert!(std::ptr::eq(
                     error
                         .source()
                         .unwrap()
-                        .downcast_ref::<super::super::PocketIcOperationError>(),
-                    Some(source)
-                );
+                        .downcast_ref::<ClientError>()
+                        .unwrap(),
+                    source
+                ));
             }
             let displayed = error.to_string();
             assert!(displayed.starts_with(&primary_text));
@@ -1472,8 +1468,8 @@ mod tests {
             let (sender, receiver) = mpsc::channel();
             if !disconnected {
                 sender
-                    .send(Err(super::super::PocketIcOperationError::new(
-                        "original-builder-panic",
+                    .send(Err(ClientError::Protocol(
+                        "original-builder-failure".into(),
                     )))
                     .unwrap();
             }
@@ -1495,7 +1491,7 @@ mod tests {
             assert!(matches!(
                 (disconnected, error.failure()),
                 (true, PocketIcStartupFailure::BuilderDisconnected)
-                    | (false, PocketIcStartupFailure::BuilderPanicked { .. })
+                    | (false, PocketIcStartupFailure::BuilderFailed { .. })
             ));
             assert_eq!(error.output().stderr(), "builder-diagnostic");
             assert!(error.server_cleanup().is_none());
@@ -1688,7 +1684,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn owned_builder_panic_retains_server_output_and_reaps_child() {
+    fn owned_builder_failure_retains_server_output_and_reaps_child() {
         let script = TestServerScript::new(
             "builder-panic",
             "#!/bin/sh\nprintf '%s' \"$$\" > \"$0.pid\"\nprintf 'builder stdout'\nprintf 'builder stderr' >&2\nprintf '34567\\n' > \"$2\"\nexec sleep 30\n",
@@ -1698,16 +1694,17 @@ mod tests {
             .build_instance(PocketIcBuilder::new())
             .err()
             .unwrap();
-        let PocketIcStartupFailure::BuilderPanicked { source } = error.failure() else {
+        let PocketIcStartupFailure::BuilderFailed { source } = error.failure() else {
             panic!("expected builder failure, got {error:?}");
         };
-        assert_ne!(source.message(), "");
-        assert_eq!(
+        assert_ne!(source.to_string(), "");
+        assert!(std::ptr::eq(
             std::error::Error::source(&error)
                 .unwrap()
-                .downcast_ref::<super::super::PocketIcOperationError>(),
-            Some(source)
-        );
+                .downcast_ref::<ClientError>()
+                .unwrap(),
+            source
+        ));
         assert_eq!(error.output().stdout(), "builder stdout");
         assert_eq!(error.output().stderr(), "builder stderr");
         assert!(error.server_cleanup().is_none());

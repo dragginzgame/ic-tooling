@@ -4,13 +4,8 @@ use std::{
 };
 
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
-use ic_platform_pocket_ic::{CanisterLogRecord, CanisterStatusResult, PocketIc};
+use ic_platform_pocket_ic::{CanisterLogRecord, CanisterStatusResult, ClientError, PocketIc};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
-
-use super::{
-    PocketIcCallFailure,
-    transport::{self, capture_call},
-};
 
 /// Default maximum number of canister-log records retained in diagnostics.
 pub const DEFAULT_CANISTER_LOG_RECORD_LIMIT: usize = 32;
@@ -198,9 +193,9 @@ pub struct CanisterDiagnosticsReport {
     /// Exact request used for this report.
     pub request: CanisterDiagnosticsRequest,
     /// Status result, independent of log retrieval.
-    pub status: Result<CanisterStatusResult, PocketIcCallFailure>,
+    pub status: Result<CanisterStatusResult, ClientError>,
     /// Log result, independent of status retrieval.
-    pub logs: Result<CanisterDiagnosticLogs, PocketIcCallFailure>,
+    pub logs: Result<CanisterDiagnosticLogs, ClientError>,
 }
 
 impl CanisterDiagnosticsReport {
@@ -306,8 +301,8 @@ impl fmt::Display for CanisterDiagnosticsReport {
 pub trait PocketIcDiagnosticsExt {
     /// Collect status and bounded logs using the request's exact senders.
     ///
-    /// Both calls are attempted independently. `PocketIC` transport panics are
-    /// captured so diagnostics can remain subordinate to the original failure.
+    /// Both calls are attempted independently. Typed client failures remain in
+    /// the report so diagnostics can stay subordinate to the original failure.
     fn collect_canister_diagnostics(
         &self,
         request: CanisterDiagnosticsRequest,
@@ -316,8 +311,8 @@ pub trait PocketIcDiagnosticsExt {
     /// Explicitly collect and write one contextual diagnostic report.
     ///
     /// Uses the request's exact senders and log limits, with no retry or output
-    /// destination selected implicitly. Collection, formatting and writer panics
-    /// are captured as an IO error retaining [`super::PocketIcOperationError`].
+    /// destination selected implicitly. Unrelated collection/formatting/writer
+    /// panics propagate.
     /// Ordinary writer errors are returned unchanged. Status/log failures remain
     /// in the written report; successful output does not mean those calls passed.
     /// Callers keep their primary failure authoritative and decide whether to
@@ -331,16 +326,13 @@ pub trait PocketIcDiagnosticsExt {
         context: &str,
         writer: &mut dyn io::Write,
     ) -> io::Result<()> {
-        transport::capture_operation(|| {
-            let report = self.collect_canister_diagnostics(request);
-            writeln!(writer, "{context}: {report}")
-        })
-        .map_err(io::Error::other)?
+        let report = self.collect_canister_diagnostics(request);
+        writeln!(writer, "{context}: {report}")
     }
 
     /// Collect every labeled request sequentially in its supplied order.
     ///
-    /// Every target is attempted even when an earlier entry fails or panics.
+    /// Every target is attempted even when an earlier entry has client failures.
     /// Each entry preserves its exact request and independent status/log
     /// outcomes; no anonymous retry or fallback is performed.
     /// Invalid labels return Host's [`BatchLabelError`] before collection starts.
@@ -358,13 +350,7 @@ pub trait PocketIcDiagnosticsExt {
             .map(|labeled| {
                 let entry_started = Instant::now();
                 let request = labeled.request;
-                let report =
-                    transport::capture_operation(|| self.collect_canister_diagnostics(request))
-                        .unwrap_or_else(|source| CanisterDiagnosticsReport {
-                            request,
-                            status: Err(PocketIcCallFailure::Operation(source.clone())),
-                            logs: Err(PocketIcCallFailure::Operation(source)),
-                        });
+                let report = self.collect_canister_diagnostics(request);
                 CanisterDiagnosticsBatchEntry {
                     label: labeled.label.clone(),
                     report,
@@ -384,11 +370,10 @@ impl PocketIcDiagnosticsExt for PocketIc {
         &self,
         request: CanisterDiagnosticsRequest,
     ) -> CanisterDiagnosticsReport {
-        let status =
-            capture_call(|| self.canister_status(request.canister_id, Some(request.status_sender)));
-        let logs =
-            capture_call(|| self.fetch_canister_logs(request.canister_id, request.log_sender))
-                .map(|records| render_log_records(records, request.log_limits));
+        let status = self.canister_status(request.canister_id, Some(request.status_sender));
+        let logs = self
+            .fetch_canister_logs(request.canister_id, request.log_sender)
+            .map(|records| render_log_records(records, request.log_limits));
 
         CanisterDiagnosticsReport {
             request,
@@ -454,79 +439,36 @@ mod tests {
 
     use super::{
         CanisterDiagnosticsReport, CanisterDiagnosticsRequest, CanisterLogRenderLimits,
-        LabeledCanisterDiagnosticsRequest, PocketIcCallFailure, PocketIcDiagnosticsExt,
-        capture_call, render_log_records,
+        LabeledCanisterDiagnosticsRequest, PocketIcDiagnosticsExt, render_log_records,
     };
 
-    #[test]
-    fn diagnostic_transport_classification_survives_context_and_io_wrapping() {
-        const REFUSED: &str = "HTTP failure: reqwest::Error { kind: Request, url: \"http://127.0.0.1:1234/instances/0/read/get_time\", source: ConnectError(\"tcp connect error\", Os { code: 111, kind: ConnectionRefused, message: \"Connection refused\" }) }";
-        const RESET: &str = "HTTP failure: reqwest::Error { kind: Request, url: \"http://127.0.0.1:49238/instances/0/read/get_time\", source: hyper_util::client::legacy::Error(SendRequest, hyper::Error(Io, Os { code: 54, kind: ConnectionReset, message: \"Connection reset by peer\" })) }";
-        for message in [REFUSED, RESET, "application worker channel closed"] {
-            let error = capture_call::<()>(|| panic!("{message}"))
-                .expect_err("diagnostic operation should capture the panic");
-            let expected = message != "application worker channel closed";
-            let PocketIcCallFailure::Operation(source) = &error else {
-                panic!("expected the original operation error");
-            };
-            assert_eq!(source.message(), message);
-            assert_eq!(source.is_transport(), expected);
-            let chained = std::error::Error::source(&error)
-                .and_then(|cause| cause.downcast_ref::<super::super::PocketIcOperationError>())
-                .expect("diagnostic error exposes its original typed cause");
-            assert_eq!(chained, source);
-            assert_eq!(
-                super::super::is_dead_pocket_ic_transport_error(&error),
-                expected,
-            );
-            let wrapped = std::io::Error::other(error);
-            assert_eq!(
-                super::super::is_dead_pocket_ic_transport_error(&wrapped),
-                expected,
-            );
-        }
-    }
-
-    struct PanickingThenReporting {
+    struct Reporting {
         calls: Cell<usize>,
         request: Cell<Option<CanisterDiagnosticsRequest>>,
     }
 
-    impl PocketIcDiagnosticsExt for PanickingThenReporting {
+    impl PocketIcDiagnosticsExt for Reporting {
         fn collect_canister_diagnostics(
             &self,
             request: CanisterDiagnosticsRequest,
         ) -> CanisterDiagnosticsReport {
-            let call = self.calls.get();
-            self.calls.set(call + 1);
+            self.calls.set(self.calls.get() + 1);
             self.request.set(Some(request));
-            assert_ne!(call, 0, "synthetic first-entry diagnostic panic");
             CanisterDiagnosticsReport {
                 request,
-                status: Err(PocketIcCallFailure::Operation(
-                    super::super::PocketIcOperationError::new("synthetic status failure"),
+                status: Err(ic_platform_pocket_ic::ClientError::Protocol(
+                    "synthetic status failure".into(),
                 )),
-                logs: Err(PocketIcCallFailure::Operation(
-                    super::super::PocketIcOperationError::new("synthetic log failure"),
+                logs: Err(ic_platform_pocket_ic::ClientError::Protocol(
+                    "synthetic log failure".into(),
                 )),
             }
         }
     }
 
-    struct PanickingWriter;
-
-    impl std::io::Write for PanickingWriter {
-        fn write(&mut self, _: &[u8]) -> std::io::Result<usize> {
-            panic!("synthetic writer panic");
-        }
-        fn flush(&mut self) -> std::io::Result<()> {
-            Ok(())
-        }
-    }
-
     #[test]
-    fn explicit_reporting_preserves_requests_and_contains_secondary_failures() {
-        let collector = PanickingThenReporting {
+    fn explicit_reporting_preserves_requests_and_writer_failures() {
+        let collector = Reporting {
             calls: Cell::new(0),
             request: Cell::new(None),
         };
@@ -537,60 +479,24 @@ mod tests {
             log_limits: CanisterLogRenderLimits::default(),
         };
         let mut output = Vec::new();
-        let error = collector
-            .write_canister_diagnostics(request, "install", &mut output)
-            .expect_err("collection panic becomes secondary error");
-        assert_eq!(output, [] as [u8; 0]);
-        assert_eq!(collector.calls.get(), 1);
-        assert_eq!(collector.request.get(), Some(request));
-        assert!(
-            error
-                .get_ref()
-                .unwrap()
-                .downcast_ref::<super::super::PocketIcOperationError>()
-                .unwrap()
-                .message()
-                .contains("synthetic first-entry diagnostic panic")
-        );
-
         collector
             .write_canister_diagnostics(request, "install", &mut output)
             .unwrap();
         let text = String::from_utf8(output).unwrap();
-        assert!(text.starts_with("install: "));
         assert!(
             text.contains("synthetic status failure") && text.contains("synthetic log failure")
         );
+        let error = collector
+            .write_canister_diagnostics(request, "install", &mut std::io::Cursor::new([0_u8; 0]))
+            .unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::WriteZero);
         assert_eq!(collector.calls.get(), 2);
         assert_eq!(collector.request.get(), Some(request));
-
-        let mut full_writer = std::io::Cursor::new([0_u8; 0]);
-        let error = collector
-            .write_canister_diagnostics(request, "install", &mut full_writer)
-            .expect_err("ordinary writer failure is retained");
-        assert_eq!(error.kind(), std::io::ErrorKind::WriteZero);
-        let error = collector
-            .write_canister_diagnostics(request, "install", &mut PanickingWriter)
-            .expect_err("writer panic becomes secondary error");
-        assert!(
-            error
-                .get_ref()
-                .unwrap()
-                .downcast_ref::<super::super::PocketIcOperationError>()
-                .unwrap()
-                .message()
-                .contains("synthetic writer panic")
-        );
-        assert_eq!(
-            collector.calls.get(),
-            4,
-            "one explicit collection per call, with no retries"
-        );
     }
 
     #[test]
-    fn labeled_batch_retains_order_and_continues_after_entry_panic() {
-        let collector = PanickingThenReporting {
+    fn labeled_batch_retains_order_and_continues_after_entry_failure() {
+        let collector = Reporting {
             calls: Cell::new(0),
             request: Cell::new(None),
         };
@@ -636,12 +542,12 @@ mod tests {
         let compact = report.to_string();
         assert!(compact.contains("label=\"root\""));
         assert!(compact.contains("label=\"worker\""));
-        assert!(compact.contains("synthetic first-entry diagnostic panic"));
+        assert!(compact.contains("synthetic status failure"));
     }
 
     #[test]
     fn diagnostic_batch_rejects_invalid_labels_before_collection() {
-        let collector = PanickingThenReporting {
+        let collector = Reporting {
             calls: Cell::new(0),
             request: Cell::new(None),
         };

@@ -5,6 +5,7 @@
 //! ```text
 //! cargo run -p ic-testkit --example multi_canister_baseline_pool
 //! ```
+use ic_platform_pocket_ic::ClientError;
 
 use std::{error::Error, fmt, num::NonZeroUsize, time::Duration};
 
@@ -29,14 +30,14 @@ struct TopologyMetadata {
 }
 
 fn lifecycle(
-    call: impl FnOnce() -> Result<(), ic_platform_pocket_ic::RejectResponse>,
+    call: impl FnOnce() -> Result<(), ic_platform_pocket_ic::ClientError>,
 ) -> Result<(), RecipeError> {
-    ic_testkit::pic::try_pocket_ic_call(call).map_err(RecipeError::Lifecycle)
+    call().map_err(RecipeError::Lifecycle)
 }
 
 #[derive(Debug)]
 enum RecipeError {
-    Lifecycle(ic_testkit::pic::PocketIcCallFailure),
+    Lifecycle(ClientError),
     Startup(PocketIcStartupError),
     Snapshot(ControllerSnapshotError),
     Validation(&'static str),
@@ -65,13 +66,14 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
         let pocket_ic = PocketIcStartupConfig::from_env(Duration::from_secs(30))?
             .build_instance(PocketIcBuilder::new().with_application_subnet())?;
         let canister_ids = [
-            pocket_ic.instance().create_canister(),
-            pocket_ic.instance().create_canister(),
+            pocket_ic.instance().create_canister().unwrap(),
+            pocket_ic.instance().create_canister().unwrap(),
         ];
         for canister_id in canister_ids {
             pocket_ic
                 .instance()
-                .install_canister(canister_id, EMPTY_WASM.to_vec(), vec![], None);
+                .install_canister(canister_id, EMPTY_WASM.to_vec(), vec![], None)
+                .unwrap();
             lifecycle(|| pocket_ic.instance().stop_canister(canister_id, None))?;
         }
 

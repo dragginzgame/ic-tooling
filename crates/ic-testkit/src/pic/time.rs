@@ -1,9 +1,13 @@
+use ic_platform_pocket_ic::ClientError;
 use ic_platform_pocket_ic::PocketIc;
 use std::{task::Poll, time::Duration};
 
 /// A caller-owned readiness check failed or exhausted its simulated round budget.
-#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum TickUntilError<E> {
+    /// A simulated progression operation failed; no remaining ticks are dispatched.
+    #[error("PocketIC progression failed: {0}")]
+    Progress(#[source] ClientError),
     /// The predicate was still pending after this many advance/tick rounds.
     #[error("readiness remained pending after {rounds} rounds")]
     ProgressLimit {
@@ -21,15 +25,16 @@ pub enum TickUntilError<E> {
 /// without delivering a round. This function does not poll, retry, start a server
 /// or decide application readiness. Callers own completion and cadence budgets.
 ///
-/// # Panics
-/// `PocketIC` operation failures retain the upstream client's panic behavior.
-pub fn advance_and_tick(pic: &PocketIc, advance: Duration, ticks: u32) {
+/// # Errors
+/// Returns the first client failure without dispatching remaining ticks.
+pub fn advance_and_tick(pic: &PocketIc, advance: Duration, ticks: u32) -> Result<(), ClientError> {
     if !advance.is_zero() {
-        pic.advance_time(advance);
+        pic.advance_time(advance)?;
     }
     for _ in 0..ticks {
-        pic.tick();
+        pic.tick()?;
     }
+    Ok(())
 }
 
 /// Check a caller-owned predicate, advancing simulated time and ticking while pending.
@@ -41,8 +46,8 @@ pub fn advance_and_tick(pic: &PocketIc, advance: Duration, ticks: u32) {
 /// on the last allowed round succeeds; predicate failures return immediately without another round.
 ///
 /// This bounds simulated progression, not wall-clock time spent inside `PocketIC`
-/// calls or the predicate. `PocketIC` operation failures retain upstream panic
-/// behavior. Applications own readiness meaning and predicate error types.
+/// calls or the predicate. Client failures return immediately as `Progress`.
+/// Applications own readiness meaning and predicate error types.
 ///
 /// # Errors
 /// Returns the predicate error or `ProgressLimit` when all permitted rounds remain pending.
@@ -61,7 +66,7 @@ pub fn tick_until<T, E>(
 
 fn poll_with_rounds<T, E>(
     max_rounds: u32,
-    mut round: impl FnMut(),
+    mut round: impl FnMut() -> Result<(), ClientError>,
     mut poll: impl FnMut() -> Poll<Result<T, E>>,
 ) -> Result<T, TickUntilError<E>> {
     let mut rounds = 0;
@@ -72,7 +77,7 @@ fn poll_with_rounds<T, E>(
                 return Err(TickUntilError::ProgressLimit { rounds });
             }
             Poll::Pending => {
-                round();
+                round().map_err(TickUntilError::Progress)?;
                 rounds += 1;
             }
         }
@@ -93,11 +98,31 @@ mod tests {
                         budget,
                         || panic!("unexpected round"),
                         || Poll::Ready(result)
-                    ),
-                    result.map_err(TickUntilError::Failed)
+                    )
+                    .map_err(|e| e.to_string()),
+                    result
+                        .map_err(TickUntilError::Failed)
+                        .map_err(|e| e.to_string())
                 );
             }
         }
+    }
+
+    #[test]
+    fn progression_failure_stops_before_polling_again() {
+        let polls = Cell::new(0);
+        let result = poll_with_rounds(
+            3,
+            || Err(ClientError::Protocol("tick failed".into())),
+            || {
+                polls.set(polls.get() + 1);
+                Poll::<Result<(), ()>>::Pending
+            },
+        );
+        assert_eq!(polls.get(), 1);
+        assert!(
+            matches!(result, Err(TickUntilError::Progress(ClientError::Protocol(message))) if message == "tick failed")
+        );
     }
 
     #[test]
@@ -109,6 +134,7 @@ mod tests {
             || {
                 assert_eq!(polls.get(), rounds.get() + 1);
                 rounds.set(rounds.get() + 1);
+                Ok(())
             },
             || {
                 assert_eq!(polls.get(), rounds.get());
@@ -120,7 +146,7 @@ mod tests {
                 }
             },
         );
-        assert_eq!(result, Ok(42));
+        assert_eq!(result.unwrap(), 42);
         assert_eq!((rounds.get(), polls.get()), (3, 4));
     }
 
@@ -131,15 +157,17 @@ mod tests {
             let polls = Cell::new(0);
             let result = poll_with_rounds(
                 budget,
-                || rounds.set(rounds.get() + 1),
+                || {
+                    rounds.set(rounds.get() + 1);
+                    Ok(())
+                },
                 || {
                     polls.set(polls.get() + 1);
                     Poll::<Result<(), ()>>::Pending
                 },
             );
-            assert_eq!(
-                result,
-                Err(TickUntilError::ProgressLimit { rounds: budget })
+            assert!(
+                matches!(result, Err(TickUntilError::ProgressLimit { rounds }) if rounds == budget)
             );
             assert_eq!((rounds.get(), polls.get()), (budget, budget + 1));
         }
@@ -150,7 +178,10 @@ mod tests {
         let rounds = Cell::new(0);
         let result = poll_with_rounds(
             3,
-            || rounds.set(rounds.get() + 1),
+            || {
+                rounds.set(rounds.get() + 1);
+                Ok(())
+            },
             || {
                 if rounds.get() == 1 {
                     Poll::Ready(Err::<(), _>(std::io::Error::from(
@@ -182,7 +213,7 @@ mod tests {
                         Poll::Pending
                     }
                 });
-                assert_eq!(result, Ok(42));
+                assert_eq!(result.unwrap(), 42);
                 assert_eq!(polls, 2);
             });
         }
@@ -192,7 +223,9 @@ mod tests {
     fn tick_batches_preserve_exact_transport_order_and_selected_counts() {
         for advance in [Duration::ZERO, Duration::from_nanos(7)] {
             for ticks in [0, 2, 4, 24] {
-                assert_time_requests(advance, ticks, |pic| advance_and_tick(pic, advance, ticks));
+                assert_time_requests(advance, ticks, |pic| {
+                    advance_and_tick(pic, advance, ticks).unwrap();
+                });
             }
         }
     }
@@ -202,7 +235,7 @@ mod tests {
         use crate::pic::CanisterInstallExt as _;
         for advance in [Duration::ZERO, Duration::from_nanos(7)] {
             assert_time_requests(advance, 2, |pic| {
-                pic.wait_out_install_code_rate_limit(advance);
+                pic.wait_out_install_code_rate_limit(advance).unwrap();
             });
         }
     }

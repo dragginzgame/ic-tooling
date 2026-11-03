@@ -45,7 +45,7 @@ fn metadata(
 }
 
 fn install_timer_canister(pic: &PocketIc) -> (Principal, Vec<u8>) {
-    let id = pic.create_canister();
+    let id = pic.create_canister().unwrap();
     pic.update_canister_settings(
         id,
         None,
@@ -64,7 +64,7 @@ fn install_timer_canister(pic: &PocketIc) -> (Principal, Vec<u8>) {
         },
     )
     .unwrap();
-    pic.install_canister(id, wasm, vec![], None);
+    pic.install_canister(id, wasm, vec![], None).unwrap();
     let chunk = pic
         .upload_chunk(id, None, b"retained snapshot chunk".to_vec())
         .unwrap();
@@ -113,10 +113,10 @@ fn repeated_baseline_restore_keeps_heap_timer_hook_and_memory_coherent() {
             std::mem::discriminant(&hook)
         );
         pic.delete_canister_snapshot(id, None, changed.id).unwrap();
-        let time = pic.get_time();
+        let time = pic.get_time().unwrap();
         baseline.restore(SnapshotRestoreFunding::Preserve).unwrap();
         assert!(
-            pic.get_time() >= time,
+            pic.get_time().unwrap() >= time,
             "restoration must not rewind simulated time"
         );
         let current = pic.take_canister_snapshot(id, None, None).unwrap();
@@ -136,8 +136,8 @@ fn repeated_baseline_restore_keeps_heap_timer_hook_and_memory_coherent() {
         assert_eq!(chunks[0], chunk);
     }
     assert!(matches!(source, Some(SnapshotSource::MetadataUpload(_))));
-    pic.advance_time(Duration::from_secs(61));
-    pic.tick();
+    pic.advance_time(Duration::from_secs(61)).unwrap();
+    pic.tick().unwrap();
     assert_eq!(
         inspect(pic, id)[1],
         1,
@@ -146,7 +146,7 @@ fn repeated_baseline_restore_keeps_heap_timer_hook_and_memory_coherent() {
     pic.stop_canister(id, None).unwrap();
     baseline.restore(SnapshotRestoreFunding::Preserve).unwrap();
     pic.start_canister(id, None).unwrap();
-    pic.tick();
+    pic.tick().unwrap();
     assert_eq!(
         inspect(pic, id)[1],
         1,

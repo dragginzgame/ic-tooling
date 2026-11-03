@@ -25,13 +25,15 @@ failure-evidence contracts; consumer adoption is separate from this implementati
 
 ## Direct Types and Runtime owners
 
-Testkit selects published `ic-platform-types` 0.17 for its existing external
-Principal identity and `ic-platform-runtime` 0.18 for Wasm IC0. The raw Wasm
+Testkit selects published `ic-platform-types` 0.18 for its existing external
+Principal identity and `ic-platform-runtime` 0.19 for Wasm IC0. The raw Wasm
 library excludes the facade, executor, macros and Candid. The private performance
 probe selects Runtime's `cdk` entrypoints and one guarded executor directly.
-Native simulator operations select `ic-platform-pocket-ic` 0.18 directly;
+Native simulator operations select `ic-platform-pocket-ic` 0.19 directly;
 Candid and management adapters retain the facade without its `pocket-ic` feature.
-These paths preserve canonical identities and behavior; the earlier facade-owned
+Align consumers to the selected Types family for shared owned types. PocketIC
+operations return upstream typed failures directly; Testkit no longer captures
+client panic strings. The earlier facade-owned
 runtime descriptions below are historical, not an additional execution owner.
 
 ## Fleet Candid/CDK boundary

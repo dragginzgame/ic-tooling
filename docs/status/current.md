@@ -1,4 +1,37 @@
-# Current handoff — 2026-11-02
+# Current handoff — 2026-11-03
+
+## Platform adoption
+
+Local source adopts published Platform, PocketIC and Runtime 0.19.0, with Types
+0.18.0. Testkit uses upstream `ClientError` throughout installation, diagnostics,
+snapshots, Wire calls and bounded startup. The old panic-string adapters and
+recognition tests are removed. Simulated progression and install cooldowns return
+failures; only explicit install-rate-limit rejections permit another attempt.
+Server pin 16.1.0, caller recovery and feature boundaries remain unchanged.
+Pending breaking notes select Tools 0.79.0 and Testkit 0.81.0; actual package
+versions and publication are unchanged. Incoming unrelated lock selections are
+preserved; only the selected family, its Strum dependencies and the already
+delivered Text 0.74.1 workspace row change.
+
+PR [#316](https://github.com/dragginzgame/ic-tooling/pull/316), merged as
+`5f19321f79f50706bf6740d7b6fee0f215ed6f07`, fixes #314's version-dependent Text
+fixture. Its disposable manifest now advances from the actual fixture version
+using the existing release arithmetic owner. Plan and ShellCheck checks pass;
+the fresh [CI run](https://github.com/dragginzgame/ic-tooling/actions/runs/41601884323)
+remains asynchronous. #313 is closed; #314 still requires actual three-host
+full/focused comparison evidence before closure.
+
+Adoption evidence and incoming backups:
+`/tmp/ic-tooling-platform-adoption.WgLoB2/`. Linux affected-package all-target,
+all-feature Clippy, Tools/Dev library tests, deployed Testkit/probe Wasm builds,
+native/Wasm feature graphs and the live benchmark probe pass. Native macOS
+qualification of this local adoption has not run.
+All Testkit unit/integration targets pass with the prepared real server; the
+updated startup doctests pass separately, as do warning-denied public docs and
+812 local references. The old 1 ms synthetic creation budget now uses 1 second,
+because the new client applies it to construction as well as later requests.
+The conditional #314 checker runs in persistent session 99335; its status, logs
+and downloaded proofs live under that evidence directory's `issue-314-closure/`.
 
 ## Issue delivery
 
@@ -65,19 +98,23 @@ local consumer qualification remains. No product artifact cleanup occurred.
 | Tools | 0.78.1 | `17b79dc82fa10da41afa455d9c3c9f2540a41bbe` |
 | Testkit | 0.80.2 | `fc66f67b241af549034ac993c1254b46ab378934` |
 
-Text 0.74.0 and Native 0.80.0 remain unchanged. Pending notes select compatible
-Build 0.74.2 and Testkit 0.80.3; package versions, release tags and registry uploads
-are unchanged by this source delivery. The unrelated Cargo.lock selections remain
-local and byte-preserved, outside the delivery commits. Earlier deployment proof
+Text 0.74.1 was delivered at `df9d9cdffe8d56fb82c3132a4860d2567d6f01a7`;
+Native remains 0.80.0. Pending notes select compatible Build 0.74.2 and the local
+Tools/Testkit minors above. Package versions, release tags and registry uploads
+are unchanged by this adoption. Unrelated incoming Cargo.lock selections remain
+local, outside the issue-delivery commits. Earlier deployment proof
 remains under `.git/release-state/deployment-cleanup-20261102/` and
 `/tmp/ic-tooling-cleanup-deploy.VLiO5k/`.
 
 ## Supplying-owner follow-ups
 
-[Platform #134](https://github.com/dragginzgame/ic-platform/issues/134) owns typed
-client failures; [#136](https://github.com/dragginzgame/ic-platform/issues/136) owns
-bounded snapshot transfer. Client 0.18.0 remains the newest published version in
-the latest registry readback; Testkit keeps its adapters until replacements ship.
+[Platform #134](https://github.com/dragginzgame/ic-platform/issues/134) shipped
+typed client failures in 0.19 and is closed; this adoption removes their local
+panic adapters. [#136](https://github.com/dragginzgame/ic-platform/issues/136)'s
+bounded snapshot API is pending the next published client, so Testkit retains
+its metadata/data transfer implementation. Wire 0.15.1 remains selected without
+its optional `platform-types` feature; the exercised graphs contain one Types
+0.18 owner. No old Account schema compatibility is implied by that feature choice.
 No sibling source/release or DFINITY/PocketIC issue was changed. The private
 checked-average exception remains in AGENTS.md, coordinated through
 [Shared #347](https://github.com/dragginzgame/shared-tooling/issues/347) and
