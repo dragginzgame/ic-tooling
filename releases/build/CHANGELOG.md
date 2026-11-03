@@ -25,6 +25,8 @@ reset, release, tag or upload is implied by establishing this group.
   separate from cache acquisition and publication, without changing fingerprint
   or public API contracts. Check fixture retention and relative temporary paths
   at the actual initialization/EXIT boundaries without repeating product suites.
+  Keep the Make roster-order and failure-stopping fixture aligned with that
+  explicit membership, with a focused roster entrypoint.
 - Adopt Shared Tooling's pending 0.29.0 snapshot with its shared validation-plan
   parser, evidence interfaces and fail-closed tree inventory, including the UTF-8
   fix in [Shared PR #350 — Fix UTF-8 runner evidence verification](https://github.com/dragginzgame/shared-tooling/pull/350).

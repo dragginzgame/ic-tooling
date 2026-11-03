@@ -82,6 +82,10 @@ entrypoint retains all six groups for complete release qualification.
 For full-CI roster and lint/publication ordering, use
 `bash scripts/ci/test-workspace-validation.sh`; it runs the actual Make routing
 with substituted check/build/publication effects and no Cargo compilation.
+For explicit tooling-fixture membership/order and first-failure stopping, use
+`bash scripts/ci/test-make-snapshot.sh --case tooling-roster`. It retains the
+actual Make/selector wiring with substituted fixture bodies; the default
+entrypoint retains the broader Make contracts.
 
 Fixture retention checks execute each real initialization/EXIT boundary with
 failure injection and relative, aliased temporary parents after changing cwd.
