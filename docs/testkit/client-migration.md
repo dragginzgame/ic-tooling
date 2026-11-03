@@ -1,6 +1,6 @@
 # Maintained client in Testkit
 
-The pending Testkit 0.84 line owns the PocketIC client and lifecycle helpers in
+The published Testkit 0.84 line owns the PocketIC client and lifecycle helpers in
 one package. Use `ic_testkit::pocket_ic::{PocketIc, PocketIcBuilder, ClientError}`;
 async clients live in `ic_testkit::pocket_ic::nonblocking`, and REST DTOs in
 `ic_testkit::pocket_ic::common::rest`. Existing lifecycle helpers stay in
@@ -8,9 +8,8 @@ async clients live in `ic_testkit::pocket_ic::nonblocking`, and REST DTOs in
 `ic_platform::pocket_ic::...` imports. Remove the separate client dependency and
 the Platform `pocket-ic` feature. No compatibility re-export is provided.
 
-After publication, select the Testkit 0.84 line directly. Until then, qualify an
-explicit source checkout; the current registry 0.83 package does not supply this
-new module. Client and helper changes thereafter need only one Testkit selection.
+Select the Testkit 0.84 line directly from crates.io; the earlier 0.83 package
+does not supply this module. Client and helper changes need only one Testkit selection.
 Platform remains a dependency for general external-protocol adapters; it must
 not depend on Testkit through normal/build dependencies.
 
