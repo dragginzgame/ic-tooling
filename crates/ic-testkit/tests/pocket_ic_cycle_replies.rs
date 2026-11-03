@@ -4,11 +4,11 @@
 mod support;
 
 use ic_host_artifacts::wasm::validate;
-use ic_platform_pocket_ic::{PocketIc, PocketIcBuilder};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::fixtures::{
     RawReplyLimits, RawReplyMethod, ReplyMode, cycle_reply_canister, held::HeldReplyFixture,
 };
+use ic_testkit::pocket_ic::{PocketIc, PocketIcBuilder};
 use std::time::Duration;
 
 const ATTACHED: u128 = 10_000;

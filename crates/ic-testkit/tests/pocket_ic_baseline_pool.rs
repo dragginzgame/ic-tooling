@@ -1,5 +1,5 @@
 //! Integration checks for pocket ic baseline pool behavior.
-use ic_platform_pocket_ic::ClientError;
+use ic_testkit::pocket_ic::ClientError;
 mod support;
 
 use std::{
@@ -14,7 +14,6 @@ use std::{
     time::Duration,
 };
 
-use ic_platform_pocket_ic::PocketIcBuilder;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolError, BaselinePoolOutcome, BaselinePoolPreparationError,
@@ -24,6 +23,7 @@ use ic_testkit::pic::{
     RebuildReason, ResetPolicies, ResetReceipt, ResetRequirements, SnapshotRestoreFunding,
     TimeResetPolicy, is_dead_pocket_ic_transport_error,
 };
+use ic_testkit::pocket_ic::PocketIcBuilder;
 
 const EMPTY_WASM: &[u8] = b"\0asm\x01\0\0\0";
 const OPERATION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -66,7 +66,7 @@ struct TwoCanisterMetadata {
 }
 
 fn lifecycle(
-    call: impl FnOnce() -> Result<(), ic_platform_pocket_ic::ClientError>,
+    call: impl FnOnce() -> Result<(), ic_testkit::pocket_ic::ClientError>,
 ) -> Result<(), TestRecipeError> {
     call().map_err(TestRecipeError::Lifecycle)
 }

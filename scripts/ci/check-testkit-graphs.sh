@@ -15,7 +15,7 @@ policy=(--consumer "$consumer" --require ic-platform-types=1 --forbid ic-metrics
     --forbid ic-agent --forbid candid_parser --forbid ic0 --forbid pocket-ic --forbid-pattern '^ic-cdk')
 runtime_policy=("${policy[@]}")
 policy+=(--forbid ic-platform-runtime-guard)
-native_policy=("${policy[@]}" --require ic-platform=1 --require ic-platform-pocket-ic=1
+native_policy=("${policy[@]}" --require ic-platform=1 --forbid ic-platform-pocket-ic
     --forbid-feature ic-platform/pocket-ic --forbid ic-platform-runtime)
 
 perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
@@ -35,7 +35,7 @@ perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --require clap=1 --require ic-wire=1
 perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --package ic-testkit-dev --target "$host" --all-features \
-    --require ic-build=1 --require ic-platform=1 --require ic-platform-pocket-ic=1 \
+    --require ic-build=1 --require ic-platform=1 --forbid ic-platform-pocket-ic \
     --forbid-feature ic-platform/pocket-ic \
     --forbid pocket-ic --forbid ic-metrics --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
     --require ic-host-artifacts=1 --require ic-host-fs=1 \
@@ -45,6 +45,7 @@ perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --require ic-testkit-native=1 --forbid-pattern '^(?!ic-testkit-native$)'
 testkit_wasm="$(perl scripts/ci/check-cargo-graph.pl "${policy[@]}" --package ic-testkit \
     --target wasm32-unknown-unknown --all-features --forbid-pattern '^ic-host-' \
+    --forbid reqwest --forbid tokio --forbid tempfile --forbid flate2 --forbid ic-certification --forbid ic-transport-types \
     --forbid candid --forbid candid_derive --forbid ic-platform-pocket-ic --forbid ic-wire --forbid clap \
     --forbid wat --forbid wast --forbid wasm-encoder --forbid wasmparser --forbid ic-management-canister-types \
     --forbid ic-platform --forbid ic-platform-macros --require ic-platform-runtime=1 --json --observations)"

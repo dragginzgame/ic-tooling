@@ -10,8 +10,8 @@ use ic_platform::{
     },
     principal::ExternalPrincipal as Principal,
 };
-use ic_platform_pocket_ic::{CanisterSettings, PocketIc, common::rest::RawEffectivePrincipal};
 use ic_testkit::pic::{CachedPocketIcBaseline, CanisterSnapshotTarget, SnapshotRestoreFunding};
+use ic_testkit::pocket_ic::{CanisterSettings, PocketIc, common::rest::RawEffectivePrincipal};
 use std::time::Duration;
 
 fn inspect(pic: &PocketIc, id: Principal) -> [u64; 5] {

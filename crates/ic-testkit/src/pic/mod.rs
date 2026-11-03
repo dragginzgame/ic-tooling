@@ -1,12 +1,12 @@
 //! `PocketIC` host-test harness extensions.
 //!
-//! Import the client and DTOs directly from `ic_platform_pocket_ic`.
+//! Import the client and DTOs from `ic_testkit::pocket_ic`.
 //! This module owns Testkit's extension traits and policy types.
 //!
-//! Construct and own [`ic_platform_pocket_ic::PocketIc`] instances normally, then import individual
+//! Construct and own [`crate::pocket_ic::PocketIc`] instances normally, then import individual
 //! extension traits or [`prelude`] for installation, diagnostics and snapshots.
 //! Import the call functions, startup configuration and polling helpers explicitly.
-//! Native simulator operations remain upstream inherent methods.
+//! Native simulator operations are maintained in the client module.
 //!
 //! [`PocketIcManagedServer`] can explicitly own one exact caller-selected
 //! server child for a serial suite. No type serializes independent instances or

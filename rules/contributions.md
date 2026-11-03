@@ -74,11 +74,20 @@ explicitly authorized action.
 ## Durable work and checkout location
 
 Prefer editing the requested local checkout so the user can inspect the actual
-working files. Preserve unrelated changes. A dirty checkout or failed release
+working files. Use topic branches there for authorized PRs instead of creating
+contribution directories or additional clones/worktrees. A branch does not isolate
+simultaneous sessions sharing a checkout: coordinate with its active owner before
+switching it. Preserve unrelated changes. A dirty checkout or failed release
 preflight does not authorize moving implementation or delivery elsewhere.
 
+- Creating an additional checkout requires explicit user approval of its exact
+  location, including for an otherwise authorized PR. Do not create sibling
+  `*-contributions` directories by default. If the normal checkout is occupied
+  or outside the authorized editing scope, report the conflict and ask before
+  choosing another location; do not silently switch another session's branch.
 - Lasting source changes must live in the normal checkout or a disclosed durable
-  contribution checkout for an authorized PR. Keep contribution checkouts outside
+  contribution checkout at an explicitly approved location for an authorized PR.
+  Keep contribution checkouts outside
   `/tmp`, `target/`, caches and other cleanup roots. Disposable clones and patches
   may support validation of already-preserved source; they must never become the
   sole copy of unfinished implementation or the place where follow-up work silently
@@ -227,12 +236,14 @@ Carry that authorization forward without asking again for each substep.
   and search existing issues/PRs before starting. Keep the contribution tied to
   confirmed work in the current task; coordinate with an active owner rather
   than duplicating their fix. Link the owning issue where one exists.
-- Use a separate worktree or clone and a dedicated topic branch from the intended
-  upstream base, in a disclosed durable location under the
-  [checkout contract](#durable-work-and-checkout-location). Never edit, switch
-  branches in, stage, reset, clean or commit
-  another contributor's normal sibling checkout. Do not carry its dirty changes
-  into the contribution. Build and validate in the isolated checkout.
+- Prefer a dedicated topic branch in the destination's normal checkout when the
+  user has authorized work there and its active owner can hand it over safely.
+  A sibling PR request alone does not authorize taking over another contributor's
+  checkout. If no suitable checkout is authorized and available, ask for approval
+  of the exact location before creating a separate worktree or clone under the
+  [checkout contract](#durable-work-and-checkout-location). Never switch, stage,
+  reset, clean or commit another contributor's checkout or carry its dirty work
+  into the contribution. Build and validate in the agreed checkout.
 - Complete the destination's focused checks for the changed behavior and affected
   callers, respecting its documented execution restrictions. PR preparation does
   not authorize local full-suite runs; reserve those for release or an explicit
@@ -266,8 +277,8 @@ adoption PRs. A PR audit alone does not request PR closure or branch deletion.
 
 - Keep unrelated staged and working changes intact. Review the entire index
   before committing and stage only explicit reviewed paths for the authorized
-  work; do not use blanket `git add .` or `git add -A`. Use an isolated branch
-  or worktree when needed to preserve another contributor's work.
+  work; do not use blanket `git add .` or `git add -A`. Use a topic branch in the
+  agreed checkout; an additional worktree requires explicit location approval.
 - An authorized commit/PR task may organize its own unpublished task commits.
   Rewriting another contributor's or already-shared history, force-pushing,
   merging and pushing directly to `main`, `master` or another integration/release
@@ -287,8 +298,8 @@ adoption PRs. A PR audit alone does not request PR closure or branch deletion.
   package versions, tag, publish or deploy unless those effects were requested.
 - Each requested PR covers one destination and coherent change. Coordinate
   cross-repository adoption with the receiving owners and existing actionable
-  issues; create isolated PRs only within the explicit authority above. Never
-  make direct edits to sibling working checkouts.
+  issues; create PRs only within the explicit authority above. Never take over
+  another contributor's sibling working checkout without an express handoff.
 
 The standard release runner defaults to an atomic selected-branch/tag push.
 Consumers can explicitly adopt `RELEASE_DELIVERY=pr` under the

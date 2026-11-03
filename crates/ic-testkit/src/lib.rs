@@ -1,6 +1,6 @@
 //! Focused `PocketIC` test-harness utilities for Internet Computer canisters.
 //!
-//! Import native `PocketIC` clients and DTOs directly from `ic_platform_pocket_ic`.
+//! Import native `PocketIC` clients and DTOs from `ic_testkit::pocket_ic`.
 //! `pic` adds optional typed Wire calls, extension traits for
 //! installation, diagnostics and snapshots, startup errors, caller-owned
 //! managed-server startup and bounded readiness polling. It does not provide a
@@ -18,6 +18,9 @@
 //! available to canister code.
 
 pub mod benchmark;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod pocket_ic;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pic;

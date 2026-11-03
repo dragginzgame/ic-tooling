@@ -1,5 +1,5 @@
 //! Integration checks for pocket ic concurrency behavior.
-use ic_platform_pocket_ic::ClientError;
+use ic_testkit::pocket_ic::ClientError;
 mod support;
 
 use std::{
@@ -15,7 +15,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ic_platform_pocket_ic::{PocketIc, PocketIcBuilder};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolError, BaselinePoolPreparationError,
@@ -23,6 +22,7 @@ use ic_testkit::pic::{
     PocketIcInstance, PocketIcStartupConfig, PocketIcStartupFailure, RebuildReason,
     SnapshotRestoreFunding, StandaloneCanisterFixture, StandaloneCanisterRecipe,
 };
+use ic_testkit::pocket_ic::{PocketIc, PocketIcBuilder};
 
 const READY_TIMEOUT: Duration = Duration::from_secs(60);
 const OPERATION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -95,7 +95,7 @@ enum Event {
 fn upstream_supports_two_overlapping_instances() {
     assert_two_instances_overlap(move || {
         support::startup_config()
-            .build_instance(ic_platform_pocket_ic::PocketIcBuilder::new().with_application_subnet())
+            .build_instance(ic_testkit::pocket_ic::PocketIcBuilder::new().with_application_subnet())
             .expect("build explicitly configured upstream instance")
     });
 }

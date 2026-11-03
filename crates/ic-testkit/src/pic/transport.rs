@@ -1,4 +1,4 @@
-use ic_platform_pocket_ic::ClientError;
+use crate::pocket_ic::ClientError;
 
 /// Whether an error chain contains a typed `PocketIC` transport or body failure.
 ///

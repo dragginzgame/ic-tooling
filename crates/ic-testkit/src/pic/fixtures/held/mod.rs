@@ -9,16 +9,16 @@
 //! test-control facility, not a deployed service or an authorization boundary.
 
 use super::{CatalogBudget, RawReplyError, RawReplyLimits, RawReplyMethod, ReplyMode, charge};
-use ic_host_artifacts::wasm_text::{CompileError, CompileLimits, compile};
-use ic_platform::{
-    candid::contract::encode_one,
-    management_canister_types::{HttpMethod, HttpRequestArgs},
-};
-use ic_platform_pocket_ic::{
+use crate::pocket_ic::{
     ClientError, PocketIc,
     common::rest::{
         CanisterHttpReply, CanisterHttpRequest, CanisterHttpResponse, MockCanisterHttpResponse,
     },
+};
+use ic_host_artifacts::wasm_text::{CompileError, CompileLimits, compile};
+use ic_platform::{
+    candid::contract::encode_one,
+    management_canister_types::{HttpMethod, HttpRequestArgs},
 };
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use std::{collections::BTreeMap, fmt::Write};

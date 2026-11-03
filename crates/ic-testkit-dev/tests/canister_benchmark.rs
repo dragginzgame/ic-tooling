@@ -12,7 +12,7 @@ use ic_host_process::{
     tool::{CompletedExecution, OutputLimit, OutputLimits, capture_command},
 };
 use ic_platform::principal::ExternalPrincipal as Principal;
-use ic_platform_pocket_ic::ClientError;
+use ic_testkit::pocket_ic::ClientError;
 use ic_testkit::{
     benchmark::{
         BenchmarkEventSource, BenchmarkParserConfig, pair_benchmark_spans,
@@ -89,7 +89,7 @@ fn install_probe() -> StandaloneCanisterFixture {
     StandaloneCanisterFixture::try_install(
         ic_testkit::pic::PocketIcStartupConfig::from_env(std::time::Duration::from_secs(30))
             .expect("configure prepared PocketIC")
-            .build_instance(ic_platform_pocket_ic::PocketIcBuilder::new().with_application_subnet())
+            .build_instance(ic_testkit::pocket_ic::PocketIcBuilder::new().with_application_subnet())
             .expect("construct explicitly configured test instance"),
         InstallSpec {
             wasm,

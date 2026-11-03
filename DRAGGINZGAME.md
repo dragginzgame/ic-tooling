@@ -27,8 +27,10 @@ same approach: mandatory local constraints first, task-specific references after
 - Preserve unrelated dirty work and reread dirty files before editing. Task-relevant
   sibling inspection needs no additional permission. Never edit another
   contributor's sibling working checkout in place.
-- Keep lasting implementation in the requested local checkout. An authorized PR
-  may use a disclosed durable contribution checkout; an issue may record deferred
+- Keep lasting implementation in the requested local checkout, using topic
+  branches for authorized PRs. Creating another clone, worktree or contribution
+  directory requires explicit approval of its location; a PR request alone does
+  not authorize another checkout. An issue may record deferred
   work. Never leave the only copy of code changes in `/tmp`, `target/`, caches or
   a disposable patch. If those delivery options are unavailable, ask the user
   before choosing another location. Follow the [durable work contract](rules/contributions.md#durable-work-and-checkout-location).

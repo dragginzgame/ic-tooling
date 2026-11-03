@@ -1,6 +1,6 @@
 use std::{num::NonZeroUsize, time::Duration};
 
-use ic_platform_pocket_ic::{ClientError, ErrorCode, PocketIc};
+use crate::pocket_ic::{ClientError, ErrorCode, PocketIc};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 use super::CanisterInstallError;
@@ -140,7 +140,7 @@ mod tests {
         time::Duration,
     };
 
-    use ic_platform_pocket_ic::{ErrorCode, RejectCode, RejectResponse};
+    use crate::pocket_ic::{ErrorCode, RejectCode, RejectResponse};
 
     use super::{ClientError, RetryPolicy, retry_install_code_with};
 

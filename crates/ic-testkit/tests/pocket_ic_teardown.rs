@@ -1,18 +1,18 @@
 //! Controlled reproduction of `PocketIC`'s synchronous instance-deletion wait.
 //! The parent owns a synthetic HTTP peer and can always kill/reap the probe.
-use ic_platform_pocket_ic::ClientError;
+use ic_testkit::pocket_ic::ClientError;
 
 mod support;
 
 use ic_host_process::testing::http::{HttpContentLength, capture_http_request};
-use ic_platform_pocket_ic::common::rest::{CreateInstanceResponse, RawCanisterId, Topology};
-use ic_platform_pocket_ic::{PocketIc, PocketIcBuilder};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     CanisterDiagnosticsRequest, CanisterInstallError, CanisterLogRenderLimits, InstallSpec,
     PocketIcDiagnosticsExt, PocketIcInstance, PocketIcStartupConfig, StandaloneCanisterFixture,
     is_dead_pocket_ic_transport_error,
 };
+use ic_testkit::pocket_ic::common::rest::{CreateInstanceResponse, RawCanisterId, Topology};
+use ic_testkit::pocket_ic::{PocketIc, PocketIcBuilder};
 #[cfg(unix)]
 use std::os::fd::AsRawFd as _;
 use std::{

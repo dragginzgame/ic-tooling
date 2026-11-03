@@ -26,3 +26,15 @@ records the exact adopted files and revision.
   Report native macOS qualification separately from Linux evidence.
 - Follow shared changelog rules. GitHub issues are the sole follow-up tracker;
   source provenance, design and handoff documents are evidence, not issue queues.
+
+## Maintained native PocketIC client
+
+Tooling #324 transfers Platform’s qualified PocketIC 16.1 client into
+`ic-testkit::pocket_ic`. Preserve imported Apache-2.0 licenses, protocol bytes,
+external identities, fallible/no-replay behavior and bounded snapshot transfer.
+The exact donor and upstream reconstruction guards own its source provenance.
+The native module retains donor lint policy for unchanged imported bodies. Its
+existing server convenience implementation alone retains direct flate2/tempfile
+selection during this transfer; shared Host APIs remain the owner elsewhere.
+This exception does not authorize new gzip/temporary-file implementations or
+changes to hash, key or signature algorithms. Keep all client dependencies native.

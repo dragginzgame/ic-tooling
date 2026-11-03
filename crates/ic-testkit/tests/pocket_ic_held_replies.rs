@@ -4,12 +4,12 @@
 mod support;
 
 use ic_host_artifacts::wasm::validate;
-use ic_platform_pocket_ic::{PocketIc, common::rest::RawMessageId};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::fixtures::{
     RawReplyLimits, RawReplyMethod, ReplyMode,
     held::{HeldReplyError, HeldReplyFixture, HeldRequest},
 };
+use ic_testkit::pocket_ic::{PocketIc, common::rest::RawMessageId};
 
 use std::time::Duration;
 

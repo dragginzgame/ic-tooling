@@ -1,0 +1,3 @@
+# Unified patches preserve blank context lines exactly for source reconstruction.
+crates/ic-testkit/pocket-ic-provenance/**/*.patch whitespace=-blank-at-eol
+crates/ic-testkit/pocket-ic-provenance/*.patch whitespace=-blank-at-eol

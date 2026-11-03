@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use ic_platform_pocket_ic::{ClientError, PocketIc};
+use crate::pocket_ic::{ClientError, PocketIc};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 mod transfer;
@@ -349,7 +349,7 @@ mod tests {
     #[test]
     fn cleanup_preserves_causes_and_senders_and_continues_after_each_failure() {
         use super::{ControllerSnapshot, SnapshotCleanupFailure, cleanup_captured_snapshots};
-        use ic_platform_pocket_ic::{ClientError, ErrorCode, RejectCode, RejectResponse};
+        use crate::pocket_ic::{ClientError, ErrorCode, RejectCode, RejectResponse};
         use ic_platform_types::principal::ExternalPrincipal as Principal;
 
         let ids = [1, 2, 3, 4].map(|byte| Principal::from_slice(&[byte]));

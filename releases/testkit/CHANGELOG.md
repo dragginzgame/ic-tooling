@@ -6,6 +6,25 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.84.0]
+
+### ⚠️ Breaking
+
+- Own the maintained PocketIC 16.1 client in `ic_testkit::pocket_ic`, so client,
+  DTO/error types and lifecycle helpers share one Testkit version. Replace
+  `ic_platform_pocket_ic` imports and remove the separate client dependency.
+  Preserve external IC identities, typed failures, uncertain-operation custody
+  and the native-only dependency graph
+  ([#324](https://github.com/dragginzgame/ic-tooling/issues/324)).
+  See the [migration guide](../../docs/testkit/client-migration.md).
+
+### 🧹 Cleanup
+
+- Delegate snapshot copying to the maintained client's bounded transfer engine.
+  Keep Testkit's exact sender, funding and rollback policy, recording each upload
+  identity before copying data. Preserve the existing management reply and chunk
+  limits while bounding the outer HTTP envelope to 16 MiB.
+
 ## [0.83.0] - 2026-11-03
 
 ### ⚠️ Breaking
