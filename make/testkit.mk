@@ -18,8 +18,10 @@ testkit-browser-check:
 testkit-check: build-server-cli
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit -p ic-testkit-dev -p ic-testkit-native --all-features --locked --offline
 testkit-installed-check: build-server-cli
+	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit --locked --offline --test client_installed -- --ignored
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit --features cli --locked --offline --test server_runner real_server_runs_a_separate_process_using_environment_startup -- --ignored --exact
 testkit-package-check: build-server-cli
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo run -p ic-testkit-dev --bin check_packages --locked --offline
 testkit-graph-check:
+	bash scripts/ci/test-pocket-ic-source.sh
 	bash scripts/ci/check-testkit-graphs.sh

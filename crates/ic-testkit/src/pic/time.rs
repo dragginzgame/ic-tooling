@@ -1,5 +1,5 @@
-use ic_platform_pocket_ic::ClientError;
-use ic_platform_pocket_ic::PocketIc;
+use crate::pocket_ic::ClientError;
+use crate::pocket_ic::PocketIc;
 use std::{task::Poll, time::Duration};
 
 /// A caller-owned readiness check failed or exhausted its simulated round budget.

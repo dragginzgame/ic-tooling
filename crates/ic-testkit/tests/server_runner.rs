@@ -364,8 +364,8 @@ fn real_server_runs_a_separate_process_using_environment_startup() {
 #[test]
 #[ignore = "invoked by the real server runner test in a separate process"]
 fn runner_environment_worker() {
-    use ic_platform_pocket_ic::PocketIcBuilder;
     use ic_testkit::pic::PocketIcStartupConfig;
+    use ic_testkit::pocket_ic::PocketIcBuilder;
     if std::env::var_os("IC_TESTKIT_TEST_PRECLIENT_DELAY").is_some() {
         thread::sleep(Duration::from_secs(65));
     }

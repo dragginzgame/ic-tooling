@@ -1,7 +1,7 @@
 //! Native typed transport; IC Wire remains the sole frame and codec owner.
-use ic_platform_pocket_ic::ClientError;
+use crate::pocket_ic::ClientError;
 
-use ic_platform_pocket_ic::PocketIc;
+use crate::pocket_ic::PocketIc;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_wire::{Limits, native};
 use serde::{Serialize, de::DeserializeOwned};

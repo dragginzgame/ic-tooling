@@ -12,9 +12,9 @@ use std::{
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt as _;
 
+use crate::pocket_ic::{ClientError, PocketIc, PocketIcBuilder};
 use ic_host_fs::{directory::create_unique_directory, owned_directory::OwnedDirectory};
 use ic_host_process::child::{CleanupError, CleanupPolicy, OwnedChild};
-use ic_platform_pocket_ic::{ClientError, PocketIc, PocketIcBuilder};
 
 const STARTUP_POLL_INTERVAL: Duration = Duration::from_millis(20);
 const SERVER_OUTPUT_LIMIT: usize = 16 * 1024;
@@ -450,7 +450,7 @@ impl PocketIcStartupConfig {
     /// never claims the external server. See [`PocketIcInstance`] for drop limits.
     ///
     /// ```no_run
-    /// use ic_platform_pocket_ic::PocketIcBuilder;
+    /// use crate::pocket_ic::PocketIcBuilder;
     /// use ic_testkit::pic::PocketIcStartupConfig;
     /// use std::{path::Path, time::Duration};
     /// # fn run(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -498,7 +498,7 @@ impl PocketIcStartupConfig {
     /// reconciliation. The deadline covers construction, not subsequent deletion.
     ///
     /// ```no_run
-    /// use ic_platform_pocket_ic::PocketIcBuilder;
+    /// use crate::pocket_ic::PocketIcBuilder;
     /// use ic_testkit::pic::PocketIcStartupConfig;
     /// use std::{path::Path, time::Duration};
     /// # async fn run(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -518,7 +518,7 @@ impl PocketIcStartupConfig {
     pub async fn build_instance_async(
         self,
         builder: PocketIcBuilder,
-    ) -> Result<PocketIcInstance<ic_platform_pocket_ic::nonblocking::PocketIc>, PocketIcStartupError>
+    ) -> Result<PocketIcInstance<crate::pocket_ic::nonblocking::PocketIc>, PocketIcStartupError>
     {
         let startup = StartupDeadline::new(&self)?;
         let (server, server_url) = match self {
@@ -970,7 +970,7 @@ async fn build_async_bounded(
     server_url: &str,
     startup: &StartupDeadline,
     server: Option<ManagedServer>,
-) -> Result<PocketIcInstance<ic_platform_pocket_ic::nonblocking::PocketIc>, PocketIcStartupError> {
+) -> Result<PocketIcInstance<crate::pocket_ic::nonblocking::PocketIc>, PocketIcStartupError> {
     let mut startup = InstanceStartup {
         deadline: startup,
         server_url,
@@ -1297,7 +1297,7 @@ impl std::error::Error for PocketIcStartupError {
 
 #[cfg(test)]
 mod tests {
-    use ic_platform_pocket_ic::ClientError;
+    use crate::pocket_ic::ClientError;
     mod instances;
 
     use std::{
@@ -1310,7 +1310,7 @@ mod tests {
         OwnedDirectory, PocketIcStartupConfig, PocketIcStartupError, PocketIcStartupFailure,
         StartupFiles, create_unique_directory,
     };
-    use ic_platform_pocket_ic::PocketIcBuilder;
+    use crate::pocket_ic::PocketIcBuilder;
 
     #[cfg(unix)]
     use ic_host_process::testing::write_executable_script;
@@ -1352,7 +1352,7 @@ mod tests {
 
     #[test]
     fn original_failure_output_and_both_typed_cleanup_reports_survive_projection() {
-        use ic_platform_pocket_ic::ClientError;
+        use crate::pocket_ic::ClientError;
         use std::error::Error as _;
         for failure in [
             PocketIcStartupFailure::ReadinessTimeout {

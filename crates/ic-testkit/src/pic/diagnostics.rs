@@ -3,8 +3,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::pocket_ic::{CanisterLogRecord, CanisterStatusResult, ClientError, PocketIc};
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
-use ic_platform_pocket_ic::{CanisterLogRecord, CanisterStatusResult, ClientError, PocketIc};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 /// Default maximum number of canister-log records retained in diagnostics.
@@ -433,8 +433,8 @@ fn render_log_records(
 mod tests {
     use std::cell::Cell;
 
+    use crate::pocket_ic::CanisterLogRecord;
     use ic_host_artifacts::batch::BatchLabelError;
-    use ic_platform_pocket_ic::CanisterLogRecord;
     use ic_platform_types::principal::ExternalPrincipal as Principal;
 
     use super::{
@@ -456,10 +456,10 @@ mod tests {
             self.request.set(Some(request));
             CanisterDiagnosticsReport {
                 request,
-                status: Err(ic_platform_pocket_ic::ClientError::Protocol(
+                status: Err(crate::pocket_ic::ClientError::Protocol(
                     "synthetic status failure".into(),
                 )),
-                logs: Err(ic_platform_pocket_ic::ClientError::Protocol(
+                logs: Err(crate::pocket_ic::ClientError::Protocol(
                     "synthetic log failure".into(),
                 )),
             }

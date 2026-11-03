@@ -2,7 +2,7 @@ use super::{
     CanisterSnapshotTarget, ControllerSnapshotError, ControllerSnapshots, PocketIcInstance,
     PocketIcSnapshotExt, SnapshotRestoreFunding,
 };
-use ic_platform_pocket_ic::PocketIc;
+use crate::pocket_ic::PocketIc;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 /// One owned `PocketIC` instance/server record with snapshots and caller metadata.

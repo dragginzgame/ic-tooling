@@ -1,13 +1,13 @@
 //! Integration checks for pocket ic diagnostics behavior.
-use ic_platform_pocket_ic::ClientError;
+use ic_testkit::pocket_ic::ClientError;
 mod support;
 
-use ic_platform_pocket_ic::CanisterSettings;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     CanisterDiagnosticsRequest, CanisterLogRenderLimits, LabeledCanisterDiagnosticsRequest,
     PocketIcDiagnosticsExt, is_dead_pocket_ic_transport_error,
 };
+use ic_testkit::pocket_ic::CanisterSettings;
 
 #[test]
 fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() {

@@ -1,0 +1,41 @@
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -108,6 +108,7 @@
+ pub use error::{ClientError, Operation, RequestContext};
+ pub mod common;
+ pub mod nonblocking;
++pub mod snapshot;
+ 
+ const POCKET_IC_SERVER_NAME: &str = "pocket-ic-server";
+ 
+--- a/src/nonblocking.rs
++++ b/src/nonblocking.rs
+@@ -50,6 +50,8 @@
+ 
+ // wait time between polling requests
+ 
++mod snapshot;
++
+ const LOG_DIR_PATH_ENV_NAME: &str = "POCKET_IC_LOG_DIR";
+ const LOG_DIR_LEVELS_ENV_NAME: &str = "POCKET_IC_LOG_DIR_LEVELS";
+ 
+@@ -1785,8 +1787,19 @@
+         endpoint: &str,
+         body: B,
+     ) -> Result<T, ClientError> {
++        self.request_limited(method, endpoint, body, None).await
++    }
++
++    async fn request_limited<T: DeserializeOwned, B: Serialize>(
++        &self,
++        method: HttpMethod,
++        endpoint: &str,
++        body: B,
++        response_limit: Option<usize>,
++    ) -> Result<T, ClientError> {
+         let url = self.instance_url().join(endpoint).unwrap();
+         let mut exchange = Exchange::new(&url, self.max_request_time_ms);
++        exchange.response_limit = response_limit;
+         loop {
+             let builder = if let Some(operation) = &exchange.context.operation {
+                 self.reqwest_client.get(

@@ -1,12 +1,12 @@
 //! Integration checks for pocket ic calls behavior.
 #![cfg(feature = "wire")]
-use ic_platform_pocket_ic::ClientError;
+use ic_testkit::pocket_ic::ClientError;
 
 mod support;
 
-use ic_platform_pocket_ic::{ErrorCode, RejectCode};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{WireCallError, WireCallSpec, query_wire, update_wire};
+use ic_testkit::pocket_ic::{ErrorCode, RejectCode};
 use ic_wire::Limits;
 
 const PROBE: WireCallSpec = WireCallSpec {

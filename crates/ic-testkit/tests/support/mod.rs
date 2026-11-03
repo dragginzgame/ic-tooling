@@ -11,9 +11,9 @@ pub fn startup_config() -> ic_testkit::pic::PocketIcStartupConfig {
         .expect("prepare POCKET_IC_BIN or configure IC_TESTKIT_POCKET_IC_URL for live tests")
 }
 
-pub fn pocket_ic() -> ic_testkit::pic::PocketIcInstance<ic_platform_pocket_ic::PocketIc> {
+pub fn pocket_ic() -> ic_testkit::pic::PocketIcInstance<ic_testkit::pocket_ic::PocketIc> {
     startup_config()
-        .build_instance(ic_platform_pocket_ic::PocketIcBuilder::new().with_application_subnet())
+        .build_instance(ic_testkit::pocket_ic::PocketIcBuilder::new().with_application_subnet())
         .expect("construct explicitly configured test instance")
 }
 
@@ -29,7 +29,7 @@ pub fn wat_bytes(bytes: &[u8]) -> String {
 
 #[cfg(feature = "held-reply-fixtures")]
 pub fn install_wat(
-    pic: &ic_platform_pocket_ic::PocketIc,
+    pic: &ic_testkit::pocket_ic::PocketIc,
     canister: ic_platform_types::principal::ExternalPrincipal,
     source: &str,
     module_bytes: usize,

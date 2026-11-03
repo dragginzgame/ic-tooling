@@ -18,7 +18,6 @@ use std::{
 };
 
 use crate::fixture_reuse_report::{Phases, Sample, WorkerReport};
-use ic_platform_pocket_ic::{PocketIc, PocketIcBuilder};
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolTimings, BaselinePreparationStage, CachedPocketIcBaseline,
@@ -26,6 +25,7 @@ use ic_testkit::pic::{
     PocketIcInstance, PocketIcStartupConfig, PreparedBaseline, ResetPolicies, ResetReceipt,
     ResetRequirements, SnapshotRestoreFunding, query_wire, update_wire,
 };
+use ic_testkit::pocket_ic::{PocketIc, PocketIcBuilder};
 use ic_testkit_perf_probe::protocol::{INSPECT_STATE, MUTATE_STATE, SEED_STATE, State};
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
@@ -78,7 +78,7 @@ fn recipe_error(error: impl Error + Send + Sync + 'static) -> RecipeError {
 }
 
 fn lifecycle(
-    call: impl FnOnce() -> std::result::Result<(), ic_platform_pocket_ic::ClientError>,
+    call: impl FnOnce() -> std::result::Result<(), ic_testkit::pocket_ic::ClientError>,
 ) -> std::result::Result<(), RecipeError> {
     call().map_err(recipe_error)
 }

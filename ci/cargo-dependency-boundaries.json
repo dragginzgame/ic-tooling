@@ -1,5 +1,5 @@
 [
-  {"dependency": "flate2", "allowed_packages": ["ic-host-artifacts"]},
+  {"dependency": "flate2", "allowed_packages": ["ic-host-artifacts", "ic-testkit"]},
   {"dependency": "serde_yaml", "allowed_packages": []},
   {"dependency": "unsafe-libyaml", "allowed_packages": []},
   {"dependency": "yaml_serde", "allowed_packages": ["ic-host-text"]},
@@ -8,7 +8,7 @@
   {"dependency": "serde_yml", "allowed_packages": []},
   {"dependency": "cap-fs-ext", "allowed_packages": ["ic-host-fs"]},
   {"dependency": "cap-std", "allowed_packages": ["ic-host-fs"]},
-  {"dependency": "tempfile", "allowed_packages": ["ic-host-fs"]},
+  {"dependency": "tempfile", "allowed_packages": ["ic-host-fs", "ic-testkit"]},
   {"dependency": "wasm-encoder", "allowed_packages": ["ic-host-artifacts"]},
   {"dependency": "wasmparser", "allowed_packages": ["ic-host-artifacts"]},
   {"dependency": "wat", "allowed_packages": ["ic-host-artifacts"]},

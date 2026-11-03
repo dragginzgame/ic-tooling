@@ -1688,38 +1688,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-platform-pocket-ic"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb41e1e22f9ab9c953bf5bdde690c21a06308de92908c3d2dd68bee2b2c70dbc"
-dependencies = [
- "backon",
- "base64 0.23.1",
- "candid",
- "flate2",
- "hex",
- "ic-certification",
- "ic-management-canister-types",
- "ic-transport-types",
- "reqwest",
- "schemars",
- "semver",
- "serde",
- "serde_cbor",
- "serde_json",
- "sha2 0.10.9",
- "slog",
- "strum",
- "strum_macros",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "ic-platform-runtime"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1758,20 +1726,39 @@ dependencies = [
 name = "ic-testkit"
 version = "0.83.0"
 dependencies = [
+ "backon",
+ "base64 0.23.1",
+ "candid",
  "clap",
+ "flate2",
+ "hex",
+ "ic-certification",
  "ic-host-artifacts",
  "ic-host-fs",
  "ic-host-process",
+ "ic-management-canister-types",
  "ic-platform",
- "ic-platform-pocket-ic",
  "ic-platform-runtime",
  "ic-platform-types",
+ "ic-transport-types",
  "ic-wire",
  "libc",
+ "reqwest",
+ "schemars",
+ "semver",
  "serde",
+ "serde_cbor",
  "serde_json",
+ "sha2 0.10.9",
+ "slog",
+ "strum",
+ "strum_macros",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1786,7 +1773,6 @@ dependencies = [
  "ic-host-text",
  "ic-host-tools",
  "ic-platform",
- "ic-platform-pocket-ic",
  "ic-platform-types",
  "ic-testkit",
  "ic-testkit-perf-probe",

@@ -83,6 +83,12 @@ For full-CI roster and lint/publication ordering, use
 `bash scripts/ci/test-workspace-validation.sh`; it runs the actual Make routing
 with substituted check/build/publication effects and no Cargo compilation.
 
+Fixture retention checks execute each real initialization/EXIT boundary with
+failure injection and relative, aliased temporary parents after changing cwd.
+They do not execute product fixture bodies. The `tooling` roster explicitly runs
+each Make, release, publication and qualification fixture once during complete CI;
+ordinary development selects the affected entrypoint directly.
+
 Standard `make fmt` and `make fmt-check` report each manifest/Rustfmt pass and
 its elapsed time. An unchanged successful selection can reuse its formatting
 receipt after prepared-tool admission; `FORMAT_RUST_ARGS=--no-cache` runs all
@@ -217,11 +223,10 @@ profiles use only Wire's core codec and do not select its optional metadata brid
 independent Types releases; incompatible Types changes still require explicit
 consumer and schema adoption.
 
-Native Testkit selects the independent `ic-platform-pocket-ic` 0.20 client
-directly, with imports from `ic_platform_pocket_ic`. Its exposed client and
-client-owned DTO identities require callers to align on the client package;
-the separate Platform dependency supplies Candid and management adapters without
-its `pocket-ic` feature. The registry `pocket-ic` package is excluded.
+Native Testkit owns its client in `ic_testkit::pocket_ic`; callers select one
+Testkit version for client/DTO identities and lifecycle helpers. The separate
+Platform dependency supplies general Candid and management adapters. Both
+registry `pocket-ic` and `ic-platform-pocket-ic` are excluded.
 Wasm graphs exclude the native client
 implementation as well. The installed PocketIC server remains pinned to 16.1.0.
 

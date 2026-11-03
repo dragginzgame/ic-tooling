@@ -5,12 +5,11 @@
 //! ```text
 //! cargo run -p ic-testkit --example multi_canister_baseline_pool
 //! ```
-use ic_platform_pocket_ic::ClientError;
+use ic_testkit::pocket_ic::ClientError;
 
 use std::{error::Error, fmt, num::NonZeroUsize, time::Duration};
 
 use ic_platform::principal::ExternalPrincipal as Principal;
-use ic_platform_pocket_ic::PocketIcBuilder;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePreparationStage, CachedPocketIcBaseline,
     CachedPocketIcBaselinePool, CanisterSnapshotTarget, ControllerSnapshotError,
@@ -18,6 +17,7 @@ use ic_testkit::pic::{
     PreparedBaseline, RebuildReason, ResetPolicies, ResetReceipt, ResetRequirements,
     SnapshotRestoreFunding, is_dead_pocket_ic_transport_error,
 };
+use ic_testkit::pocket_ic::PocketIcBuilder;
 
 const EMPTY_WASM: &[u8] = b"\0asm\x01\0\0\0";
 
@@ -30,7 +30,7 @@ struct TopologyMetadata {
 }
 
 fn lifecycle(
-    call: impl FnOnce() -> Result<(), ic_platform_pocket_ic::ClientError>,
+    call: impl FnOnce() -> Result<(), ic_testkit::pocket_ic::ClientError>,
 ) -> Result<(), RecipeError> {
     call().map_err(RecipeError::Lifecycle)
 }

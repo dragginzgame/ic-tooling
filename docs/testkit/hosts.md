@@ -102,13 +102,11 @@ typed Host cause and I/O error classification; incomplete output is never decode
 
 ### Published Platform boundary
 
-Testkit selects `ic-platform-pocket-ic` 0.18 directly for native simulator APIs.
-The separate `ic-platform` 0.18 dependency enables `candid` and
-`management-canister-types`, without `pocket-ic`. The Wasm library instead selects
-`ic-platform-runtime` 0.18 for IC0 marker logging, execution counters and stable-page
-counts, alongside `ic-platform-types` 0.17 for external principal identity. It
-excludes the facade, native client, Candid and executor. Native PocketIC still
-requires transitive Candid; direct client adoption does not remove that code.
+Testkit owns native simulator APIs under `ic_testkit::pocket_ic`. Its separate
+Platform 0.20 dependency supplies general Candid and management adapters.
+The Wasm library selects Runtime 0.19 for IC0 and Types 0.18 for external Principal
+identity; it excludes the facade, native client, Candid and executor. Native
+PocketIC still requires Candid.
 
 The following decoder adoption records describe earlier releases.
 
@@ -140,11 +138,9 @@ runtime reject codes. Testkit's probe already supplies explicit Wire codecs;
 its PocketIC-facing reject codes and DTOs retain the original external identities.
 The signature features are not selected. No local replacement API is needed.
 
-The independent `ic-platform-pocket-ic` package owns the native client and
-client-owned DTOs; callers import `ic_platform_pocket_ic` directly. Testkit retains
-provisioning, server admission, startup/teardown, transport classification and
-fixture policy. Client 0.18 preserves the PocketIC 16.1 protocol; the server
-remains pinned to 16.1.0. The library's Wasm
+Testkit owns the native client and client-owned DTOs in `ic_testkit::pocket_ic`,
+with provisioning, admission and fixture policy in `ic_testkit::pic`. The client
+preserves the PocketIC 16.1 protocol; the server remains pinned to 16.1.0. The library's Wasm
 normal/build graph must exclude the native client implementation, Candid, CDK
 and host transport; the test probe's runtime graph is a separate intentional selection.
 

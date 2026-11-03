@@ -198,10 +198,14 @@ remote provenance verification. The upload guard does not establish CI success
 or native host qualification, and callers must keep source stable throughout
 packaging/publication. See [#7](https://github.com/dragginzgame/ic-tooling/issues/7).
 
-Package metadata uses the standard MIT SPDX identifier. Each selected package's
-`LICENSE` is a regular copy of the canonical root notice, compatible with the formatting
-hook and included in the package archive without redundant `license-file`
-metadata. Both publication commands reject missing, symlinked or differing
+Most packages use the standard MIT SPDX identifier. Testkit uses
+`MIT AND Apache-2.0` for its maintained PocketIC client and includes the imported
+Apache licenses, notices and reconstruction evidence under
+`pocket-ic-provenance/`. Its source guards preserve those original bytes.
+Each selected package's root `LICENSE` remains a regular copy of the canonical
+MIT notice for Tooling-owned code, compatible with the formatting hook and
+included in the package archive without redundant `license-file` metadata.
+Both publication commands reject missing, symlinked or differing
 notices before invoking Cargo. The CI publication fixture preserves real package
 notices, so the complete release gate observes source drift instead of synthesizing
 matching notices. Update every selected package's copy when the root notice changes.

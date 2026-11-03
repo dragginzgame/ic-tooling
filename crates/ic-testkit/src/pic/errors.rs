@@ -1,5 +1,5 @@
-use ic_platform_pocket_ic::ClientError;
-use ic_platform_pocket_ic::PocketIc;
+use crate::pocket_ic::ClientError;
+use crate::pocket_ic::PocketIc;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 use super::PocketIcInstance;
@@ -118,7 +118,7 @@ impl std::fmt::Debug for StandaloneCanisterInstallError {
 
 #[cfg(test)]
 mod tests {
-    use ic_platform_pocket_ic::ClientError;
+    use crate::pocket_ic::ClientError;
     use ic_platform_types::principal::ExternalPrincipal as Principal;
 
     use super::CanisterInstallError;

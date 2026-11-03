@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ic_platform_pocket_ic::PocketIcBuilder;
+use crate::pocket_ic::PocketIcBuilder;
 
 #[cfg(unix)]
 use super::super::PocketIcInstance;

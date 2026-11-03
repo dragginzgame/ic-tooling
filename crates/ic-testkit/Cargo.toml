@@ -4,7 +4,7 @@ name = "ic-testkit"
 edition.workspace = true
 rust-version.workspace = true
 version = "0.83.0"
-license.workspace = true
+license = "MIT AND Apache-2.0"
 authors.workspace = true
 description = "PocketIC-oriented test utilities for IC canister tests"
 readme = "README.md"
@@ -23,35 +23,55 @@ default = []
 cli = ["dep:clap", "clap/derive"]
 reply-fixtures = ["ic-host-artifacts/wasm-encoding"]
 held-reply-fixtures = ["reply-fixtures", "ic-host-artifacts/wasm-text"]
-wire = ["dep:ic-wire", "dep:serde"]
+wire = ["dep:ic-wire"]
 
 [dependencies]
 ic-platform-types = { workspace = true, features = ["principal-external"] }
 thiserror = { workspace = true }
 
-[target.'cfg(all(unix, not(target_arch = "wasm32")))'.dependencies]
+[target.'cfg(all(unix, not(target_family = "wasm")))'.dependencies]
 libc = { workspace = true }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+backon = { workspace = true }
+base64 = { workspace = true }
+candid = { workspace = true, features = ["bignum", "serde_bytes", "printer"] }
 clap = { workspace = true, features = ["string"], optional = true }
+flate2 = { workspace = true }
+hex = { workspace = true, features = ["serde"] }
+ic-certification = { workspace = true }
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
 ic-host-fs = { workspace = true }
 ic-host-process = { workspace = true }
+ic-management-canister-types = { workspace = true }
 # Held fixtures adapt the external management HTTP protocol on native targets only.
 ic-platform = { workspace = true, features = ["candid", "management-canister-types"] }
-ic-platform-pocket-ic = { workspace = true }
+ic-transport-types = { workspace = true }
 ic-wire = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
-tokio = { workspace = true, features = ["time"] }
+reqwest = { workspace = true, features = ["blocking", "http2", "json", "multipart", "rustls", "socks", "stream"] }
+schemars = { workspace = true }
+semver = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_cbor = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+slog = { workspace = true, features = ["max_level_trace", "nested-values", "release_max_level_trace"] }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
+tracing-appender = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 ic-platform-runtime = { workspace = true, features = ["ic0"] }
 
-[target.'cfg(all(unix, not(target_arch = "wasm32")))'.dev-dependencies]
+[target.'cfg(all(unix, not(target_family = "wasm")))'.dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }
 ic-host-process = { workspace = true, features = ["test-support"] }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 clap = { workspace = true, features = ["string"] }
 ic-host-artifacts = { workspace = true, features = ["wasm-validation", "wasm-text"] }
 serde_json = { workspace = true }
@@ -60,6 +80,10 @@ tokio = { workspace = true, features = ["net", "rt"] }
 [[test]]
 name = "server_runner"
 required-features = ["cli"]
+
+[[test]]
+name = "client_installed"
+path = "tests/client_installed/main.rs"
 
 [lints]
 workspace = true
