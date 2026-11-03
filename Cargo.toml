@@ -42,7 +42,7 @@ ic-host-text = { path = "crates/ic-host-text", version = "0.74.1", default-featu
 
 # Host Tools
 # Changelog : releases/tools/CHANGELOG.md
-ic-host-tools = { path = "crates/ic-host-tools", version = "0.79.0", default-features = false }
+ic-host-tools = { path = "crates/ic-host-tools", version = "0.80.0", default-features = false }
 
 # Testkit (Dev and perf probe are private qualification crates)
 # Changelog : releases/testkit/CHANGELOG.md
