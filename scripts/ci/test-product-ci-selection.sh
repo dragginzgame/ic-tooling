@@ -40,6 +40,7 @@ is($classifier->{env}{CHANGE_REF}, q~${{ github.event_name == 'pull_request' && 
 is($workflow->{jobs}{'change-scope'}{steps}[0]{with}{'fetch-depth'}, 0, 'classification has complete comparison history');
 ok(!grep({ exists $_->{uses} } @{$workflow->{jobs}{msrv}{steps}}), "compiler gate performs no duplicate setup or compilation");
 my $full = q|${{ needs.change-scope.outputs.scope == 'full' }}|;
+my $qualification = q|${{ needs.change-scope.outputs.scope == 'full' && github.event_name == 'workflow_dispatch' }}|;
 my $docs = q|${{ needs.change-scope.outputs.scope == 'docs' }}|;
 my @guards;
 my @documentation;
@@ -61,6 +62,8 @@ for my $name (qw(native msrv)) {
             # Checkout and host identity are cheap and run for both profiles.
         } elsif ($label =~ /^Retain .*evidence$/) {
             like($step->{if}, qr/needs\.change-scope\.outputs\.scope == 'full'/, 'failure artifacts require full qualification');
+        } elsif ($label eq 'Qualify focused release contracts' || $label eq 'Retain release-validation comparison') {
+            is($step->{if}, $qualification, 'matched-input comparison runs only for explicit qualification');
         } else {
             is($step->{if}, $full, "$name gates $label on full qualification");
         }
@@ -83,7 +86,7 @@ ok(!exists $workflow->{jobs}{'lint-and-security'}{if}, 'lint and security remain
     my ($focused) = grep { ($_->{name} // '') eq 'Qualify focused release contracts' } @{$workflow->{jobs}{native}{steps}};
     my $checkout = "$fixture/matched inputs";
     make_path("$checkout/bin", "$checkout/ci", "$checkout/scripts/ci");
-    copy("$root/ci/release-validation.json", "$checkout/ci/release-validation.json") or die $!;
+    run('bash', "$root/scripts/ci/prepare-script-fixture.sh", $root, $checkout, 'scripts/ci/validation-roster.sh');
     write_file("$checkout/bin/make", <<'SH');
 #!/usr/bin/env bash
 set -euo pipefail

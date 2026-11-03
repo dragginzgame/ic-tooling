@@ -29,9 +29,27 @@ Account reader or automatic migration is implied.
 | Testkit | 0.83.0 | `4b5f2408b3c1325192c40eade4183ffa1d583aaf` |
 
 Native remains 0.80.0. Build's independent 0.74.2 notes remain pending; this
-adoption released only Tools and Testkit. Shared remains 0.27.27 at
-`651f5f7acb2e3055abd51ba5f835a2112801666a`, with 159 managed files.
+adoption released only Tools and Testkit. The local Shared snapshot is the pending
+0.28.3 source `150c304d70381f15601ea5114a4aea7bfa09bc60`, with 162 managed files.
+[Shared PR #350](https://github.com/dragginzgame/shared-tooling/pull/350) fixes UTF-8
+runner evidence comparison; it is submitted, not merged or released. The approved
+durable contribution checkout is
+`/home/adam/projects/shared-tooling-contributions/validation-evidence-utf8`.
 The [group ledgers](../../CHANGELOG.md) retain earlier delivery history.
+
+The Shared refresh and validation consolidation are prepared on Tooling branch
+`consolidate/release-validation` for PR delivery; package versions are unchanged.
+Snapshot/source integrity, 99 CI
+wiring assertions, Tooling's source-bound plan/shared-proof checks, group
+admission, documentation and workflow/script lint passed on Linux. Make gate
+effects were substituted in the fixture; these are focused adoption checks,
+not full release or native macOS qualification of the refreshed snapshot.
+The selected Testkit adapter fixture also passed prepared-version and committed
+recovery, changed-proof/log refusal and legacy-receipt refusal. Shared's focused
+UTF-8 producer regression passed for Latin-1/non-Latin reasons and Unicode log
+paths, malformed text and changed evidence. Local migration evidence is under
+`target/shared-verifier-adoption.zza5Cz/`; lasting code remains in this checkout
+and the approved durable Shared contribution, not temporary patches.
 
 ## Qualification and custody
 
@@ -72,14 +90,25 @@ a stale Text fixture version. Foundation, Build, Tools, Testkit and uncertain/sh
 changes retain all obligations. Native/Text narrow only from a complete admitted
 three-host baseline. [PR #321](https://github.com/dragginzgame/ic-tooling/pull/321)
 lets explicit qualification finish while routine CI retains newest-revision
-cancellation. #314 closed after complete Linux and native macOS 15 Intel/Apple Silicon proof in
+cancellation. The Shared 0.28.2 adoption keeps full/focused comparisons on explicit
+qualification dispatches; ordinary CI runs its full gate once per native host.
+Hosted baseline admission still requires the actual comparison and retained proof.
+Shared now verifies execution evidence before version-4 receipts are sealed.
+Tooling retains source/group/environment admission and a frozen gate inventory
+for prepared/committed payload recovery, removing duplicate event/timing parsing.
+Historical version-3 receipts keep their original adapter and are not relabelled.
+The #314 roster consolidation uses the same delivery branch: full CI and release
+selection share the admitted policy, with no Make-recipe parser. Focused dispatch
+tests preserve all 35 checks, one lint pass, failure stopping and pipe jobserver
+access. All-six-group plan checks and the 99 workflow assertions pass with
+substituted effects; evidence is under `target/issue-314-roster.nhB3Tc/`.
+#314 closed after complete Linux and native macOS 15 Intel/Apple Silicon proof in
 [CI 41621801740](https://github.com/dragginzgame/ic-tooling/actions/runs/41621801740).
 Its verified source is `18e3eba9`, not this release; checker/artifact evidence remains
 under `/tmp/ic-tooling-314-dispatch.JnxkDE/closure/` and the durable issue release-state copy.
 
 [Platform #134](https://github.com/dragginzgame/ic-platform/issues/134) shipped typed
 failures; [#136](https://github.com/dragginzgame/ic-platform/issues/136) shipped the
-bounded snapshot API in the 0.20 client. The local private arithmetic exception
-remains in AGENTS.md, coordinated through
-[Shared #347](https://github.com/dragginzgame/shared-tooling/issues/347) and
-[Metrics #127](https://github.com/dragginzgame/ic-observability/issues/127).
+bounded snapshot API in the 0.20 client. Shared's benchmark-arithmetic rule now
+covers Testkit's private average projection, so the redundant AGENTS.md exception
+is removed. Metrics/Logging retain instrumentation and recording ownership.

@@ -98,9 +98,10 @@ set -euo pipefail
 printf '%s\n' "$*" >> "$TMPDIR/discovery-events"
 case "$*" in
     *workflows*)
-        event=push branch=main path=.github/workflows/ci.yml repository=dragginzgame/ic-tooling
+        event=workflow_dispatch branch=main path=.github/workflows/ci.yml repository=dragginzgame/ic-tooling
         case ${BASELINE_TEST_MODE:?} in
             dispatch) event=workflow_dispatch ;;
+            push) event=push ;;
             pr) event=pull_request ;;
             dispatch-branch) event=workflow_dispatch branch=topic ;;
             dispatch-workflow) event=workflow_dispatch path=.github/workflows/other.yml ;;
@@ -132,7 +133,7 @@ git remote set-url origin https://github.com/dragginzgame/ic-tooling.git
 BASELINE_TEST_MODE=valid bash scripts/release/validation-baseline.sh "$baseline" "$fixture/offline.json"
 [[ ! -s "$fixture/discovery-events" ]]
 jq -e '. == null' "$fixture/offline.json" >/dev/null
-for mode in valid dispatch pr dispatch-branch dispatch-workflow dispatch-repository \
+for mode in valid dispatch push pr dispatch-branch dispatch-workflow dispatch-repository \
     docs partial truncated source compiler unqualified unretained malformed failed; do
     CARGO_NET_OFFLINE=false BASELINE_TEST_MODE="$mode" bash scripts/release/validation-baseline.sh \
         "$baseline" "$fixture/discovery-$mode.json"
@@ -151,6 +152,8 @@ jq -e '.selection == "focused"' "$directory/context.json" >/dev/null
 : > "$VALIDATION_TEST_EVENTS"
 VALIDATION_TEST_FAIL=testkit-installed-check bash scripts/release/validation.sh run "$pointer" > "$fixture/native.run.log" 2>&1
 bash scripts/release/validation.sh receipt "$pointer" > "$fixture/native.receipt"
+jq -e --arg source "$RELEASE_SOURCE" '.kind == "group-validation-evidence" and
+    .source == $source and .group == "native"' "$directory/shared-proof.json" >/dev/null
 absent grep -E 'testkit-|^tools-check$|^clippy-workspace$|^tooling-command-check$' "$VALIDATION_TEST_EVENTS"
 grep -Fx release-scope-archives "$VALIDATION_TEST_EVENTS" >/dev/null
 # Every omitted target still has explicit not-applicable evidence.
@@ -158,9 +161,13 @@ run_directory=$(echo "$directory"/logs/validation.*)
 grep $'^release-stage-testkit-installed-check\tnot-applicable\t' "$run_directory/plan-events.tsv" >/dev/null
 cp "$run_directory/0.log" "$fixture/original.log"
 printf 'tampered\n' >> "$run_directory/0.log"
-bash scripts/release/validation.sh receipt "$pointer" > "$fixture/tampered.receipt"
-absent cmp -s "$fixture/native.receipt" "$fixture/tampered.receipt"
+refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/tampered.receipt" 2>&1
 cp "$fixture/original.log" "$run_directory/0.log"
+cp "$directory/shared-proof.json" "$fixture/native.shared-proof"
+jq -cS '.source = "0000000000000000000000000000000000000000"' \
+    "$fixture/native.shared-proof" > "$directory/shared-proof.json"
+refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/wrong-proof.log" 2>&1
+mv "$fixture/native.shared-proof" "$directory/shared-proof.json"
 # Missing/failed/blocked execution cannot produce a successful receipt.
 cp "$run_directory/timings.tsv" "$fixture/timings"
 : > "$run_directory/timings.tsv"
@@ -169,6 +176,7 @@ cp "$fixture/timings" "$run_directory/timings.tsv"
 make_plan native-failure
 : > "$VALIDATION_TEST_EVENTS"
 refuse env VALIDATION_TEST_FAIL=release-scope-lint bash scripts/release/validation.sh run "$pointer" > "$fixture/failure.log" 2>&1
+[[ ! -e "$directory/shared-proof.json" ]]
 absent grep -Fx release-scope-tests "$VALIDATION_TEST_EVENTS"
 refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/failure-receipt.log" 2>&1
 make_plan native-drift
@@ -191,16 +199,11 @@ printf '\n# shared input\n' >> Makefile
 git add Makefile
 git commit -qm shared
 RELEASE_SOURCE=$(git rev-parse HEAD)
-# Independently observe actual Make dispatch; coverage annotations own no roster.
-awk '
-    /^_ci-preflight:/ { selected=1; next }
-    /^_ci-checks:/ { selected=1; print "clippy-workspace"; next }
-    selected && /^\t\+\$\(MAKE\) --no-print-directory / {
-        for (i=3; i<=NF; i++) print $i
-        next
-    }
-    /^[^[:space:]#]/ { selected=0 }
-' Makefile > "$fixture/expected"
+# Observe the real CI dispatcher with substituted Make effects, rather than
+# parsing recipes or treating coverage annotations as a dispatch roster.
+: > "$fixture/expected"
+VALIDATION_TEST_EVENTS="$fixture/expected" bash scripts/ci/workspace-validation.sh ci \
+    > "$fixture/full-ci.log" 2>&1
 for RELEASE_GROUP in foundation build text tools testkit native; do
     make_plan "full-$RELEASE_GROUP"
     jq -e '.selection == "full"' "$directory/context.json" >/dev/null
@@ -209,17 +212,17 @@ for RELEASE_GROUP in foundation build text tools testkit native; do
 done
 : > "$VALIDATION_TEST_EVENTS"
 refuse env VALIDATION_TEST_FAIL=testkit-installed-check bash scripts/release/validation.sh run "$pointer" > "$fixture/full-failure.log" 2>&1
-# A new required full-gate stage cannot disappear behind an older mapping.
-# shellcheck disable=SC2016 # Match literal Make syntax.
-sed 's/\$(MAKE) --no-print-directory fmt-check/$(MAKE) --no-print-directory new-obligation/' Makefile > "$fixture/new-stage"
-cp "$fixture/new-stage" Makefile
+# New/omitted obligations refuse until their product coverage is explicit.
+jq -cS '.stages += ["release-stage-new-obligation"]' ci/release-validation.json > "$fixture/new-stage"
+cp "$fixture/new-stage" ci/release-validation.json
 refuse perl scripts/release/select-validation.pl "$RELEASE_SOURCE" native \
     "$fixture/baseline.json" "$fixture/never-plan" "$fixture/never-context" > "$fixture/roster.log" 2>&1
-git restore -- Makefile
-printf '\n_ci-checks: new-obligation\n' >> Makefile
+git restore -- ci/release-validation.json
+jq '.exclusions[0].targets = []' ci/release-validation-coverage.json > "$fixture/missing-coverage"
+cp "$fixture/missing-coverage" ci/release-validation-coverage.json
 refuse perl scripts/release/select-validation.pl "$RELEASE_SOURCE" native \
-    "$fixture/baseline.json" "$fixture/never-plan" "$fixture/never-context" > "$fixture/prerequisite.log" 2>&1
-git restore -- Makefile
+    "$fixture/baseline.json" "$fixture/never-plan" "$fixture/never-context" > "$fixture/missing-coverage.log" 2>&1
+git restore -- ci/release-validation-coverage.json
 # Unknown groups, absent full evidence and compiler/config overrides fail closed.
 refuse env RELEASE_GROUP=unknown bash scripts/release/validation.sh run "$pointer" > "$fixture/unknown.log" 2>&1
 # Use the original baseline plus a Text-only commit to check its reverse consumers.

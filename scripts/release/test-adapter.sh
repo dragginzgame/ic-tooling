@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+groups=(foundation build text tools testkit native)
+if [[ $# != 0 ]]; then
+    [[ $# == 2 && $1 == --group ]] || { echo 'usage: test-adapter.sh [--group GROUP]' >&2; exit 2; }
+    case $2 in foundation|build|text|tools|testkit|native) groups=("$2") ;; *) exit 2 ;; esac
+fi
+
 # Real consumer policy, Cargo metadata, Git, rendering and receipts. Tool setup
 # and the complete CI gate are substituted; no release or delivery runs.
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES RELEASE_COMMIT RELEASE_GROUP
@@ -95,7 +101,7 @@ invoke() { bash "$adapter" "$@"; }
 refuse() {
     if "$@"; then echo 'Unexpected release adapter admission' >&2; exit 1; fi
 }
-for selected_group in foundation build text tools testkit native; do
+for selected_group in "${groups[@]}"; do
     checkout="$fixture/$selected_group checkout"
     mkdir "$checkout"
     bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$root" "$checkout"
@@ -150,6 +156,21 @@ for selected_group in foundation build text tools testkit native; do
     [[ ! -e "$state" ]]
     invoke verify > "$fixture/$selected_group.verify.log" 2>&1
     grep 'release-stage-clippy-workspace' "$ADAPTER_EVENTS" > /dev/null
+    gate_pointer="$state.gate"
+    gate_directory=$(jq -er .directory "$gate_pointer")
+    shared_proof="$gate_directory/shared-proof.json"
+    jq -e --arg source "$RELEASE_SOURCE" --arg group "$selected_group" \
+        '.kind == "group-validation-evidence" and .source == $source and .group == $group' "$shared_proof" >/dev/null
+    # A frozen receipt cannot admit a changed Shared proof or its retained log.
+    cp "$shared_proof" "$fixture/$selected_group.shared-proof"
+    printf '\n' >> "$shared_proof"
+    refuse invoke prepare > "$fixture/$selected_group.changed-proof.log" 2>&1
+    cp "$fixture/$selected_group.shared-proof" "$shared_proof"
+    execution_log=$(jq -er '.run + "/0.log"' "$shared_proof")
+    cp "$execution_log" "$fixture/$selected_group.execution-log"
+    printf 'changed retained execution\n' >> "$execution_log"
+    refuse invoke prepare > "$fixture/$selected_group.changed-log.log" 2>&1
+    cp "$fixture/$selected_group.execution-log" "$execution_log"
     # Valid-looking output from a failed Git observation grants no custody.
     ADAPTER_GIT_CONTROL='head' refuse invoke prepare > "$fixture/$selected_group.failed-head.log" 2>&1
     ADAPTER_GIT_CONTROL='diff' refuse invoke verify > "$fixture/$selected_group.failed-diff.log" 2>&1
@@ -164,6 +185,16 @@ for selected_group in foundation build text tools testkit native; do
     git diff --exit-code -- > /dev/null
     invoke prepare > "$fixture/$selected_group.prepare.log" 2>&1
     invoke check > "$fixture/$selected_group.check.log" 2>&1
+    # Prepared versions differ from the original input checkpoint. Recovery
+    # admits the already sealed inventory and exact payload, never a new proof.
+    refuse bash "$tooling/scripts/release/validation.sh" receipt "$gate_pointer" \
+        > "$fixture/$selected_group.prepared-live-proof.log" 2>&1
+    cp "$state" "$fixture/$selected_group.receipt"
+    sed '1s/tooling-release-validation-4/tooling-release-validation-3/' \
+        "$fixture/$selected_group.receipt" > "$state"
+    refuse invoke check > "$fixture/$selected_group.old-receipt.log" 2>&1
+    cp "$fixture/$selected_group.receipt" "$state"
+    invoke check > "$fixture/$selected_group.recovered.log" 2>&1
     sed "/^## \\[$RELEASE_VERSION\\]/d" "$ledger" > "$fixture/$selected_group.prepared-body"
     git show "$RELEASE_SOURCE:$ledger" | sed "/^## \\[$RELEASE_VERSION\\]/d" > "$fixture/$selected_group.source-body"
     cmp "$fixture/$selected_group.source-body" "$fixture/$selected_group.prepared-body"
@@ -226,4 +257,4 @@ for selected_group in foundation build text tools testkit native; do
     unset RELEASE_COMMIT
 done
 fixture_complete=true
-echo 'Release adapter checks passed (all six groups; setup and full qualification substituted).'
+echo "Release adapter checks passed (${groups[*]}; setup and full qualification substituted)."

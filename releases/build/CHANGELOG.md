@@ -15,11 +15,22 @@ reset, release, tag or upload is implied by establishing this group.
 - Let explicit CI qualification dispatches finish independently of newer routine
   pushes, preserving normal newest-revision cancellation and all native checks.
   Accept a fully qualified main-branch dispatch as a release-plan baseline, with
-  the same source, host, step and recovery requirements. This prevents #314's
-  matched-input comparison from being repeatedly cancelled during delivery.
+  the same source, host, step and recovery requirements. This prevents the
+  matched-input comparison from being repeatedly cancelled during delivery
+  ([#314 — Qualify group-scoped release validation](https://github.com/dragginzgame/ic-tooling/issues/314)).
 
 ### 🧹 Cleanup
 
+- Adopt Shared Tooling's pending 0.28.3 snapshot with its shared validation-plan
+  parser, evidence interfaces and fail-closed tree inventory, including the UTF-8
+  fix in [Shared PR #350 — Fix UTF-8 runner evidence verification](https://github.com/dragginzgame/shared-tooling/pull/350).
+  Run full-versus-focused comparisons
+  only for explicit qualification; routine CI retains the complete native gate
+  without repeating both focused contracts on every push.
+- Replace local execution-event and timing parsing with Shared's canonical
+  validation proof. Seal live evidence before version preparation; recovery
+  retains the same frozen proof, complete artifact inventory and exact payload
+  checks. Version-4 receipts refuse older formats rather than reinterpreting them.
 - Share standalone/batch input hashing and artifact verification decisions while
   preserving fingerprints, mutation observation points, lock order and failure
   attribution. Carry each configured shared target through its maintenance
@@ -27,9 +38,12 @@ reset, release, tag or upload is implied by establishing this group.
 - Bind release verification to exhaustive group plans and retained stage evidence.
   Native/Text-only releases can narrow from a complete three-host baseline;
   shared changes and the four wider groups retain the full gate.
-  [#314](https://github.com/dragginzgame/ic-tooling/issues/314).
+  [#314 — Qualify group-scoped release validation](https://github.com/dragginzgame/ic-tooling/issues/314).
 - Keep release-stage inventory and three-host baseline admission with one owner
-  each, retaining independent Make dispatch checks and saved-evidence revalidation.
+  each. Full CI and release selection now use the same admitted policy instead
+  of duplicated Make lists and recipe parsing, preserving all 35 checks, one lint
+  pass and failure stopping before later publication/checks. Missing or unmapped
+  stage coverage refuses; saved-evidence revalidation remains required.
 - Compare full and focused qualification on the same native CI inputs, retaining
   stage timing and installed-archive evidence. Narrow release admission requires
   that proof on Linux and both macOS hosts.

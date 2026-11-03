@@ -44,51 +44,19 @@ my $coverage = $json->decode(read_file('ci/release-validation-coverage.json'));
 my $groups = $json->decode(read_file('ci/cargo-release-groups.json'));
 $policy->{schema} == 1 && $coverage->{schema} == 1 or die "unknown selection schema\n";
 my @groups = sort map { $_->{name} } @{$groups->{groups}};
-join(',', sort @{$policy->{groups}}) eq join(',', @groups) or die "release group roster changed\n";
 grep($_ eq $group, @groups) or die "unknown release group\n";
 join(',', sort(@{$coverage->{focused}}, keys %{$coverage->{fallback}})) eq join(',', @groups)
     or die "incomplete group coverage\n";
 my %owned = map { $_ => 1 } map { @{$_->{members}} } @{$groups->{groups}};
-my @focus = map { "release-scope-$_" } qw(tools-check lint graphs tests docs archives);
+my @focus = grep { length } split /\n/, command('bash', 'scripts/ci/validation-roster.sh', 'focused');
 my %focus = map { $_ => 1 } @focus;
-my (%stage, @full, @focused);
-for my $target (@{$policy->{stages}}) {
-    $target =~ /\Arelease-stage-([a-z0-9-]+)\z/ && !$stage{$1}++
-        or die "invalid or duplicate plan stage\n";
-    if ($focus{$1}) { push @focused, $1; }
-    else { push @full, $1; }
-}
-join(',', @focused) eq join(',', @focus) or die "incomplete or reordered focused gate\n";
+my @full = grep { length } split /\n/, command('bash', 'scripts/ci/validation-roster.sh', 'full');
 my %full = map { $_ => 1 } @full;
 my %common = map { $_ => 1 } @{$coverage->{common}};
-!grep(!$full{$_}, keys %common) or die "unknown common stage\n";
-my %exclusions;
-for my $contract (@{$coverage->{exclusions}}) {
-    length($contract->{reason}) or die "missing exclusion contract\n";
-    for my $target (@{$contract->{targets}}) {
-        $full{$target} && !$common{$target} && !exists($exclusions{$target}) or die "unknown or duplicate exclusion contract\n";
-        $exclusions{$target} = $contract->{reason};
-    }
-}
-keys(%exclusions) == keys(%full) - keys(%common) or die "incomplete exclusion contracts\n";
-# Keep every existing CI obligation. New/unmapped Make dispatch refuses selection.
-sub make_targets {
-    my ($name) = @_;
-    my $text = read_file('Makefile');
-    my @declarations = $text =~ /^(\Q$name\E[ \t]*:[^\n]*)$/mg;
-    @declarations == 1 && $declarations[0] eq "$name:" or die "unmapped Make gate prerequisites or duplicate rule in $name\n";
-    $text =~ /^\Q$name\E:\n((?:\t[^\n]*\n|\n|#[^\n]*\n)*)/m or die "missing Make gate $name\n";
-    my @targets;
-    for my $line (split /\n/, $1) {
-        next if $line eq '' || $line =~ /^#|^\t#/;
-        $line =~ /^\t\+\$\(MAKE\) --no-print-directory ([a-z0-9_ -]+)$/ or die "unmapped Make gate recipe in $name\n";
-        push @targets, split / /, $1;
-    }
-    return @targets;
-}
-my @make_full = (make_targets('_ci-preflight'), 'clippy-workspace', make_targets('_ci-checks'));
-join(',', @full) eq join(',', @make_full) or die "full CI roster changed; qualify the group mapping\n";
-join(',', make_targets('ci')) eq '_ci-preflight,clippy-workspace,_ci-checks' or die "full CI entrypoint changed\n";
+my %exclusions = map {
+    my $contract = $_;
+    map { $_ => $contract->{reason} } @{$contract->{targets}}
+} @{$coverage->{exclusions}};
 my $baseline = $json->decode(read_file($baseline_path));
 my $narrow = 0;
 my $reason = $coverage->{fallback}{$group} // 'No admitted full native CI baseline is available.';
@@ -195,7 +163,10 @@ my @inputs = ('Makefile','Cargo.toml','Cargo.lock','rust-toolchain.toml','.share
     'ci/release-editor.env','ci/cargo-release-groups.json','ci/release-validation-coverage.json','ci/release-validation-baseline.jq',
     'make/release-validation-local.mk','make/testkit.mk','scripts/release/select-validation.pl',
     'scripts/release/validation-stage.sh','scripts/release/validation-focus.sh','scripts/release/validation-baseline.sh',
-    'scripts/release/validation.sh','scripts/ci/check-release-source.sh',$context_path,$baseline_path);
+    'scripts/release/validation.sh','scripts/release/validation-proof.pl',
+    'scripts/ci/validation-roster.sh','scripts/ci/workspace-validation.sh',
+    'scripts/ci/validation-evidence.pl','scripts/ci/ValidationPlan.pm',
+    'scripts/ci/check-release-source.sh',$context_path,$baseline_path);
 push @inputs, map { $_->{changelog} } @{$groups->{groups}};
 my %environment = map { $_ => sha256_hex($ENV{$_}) } grep {
     /\A(?:CARGO(?:_|$)|RUST|CC(?:_|$)|CXX(?:_|$)|AR(?:_|$)|LD(?:_|$)|TARGET_|HOST_|MACOSX_DEPLOYMENT_TARGET$|SDKROOT$|SOURCE_DATE_EPOCH$|PATH$|HOME$|TMPDIR$)/ &&

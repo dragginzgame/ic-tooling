@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/release/select-validation.pl scripts/release/validation-baseline.sh scripts/release/validation-proof.pl scripts/release/validation-stage.sh scripts/release/validation-focus.sh ci/release-validation.json ci/release-validation-coverage.json make/release-validation-local.mk scripts/ci/run-validation-targets.sh
+# Shared companions: scripts/release/select-validation.pl scripts/release/validation-baseline.sh scripts/release/validation-proof.pl scripts/release/validation-stage.sh scripts/release/validation-focus.sh ci/release-validation.json ci/release-validation-coverage.json make/release-validation-local.mk scripts/ci/run-validation-targets.sh scripts/ci/release-receipts.sh scripts/ci/validation-roster.sh scripts/ci/workspace-validation.sh
 set -euo pipefail
-[[ $# == 2 || ( $# == 3 && $1 == fork ) ]] || { echo 'usage: validation.sh plan|run|receipt POINTER' >&2; exit 2; }
+[[ $# == 2 || ( $# == 3 && $1 == fork ) ]] || { echo 'usage: validation.sh plan|fork|run|receipt|retained-receipt POINTER' >&2; exit 2; }
 operation=$1 pointer=$2
 root="${BASH_SOURCE[0]}"
 [[ $root == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
 source_sha=${RELEASE_SOURCE:?} group=${RELEASE_GROUP:?}
+# shellcheck source=scripts/ci/release-receipts.sh
+source "$root/scripts/ci/release-receipts.sh"
 gate_directory() {
     local state
     state=$(git rev-parse --git-path release-state)
@@ -54,15 +56,19 @@ case $operation in
             "$directory/baseline.json" "$directory/plan.json" "$directory/context.json" --check
         CARGO_NET_OFFLINE=true VALIDATION_REPOSITORY_ROOT="$PWD" VALIDATION_LOG_DIR="$directory/logs" \
             bash "$root/scripts/ci/run-validation-targets.sh" --plan "$directory/plan.json"
+        release_receipt_write "$directory/shared-proof.json" \
+            perl "$root/scripts/release/validation-proof.pl" verify "$source_sha" "$group" "$pointer"
         ;;
-    receipt)
-        perl "$root/scripts/release/validation-proof.pl" "$source_sha" "$group" "$pointer" > /dev/null
+    receipt|retained-receipt)
+        if [[ "$operation" == receipt ]]; then
+            perl "$root/scripts/release/validation-proof.pl" check "$source_sha" "$group" "$pointer" > /dev/null
+        fi
         directory=$(jq -er .directory "$pointer")
         perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
             "$directory/baseline.json" "$directory/plan.json" "$directory/context.json" --check > /dev/null
         [[ $(rustc -vV) == "$(cat "$directory/rustc.txt")" && $(cargo -V) == "$(cat "$directory/cargo.txt")" &&
             $(uname -srm) == "$(cat "$directory/host.txt")" ]] || { echo 'gate host/compiler context changed' >&2; exit 1; }
-        perl "$root/scripts/release/validation-proof.pl" "$source_sha" "$group" "$pointer"
+        perl "$root/scripts/release/validation-proof.pl" receipt "$source_sha" "$group" "$pointer"
         ;;
     *) exit 2 ;;
 esac
