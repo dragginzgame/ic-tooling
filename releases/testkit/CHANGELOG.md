@@ -6,6 +6,15 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.84.1]
+
+### 🧹 Maintenance
+
+- Adopt Platform 0.21's external-protocol adapters after its PocketIC client
+  retirement. Testkit retains the maintained client, public error/DTO identities,
+  management SDK 0.11, Types 0.18, Runtime 0.19 and server 16.1.0. Consumer imports
+  and native/Wasm feature boundaries are unchanged.
+
 ## [0.84.0] - 2026-11-03
 
 ### ⚠️ Breaking

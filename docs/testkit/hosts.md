@@ -103,7 +103,7 @@ typed Host cause and I/O error classification; incomplete output is never decode
 ### Published Platform boundary
 
 Testkit owns native simulator APIs under `ic_testkit::pocket_ic`. Its separate
-Platform 0.20 dependency supplies general Candid and management adapters.
+Platform 0.21 dependency supplies general Candid and management adapters.
 The Wasm library selects Runtime 0.19 for IC0 and Types 0.18 for external Principal
 identity; it excludes the facade, native client, Candid and executor. Native
 PocketIC still requires Candid.

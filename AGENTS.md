@@ -42,7 +42,7 @@ changes to hash, key or signature algorithms. Keep all client dependencies nativ
 ### Management DTO identity
 
 The transferred PocketIC 16.1 client retains the donor's exact
-`ic-management-canister-types = "=0.11.0"` selection. Platform 0.20 exposes the same
+`ic-management-canister-types = "=0.11.0"` selection. Platform 0.21 exposes the same
 management DTO identity, including snapshot metadata and status/settings fields.
 Keep this pin until an intentional joint adapter upgrade qualifies client/facade
 type identity and the installed management/snapshot contract. Run the focused
