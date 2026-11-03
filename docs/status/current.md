@@ -1,5 +1,23 @@
 # Current handoff — 2026-11-03
 
+## Platform 0.20 adoption — local
+
+The working tree selects published Platform and independent PocketIC client
+0.20.0. Runtime remains 0.19.0, canonical Types 0.18.0 and Wire 0.16.0;
+the installed PocketIC server remains 16.1.0. Only the two requested package
+records changed relative to the incoming lockfile; unrelated selections remain.
+Tools 0.80.0 and Testkit 0.83.0 have pending minor notes for exposed dependency
+identities and the additional client-error variant. Package versions are unchanged.
+
+Platform's bounded snapshot API is available, but this adoption preserves the
+existing Testkit metadata/data transfer behavior and caller-selected limits.
+Focused adoption evidence and incoming backups are retained under
+`/tmp/ic-tooling-platform020-adoption.jRLpyl/`. Native/Wasm graphs, affected-package
+all-target Clippy, Tools' Wasm adapter Clippy, declaration policy and 20 certificate,
+public-contract and live PocketIC snapshot/timer/call tests passed on Linux.
+Native macOS qualification and release/publication of these local changes have
+not been performed.
+
 ## Wire delivery
 
 [PR #319](https://github.com/dragginzgame/ic-tooling/pull/319) merged Wire/Core
@@ -14,7 +32,7 @@ boundaries without selecting Wire's optional Platform schema adapter. The
 checksum-verified Core archive changes only that adapter's Rust source from
 0.15.1; derive's Rust source is unchanged. Account byte/contract migration remains
 with Account consumers; this is not an old-Account reader or automatic migration.
-Platform, PocketIC and Runtime remain 0.19, with canonical Types 0.18.
+That delivery selected Platform, PocketIC and Runtime 0.19 with Types 0.18.
 
 The complete 35-obligation local Linux release gate passed on the scoped locked
 source, including installed archives and live PocketIC/Wasm consumers. Git
@@ -102,8 +120,8 @@ ancestor evidence. See the [qualification procedure](../design/release-validatio
 
 [Platform #134](https://github.com/dragginzgame/ic-platform/issues/134) shipped
 typed failures and is closed. [#136](https://github.com/dragginzgame/ic-platform/issues/136)
-tracks bounded snapshot transfer; this deployment retains the metadata/data
-transfer implementation required by the selected 0.19 client. The
+shipped bounded snapshot transfer in the 0.20 client; Testkit's existing helpers
+still use their metadata/data transfer implementation. The
 private arithmetic exception remains in AGENTS.md, coordinated through
 [Shared #347](https://github.com/dragginzgame/shared-tooling/issues/347) and
 [Metrics #127](https://github.com/dragginzgame/ic-observability/issues/127).

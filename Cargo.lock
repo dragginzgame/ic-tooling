@@ -1656,9 +1656,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c09ed6a8bafe4ba7f13b4ba12091839e85095766fad7b7dcd1640e81b53b346"
+checksum = "a06a85185aca3ced2084507e0431def65be9beb7beeb3dd4adf2ddb18d561819"
 dependencies = [
  "candid",
  "candid_parser",
@@ -1689,9 +1689,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-pocket-ic"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "929bfd49f776299d7c48e690543b06af02a76cce305360e828bf8d4346abf7b7"
+checksum = "eb41e1e22f9ab9c953bf5bdde690c21a06308de92908c3d2dd68bee2b2c70dbc"
 dependencies = [
  "backon",
  "base64 0.23.1",
