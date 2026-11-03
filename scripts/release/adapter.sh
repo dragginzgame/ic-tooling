@@ -66,9 +66,9 @@ admit_files() {
         fail 'commit refused source paths before releasing'
 }
 receipt_header() {
-    printf '%s\n' tooling-release-validation-3 "$RELEASE_KIND" || return
+    printf '%s\n' tooling-release-validation-4 "$RELEASE_KIND" || return
     release_receipt_identity || return
-    bash "$tooling_root/scripts/release/validation.sh" receipt "$gate"
+    bash "$tooling_root/scripts/release/validation.sh" "${1:-retained-receipt}" "$gate"
 }
 check_receipt() {
     [[ -f "$notes" && ! -L "$notes" ]] || fail 'source-bound validation notes are missing'
@@ -155,7 +155,9 @@ case "$operation" in
             admit_files
             cmp "$scratch/notes" "$changelog"
             release_receipt_write "$notes" cat "$scratch/notes"
-            release_receipt_write "$receipt" receipt_header
+            # Seal only evidence freshly re-admitted by Shared. Later payload
+            # checks compare its frozen inventory after version preparation.
+            release_receipt_write "$receipt" receipt_header receipt
         fi
         ;;
     prepare)

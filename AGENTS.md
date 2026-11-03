@@ -24,10 +24,5 @@ records the exact adopted files and revision.
   plain Cargo cleanup retains its whole-workspace target semantics.
 - Linux x86-64 and macOS 15 on Intel and Apple Silicon are required hosts.
   Report native macOS qualification separately from Linux evidence.
-- The maintainer approved keeping Testkit's private benchmark-average arithmetic
-  local, without an ic-metrics dependency. Actual instrumentation and recording
-  retain canonical ownership. Coordinate broader arithmetic policy through
-  [Shared #347](https://github.com/dragginzgame/shared-tooling/issues/347) and
-  [Metrics #127](https://github.com/dragginzgame/ic-observability/issues/127).
 - Follow shared changelog rules. GitHub issues are the sole follow-up tracker;
   source provenance, design and handoff documents are evidence, not issue queues.

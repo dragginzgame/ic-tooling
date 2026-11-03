@@ -93,5 +93,13 @@
       ],
       "reason": "Wasm inspection does not depend on Native or Text; its source, graph and public identities are unchanged."
     }
+  ],
+  "focused_stages": [
+    "release-scope-tools-check",
+    "release-scope-lint",
+    "release-scope-graphs",
+    "release-scope-tests",
+    "release-scope-docs",
+    "release-scope-archives"
   ]
 }

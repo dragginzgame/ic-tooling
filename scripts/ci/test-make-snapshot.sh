@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/ci/test-workspace-validation.sh
 set -euo pipefail
 
 # Qualify Host's checkout-local routing using its actual Makefile and snapshot.
@@ -355,41 +356,8 @@ for target in "${cargo_targets[@]}" "${helper_targets[@]}"; do
         > "$fixture/jobserver-$target.log" 2>&1
     [[ -s "$HOST_MAKE_EVENTS" ]] || exit 1
 done
-# Exercise CI's real sequential recipes under parallel Make. A lint refusal
-# stops before formatting/tests; a passing lint reaches the next stage exactly once.
-cat > "$fixture/local/scripts/ci/check-no-symlinks.pl" <<'STUB'
-exec 'cargo', 'fixture-no-symlinks';
-STUB
-for ci_target in ci ci-publication; do
-for lint_status in 23 0; do
-    : > "$HOST_MAKE_EVENTS"
-    status=0
-    PATH="$fixture/local:$PATH" RUNNER_TEMP="$fixture" \
-        HOST_MAKE_CLIPPY_STATUS="$lint_status" HOST_MAKE_FAIL=sort HOST_MAKE_PUBLICATION_LINT=1 \
-        make "${jobserver_options[@]}" "MAKE=$(command -v make)" "$ci_target" \
-        > "$fixture/$ci_target-lint-$lint_status.log" 2>&1 || status=$?
-    [[ "$status" == 2 ]] || exit 1
-    grep -Fx 'clippy --workspace --all-targets --all-features --locked --offline -- -D warnings' \
-        "$HOST_MAKE_EVENTS" > "$fixture/clippy-events"
-    [[ "$(wc -l < "$fixture/clippy-events")" -eq 1 ]] || exit 1
-    if [[ "$lint_status" == 23 ]]; then
-        [[ "$(tail -n 1 "$HOST_MAKE_EVENTS")" == clippy\ --workspace\ * ]] || exit 1
-        if grep -E '^(sort |fmt )' "$HOST_MAKE_EVENTS"; then exit 1; fi
-    else
-        [[ "$(tail -n 1 "$HOST_MAKE_EVENTS")" == 'sort --workspace --grouped --check' ]] || exit 1
-        if [[ "$ci_target" == ci-publication ]]; then
-            [[ "$(grep -Fxc check "$HOST_MAKE_EVENTS")" -eq 1 ]] || exit 1
-        fi
-    fi
-done
-done
-: > "$HOST_MAKE_EVENTS"
-status=0
-PATH="$fixture/local:$PATH" RUNNER_TEMP="$fixture" HOST_MAKE_PUBLICATION_LINT=1 \
-    HOST_MAKE_PUBLICATION_STATUS=17 make "${jobserver_options[@]}" "MAKE=$(command -v make)" ci-publication \
-    > "$fixture/ci-publication-refusal.log" 2>&1 || status=$?
-[[ "$status" == 2 && "$(tail -n 1 "$HOST_MAKE_EVENTS")" == check ]] || exit 1
-if grep -E '^(sort |fmt )' "$HOST_MAKE_EVENTS"; then exit 1; fi
+# The focused fixture owns actual CI dispatch, lint/publication order and jobserver checks.
+bash "$root/scripts/ci/test-workspace-validation.sh"
 # One pinned compiler covers native, isolated-feature and Wasm obligations.
 : > "$HOST_MAKE_EVENTS"
 PATH="$fixture/local:$PATH" make --no-print-directory compiler-check > "$fixture/compiler-check.log" 2>&1
@@ -406,10 +374,6 @@ test -p ic-host-tools --no-default-features --features ledger-evidence --all-tar
 test -p ic-host-text --no-default-features --features yaml --lib --locked --offline yaml::
 EVENTS
 cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
-# Native CI must actually call the unsupported-FS obligation after consolidation.
-awk '/^_ci-checks:/ { selected=1; next } selected && /^[^[:space:]#]/ { exit } selected { print }' Makefile > "$fixture/native-checks"
-grep -F 'check-fs-non-unix' "$fixture/native-checks" > /dev/null
-
 # Actual Host formatting stops after sorter failure and points at complete logs.
 for target in fmt fmt-check; do
     : > "$HOST_MAKE_EVENTS"

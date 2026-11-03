@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml make/release-validation-local.mk
+# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml make/release-validation-local.mk scripts/ci/workspace-validation.sh
 PACKAGE ?= ic-host-artifacts
 RELEASE_DELIVERY ?= direct
 export RELEASE_GROUP
@@ -145,52 +145,10 @@ publish-check:
 	+bash scripts/publish/workspace.sh check $(if $(filter command line,$(origin PACKAGE)),--packages "$$IC_TOOLING_PUBLISH_SELECTION")
 publish-command-check:
 	+bash scripts/publish/test-workspace.sh
-.PHONY: ci-publication _ci-preflight _ci-checks
-# Native CI reuses publication's admission/lint gate. Standalone ci retains its
-# own lint gate; no skip flag or cached receipt can bypass either entrypoint.
-ci:
-	+$(MAKE) --no-print-directory _ci-preflight
-	+$(MAKE) --no-print-directory clippy-workspace
-	+$(MAKE) --no-print-directory _ci-checks
-ci-publication:
-	+$(MAKE) --no-print-directory _ci-preflight
-	+bash scripts/publish/workspace.sh qualify
-	+CARGO_NET_OFFLINE=true $(MAKE) --no-print-directory _ci-checks
-_ci-preflight:
-	+$(MAKE) --no-print-directory shared-tooling-check
-	+$(MAKE) --no-print-directory check-no-symlinks
-	+$(MAKE) --no-print-directory tools-check
-	+$(MAKE) --no-print-directory compiler-check
-	+$(MAKE) --no-print-directory dependency-pins-check
-_ci-checks:
-	+$(MAKE) --no-print-directory fmt-check
-	+$(MAKE) --no-print-directory formatting-hook-check
-	+$(MAKE) --no-print-directory check-doc-links
-	# Retention qualification runs the Make, release, publication and record suites
-	# once under a relative aliased temporary parent; keep standalone targets too.
-	+$(MAKE) --no-print-directory tooling-command-check
-	+$(MAKE) --no-print-directory test-artifacts-minimal
-	+$(MAKE) --no-print-directory test-fs-minimal test-fs-capability test-fs-temporary-file
-	+$(MAKE) --no-print-directory test-artifacts-wasm
-	+$(MAKE) --no-print-directory test-artifacts-encoding
-	+$(MAKE) --no-print-directory test-artifacts-text
-	+$(MAKE) --no-print-directory tools-features-check
-	+$(MAKE) --no-print-directory isolated-features-check
-	+$(MAKE) --no-print-directory testkit-graph-check testkit-wasm-check check-fs-non-unix
-	+$(MAKE) --no-print-directory testkit-installed-check
-	+$(MAKE) --no-print-directory testkit-package-check
-	+$(MAKE) --no-print-directory test-tools-default
-	+$(MAKE) --no-print-directory test-tools-interface
-	+$(MAKE) --no-print-directory test-tools-certificate
-	+$(MAKE) --no-print-directory test-tools-candid
-	+$(MAKE) --no-print-directory test-tools-combined
-	+$(MAKE) --no-print-directory test-tools-agent
-
-	+$(MAKE) --no-print-directory test-tools-encoding
-	+$(MAKE) --no-print-directory test-tools-registry
-	+$(MAKE) --no-print-directory test-wasm-inspection
-	+$(MAKE) --no-print-directory docs-workspace
-	+$(MAKE) --no-print-directory test-workspace-installed
+.PHONY: ci-publication
+# One policy drives ordinary CI and the source-bound release selector.
+ci ci-publication:
+	+bash scripts/ci/workspace-validation.sh "$@"
 .PHONY: docs-workspace test-workspace-installed
 docs-workspace:
 	+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --locked --offline --no-deps

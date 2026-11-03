@@ -1,72 +1,56 @@
 #!/usr/bin/env perl
+# Shared companions: scripts/ci/validation-evidence.pl scripts/ci/ValidationPlan.pm
 use strict;
 use warnings;
 use JSON::PP;
 use File::Find;
-use File::Spec;
-use Digest::SHA qw(sha256_hex);
-my ($source, $group, $pointer) = @ARGV;
-@ARGV == 3 or die "usage: validation-proof.pl SOURCE GROUP POINTER\n";
-my $json = JSON::PP->new->canonical->utf8;
-sub read_file {
-    my ($file) = @_;
-    -f $file && !-l $file or die "missing or redirected gate evidence: $file\n";
-    open my $in, '<:raw', $file or die "read $file: $!\n";
-    local $/; my $raw = <$in>; close $in or die "close evidence: $!\n"; return $raw;
-}
-my $record = $json->decode(read_file($pointer));
-$record->{schema} == 1 && $record->{source} eq $source && $record->{group} eq $group or die "wrong gate source/group\n";
-my $root = $record->{directory};
-$root =~ m{\A(?:\.git/release-state|target/release-validation)/[A-Za-z0-9_.-]+\z} && -d $root && !-l $root or die "invalid gate evidence directory\n";
-my @files;
-find({no_chdir=>1,wanted=>sub {
-    -l $_ and die "redirected gate evidence\n";
-    return if -d $_;
-    -f $_ or die "nonregular gate evidence\n";
-    push @files, $_;
-}}, $root);
-my $plan = $json->decode(read_file("$root/plan.json"));
-$plan->{source} eq $source && $plan->{group} eq $group or die "wrong saved plan\n";
-my @runs = glob "$root/logs/validation.*";
-@runs == 1 && -d $runs[0] && !-l $runs[0] or die "missing or ambiguous gate execution\n";
-my $run = $runs[0];
-# Match every obligation to the exact admitted plan and an actual successful Make log.
-read_file("$root/plan.json") eq read_file("$run/parsed-inputs.json.plan.json") or die "runner selected different plan\n";
-read_file($plan->{policy}) eq read_file("$run/parsed-inputs.json.policy.json") or die "runner policy changed\n";
-my %events;
-for my $line (split /\n/, read_file("$run/plan-events.tsv")) {
-    next if $line =~ /^target\tstate\t/;
-    my ($target,$state,$detail) = split /\t/, $line, 3;
-    $events{$target} = [$state,$detail];
-}
-my %timings;
-for my $line (split /\n/, read_file("$run/timings.tsv")) {
-    next if $line =~ /^target\tresult\t/;
-    my ($target,$state,$seconds,$log) = split /\t/, $line, 4;
-    !exists $timings{$target} or die "duplicate gate timing\n";
-    $timings{$target} = [$state,$log];
-}
-my %expected;
-for my $stage (@{$plan->{stages}}) {
-    my $target = $stage->{target};
-    !$expected{$target}++ or die "duplicate gate obligation\n";
-    my $event = $events{$target} // die "missing gate event\n";
-    if ($stage->{required}) {
-        $event->[0] eq 'PASS' or die "required gate is failed or incomplete: $target\n";
-        my $timing = $timings{$target} // die "missing execution evidence\n";
-        $timing->[0] eq 'PASS' && $timing->[1] eq $event->[1] or die "mismatched execution evidence\n";
-        my $log = File::Spec->rel2abs($timing->[1]);
-        my $directory = File::Spec->rel2abs($run);
-        index($log, "$directory/") == 0 or die "execution log escapes gate evidence\n";
-        read_file($log);
-    } else {
-        $event->[0] eq 'not-applicable' && !exists $timings{$target} or die "excluded gate was executed or relabelled\n";
-    }
-}
-keys(%expected) == keys(%events) or die "unknown gate event\n";
-!grep(!$expected{$_}, keys %timings) or die "unknown gate timing\n";
-my $context = $json->decode(read_file("$root/context.json"));
+use Cwd qw(getcwd);
+use FindBin qw($RealBin);
+use lib "$RealBin/../ci";
+use ValidationPlan qw(document digest);
+
+# Shared owns execution evidence; Tooling owns the gate pointer and frozen
+# receipt inventory used after release-owned version preparation.
+my ($operation, $source, $group, $pointer) = @ARGV;
+@ARGV == 4 && $operation =~ /\A(?:verify|check|receipt)\z/
+    or die "usage: validation-proof.pl verify|check|receipt SOURCE GROUP POINTER\n";
+-f $pointer && !-l $pointer && -s $pointer <= 1048576 or die "missing or redirected gate pointer\n";
+open my $in, '<:raw', $pointer or die "read gate pointer: $!\n";
+my $raw = do { local $/; <$in> };
+close $in or die "close gate pointer: $!\n";
+my $record = JSON::PP->new->utf8->decode($raw);
+$record->{schema} == 1 && $record->{source} eq $source && $record->{group} eq $group
+    or die "wrong gate source/group\n";
+my $gate = $record->{directory};
+$gate =~ m{\A(?:\.git/release-state|target/release-validation)/[A-Za-z0-9_.-]+\z}
+    && -d $gate && !-l $gate or die "invalid gate evidence directory\n";
+my $root = getcwd();
+my $context = document($root, "$gate/context.json");
 $context->{source} eq $source && $context->{group} eq $group or die "wrong gate context\n";
-# Record only observations; no stage reuse is granted by this format.
-print "tooling-group-gate-1\n$source\n$group\n$root\n";
-for my $file (sort @files) { print "$file\t", sha256_hex(read_file($file)), "\n"; }
+my @runs = glob "$gate/logs/validation.*";
+@runs == 1 && -d $runs[0] && !-l $runs[0] or die "missing or ambiguous gate execution\n";
+my $proof_path = "$gate/shared-proof.json";
+if ($operation ne 'receipt') {
+    my @args = ($operation, $root, "$gate/plan.json", $source, $group, $runs[0], "$gate/context.json");
+    push @args, $proof_path if $operation eq 'check';
+    exec $^X, "$RealBin/../ci/validation-evidence.pl", @args;
+    die "start shared evidence verifier: $!\n";
+}
+my $proof = document($root, $proof_path);
+$proof->{kind} eq 'group-validation-evidence' && $proof->{source} eq $source
+    && $proof->{group} eq $group && $proof->{run} eq $runs[0]
+    or die "wrong shared gate proof\n";
+my @files;
+{
+    local $SIG{__WARN__} = sub { die @_ };
+    find({no_chdir=>1,wanted=>sub {
+        -l $_ and die "redirected gate evidence\n";
+        return if -d $_;
+        -f $_ or die "nonregular gate evidence\n";
+        push @files, $_;
+    }}, $gate);
+}
+# This inventory is compared with the receipt sealed by the live Shared check.
+# It grants no new validation or reuse when prepared versions differ from inputs.
+print "tooling-group-gate-2\n$source\n$group\n$gate\n";
+for my $file (sort @files) { print "$file\t", digest($root, $file), "\n"; }

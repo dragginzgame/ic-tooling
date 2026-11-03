@@ -76,6 +76,12 @@ Tooling changes use the affected consumer check: `make release-adapter-check`,
 `make release-validation-plan-check`, `bash scripts/ci/test-make-snapshot.sh` or
 `bash scripts/ci/test-host-fixture-retention.sh`. The shared
 [validation policy](../DRAGGINZGAME.md#validation-and-evidence) owns execution cadence.
+For receipt/prepared-version changes shared by all groups, select a representative
+owner with `bash scripts/release/test-adapter.sh --group testkit`; the default
+entrypoint retains all six groups for complete release qualification.
+For full-CI roster and lint/publication ordering, use
+`bash scripts/ci/test-workspace-validation.sh`; it runs the actual Make routing
+with substituted check/build/publication effects and no Cargo compilation.
 
 Standard `make fmt` and `make fmt-check` report each manifest/Rustfmt pass and
 its elapsed time. An unchanged successful selection can reuse its formatting
