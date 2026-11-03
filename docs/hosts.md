@@ -190,8 +190,8 @@ Host Artifacts and Wasm parsing. The standalone Wasm inspector
 retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.99.1
 and native Linux/macOS matrix as the existing libraries.
 
-Platform 0.18 delegates IC system calls and the executor to independent Runtime
-0.18. Testkit's
+Platform 0.20 delegates IC system calls and the executor to independent Runtime
+0.19. Testkit's
 Wasm graph excludes external `ic0` and `ic-cdk-executor` packages; the private
 performance probe enables Platform's executor through `cdk`. Wasm compilation
 checks this selection separately from native execution and installed IC behavior.
@@ -199,7 +199,7 @@ Platform selects its internal singleton guard only for executor/runtime
 users. The graph policies exclude it from Host/Tools and Testkit, and require it
 for the private probe's Wasm runtime.
 Consumers exchanging Platform-owned registry principals with Tools must align
-the canonical `ic-platform-types` 0.17.0 identity exposed by Platform 0.18.0.
+the canonical `ic-platform-types` 0.18.0 identity exposed by Platform 0.20.0.
 Tools' certificate decoders now return Platform-owned certificate/hash-tree
 identities. Enable `agent` and use Platform's explicit `From`/`Into` conversions
 when exchanging them with native Agent certificates. Certificate-only profiles
@@ -211,7 +211,7 @@ profiles use only Wire's core codec and do not select its optional metadata brid
 independent Types releases; incompatible Types changes still require explicit
 consumer and schema adoption.
 
-Native Testkit selects the independent `ic-platform-pocket-ic` 0.18 client
+Native Testkit selects the independent `ic-platform-pocket-ic` 0.20 client
 directly, with imports from `ic_platform_pocket_ic`. Its exposed client and
 client-owned DTO identities require callers to align on the client package;
 the separate Platform dependency supplies Candid and management adapters without

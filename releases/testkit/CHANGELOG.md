@@ -6,6 +6,16 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.83.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Platform and its independent PocketIC client 0.20. Align direct client
+  dependencies when exchanging Testkit's exposed client, DTO and error types;
+  exhaustive client-error matches must handle `ResponseTooLarge`. Runtime 0.19,
+  Types 0.18, Wire 0.16 and the PocketIC server 16.1.0 remain selected.
+  Existing snapshot helpers retain their current transfer behavior and limits.
+
 ## [0.82.0] - 2026-11-03
 
 ### ⚠️ Breaking
