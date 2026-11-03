@@ -1,28 +1,42 @@
 # Current handoff — 2026-11-03
 
-## Wire adoption prepared
+## Wire delivery
 
-Local source selects published Wire/Core and derive 0.16.0. The registry archive
-checksum is verified; Core's only runtime source change from 0.15.1 is its optional
-Platform schema adapter. Tooling retains its existing primitive/local probe DTOs,
-method IDs, limits and feature boundaries without selecting that adapter.
-Testkit exposes Wire `Limits`/`Error` identities, so pending notes select a
-Testkit 0.82.0 minor and require matching direct Wire 0.16 dependencies. Package
-versions and registry publication remain at the delivered state below.
+[PR #319](https://github.com/dragginzgame/ic-tooling/pull/319) merged Wire/Core
+and derive 0.16.0 at `400335ce3a43e43945027bb4e16d2ccd77f010aa`.
+Testkit **0.82.0** is published from `e644afe09f0fa9ef248db6f98b3efa461de9f890`.
+Direct consumer dependencies must select Wire 0.16 when supplying Testkit's
+exposed `Limits` or matching Wire error causes. Private Dev/probe versions
+follow 0.82.0 and remain excluded from registry uploads.
 
-All 466 non-Wire package records in the incoming lock remain unchanged. Native
-and Wasm affected-package Clippy, nine Wire tests, the protocol-bound test, live
-PocketIC calls and the rebuilt Wasm benchmark probe pass. Native/Wasm graph,
-manifest-formatting and document-link checks pass. Evidence is retained under
-`/tmp/ic-tooling-wire-adoption.RCFp41/`. Native macOS qualification of this local
-Wire update has not run.
+Tooling retains primitive/local probe DTOs, method IDs, limits and feature
+boundaries without selecting Wire's optional Platform schema adapter. The
+checksum-verified Core archive changes only that adapter's Rust source from
+0.15.1; derive's Rust source is unchanged. Account byte/contract migration remains
+with Account consumers; this is not an old-Account reader or automatic migration.
+Platform, PocketIC and Runtime remain 0.19, with canonical Types 0.18.
+
+The complete 35-obligation local Linux release gate passed on the scoped locked
+source, including installed archives and live PocketIC/Wasm consumers. Git
+release and registry publication used separate standard commands. Independent
+registry checksum and clean VCS-source readback passed. Native macOS 15
+Intel/Apple Silicon qualification of this delivery remains asynchronous.
+
+Incoming registry lock selections remain preserved; only owned workspace package
+versions advance in the ordinary checkout. Source and lock backups, release and
+publication logs, readbacks and the incoming stash reference are retained under
+`/tmp/ic-tooling-testkit082-deploy.DsxSsd/`; durable copies live in
+`.git/release-state/deployment-testkit082-20261103/`. The reused isolated
+checkout and its original gate evidence remain under
+`/tmp/ic-tooling-platform-deploy.BGZn8d/release/`. Focused adoption checks
+remain under `/tmp/ic-tooling-wire-adoption.RCFp41/`.
 
 ## Platform delivery
 
 [PR #317](https://github.com/dragginzgame/ic-tooling/pull/317) merged Platform,
 PocketIC and Runtime 0.19.0, with Types 0.18.0, at
 `259e22288e039fcfa758b7d2cb66a3c720e5141a`. Tools 0.79.0 and Testkit 0.81.0
-are published. Their minor releases expose the new canonical types and upstream
+shipped that adoption. Their minor releases expose the new canonical types and upstream
 `ClientError`; direct consumer dependencies must follow the selected family.
 
 Testkit removed panic-string adapters and returns typed failures through calls,
@@ -43,16 +57,16 @@ compatibility is implied by that feature choice.
 | Build | 0.74.1 | `aeff79aa1b6d3e6466b7f990b679db9379215466` |
 | Text | 0.74.1 | `df9d9cdffe8d56fb82c3132a4860d2567d6f01a7` |
 | Tools | 0.79.0 | `c4b6b9730afa1747bc6f59b7018785b57da6eec1` |
-| Testkit | 0.81.0 | `4b023d5e3b2cdac0424f17d37b2bacc3f186c44a` |
+| Testkit | 0.82.0 | `e644afe09f0fa9ef248db6f98b3efa461de9f890` |
 
 Native remains 0.80.0. Build's independent 0.74.2 notes remain pending; this
 Platform deployment selected Tools and Testkit. Private Dev/probe versions follow
-Testkit 0.81.0 and are excluded from registry uploads. Shared remains 0.27.27 at
+Testkit 0.82.0 and are excluded from registry uploads. Shared remains 0.27.27 at
 `651f5f7acb2e3055abd51ba5f835a2112801666a`, with 159 managed files.
 
 ## Qualification and custody
 
-Both groups passed their complete 35-obligation local Linux release gates,
+The earlier Tools 0.79.0/Testkit 0.81.0 groups passed complete local Linux gates,
 including workspace Clippy, isolated profiles, native tests, real PocketIC,
 deployed Wasm builds, installed archives, docs and release/rollback fixtures.
 Git release and registry upload used separate standard commands. Each uploaded
