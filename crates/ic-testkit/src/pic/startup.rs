@@ -450,7 +450,7 @@ impl PocketIcStartupConfig {
     /// never claims the external server. See [`PocketIcInstance`] for drop limits.
     ///
     /// ```no_run
-    /// use crate::pocket_ic::PocketIcBuilder;
+    /// use ic_testkit::pocket_ic::PocketIcBuilder;
     /// use ic_testkit::pic::PocketIcStartupConfig;
     /// use std::{path::Path, time::Duration};
     /// # fn run(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -498,7 +498,7 @@ impl PocketIcStartupConfig {
     /// reconciliation. The deadline covers construction, not subsequent deletion.
     ///
     /// ```no_run
-    /// use crate::pocket_ic::PocketIcBuilder;
+    /// use ic_testkit::pocket_ic::PocketIcBuilder;
     /// use ic_testkit::pic::PocketIcStartupConfig;
     /// use std::{path::Path, time::Duration};
     /// # async fn run(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
