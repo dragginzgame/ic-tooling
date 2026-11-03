@@ -1,23 +1,33 @@
 # Current handoff — 2026-11-03
 
-## Platform 0.21 adoption and requested deployment
+## Delivered Platform 0.21 adoption
 
-The root catalog now selects published Platform 0.21.0. Types 0.18.0,
-Runtime 0.19.0, Wire 0.16 and server 16.1.0 remain selected. The pending release
-groups are Tools 0.81.0 (exposed Platform-owned certificate/hash-tree and Candid
-limit identities) and Testkit 0.84.1 (unchanged public client and external DTO/error
-identities). Package versions still identify the delivered baseline below;
-release preparation and publication have not started for this adoption.
+The root catalog selects published Platform 0.21.0 through
+[PR #331](https://github.com/dragginzgame/ic-tooling/pull/331), merged at
+`a772e6848500c3697c6d2228a7501917c1c35471`. Tools 0.81.0 and Testkit 0.84.1 are
+pushed, tagged and published separately. Tools consumers exchanging Platform-owned
+certificate/hash-tree or Candid decoder-limit values must align Platform 0.21.
+Testkit retains its public client and external DTO/error identities. Types 0.18,
+Runtime 0.19, Wire 0.16 and server 16.1.0 remain selected.
 
 Focused Linux checks passed: native/Wasm feature graphs, affected Tools/Testkit/Dev
 Clippy, public certificate/Principal/Wire exchanges, direct-client/facade management
 DTO identity, installed management/snapshot behavior and six snapshot-helper cases.
-New full release gates and native macOS qualification remain separate.
-Evidence and incoming lock backup are in `target/platform021-adoption/`.
-The canonical delivery lock changes only Platform's version and checksum.
-Working-lock package versions/checksums are preserved except Platform; Cargo
-normalized eleven stale Windows dependency links. The original working bytes
-remain in `Cargo.lock.incoming` beside the normalized selection and comparison proof.
+Tools and Testkit each passed their complete 35-obligation source-bound Linux
+release gates, publication dry runs/uploads and independent registry archive,
+checksum, exact VCS and license/provenance verification. A registry-only consumer
+compiled the published Tools/Testkit APIs with one Platform 0.21 identity,
+including certificate/Candid limits and client/facade management DTO exchange.
+
+Native macOS evidence is separate: runtime, optimizer and browser qualification
+passed on all three hosts at adoption source `a772e684` before version preparation.
+Full final-release native qualification is dispatched asynchronously at
+`c484b50c4011979cd5ee5c4f6299de8cfd5e0257`: [CI 41700137827](https://github.com/dragginzgame/ic-tooling/actions/runs/41700137827),
+[optimizer 41700142442](https://github.com/dragginzgame/ic-tooling/actions/runs/41700142442),
+[runtime 41700148093](https://github.com/dragginzgame/ic-tooling/actions/runs/41700148093), and
+[browser 41700153602](https://github.com/dragginzgame/ic-tooling/actions/runs/41700153602).
+Full final-source native CI was pending at handoff; earlier successful host
+qualification is retained under its own source identity.
 
 ## Delivered cleanup and client ownership
 
@@ -42,10 +52,10 @@ doctests needed external `ic_testkit::pocket_ic` imports
 | Foundation | 0.74.2 | `aa62709bff680ac7c8a050c88cff769c818eebf2` |
 | Build | 0.74.2 | `ba0c79118e9bcb8a0af64143a01dbd71cf2cd61a` |
 | Text | 0.74.1 | `df9d9cdffe8d56fb82c3132a4860d2567d6f01a7` |
-| Tools | 0.80.0 | `109244b35678e9d89ecec6963ab535c8d65b2f25` |
-| Testkit | 0.84.0 | `5f91f4cdbaa72e04cc0d7ba92e4e1c3953b0ae8e` |
+| Tools | 0.81.0 | `8ac12cf92fe04c6f4aec0ce4aad80fcd13df07f0` |
+| Testkit | 0.84.1 | `c484b50c4011979cd5ee5c4f6299de8cfd5e0257` |
 
-Native remains 0.80.0. Private Dev/probe packages follow Testkit 0.84.0 and were not
+Native remains 0.80.0. Private Dev/probe packages follow Testkit 0.84.1 and were not
 uploaded. Build and Testkit were released separately through the normal adapters,
 with atomic main/group-tag pushes, followed by separate publication commands.
 The [group ledgers](../../CHANGELOG.md) retain the finalized release notes.
@@ -74,7 +84,7 @@ contribution `69f1be9af8080374393d7c65d65916175a01ec36` and its bundles remain a
 the locations recorded by Platform's handoff. Implementation no longer exists
 only beneath Platform's `target/`.
 
-## Validation and host evidence
+## Client-transfer validation and host evidence
 
 Build and Testkit each passed their complete 35-obligation source-bound Linux
 release gates. Publication dry runs, uploads, independent registry/archive
@@ -110,15 +120,19 @@ Testkit 0.84.0 source, separately from the new Platform 0.21 adoption above.
 
 ## Checkout and evidence custody
 
-The ordinary checkout's delivered baseline is merged main with Build 0.74.2 and Testkit 0.84.0.
-Its unrelated Cargo.lock registry selections are preserved; only local package
-versions were aligned to the released groups. They remain uncommitted and were
-excluded from all delivered source/release commits.
+The ordinary checkout is on merged main with Tools 0.81.0 and Testkit 0.84.1.
+Its working lock retains unrelated package versions/checksums. Platform 0.21 and
+the four local release-package versions are aligned; Cargo normalized eleven
+stale Windows dependency links. The original lock is preserved separately from
+the normalized working selection. Unrelated selections remain uncommitted and
+were excluded from all delivered source/release commits.
 
 Release checkout, logs, archives, failed attempts and publication admissions remain
 under `/tmp/ic-tooling-platform-deploy.BGZn8d/release/`. Durable receipts, complete
 gate proof, registry readbacks, publication evidence and incoming lock backups are
-in `.git/release-state/deployment-testkit-owner-20261103/`. Development evidence
-remains in `target/cleanup-pass/`. Earlier failed attempts stopped before version
+in `.git/release-state/deployment-platform021-20261103/`, with the client-transfer
+delivery in `.git/release-state/deployment-testkit-owner-20261103/`. Development
+evidence remains in `target/platform021-adoption/` and `target/cleanup-pass/`.
+Earlier failed client-transfer attempts stopped before version
 preparation or publication; their original logs and artifacts are retained.
 No artifact cleanup was performed.
