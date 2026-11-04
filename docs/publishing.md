@@ -97,10 +97,12 @@ old evidence as validation of new source. Native qualification belongs to the
 Old ungrouped and joint `integration` attempts remain under their original identities. Recover them
 using their recorded pre-group source/adapter in an isolated checkout; never
 rename their plans or receipts into a group namespace.
-Earlier `tooling-release-validation-2` and `tooling-release-validation-3`
-receipts retain their original adapters. Version 4 seals Shared's canonical
-execution proof before version preparation and checks its frozen inventory during
-payload/recovery admission. Never reinterpret an older receipt as version 4.
+Earlier `tooling-release-validation-2`, `tooling-release-validation-3` and
+`tooling-release-validation-4` receipts retain their original adapters. Version 5
+also seals the original proof and logs for admitted unchanged-stage reuse before
+version preparation, then checks the frozen inventory during payload/recovery
+admission. See [stage reuse and custody](design/release-validation.md#selected-adapter-cases-and-unchanged-stage-reuse).
+Never reinterpret an older receipt as version 5.
 
 ## Registry publication
 

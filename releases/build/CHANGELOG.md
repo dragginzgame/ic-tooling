@@ -6,6 +6,15 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.74.4] - Unreleased
+
+### 🧪 Testing
+
+- Release qualification checks its selected adapter group; full CI retains all
+  six groups. Reuse unchanged fixture-retention execution through Shared's
+  stage runner, retaining original proof/log custody and fresh source/group
+  admission. Rust and archive obligations continue to execute normally.
+
 ## [0.74.3] - 2026-11-04
 
 ### 🧹 Cleanup

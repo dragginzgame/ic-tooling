@@ -66,7 +66,7 @@ admit_files() {
         fail 'commit refused source paths before releasing'
 }
 receipt_header() {
-    printf '%s\n' tooling-release-validation-4 "$RELEASE_KIND" || return
+    printf '%s\n' tooling-release-validation-5 "$RELEASE_KIND" || return
     release_receipt_identity || return
     bash "$tooling_root/scripts/release/validation.sh" "${1:-retained-receipt}" "$gate"
 }

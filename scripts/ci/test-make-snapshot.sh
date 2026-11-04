@@ -117,6 +117,7 @@ fixture scripts/ci/test-tools-layering.sh
 fixture scripts/ci/test-product-ci-selection.sh
 fixture scripts/ci/test-product-evidence.sh
 fixture scripts/ci/test-host-fixture-retention.sh
+fixture scripts/release/test-stage-reuse.sh
 fixture scripts/ci/test-make-snapshot.sh
 fixture scripts/release/test-adapter.sh
 fixture scripts/release/test-validation.sh
@@ -131,6 +132,19 @@ EVENTS
     [[ "$status" == 2 ]] || exit 1
     printf '%s\n' 'fixture scripts/ci/test-qualification-record.sh' > "$fixture/expected"
     cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
+    # Each release checks its actual adapter once; full CI keeps all groups.
+    for group in foundation build text tools testkit native; do
+        : > "$HOST_MAKE_EVENTS"
+        PATH="$fixture/local:$PATH" make --no-print-directory tooling-command-check \
+            "TOOLING_RELEASE_GROUP=$group" > "$fixture/tooling-$group.log" 2>&1
+        grep -Fx "fixture scripts/release/test-adapter.sh --group $group" "$HOST_MAKE_EVENTS" >/dev/null
+        [[ $(grep -c '^fixture scripts/release/test-adapter.sh' "$HOST_MAKE_EVENTS") == 1 ]]
+    done
+    : > "$HOST_MAKE_EVENTS"
+    PATH="$fixture/local:$PATH" IC_TOOLING_FULL_CI=1 make --no-print-directory tooling-command-check \
+        TOOLING_RELEASE_GROUP=testkit > "$fixture/tooling-full-ci.log" 2>&1
+    grep -Fx 'fixture scripts/release/test-adapter.sh' "$HOST_MAKE_EVENTS" >/dev/null
+    if grep -F -- '--group' "$HOST_MAKE_EVENTS" >/dev/null; then exit 1; fi
 }
 
 if [[ $selection == tooling-roster ]]; then

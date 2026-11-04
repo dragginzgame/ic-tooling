@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Shared companions: scripts/ci/validation-roster.sh scripts/ci/run-validation-targets.sh scripts/publish/workspace.sh
 set -euo pipefail
+export IC_TOOLING_FULL_CI=1
 [[ $# == 1 && ( $1 == ci || $1 == ci-publication ) ]] || exit 2
 root="$(cd -P "${BASH_SOURCE[0]%/*}/../.." && pwd -P)"
 cd "$root"

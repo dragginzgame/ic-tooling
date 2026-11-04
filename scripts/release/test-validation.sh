@@ -27,6 +27,7 @@ export YQ="${YQ:-$root/.tools/host/bin/yq}"
 YQ=$(command -v "$YQ")
 VALIDATION_TEST_REAL_MAKE="$(command -v make)"
 export VALIDATION_TEST_REAL_MAKE
+export VALIDATION_TEST_STAGE_PATH="$PATH"
 export VALIDATION_TEST_EVENTS="$fixture/events"
 export CARGO_HOME="$fixture/home"
 unset CARGO RUSTC RUSTDOC RUSTC_WRAPPER RUSTC_WORKSPACE_WRAPPER RUSTFLAGS CARGO_ENCODED_RUSTFLAGS CARGO_ENCODED_RUSTDOCFLAGS RUSTDOCFLAGS RUSTC_BOOTSTRAP CARGO_TARGET_DIR
@@ -50,6 +51,9 @@ case $last in
         [[ $last != "${VALIDATION_TEST_FAIL:-}" ]] || exit 29
         if [[ $last == "${VALIDATION_TEST_DRIFT:-}" ]]; then
             printf '\nchanged during stage\n' >> crates/ic-testkit-native/src/lib.rs
+        fi
+        if [[ $last == tooling-command-check && -n ${TOOLING_STAGE_ADMISSIONS:-} ]]; then
+            PATH="$VALIDATION_TEST_STAGE_PATH" bash scripts/release/reuse-fixture.sh "$RELEASE_GROUP"
         fi ;;
 esac
 STUB
@@ -212,6 +216,22 @@ for RELEASE_GROUP in foundation build text tools testkit native; do
 done
 : > "$VALIDATION_TEST_EVENTS"
 refuse env VALIDATION_TEST_FAIL=testkit-installed-check bash scripts/release/validation.sh run "$pointer" > "$fixture/full-failure.log" 2>&1
+make_plan full-success
+bash scripts/release/validation.sh run "$pointer" > "$fixture/full-success.log" 2>&1
+bash scripts/release/validation.sh receipt "$pointer" > "$fixture/full.receipt"
+admission="$directory/stage-admissions/fixture-retention.json"
+cp "$admission" "$fixture/stage-admission"
+jq '.source = "wrong-source"' "$fixture/stage-admission" > "$admission"
+refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/stage-identity.log" 2>&1
+cp "$fixture/stage-admission" "$admission"
+execution=$(jq -r .execution_proof "$admission")
+stage_log=$(jq -r .logs.stdout.path "$execution")
+cp "$stage_log" "$fixture/stage-log"
+printf 'tampered\n' >> "$stage_log"
+refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/stage-log.log" 2>&1
+cp "$fixture/stage-log" "$stage_log"
+bash scripts/release/validation.sh receipt "$pointer" > "$fixture/full-restored.receipt"
+cmp "$fixture/full.receipt" "$fixture/full-restored.receipt"
 # New/omitted obligations refuse until their product coverage is explicit.
 jq -cS '.stages += ["release-stage-new-obligation"]' ci/release-validation.json > "$fixture/new-stage"
 cp "$fixture/new-stage" ci/release-validation.json

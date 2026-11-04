@@ -3,6 +3,7 @@ scripts/ci/test-tools-layering.sh	tooling,make-stub
 scripts/ci/test-product-ci-selection.sh	tooling,make-stub
 scripts/ci/test-product-evidence.sh	tooling,make-stub
 scripts/ci/test-host-fixture-retention.sh	tooling,make-stub,retention
+scripts/release/test-stage-reuse.sh	tooling,make-stub
 scripts/ci/test-make-snapshot.sh	tooling,make-stub,retention,relative
 scripts/release/test-adapter.sh	tooling,make-stub,retention,relative
 scripts/release/test-validation.sh	tooling,make-stub,retention,relative

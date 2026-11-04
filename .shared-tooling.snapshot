@@ -117,6 +117,7 @@ revision	628ccc75d813bfd9bae777bfbaef55838d25b1b2
 # entrypoint	scripts/ci/cargo-publication-selection.pl
 # entrypoint	scripts/ci/classify-ci-change.pl
 # entrypoint	docs/validation-runner.md
+# entrypoint	scripts/ci/run-validation-stage.pl
 file	f6d100137dcf1097c807286fc5e028e9a49e15725164488ccc903643ceee4f45	x	.githooks/pre-commit
 file	4f8004bdbb5052394b8f313a6f65d30e8230a12a019c666c6d412cd3779b8df0	-	.github/actions/prepare-common-tools/action.yml
 file	26a269c0e63125e8bd939578a64a6a67dbc5280cd3fbfd7da8b9c8e4d44cc6d5	-	.github/actions/retain-failure-evidence/action.yml
@@ -231,6 +232,7 @@ file	2aee39fe595a6e30b71d4a1a3b7ba7db231e6f1c0efe964ec4456dcad9759f20	-	scripts/
 file	ec46c51af7fc2b7ef2959343331e6aa9efb40904d55f5c5b5a43cb446736f9a8	-	scripts/ci/cargo-publication-selection.pl
 file	e3e6ef15ae74be6f26fe89579e16c1369a57f1b67d5c3a0bd4dca424fd7b7472	-	scripts/ci/classify-ci-change.pl
 file	f961b1fc079f37e9da3d272a9308bc3d29bfcb1aa3fcc547a4ee778635c3abc5	-	docs/validation-runner.md
+file	42bf4d5ababbf964607962d8ef5ae9d87a615f234533ded80eb53ac1d367f3b4	x	scripts/ci/run-validation-stage.pl
 file	39f963385691868991cd0a8c77e5a009143ed97ea871b0daa54278c5f3c5f024	-	rules/engineering-details.md
 file	e3aed908dd9b08bf93255328bb056bed57298dab39944e3726aad2726548e653	-	rules/rpc-budgets.md
 file	a916ce4194ae2bd5591d86219109e4527455ce7b6358de0023da6bbe00b8397f	-	docs/rust-toolchains.md

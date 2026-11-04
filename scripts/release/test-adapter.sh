@@ -29,6 +29,7 @@ ADAPTER_REAL_MAKE="$(command -v make)"
 export ADAPTER_REAL_MAKE
 export ADAPTER_REAL_CARGO ADAPTER_REAL_BASH ADAPTER_REAL_GIT ADAPTER_REAL_EDITOR ADAPTER_SELECTED_EDITOR
 ADAPTER_REAL_CARGO="$(command -v cargo)"
+export ADAPTER_REAL_STAGE_PATH="$PATH"
 ADAPTER_REAL_BASH="$(command -v bash)"
 ADAPTER_REAL_GIT="$(command -v git)"
 ADAPTER_REAL_EDITOR="$(bash "$root/scripts/release/editor.sh" check)"
@@ -74,6 +75,9 @@ set -euo pipefail
 if [[ "$*" == '--no-print-directory -f - MAKEFILES=' ]]; then exec "$ADAPTER_REAL_MAKE" "$@"; fi
 printf 'make %s\n' "$*" >> "$ADAPTER_EVENTS"
 case "$*" in
+    *'-- release-stage-tooling-command-check')
+        [[ "${ADAPTER_GATE_RESULT:-0}" == 0 ]] || exit "$ADAPTER_GATE_RESULT"
+        PATH="$ADAPTER_REAL_STAGE_PATH" "$ADAPTER_REAL_BASH" scripts/release/reuse-fixture.sh "$RELEASE_GROUP" ;;
     *'-- release-stage-'*) exit "${ADAPTER_GATE_RESULT:-0}" ;;
     '--no-print-directory install-tools') : > "$ADAPTER_EDITOR_READY" ;;
     '--no-print-directory tools-check'|'--no-print-directory compiler-check'|'--no-print-directory dependency-pins-check') ;;
@@ -190,7 +194,7 @@ for selected_group in "${groups[@]}"; do
     refuse bash "$tooling/scripts/release/validation.sh" receipt "$gate_pointer" \
         > "$fixture/$selected_group.prepared-live-proof.log" 2>&1
     cp "$state" "$fixture/$selected_group.receipt"
-    sed '1s/tooling-release-validation-4/tooling-release-validation-3/' \
+    sed '1s/tooling-release-validation-5/tooling-release-validation-4/' \
         "$fixture/$selected_group.receipt" > "$state"
     refuse invoke check > "$fixture/$selected_group.old-receipt.log" 2>&1
     cp "$fixture/$selected_group.receipt" "$state"

@@ -103,7 +103,7 @@ every stage. A required failure or source/input drift stops later stages. Omitte
 stages retain explicit `not-applicable` events and their coverage reasons; they
 are never reported as executed passes.
 
-Version-4 release receipts include the canonical Shared run proof and bind the
+Version-5 release receipts include the canonical Shared run proof and bind the
 source/group, plan and policy, environment, host/compiler observations and complete
 gate inventory. Shared verifies the original inputs, ordered stage events,
 timings, checkpoints and logs before the proof is saved and again before the
@@ -118,7 +118,7 @@ the exact prepared/committed payload and allowed source changes. It never create
 a replacement live proof from prepared versions. The private `retained-receipt`
 operation only generates that frozen inventory for comparison with an existing
 trusted receipt; it cannot authorize initial sealing or grant stage reuse.
-Selection grants no reuse. Metadata preparation, unrelated-group preservation,
+Selection alone grants no reuse. Metadata preparation, unrelated-group preservation,
 commit/payload custody, Git delivery and publication retain their existing checks.
 
 Gate artifacts live in unique `.git/release-state/<group>-gate.*` directories.
@@ -128,8 +128,33 @@ the release receipts; deleting artifacts invalidates evidence rather than granti
 an implicit pass. Exact-version recovery retains its saved baseline and re-derives
 the same selection without a new remote lookup. Fresh verification creates new
 logs while preserving earlier attempts. Changed source/scope/configuration needs
-a fresh admitted attempt. Historical version-2/3 receipts use their original
-source and adapter; they are never relabelled as version 4.
+a fresh admitted attempt. Historical version-2/3/4 receipts use their original
+source and adapter; they are never relabelled as version 5.
+
+## Selected adapter cases and unchanged-stage reuse
+
+During release qualification, `tooling-command-check` runs the adapter fixture
+with `--group` for the selected release group. Ordinary CI and CI/publication
+continue to exercise all six groups, even when a release selection is inherited.
+The remaining tooling roster and its first-failure behavior are unchanged.
+
+The fixture-retention stage uses Shared's
+[stage runner](../release-validation-reuse.md). It observes every shell source
+under `scripts/`, the tooling roster, its observer, interpreter modules and the
+resolved fixture tools. Execution has an explicit environment containing PATH,
+a fixed workspace temporary root and the C locale. The fixture renders only
+initialization/EXIT prefixes; it stops before Cargo, Git and product bodies.
+Manifests, lockfiles and release ledgers are outside this stage's input closure.
+Consequently version-only changes can reuse this stage across release groups.
+Changes to an observed source, tool, environment, runner or host invalidate reuse.
+
+Each gate records a new source/group admission with mode `executed` or `reused`.
+Reuse retains the original execution source, group, proof and stdout/stderr;
+Tooling seals those original bytes into its recovery receipt. Evidence lives
+under `target/release-stage-cache`; deleting it invalidates dependent receipts.
+Changed or missing proof/log bytes cannot be sealed or recovered as a pass.
+All Rust, dependency, runtime and archive obligations retain fresh execution;
+there is no whole-gate reuse or reinterpretation of earlier release receipts.
 
 ## Qualification and limits
 
@@ -140,6 +165,11 @@ Its Make effects are substituted. `bash scripts/release/test-adapter.sh` retains
 the real six-group metadata, rollback, commit and recovery contracts, also with
 qualification effects substituted. These fixtures do not establish native-host
 execution or a runtime saving.
+`bash scripts/release/test-adapter.sh --group testkit` selects one adapter owner
+for a focused change. `bash scripts/release/test-stage-reuse.sh` executes the real
+retention fixture, proves cross-group reuse with unchanged inputs, and forces
+fresh execution after changed/new shell inputs. Recovery fixtures additionally
+reject changed stage identities and original execution logs.
 `bash scripts/ci/test-workspace-validation.sh` isolates actual Make dispatch for
 both full CI entrypoints under parallel Make. Its substituted check/publication
 effects prove the preserved 35-stage order, one lint pass, pipe jobserver access
