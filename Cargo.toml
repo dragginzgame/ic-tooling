@@ -46,9 +46,9 @@ ic-host-tools = { path = "crates/ic-host-tools", version = "0.82.0", default-fea
 
 # Testkit (Dev and perf probe are private qualification crates)
 # Changelog : releases/testkit/CHANGELOG.md
-ic-testkit = { path = "crates/ic-testkit", version = "0.85.1", default-features = false }
-ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.85.1" }
-ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.85.1" }
+ic-testkit = { path = "crates/ic-testkit", version = "0.86.0", default-features = false }
+ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.86.0" }
+ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.86.0" }
 
 # Native allocation measurement
 # Changelog : releases/native/CHANGELOG.md
