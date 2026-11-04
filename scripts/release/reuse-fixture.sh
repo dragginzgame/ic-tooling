@@ -28,7 +28,7 @@ perl scripts/ci/run-validation-stage.pl --state "$state" --stage fixture-retenti
     --contract tooling-fixture-retention/1 --source "$source" --group "$group" \
     --observe scripts/release/observe-fixture-retention.pl --environment "$environment" \
     --max-bytes 33554432 -- bash scripts/ci/test-host-fixture-retention.sh | tee "$capture"
-admission=$(sed -n 's/^Validation stage fixture-retention: \(executed\|reused\); admission //p' "$capture")
+admission=$(sed -En 's/^Validation stage fixture-retention: (executed|reused); admission //p' "$capture")
 case $admission in "$root/$state/attempts/fixture-retention-$group."*/admission.json) ;; *) exit 1 ;; esac
 jq -e --arg source "$source" --arg group "$group" '
     .kind == "release-stage-admission" and .source == $source and .group == $group
