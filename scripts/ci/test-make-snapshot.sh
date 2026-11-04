@@ -17,6 +17,7 @@ root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 unset SHARED_TOOLING_ROOT
+unset TOOLING_STAGE_ADMISSIONS IC_TOOLING_RELEASE_GROUP TOOLING_RELEASE_GROUP
 # Substitute Cargo has no source metadata; exercise every formatter pass while
 # Shared's producer fixtures own exact-input reuse and invalidation coverage.
 export FORMAT_RUST_ARGS=--no-cache

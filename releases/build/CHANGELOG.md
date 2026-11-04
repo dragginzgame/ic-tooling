@@ -15,7 +15,8 @@ reset, release, tag or upload is implied by establishing this group.
   stage runner, retaining original proof/log custody and fresh source/group
   admission. Rust and archive obligations continue to execute normally.
 - Keep the selected-group routing fixture independent of its caller's full-CI
-  marker, and replay stage-reuse diagnostics when a fixture fails on another host.
+  marker and release admission destination. Nested validation fixtures own their
+  admission records. Replay stage-reuse diagnostics on fixture failures.
 - Parse stage admission records with portable extended regular expressions so
   macOS's native sed admits the same execution/reuse records as Linux.
 
