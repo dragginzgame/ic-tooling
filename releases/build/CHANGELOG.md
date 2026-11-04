@@ -19,6 +19,7 @@ reset, release, tag or upload is implied by establishing this group.
   admission records. Replay stage-reuse diagnostics on fixture failures.
 - Parse stage admission records with portable extended regular expressions so
   macOS's native sed admits the same execution/reuse records as Linux.
+- Keep release-stage arguments nonempty for macOS Bash 3.2's nounset behavior.
 
 ## [0.74.3] - 2026-11-04
 

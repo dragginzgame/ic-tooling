@@ -10,11 +10,11 @@ ledger=$(jq -er --arg group "${RELEASE_GROUP:?}" '.groups[] | select(.name == $g
 # Keep the one permitted pending ledger byte-bound in the runner inventory.
 bash scripts/ci/check-release-source.sh --allow "$ledger"
 status=0
-arguments=()
+arguments=(--no-print-directory)
 if [[ $stage == tooling-command-check ]]; then
     arguments+=("TOOLING_RELEASE_GROUP=$RELEASE_GROUP")
 fi
-make --no-print-directory "${arguments[@]}" -- "$stage" || status=$?
+make "${arguments[@]}" -- "$stage" || status=$?
 [[ $status == 0 ]] || exit "$status"
 [[ $(git rev-parse HEAD) == "$RELEASE_SOURCE" ]]
 bash scripts/ci/check-release-source.sh --allow "$ledger"
