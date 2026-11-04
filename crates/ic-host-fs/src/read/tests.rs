@@ -6,7 +6,7 @@ use std::io;
 #[test]
 fn hashing_retains_the_selected_descriptors_metadata() {
     use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let path = fixture.path().join("observed");
     for observe in [hash_file_with_metadata, hash_file_no_follow_with_metadata] {
         std::fs::write(&path, b"selected bytes").unwrap();
@@ -68,7 +68,7 @@ fn bounded_file_operations_leave_source_intact_and_reject_special_inputs() {
 #[test]
 fn following_reads_preserve_open_failure_before_size_admission() {
     use std::os::unix::fs::PermissionsExt as _;
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let path = fixture.path().join("inaccessible");
     std::fs::write(&path, b"oversized").unwrap();
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
@@ -100,7 +100,7 @@ fn following_reads_preserve_open_failure_before_size_admission() {
 #[cfg(unix)]
 #[test]
 fn regular_opener_follows_links_and_keeps_the_selected_inode() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let path = fixture.path().join("source");
     let link = fixture.path().join("link");
     std::fs::write(&path, b"original").unwrap();
@@ -131,7 +131,7 @@ fn regular_opener_follows_links_and_keeps_the_selected_inode() {
 fn regular_opener_refuses_a_fifo_before_waiting_for_a_writer() {
     use rustix::fs::{Mode, OFlags, open};
     use std::{sync::mpsc, thread, time::Duration};
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let fifo = fixture.path().join("fifo");
     crate::testing::create_fifo(&fifo, Some(0o600)).unwrap();
     let path = fifo.clone();
@@ -165,7 +165,7 @@ fn regular_opener_refuses_a_fifo_before_waiting_for_a_writer() {
 
 #[test]
 fn file_prefix_preserves_source_and_reports_observed_length() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let path = fixture.path().join("source");
     std::fs::write(&path, b"original").unwrap();
     for limit in [0, 3, 8, 32] {

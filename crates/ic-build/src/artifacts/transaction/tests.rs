@@ -1773,3 +1773,39 @@ fn revalidation_preserves_the_original_source_identity() {
         "failed to revalidate resolved Cargo build inputs `selected`: invalid Wasm build spec: original"
     );
 }
+
+#[test]
+fn cache_diagnostics_preserve_lists_and_secondary_cleanup_sources() {
+    use std::error::Error as _;
+    let missing = super::WasmBuildError::MissingArtifacts {
+        paths: vec!["first.wasm".into(), "second.wasm".into()],
+    };
+    assert_eq!(
+        missing.to_string(),
+        "cargo build succeeded without producing: first.wasm, second.wasm"
+    );
+    let invalid = ArtifactCacheError::InvalidOutputs {
+        outputs: vec![
+            ("first".into(), "staging/first".into()),
+            ("second".into(), "staging/second".into()),
+        ],
+    };
+    let error = ArtifactCacheError::FailedTransactionCleanup {
+        transaction_error: Box::new(invalid),
+        path: "staging".into(),
+        source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "cleanup refused"),
+    };
+    assert_eq!(
+        error.to_string(),
+        "artifact transaction failed (artifact transaction has missing or invalid outputs: first (staging/first), second (staging/second)) and staging cleanup at staging also failed: cleanup refused"
+    );
+    assert_eq!(
+        error
+            .source()
+            .unwrap()
+            .downcast_ref::<std::io::Error>()
+            .unwrap()
+            .kind(),
+        std::io::ErrorKind::PermissionDenied
+    );
+}

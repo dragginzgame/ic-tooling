@@ -33,11 +33,11 @@ Tooling #324 transfers Platform’s qualified PocketIC 16.1 client into
 `ic-testkit::pocket_ic`. Preserve imported Apache-2.0 licenses, protocol bytes,
 external identities, fallible/no-replay behavior and bounded snapshot transfer.
 The exact donor and upstream reconstruction guards own its source provenance.
-The native module retains donor lint policy for unchanged imported bodies. Its
-existing server convenience implementation alone retains direct flate2/tempfile
-selection during this transfer; shared Host APIs remain the owner elsewhere.
-This exception does not authorize new gzip/temporary-file implementations or
-changes to hash, key or signature algorithms. Keep all client dependencies native.
+The native module retains donor lint policy for unchanged imported bodies.
+The client requires an explicit server URL; `pic` owns server provisioning and
+managed startup. The imported `PocketIcState` still uses tempfile for instance
+state custody. This exception does not authorize new temporary-file implementations
+or changes to hash, key or signature algorithms. Keep all client dependencies native.
 
 ### Management DTO identity
 

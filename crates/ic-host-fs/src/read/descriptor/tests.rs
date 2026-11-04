@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::fixture;
+use crate::tests::fixture;
 use ic_host_artifacts::artifact::Sha256Digest;
 use std::{
     fs::{self, File},

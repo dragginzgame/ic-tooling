@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn directory_size_sums_wide_and_nested_files() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path();
     assert_eq!(directory_logical_size(root).unwrap(), 0);
     fs::create_dir_all(root.join("wide")).unwrap();
@@ -34,7 +34,7 @@ fn directory_size_sums_wide_and_nested_files() {
 #[test]
 #[cfg(unix)]
 fn directory_size_counts_symlinks_without_following_them() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path();
     let walked = root.join("walked");
     fs::create_dir_all(&walked).unwrap();

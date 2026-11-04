@@ -24,6 +24,10 @@ pub struct RequestContext {
 /// Failures from the maintained client. Sources are preserved without string matching.
 #[derive(Debug, thiserror::Error)]
 pub enum ClientError {
+    #[error(
+        "PocketIC requires an explicit server URL; provision/start it through ic_testkit::pic or supply a running server"
+    )]
+    MissingServerUrl,
     #[error("PocketIC transport failed: {source}")]
     Transport {
         context: Box<RequestContext>,

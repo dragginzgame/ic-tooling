@@ -131,7 +131,7 @@ retained; a changed installation requires a fresh selected root.
 Run uses that prepared selection when neither `POCKET_IC_BIN` nor
 `IC_TESTKIT_POCKET_IC_URL` is selected, and exports the executable and managed
 URL to the command. Explicit binary overrides admit stable 16.x servers,
-independently of the Rust client's latest download constant. URL mode borrows an
+independently of the Rust client's protocol-version constant. URL mode borrows an
 existing server. For long pre-client work, select `run --idle-ttl SECONDS -- COMMAND`
 or the `Spawn` variant's `server_idle_ttl` field. This selects operation-idle
 lifetime independently of `--ttl`'s hard limit; omitted idle selection retains

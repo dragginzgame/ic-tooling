@@ -14,8 +14,8 @@ has shipped.
 ## Ownership
 
 PocketIC owns the simulator and server protocol. Testkit owns the maintained
-native client, client-owned DTO/error identities and inherited default server
-discovery behavior in `ic_testkit::pocket_ic`. The `pic` module supplies lifecycle
+native client and client-owned DTO/error identities in `ic_testkit::pocket_ic`.
+The client requires an explicit endpoint. The `pic` module supplies lifecycle
 and testing helpers. Both ship in one Testkit package and release group.
 Platform continues to supply general Candid and management adapters.
 See [the client migration](client-migration.md) for imports and provenance.
@@ -33,8 +33,7 @@ benchmark averages without depending on Canic capabilities such as IC Metrics.
 
 ## Server selection and provisioning
 
-The upstream implicit builder may discover or download a server. Testkit's bounded
-startup path requires an explicit selection instead:
+Server acquisition and startup require explicit selection:
 
 - `server_assets::setup` and `ic-testkit-server setup` explicitly provision one
   release-bound, reviewed archive. Testkit owns the version/digests and bundle
@@ -62,9 +61,7 @@ would still need an explicit owner.
 
 ## Bounded startup and process lifetime
 
-The selected upstream server launcher waits for port publication without Testkit's
-complete readiness deadline and child-exit observation. Testkit's `build_instance`
-and `build_instance_async` use the explicit configuration, preserve a typed
+Testkit's `build_instance` and `build_instance_async` use the explicit configuration, preserve a typed
 `PocketIcStartupFailure`, and return `PocketIcInstance<T>` with the upstream
 instance and its server lifetime. Startup cancellation/failure cleans up the
 owned child; borrowed-server failure leaves ownership with its caller.

@@ -1,5 +1,5 @@
 use super::{OwnedDirectory, remove_path_if_present};
-use crate::test_support::fixture;
+use crate::tests::fixture;
 use std::{
     fs, io,
     panic::{AssertUnwindSafe, catch_unwind},

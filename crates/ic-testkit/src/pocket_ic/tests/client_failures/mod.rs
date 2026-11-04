@@ -132,6 +132,40 @@ impl Server {
 }
 
 #[test]
+fn missing_server_is_refused_before_any_external_effect() {
+    assert!(matches!(
+        crate::pocket_ic::PocketIcBuilder::new().build(),
+        Err(ClientError::MissingServerUrl)
+    ));
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    assert!(matches!(
+        runtime.block_on(crate::pocket_ic::PocketIcBuilder::new().build_async()),
+        Err(ClientError::MissingServerUrl)
+    ));
+}
+
+#[test]
+fn instance_listing_uses_only_the_supplied_endpoint() {
+    for asynchronous in [false, true] {
+        let server = Server::new(vec![Step::reply(
+            "/instances",
+            200,
+            r#"["Available","Busy"]"#,
+        )]);
+        let instances = if asynchronous {
+            tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(nonblocking::PocketIc::list_instances(server.url.clone()))
+        } else {
+            PocketIc::list_instances(server.url.clone())
+        }
+        .unwrap();
+        assert_eq!(instances, ["Available", "Busy"]);
+        assert_eq!(server.finish().len(), 1);
+    }
+}
+
+#[test]
 fn sync_and_async_preserve_failure_sources_and_never_resubmit_lost_requests() {
     for asynchronous in [false, true] {
         for failure in ["reset", "body", "json", "server", "timeout"] {

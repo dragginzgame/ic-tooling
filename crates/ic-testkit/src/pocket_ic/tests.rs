@@ -1,4 +1,4 @@
-use super::{ErrorCode, RejectCode, RejectResponse, check_pocketic_server_version};
+use super::{ErrorCode, RejectCode, RejectResponse};
 use strum::IntoEnumIterator as _;
 
 #[test]
@@ -48,22 +48,6 @@ fn rejection_catalog_preserves_protocol_values_and_json() {
     assert_eq!(rejected.error_code, ErrorCode::CanisterRejectedMessage);
     assert!(!rejected.certified);
     assert_eq!(serde_json::to_vec(&rejected).unwrap(), bytes);
-}
-
-#[test]
-fn server_version_admission_retains_the_16_x_contract() {
-    for version in ["16.0.0", "16.0.1", "16.1.0"] {
-        check_pocketic_server_version(&format!("pocket-ic-server {version}")).unwrap();
-    }
-    for value in [
-        "pocket-ic-server",
-        "pocket-ic 16.1.0",
-        "pocket-ic-server 16 1 0",
-        "pocket-ic-server 15.0.0",
-        "pocket-ic-server 17.0.0",
-    ] {
-        assert!(check_pocketic_server_version(value).is_err(), "{value}");
-    }
 }
 
 #[cfg(test)]

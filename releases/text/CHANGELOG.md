@@ -6,6 +6,13 @@ optional YAML. Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.74.2]
+
+### 🧹 Cleanup
+
+- Keep table, escaping and width unit tests in test-only modules so source
+  counts distinguish tests from runtime code without changing their coverage.
+
 ## [0.74.1] - 2026-11-02
 
 ### ➕ Added

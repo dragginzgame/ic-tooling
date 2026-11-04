@@ -154,23 +154,6 @@ const fn failed(bytes: Vec<u8>, failure: HttpCaptureFailure) -> HttpCapture {
     }
 }
 
-#[cfg(test)]
-fn capture_with(
-    read: impl FnMut(&mut [u8], Duration) -> io::Result<usize>,
-    budget: Duration,
-    max_header_bytes: usize,
-    max_body_bytes: usize,
-    content_length: HttpContentLength,
-) -> HttpCapture {
-    let Some(deadline) = Instant::now().checked_add(budget) else {
-        return failed(Vec::new(), HttpCaptureFailure::InvalidDeadline);
-    };
-    let Some(bounds) = CaptureBounds::new(max_header_bytes, max_body_bytes, 0) else {
-        return failed(Vec::new(), HttpCaptureFailure::InvalidBounds);
-    };
-    capture_with_deadline(read, Vec::new(), deadline, bounds, content_length)
-}
-
 fn capture_with_deadline(
     mut read: impl FnMut(&mut [u8], Duration) -> io::Result<usize>,
     mut bytes: Vec<u8>,

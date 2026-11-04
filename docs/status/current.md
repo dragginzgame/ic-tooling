@@ -1,4 +1,76 @@
-# Current handoff — 2026-11-03
+# Current handoff — 2026-11-04
+
+## Local Shared refresh and complexity reduction
+
+This uncommitted batch adopts Shared Tooling 0.29.4 at
+`628ccc75d813bfd9bae777bfbaef55838d25b1b2` through the canonical exporter.
+All 163 managed files match the selected source; tool catalogs are unchanged.
+The CI-selection fixture now prepares the classifier's declared companion closure,
+including `StableVersion.pm`, rather than copying its entrypoint alone.
+
+Thirty-seven inline Rust test modules now use ordinary `tests.rs` or `tests/`
+discovery. Private fixtures/helpers moved without widening production visibility or
+changing Cargo target roots. Three small Unix FS fault-injection entrypoints retain
+their restricted boundary, with the reason documented beside them.
+
+The subsequent authorized implementation simplifies 71 blocking PocketIC
+forwarders and removes their now-unnecessary shared runtime allocation. The client
+requires an explicit server URL: sync/async `new` and `list_instances` take an
+endpoint, builders without one return `ClientError::MissingServerUrl`, and
+`with_server_binary`, `StartServerParams` and the implicit downloader/launcher
+are removed. `pic` remains the sole provisioning/managed-startup owner. Its instance
+builders supply the URL. Direct client flate2 and semver selections are removed;
+imported temporary instance-state custody remains. This API cut has migration
+instructions and pending Testkit 0.85.0 notes, with no manifest version bump.
+
+A separately checksummed `tooling-maintenance.patch` records the client changes.
+The source guard reverses it before the unchanged transfer/upstream reconstruction;
+original donor hashes, license notices, protocol/crypto identities and fallible
+no-replay/snapshot contracts remain. Mutation checks cover the additional patch.
+
+Build now derives routine error formatting while preserving streamed list rendering,
+diagnostic text and source chains. Both caches share failed-acquisition finalization:
+published/disarmed entries survive later errors; incomplete entries are cleaned
+once, retaining original and cleanup causes on failure. Generic commit cleanup no
+longer silently retries on Drop. Fingerprints, retained formats, locking, publication
+and materialization policies remain distinct and unchanged.
+
+The same LOC command reports 37,743 non-test-file Rust lines and 46,894 test-file
+lines, with 1,205 test functions and zero inline test functions. The test-layout-only
+stage was 38,144 / 46,792 / 1,201; this implementation removes 401 non-test-file
+lines and adds 102 test lines (299 fewer total). The original 44,247 non-test-file
+count included inline tests, so its larger decrease is primarily classification.
+
+Focused Linux evidence in `target/complexity-reduction-20261104/` records:
+207 artifact/cache unit tests, 21 client tests, 28 startup tests with six existing
+ignores, and one installed management/snapshot test against the explicitly admitted
+16.1 server. Affected Build/Testkit/Dev Clippy, native/Wasm graphs, deployed Wasm
+compilation, source reconstruction/mutations, error diagnostics and documentation
+checks passed. Initial sandbox client failures denied local listener creation;
+the identical native tests passed with socket access enabled. Full workspace/release
+qualification and native macOS qualification were not run for this local batch.
+The earlier layout evidence (372 tests, six existing ignores), Shared consumer
+fixtures and all 99 CI-selection cases remain in `target/loc-cleanup-20261104/`.
+
+All incoming unrelated `Cargo.lock` content is preserved; the only subsequent
+lock edits remove ic-testkit's two retired direct dependency edges. Work remains
+local on main, with pending group notes and no commits, pushes or publication.
+
+The read-only retention guard initially refused an old nested checkout and build
+tree under `.git/release-state/deployment-tools-0.77.0-testkit-0.77.0/release/`.
+Review established clean/inactive state and no unique refs: every ref is already
+in current main ancestry. With explicit user approval, that redundant checkout
+and its temporary comparison archive were removed. Its 760 KB of completed plans
+and receipts remain byte-for-byte under `historical-release-records/` beside the
+original delivery evidence, with ref/status inventories and the review record.
+Retained-state admission now passes without relaxing the shared limits.
+
+The user has authorized deployment of this batch. Selected releases are
+Foundation 0.74.3, Build 0.74.3, Text 0.74.2 and Testkit 0.85.0, in supplier order.
+Tools and Native have no new release. The ordinary checkout is the release owner;
+unrelated lock selections remain separately preserved rather than delivered.
+
+The following delivered baseline and host evidence precede this local batch.
 
 ## Delivered Platform 0.21 adoption
 

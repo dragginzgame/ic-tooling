@@ -2,7 +2,7 @@ use super::{
     lock_exclusive, lock_exclusive_with_wait, lock_shared, try_lock_exclusive, unlock,
     wait_for_lock,
 };
-use crate::test_support::fixture;
+use crate::tests::fixture;
 use std::{fs::File, io, time::Duration};
 
 #[test]

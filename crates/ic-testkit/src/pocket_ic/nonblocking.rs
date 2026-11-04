@@ -16,7 +16,7 @@ use crate::pocket_ic::wsl_path;
 use crate::pocket_ic::{ClientError, Operation, RequestContext, http::Exchange};
 use crate::pocket_ic::{
     CreateCanisterParams, CreateCanisterPlacement, IngressStatusResult, PocketIcBuilder,
-    PocketIcState, RejectResponse, StartServerParams, TickConfigs, Time, copy_dir, start_server,
+    PocketIcState, RejectResponse, TickConfigs, Time, copy_dir,
 };
 use backon::{BackoffBuilder, ExponentialBuilder};
 use candid::{
@@ -97,9 +97,10 @@ pub struct PocketIc {
 
 impl PocketIc {
     /// Creates a new PocketIC instance with a single application subnet on the server.
-    /// The server is started if it's not already running.
-    pub async fn new() -> Result<Self, ClientError> {
+    /// The caller supplies an already admitted server endpoint.
+    pub async fn new(server_url: Url) -> Result<Self, ClientError> {
         PocketIcBuilder::new()
+            .with_server_url(server_url)
             .with_application_subnet()
             .build_async()
             .await
@@ -139,8 +140,7 @@ impl PocketIc {
     )]
     pub(crate) async fn from_components(
         subnet_config_set: impl Into<ExtendedSubnetConfigSet>,
-        server_url: Option<Url>,
-        server_binary: Option<PathBuf>,
+        server_url: Url,
         max_request_time_ms: Option<u64>,
         read_only_state_dir: Option<PathBuf>,
         mut state_dir: Option<PocketIcState>,
@@ -154,19 +154,6 @@ impl PocketIc {
         mainnet_nns_subnet_id: Option<bool>,
         disable_ingress_validation: Option<bool>,
     ) -> Result<Self, ClientError> {
-        let server_url = if let Some(server_url) = server_url {
-            server_url
-        } else {
-            let (_, server_url) = start_server(StartServerParams {
-                server_binary,
-                reuse: true,
-                ttl: None,
-                hard_ttl: None,
-            })
-            .await?;
-            server_url
-        };
-
         let subnet_config_set: ExtendedSubnetConfigSet = subnet_config_set.into();
 
         // copy the read-only state dir to the state dir
@@ -334,12 +321,7 @@ impl PocketIc {
 
     /// List all instances and their status.
     #[instrument(ret)]
-    pub async fn list_instances() -> Result<Vec<String>, ClientError> {
-        let (_, server_url) = start_server(StartServerParams {
-            reuse: true,
-            ..Default::default()
-        })
-        .await?;
+    pub async fn list_instances(server_url: Url) -> Result<Vec<String>, ClientError> {
         let url = server_url.join("instances").unwrap();
         let client = reqwest::Client::new();
         Exchange::new(&url, None)

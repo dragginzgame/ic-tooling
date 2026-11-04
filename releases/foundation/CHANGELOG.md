@@ -6,6 +6,14 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.74.3]
+
+### 🧹 Cleanup
+
+- Move FS, Process and inspector unit tests and private helpers into test-only
+  modules. Preserve Cargo targets, test names, visibility and runtime behavior;
+  source counts now distinguish these tests from library code.
+
 ## [0.74.2] - 2026-11-02
 
 ### 🩹 Fixed

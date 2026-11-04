@@ -22,9 +22,9 @@ use super::{
     cache_fs::{
         ArtifactCacheMaintenance, ArtifactCachePruneReport, CacheFsError, CacheRetentionLimits,
         LAST_USED_FILE, RetainedCacheEntry, canonicalize_allow_missing, ensure_cache_directory_tag,
-        is_sha256_directory, lock_cache_file, perform_scheduled_cache_maintenance,
-        prune_direct_child_directories, record_cache_entry_use, remove_unretained_entry,
-        try_lock_cache_file,
+        finish_cache_build, is_sha256_directory, lock_cache_file,
+        perform_scheduled_cache_maintenance, prune_direct_child_directories,
+        record_cache_entry_use, remove_unretained_entry, try_lock_cache_file,
     },
     digest::{
         FileDigest, InputDigest, InputHasher, copy_file_atomic, digest_bytes, digest_file,
@@ -144,11 +144,13 @@ pub struct ArtifactBuildTransaction {
 #[derive(Debug, thiserror::Error)]
 pub enum ArtifactCacheError {
     /// The caller supplied an incomplete, ambiguous, or unsafe specification.
+    #[error("invalid artifact cache spec: {message}")]
     InvalidSpec {
         /// Diagnostic describing the rejected input or evidence.
         message: String,
     },
     /// A filesystem operation failed.
+    #[error("failed to {operation} at {}: {source}", .path.display())]
     Io {
         /// Filesystem or process operation that failed.
         operation: &'static str,
@@ -158,6 +160,7 @@ pub enum ArtifactCacheError {
         source: io::Error,
     },
     /// Inputs changed while preparing a stable cache acquisition.
+    #[error("artifact inputs changed during cache preparation: {before} -> {after}")]
     InputsChangedDuringPreparation {
         /// Input identity captured before the operation.
         before: InputDigest,
@@ -165,6 +168,7 @@ pub enum ArtifactCacheError {
         after: InputDigest,
     },
     /// Inputs changed while the caller owned a build transaction.
+    #[error("artifact inputs changed while the caller was building: {before} -> {after}")]
     InputsChangedDuringAcquisition {
         /// Input identity captured before the operation.
         before: InputDigest,
@@ -172,6 +176,7 @@ pub enum ArtifactCacheError {
         after: InputDigest,
     },
     /// A resolved Cargo source/configuration set changed after it was captured.
+    #[error("resolved Cargo build inputs `{label}` changed: {before} -> {after}")]
     CargoBuildInputsChanged {
         /// Caller-selected logical input-set label.
         label: String,
@@ -181,6 +186,7 @@ pub enum ArtifactCacheError {
         after: InputDigest,
     },
     /// Rehashing a resolved Cargo input set failed.
+    #[error("failed to revalidate resolved Cargo build inputs `{label}`: {source}")]
     CargoBuildInputRevalidation {
         /// Caller-selected logical input-set label.
         label: String,
@@ -188,16 +194,19 @@ pub enum ArtifactCacheError {
         source: WasmBuildError,
     },
     /// One or more declared staged outputs were missing or failed validation.
+    #[error("artifact transaction has missing or invalid outputs: {}", InvalidOutputList(.outputs))]
     InvalidOutputs {
         /// Logical names and paths of outputs that failed validation.
         outputs: Vec<(String, PathBuf)>,
     },
     /// A logical output name was not declared by the transaction specification.
+    #[error("artifact transaction has no output named `{name}`")]
     UnknownOutput {
         /// Undeclared logical output name.
         name: String,
     },
     /// Transaction failure cleanup also failed.
+    #[error("artifact transaction failed ({transaction_error}) and staging cleanup at {} also failed: {source}", .path.display())]
     FailedTransactionCleanup {
         /// Original transaction error before cleanup was attempted.
         transaction_error: Box<Self>,
@@ -206,6 +215,20 @@ pub enum ArtifactCacheError {
         /// Original underlying error, including its typed failure evidence.
         source: io::Error,
     },
+}
+
+struct InvalidOutputList<'a>(&'a [(String, PathBuf)]);
+
+impl std::fmt::Display for InvalidOutputList<'_> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (index, (name, path)) in self.0.iter().enumerate() {
+            if index != 0 {
+                formatter.write_str(", ")?;
+            }
+            write!(formatter, "{name} ({})", path.display())?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -744,21 +767,15 @@ impl ArtifactBuildTransaction {
     /// errors. Failed staging cleanup preserves both the transaction and cleanup errors.
     pub fn commit(mut self) -> Result<ArtifactCacheOutcome, ArtifactCacheError> {
         let result = self.commit_inner();
-        match result {
-            Ok(outcome) => Ok(outcome),
-            Err(transaction_error) if self.staging_directory.is_armed() => {
-                let path = self.staging_directory.path().to_owned();
-                match self.staging_directory.try_cleanup() {
-                    Ok(()) => Err(transaction_error),
-                    Err(source) => Err(ArtifactCacheError::FailedTransactionCleanup {
-                        transaction_error: Box::new(transaction_error),
-                        path,
-                        source,
-                    }),
-                }
-            }
-            Err(transaction_error) => Err(transaction_error),
-        }
+        finish_cache_build(
+            result,
+            self.staging_directory,
+            |transaction_error, path, source| ArtifactCacheError::FailedTransactionCleanup {
+                transaction_error: Box::new(transaction_error),
+                path,
+                source,
+            },
+        )
     }
 
     /// Abandon the transaction and synchronously remove its staging directory.
@@ -1945,70 +1962,6 @@ impl ArtifactOutputValidation {
         match self {
             Self::RegularFile => "regular-file",
             Self::NonEmptyFile => "nonempty-file",
-        }
-    }
-}
-
-impl std::fmt::Display for ArtifactCacheError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidSpec { message } => {
-                write!(formatter, "invalid artifact cache spec: {message}")
-            }
-            Self::Io {
-                operation,
-                path,
-                source,
-            } => write!(
-                formatter,
-                "failed to {operation} at {}: {source}",
-                path.display()
-            ),
-            Self::InputsChangedDuringPreparation { before, after } => write!(
-                formatter,
-                "artifact inputs changed during cache preparation: {before} -> {after}",
-            ),
-            Self::InputsChangedDuringAcquisition { before, after } => write!(
-                formatter,
-                "artifact inputs changed while the caller was building: {before} -> {after}",
-            ),
-            Self::CargoBuildInputsChanged {
-                label,
-                before,
-                after,
-            } => write!(
-                formatter,
-                "resolved Cargo build inputs `{label}` changed: {before} -> {after}",
-            ),
-            Self::CargoBuildInputRevalidation { label, source } => write!(
-                formatter,
-                "failed to revalidate resolved Cargo build inputs `{label}`: {source}",
-            ),
-            Self::InvalidOutputs { outputs } => {
-                formatter.write_str("artifact transaction has missing or invalid outputs: ")?;
-                for (index, (name, path)) in outputs.iter().enumerate() {
-                    if index != 0 {
-                        formatter.write_str(", ")?;
-                    }
-                    write!(formatter, "{name} ({})", path.display())?;
-                }
-                Ok(())
-            }
-            Self::UnknownOutput { name } => {
-                write!(
-                    formatter,
-                    "artifact transaction has no output named `{name}`"
-                )
-            }
-            Self::FailedTransactionCleanup {
-                transaction_error,
-                path,
-                source,
-            } => write!(
-                formatter,
-                "artifact transaction failed ({transaction_error}) and staging cleanup at {} also failed: {source}",
-                path.display(),
-            ),
         }
     }
 }

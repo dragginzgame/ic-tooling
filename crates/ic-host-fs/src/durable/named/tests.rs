@@ -4,7 +4,7 @@ use crate::{
         supported::{FileCommitStep, WriterCustody, commit_path_with_options},
         tests::REPLACE_OPTIONS,
     },
-    test_support::fixture,
+    tests::fixture,
 };
 use std::{
     fs,

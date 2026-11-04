@@ -1,5 +1,5 @@
 use super::*;
-use crate::{read::tree::checksum::checksum_directory, test_support::fixture};
+use crate::{read::tree::checksum::checksum_directory, tests::fixture};
 use ic_host_artifacts::artifact::ArtifactError;
 use std::{fs, os::unix::fs::symlink, path::PathBuf};
 

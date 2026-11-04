@@ -343,6 +343,8 @@ mod supported {
         FinalParentSync,
     }
 
+    // Test-only entrypoints stay beside these private Unix operations so fault
+    // injection preserves their restricted descriptor/publication boundary.
     #[cfg(test)]
     pub(super) fn commit_with_hook(
         path: &Path,

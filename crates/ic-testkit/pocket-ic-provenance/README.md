@@ -11,7 +11,7 @@ That historical evidence is not qualification of this new package layout.
 `src/lib.rs` becomes `src/pocket_ic/mod.rs`; internal crate paths become module
 paths. Rustfmt orders those imports. The module retains the donor's Clippy
 policy for imported source by expecting Testkit's additional pedantic/nursery
-lint groups only there. No client function bodies, protocol constants, tests,
+lint groups only there. The transfer changes no client function bodies, protocol constants, tests,
 cryptographic operations or retry semantics change.
 
 `module-transfer.patch` records exactly that packaging adaptation and has its
@@ -26,3 +26,19 @@ their Platform paths and release references describe the donor history.
 The imported source remains Apache-2.0; see LICENSE and upstream/LICENSE.
 Testkit's package license is MIT AND Apache-2.0. The source remains maintained in
 one Testkit module, without a second wrapper package or separate release group.
+
+## Tooling maintenance after transfer
+
+`tooling-maintenance.patch` records the subsequent explicit-server API cut and
+blocking-forwarder simplification. Its independent checksum is checked before
+reversing it, then the unchanged transfer and upstream reconstruction checks run.
+Original donor/upstream hashes and patches are not refreshed to admit these edits.
+Mutation checks also reject changes to this maintenance patch.
+
+The client no longer provisions or starts a server. Builders require
+`with_server_url`; missing selection returns `ClientError::MissingServerUrl`
+before runtime construction or network effects. Sync/async `new` and
+`list_instances` take a URL. `pic::server_assets` and the managed startup surface
+own provisioning and server custody. Protocol bytes, crypto, typed failures,
+accepted-operation custody, snapshot transfer and external DTO identities stay
+unchanged. Existing private state-directory custody remains imported behavior.

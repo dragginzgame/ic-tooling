@@ -376,8 +376,8 @@ Neither construction method adds an instance-operation or deletion deadline.
 The synchronous upstream drop limitation below still applies.
 
 Use `PocketIcStartupConfig::Connect { server_url: url.into(), timeout }` for a caller-owned existing
-server. Both modes set the server URL on the builder, preventing its implicit,
-unbounded child-startup path. There is no implicit binary fallback or hidden retry.
+server. Both modes set the server URL required by the client builder.
+There is no implicit binary fallback or hidden retry.
 
 The deadline covers construction. After it returns, operations and instance
 teardown follow upstream PocketIC behavior. In PocketIC 16, dropping an
@@ -541,7 +541,7 @@ Port/readiness files remain private temporary state and are removed normally.
 This selection requires an owned server; external URL mode rejects it.
 Public `output()` and error excerpts still read only the first 16 KiB per stream.
 
-ic-testkit does not discover, download or cache server binaries. Explicit `spawn`
+Managed startup does not discover, download or cache server binaries. Explicit `spawn`
 continues to assume caller admission. Version checks do not authenticate executable
 bytes: use the shared `make tools-check` receipt verification for a prepared
 bundle, or admit an external binary yourself. `PocketIc::get_server_url()` exposes
@@ -893,8 +893,9 @@ Read nanoseconds since the Unix epoch directly from PocketIC:
 ```rust,no_run
 use ic_testkit::pocket_ic::PocketIc;
 
-let pocket_ic = PocketIc::new();
-let now_ns = pocket_ic.get_time().as_nanos_since_unix_epoch();
+let server_url = "http://127.0.0.1:4943/".parse().unwrap();
+let pocket_ic = PocketIc::new(server_url).unwrap();
+let now_ns = pocket_ic.get_time().unwrap().as_nanos_since_unix_epoch();
 ```
 
 Use PocketIC's inherent `get_time`, `set_time`, `set_certified_time`,

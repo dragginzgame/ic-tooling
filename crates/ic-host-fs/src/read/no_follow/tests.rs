@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     read::{admit_file, hash_file, read_file, read_opened_file},
-    test_support::fixture,
+    tests::fixture,
 };
 use ic_host_artifacts::artifact::{ArtifactError, ArtifactIdentity, Sha256Digest, hash_reader};
 use rustix::fs::{Mode, OFlags, open};

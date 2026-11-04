@@ -1,5 +1,5 @@
 use super::{canonicalize_allow_missing, validate_physical_directory_allow_missing};
-use crate::test_support::fixture;
+use crate::tests::fixture;
 use std::{fs, io, path::Path};
 
 #[test]

@@ -6,6 +6,25 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.74.3]
+
+### 🧹 Cleanup
+
+- Move inline unit tests into ordinary test modules while preserving their
+  module paths, fixture contents and production visibility.
+- Derive routine cache error formatting while preserving diagnostics and sources.
+- Share acquisition finalization between the Wasm and generic artifact caches.
+  Preserve published entries after later failures and retain both causes when
+  incomplete-entry cleanup fails. Generic commit cleanup now makes one explicit
+  attempt, leaving recovery to its returned error rather than retrying on Drop.
+
+### 🥾 Governance
+
+- Adopt Shared Tooling 0.29.4, including test-layout guidance and bounded
+  retained-release-state admission, from committed source `628ccc75`.
+- Prepare the CI classifier fixture from its declared companion closure so
+  new shared parser dependencies remain available in the consumer check.
+
 ## [0.74.2] - 2026-11-03
 
 ### 🛠️ Fixes

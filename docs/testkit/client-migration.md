@@ -21,10 +21,27 @@ DTOs/errors acquire Testkit identity, so callers must migrate together.
 
 The transfer preserves fallible operations, accepted-operation custody, explicit
 Busy-only retry, no replay after uncertain requests, bounded snapshot chunks and
-total budgets. The inherited convenience builder's server discovery/download
-behavior is unchanged; `pic` retains explicit provisioning and lifecycle policy.
+total budgets. The 0.85 API requires an explicit server endpoint; `pic` owns
+provisioning and lifecycle policy.
 Application budgets, retries, topology, authentication and fixture policy remain
 caller-owned. No Runtime, Types, Agent or crypto implementation moves here.
+
+## Explicit server selection in 0.85
+
+Provision with `ic-testkit-server setup` or `pic::server_assets::setup`, admit an
+existing installation with `check`, and start it through `PocketIcStartupConfig`.
+Managed `build_instance(builder)` supplies the endpoint and retains server custody.
+For an externally owned server, pass its URL to `PocketIcBuilder::with_server_url`.
+Builders without a URL return `ClientError::MissingServerUrl`; they do not inspect
+`POCKET_IC_BIN`, download executables or start processes.
+
+Replace `PocketIc::new()` with `PocketIc::new(server_url)` and
+`PocketIc::list_instances()` with `PocketIc::list_instances(server_url)`; the async
+client has the same explicit arguments. Replace `with_server_binary`,
+`StartServerParams` and `pocket_ic::start_server` with the managed `pic` startup
+surface. Keep its server handle alive while its instances are in use. This is a
+minor-release API change; the currently published 0.84 line retains the inherited
+convenience behavior.
 
 [Provenance](../../crates/ic-testkit/pocket-ic-provenance/README.md) records the
 exact Platform donor and reconstruction guards. Run

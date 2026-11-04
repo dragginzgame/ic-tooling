@@ -6,6 +6,26 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.85.0]
+
+### ⚠️ Breaking
+
+- Require an explicit server URL in the maintained client. `new` and
+  `list_instances` take an endpoint; builders without one return
+  `ClientError::MissingServerUrl`. Remove `with_server_binary`, `StartServerParams`
+  and the implicit downloader/launcher. Provision and start through `pic` instead;
+  managed instance builders supply their server URL. Remove direct flate2 and
+  semver dependencies. See the client migration guide.
+
+### 🧹 Cleanup
+
+- Move private unit tests and helpers into test-only modules across Testkit,
+  its CLI, the development drivers and the probe. Preserve test names, Cargo
+  target roots and production visibility.
+- Simplify 71 blocking client forwarders without changing their request/error
+  semantics. Preserve donor/upstream reconstruction through a separately checked
+  maintenance patch.
+
 ## [0.84.1] - 2026-11-03
 
 ### 🧹 Maintenance

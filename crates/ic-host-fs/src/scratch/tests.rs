@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::fixture;
+use crate::tests::fixture;
 use std::{
     error::Error as _,
     os::unix::fs::{PermissionsExt as _, symlink},

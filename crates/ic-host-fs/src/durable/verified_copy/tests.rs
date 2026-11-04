@@ -4,7 +4,7 @@ use std::fs;
 
 #[test]
 fn verified_copy_preserves_prior_bytes_on_digest_limit_and_source_refusal() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let source = fixture.path().join("source");
     let output = fixture.path().join("output");
     fs::write(&source, b"complete").unwrap();
@@ -82,7 +82,7 @@ fn verified_copy_preserves_prior_bytes_on_digest_limit_and_source_refusal() {
 #[test]
 fn verified_copy_refuses_fifo_without_a_writer_and_follows_selected_symlinks() {
     use std::os::unix::fs::symlink;
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let source = fixture.path().join("source");
     let alias = fixture.path().join("alias");
     let fifo = fixture.path().join("fifo");

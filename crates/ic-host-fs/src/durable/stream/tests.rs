@@ -2,7 +2,7 @@ use super::*;
 mod existing_parent;
 use crate::{
     durable::supported::{FileCommitStep, commit_at_with_hook, native_permissions},
-    test_support::fixture,
+    tests::fixture,
 };
 use std::{
     ffi::{OsStr, OsString},

@@ -42,7 +42,7 @@ fn durable_stream_copy_preserves_outputs_on_read_failure_and_create_only_refusal
             Ok(1)
         }
     }
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let output = fixture.path().join("copy/output");
     let options = WriteOptions {
         mode: PublicationMode::Replace,
@@ -82,7 +82,7 @@ fn durable_stream_copy_preserves_outputs_on_read_failure_and_create_only_refusal
 #[test]
 fn durable_stream_copy_keeps_default_or_exact_caller_permissions() {
     use std::os::unix::fs::PermissionsExt;
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let output = fixture.path().join("copy");
     let control = fixture.path().join("ordinary");
     fs::File::create(&control).unwrap();
@@ -117,7 +117,7 @@ fn durable_stream_copy_keeps_default_or_exact_caller_permissions() {
 fn private_parent_preparation_preserves_modes_and_refuses_symlinks() {
     use std::os::unix::fs::{MetadataExt, symlink};
 
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let first = fixture.path().join("private");
     let parent = first.join("nested");
     prepare_private_parents(&parent).unwrap();
@@ -166,7 +166,7 @@ fn private_parent_preparation_preserves_modes_and_refuses_symlinks() {
 #[test]
 fn streamed_replacement_returns_producer_value_only_after_complete_publication() {
     use std::io::Write as _;
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("streamed-replacement");
     let path = root.join("nested/output");
     let value = write_with(&path, REPLACE_OPTIONS, |file| {
@@ -191,7 +191,7 @@ fn producer_failure_and_bounded_copy_preserve_previous_destination() {
             Err(io::Error::from_raw_os_error(13))
         }
     }
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("streamed-failure");
     let path = root.join("output");
     write_bytes(&path, REPLACE_OPTIONS, b"original").unwrap();
@@ -292,7 +292,7 @@ fn durable_lock_reports_wait_for_another_process_and_retains_exclusion() {
         hold_regular_lock_until_release(&PathBuf::from(root).join("complete-build-reuse.lock"));
         return;
     }
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("progress-lock");
     let mut child = Command::new(std::env::current_exe().unwrap())
         .args(["--exact", test_name, "--nocapture"])
@@ -384,7 +384,7 @@ fn hold_regular_lock_until_release(path: &Path) {
 
 #[test]
 fn durable_write_creates_parents_and_replaces_complete_contents() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("replace");
     let path = root.join("reports/nested/state.json");
 
@@ -431,7 +431,7 @@ fn private_lock_creation_is_owner_only_with_permissive_umask() {
         assert!(String::from_utf8_lossy(&output.stdout).contains("PRIVATE_SIDECAR_CHECKED"));
         return;
     }
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let path = fixture.path().join("command.lock");
     let file = open_private_regular_lock_file(&path).unwrap();
     let metadata = file.metadata().unwrap();
@@ -451,7 +451,7 @@ fn private_lock_creation_is_owner_only_with_permissive_umask() {
 #[test]
 fn private_lock_refuses_missing_parents_and_unsafe_entries_without_changes() {
     use std::os::unix::fs::{MetadataExt, symlink};
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let missing = fixture.path().join("missing/nested/command.lock");
     assert!(matches!(open_private_regular_lock_file(&missing),
         Err(RegularFileLockError::Io(error)) if error.kind() == io::ErrorKind::NotFound));
@@ -498,7 +498,7 @@ fn private_lock_refuses_missing_parents_and_unsafe_entries_without_changes() {
 fn existing_sidecar_open_never_creates_and_one_try_reports_contention() {
     use std::os::unix::fs::{MetadataExt, symlink};
 
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let path = fixture.path().join("original.lock");
     assert!(matches!(
         open_existing_regular_lock_file(&path),
@@ -537,7 +537,7 @@ fn existing_sidecar_open_never_creates_and_one_try_reports_contention() {
 #[test]
 fn lock_errors_preserve_admission_and_original_io_causes() {
     use std::error::Error as _;
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let target = fixture.path().join("target");
     fs::write(&target, b"unchanged").unwrap();
     let link = fixture.path().join("link");
@@ -581,7 +581,7 @@ fn lock_errors_preserve_admission_and_original_io_causes() {
 #[test]
 fn lock_creation_preserves_publication_error_through_io_boundary() {
     use std::error::Error as _;
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let link = fixture.path().join("parent");
     std::os::unix::fs::symlink(fixture.path().join("missing"), &link).unwrap();
     let error = open_regular_lock_file_with_parents(&link.join("lock")).unwrap_err();
@@ -614,7 +614,7 @@ fn lock_creation_preserves_publication_error_through_io_boundary() {
 #[test]
 fn existing_lock_admission_does_not_require_parent_write_permission() {
     use std::os::unix::fs::PermissionsExt as _;
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let path = fixture.path().join("lock");
     fs::write(&path, b"existing lock bytes").unwrap();
     fs::set_permissions(fixture.path(), fs::Permissions::from_mode(0o555)).unwrap();
@@ -631,7 +631,7 @@ fn existing_lock_admission_does_not_require_parent_write_permission() {
 #[test]
 fn concurrent_missing_lock_openers_converge_on_one_regular_file() {
     use std::{os::unix::fs::MetadataExt as _, sync::Barrier};
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let path = fixture.path().join("nested/lock");
     let start = Barrier::new(8);
     let files = std::thread::scope(|scope| {
@@ -664,7 +664,7 @@ fn concurrent_missing_lock_openers_converge_on_one_regular_file() {
 #[test]
 fn admitted_lock_files_compose_with_shared_locks_and_explicit_clone_unlock() {
     use rustix::fs::{FlockOperation as Op, flock};
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("admitted-lock");
     let path = root.join("nested/lock");
     let first = open_regular_lock_file_with_parents(&path).unwrap();
@@ -700,7 +700,7 @@ fn admitted_lock_files_compose_with_shared_locks_and_explicit_clone_unlock() {
 
 #[test]
 fn durable_create_new_with_parents_never_replaces_an_existing_file() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("create-new-with-parents");
     fs::create_dir_all(&root).expect("create temp root");
     let path = root.join("nested/report.json");
@@ -724,7 +724,7 @@ fn durable_create_new_with_parents_never_replaces_an_existing_file() {
 fn durable_create_new_with_parents_rejects_a_symlinked_parent() {
     use std::os::unix::fs::symlink;
 
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("create-new-symlink-parent");
     let outside = fixture.path().join("create-new-symlink-outside");
     fs::create_dir_all(&root).expect("create temp root");
@@ -765,7 +765,7 @@ fn prepublication_failures_preserve_old_complete_bytes_and_remove_staging() {
     ];
 
     for step in steps {
-        let fixture = crate::test_support::fixture();
+        let fixture = crate::tests::fixture();
         let root = fixture.path().join(format!("prepublication-{step:?}"));
         fs::create_dir_all(&root).expect("create temp root");
         let path = root.join("report.json");
@@ -801,7 +801,7 @@ fn prepublication_failures_preserve_old_complete_bytes_and_remove_staging() {
 #[test]
 fn postpublication_sync_failure_exposes_only_new_complete_bytes() {
     for options in [REPLACE_OPTIONS, CREATE_NEW_OPTIONS, CREATE_PRIVATE_OPTIONS] {
-        let fixture = crate::test_support::fixture();
+        let fixture = crate::tests::fixture();
         let root = fixture.path().join("postpublication");
         fs::create_dir_all(&root).expect("create temp root");
         let path = root.join("report.json");
@@ -831,7 +831,7 @@ fn postpublication_sync_failure_exposes_only_new_complete_bytes() {
 #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
 #[test]
 fn create_new_publication_race_cannot_replace_the_winner() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("create-new-race");
     fs::create_dir_all(&root).expect("create temp root");
     let path = root.join("report.json");
@@ -869,7 +869,7 @@ fn unsupported_no_replace_rename_uses_atomic_link_publication() {
     ];
 
     for (label, error) in unsupported {
-        let fixture = crate::test_support::fixture();
+        let fixture = crate::tests::fixture();
         let root = fixture.path().join(format!("create-new-link-{label}"));
         fs::create_dir_all(&root).expect("create temp root");
         let temp_name = std::ffi::OsStr::new(".report.json.canic-tmp-test");
@@ -889,7 +889,7 @@ fn unsupported_no_replace_rename_uses_atomic_link_publication() {
 #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
 #[test]
 fn link_publication_fallback_cannot_replace_an_existing_file() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("create-new-link-race");
     fs::create_dir_all(&root).expect("create temp root");
     let temp_name = std::ffi::OsStr::new(".report.json.canic-tmp-test");
@@ -926,7 +926,7 @@ fn new_parent_failures_never_create_the_final_file_or_staging() {
     ];
 
     for step in steps {
-        let fixture = crate::test_support::fixture();
+        let fixture = crate::tests::fixture();
         let root = fixture.path().join(format!("parent-{step:?}"));
         fs::create_dir_all(&root).expect("create temp root");
         let path = root.join("reports/nested/report.json");
@@ -956,7 +956,7 @@ fn new_parent_failures_never_create_the_final_file_or_staging() {
 
 #[test]
 fn failed_replacement_removes_its_staging_file() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("replace-error");
     let path = root.join("occupied");
     fs::create_dir_all(&path).expect("create non-file destination");
@@ -975,7 +975,7 @@ fn failed_replacement_removes_its_staging_file() {
 #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
 #[test]
 fn raced_parent_creation_completes_both_syncs_before_staging() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("raced-parent-sync");
     fs::create_dir(&root).unwrap();
     let parent = root.join("new-parent");
@@ -1021,7 +1021,7 @@ fn raced_parent_creation_sync_failures_stop_before_staging() {
         FileCommitStep::CreatedDirectorySync,
         FileCommitStep::CreatedDirectoryParentSync,
     ] {
-        let fixture = crate::test_support::fixture();
+        let fixture = crate::tests::fixture();
         let root = fixture.path().join("raced-parent-failure");
         fs::create_dir(&root).unwrap();
         let parent = root.join("new-parent");
@@ -1074,7 +1074,7 @@ fn assert_no_temporary_files(root: &Path) {
 #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
 fn private_publication_is_owner_only_before_writing_and_never_replaces() {
     use std::os::unix::fs::PermissionsExt as _;
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("private-publication");
     let path = root.join("private/key");
     commit_with_hook(&path, &[7; 32], CREATE_PRIVATE_OPTIONS, |step, observed| {
@@ -1101,7 +1101,7 @@ fn private_publication_is_owner_only_before_writing_and_never_replaces() {
 #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
 #[test]
 fn replacement_supports_long_destination_names() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("long-replacement");
     fs::create_dir(&root).unwrap();
     let path = root.join("a".repeat(255));
@@ -1120,7 +1120,7 @@ fn replacement_supports_long_destination_names() {
 #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
 #[test]
 fn staging_collisions_retry_without_touching_unowned_files() {
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("collision-replacement");
     fs::create_dir(&root).unwrap();
     let path = root.join("output");
@@ -1177,7 +1177,7 @@ fn selected_staging_namespace_destinations_remain_absent_until_publication() {
         );
         return;
     }
-    let fixture = crate::test_support::fixture();
+    let fixture = crate::tests::fixture();
     let root = fixture.path().join("staging-destination");
     fs::create_dir(&root).unwrap();
     for (prefix, sequence) in [(".ic-host-tmp", 0), (".IC-HOST-TMP", 2)] {

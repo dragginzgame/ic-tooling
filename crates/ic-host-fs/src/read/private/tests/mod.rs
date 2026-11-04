@@ -1,6 +1,6 @@
 use super::*;
 use crate::durable::{PublicationMode, WriteOptions, write_bytes};
-use crate::test_support::fixture;
+use crate::tests::fixture;
 use std::{
     error::Error as _,
     fs,

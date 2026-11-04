@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::fixture;
+use crate::tests::fixture;
 
 #[test]
 fn admitted_bundle_runs_before_and_after_selection_and_rejection_preserves_it() {

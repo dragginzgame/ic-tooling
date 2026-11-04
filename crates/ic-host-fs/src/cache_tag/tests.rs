@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::fixture;
+use crate::tests::fixture;
 use std::fs;
 
 const SUFFIX: &[u8] = b"\n# caller-selected cache\n";

@@ -37,7 +37,6 @@ backon = { workspace = true }
 base64 = { workspace = true }
 candid = { workspace = true, features = ["bignum", "serde_bytes", "printer"] }
 clap = { workspace = true, features = ["string"], optional = true }
-flate2 = { workspace = true }
 hex = { workspace = true, features = ["serde"] }
 ic-certification = { workspace = true }
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
@@ -50,7 +49,6 @@ ic-transport-types = { workspace = true }
 ic-wire = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["blocking", "http2", "json", "multipart", "rustls", "socks", "stream"] }
 schemars = { workspace = true }
-semver = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_cbor = { workspace = true }
 serde_json = { workspace = true }

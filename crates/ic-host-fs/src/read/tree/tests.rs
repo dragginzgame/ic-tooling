@@ -1,5 +1,5 @@
 use super::{TreeVisitor, walk_tree};
-use crate::test_support::fixture;
+use crate::tests::fixture;
 use rustix::{
     fd::OwnedFd,
     fs::{FileType, Mode, OFlags, open},

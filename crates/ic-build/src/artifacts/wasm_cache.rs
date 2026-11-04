@@ -54,8 +54,8 @@ use super::{
     cache_fs::{
         ArtifactCacheMaintenance, ArtifactCachePruneReport, CacheFsError, CacheRetentionLimits,
         RetainedCacheEntry, canonicalize_allow_missing,
-        ensure_cache_directory_tag as ensure_cache_tag, is_sha256_directory, lock_cache_file,
-        lock_cache_file_with_wait_observer, perform_scheduled_cache_maintenance,
+        ensure_cache_directory_tag as ensure_cache_tag, finish_cache_build, is_sha256_directory,
+        lock_cache_file, lock_cache_file_with_wait_observer, perform_scheduled_cache_maintenance,
         prune_direct_child_directories, record_cache_entry_use as record_entry_use,
         remove_unretained_entry,
     },
@@ -533,11 +533,13 @@ impl WasmBuildProgressConfig {
 #[derive(Debug, thiserror::Error)]
 pub enum WasmBuildError {
     /// The caller supplied an incomplete or inconsistent specification.
+    #[error("invalid Wasm build spec: {message}")]
     InvalidSpec {
         /// Diagnostic describing the rejected input or evidence.
         message: String,
     },
     /// A filesystem operation failed.
+    #[error("failed to {operation} at {}: {source}", .path.display())]
     Io {
         /// Filesystem or process operation that failed.
         operation: &'static str,
@@ -547,6 +549,7 @@ pub enum WasmBuildError {
         source: io::Error,
     },
     /// An external command could not be launched.
+    #[error("failed to launch {phase} using `{}`: {source}", .program.to_string_lossy())]
     CommandSpawn {
         /// Build phase in which the command failed.
         phase: WasmBuildPhase,
@@ -558,6 +561,7 @@ pub enum WasmBuildError {
     /// An external command completed unsuccessfully.
     /// Cargo-build streams retain at most 1 MiB of raw bytes each, with an explicit marker
     /// if truncated; optional progress callbacks still receive all output.
+    #[error("{phase} failed with {status}\nstdout:\n{stdout}\nstderr:\n{stderr}")]
     CommandFailed {
         /// Build phase in which the command failed.
         phase: WasmBuildPhase,
@@ -569,11 +573,13 @@ pub enum WasmBuildError {
         stderr: String,
     },
     /// Cargo metadata did not contain the expected package graph.
+    #[error("invalid Cargo metadata: {message}")]
     InvalidMetadata {
         /// Diagnostic describing the rejected input or evidence.
         message: String,
     },
     /// A discovered Cargo configuration could not be interpreted exactly.
+    #[error("invalid Cargo configuration at {}: {message}", .path.display())]
     InvalidCargoConfiguration {
         /// Exact path involved in the failed operation.
         path: PathBuf,
@@ -581,11 +587,13 @@ pub enum WasmBuildError {
         message: String,
     },
     /// Cargo succeeded without producing every declared Wasm artifact.
+    #[error("cargo build succeeded without producing: {}", MissingArtifactList(.paths))]
     MissingArtifacts {
         /// Expected artifact paths that were not produced.
         paths: Vec<PathBuf>,
     },
     /// Declared inputs changed while acquiring or building Wasm artifacts.
+    #[error("Wasm inputs changed during artifact acquisition: {before} -> {after}")]
     InputsChangedDuringAcquisition {
         /// Input identity captured before the operation.
         before: InputDigest,
@@ -593,8 +601,10 @@ pub enum WasmBuildError {
         after: InputDigest,
     },
     /// Another concurrent reader invalidated the prepared input snapshot before publication.
+    #[error("the prepared Wasm input snapshot was invalidated before artifact publication")]
     PreparedInputSnapshotInvalidated,
     /// A build failed and its incomplete fingerprint directory could not be removed.
+    #[error("Wasm build failed ({build_error}) and its incomplete target directory at {} could not be removed: {source}", .path.display())]
     FailedBuildCleanup {
         /// Original build failure before cleanup was attempted.
         build_error: Box<Self>,
@@ -603,6 +613,20 @@ pub enum WasmBuildError {
         /// Original underlying error, including its typed failure evidence.
         source: io::Error,
     },
+}
+
+struct MissingArtifactList<'a>(&'a [PathBuf]);
+
+impl std::fmt::Display for MissingArtifactList<'_> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (index, path) in self.0.iter().enumerate() {
+            if index != 0 {
+                formatter.write_str(", ")?;
+            }
+            write!(formatter, "{}", path.display())?;
+        }
+        Ok(())
+    }
 }
 
 impl WasmBuildSpec {
@@ -2637,40 +2661,25 @@ fn finish_fingerprint_build<T>(
     incomplete_directory: OwnedDirectory,
     progress: &mut ProgressReporter<'_>,
 ) -> Result<T, WasmBuildError> {
-    match result {
-        Ok(outcome) => {
-            incomplete_directory.preserve();
-            Ok(outcome)
-        }
-        Err(build_error) => Err(cleanup_failed_fingerprint_build(
-            build_error,
-            incomplete_directory,
-            progress,
-        )),
-    }
-}
-
-fn cleanup_failed_fingerprint_build(
-    build_error: WasmBuildError,
-    incomplete_directory: OwnedDirectory,
-    progress: &mut ProgressReporter<'_>,
-) -> WasmBuildError {
-    let path = incomplete_directory.path().to_owned();
+    let failed = result.is_err();
     let primary_phase = progress.failure_details(Duration::ZERO).phase();
     let cleanup_started = Instant::now();
-    let cleanup = incomplete_directory.cleanup();
-    progress.record_phase(WasmBuildPhase::Cleanup, cleanup_started.elapsed());
-    match cleanup {
-        Ok(()) => {
-            progress.begin_phase(primary_phase);
-            build_error
-        }
-        Err(source) => WasmBuildError::FailedBuildCleanup {
+    let mut cleanup_failed = false;
+    let result = finish_cache_build(result, incomplete_directory, |build_error, path, source| {
+        cleanup_failed = true;
+        WasmBuildError::FailedBuildCleanup {
             build_error: Box::new(build_error),
             path,
             source,
-        },
+        }
+    });
+    if failed {
+        progress.record_phase(WasmBuildPhase::Cleanup, cleanup_started.elapsed());
+        if !cleanup_failed {
+            progress.begin_phase(primary_phase);
+        }
     }
+    result
 }
 
 fn lock_wasm_build_cache(target_dir: &Path) -> Result<(File, Duration), WasmBuildError> {
@@ -3566,77 +3575,6 @@ impl WasmBuildError {
             Self::InputsChangedDuringAcquisition { .. } => true,
             Self::FailedBuildCleanup { build_error, .. } => build_error.indicates_input_change(),
             _ => false,
-        }
-    }
-}
-
-impl std::fmt::Display for WasmBuildError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidSpec { message } => {
-                write!(formatter, "invalid Wasm build spec: {message}")
-            }
-            Self::Io {
-                operation,
-                path,
-                source,
-            } => write!(
-                formatter,
-                "failed to {operation} at {}: {source}",
-                path.display()
-            ),
-            Self::CommandSpawn {
-                phase,
-                program,
-                source,
-            } => write!(
-                formatter,
-                "failed to launch {phase} using `{}`: {source}",
-                program.to_string_lossy(),
-            ),
-            Self::CommandFailed {
-                phase,
-                status,
-                stdout,
-                stderr,
-            } => write!(
-                formatter,
-                "{phase} failed with {status}\nstdout:\n{stdout}\nstderr:\n{stderr}",
-            ),
-            Self::InvalidMetadata { message } => {
-                write!(formatter, "invalid Cargo metadata: {message}")
-            }
-            Self::InvalidCargoConfiguration { path, message } => write!(
-                formatter,
-                "invalid Cargo configuration at {}: {message}",
-                path.display(),
-            ),
-            Self::MissingArtifacts { paths } => {
-                formatter.write_str("cargo build succeeded without producing: ")?;
-                for (index, path) in paths.iter().enumerate() {
-                    if index != 0 {
-                        formatter.write_str(", ")?;
-                    }
-                    write!(formatter, "{}", path.display())?;
-                }
-                Ok(())
-            }
-            Self::InputsChangedDuringAcquisition { before, after } => write!(
-                formatter,
-                "Wasm inputs changed during artifact acquisition: {before} -> {after}",
-            ),
-            Self::PreparedInputSnapshotInvalidated => formatter.write_str(
-                "the prepared Wasm input snapshot was invalidated before artifact publication",
-            ),
-            Self::FailedBuildCleanup {
-                build_error,
-                path,
-                source,
-            } => write!(
-                formatter,
-                "Wasm build failed ({build_error}) and its incomplete target directory at {} could not be removed: {source}",
-                path.display(),
-            ),
         }
     }
 }

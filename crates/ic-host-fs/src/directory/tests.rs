@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn collision_budget_preserves_existing_files_and_directories() {
-    let root = crate::test_support::fixture();
+    let root = crate::tests::fixture();
     let prefix = "owned";
     let name = |sequence| {
         root.path()
@@ -31,7 +31,7 @@ fn collision_budget_preserves_existing_files_and_directories() {
 
 #[test]
 fn invalid_policy_and_missing_parent_create_nothing() {
-    let root = crate::test_support::fixture();
+    let root = crate::tests::fixture();
     for prefix in ["", ".", "..", "a/b", "a/", "a\nb", "a\rb"] {
         assert_eq!(
             create_unique_directory(root.path(), prefix, 0o700, None)
@@ -59,7 +59,7 @@ fn invalid_policy_and_missing_parent_create_nothing() {
 #[test]
 fn alias_paths_and_selected_permissions_remain_caller_owned() {
     use std::os::unix::fs::{PermissionsExt as _, symlink};
-    let root = crate::test_support::fixture();
+    let root = crate::tests::fixture();
     let physical = root.path().join("physical");
     let alias = root.path().join("alias");
     fs::create_dir(&physical).unwrap();

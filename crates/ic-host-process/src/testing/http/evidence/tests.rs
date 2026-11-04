@@ -195,3 +195,19 @@ fn invalid_capture_bounds_refuse_before_reading() {
         ));
     }
 }
+
+fn capture_with(
+    read: impl FnMut(&mut [u8], Duration) -> io::Result<usize>,
+    budget: Duration,
+    max_header_bytes: usize,
+    max_body_bytes: usize,
+    content_length: HttpContentLength,
+) -> HttpCapture {
+    let Some(deadline) = Instant::now().checked_add(budget) else {
+        return failed(Vec::new(), HttpCaptureFailure::InvalidDeadline);
+    };
+    let Some(bounds) = CaptureBounds::new(max_header_bytes, max_body_bytes, 0) else {
+        return failed(Vec::new(), HttpCaptureFailure::InvalidBounds);
+    };
+    capture_with_deadline(read, Vec::new(), deadline, bounds, content_length)
+}

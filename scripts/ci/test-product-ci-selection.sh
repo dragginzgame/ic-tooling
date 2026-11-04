@@ -143,7 +143,9 @@ for my $path (@paths) {
     make_path($parent);
     write_file("$repo/$path", "Product prose\n");
 }
-for my $file (qw(classify-ci-change.pl check-product-doc-links.sh check-documentation-links.pl)) {
+run('bash', "$root/scripts/ci/prepare-script-fixture.sh", $root, $repo,
+    'scripts/ci/classify-ci-change.pl');
+for my $file (qw(check-product-doc-links.sh check-documentation-links.pl)) {
     copy("$root/scripts/ci/$file", "$repo/scripts/ci/$file") or die $!;
 }
 write_file("$repo/ci/docs-only-paths.txt", $policy);
