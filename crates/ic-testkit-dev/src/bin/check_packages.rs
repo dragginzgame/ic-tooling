@@ -4,6 +4,7 @@ use std::{
     collections::BTreeMap,
     error::Error,
     fmt::Write as _,
+    io::Write as _,
     path::Path,
     process::{Command, ExitCode},
 };
@@ -11,7 +12,7 @@ use std::{
 use ic_build::cargo::observation::{CargoMetadataSpec, decode_metadata};
 use ic_build::cargo::packages::{
     PackageArchiveSpec, PackageCommandError, PackageQualificationLimits, capture_package_command,
-    qualify_package_archives,
+    qualify_package_archives_with,
 };
 use ic_build::cargo::selection::CargoFeatureSelection;
 use ic_host_process::tool::{OutputLimit, OutputLimits};
@@ -103,15 +104,16 @@ fn run() -> Result<(), Box<dyn Error>> {
         "Current archive stage: {}",
         archives.join("current-stage").display()
     );
-    qualify_package_archives(
+    let features = CargoFeatureSelection {
+        all_features: true,
+        ..CargoFeatureSelection::default()
+    };
+    qualify_package_archives_with(
         workspace,
         &target.join("package"),
         &archives,
         &packages,
-        &CargoFeatureSelection {
-            all_features: true,
-            ..CargoFeatureSelection::default()
-        },
+        &features,
         limits,
         || {
             let mut command =
@@ -124,8 +126,84 @@ fn run() -> Result<(), Box<dyn Error>> {
             command.arg("-xzf").arg(archive).arg("-C").arg(destination);
             command
         },
+        |root| qualify_archive_tests(root, &target.join("archive-build-cache"), limits.process),
     )?;
     Ok(())
+}
+
+fn qualify_archive_tests(
+    root: &Path,
+    cache: &Path,
+    limits: OutputLimits,
+) -> Result<(), Box<dyn Error>> {
+    // This cache contains only regenerable compiler outputs. Keep its lock
+    // across invalidation and both test commands; ordinary workspace artifacts
+    // and retained archive attempts are outside the cleanup namespace.
+    let _lock = admit_compilation_cache(cache)?;
+    std::fs::write(
+        root.join("compilation-target"),
+        cache.as_os_str().as_encoded_bytes(),
+    )?;
+    for (stage, args) in [
+        ("rebuild-packages", &["clean", "--workspace"][..]),
+        (
+            "test-targets",
+            &["test", "--workspace", "--all-targets"][..],
+        ),
+        ("test-docs", &["test", "--workspace", "--doc"][..]),
+    ] {
+        let mut command = Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()));
+        command
+            .current_dir(root)
+            .env_remove("CARGO_TARGET_DIR")
+            .args(args)
+            .args(["--offline", "--locked", "--manifest-path"])
+            .arg(root.join("Cargo.toml"))
+            .arg("--target-dir")
+            .arg(cache);
+        // Workspace-only cleaning rebuilds all extracted packages, including
+        // same-version payloads with fixed tar mtimes, retaining registry builds.
+        if stage != "rebuild-packages" {
+            command.args(["--all-features", "--message-format=json"]);
+        }
+        std::fs::write(root.join("current-stage"), stage)?;
+        capture_package_command(
+            &mut command,
+            stage,
+            &root.join(format!("{stage}.json")),
+            &root.join(format!("{stage}.stderr")),
+            limits,
+        )?;
+    }
+    Ok(())
+}
+
+fn admit_compilation_cache(cache: &Path) -> Result<std::fs::File, Box<dyn Error>> {
+    const OWNER: &[u8] =
+        b"Signature: 8a477f597d28d172789f06886806bc55\n# ic-tooling-package-qualification/1\n";
+    ic_host_fs::path::validate_physical_directory_allow_missing(cache)?;
+    let lock =
+        ic_host_fs::durable::open_regular_lock_file_with_parents(&cache.with_extension("lock"))?;
+    ic_host_fs::durable::lock_exclusive(&lock)?;
+    if !cache.exists() {
+        std::fs::create_dir(cache)?;
+    }
+    let marker = cache.join("CACHEDIR.TAG");
+    if let Some(owner) = ic_host_fs::read::read_optional_file_no_follow(&marker, OWNER.len())? {
+        if owner != OWNER {
+            return Err("unrecognized archive compilation cache owner".into());
+        }
+    } else {
+        if std::fs::read_dir(cache)?.next().is_some() {
+            return Err("refusing to adopt a nonempty archive compilation cache".into());
+        }
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(marker)?
+            .write_all(OWNER)?;
+    }
+    Ok(lock)
 }
 
 fn selected_roster<'a>(

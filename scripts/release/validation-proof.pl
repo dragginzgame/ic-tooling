@@ -32,11 +32,20 @@ my @runs = glob "$gate/logs/validation.*";
 my $proof_path = "$gate/shared-proof.json";
 my @stage_files;
 my $plan = document($root, "$gate/plan.json");
-my $requires_retention = grep {
+my $requires_fixtures = grep {
     $_->{target} eq 'release-stage-tooling-command-check' && $_->{required}
 } @{$plan->{stages}};
 my @admissions = glob "$gate/stage-admissions/*.json";
-@admissions == ($requires_retention ? 1 : 0)
+open my $roster, '<', 'ci/tooling-checks.tsv' or die "read fixture roster: $!\n";
+my %stages;
+while (<$roster>) {
+    chomp;
+    my (undef, undef, $stage) = split /\t/;
+    next unless defined($stage) && length($stage);
+    $stage =~ /\Afixture-[a-z-]+\z/ && !$stages{$stage}++ or die "invalid reusable fixture roster\n";
+}
+close $roster or die "close fixture roster: $!\n";
+@admissions == ($requires_fixtures ? scalar(keys %stages) : 0)
     or die "missing or unexpected reusable-stage admission\n";
 sub cache_file {
     my ($path) = @_;
@@ -48,13 +57,14 @@ sub cache_file {
     return $path;
 }
 for my $path (@admissions) {
-    $path eq "$gate/stage-admissions/fixture-retention.json"
+    my ($stage) = $path =~ m{/([^/]+)\.json\z};
+    $stages{$stage} && $path eq "$gate/stage-admissions/$stage.json"
         or die "unknown reusable stage\n";
     my $admission = document($root, $path);
     $admission->{kind} eq 'release-stage-admission' && $admission->{schema} == 1
         && $admission->{source} eq $source && $admission->{group} eq $group
-        && $admission->{stage} eq 'fixture-retention'
-        && $admission->{contract} eq 'tooling-fixture-retention/1'
+        && $admission->{stage} eq $stage
+        && $admission->{contract} eq "tooling-$stage/1"
         && $admission->{mode} =~ /\A(?:executed|reused)\z/
         or die "wrong reusable-stage identity\n";
     # Shared admits execution/reuse. Tooling seals the unchanged original bytes,

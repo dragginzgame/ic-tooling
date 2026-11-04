@@ -54,7 +54,9 @@ case $last in
             printf '\nchanged during stage\n' >> crates/ic-testkit-native/src/lib.rs
         fi
         if [[ $last == tooling-command-check && -n ${TOOLING_STAGE_ADMISSIONS:-} ]]; then
-            PATH="$VALIDATION_TEST_STAGE_PATH" bash scripts/release/reuse-fixture.sh "$RELEASE_GROUP"
+            while IFS=$'\t' read -r stage _check; do
+                PATH="$VALIDATION_TEST_STAGE_PATH" bash scripts/release/reuse-fixture.sh "$RELEASE_GROUP" "$stage"
+            done < <(bash scripts/ci/select-tooling-checks.sh reusable)
         fi ;;
 esac
 STUB
@@ -220,17 +222,19 @@ refuse env VALIDATION_TEST_FAIL=testkit-installed-check bash scripts/release/val
 make_plan full-success
 bash scripts/release/validation.sh run "$pointer" > "$fixture/full-success.log" 2>&1
 bash scripts/release/validation.sh receipt "$pointer" > "$fixture/full.receipt"
-admission="$directory/stage-admissions/fixture-retention.json"
-cp "$admission" "$fixture/stage-admission"
-jq '.source = "wrong-source"' "$fixture/stage-admission" > "$admission"
-refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/stage-identity.log" 2>&1
-cp "$fixture/stage-admission" "$admission"
-execution=$(jq -r .execution_proof "$admission")
-stage_log=$(jq -r .logs.stdout.path "$execution")
-cp "$stage_log" "$fixture/stage-log"
-printf 'tampered\n' >> "$stage_log"
-refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/stage-log.log" 2>&1
-cp "$fixture/stage-log" "$stage_log"
+for stage in fixture-retention fixture-evidence; do
+    admission="$directory/stage-admissions/$stage.json"
+    cp "$admission" "$fixture/stage-admission"
+    jq '.source = "wrong-source"' "$fixture/stage-admission" > "$admission"
+    refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/stage-identity.log" 2>&1
+    cp "$fixture/stage-admission" "$admission"
+    execution=$(jq -r .execution_proof "$admission")
+    stage_log=$(jq -r .logs.stdout.path "$execution")
+    cp "$stage_log" "$fixture/stage-log"
+    printf 'tampered\n' >> "$stage_log"
+    refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/stage-log.log" 2>&1
+    cp "$fixture/stage-log" "$stage_log"
+done
 bash scripts/release/validation.sh receipt "$pointer" > "$fixture/full-restored.receipt"
 cmp "$fixture/full.receipt" "$fixture/full-restored.receipt"
 # New/omitted obligations refuse until their product coverage is explicit.

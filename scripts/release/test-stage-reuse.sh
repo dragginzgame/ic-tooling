@@ -11,9 +11,9 @@ fixture_complete=false
 finish() {
     local status=$?
     if [[ $status != 0 ]]; then
-        fixture_replay_logs "$fixture/first.log" "$fixture/second.log" "$fixture/changed.log" "$fixture/added.log"
+        fixture_replay_logs "$fixture"/*.log
         local admission
-        for admission in "$fixture"/work/admissions/*/fixture-retention.json; do
+        for admission in "$fixture"/work/admissions/*/*.json; do
             [[ -f $admission ]] || continue
             jq '{mode, source, group, execution_proof}' "$admission" >&2 || :
         done
@@ -29,27 +29,27 @@ source_a=1111111111111111111111111111111111111111
 source_b=2222222222222222222222222222222222222222
 run() {
     RELEASE_SOURCE=$1 TOOLING_STAGE_ADMISSIONS="admissions/$2" \
-        bash scripts/release/reuse-fixture.sh "$3" > "$fixture/$2.log" 2>&1
+        bash scripts/release/reuse-fixture.sh "$3" "$stage" > "$fixture/$2.log" 2>&1
 }
-run "$source_a" first foundation
-jq -e '.mode == "executed"' admissions/first/fixture-retention.json >/dev/null
-# These are deliberately unread by the retention-prefix contract.
-printf '[workspace]\n' > Cargo.toml
-printf 'version = 4\n' > Cargo.lock
-run "$source_b" second build
-jq -e --arg source "$source_b" '.mode == "reused" and .source == $source and .group == "build"' \
-    admissions/second/fixture-retention.json >/dev/null
-first=$(jq -r .execution_proof admissions/first/fixture-retention.json)
-second=$(jq -r .execution_proof admissions/second/fixture-retention.json)
-[[ $first == "$second" ]]
-jq -e --arg source "$source_a" '.origin.source == $source and .origin.group == "foundation"' "$first" >/dev/null
-printf '\n# changed prefix input\n' >> scripts/ci/fixture-lifecycle.sh
-run "$source_b" changed testkit
-jq -e '.mode == "executed"' admissions/changed/fixture-retention.json >/dev/null
-printf '# new inventory input\n' > scripts/ci/new-retention-input.sh
-run "$source_b" added text
-jq -e '.mode == "executed"' admissions/added/fixture-retention.json >/dev/null
-grep -F 'Host fixtures reject' "$fixture/first.log" >/dev/null
-if grep -F 'Host fixtures reject' "$fixture/second.log" >/dev/null; then exit 1; fi
-echo 'Consumer retention stage executes once across group/version metadata, preserves its origin, and invalidates changed/new inputs'
+while IFS=$'\t' read -r stage _check; do
+    run "$source_a" "$stage-first" foundation
+    jq -e '.mode == "executed"' "admissions/$stage-first/$stage.json" >/dev/null
+    # These are deliberately unread by both fixture contracts.
+    printf '[workspace]\n' > Cargo.toml
+    printf 'version = 4\n' > Cargo.lock
+    run "$source_b" "$stage-second" build
+    jq -e --arg source "$source_b" '.mode == "reused" and .source == $source and .group == "build"' \
+        "admissions/$stage-second/$stage.json" >/dev/null
+    first=$(jq -r .execution_proof "admissions/$stage-first/$stage.json")
+    second=$(jq -r .execution_proof "admissions/$stage-second/$stage.json")
+    [[ $first == "$second" ]]
+    jq -e --arg source "$source_a" '.origin.source == $source and .origin.group == "foundation"' "$first" >/dev/null
+    printf '\n# changed prefix input\n' >> scripts/ci/fixture-lifecycle.sh
+    run "$source_b" "$stage-changed" testkit
+    jq -e '.mode == "executed"' "admissions/$stage-changed/$stage.json" >/dev/null
+    printf '# new inventory input\n' > "scripts/ci/new-$stage-input.sh"
+    run "$source_b" "$stage-added" text
+    jq -e '.mode == "executed"' "admissions/$stage-added/$stage.json" >/dev/null
+done < <(bash scripts/ci/select-tooling-checks.sh reusable)
+echo 'Consumer fixture stages reuse unchanged inputs across groups, preserve execution origins and invalidate changed/new inputs'
 fixture_complete=true

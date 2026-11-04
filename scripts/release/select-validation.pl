@@ -159,7 +159,7 @@ my @stages = map {
      reason => $selected{$target} ? $reason : $narrow ? $exclusions{$target} :
         'Focused alternative is covered by the complete workspace gate.'}
 } @{$policy->{stages}};
-my @inputs = ('Makefile','Cargo.toml','Cargo.lock','rust-toolchain.toml','.shared-tooling.snapshot','ci/tool-versions.env',
+my @inputs = ('Makefile','Cargo.toml','Cargo.lock','rust-toolchain.toml','.shared-tooling.snapshot','ci/tool-versions.env','ci/tooling-checks.tsv',
     'ci/release-editor.env','ci/cargo-release-groups.json','ci/release-validation-coverage.json','ci/release-validation-baseline.jq',
     'make/release-validation-local.mk','make/testkit.mk','scripts/release/select-validation.pl',
     'scripts/release/validation-stage.sh','scripts/release/validation-focus.sh','scripts/release/validation-baseline.sh',

@@ -89,3 +89,200 @@ fn failure_report_preserves_stage_paths_and_bounds_escaped_capture() {
     assert!(!report.contains('\x1b'));
     assert!(report.len() < 9000);
 }
+
+#[cfg(unix)]
+fn archive_payload(value: u8) -> String {
+    format!(
+        "pub fn value()->u8{{{value}}}\n#[test]fn archived_value(){{assert_eq!(value(),42); assert_eq!(itoa::Buffer::new().format(value()),\"42\");}}\n"
+    )
+}
+
+#[cfg(unix)]
+fn archive_cargo(source: &Path) -> Command {
+    let mut command = Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()));
+    command
+        .env("RUSTUP_AUTO_INSTALL", "0")
+        .env("CARGO_NET_OFFLINE", "true")
+        .env("CARGO_TARGET_DIR", source.join("target"));
+    command
+}
+
+#[cfg(unix)]
+fn archive_cache_fixture() -> ic_host_fs::testing::FixtureDirectory {
+    let parent = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("target");
+    let fixture = ic_host_fs::testing::FixtureDirectory::new(&parent, "archive-cache").unwrap();
+    let source = fixture.path().join("source");
+    std::fs::create_dir_all(source.join("src")).unwrap();
+    std::fs::create_dir(source.join("target")).unwrap();
+    std::fs::write(source.join("Cargo.toml"), "[workspace]\n[package]\nname='cache-fixture'\nversion='0.1.0'\nedition='2024'\n[dependencies]\nitoa='1.0'\n").unwrap();
+    std::fs::write(source.join("src/lib.rs"), archive_payload(42)).unwrap();
+    let lock = archive_cargo(&source)
+        .current_dir(&source)
+        .args(["generate-lockfile", "--offline"])
+        .output()
+        .unwrap();
+    assert!(
+        lock.status.success(),
+        "{}",
+        String::from_utf8_lossy(&lock.stderr)
+    );
+    std::fs::create_dir(source.join("target/package")).unwrap();
+    fixture
+}
+
+#[cfg(unix)]
+fn reject_fixed_mtime_workspace(root: &Path, cache: &Path, limits: OutputLimits) {
+    let source = root.join("cache-fixture-0.1.0/src/lib.rs");
+    let modified = std::fs::metadata(&source).unwrap().modified().unwrap();
+    std::fs::write(&source, archive_payload(43)).unwrap();
+    std::fs::File::open(&source)
+        .unwrap()
+        .set_modified(modified)
+        .unwrap();
+    let error = qualify_archive_tests(root, cache, limits).unwrap_err();
+    assert!(failure_report(error.as_ref()).contains("test-targets"));
+    assert!(
+        std::fs::read_to_string(root.join("test-targets.json"))
+            .unwrap()
+            .contains("archived_value ... FAILED")
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn archive_cache_reuses_dependencies_and_rebuilds_same_version_payloads() {
+    let fixture = archive_cache_fixture();
+    let source = fixture.path().join("source");
+    let cache = fixture.path().join("compiler");
+    let packages = [PackageArchiveSpec {
+        name: "cache-fixture",
+        version: "0.1.0",
+        patch_registry: true,
+    }];
+    let features = CargoFeatureSelection {
+        all_features: true,
+        ..CargoFeatureSelection::default()
+    };
+    let limits = PackageQualificationLimits {
+        process: OutputLimits {
+            stdout: OutputLimit::Terminate(4 * 1024 * 1024),
+            stderr: OutputLimit::Terminate(1024 * 1024),
+            timeout: Some(std::time::Duration::from_secs(60)),
+        },
+        file_bytes: 4 * 1024 * 1024,
+        source_entries: 100,
+        source_depth: 10,
+    };
+    let mut mtimes = Vec::new();
+    for attempt in ["cold", "warm", "changed"] {
+        if attempt == "changed" {
+            std::fs::write(source.join("src/lib.rs"), archive_payload(43)).unwrap();
+        }
+        let evidence = fixture.path().join(attempt);
+        std::fs::create_dir(&evidence).unwrap();
+        let started = std::time::Instant::now();
+        let result = qualify_package_archives_with(
+            &source,
+            &source.join("target/package"),
+            &evidence,
+            &packages,
+            &features,
+            limits,
+            || archive_cargo(&source),
+            |archive, destination| {
+                let mut command = Command::new("tar");
+                command.arg("-xzf").arg(archive).arg("-C").arg(destination);
+                command
+            },
+            |root| qualify_archive_tests(root, &cache, limits.process),
+        );
+        eprintln!("Archive compiler cache {attempt}: {:?}", started.elapsed());
+        if attempt != "changed"
+            && let Err(error) = &result
+        {
+            panic!("{}", failure_report(error));
+        }
+        mtimes.push(
+            std::fs::metadata(evidence.join("cache-fixture-0.1.0/src/lib.rs"))
+                .unwrap()
+                .modified()
+                .unwrap(),
+        );
+        let output = std::fs::read_to_string(evidence.join("test-targets.json")).unwrap();
+        let artifacts: Vec<serde_json::Value> = output
+            .lines()
+            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+            .filter(|record| record["reason"] == "compiler-artifact")
+            .collect();
+        if attempt == "changed" {
+            let error = result.unwrap_err();
+            assert!(failure_report(&error).contains("test-targets"));
+            assert!(
+                std::fs::read_to_string(evidence.join("test-targets.json"))
+                    .unwrap()
+                    .contains("archived_value ... FAILED")
+            );
+            assert_eq!(
+                mtimes[0], mtimes[2],
+                "tar timestamps must not hide the changed payload"
+            );
+        } else {
+            result.unwrap_or_else(|error| panic!("{}", failure_report(&error)));
+            assert!(
+                artifacts
+                    .iter()
+                    .any(|record| record["target"]["name"] == "itoa"
+                        && record["fresh"] == (attempt == "warm")),
+                "missing dependency freshness evidence: {output}"
+            );
+            assert!(evidence.join("final-sources.json").is_file());
+        }
+        assert!(
+            artifacts
+                .iter()
+                .any(|record| record["target"]["name"] == "cache_fixture"
+                    && record["fresh"] == false),
+            "extracted package must rebuild: {output}"
+        );
+        assert!(evidence.join("rebuild-packages.stderr").is_file());
+        if attempt == "warm" {
+            // Exercise an identical path too: Cargo's mtime freshness alone
+            // must not let a cached success hide changed source bytes.
+            reject_fixed_mtime_workspace(&evidence, &cache, limits.process);
+        }
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn archive_cache_refuses_unowned_or_redirected_artifacts() {
+    use std::os::unix::fs::symlink;
+    let parent = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("target");
+    let fixture =
+        ic_host_fs::testing::FixtureDirectory::new(&parent, "archive-cache-custody").unwrap();
+    let unowned = fixture.path().join("unowned");
+    std::fs::create_dir(&unowned).unwrap();
+    std::fs::write(unowned.join("keep"), b"user artifact").unwrap();
+    assert!(admit_compilation_cache(&unowned).is_err());
+    let redirected = fixture.path().join("redirected");
+    symlink(&unowned, &redirected).unwrap();
+    assert!(admit_compilation_cache(&redirected).is_err());
+    let marker_link = fixture.path().join("marker-link");
+    std::fs::create_dir(&marker_link).unwrap();
+    symlink(unowned.join("keep"), marker_link.join("CACHEDIR.TAG")).unwrap();
+    assert!(admit_compilation_cache(&marker_link).is_err());
+    assert_eq!(
+        std::fs::read(unowned.join("keep")).unwrap(),
+        b"user artifact"
+    );
+}

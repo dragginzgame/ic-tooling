@@ -18,6 +18,7 @@ mkdir -p "$temporary/wasm-qualification/optimizer" \
     "$repository/target/package-qualification-123-0/target/debug" \
     "$repository/target/package-qualification-456-0/archives/target/debug" \
     "$repository/target/publish/admission/check.partial" \
+    "$repository/target/archive-build-cache/debug" \
     "$repository/target/debug"
 printf 'failed optimizer\n' > "$temporary/wasm-qualification/optimizer/qualification.log"
 printf 'wasm bytes\n' > "$temporary/wasm-qualification/optimizer/output.wasm"
@@ -29,6 +30,7 @@ printf 'selection metadata\n' > "$repository/target/package-qualification-456-0/
 printf 'failed archive\n' > "$repository/target/package-qualification-456-0/archives/test-targets.stderr"
 printf 'nested cache\n' > "$repository/target/package-qualification-456-0/archives/target/debug/cache"
 printf 'unrelated cache\n' > "$repository/target/debug/cache"
+printf 'archive compiler cache\n' > "$repository/target/archive-build-cache/debug/cache"
 printf 'partial admission\n' > "$repository/target/publish/admission/check.partial/metadata.log"
 bash "$root/scripts/ci/archive-product-evidence.sh" "$repository" "$temporary" "$fixture/evidence.tar.gz"
 mkdir "$fixture/extracted"
@@ -45,7 +47,8 @@ for path in target/package-qualification-123-0/test-targets.stderr \
 done
 [[ ! -e "$fixture/extracted/target/package-qualification-123-0/target" &&
    ! -e "$fixture/extracted/target/package-qualification-456-0/archives/target" &&
-   ! -e "$fixture/extracted/target/debug" ]] || exit 1
+   ! -e "$fixture/extracted/target/debug" &&
+   ! -e "$fixture/extracted/target/archive-build-cache" ]] || exit 1
 # Shared archive admission refuses redirected ancestors, retaining original inputs.
 mv "$repository/target" "$fixture/retained-target"
 ln -s "$fixture/retained-target" "$repository/target"

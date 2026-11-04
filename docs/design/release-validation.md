@@ -92,7 +92,9 @@ Native/Text archives use the same IC Build engine as the full public roster,
 including normalized source/lock/provenance checks and extracted-package tests.
 The private archive driver still compiles its normal dependencies, including
 Build and the client; focused selection excludes unrelated test/server execution,
-not every possible dependency compilation. No archive stage is reused.
+not every possible dependency compilation. No archive stage is reused. Tooling's
+archive driver may retain registry compiler outputs in its owned cache, but Cargo
+cleans every extracted workspace package before fresh all-target/doctest execution.
 
 ## Source custody, receipts and recovery
 
@@ -138,12 +140,14 @@ with `--group` for the selected release group. Ordinary CI and CI/publication
 continue to exercise all six groups, even when a release selection is inherited.
 The remaining tooling roster and its first-failure behavior are unchanged.
 
-The fixture-retention stage uses Shared's
+The fixture-retention and product-evidence stages use Shared's
 [stage runner](../release-validation-reuse.md). It observes every shell source
 under `scripts/`, the tooling roster, its observer, interpreter modules and the
 resolved fixture tools. Execution has an explicit environment containing PATH,
-a fixed workspace temporary root and the C locale. The fixture renders only
-initialization/EXIT prefixes; it stops before Cargo, Git and product bodies.
+a fixed workspace temporary root, stage identity and the C locale. Retention
+renders only initialization/EXIT prefixes; it stops before Cargo, Git and product
+bodies. Evidence qualification archives and checks its synthetic inputs, including
+compiler-cache exclusions. The tooling roster owns the two stage selections.
 Manifests, lockfiles and release ledgers are outside this stage's input closure.
 Consequently version-only changes can reuse this stage across release groups.
 Changes to an observed source, tool, environment, runner or host invalidate reuse.
@@ -163,11 +167,20 @@ the same full-gate roster, focused Native/Text selection, required/excluded fail
 injection, discovery refusals, source/environment drift and receipt custody.
 Its Make effects are substituted. `bash scripts/release/test-adapter.sh` retains
 the real six-group metadata, rollback, commit and recovery contracts, also with
-qualification effects substituted. These fixtures do not establish native-host
+qualification effects substituted. Its disposable checkout uses three gate targets
+(source admission, lint and tooling proof) plus the focused vocabulary. This
+preserves actual selector/Shared-proof/receipt wiring without replaying 35 dummy
+product commands for every recovery probe. The complete production policy and
+roster-equivalence checks remain in `test-validation.sh` and ordinary CI.
+Common source/proof corruption, setup refusal and staging probes execute once in
+the six-group adapter run. Each group retains real metadata preparation, renderer
+and graph rollback, other-group receipt refusal and committed-payload admission.
+A single `--group` run includes the complete common probe set.
+These fixtures do not establish native-host
 execution or a runtime saving.
 `bash scripts/release/test-adapter.sh --group testkit` selects one adapter owner
 for a focused change. `bash scripts/release/test-stage-reuse.sh` executes the real
-retention fixture, proves cross-group reuse with unchanged inputs, and forces
+retention and evidence fixtures, proves cross-group reuse with unchanged inputs, and forces
 fresh execution after changed/new shell inputs. Recovery fixtures additionally
 reject changed stage identities and original execution logs.
 `bash scripts/ci/test-workspace-validation.sh` isolates actual Make dispatch for

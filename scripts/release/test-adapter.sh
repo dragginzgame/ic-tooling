@@ -7,8 +7,10 @@ if [[ $# != 0 ]]; then
     case $2 in foundation|build|text|tools|testkit|native) groups=("$2") ;; *) exit 2 ;; esac
 fi
 
-# Real consumer policy, Cargo metadata, Git, rendering and receipts. Tool setup
-# and the complete CI gate are substituted; no release or delivery runs.
+# Real group policy, Cargo metadata, Git, rendering and receipts. A compact
+# fixture gate retains actual lint ordering, Shared proofs and stage admission;
+# test-validation.sh separately owns complete production-roster coverage.
+# Tool setup/product qualification are substituted; no delivery runs.
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES RELEASE_COMMIT RELEASE_GROUP
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE
 export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null
@@ -77,7 +79,9 @@ printf 'make %s\n' "$*" >> "$ADAPTER_EVENTS"
 case "$*" in
     *'-- release-stage-tooling-command-check')
         [[ "${ADAPTER_GATE_RESULT:-0}" == 0 ]] || exit "$ADAPTER_GATE_RESULT"
-        PATH="$ADAPTER_REAL_STAGE_PATH" "$ADAPTER_REAL_BASH" scripts/release/reuse-fixture.sh "$RELEASE_GROUP" ;;
+        while IFS=$'\t' read -r stage _check; do
+            PATH="$ADAPTER_REAL_STAGE_PATH" "$ADAPTER_REAL_BASH" scripts/release/reuse-fixture.sh "$RELEASE_GROUP" "$stage"
+        done < <(bash scripts/ci/select-tooling-checks.sh reusable) ;;
     *'-- release-stage-'*) exit "${ADAPTER_GATE_RESULT:-0}" ;;
     '--no-print-directory install-tools') : > "$ADAPTER_EDITOR_READY" ;;
     '--no-print-directory tools-check'|'--no-print-directory compiler-check'|'--no-print-directory dependency-pins-check') ;;
@@ -105,11 +109,24 @@ invoke() { bash "$adapter" "$@"; }
 refuse() {
     if "$@"; then echo 'Unexpected release adapter admission' >&2; exit 1; fi
 }
+common_probes=true
 for selected_group in "${groups[@]}"; do
     checkout="$fixture/$selected_group checkout"
     mkdir "$checkout"
     bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$root" "$checkout"
     bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$checkout"
+    # This fixture checks adapter effects and proof custody, rather than replaying
+    # all 35 dummy product targets for each preparation/recovery probe. Retain
+    # the real selector and focused vocabulary in this disposable checkout.
+    jq -cS '.stages |= map(select(startswith("release-stage-release-scope-") or
+        . == "release-stage-shared-tooling-check" or
+        . == "release-stage-clippy-workspace" or
+        . == "release-stage-tooling-command-check"))' \
+        "$checkout/ci/release-validation.json" > "$fixture/policy"
+    mv "$fixture/policy" "$checkout/ci/release-validation.json"
+    jq -cS '.common = ["shared-tooling-check", "clippy-workspace", "tooling-command-check"] |
+        .exclusions = []' "$checkout/ci/release-validation-coverage.json" > "$fixture/coverage"
+    mv "$fixture/coverage" "$checkout/ci/release-validation-coverage.json"
     mv "$checkout/source-metadata.json" "$fixture/$selected_group.source-metadata.json"
     cd "$checkout"
     git init -q -b main
@@ -139,25 +156,31 @@ for selected_group in "${groups[@]}"; do
     RELEASE_SOURCE="$(git rev-parse HEAD)"
     state=".git/release-state/$RELEASE_GROUP-$RELEASE_VERSION.validation"
     : > "$ADAPTER_EVENTS"
-    refuse env RELEASE_GROUP='' bash "$adapter" version > "$fixture/no-group.log" 2>&1
-    refuse env RELEASE_GROUP=unknown bash "$adapter" version > "$fixture/unknown-group.log" 2>&1
+    if [[ $common_probes == true ]]; then
+        refuse env RELEASE_GROUP='' bash "$adapter" version > "$fixture/no-group.log" 2>&1
+        refuse env RELEASE_GROUP=unknown bash "$adapter" version > "$fixture/unknown-group.log" 2>&1
+    fi
     [[ ! -s "$ADAPTER_EVENTS" ]]
     invoke files > "$fixture/$selected_group.files"
     bash "$root/scripts/ci/cargo-release-group.sh" files "$selected_group" > "$fixture/$selected_group.expected-files"
     cmp "$fixture/$selected_group.files" "$fixture/$selected_group.expected-files"
     # Busy setup must not become an installation; refused source must precede it.
-    status=0
-    ADAPTER_EDITOR_BUSY=1 invoke preflight > "$fixture/$selected_group.busy.log" 2>&1 || status=$?
-    [[ "$status" == 75 && ! -s "$ADAPTER_EVENTS" ]]
-    printf '\nUnrelated dirty source\n' >> README.md
-    refuse invoke preflight > "$fixture/$selected_group.dirty.log" 2>&1
-    [[ ! -s "$ADAPTER_EVENTS" ]]
-    git restore -- README.md
+    if [[ $common_probes == true ]]; then
+        status=0
+        ADAPTER_EDITOR_BUSY=1 invoke preflight > "$fixture/$selected_group.busy.log" 2>&1 || status=$?
+        [[ "$status" == 75 && ! -s "$ADAPTER_EVENTS" ]]
+        printf '\nUnrelated dirty source\n' >> README.md
+        refuse invoke preflight > "$fixture/$selected_group.dirty.log" 2>&1
+        [[ ! -s "$ADAPTER_EVENTS" ]]
+        git restore -- README.md
+    fi
     invoke preflight > "$fixture/$selected_group.preflight.log" 2>&1
     [[ "$(grep -c '^make --no-print-directory install-tools$' "$ADAPTER_EVENTS")" == 1 ]]
     # The complete native/Wasm gate is substituted, never source/group checks.
-    refuse env ADAPTER_GATE_RESULT=29 bash "$adapter" verify > "$fixture/$selected_group.gate.log" 2>&1
-    [[ ! -e "$state" ]]
+    if [[ $common_probes == true ]]; then
+        refuse env ADAPTER_GATE_RESULT=29 bash "$adapter" verify > "$fixture/$selected_group.gate.log" 2>&1
+        [[ ! -e "$state" ]]
+    fi
     invoke verify > "$fixture/$selected_group.verify.log" 2>&1
     grep 'release-stage-clippy-workspace' "$ADAPTER_EVENTS" > /dev/null
     gate_pointer="$state.gate"
@@ -165,22 +188,26 @@ for selected_group in "${groups[@]}"; do
     shared_proof="$gate_directory/shared-proof.json"
     jq -e --arg source "$RELEASE_SOURCE" --arg group "$selected_group" \
         '.kind == "group-validation-evidence" and .source == $source and .group == $group' "$shared_proof" >/dev/null
-    # A frozen receipt cannot admit a changed Shared proof or its retained log.
-    cp "$shared_proof" "$fixture/$selected_group.shared-proof"
-    printf '\n' >> "$shared_proof"
-    refuse invoke prepare > "$fixture/$selected_group.changed-proof.log" 2>&1
-    cp "$fixture/$selected_group.shared-proof" "$shared_proof"
-    execution_log=$(jq -er '.run + "/0.log"' "$shared_proof")
-    cp "$execution_log" "$fixture/$selected_group.execution-log"
-    printf 'changed retained execution\n' >> "$execution_log"
-    refuse invoke prepare > "$fixture/$selected_group.changed-log.log" 2>&1
-    cp "$fixture/$selected_group.execution-log" "$execution_log"
-    # Valid-looking output from a failed Git observation grants no custody.
-    ADAPTER_GIT_CONTROL='head' refuse invoke prepare > "$fixture/$selected_group.failed-head.log" 2>&1
-    ADAPTER_GIT_CONTROL='diff' refuse invoke verify > "$fixture/$selected_group.failed-diff.log" 2>&1
-    printf '\n# Unvalidated source edit\n' >> Cargo.toml
-    refuse invoke prepare > "$fixture/$selected_group.source-before-prepare.log" 2>&1
-    git restore -- Cargo.toml
+    # Shared corruption/source failures are group-independent. Run them once;
+    # a selected --group run still includes the entire common recovery suite.
+    if [[ $common_probes == true ]]; then
+        # A frozen receipt cannot admit a changed Shared proof or its retained log.
+        cp "$shared_proof" "$fixture/$selected_group.shared-proof"
+        printf '\n' >> "$shared_proof"
+        refuse invoke prepare > "$fixture/$selected_group.changed-proof.log" 2>&1
+        cp "$fixture/$selected_group.shared-proof" "$shared_proof"
+        execution_log=$(jq -er '.run + "/0.log"' "$shared_proof")
+        cp "$execution_log" "$fixture/$selected_group.execution-log"
+        printf 'changed retained execution\n' >> "$execution_log"
+        refuse invoke prepare > "$fixture/$selected_group.changed-log.log" 2>&1
+        cp "$fixture/$selected_group.execution-log" "$execution_log"
+        # Valid-looking output from a failed Git observation grants no custody.
+        ADAPTER_GIT_CONTROL='head' refuse invoke prepare > "$fixture/$selected_group.failed-head.log" 2>&1
+        ADAPTER_GIT_CONTROL='diff' refuse invoke verify > "$fixture/$selected_group.failed-diff.log" 2>&1
+        printf '\n# Unvalidated source edit\n' >> Cargo.toml
+        refuse invoke prepare > "$fixture/$selected_group.source-before-prepare.log" 2>&1
+        git restore -- Cargo.toml
+    fi
     # Errors at either renderer or prepared Cargo observation leave all selected
     # and unselected metadata at the qualified source.
     ADAPTER_CONTROL=render refuse invoke prepare > "$fixture/$selected_group.render.log" 2>&1
@@ -191,14 +218,16 @@ for selected_group in "${groups[@]}"; do
     invoke check > "$fixture/$selected_group.check.log" 2>&1
     # Prepared versions differ from the original input checkpoint. Recovery
     # admits the already sealed inventory and exact payload, never a new proof.
-    refuse bash "$tooling/scripts/release/validation.sh" receipt "$gate_pointer" \
-        > "$fixture/$selected_group.prepared-live-proof.log" 2>&1
-    cp "$state" "$fixture/$selected_group.receipt"
-    sed '1s/tooling-release-validation-5/tooling-release-validation-4/' \
-        "$fixture/$selected_group.receipt" > "$state"
-    refuse invoke check > "$fixture/$selected_group.old-receipt.log" 2>&1
-    cp "$fixture/$selected_group.receipt" "$state"
-    invoke check > "$fixture/$selected_group.recovered.log" 2>&1
+    if [[ $common_probes == true ]]; then
+        refuse bash "$tooling/scripts/release/validation.sh" receipt "$gate_pointer" \
+            > "$fixture/$selected_group.prepared-live-proof.log" 2>&1
+        cp "$state" "$fixture/$selected_group.receipt"
+        sed '1s/tooling-release-validation-5/tooling-release-validation-4/' \
+            "$fixture/$selected_group.receipt" > "$state"
+        refuse invoke check > "$fixture/$selected_group.old-receipt.log" 2>&1
+        cp "$fixture/$selected_group.receipt" "$state"
+        invoke check > "$fixture/$selected_group.recovered.log" 2>&1
+    fi
     sed "/^## \\[$RELEASE_VERSION\\]/d" "$ledger" > "$fixture/$selected_group.prepared-body"
     git show "$RELEASE_SOURCE:$ledger" | sed "/^## \\[$RELEASE_VERSION\\]/d" > "$fixture/$selected_group.source-body"
     cmp "$fixture/$selected_group.source-body" "$fixture/$selected_group.prepared-body"
@@ -239,19 +268,23 @@ for selected_group in "${groups[@]}"; do
     cp "$state.payload" "$other_state.payload"
     refuse env RELEASE_GROUP="$other_group" bash "$adapter" check > "$fixture/$selected_group.wrong-group.log" 2>&1
     # Payload custody rejects a semantically valid manual note edit too.
-    cp "$ledger" "$fixture/$selected_group.prepared-notes"
-    printf '\nUnvalidated replacement\n' >> "$ledger"
-    refuse invoke check > "$fixture/$selected_group.payload.log" 2>&1
-    cp "$fixture/$selected_group.prepared-notes" "$ledger"
+    if [[ $common_probes == true ]]; then
+        cp "$ledger" "$fixture/$selected_group.prepared-notes"
+        printf '\nUnvalidated replacement\n' >> "$ledger"
+        refuse invoke check > "$fixture/$selected_group.payload.log" 2>&1
+        cp "$fixture/$selected_group.prepared-notes" "$ledger"
+    fi
     # The ordinary commit checks admit only the declared files. Real Git
     # creates a disposable commit solely to test selected-source verification.
     git add -- Cargo.toml Cargo.lock "$ledger"
     jq -r '.manifests[].path | select(. != "Cargo.toml")' "$fixture/$selected_group.before.json" |
         while IFS= read -r path; do git add -- "$path"; done
-    printf '\nUnrelated staging\n' >> README.md
-    git add -- README.md
-    refuse invoke commit-check > "$fixture/$selected_group.unrelated-staging.log" 2>&1
-    git restore --staged --worktree -- README.md
+    if [[ $common_probes == true ]]; then
+        printf '\nUnrelated staging\n' >> README.md
+        git add -- README.md
+        refuse invoke commit-check > "$fixture/$selected_group.unrelated-staging.log" 2>&1
+        git restore --staged --worktree -- README.md
+    fi
     invoke commit-check > "$fixture/$selected_group.commit.log" 2>&1
     git commit -qm 'fixture prepared group'
     export RELEASE_COMMIT
@@ -259,6 +292,7 @@ for selected_group in "${groups[@]}"; do
     printf '\nUnrelated live notes\n' >> "$ledger"
     invoke committed-check > "$fixture/$selected_group.committed.log" 2>&1
     unset RELEASE_COMMIT
+    common_probes=false
 done
 fixture_complete=true
 echo "Release adapter checks passed (${groups[*]}; setup and full qualification substituted)."

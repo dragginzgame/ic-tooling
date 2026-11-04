@@ -117,12 +117,14 @@ jobs:
         timeout-minutes: 3
         continue-on-error: true
         with:
-          # Archive verification always uses a fresh attempt-specific target.
+          # Fresh archive sources/tests rebuild local packages; registry compiler
+          # outputs may be restored in the separately owned archive cache.
           cache-targets: false
           cache-bin: false
           cache-directories: |
             target/debug
             target/wasm32-unknown-unknown/debug
+            target/archive-build-cache
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Prepare locked dependency cache
         if: ${{ needs.change-scope.outputs.scope == 'full' }}

@@ -11,6 +11,7 @@ consumer="$root/"
 host="$(rustc -vV | sed -n 's/^host: //p')"
 test -n "$host"
 policy=(--consumer "$consumer" --require ic-platform-types=1 --forbid ic-metrics
+    --forbid ic-wire-derive
     --forbid ic-build --forbid ic-host-text --forbid ic-wire-endpoint
     --forbid ic-agent --forbid candid_parser --forbid ic0 --forbid pocket-ic --forbid-pattern '^ic-cdk')
 runtime_policy=("${policy[@]}")

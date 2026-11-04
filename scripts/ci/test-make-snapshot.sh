@@ -146,6 +146,25 @@ EVENTS
         TOOLING_RELEASE_GROUP=testkit > "$fixture/tooling-full-ci.log" 2>&1
     grep -Fx 'fixture scripts/release/test-adapter.sh' "$HOST_MAKE_EVENTS" >/dev/null
     if grep -F -- '--group' "$HOST_MAKE_EVENTS" >/dev/null; then exit 1; fi
+    # Release routing uses the same named stages that the gate seals. Product
+    # effects remain substituted here; test-stage-reuse.sh owns actual reuse.
+    cat > scripts/release/reuse-fixture.sh <<'STUB'
+#!/usr/bin/env bash
+exec cargo fixture scripts/release/reuse-fixture.sh "$@"
+STUB
+    : > "$HOST_MAKE_EVENTS"
+    PATH="$fixture/local:$PATH" IC_TOOLING_FULL_CI=0 make --no-print-directory tooling-command-check \
+        TOOLING_RELEASE_GROUP=testkit TOOLING_STAGE_ADMISSIONS=admissions > "$fixture/tooling-reuse.log" 2>&1
+    for stage in fixture-evidence fixture-retention; do
+        grep -Fx "fixture scripts/release/reuse-fixture.sh testkit $stage" "$HOST_MAKE_EVENTS" >/dev/null
+    done
+    if grep -E '^fixture scripts/ci/test-(product-evidence|host-fixture-retention).sh$' "$HOST_MAKE_EVENTS" >/dev/null; then exit 1; fi
+    : > "$HOST_MAKE_EVENTS"
+    PATH="$fixture/local:$PATH" IC_TOOLING_FULL_CI=1 make --no-print-directory tooling-command-check \
+        TOOLING_RELEASE_GROUP=testkit TOOLING_STAGE_ADMISSIONS=admissions > "$fixture/tooling-no-reuse.log" 2>&1
+    if grep -F 'fixture scripts/release/reuse-fixture.sh' "$HOST_MAKE_EVENTS" >/dev/null; then exit 1; fi
+    grep -Fx 'fixture scripts/ci/test-product-evidence.sh' "$HOST_MAKE_EVENTS" >/dev/null
+    grep -Fx 'fixture scripts/ci/test-host-fixture-retention.sh' "$HOST_MAKE_EVENTS" >/dev/null
 }
 
 if [[ $selection == tooling-roster ]]; then

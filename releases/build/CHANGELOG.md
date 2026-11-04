@@ -10,6 +10,14 @@ reset, release, tag or upload is implied by establishing this group.
 
 ### 🧪 Testing
 
+- Reuse unchanged product-evidence fixture execution across release groups, with
+  new source/group admissions and original proof/log custody. Ordinary CI still
+  runs the fixture; Rust, runtime and archive qualification remain fresh.
+- Run common adapter corruption/refusal probes once per six-group fixture, while
+  retaining each group's preparation, rollback, isolation and committed checks.
+  Selected-group fixtures keep the complete common probe set.
+- Keep adapter preparation/recovery probes on a compact substituted gate. The
+  separate validation fixture still checks the complete production roster.
 - Release qualification checks its selected adapter group; full CI retains all
   six groups. Reuse unchanged fixture-retention execution through Shared's
   stage runner, retaining original proof/log custody and fresh source/group
@@ -20,6 +28,12 @@ reset, release, tag or upload is implied by establishing this group.
 - Parse stage admission records with portable extended regular expressions so
   macOS's native sed admits the same execution/reuse records as Linux.
 - Keep release-stage arguments nonempty for macOS Bash 3.2's nounset behavior.
+
+### ➕ Added
+
+- Allow callers to package and qualify fresh admitted archives with their own
+  checks and compiler-cache policy. Preserve the existing default qualification
+  behavior and all source, archive and graph custody checks.
 
 ## [0.74.3] - 2026-11-04
 

@@ -166,6 +166,47 @@ pub fn qualify_package_archives(
     })
 }
 
+/// Package a selection and run caller-owned checks over its fresh admitted graph.
+///
+/// Source/archive admission and final custody checks match
+/// [`qualify_package_archives`]. The callback receives the extracted workspace;
+/// it owns test commands and compiler-cache policy. In particular, a shared
+/// compiler cache must rebuild the extracted packages even when their versions
+/// and archive mtimes match a previous payload. The convenience API retains its
+/// fresh per-attempt compilation target.
+///
+/// # Errors
+/// Returns packaging, source, archive, graph or callback failure with retained evidence.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "archive custody, tools, limits and consumer qualification remain explicit"
+)]
+pub fn qualify_package_archives_with(
+    workspace: &Path,
+    archive_root: &Path,
+    evidence: &Path,
+    packages: &[PackageArchiveSpec<'_>],
+    features: &CargoFeatureSelection,
+    limits: PackageQualificationLimits,
+    mut cargo: impl FnMut() -> Command,
+    mut extractor: impl FnMut(&Path, &Path) -> Command,
+    qualify: impl FnOnce(&Path) -> Result<(), Box<dyn Error>>,
+) -> Result<(), PackageQualificationError> {
+    PreparedQualification::prepare(
+        workspace,
+        archive_root,
+        evidence,
+        packages,
+        features,
+        limits,
+    )
+    .and_then(|prepared| prepared.run(&mut cargo, &mut extractor, true, |root, _, _| qualify(root)))
+    .map_err(|cause| PackageQualificationError {
+        evidence: evidence.to_owned(),
+        cause,
+    })
+}
+
 /// Qualify already-produced archives with caller-owned checks over the admitted graph.
 ///
 /// This does not run Cargo packaging or choose test targets, toolchains or Wasm

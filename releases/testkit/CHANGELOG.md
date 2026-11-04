@@ -6,6 +6,23 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.86.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt IC Wire 0.17 for typed calls and probe fixtures. Consumers exchanging
+  Wire limits or errors with Testkit should select the same minor line. Core
+  codec builds no longer pull in Wire's optional schema derive; frame bytes,
+  budgets and simulator behavior remain unchanged.
+
+### 🧪 Testing
+
+- Reuse a dedicated archive compiler cache across qualification attempts. Cargo
+  rebuilds every extracted workspace package, including changed same-version
+  payloads, while retaining compiled registry dependencies. Each attempt still
+  packages, extracts, admits and tests its exact sources; evidence stays separate
+  from the owned compiler cache and normal workspace artifacts.
+
 ## [0.85.1] - 2026-11-04
 
 ### 🧹 Maintenance

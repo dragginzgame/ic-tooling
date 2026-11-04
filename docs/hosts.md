@@ -7,8 +7,14 @@ qualification using the prepared server; `make testkit-wasm-check` qualifies dep
 qualifies all ten public archives through Build. Private packages remain
 excluded from publication. Native macOS results must come from native runners.
 The driver's retained attempt holds selection diagnostics beside Build's
-`archives/` qualification directory; its Cargo `target/` is excluded from evidence
-uploads, while selection and archive diagnostics remain retained.
+`archives/` qualification directory. Its separate `target/archive-build-cache`
+retains registry compiler outputs across attempts. Before every test run, Cargo
+cleans only the extracted workspace packages from that owned cache, so fixed tar
+mtimes cannot let a changed same-version payload reuse its old build. A lock
+serializes invalidation and tests; unowned or redirected cache paths refuse.
+Archive/source/graph verification and both all-target/doctest commands always run.
+Compiler outputs are excluded from evidence uploads; original diagnostics remain.
+The generic Build convenience API still uses a fresh target for every attempt.
 
 Plain `cargo clean` removes this workspace's complete `target/`, including nested
 qualification caches and evidence. Builds/releases do not clean automatically.
@@ -40,7 +46,9 @@ the clean source revision, exact Cargo.lock, compiler/Cargo identities and decla
 OS/architecture/version, selected profile and completion marker. These are
 produced after the job gates pass and retained for 14 days; cache restoration
 does not itself qualify a source or host. Compilation caches exclude attempt-specific archive targets. Hosted uploads/cache effectiveness
-remain distinct from local script qualification.
+remain distinct from local script qualification. The dedicated archive compiler
+cache can be restored separately; extracted workspace packages are rebuilt before
+tests regardless of cache restoration.
 Native CI explicitly adds `wasm32-unknown-unknown` to the declared development
 compiler after preparing it, before running the deployed Testkit profile checks.
 The FS package also owns the [native file CLI](file-cli.md). Its actual-executable
@@ -251,7 +259,10 @@ release groups, with substituted setup/full qualification. Shared owns group
 rendering and transactions; source custody and the complete gates remain local.
 See [release ownership](design/release-groups.md).
 The consumer's [tooling-check roster](../ci/tooling-checks.tsv) selects ordinary
-command checks and the appropriate Make/retention fixtures. Keep behavioral
+command checks, the appropriate Make/retention fixtures and reusable stage names
+in its optional third column. Release gates can reuse retention and archive-evidence
+fixture results through exact-input admission; ordinary CI executes both fixtures.
+Keep behavioral
 assertions independent of that roster when extending a selected check.
 Shared owns the synthetic Make-consumer, host/IC/Rust installer and LOC parser
 matrices in `shared-tooling/scripts/ci/test-portable-tools.sh`. Host retains its actual

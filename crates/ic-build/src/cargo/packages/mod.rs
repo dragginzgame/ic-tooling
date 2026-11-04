@@ -14,4 +14,5 @@ mod source_inventory;
 pub use archive::{
     PackageArchiveSpec, PackageCommandError, PackageQualificationError, PackageQualificationLimits,
     capture_package_command, qualify_existing_package_archives, qualify_package_archives,
+    qualify_package_archives_with,
 };
