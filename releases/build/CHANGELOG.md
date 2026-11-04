@@ -14,6 +14,8 @@ reset, release, tag or upload is implied by establishing this group.
   six groups. Reuse unchanged fixture-retention execution through Shared's
   stage runner, retaining original proof/log custody and fresh source/group
   admission. Rust and archive obligations continue to execute normally.
+- Keep the selected-group routing fixture independent of its caller's full-CI
+  marker, and replay stage-reuse diagnostics when a fixture fails on another host.
 
 ## [0.74.3] - 2026-11-04
 

@@ -135,7 +135,7 @@ EVENTS
     # Each release checks its actual adapter once; full CI keeps all groups.
     for group in foundation build text tools testkit native; do
         : > "$HOST_MAKE_EVENTS"
-        PATH="$fixture/local:$PATH" make --no-print-directory tooling-command-check \
+        PATH="$fixture/local:$PATH" IC_TOOLING_FULL_CI=0 make --no-print-directory tooling-command-check \
             "TOOLING_RELEASE_GROUP=$group" > "$fixture/tooling-$group.log" 2>&1
         grep -Fx "fixture scripts/release/test-adapter.sh --group $group" "$HOST_MAKE_EVENTS" >/dev/null
         [[ $(grep -c '^fixture scripts/release/test-adapter.sh' "$HOST_MAKE_EVENTS") == 1 ]]

@@ -8,7 +8,19 @@ root="${root%/.}"
 source "$root/scripts/ci/fixture-lifecycle.sh"
 fixture=$(fixture_create "$root/target/release-stage-reuse.XXXXXX")
 fixture_complete=false
-trap 'fixture_finish "$?" "$fixture" "Stage reuse evidence retained"' EXIT
+finish() {
+    local status=$?
+    if [[ $status != 0 ]]; then
+        fixture_replay_logs "$fixture/first.log" "$fixture/second.log" "$fixture/changed.log" "$fixture/added.log"
+        local admission
+        for admission in "$fixture"/work/admissions/*/fixture-retention.json; do
+            [[ -f $admission ]] || continue
+            jq '{mode, source, group, execution_proof}' "$admission" >&2 || :
+        done
+    fi
+    fixture_finish "$status" "$fixture" 'Stage reuse evidence retained'
+}
+trap finish EXIT
 mkdir -p "$fixture/work/ci"
 cp -R "$root/scripts" "$fixture/work/"
 cp "$root/ci/tooling-checks.tsv" "$fixture/work/ci/"
