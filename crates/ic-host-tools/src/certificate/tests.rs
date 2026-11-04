@@ -2,6 +2,18 @@ use super::*;
 use serde_cbor::Value;
 const LIMITS: DecodeLimits = DecodeLimits { bytes: 65_536 };
 
+#[cfg(all(feature = "agent", not(target_family = "wasm")))]
+#[test]
+fn decoded_certificate_has_the_native_agent_identity() {
+    let bytes = encode(&certificate(Value::Bytes(vec![1, 2, 3])));
+    let decoded: ic_platform::agent::ExternalCertificate =
+        decode_certificate(&bytes, LIMITS).unwrap();
+    let tree: ic_platform::agent::ExternalHashTree =
+        decode_hash_tree(&encode(&decoded.tree), LIMITS).unwrap();
+    assert_eq!(decoded.tree, tree);
+    assert_eq!(decoded.signature, [1, 2, 3]);
+}
+
 fn encode(value: &impl serde::Serialize) -> Vec<u8> {
     serde_cbor::to_vec(value).unwrap()
 }

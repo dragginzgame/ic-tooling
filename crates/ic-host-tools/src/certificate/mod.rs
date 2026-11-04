@@ -3,9 +3,8 @@
 //! Caller owns trust roots, signatures, combined evidence budgets, commitment
 //! verification and application leaf meanings. Original bytes stay caller-owned.
 //!
-//! Returned certificates and trees use Platform's maintained identities. Native
-//! Agent consumers enable `agent` and use Platform's explicit `From`/`Into`
-//! conversions when passing them to the Agent's external certificate types.
+//! Returned certificates and trees use the upstream identities exposed by
+//! Platform and native Agent; callers can pass them directly between those APIs.
 
 use ic_platform::certification::{
     Certificate, Delegation, HashTree, empty, fork, labeled, leaf, pruned,
@@ -54,7 +53,7 @@ pub enum DecodeError {
     #[error("{0}")]
     Cbor(#[source] ParseError),
 }
-/// Decode one certificate into Platform-owned IC-format values.
+/// Decode one certificate into upstream IC-format values exposed by Platform.
 ///
 /// Required tree/signature and optional delegation fields are strict: duplicate,
 /// unknown or incorrectly typed fields refuse. Signatures, labels, leaves and

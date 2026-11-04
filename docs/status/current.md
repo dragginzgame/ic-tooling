@@ -1,5 +1,25 @@
 # Current handoff
 
+## Local Platform 0.22 adoption
+
+The root catalog now selects published Platform 0.22.0. Tools' certificate/tree
+API uses the upstream identity shared directly with native Agent; its three
+certificate graph profiles now require one `ic-certification` package. Pending
+Tools 0.82.0 notes cover that identity change. Testkit's native Candid/management
+adapter adoption is compatible, with pending 0.85.1 notes; Types 0.18, Runtime
+0.19 and the exact management DTO pin remain unchanged. Deployment is authorized
+for Tools 0.82.0 and Testkit 0.85.1, through main and the normal group release/
+publication adapters. Tools 0.81.1 was never published; the public certificate
+identity change requires the selected minor release instead of that patch.
+
+Focused Linux evidence in `target/platform022-adoption/` records 30 certificate/
+Agent tests, the management DTO round trip, and the installed PocketIC 16.1
+management/snapshot test. Certificate-only, certificate/interface and combined
+Candid graphs passed, alongside Testkit native/Wasm exclusion graphs. Formatting,
+ShellCheck and local document links passed. Native macOS qualification of this
+adoption has not run. The incoming lock backup is retained there; unrelated
+package versions/checksums are preserved while Cargo repairs stale Windows edges.
+
 ## Delivered cleanup and package releases — 2026-11-04
 
 The test-layout and complexity cleanup is integrated at
