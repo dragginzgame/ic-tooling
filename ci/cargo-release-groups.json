@@ -53,6 +53,9 @@
         "ic-host-tools"
       ],
       "changelog": "releases/tools/CHANGELOG.md",
+      "metadata_files": [
+        "releases/tools/0.82.md"
+      ],
       "dependencies": [
         "ic-host-tools"
       ]

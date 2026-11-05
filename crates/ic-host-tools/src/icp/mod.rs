@@ -1,15 +1,19 @@
-//! ICP CLI command syntax and installation facts, without process execution.
+//! ICP CLI command syntax, inventory and status facts, without process execution.
 //!
 //! Callers select executables, credentials, environments, output formats and
 //! capture limits. No command is dispatched and no tool version is admitted here.
 
+mod inventory;
 mod status;
 #[cfg(test)]
 mod tests;
 
 use std::{ffi::OsStr, path::Path, process::Command};
 
-pub use status::{InstallationStatusError, decode_installation_status};
+pub use inventory::{CanisterListError, decode_canister_list};
+pub use status::{
+    CycleBalanceError, InstallationStatusError, decode_canister_cycles, decode_installation_status,
+};
 
 /// The already-selected query or update operation; this does not authorize it.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

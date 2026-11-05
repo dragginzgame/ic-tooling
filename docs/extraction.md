@@ -148,8 +148,11 @@ no longer owns an `ic-limits` profile or a reference-policy CLI example.
   reply decoding with explicit byte/work and caller-owned aggregate limits,
   IC method export projection over generic Wasm facts, JSON/plain-hex ICP responses
   and bounded certificate decoding. Its `icp` module owns pure call/status argv
-  construction and successful status JSON's null/string installation projection;
-  executable/context admission, capture bounds, execution, targets, full status
+  construction and successful status JSON's null/string installation projection.
+  Bounded inventory and decimal-string cycle-balance projections also live here;
+  sorting, name admission, manifest fallback and funding policy stay local
+  ([#335](https://github.com/dragginzgame/ic-tooling/issues/335)).
+  Executable/context admission, capture bounds, execution, targets, full status
   reports and lifecycle stay with callers. The implementation and four tests are
   taken from reviewed Host PR #101 at `38b114bb30f12e9a6e255ccd85d6b7344331d763`.
   CLI labels, preambles and any Unicode whitespace normalization remain with

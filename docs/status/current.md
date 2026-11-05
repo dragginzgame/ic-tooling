@@ -1,5 +1,17 @@
 # Current handoff
 
+## Ready-batch deployment — 2026-11-05
+
+The renewed deployment request includes the completed Host Tools #335 decoders.
+Its 11 focused ICP tests and strict minimal-feature Clippy passed locally. The
+selected order is Foundation 0.74.4, Build 0.74.4, Tools 0.82.1 and Testkit 0.87.0,
+through ordinary main and the standard release/publication adapters. Incoming
+lock selections remain backed up under `target/deploy-ready-20261105/` and outside
+release commits. Two exact generated Mermaid identifiers in the Shared stack
+snapshot caused secret-scan false positives; `.gitleaksignore` records only their
+historical fingerprints, and the complete history scan passes. Native hosted
+qualification continues asynchronously; no new macOS success is claimed here.
+
 ## Tools/Build focused qualification — 2026-11-05
 
 The maintainer requested focused Tools and Build release plans. Their selected

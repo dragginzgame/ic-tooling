@@ -4,6 +4,18 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.82.1]
+
+### ➕ Added
+
+- Decode bounded ICP canister inventory and structured cycle balances without
+  scraping display text. Preserve public-status balance absence and refuse
+  malformed or repeated authoritative fields; callers retain sorting, fallback
+  and funding policy
+  ([#335 — Share bounded ICP inventory and cycle decoding](https://github.com/dragginzgame/ic-tooling/issues/335)).
+
+[Detailed changes](0.82.md).
+
 ## [0.82.0] - 2026-11-04
 
 ### ⚠️ Breaking

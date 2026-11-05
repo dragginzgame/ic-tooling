@@ -18,12 +18,11 @@ certificate = ["dep:ic-platform", "dep:serde_cbor", "ic-platform/certification"]
 encoding = []
 ic-interface = ["dep:ic-host-artifacts", "ic-host-artifacts/wasm"]
 icp-ledger = ["dep:prost"]
-icp-project = ["dep:ic-host-text", "ic-host-text/yaml", "serde/derive"]
+icp-project = ["dep:ic-host-text", "ic-host-text/yaml"]
 ledger-evidence = [
     "dep:ic-platform",
     "ic-platform/candid",
     "ic-platform/icrc-ledger-types",
-    "serde/derive",
 ]
 registry = ["dep:ic-platform-types", "dep:prost"]
 
@@ -36,7 +35,7 @@ ic-host-text = { workspace = true, optional = true }
 ic-platform = { workspace = true, optional = true }
 ic-platform-types = { workspace = true, optional = true }
 prost = { workspace = true, optional = true }
-serde = { workspace = true, features = ["std"] }
+serde = { workspace = true, features = ["derive", "std"] }
 serde_cbor = { workspace = true, optional = true }
 serde_json.workspace = true
 thiserror.workspace = true
