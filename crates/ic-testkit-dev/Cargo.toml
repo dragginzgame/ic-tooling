@@ -42,8 +42,8 @@ rustix = { workspace = true, features = ["process"] }
 
 [dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }
-ic-host-tools = { workspace = true, features = ["registry", "certificate"] }
-ic-platform = { workspace = true, features = ["principal", "certification"] }
+ic-host-tools = { workspace = true, features = ["registry"] }
+ic-platform = { workspace = true, features = ["principal", "ic-protocol"] }
 ic-wire.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 

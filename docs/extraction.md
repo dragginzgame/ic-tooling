@@ -35,10 +35,11 @@ adapters retain Platform without its PocketIC feature. The workspace manifest
 owns exact dependency versions; the [client migration](testkit/client-migration.md)
 describes the async-only client and explicit teardown contract.
 
-Host Tools selects Platform for external Candid decoding, native parsing and
-optional certification. Platform owns those protocol adapters; Tools retains
-service-to-Wasm projections, strict certificate CBOR admission and caller-owned
-aggregate-byte accounting. Owned application protocols use IC Wire.
+Host Tools selects Platform for external Candid decoding and native parsing.
+Platform owns certificate/hash-tree CBOR and typed IC packet codecs; Tools retains
+service-to-Wasm projections and caller-owned aggregate-byte accounting.
+Testkit uses Platform's packet codecs while retaining PocketIC transport and
+orchestration. Owned application protocols use IC Wire.
 
 <a id="fleet-candidcdk-boundary"></a>
 
@@ -72,8 +73,7 @@ Native Candid extraction belongs to IC Build's `artifacts::candid`; generic line
 normalization belongs to `ic_host_text::normalize`.
 Shared method identities remain unconditional. Candid service inspection and
 bounded reply decoding require `candid`; Platform and its native parser are
-optional. The independent `certificate` feature selects certification without
-Candid. `ic-interface` adds generic Wasm facts and export projection without
+optional. `ic-interface` adds generic Wasm facts and export projection without
 Platform, Candid or filesystem/process dependencies. Select both `candid` and
 `ic-interface` for service/export comparisons.
 Replica revision selection, install thresholds and resource-report policy belong
@@ -146,8 +146,8 @@ no longer owns an `ic-limits` profile or a reference-policy CLI example.
   [#110 — Host text ownership](https://github.com/dragginzgame/ic-host-tooling/issues/110).
 - ic-host-tools owns Candid service-method interpretation,
   reply decoding with explicit byte/work and caller-owned aggregate limits,
-  IC method export projection over generic Wasm facts, JSON/plain-hex ICP responses
-  and bounded certificate decoding. Its `icp` module owns pure call/status argv
+  IC method export projection over generic Wasm facts and JSON/plain-hex ICP responses.
+  Its `icp` module owns pure call/status argv
   construction and successful status JSON's null/string installation projection.
   Bounded inventory and decimal-string cycle-balance projections also live here;
   sorting, name admission, manifest fallback and funding policy stay local
@@ -189,7 +189,7 @@ parsing; bounded artifact-reader refusals retain their typed cause through
 The optional native Tools `agent` feature shares response-bounded SDK construction
 and lazy exact endpoint/ceiling binding using Platform's supported Agent API.
 The caller retains endpoint admission, trust roots, identity, historical policy,
-deadlines and every network call. Defaults/certificate exclude transport, and
+deadlines and every network call. Defaults exclude transport, and
 the Wasm graph excludes it even with the feature selected. Process and Tokio
 are dev-only fixtures; no lifecycle owner or automatic network activity is added.
 
@@ -198,11 +198,13 @@ The optional tools `encoding` feature decodes a complete canonical unsigned
 overflowing, nonminimal and trailing encodings while inspecting at most ten bytes.
 Callers retain field names, semantic limits, transport and trust policy.
 
-The optional tools `certificate` feature owns strict CBOR decoding into owned
-certificate/delegation/hash-tree values supplied by `ic_platform::certification`.
+Platform's `certification-cbor` feature owns strict CBOR decoding through
+`ic_platform::certification::cbor::strict`, including its `DecodeLimits` and
+typed errors. Host Tools no longer provides a `certificate` feature or module.
+The codec returns certificate/delegation/hash-tree values from Platform.
 These retain upstream `ic-certification` type identities. It admits complete
 input bytes before decoding with the IC Agent's `serde_cbor` codec and its
-built-in recursion limit, returning one fully consumed value. Host has no depth
+built-in recursion limit, returning one fully consumed value. The codec has no depth
 override or competing CBOR parser. Direct Serde visitors enforce actual array/byte kinds, exact tree tags
 and arities and 32-byte pruned digests without a generic CBOR payload tree.
 Certificate/delegation fields reject unknown, duplicate, missing or invalid
@@ -213,9 +215,14 @@ data and CBOR/shape failures.
 Parser allocations use ordinary upstream Vec/Box storage; a byte bound is not a
 heap/CPU quota. No authentication is implied. Agent verification, network trust
 roots, combined certificate/witness budgets, witness commitment and application
-leaf interpretation remain consumer-owned. No Agent, transport, filesystem,
-process or text dependency enters this profile
-([#109 — Owned certificate decoding](https://github.com/dragginzgame/ic-host-tooling/issues/109)).
+leaf interpretation remain consumer-owned. The original extraction is recorded
+in [#109](https://github.com/dragginzgame/ic-host-tooling/issues/109); its codec and
+grammar tests now belong to Platform. Consumers select that owner directly.
+
+Platform's `ic-protocol` feature also owns typed read-state envelope encoding,
+response decoding and subnet-metrics leaf decoding. Testkit retains the HTTP
+exchange, endpoint/status handling, certificate tree lookup and optional-result
+behavior. This move adds no verification, retry or replay policy.
 
 Source tests move with their owner; public artifact projection tests belong to
 ic-host-artifacts. Runnable examples retain explicit dependencies on each owner.

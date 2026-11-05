@@ -1627,7 +1627,6 @@ dependencies = [
  "leb128",
  "prost",
  "serde",
- "serde_cbor",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
@@ -1656,9 +1655,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform"
-version = "0.22.0"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19b0b5b5a8399051037aeb0f6d0832b8191eef1f7c9e727a9cf9baed951fc968"
+checksum = "be12bedb3f3a6eaeb38eaa4f834159e181b560e530df59291fa3a486219cfc57"
 dependencies = [
  "candid",
  "candid_parser",
@@ -1669,11 +1668,14 @@ dependencies = [
  "ic-certification",
  "ic-management-canister-types",
  "ic-platform-types",
+ "ic-transport-types",
  "num-bigint",
  "num-traits",
  "serde",
  "serde_bytes",
+ "serde_cbor",
  "sha2 0.10.9",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -1710,9 +1712,9 @@ checksum = "d5833c1847deb7fcd326b77a48ecaf96ecde90dcf2c2fb3d3cedb7a7e67d2159"
 
 [[package]]
 name = "ic-platform-types"
-version = "0.18.0"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f95791d7eff0804a23182f131b976293f0f0184b237a63cfb741c1f63a60fb91"
+checksum = "aa881498e10a94f06602424148b166e685170cd9afe0b0f377fb849b47c7bc6f"
 dependencies = [
  "crc32fast",
  "data-encoding",
@@ -1731,7 +1733,6 @@ dependencies = [
  "candid",
  "clap",
  "hex",
- "ic-certification",
  "ic-host-artifacts",
  "ic-host-fs",
  "ic-host-process",
@@ -1739,13 +1740,11 @@ dependencies = [
  "ic-platform",
  "ic-platform-runtime",
  "ic-platform-types",
- "ic-transport-types",
  "ic-wire",
  "libc",
  "reqwest",
  "schemars",
  "serde",
- "serde_cbor",
  "serde_json",
  "sha2 0.10.9",
  "slog",

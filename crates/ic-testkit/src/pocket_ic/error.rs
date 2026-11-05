@@ -64,7 +64,7 @@ pub enum ClientError {
     #[error("Candid failed: {0}")]
     Candid(#[from] candid::Error),
     #[error("CBOR failed: {0}")]
-    Cbor(#[from] serde_cbor::Error),
+    Cbor(#[from] ic_platform::certification::cbor::CborError),
     #[error("I/O failed: {0}")]
     Io(#[from] std::io::Error),
     #[error("invalid PocketIC response: {0}")]

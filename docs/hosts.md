@@ -158,8 +158,7 @@ regressions; Linux and both macOS graph checks independently enforce selection.
 `make test-tools-default` checks response and ICP interpretation without
 Platform or Candid. `make test-tools-candid` checks opt-in Candid decoding/service
 facts. `make test-tools-interface` adds Wasm export
-interpretation; `make test-tools-certificate` adds strict owned certificate/hash-tree
-decoding. `make test PACKAGE=ic-host-text` checks bounded line normalization,
+interpretation. `make test PACKAGE=ic-host-text` checks bounded line normalization,
 escaping, progress frames and Unicode table alignment.
 `make test-tools-registry` checks golden Protobuf tags and shard admission.
 Single-feature Tools targets compile all targets under their isolated feature
@@ -186,13 +185,11 @@ with Rust 1.82; `libyaml-rs` is MIT with Rust 1.60. The public Host contract sta
 on Rust 1.99.1. All-feature and isolated YAML checks use the same pinned compiler
 and native CI lane.
 
-Certificate tests compare recursion refusal, semantic tags and indefinite byte
-chunks with the same `serde_cbor` decoder used by IC Agent. Strict Host field,
-array/byte-kind, trailing-input and redacted-error tests remain independent.
-Certificate normal/build graphs require serde_cbor and exclude Minicbor; every
-selected graph excludes Ciborium. The ledger profile retains its upstream
-Minicbor dependency. Native Linux and both macOS hosts must qualify new decoder
-source separately; named-target graph checks do not execute on those hosts.
+Platform owns the strict certificate/hash-tree decoder and its grammar, recursion,
+byte-limit and error tests. Tooling's `ic-testkit-dev --test public_contracts`
+retains Testkit's public subnet-metrics DTO identity check within ordinary workspace
+tests. It does not repeat Platform's decoder suite. Every selected Tools graph
+excludes Ciborium; the ledger profile retains its upstream Minicbor dependency.
 
 `make test-tools-agent` exercises native construction, exact binding and response
 ceilings. Its Wasm graph check observes dependency exclusion, not Tools execution.
@@ -206,13 +203,12 @@ for the current graph evidence and Platform correction dependency. Named-target
 macOS graphs establish selection only; native execution remains separate evidence.
 
 The optional `icp-project` feature qualifies bounded effective-YAML projection;
-default and certificate profiles exclude its YAML parser.
+default and other unrelated profiles exclude its YAML parser.
 
 `make test-tools-encoding` checks canonical unsigned LEB128 admission. The decoder
 adds no dependencies. `make tools-features-check` excludes Candid and its parser
-from default, certificate-only and interface-only normal/build graphs, including
-`certificate,ic-interface` together. `make test-tools-combined` exercises that
-parser-free combination; all-feature tests retain the DID/Wasm comparison.
+from default and interface-only normal/build graphs. `make test-tools-combined`
+exercises `candid,ic-interface` together, including the DID/Wasm comparison.
 Native CI includes these profiles. Only explicit `candid` selects Platform's parser;
 Agent and ledger evidence retain their required codec dependencies without it.
 Registry selects `ic-platform-types` directly, without the facade or codec. Its
@@ -221,7 +217,7 @@ Host Artifacts and Wasm parsing. The standalone Wasm inspector
 retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.99.1
 and native Linux/macOS matrix as the existing libraries.
 
-Platform 0.22 delegates IC system calls and the executor to independent Runtime
+Platform 0.23 delegates IC system calls and the executor to independent Runtime
 0.19. Testkit's
 Wasm graph excludes external `ic0` and `ic-cdk-executor` packages; the private
 performance probe enables Platform's executor through `cdk`. Wasm compilation
@@ -230,11 +226,10 @@ Platform selects its internal singleton guard only for executor/runtime
 users. The graph policies exclude it from Host/Tools and Testkit, and require it
 for the private probe's Wasm runtime.
 Consumers exchanging Platform-owned registry principals with Tools must align
-the canonical `ic-platform-types` 0.18.0 identity exposed by Platform 0.22.0.
-Tools' certificate decoders return the upstream certificate/hash-tree identities
-exposed by Platform and native Agent. Pass decoded values directly between those
-APIs. Certificate profiles require one registry `ic-certification` identity;
-profiles without certificate or Agent features retain their exclusions.
+the canonical `ic-platform-types` 0.18.1 identity exposed by Platform 0.23.0.
+Platform's certificate codecs return the same upstream certificate/hash-tree
+identities as native Agent. Pass decoded values directly between those APIs.
+Tools profiles without Agent retain their declared dependency exclusions.
 Platform has no production Wire or Host Artifacts dependency. Public caller tests
 check Principal/Account core frames, limits and type identities. Production
 profiles use only Wire's core codec and do not select its optional metadata bridge or

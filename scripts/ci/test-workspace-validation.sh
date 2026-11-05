@@ -13,7 +13,7 @@ mkdir "$fixture/checkout"
 bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/checkout" \
     Makefile make/consumer.mk make/testkit.mk scripts/ci/check-pipe-jobserver.pl
 cd "$fixture/checkout"
-# Frozen regression observation of the 35-stage pre-consolidation behavior.
+# Independent observation of the 34-stage gate after certificate owner extraction.
 # Production dispatch has one owner: ci/release-validation.json.
 cat > "$fixture/expected" <<'STAGES'
 shared-tooling-check
@@ -42,7 +42,6 @@ testkit-installed-check
 testkit-package-check
 test-tools-default
 test-tools-interface
-test-tools-certificate
 test-tools-candid
 test-tools-combined
 test-tools-agent
@@ -118,4 +117,4 @@ for mutation in focus multiple-documents; do
     [[ ! -s $WORKSPACE_TEST_EVENTS ]]
 done
 fixture_complete=true
-echo 'Both CI entrypoints preserve 35-stage coverage, one lint, fail-fast order and pipe jobserver access'
+echo 'Both CI entrypoints preserve 34-stage coverage, one lint, fail-fast order and pipe jobserver access'

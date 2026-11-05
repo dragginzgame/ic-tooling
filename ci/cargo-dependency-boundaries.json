@@ -1,4 +1,7 @@
 [
+  {"dependency": "ic-certification", "allowed_packages": []},
+  {"dependency": "ic-transport-types", "allowed_packages": []},
+  {"dependency": "serde_cbor", "allowed_packages": []},
   {"dependency": "flate2", "allowed_packages": ["ic-host-artifacts", "ic-testkit"]},
   {"dependency": "serde_yaml", "allowed_packages": []},
   {"dependency": "unsafe-libyaml", "allowed_packages": []},

@@ -3,8 +3,6 @@
 pub mod agent;
 #[cfg(feature = "candid")]
 pub mod candid;
-#[cfg(feature = "certificate")]
-pub mod certificate;
 #[cfg(feature = "encoding")]
 pub mod encoding;
 pub mod icp;

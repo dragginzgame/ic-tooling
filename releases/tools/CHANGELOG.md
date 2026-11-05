@@ -4,6 +4,21 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.83.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.23 and move strict certificate/hash-tree CBOR decoding there. Remove Tools'
+  `certificate` feature and module; select Platform's `certification-cbor` feature
+  and import `certification::cbor::strict` directly. Limits, malformed-input
+  rejection and certificate/tree identities retain their contracts. Application
+  verification and trust policy remain with consumers.
+
+### 🧹 Cleanup
+
+- Remove the retired certificate test profile from CI and release validation.
+  Platform owns decoder tests; Tooling retains its shared-type consumer check.
+
 ## [0.82.1] - 2026-11-05
 
 ### ➕ Added

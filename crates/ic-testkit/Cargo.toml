@@ -38,19 +38,16 @@ base64 = { workspace = true }
 candid = { workspace = true, features = ["bignum", "serde_bytes", "printer"] }
 clap = { workspace = true, features = ["string"], optional = true }
 hex = { workspace = true, features = ["serde"] }
-ic-certification = { workspace = true }
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
 ic-host-fs = { workspace = true }
 ic-host-process = { workspace = true }
 ic-management-canister-types = { workspace = true }
 # Held fixtures adapt the external management HTTP protocol on native targets only.
-ic-platform = { workspace = true, features = ["candid", "management-canister-types"] }
-ic-transport-types = { workspace = true }
+ic-platform = { workspace = true, features = ["candid", "management-canister-types", "ic-protocol"] }
 ic-wire = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["blocking", "http2", "json", "multipart", "rustls", "socks", "stream"] }
 schemars = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-serde_cbor = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
 slog = { workspace = true, features = ["max_level_trace", "nested-values", "release_max_level_trace"] }

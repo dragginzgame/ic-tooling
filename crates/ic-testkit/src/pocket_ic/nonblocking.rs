@@ -23,7 +23,6 @@ use candid::{
     Principal, decode_args, encode_args,
     utils::{ArgumentDecoder, ArgumentEncoder},
 };
-use ic_certification::{Certificate, Label, LookupResult};
 use ic_management_canister_types::{
     CanisterId, CanisterIdRecord, CanisterInstallMode, CanisterLogRecord, CanisterSettings,
     CanisterStatusResult, ChunkHash, DeleteCanisterSnapshotArgs, FetchCanisterLogsResult,
@@ -32,9 +31,14 @@ use ic_management_canister_types::{
     TakeCanisterSnapshotArgs, UpdateSettingsArgs, UpgradeFlags, UploadChunkArgs, UploadChunkResult,
     WasmMemoryPersistence,
 };
-use ic_transport_types::Envelope;
-use ic_transport_types::EnvelopeContent::ReadState;
-use ic_transport_types::{ReadStateResponse, SubnetMetrics};
+use ic_platform::certification::cbor::decode_certificate;
+use ic_platform::certification::{Certificate, Label, LookupResult};
+use ic_platform::ic_protocol::Envelope;
+use ic_platform::ic_protocol::EnvelopeContent::ReadState;
+use ic_platform::ic_protocol::{
+    ReadStateResponse, SubnetMetrics, decode_read_state_response, decode_subnet_metrics,
+    encode_envelope,
+};
 use reqwest::{StatusCode, Url};
 use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
@@ -1685,10 +1689,7 @@ impl PocketIc {
             sender_delegation: None,
         };
 
-        let mut serialized_bytes = Vec::new();
-        let mut serializer = serde_cbor::Serializer::new(&mut serialized_bytes);
-        serializer.self_describe()?;
-        envelope.serialize(&mut serializer)?;
+        let serialized_bytes = encode_envelope(&envelope, usize::MAX)?;
 
         let endpoint = format!("api/v2/subnet/{}/read_state", subnet_id.to_text());
         let url = self.instance_url().join(&endpoint).unwrap();
@@ -1705,14 +1706,18 @@ impl PocketIc {
         if !status.is_success() {
             return Err(exchange.server_error(status, &bytes));
         }
-        let read_state_response: ReadStateResponse = serde_cbor::from_slice(&bytes)?;
-        let cert: Certificate = serde_cbor::from_slice(&read_state_response.certificate)?;
+        let read_state_response: ReadStateResponse =
+            decode_read_state_response(&bytes, bytes.len())?;
+        let cert: Certificate = decode_certificate(
+            &read_state_response.certificate,
+            read_state_response.certificate.len(),
+        )?;
 
         let metrics = match cert.tree.lookup_path(path) {
             LookupResult::Found(value) => value,
             _ => return Ok(None),
         };
-        serde_cbor::from_slice(metrics).map_err(ClientError::from)
+        decode_subnet_metrics(metrics, metrics.len()).map_err(ClientError::from)
     }
 
     /// This (asynchronous) drop function must be called to drop the PocketIc instance.

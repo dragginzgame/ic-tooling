@@ -28,7 +28,7 @@ admitted process execution and IC-specific format handling.
 | ic-host-http | Optional native bounded HTTP bodies with caller-selected partial failure evidence; see [usage](crates/ic-host-http/README.md) |
 | ic-host-process | Executable resolution, digest/version admission, bounded capture, explicit child/group cleanup and Git observations |
 | ic-host-text | Optional YAML decoding with byte admission, line normalization, decimal/UTC text, exact caller-selected quantity scales, terminal-safe rendering, Unicode tables and progress frames |
-| ic-host-tools | Candid service facts, optional IC export facts, ICP command syntax, response decoding and certificate decoding |
+| ic-host-tools | Candid service facts, optional IC export facts, ICP command syntax and response decoding |
 
 The FS package's explicit `cli` feature supplies [native `ic-host-file` commands](docs/file-cli.md)
 for bounded hashes and private create/replace operations, with caller-selected

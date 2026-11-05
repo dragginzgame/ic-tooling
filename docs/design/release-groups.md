@@ -26,9 +26,10 @@ optional ICP-project adapter and the private Testkit driver consume it explicitl
 A Text-only change does not advance unrelated filesystem or build packages.
 
 Host Tools' normal/build graph uses selected Foundation, Text and optional Platform
-capabilities, without Testkit. Its public principal/certificate types belong to
-Platform. Testkit uses Foundation, arithmetic-only Metrics, optional Wire and
-Platform's PocketIC/system capabilities, without Host Tools. Its private driver
+capabilities, without Testkit. Public Principal identities belong to Types;
+selected external IC adapters belong to Platform. Testkit uses Foundation,
+optional Wire and Platform's IC-format adapters, without Host Tools. It owns
+the maintained PocketIC client and selects Runtime directly for Wasm IC0. Its private driver
 also consumes Build and Text; those testing edges do not become public Testkit
 production dependencies. The Wasm probe remains in Testkit's existing family.
 
@@ -108,7 +109,7 @@ and native-host execution remain distinct proofs; see the
 [mapping and evidence contract](release-validation.md).
 
 The private Dev `public_contracts` test requires shared public error, principal,
-certificate and core Wire identities during ordinary qualification.
+subnet-metrics DTO and core Wire identities during ordinary qualification.
 The standard package check independently qualifies normalized archives of all ten
 public packages. After both integration groups are published, opt in to
 `CARGO_NET_OFFLINE=false bash scripts/release/test-integration-cohort.sh` for the

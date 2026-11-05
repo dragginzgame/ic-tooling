@@ -10,14 +10,13 @@ fn build_keeps_its_public_foundation_error_identities() {
 }
 
 #[test]
+fn testkit_metrics_keep_the_platform_protocol_identity() {
+    let _: fn(ic_platform::ic_protocol::SubnetMetrics) -> ic_testkit::pocket_ic::SubnetMetrics =
+        |metrics| metrics;
+}
+
+#[test]
 fn tooling_callers_share_principal_and_wire_contracts() {
-    let _: fn(
-        &[u8],
-        ic_host_tools::certificate::DecodeLimits,
-    ) -> Result<
-        ic_platform::certification::Certificate,
-        ic_host_tools::certificate::DecodeError,
-    > = ic_host_tools::certificate::decode_certificate;
     let owner: ic_platform_types::Principal =
         ic_host_tools::registry::routing_shards::canister_range_start_from_key(
             "prefix/",

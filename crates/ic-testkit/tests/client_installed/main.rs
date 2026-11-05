@@ -1,4 +1,4 @@
-//! Installed management compatibility through the Testkit client.
+//! Installed management and IC packet compatibility through the Testkit client.
 #![cfg(not(target_family = "wasm"))]
 mod snapshot;
 
@@ -26,6 +26,12 @@ async fn installed_client_preserves_management_and_snapshot_state() {
         .await
         .unwrap();
     let id = pic.create_canister().await.unwrap();
+    let subnet = pic.get_subnet(id).await.unwrap().unwrap();
+    let metrics = pic.get_subnet_metrics(subnet).await.unwrap();
+    assert!(
+        metrics.is_some(),
+        "application subnet exposes certified metrics"
+    );
     let before = pic.canister_status(id, None).await.unwrap();
     let minimum = before.settings.minimum_incoming_canister_call_cycles;
     let visibility = before.settings.status_visibility;
@@ -72,6 +78,6 @@ async fn installed_client_preserves_management_and_snapshot_state() {
     pic.drop().await.unwrap();
     drop(server);
     println!(
-        "Direct PocketIC owner: management 0.11 status/settings and snapshot lifecycle passed"
+        "Direct PocketIC owner: management 0.11, certified metrics and snapshot lifecycle passed"
     );
 }

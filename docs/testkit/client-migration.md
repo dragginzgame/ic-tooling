@@ -2,8 +2,8 @@
 
 The next Testkit minor release removes the blocking client. Testkit 0.86 and
 earlier retain the old API. The maintained implementation remains in this
-package; PocketIC server 16.1, external DTO identities, protocol bytes, typed
-failures and snapshot transfer budgets are unchanged.
+package; PocketIC server 16.1, external DTO identities, protocol bytes,
+no-replay behavior and snapshot transfer budgets are unchanged.
 
 ## Imports and calls
 
@@ -30,6 +30,18 @@ coordinators need a live multithread runtime so network drivers keep progressing
 Builders without a URL return `ClientError::MissingServerUrl`. Provision with
 `ic-testkit-server setup` or `pic::server_assets::setup`, admit installations
 with `check`, and start a selected binary through `PocketIcStartupConfig`.
+
+## IC packet codecs
+
+Platform 0.23 owns read-state envelope encoding and certificate/subnet-metrics decoding.
+Testkit retains the HTTP exchange, status admission and certificate tree lookup.
+`ClientError::Cbor` now carries `ic_platform::certification::cbor::CborError`;
+code naming the former backend error type must adopt that owner. Testkit no
+longer declares the CBOR, certificate or transport DTO crates directly.
+
+`get_subnet_metrics` retains its optional result: a missing tree path or a present
+CBOR null leaf returns `None`; malformed data is an error. Decoding does not
+authenticate certificates or add retries, replay or application verification.
 
 ## Explicit teardown and cancellation
 

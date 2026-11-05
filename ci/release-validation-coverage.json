@@ -154,7 +154,6 @@
       "targets": [
         "test-tools-default",
         "test-tools-interface",
-        "test-tools-certificate",
         "test-tools-candid",
         "test-tools-combined",
         "test-tools-agent",
@@ -175,7 +174,6 @@
       "targets": [
         "test-tools-default",
         "test-tools-interface",
-        "test-tools-certificate",
         "test-tools-candid",
         "test-tools-combined",
         "test-tools-agent",

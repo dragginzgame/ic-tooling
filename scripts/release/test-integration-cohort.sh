@@ -50,9 +50,9 @@ jq -e '.workspace.dependencies as $d |
      "ic-testkit", "ic-platform", "ic-platform-types", "ic-wire"] |
     map(. as $name | {
         name: $name, version: $d[$name].version, singleton: ($name != "ic-platform"),
-        features: (if $name == "ic-host-tools" then ["registry", "certificate"]
+        features: (if $name == "ic-host-tools" then ["registry"]
             elif $name == "ic-testkit" then ["wire"]
-            elif $name == "ic-platform" then ["principal", "certification"]
+            elif $name == "ic-platform" then ["principal", "ic-protocol"]
             else [] end)
     })' "$fixture/catalog.json" > "$fixture/selection.json"
 # These are new registry-only inputs, never edits to release metadata or root lock.

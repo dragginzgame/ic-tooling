@@ -206,7 +206,7 @@ fresh execution after changed/new shell inputs. Recovery fixtures additionally
 reject changed stage identities and original execution logs.
 `bash scripts/ci/test-workspace-validation.sh` isolates actual Make dispatch for
 both full CI entrypoints under parallel Make. Its substituted check/publication
-effects prove the preserved 35-stage order, one lint pass, pipe jobserver access
+effects prove the 34-stage order after certificate owner extraction, one lint pass, pipe jobserver access
 and failure stopping before later checks. The default Make fixture includes this
 focused case for complete tooling qualification.
 

@@ -1,26 +1,104 @@
 # Current handoff
 
-## Ready-batch deployment — 2026-11-05
+## Platform codec deployment in progress — 2026-11-05
 
-Deployment remains unprepared/unpublished. Input monitoring identified
-`cargo update -v` from the checkout's VS Code terminal at 11:47 UTC rewriting
-Cargo.lock; release attempts were stopped and the updater must be paused before
-another qualification. Both original and refreshed incoming selections are
-retained in `target/deploy-ready-20261105/`. A diagnostic trace recorded no root
-lock writes by archive commands; tracing distorted a pool test, so that attempt
-was stopped and its owned processes terminated. It is not qualification evidence.
-Intel optimizer CI's registry timeout also exposed a missing pipeline-failure
-guard; the workflow now uses the same explicit fail-fast Bash as other native CI.
+The maintainer authorized Tools 0.83.0 followed by Testkit 0.87.0, using ordinary
+`/home/adam/projects/ic-tooling` main, direct origin/main plus group tags and
+separate crates.io publication. Evidence is under
+`target/deploy-platform023-20261105/`; durable incoming lock/source backups are in
+`.git/release-state/deployment-platform023-20261105/`. Hosted CI is asynchronous.
 
-The renewed deployment request includes the completed Host Tools #335 decoders.
-Its 11 focused ICP tests and strict minimal-feature Clippy passed locally. The
-selected order is Foundation 0.74.4, Build 0.74.4, Tools 0.82.1 and Testkit 0.87.0,
-through ordinary main and the standard release/publication adapters. Incoming
-lock selections remain backed up under `target/deploy-ready-20261105/` and outside
-release commits. Two exact generated Mermaid identifiers in the Shared stack
-snapshot caused secret-scan false positives; `.gitleaksignore` records only their
-historical fingerprints, and the complete history scan passes. Native hosted
-qualification continues asynchronously; no new macOS success is claimed here.
+The release lock is derived from committed main with only Platform 0.23.0,
+required Types 0.18.1 and removed workspace dependency edges. Runtime and unrelated
+patch selections retain the committed release graph. The newer incoming lock is
+kept separately and will be restored with only released workspace versions
+aligned after publication. Do not overwrite those snapshots or mix their
+unrelated selections into the release. Standard release gates remain required.
+
+## Published Platform 0.23 adoption — 2026-11-05
+
+The maintainer requested the published supplier after its codec release. The root
+catalog now selects `ic-platform = "0.23.0"` with defaults off. Types and Runtime
+requirements remain independently selected. The incoming lock already contained
+Platform 0.22.3, Types 0.18.1 and Runtime 0.19.2; the targeted update changes only
+the Platform package record. Every non-Platform record is byte-identical to that
+incoming lock, retained under `target/platform-adoption-20261105/` alongside the
+incoming source diff. Do not replace it with the older deployment snapshots.
+
+Registry metadata and packaged source confirm the published `certification-cbor`
+and `ic-protocol` features, including `Result<Option<SubnetMetrics>, CborError>`
+with null absence. Platform [#145](https://github.com/dragginzgame/ic-platform/issues/145)
+is supplied in 0.23.0. No sibling path or uncommitted supplier is selected.
+
+Linux focused evidence is under `target/platform-adoption-20261105/`: strict
+all-target/all-feature Clippy for Tools, Testkit and Dev; 107 Testkit and 58 Tools
+library cases; three public-contract cases; management DTO identity; native/Wasm
+feature graphs and Testkit Wasm compilation. The existing installed 16.1 client
+test now also reads real certified subnet metrics; metrics, management and bounded
+snapshot restoration passed together. Six library cases remain explicitly ignored;
+the focused checks do not claim their execution. Native macOS qualification and
+complete release/archive gates have not run for this adoption. Source changes
+remain local; Tools 0.83.0 and Testkit 0.87.0 are pending releases.
+
+## Certificate/protocol owner extraction — 2026-11-05
+
+The maintainer confirmed the in-flight certificate/hash-tree and subnet-metrics
+codec extraction as the next batch. Tools' pending minor is 0.83.0; Testkit's
+async-only minor remains 0.87.0. Platform owns strict certificate CBOR and typed
+read-state packet codecs; Query retains application verification and Testkit
+retains HTTP/status handling, tree lookup, optional results and orchestration.
+No compatibility certificate feature/module remains in Tools.
+
+The retired certificate test target and stage are removed. The full gate now
+has 34 stages; the separate source-bound focused plans still require a matching
+three-host comparison. Generic decoder tests belong to Platform. Dev's public
+contract checks Testkit's actual subnet-metrics DTO identity. The independent
+protocol-codec patch is formatted and checksummed, and mutation coverage includes
+that new provenance layer. Original donor/upstream fingerprints are unchanged.
+Direct certificate, transport DTO and CBOR declarations are removed; local
+dependency policy refuses their reintroduction outside Platform. Focused Make
+routing, scope-selection refusal, provenance mutations, declaration boundaries,
+formatting, shell lint and documentation links pass on Linux. Evidence is under
+`target/platform-codec-preparation-20261105/`; these checks do not establish
+runtime, graph, archive or native macOS qualification of the new dependency.
+
+The original 0.22.2 supplier gap and draft's non-optional metrics mismatch were
+resolved by Platform 0.23.0 and its adoption above. Platform retains the optional
+CBOR leaf grammar; Testkit adds no local CBOR-byte handling or null-as-error policy.
+
+## Delivered groups and interrupted Testkit release — 2026-11-05
+
+| Group | Published version | Release commit / tag |
+| --- | --- | --- |
+| Foundation (five public packages) | 0.74.4 | `fd4bc9e2` / `foundation-v0.74.4` |
+| Build | 0.74.4 | `9ed16c7a` / `build-v0.74.4` |
+| Tools | 0.82.1 | `85d45e69` / `tools-v0.82.1` |
+
+All three complete Linux release gates, Git delivery, crates.io publication and
+exact archive/checksum/Git-provenance readback passed. Tools 0.82.1 includes #335's
+bounded ICP inventory and cycle-balance decoders. Testkit 0.87.0 has no release
+commit, tag or upload: the new codec edits changed manifests/Makefile during
+archive qualification and the custody guard refused the attempt.
+
+Current deployment evidence is in `target/deploy-ready-20261105/` and
+`.git/release-state/deployment-ready-20261105/`. Both earlier lock snapshots are
+preserved there; `refreshed-incoming-Cargo.lock` in Git-side state includes the
+maintainer's Runtime 0.19.2 selections. That deployment used its committed release
+graph. The current Platform adoption preserves a newer incoming lock instead, as
+described above; retain both historical snapshots and avoid restoring them over
+the current supplier selection.
+
+Input monitoring identified `cargo update -v` from the checkout's VS Code
+terminal as the earlier lock writer; the maintainer paused dependency updates.
+A diagnostic archive trace recorded no checkout-lock writes, but distorted a pool
+test and was stopped with its owned processes; it is not qualification evidence.
+The optimizer workflow now retains setup pipeline failures. Two exact historical
+Mermaid identifiers have scoped secret-scan fingerprints; the history scan passes.
+
+At published Tools commit `85d45e69`, hosted optimizer, runtime and browser
+workflows passed; full native CI remained asynchronous at observation. See
+`target/deploy-ready-20261105/native-ci-status.json`. These results do not qualify
+the new, uncommitted extraction. No new native macOS pass is claimed for that batch.
 
 ## Tools/Build focused qualification — 2026-11-05
 
@@ -31,9 +109,10 @@ conservative fallback are implemented. Local evidence is under
 before these scopes can narrow a release. The CI profile list comes from the
 validated coverage policy. Foundation/Testkit, Shared refreshes and mixed-group
 changes retain full validation. See [the qualification contract](../design/release-validation.md).
-Concurrent Host Tools/#335 work and Cargo.lock selections are outside this batch.
+Host Tools #335 was subsequently integrated and published in 0.82.1. The current
+codec extraction changes this mapping and requires fresh qualification.
 
-## Shared adoption and async-cut deployment — 2026-11-05
+## Earlier Shared adoption and async-cut attempts — 2026-11-05
 
 The maintainer authorized deployment of the reviewed batch based on `1401a36f`.
 The selected order is Foundation 0.74.4, Build 0.74.4, then Testkit 0.87.0 from
@@ -61,8 +140,8 @@ Audit follow-up lives only in GitHub: [#333](https://github.com/dragginzgame/ic-
 owns inherited PocketIC global logging setup;
 [#334](https://github.com/dragginzgame/ic-tooling/issues/334) owns target-directory
 defaults for generated qualification fixture scratch. No historical cleanup is
-included. Native macOS Intel/Apple Silicon qualification has not run for either
-local batch. Full release qualification remains a separately requested workflow.
+included. The delivered-groups section above records subsequent release evidence;
+new native macOS qualification of the pending extraction remains separate.
 
 ## Async-only Testkit contract
 
@@ -103,20 +182,17 @@ commands and scope; no new native macOS evidence is claimed.
 
 ## Preserved lock state and release evidence
 
-Cargo.lock remains intentionally dirty with unrelated maintainer selections.
-The async cut changes only Dev's direct Tokio edge and the now-unused Tokio
-signal-hook-registry edge/package; every other incoming package record was
-verified unchanged. The original async incoming lock remains in its evidence
-directory. This adoption's incoming lock/diff/handoff are saved under
-`target/shared-adoption-20261105/incoming/`; Cargo.lock is byte-identical to that
-saved lock after the adoption. Do not reset it to HEAD or include unrelated
-selections implicitly in a release.
+The async cut's original incoming lock and the Shared adoption's incoming
+lock/diff/handoff remain in their original evidence directories. The completed
+release batch used only its admitted dependency graph; unrelated maintainer
+selections remain in the Git-side backups described above. Do not include them
+implicitly in supplier adoption or overwrite them while updating release versions.
 
 Last published Testkit is 0.86.0: release commit
 `71de6abfc21d8a26d33b3ac485499890654513db`, tag `testkit-v0.86.0`, preceded by
-Wire adoption `0a70714040588e2367d62ef4af1859f191e6a0de`. Foundation/Build 0.74.3,
-Text 0.74.2, Tools 0.82.0 and Native 0.80.0 remain published. Build's additive
-archive API is Git-delivered but pending publication as 0.74.4.
+Wire adoption `0a70714040588e2367d62ef4af1859f191e6a0de`. Foundation/Build 0.74.4,
+Tools 0.82.1, Text 0.74.2 and Native 0.80.0 are published. Build's additive archive
+API shipped in 0.74.4; Testkit 0.87.0 and Tools 0.83.0 remain pending.
 
 The complete 35-stage Linux gate and separate publication/readback for Testkit
 0.86.0 passed. Its archive SHA-256 is

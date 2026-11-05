@@ -29,7 +29,7 @@ help:
 	@echo 'Artifact profiles: test-artifacts-minimal, test-artifacts-wasm, test-artifacts-encoding, test-artifacts-text'
 	@echo 'Filesystem profiles: test-fs-minimal, test-fs-capability, test-fs-temporary-file'
 	@echo 'Unsupported-target compile contract: check-fs-non-unix (prepared Wasm target required)'
-	@echo 'Tools profiles: test-tools-default, test-tools-interface, test-tools-certificate, test-tools-candid, test-tools-combined, test-tools-agent, test-tools-encoding, test-tools-registry and tools-features-check'
+	@echo 'Tools profiles: test-tools-default, test-tools-interface, test-tools-candid, test-tools-combined, test-tools-agent, test-tools-encoding, test-tools-registry and tools-features-check'
 	@echo 'Formatting and metadata: fmt, fmt-check, shared-tooling-check, dependency-pins-check, check-doc-links, release-adapter-check'
 	@echo 'Hook qualification: formatting-hook-check (disposable Git fixtures; prepared formatters required)'
 	@echo 'Common setup: install-tools (host and Cargo); install-hooks is separate'
@@ -92,13 +92,11 @@ test-tools-default:
 test-tools-interface:
 	+cargo test -p ic-host-tools --no-default-features --features ic-interface --all-targets --locked --offline interface::
 
-.PHONY: test-tools-certificate test-tools-candid test-tools-combined test-tools-encoding test-wasm-inspection
-test-tools-certificate:
-	+cargo test -p ic-host-tools --no-default-features --features certificate --all-targets --locked --offline certificate::
+.PHONY: test-tools-candid test-tools-combined test-tools-encoding test-wasm-inspection
 test-tools-candid:
 	+cargo test -p ic-host-tools --no-default-features --features candid --all-targets --locked --offline candid::
 test-tools-combined:
-	+cargo test -p ic-host-tools --no-default-features --features certificate,ic-interface --all-targets --locked --offline
+	+cargo test -p ic-host-tools --no-default-features --features candid,ic-interface --all-targets --locked --offline
 .PHONY: test-tools-agent
 test-tools-agent:
 	+cargo test -p ic-host-tools --no-default-features --features agent --all-targets --locked --offline agent::

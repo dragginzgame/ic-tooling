@@ -106,8 +106,8 @@ See the [migration boundaries](../docs/changelog/0.29.md).
 
 `ic-host-tools` has no default features. Response and ICP command interpretation
 remain available without Platform. Enable `candid` for bounded Candid reply
-decoding and service facts; enable `certificate` for strict certificate decoding
-without Candid or its parser. The independent `ic-interface` feature adds Wasm
+decoding and service facts. Select Platform's `certification-cbor` feature directly
+for strict certificate decoding. The independent `ic-interface` feature adds Wasm
 export facts; select it together with `candid` for DID/Wasm comparisons.
 Existing Candid-helper consumers must explicitly enable `candid` when adopting
 0.28. See [the migration instructions](../docs/changelog/0.28.md).
@@ -159,8 +159,9 @@ The optional tools `encoding` feature decodes a complete canonical unsigned
 overflowing, nonminimal and trailing encodings while inspecting at most ten bytes.
 Callers retain field names, semantic limits, transport and trust policy.
 
-The optional tools `certificate` feature exposes
-`certificate::{decode_certificate, decode_hash_tree}` with an explicit input-byte
+Platform's `certification-cbor` feature exposes
+`ic_platform::certification::cbor::strict::{decode_certificate, decode_hash_tree}`
+with an explicit input-byte
 allowance. It uses the IC Agent's `serde_cbor` codec and built-in recursion limit;
 there is no caller-selected depth override. It returns owned values through Platform,
 preserving `ic-certification` type identity, and rejects trailing
@@ -168,8 +169,9 @@ data, malformed trees and invalid certificate fields. Parsing authenticates
 nothing: callers retain Agent verification, trust roots, combined evidence
 budgets, witness commitments and application leaf meanings. The feature adds no
 Agent transport, filesystem/process execution or Candid parser.
-When adopting 0.29, remove `depth` from certificate `DecodeLimits` initializers;
-see [the migration instructions](../docs/changelog/0.29.md).
+When adopting Tools 0.83, select Platform 0.23, remove Tools' `certificate` feature and import the strict
+decoder, `DecodeLimits` and errors from Platform instead. No compatibility
+reexports remain in Host Tools. Parsing and application verification stay separate.
 
 The opt-in native `agent` feature exposes `agent::{agent_builder, EndpointAgent}`
 using upstream Agent identities through Platform. Pass a parsed `url::Url` and response-byte ceiling
@@ -179,7 +181,7 @@ to the exact endpoint text and ceiling; conflicting reuse is a typed error.
 Consumers must admit their endpoints before use: URL parsing alone does not
 enforce HTTP(S), credential, query or fragment policy. Root-key fetching,
 historical verification, deadlines and all network calls remain caller-owned.
-This native-only profile does not widen default or certificate dependencies.
+This native-only profile does not widen default or unrelated profile dependencies.
 
 The optional `ledger-evidence` feature adds `ledger_evidence::BoundedLedgerBlocks`
 for caller-bounded ICRC-3 value admission and exact descending-chain verification.

@@ -10,6 +10,13 @@ Joint history through 0.76.1 remains there once, with its original scope.
 
 ### ⚠️ Breaking
 
+- Adopt Platform 0.23's typed read-state and certificate codecs for subnet metrics.
+  `ClientError::Cbor` now carries Platform's `CborError`. PocketIC transport,
+  status handling, tree lookup, absent metrics and upstream DTO identities stay
+  unchanged; decoding does not authenticate a certificate or authorize replay.
+  Certificate, transport DTO and CBOR dependencies now enter through Platform;
+  direct declarations are removed and the local dependency policy prevents their
+  reintroduction.
 - Keep one async PocketIC client at `ic_testkit::pocket_ic::PocketIc`. Remove
   the blocking facade, its private runtimes/worker channels and the public
   `nonblocking` path. Await `builder.build()`, `config.build_instance(builder)`,

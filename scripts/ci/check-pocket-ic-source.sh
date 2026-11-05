@@ -17,6 +17,11 @@ cp -R "$source_root/src/pocket_ic" "$scratch/src"
 mv "$scratch/src/mod.rs" "$scratch/src/lib.rs"
 cp -R "$provenance/upstream" "$scratch/upstream"
 cp "$provenance/LICENSE" "$scratch/LICENSE"
+read -r checksum file < "$provenance/protocol-codec.sha256"
+[[ "$file" == protocol-codec.patch ]] || exit 1
+bash "$root/scripts/ci/verify-file-checksum.sh" sha256 "$checksum" "$provenance/$file"
+patch --directory="$scratch" --strip=1 --reverse --fuzz=0 --batch \
+    < "$provenance/protocol-codec.patch" > "$scratch/protocol-codec.log"
 read -r checksum file < "$provenance/tooling-maintenance.sha256"
 [[ "$file" == tooling-maintenance.patch ]] || exit 1
 bash "$root/scripts/ci/verify-file-checksum.sh" sha256 "$checksum" "$provenance/$file"

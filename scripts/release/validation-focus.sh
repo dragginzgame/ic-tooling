@@ -43,7 +43,7 @@ case "$1" in
             cargo test -p ic-testkit-dev --bin check_packages --locked --offline
         fi
         if [[ $RELEASE_GROUP == tools ]]; then
-            make --no-print-directory test-tools-default test-tools-interface test-tools-certificate \
+            make --no-print-directory test-tools-default test-tools-interface \
                 test-tools-candid test-tools-combined test-tools-agent test-tools-encoding \
                 test-tools-registry test-tools-icp-project test-tools-icp-ledger test-tools-ledger-evidence
             cargo test -p ic-testkit-dev --test public_contracts --locked --offline

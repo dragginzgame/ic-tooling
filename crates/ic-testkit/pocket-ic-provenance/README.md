@@ -56,3 +56,13 @@ custody, no-replay behavior and bounded snapshot transfer remain intact.
 The maintenance patch reverses the complete cut, including test migrations and
 the private module move, before the unchanged donor and upstream checks run.
 Original provenance hashes, imported licenses and upstream patches are unchanged.
+
+## Typed IC packet codec maintenance
+
+The maintainer authorized the CBOR boundary consolidation. The separately
+checksummed protocol-codec.patch changes only the subnet-metrics packet codec
+calls and their error/import plumbing to typed Platform APIs. The upstream
+transport and certificate identities, self-described envelope bytes, metric
+ranges and no-authentication behavior remain unchanged. The guard reverses
+this layer before the existing maintenance/transfer patches and original
+fingerprints; none of those protected hashes is refreshed.
