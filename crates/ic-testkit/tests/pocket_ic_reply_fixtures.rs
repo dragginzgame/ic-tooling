@@ -9,8 +9,8 @@ use ic_testkit::pic::{
     fixtures::{RawReplyLimits, RawReplyMethod, ReplyMode, raw_reply_canister},
 };
 
-#[test]
-fn installed_fixture_returns_exact_query_and_update_bytes() {
+#[tokio::test]
+async fn installed_fixture_returns_exact_query_and_update_bytes() {
     let query_reply = vec![0xff; 65_537];
     let update_reply = b"not candid\0";
     let wasm = raw_reply_canister(
@@ -33,7 +33,7 @@ fn installed_fixture_returns_exact_query_and_update_bytes() {
         },
     )
     .expect("admit the explicit fixture catalog");
-    let owned = support::pocket_ic();
+    let owned = support::pocket_ic().await;
     let pocket_ic = owned.instance();
     let canister = pocket_ic
         .try_create_and_install(InstallSpec {
@@ -43,17 +43,20 @@ fn installed_fixture_returns_exact_query_and_update_bytes() {
             install_sender: None,
             label: Some("raw-reply-fixture".into()),
         })
+        .await
         .expect("install generated Wasm");
     let caller = Principal::anonymous();
     assert_eq!(
         pocket_ic
             .query_call(canister, caller, "read", vec![])
+            .await
             .unwrap(),
         query_reply
     );
     assert_eq!(
         pocket_ic
             .update_call(canister, caller, "write", vec![])
+            .await
             .unwrap(),
         update_reply
     );

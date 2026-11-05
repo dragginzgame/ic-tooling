@@ -145,7 +145,7 @@ fn linux_stat_records_must_be_complete_within_the_byte_allowance() {
     use ic_host_artifacts::artifact::ArtifactError;
     use std::{fs, io};
 
-    let fixture = crate::test_support::Fixture::new();
+    let fixture = crate::tests::support::Fixture::new();
     fs::create_dir(fixture.path().join("123")).unwrap();
     let fields = ["S", "42"]
         .into_iter()

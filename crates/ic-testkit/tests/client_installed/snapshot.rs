@@ -11,9 +11,10 @@ use ic_testkit::pocket_ic::{
 };
 use std::time::Duration;
 
-fn inspect(pic: &PocketIc, id: Principal) -> [u64; 5] {
+async fn inspect(pic: &PocketIc, id: Principal) -> [u64; 5] {
     let bytes = pic
         .query_call(id, Principal::anonymous(), "inspect", vec![])
+        .await
         .unwrap();
     assert_eq!(bytes.len(), 40);
     std::array::from_fn(|i| u64::from_le_bytes(bytes[i * 8..i * 8 + 8].try_into().unwrap()))
@@ -23,9 +24,9 @@ fn inspect(pic: &PocketIc, id: Principal) -> [u64; 5] {
     clippy::too_many_lines,
     reason = "ordered installed snapshot restoration proof transferred from Platform"
 )]
-pub fn qualify(pic: &PocketIc) {
+pub async fn qualify(pic: &PocketIc) {
     let sender = Principal::anonymous();
-    let id = pic.create_canister().unwrap();
+    let id = pic.create_canister().await.unwrap();
     pic.update_canister_settings(
         id,
         None,
@@ -35,6 +36,7 @@ pub fn qualify(pic: &PocketIc) {
             ..CanisterSettings::default()
         },
     )
+    .await
     .unwrap();
     let wasm = compile(
         include_str!("snapshot_timer.wat"),
@@ -44,14 +46,15 @@ pub fn qualify(pic: &PocketIc) {
         },
     )
     .unwrap();
-    pic.install_canister(id, wasm, vec![], None).unwrap();
+    pic.install_canister(id, wasm, vec![], None).await.unwrap();
     let chunk = pic
         .upload_chunk(id, None, b"retained snapshot chunk".to_vec())
+        .await
         .unwrap();
-    let captured = inspect(pic, id);
+    let captured = inspect(pic, id).await;
     assert_eq!(&captured[1..], &[0, 7, 42, 42]);
-    pic.stop_canister(id, None).unwrap();
-    let native = pic.take_canister_snapshot(id, None, None).unwrap();
+    pic.stop_canister(id, None).await.unwrap();
+    let native = pic.take_canister_snapshot(id, None, None).await.unwrap();
     let budget = CallLimits {
         http_bytes: 4_000_000,
         candid_bytes: 2_000_000,
@@ -67,6 +70,7 @@ pub fn qualify(pic: &PocketIc) {
             },
             budget,
         )
+        .await
         .unwrap();
     assert!(matches!(metadata.global_timer,Some(CanisterTimer::Active(t)) if t==captured[0]));
     let hook = std::mem::discriminant(metadata.on_low_wasm_memory_hook_status.as_ref().unwrap());
@@ -82,14 +86,16 @@ pub fn qualify(pic: &PocketIc) {
         },
     )
     .unwrap();
-    copy.advance(pic).unwrap();
+    copy.advance(pic).await.unwrap();
     // The consumer takes custody before any data writes, as required by the API.
     let uploaded = copy.uploaded_snapshot().unwrap().to_vec();
     while !matches!(copy.status(), TransferStatus::Complete) {
-        copy.advance(pic).unwrap();
+        copy.advance(pic).await.unwrap();
     }
     assert!(copy.transferred_bytes() > 2 * 1024 * 1024);
-    pic.delete_canister_snapshot(id, None, native.id).unwrap();
+    pic.delete_canister_snapshot(id, None, native.id)
+        .await
+        .unwrap();
     let uploaded_metadata = pic
         .read_canister_snapshot_metadata(
             sender,
@@ -99,19 +105,21 @@ pub fn qualify(pic: &PocketIc) {
             },
             budget,
         )
+        .await
         .unwrap();
     assert!(matches!(
         uploaded_metadata.source,
         Some(SnapshotSource::MetadataUpload(_))
     ));
-    pic.start_canister(id, None).unwrap();
-    pic.update_call(id, sender, "rearm", vec![]).unwrap();
-    assert_eq!(&inspect(pic, id)[2..], &[99, 99, 99]);
-    pic.clear_chunk_store(id, None).unwrap();
-    pic.stop_canister(id, None).unwrap();
+    pic.start_canister(id, None).await.unwrap();
+    pic.update_call(id, sender, "rearm", vec![]).await.unwrap();
+    assert_eq!(&inspect(pic, id).await[2..], &[99, 99, 99]);
+    pic.clear_chunk_store(id, None).await.unwrap();
+    pic.stop_canister(id, None).await.unwrap();
     pic.load_canister_snapshot(id, None, uploaded.clone())
+        .await
         .unwrap();
-    let restored = pic.take_canister_snapshot(id, None, None).unwrap();
+    let restored = pic.take_canister_snapshot(id, None, None).await.unwrap();
     let restored_metadata = pic
         .read_canister_snapshot_metadata(
             sender,
@@ -121,6 +129,7 @@ pub fn qualify(pic: &PocketIc) {
             },
             budget,
         )
+        .await
         .unwrap();
     assert!(
         matches!(restored_metadata.global_timer,Some(CanisterTimer::Active(t)) if t==captured[0])
@@ -134,14 +143,18 @@ pub fn qualify(pic: &PocketIc) {
         ),
         hook
     );
-    pic.delete_canister_snapshot(id, None, restored.id).unwrap();
-    pic.start_canister(id, None).unwrap();
-    assert_eq!(inspect(pic, id), captured);
-    assert_eq!(pic.stored_chunks(id, None).unwrap(), vec![chunk]);
-    pic.advance_time(Duration::from_secs(61)).unwrap();
-    pic.tick().unwrap();
-    assert_eq!(inspect(pic, id)[1], 1, "restored timer must execute");
-    pic.delete_canister_snapshot(id, None, uploaded).unwrap();
+    pic.delete_canister_snapshot(id, None, restored.id)
+        .await
+        .unwrap();
+    pic.start_canister(id, None).await.unwrap();
+    assert_eq!(inspect(pic, id).await, captured);
+    assert_eq!(pic.stored_chunks(id, None).await.unwrap(), vec![chunk]);
+    pic.advance_time(Duration::from_secs(61)).await.unwrap();
+    pic.tick().await.unwrap();
+    assert_eq!(inspect(pic, id).await[1], 1, "restored timer must execute");
+    pic.delete_canister_snapshot(id, None, uploaded)
+        .await
+        .unwrap();
     println!(
         "Bounded snapshot copy: module/heap/stable/globals/chunks/timer/hook restoration passed"
     );

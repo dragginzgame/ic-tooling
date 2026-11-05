@@ -2,7 +2,7 @@ use ic_host_process::child::OwnedChild;
 #[cfg(unix)]
 use ic_host_process::testing::write_executable_script;
 
-use super::test_support::fake_wasm_build_spec;
+use super::support_tests::fake_wasm_build_spec;
 use super::{ArtifactCachePreparation, ArtifactCacheSpec, prepare_artifact_cache};
 use crate::testing::fs::unique_temp_directory;
 use std::{ffi::OsString, fs, path::Path, time::Duration};

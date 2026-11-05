@@ -12,7 +12,7 @@ pub mod sampling;
 pub mod signal;
 pub mod status;
 #[cfg(all(test, unix))]
-mod test_support;
+mod tests;
 #[cfg(unix)]
 pub mod tool;
 

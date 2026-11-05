@@ -27,15 +27,15 @@ const PROBE: WireCallSpec = WireCallSpec {
 };
 
 #[cfg(feature = "reply-fixtures")]
-#[test]
-fn wire_calls_preserve_codec_refusals_and_error_identity() {
+#[tokio::test]
+async fn wire_calls_preserve_codec_refusals_and_error_identity() {
     use ic_testkit::pic::{
         CanisterInstallExt as _, InstallSpec,
         fixtures::{RawReplyLimits, RawReplyMethod, ReplyMode, raw_reply_canister},
     };
     let valid =
         ic_wire::native::encode_response(PROBE.method_id, &42_u64, PROBE.response_limits).unwrap();
-    let owned = support::pocket_ic();
+    let owned = support::pocket_ic().await;
     let pic = owned.instance();
     for mode in [ReplyMode::Query, ReplyMode::Update] {
         for reply in [valid.as_slice(), &[]] {
@@ -60,13 +60,14 @@ fn wire_calls_preserve_codec_refusals_and_error_identity() {
                     install_sender: None,
                     label: None,
                 })
+                .await
                 .unwrap();
             let result = match mode {
                 ReplyMode::Query => {
-                    query_wire::<_, u64>(pic, id, Principal::anonymous(), PROBE, &())
+                    query_wire::<_, u64>(pic, id, Principal::anonymous(), PROBE, &()).await
                 }
                 ReplyMode::Update => {
-                    update_wire::<_, u64>(pic, id, Principal::anonymous(), PROBE, &())
+                    update_wire::<_, u64>(pic, id, Principal::anonymous(), PROBE, &()).await
                 }
             };
             if reply.is_empty() {
@@ -91,21 +92,21 @@ fn wire_calls_preserve_codec_refusals_and_error_identity() {
     }
 }
 
-#[test]
-fn wire_call_errors_preserve_live_pocket_ic_rejections() {
-    let owned = support::pocket_ic();
+#[tokio::test]
+async fn wire_call_errors_preserve_live_pocket_ic_rejections() {
+    let owned = support::pocket_ic().await;
     let pic = owned.instance();
-    let removed = pic.create_canister().unwrap();
-    pic.stop_canister(removed, None).unwrap();
-    pic.delete_canister(removed, None).unwrap();
+    let removed = pic.create_canister().await.unwrap();
+    pic.stop_canister(removed, None).await.unwrap();
+    pic.delete_canister(removed, None).await.unwrap();
     for caller in [Principal::anonymous(), Principal::management_canister()] {
         for (result, operation) in [
             (
-                query_wire::<_, u64>(pic, removed, caller, PROBE, &()),
+                query_wire::<_, u64>(pic, removed, caller, PROBE, &()).await,
                 "query_call",
             ),
             (
-                update_wire::<_, u64>(pic, removed, caller, PROBE, &()),
+                update_wire::<_, u64>(pic, removed, caller, PROBE, &()).await,
                 "update_call",
             ),
         ] {

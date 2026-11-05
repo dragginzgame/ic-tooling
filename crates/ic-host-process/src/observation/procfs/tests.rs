@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::Fixture;
+use crate::tests::support::Fixture;
 
 fn stat(parent: &str, start: &str) -> String {
     let mut values = ["0"; 22];

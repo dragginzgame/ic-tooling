@@ -1,7 +1,7 @@
 //! Native regressions adapted from Backup's command-custody boundary.
 
 use super::*;
-use crate::test_support::Fixture;
+use crate::tests::support::Fixture;
 use rustix::io::{FdFlags, fcntl_getfd};
 use std::{
     os::unix::fs::{PermissionsExt, symlink},

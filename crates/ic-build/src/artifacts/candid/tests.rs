@@ -1,4 +1,6 @@
-use super::test_support::{Fixture, LIMITS};
+mod support;
+
+use self::support::{Fixture, LIMITS};
 use super::*;
 use ic_host_process::tool::{ExecutionFailure, OutputStream};
 use std::os::unix::ffi::{OsStrExt as _, OsStringExt as _};

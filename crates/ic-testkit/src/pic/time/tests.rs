@@ -1,16 +1,17 @@
 use super::*;
 use std::cell::Cell;
 
-#[test]
-fn initial_completion_and_failure_do_not_advance() {
+#[tokio::test]
+async fn initial_completion_and_failure_do_not_advance() {
     for budget in [0, 3] {
         for result in [Ok(42), Err("predicate failure")] {
             assert_eq!(
                 poll_with_rounds(
                     budget,
-                    || panic!("unexpected round"),
-                    || Poll::Ready(result)
+                    async || panic!("unexpected round"),
+                    async || Poll::Ready(result)
                 )
+                .await
                 .map_err(|e| e.to_string()),
                 result
                     .map_err(TickUntilError::Failed)
@@ -20,35 +21,36 @@ fn initial_completion_and_failure_do_not_advance() {
     }
 }
 
-#[test]
-fn progression_failure_stops_before_polling_again() {
+#[tokio::test]
+async fn progression_failure_stops_before_polling_again() {
     let polls = Cell::new(0);
     let result = poll_with_rounds(
         3,
-        || Err(ClientError::Protocol("tick failed".into())),
-        || {
+        async || Err(ClientError::Protocol("tick failed".into())),
+        async || {
             polls.set(polls.get() + 1);
             Poll::<Result<(), ()>>::Pending
         },
-    );
+    )
+    .await;
     assert_eq!(polls.get(), 1);
     assert!(
         matches!(result, Err(TickUntilError::Progress(ClientError::Protocol(message))) if message == "tick failed")
     );
 }
 
-#[test]
-fn completion_on_last_round_preserves_poll_order() {
+#[tokio::test]
+async fn completion_on_last_round_preserves_poll_order() {
     let rounds = Cell::new(0);
     let polls = Cell::new(0);
     let result = poll_with_rounds(
         3,
-        || {
+        async || {
             assert_eq!(polls.get(), rounds.get() + 1);
             rounds.set(rounds.get() + 1);
             Ok(())
         },
-        || {
+        async || {
             assert_eq!(polls.get(), rounds.get());
             polls.set(polls.get() + 1);
             if rounds.get() == 3 {
@@ -57,27 +59,29 @@ fn completion_on_last_round_preserves_poll_order() {
                 Poll::Pending
             }
         },
-    );
+    )
+    .await;
     assert_eq!(result.unwrap(), 42);
     assert_eq!((rounds.get(), polls.get()), (3, 4));
 }
 
-#[test]
-fn exhaustion_performs_exactly_the_allowed_rounds() {
+#[tokio::test]
+async fn exhaustion_performs_exactly_the_allowed_rounds() {
     for budget in [0, 1, 3] {
         let rounds = Cell::new(0);
         let polls = Cell::new(0);
         let result = poll_with_rounds(
             budget,
-            || {
+            async || {
                 rounds.set(rounds.get() + 1);
                 Ok(())
             },
-            || {
+            async || {
                 polls.set(polls.get() + 1);
                 Poll::<Result<(), ()>>::Pending
             },
-        );
+        )
+        .await;
         assert!(
             matches!(result, Err(TickUntilError::ProgressLimit { rounds }) if rounds == budget)
         );
@@ -85,16 +89,16 @@ fn exhaustion_performs_exactly_the_allowed_rounds() {
     }
 }
 
-#[test]
-fn failure_after_progress_preserves_the_original_cause() {
+#[tokio::test]
+async fn failure_after_progress_preserves_the_original_cause() {
     let rounds = Cell::new(0);
     let result = poll_with_rounds(
         3,
-        || {
+        async || {
             rounds.set(rounds.get() + 1);
             Ok(())
         },
-        || {
+        async || {
             if rounds.get() == 1 {
                 Poll::Ready(Err::<(), _>(std::io::Error::from(
                     std::io::ErrorKind::PermissionDenied,
@@ -103,7 +107,8 @@ fn failure_after_progress_preserves_the_original_cause() {
                 Poll::Pending
             }
         },
-    );
+    )
+    .await;
     let error = result.unwrap_err();
     let source = std::error::Error::source(&error).unwrap();
     assert_eq!(
@@ -112,47 +117,51 @@ fn failure_after_progress_preserves_the_original_cause() {
     );
     assert_eq!(rounds.get(), 1);
 }
-#[test]
-fn polling_transport_skips_zero_time_and_preserves_nonzero_advancement() {
+#[tokio::test]
+async fn polling_transport_skips_zero_time_and_preserves_nonzero_advancement() {
     for advance in [Duration::ZERO, Duration::from_nanos(7)] {
-        assert_time_requests(advance, 1, |pic| {
+        assert_time_requests(advance, 1, async |pic| {
             let mut polls = 0;
-            let result = tick_until(pic, 1, advance, |_| {
+            let result = tick_until(pic, 1, advance, async |_| {
                 polls += 1;
                 if polls == 2 {
                     Poll::Ready(Ok::<_, ()>(42))
                 } else {
                     Poll::Pending
                 }
-            });
+            })
+            .await;
             assert_eq!(result.unwrap(), 42);
             assert_eq!(polls, 2);
-        });
+        })
+        .await;
     }
 }
 
-#[test]
-fn tick_batches_preserve_exact_transport_order_and_selected_counts() {
+#[tokio::test]
+async fn tick_batches_preserve_exact_transport_order_and_selected_counts() {
     for advance in [Duration::ZERO, Duration::from_nanos(7)] {
         for ticks in [0, 2, 4, 24] {
-            assert_time_requests(advance, ticks, |pic| {
-                advance_and_tick(pic, advance, ticks).unwrap();
-            });
+            assert_time_requests(advance, ticks, async |pic| {
+                advance_and_tick(pic, advance, ticks).await.unwrap();
+            })
+            .await;
         }
     }
 }
 
-#[test]
-fn install_cooldown_uses_exactly_two_ticks() {
+#[tokio::test]
+async fn install_cooldown_uses_exactly_two_ticks() {
     use crate::pic::CanisterInstallExt as _;
     for advance in [Duration::ZERO, Duration::from_nanos(7)] {
-        assert_time_requests(advance, 2, |pic| {
-            pic.wait_out_install_code_rate_limit(advance).unwrap();
-        });
+        assert_time_requests(advance, 2, async |pic| {
+            pic.wait_out_install_code_rate_limit(advance).await.unwrap();
+        })
+        .await;
     }
 }
 
-fn assert_time_requests(advance: Duration, ticks: u32, run: impl FnOnce(&PocketIc)) {
+async fn assert_time_requests(advance: Duration, ticks: u32, run: impl AsyncFnOnce(&PocketIc)) {
     use std::{io::Write as _, net::TcpListener, thread, time::Instant};
     let mut expected = Vec::new();
     if !advance.is_zero() {
@@ -213,6 +222,6 @@ fn assert_time_requests(advance: Duration, ticks: u32, run: impl FnOnce(&PocketI
         requests
     });
     let pic = PocketIc::new_from_existing_instance(url, 0, Some(1_000));
-    run(&pic);
+    run(&pic).await;
     assert_eq!(worker.join().unwrap(), expected);
 }

@@ -2,7 +2,7 @@ use super::{
     hold_at_acknowledged_barrier, kill_child_at_acknowledged_barrier, wait_for_child_path,
     wait_for_path,
 };
-use crate::test_support::Fixture;
+use crate::tests::support::Fixture;
 use std::{fs, io, process::Command, time::Duration};
 
 #[test]

@@ -18,10 +18,10 @@ impl PocketIcDiagnosticsExt for Reporting {
     fn collect_canister_diagnostics(
         &self,
         request: CanisterDiagnosticsRequest,
-    ) -> CanisterDiagnosticsReport {
+    ) -> impl std::future::Future<Output = CanisterDiagnosticsReport> {
         self.calls.set(self.calls.get() + 1);
         self.request.set(Some(request));
-        CanisterDiagnosticsReport {
+        std::future::ready(CanisterDiagnosticsReport {
             request,
             status: Err(crate::pocket_ic::ClientError::Protocol(
                 "synthetic status failure".into(),
@@ -29,12 +29,12 @@ impl PocketIcDiagnosticsExt for Reporting {
             logs: Err(crate::pocket_ic::ClientError::Protocol(
                 "synthetic log failure".into(),
             )),
-        }
+        })
     }
 }
 
-#[test]
-fn explicit_reporting_preserves_requests_and_writer_failures() {
+#[tokio::test]
+async fn explicit_reporting_preserves_requests_and_writer_failures() {
     let collector = Reporting {
         calls: Cell::new(0),
         request: Cell::new(None),
@@ -48,19 +48,21 @@ fn explicit_reporting_preserves_requests_and_writer_failures() {
     let mut output = Vec::new();
     collector
         .write_canister_diagnostics(request, "install", &mut output)
+        .await
         .unwrap();
     let text = String::from_utf8(output).unwrap();
     assert!(text.contains("synthetic status failure") && text.contains("synthetic log failure"));
     let error = collector
         .write_canister_diagnostics(request, "install", &mut std::io::Cursor::new([0_u8; 0]))
+        .await
         .unwrap_err();
     assert_eq!(error.kind(), std::io::ErrorKind::WriteZero);
     assert_eq!(collector.calls.get(), 2);
     assert_eq!(collector.request.get(), Some(request));
 }
 
-#[test]
-fn labeled_batch_retains_order_and_continues_after_entry_failure() {
+#[tokio::test]
+async fn labeled_batch_retains_order_and_continues_after_entry_failure() {
     let collector = Reporting {
         calls: Cell::new(0),
         request: Cell::new(None),
@@ -88,6 +90,7 @@ fn labeled_batch_retains_order_and_continues_after_entry_failure() {
                 request: second,
             },
         ])
+        .await
         .expect("valid labeled diagnostics batch");
 
     assert_eq!(collector.calls.get(), 2);
@@ -110,8 +113,8 @@ fn labeled_batch_retains_order_and_continues_after_entry_failure() {
     assert!(compact.contains("synthetic status failure"));
 }
 
-#[test]
-fn diagnostic_batch_rejects_invalid_labels_before_collection() {
+#[tokio::test]
+async fn diagnostic_batch_rejects_invalid_labels_before_collection() {
     let collector = Reporting {
         calls: Cell::new(0),
         request: Cell::new(None),
@@ -127,6 +130,7 @@ fn diagnostic_batch_rejects_invalid_labels_before_collection() {
             label: String::new(),
             request,
         }])
+        .await
         .expect_err("empty label must reject diagnostics batch");
     assert_eq!(empty, BatchLabelError::Empty { index: 0 });
     assert_eq!(collector.calls.get(), 0);
@@ -142,6 +146,7 @@ fn diagnostic_batch_rejects_invalid_labels_before_collection() {
                 request,
             },
         ])
+        .await
         .expect_err("duplicate labels must reject diagnostics batch");
     assert_eq!(
         duplicate,

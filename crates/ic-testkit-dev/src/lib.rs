@@ -48,7 +48,18 @@ pub fn worker_main() -> ExitCode {
         Ok(arguments) => arguments,
         Err(error) => return clap_exit(&error),
     };
-    match workload::run(arguments) {
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprintln!("error: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    match runtime.block_on(workload::run(arguments)) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("error: {error}");

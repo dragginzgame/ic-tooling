@@ -1,4 +1,4 @@
-//! Controlled reproduction of `PocketIC`'s synchronous instance-deletion wait.
+//! Explicit async deletion and request failure custody.
 //! The parent owns a synthetic HTTP peer and can always kill/reap the probe.
 use ic_testkit::pocket_ic::ClientError;
 
@@ -27,7 +27,7 @@ const PROBE_URL_ENV: &str = "IC_TESTKIT_TEARDOWN_PROBE_URL";
 const DEADLOCK_ESCAPE: Duration = Duration::from_secs(10);
 
 #[test]
-fn instance_drop_waits_for_the_deletion_response() {
+fn instance_close_waits_for_the_deletion_response() {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind synthetic PocketIC peer");
     listener.set_nonblocking(true).expect("bound accept wait");
     let mut probe = spawn_probe(&listener, "instance_drop_probe");
@@ -47,10 +47,28 @@ fn instance_drop_waits_for_the_deletion_response() {
 }
 
 #[test]
+fn rust_drop_performs_no_instance_deletion_request() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let mut probe = spawn_probe(&listener, "plain_drop_probe");
+    create_instance(&listener);
+    assert!(probe.wait().success());
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
+#[ignore = "subprocess probe selected explicitly by the parent Rust Drop test"]
+async fn plain_drop_probe() {
+    drop(synthetic_instance().await);
+}
+
+#[tokio::test]
 #[ignore = "subprocess probe selected explicitly by the parent teardown test"]
-fn instance_drop_probe() {
-    let pic = synthetic_instance();
-    drop(pic);
+async fn instance_drop_probe() {
+    let pic = synthetic_instance().await;
+    pic.close().await.unwrap();
 }
 
 #[test]
@@ -200,26 +218,27 @@ fn run_refused_operation_probe(name: &str) {
     assert!(probe.wait().success(), "real reqwest refusal must qualify");
 }
 
-#[test]
+#[tokio::test]
 #[ignore = "subprocess probe selected explicitly by the parent raw-operation test"]
-fn raw_instance_request_probe() {
-    let owned = synthetic_instance();
+async fn raw_instance_request_probe() {
+    let owned = synthetic_instance().await;
     std::io::stdin()
         .read_exact(&mut [0])
         .expect("parent releases raw call");
     let error = owned
         .instance()
         .get_time()
+        .await
         .expect_err("raw request peer is gone");
     assert!(matches!(error, ClientError::Transport { .. }));
     assert!(is_dead_pocket_ic_transport_error(&error));
     drop(owned);
 }
 
-#[test]
+#[tokio::test]
 #[ignore = "subprocess probe selected explicitly by the parent transport test"]
-fn refused_instance_request_probe() {
-    let owned = synthetic_instance();
+async fn refused_instance_request_probe() {
+    let owned = synthetic_instance().await;
     let pic = owned.instance();
     std::io::stdin()
         .read_exact(&mut [0])
@@ -231,6 +250,7 @@ fn refused_instance_request_probe() {
             "get",
             vec![],
         )
+        .await
         .expect_err("peer is gone");
     assert!(matches!(error, ClientError::Transport { .. }));
     assert!(is_dead_pocket_ic_transport_error(&error));
@@ -243,7 +263,7 @@ fn refused_instance_request_probe() {
         log_sender: Principal::anonymous(),
         log_limits: CanisterLogRenderLimits::default(),
     };
-    let report = pic.collect_canister_diagnostics(request);
+    let report = pic.collect_canister_diagnostics(request).await;
     for error in [
         report.status.expect_err("status peer is gone"),
         report.logs.expect_err("log peer is gone"),
@@ -256,11 +276,11 @@ fn refused_instance_request_probe() {
     drop(owned);
 }
 
-#[test]
+#[tokio::test]
 #[ignore = "subprocess probe selected explicitly by the parent install test"]
-fn refused_creation_probe() {
-    let pic = synthetic_instance();
-    let instance_id = pic.instance().instance_id();
+async fn refused_creation_probe() {
+    let pic = synthetic_instance().await;
+    let instance_id = pic.instance().instance_id;
     std::io::stdin()
         .read_exact(&mut [0])
         .expect("parent releases refused creation");
@@ -274,6 +294,7 @@ fn refused_creation_probe() {
             label: Some("unreachable-fixture".into()),
         },
     )
+    .await
     .err()
     .expect("creation should return an error");
     assert!(
@@ -281,14 +302,14 @@ fn refused_creation_probe() {
     );
     assert!(is_dead_pocket_ic_transport_error(&error));
     let (pic, install_error) = error.into_parts();
-    assert_eq!(pic.instance().instance_id(), instance_id);
+    assert_eq!(pic.instance().instance_id, instance_id);
     assert!(
         matches!(install_error, CanisterInstallError::CreateCanister { source, .. } if matches!(source, ClientError::Transport { .. }))
     );
     drop(pic);
 }
 
-fn synthetic_instance() -> PocketIcInstance<PocketIc> {
+async fn synthetic_instance() -> PocketIcInstance<PocketIc> {
     let url = std::env::var(PROBE_URL_ENV).expect("parent supplies synthetic peer URL");
     PocketIcStartupConfig::Connect {
         server_url: url,
@@ -299,6 +320,7 @@ fn synthetic_instance() -> PocketIcInstance<PocketIc> {
             .with_application_subnet()
             .with_max_request_time_ms(Some(1_000)),
     )
+    .await
     .expect("construct synthetic instance through bounded startup")
 }
 

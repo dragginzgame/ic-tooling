@@ -133,7 +133,11 @@ impl std::error::Error for WireCallError {
 ///
 /// # Errors
 /// Returns request encoding, query rejection/transport or response decoding errors.
-pub fn query_wire<Request, Response>(
+#[expect(
+    clippy::future_not_send,
+    reason = "Serde requests may borrow local non-Sync values"
+)]
+pub async fn query_wire<Request, Response>(
     pic: &PocketIc,
     canister_id: Principal,
     caller: Principal,
@@ -148,8 +152,12 @@ where
         context("query_call", spec, canister_id, caller),
         spec,
         request,
-        |bytes| pic.query_call(canister_id, caller, spec.method, bytes),
+        async |bytes| {
+            pic.query_call(canister_id, caller, spec.method, bytes)
+                .await
+        },
     )
+    .await
 }
 
 /// Encode a method-bound request and execute one update as `caller`, without retry.
@@ -160,7 +168,11 @@ where
 ///
 /// # Errors
 /// Returns request encoding, update rejection/transport or response decoding errors.
-pub fn update_wire<Request, Response>(
+#[expect(
+    clippy::future_not_send,
+    reason = "Serde requests may borrow local non-Sync values"
+)]
+pub async fn update_wire<Request, Response>(
     pic: &PocketIc,
     canister_id: Principal,
     caller: Principal,
@@ -175,8 +187,12 @@ where
         context("update_call", spec, canister_id, caller),
         spec,
         request,
-        |bytes| pic.update_call(canister_id, caller, spec.method, bytes),
+        async |bytes| {
+            pic.update_call(canister_id, caller, spec.method, bytes)
+                .await
+        },
     )
+    .await
 }
 
 const fn context(
@@ -194,11 +210,15 @@ const fn context(
     }
 }
 
-fn call_wire<Request, Response>(
+#[expect(
+    clippy::future_not_send,
+    reason = "local Serde values and caller-owned transport futures need not be Send"
+)]
+async fn call_wire<Request, Response>(
     context: WireCallContext,
     spec: WireCallSpec,
     request: &Request,
-    call: impl FnOnce(Vec<u8>) -> Result<Vec<u8>, ClientError>,
+    call: impl AsyncFnOnce(Vec<u8>) -> Result<Vec<u8>, ClientError>,
 ) -> Result<Response, WireCallError>
 where
     Request: Serialize + ?Sized,
@@ -211,7 +231,7 @@ where
                 source,
             }
         })?;
-    let reply = call(request).map_err(|source| WireCallError::Call {
+    let reply = call(request).await.map_err(|source| WireCallError::Call {
         context: Box::new(context.clone()),
         source: Box::new(source),
     })?;

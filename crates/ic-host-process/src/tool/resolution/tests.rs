@@ -1,6 +1,6 @@
 use super::{ResolutionError, resolve_executable};
 use crate::{
-    test_support::{Fixture, LIMITS, VERSION, tool_path},
+    tests::support::{Fixture, LIMITS, VERSION, tool_path},
     tool::{AdmittedTool, ToolError, VersionSpec},
 };
 use ic_host_artifacts::artifact::{ArtifactError, Sha256Digest};

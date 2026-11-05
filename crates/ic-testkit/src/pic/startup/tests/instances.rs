@@ -65,30 +65,20 @@ fn client_drops_before_its_managed_server() {
     assert_eq!(process_state(pid), None);
 }
 
-fn test_runtime() -> tokio::runtime::Runtime {
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-}
-
-#[test]
-fn async_configuration_failures_are_typed_without_server_effects() {
-    let runtime = test_runtime();
+#[tokio::test]
+async fn async_configuration_failures_are_typed_without_server_effects() {
     for (url, timeout, invalid_configuration) in [
         ("not a URL", Duration::from_secs(1), false),
         ("http://127.0.0.1:1/", Duration::ZERO, true),
     ] {
-        let error = runtime
-            .block_on(
-                PocketIcStartupConfig::Connect {
-                    server_url: url.into(),
-                    timeout,
-                }
-                .build_instance_async(PocketIcBuilder::new()),
-            )
-            .err()
-            .unwrap();
+        let error = PocketIcStartupConfig::Connect {
+            server_url: url.into(),
+            timeout,
+        }
+        .build_instance(PocketIcBuilder::new())
+        .await
+        .err()
+        .unwrap();
         assert!(matches!(
             (invalid_configuration, error.failure()),
             (true, PocketIcStartupFailure::InvalidConfiguration { .. })
@@ -100,10 +90,9 @@ fn async_configuration_failures_are_typed_without_server_effects() {
 }
 
 #[cfg(unix)]
-#[test]
-fn async_readiness_timeout_and_cancellation_reap_the_exact_server() {
+#[tokio::test]
+async fn async_readiness_timeout_and_cancellation_reap_the_exact_server() {
     use std::future::Future as _;
-    let runtime = test_runtime();
     for cancel in [false, true] {
         let script = TestServerScript::new(
             "async-readiness",
@@ -118,8 +107,8 @@ fn async_readiness_timeout_and_cancellation_reap_the_exact_server() {
             server_idle_ttl: None,
             server_output_files: Some(((&stdout).into(), (&stderr).into())),
         };
-        runtime.block_on(async {
-            let mut construction = Box::pin(config.build_instance_async(PocketIcBuilder::new()));
+        (async {
+            let mut construction = Box::pin(config.build_instance(PocketIcBuilder::new()));
             if cancel {
                 // Poll once to spawn, then cancel while readiness is pending.
                 std::future::poll_fn(|cx| {
@@ -145,7 +134,8 @@ fn async_readiness_timeout_and_cancellation_reap_the_exact_server() {
                 assert_eq!(error.output().stderr(), "readiness diagnostic");
                 assert!(error.server_cleanup().is_none());
             }
-        });
+        })
+        .await;
         let pid_file = script.path().with_extension("pid");
         let pid = fs::read_to_string(&pid_file).unwrap().parse().unwrap();
         assert_eq!(process_state(pid), None);
@@ -157,10 +147,9 @@ fn async_readiness_timeout_and_cancellation_reap_the_exact_server() {
 }
 
 #[cfg(unix)]
-#[test]
-fn async_instance_wait_timeout_exit_and_cancellation_keep_ownership() {
+#[tokio::test]
+async fn async_instance_wait_timeout_exit_and_cancellation_keep_ownership() {
     use std::future::Future as _;
-    let runtime = test_runtime();
     for mode in ["timeout", "exit", "panic", "cancel"] {
         let script = TestServerScript::new("async-instance", "#!/bin/sh\n");
         let exit_file = script.path().with_extension("exit");
@@ -180,10 +169,10 @@ fn async_instance_wait_timeout_exit_and_cancellation_keep_ownership() {
         ).expect("write executable test script");
         let stderr = script.path().with_extension("stderr");
         let stdout = script.path().with_extension("stdout");
-        runtime.block_on(async {
+        (async {
             let mut construction = Box::pin(
                 PocketIcStartupConfig::Spawn { server_binary: script.path(), timeout: Duration::from_secs(2), server_hard_ttl: None, server_idle_ttl: None, server_output_files: Some(((&stdout).into(), (&stderr).into())) }
-                    .build_instance_async(PocketIcBuilder::new().with_application_subnet()));
+                    .build_instance(PocketIcBuilder::new().with_application_subnet()));
             if mode == "cancel" {
                 let deadline = Instant::now() + Duration::from_secs(2);
                 while !http.received.load(std::sync::atomic::Ordering::Acquire) {
@@ -207,7 +196,7 @@ fn async_instance_wait_timeout_exit_and_cancellation_keep_ownership() {
                 assert_eq!(error.output().stderr(), "instance diagnostic");
                 assert!(error.server_cleanup().is_none());
             }
-        });
+        }).await;
         assert!(http.received.load(std::sync::atomic::Ordering::Acquire));
         let pid_file = script.path().with_extension("pid");
         let pid = fs::read_to_string(&pid_file).unwrap().parse().unwrap();
@@ -223,20 +212,17 @@ fn async_instance_wait_timeout_exit_and_cancellation_keep_ownership() {
 }
 
 #[cfg(unix)]
-#[test]
-fn async_borrowed_failure_leaves_server_authority_with_the_caller() {
+#[tokio::test]
+async fn async_borrowed_failure_leaves_server_authority_with_the_caller() {
     let http = PendingHttpServer::new(None, true);
-    let runtime = test_runtime();
-    let error = runtime
-        .block_on(
-            PocketIcStartupConfig::Connect {
-                server_url: format!("http://127.0.0.1:{}/", http.port),
-                timeout: Duration::from_secs(2),
-            }
-            .build_instance_async(PocketIcBuilder::new().with_application_subnet()),
-        )
-        .err()
-        .unwrap();
+    let error = PocketIcStartupConfig::Connect {
+        server_url: format!("http://127.0.0.1:{}/", http.port),
+        timeout: Duration::from_secs(2),
+    }
+    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .await
+    .err()
+    .unwrap();
     assert!(matches!(
         error.failure(),
         PocketIcStartupFailure::BuilderFailed { .. }
@@ -321,9 +307,9 @@ impl Drop for PendingHttpServer {
 }
 
 #[cfg(unix)]
-#[test]
+#[tokio::test]
 #[ignore = "requires POCKET_IC_BIN=<caller-provided PocketIC server binary>"]
-fn owned_sync_instance_preserves_topology_and_scoped_server_lifetime() {
+async fn owned_instance_drop_preserves_topology_and_stops_server() {
     let binary = std::env::var_os("POCKET_IC_BIN").unwrap();
     let config = PocketIcStartupConfig::Spawn {
         server_binary: PathBuf::from(binary),
@@ -338,32 +324,42 @@ fn owned_sync_instance_preserves_topology_and_scoped_server_lifetime() {
                 .with_application_subnet()
                 .with_nns_subnet(),
         )
+        .await
         .unwrap();
     let server = owned.server().unwrap();
     let pid = server.process_id();
     let directory = server.server.files.directory.path().to_path_buf();
-    assert!(owned.instance().topology().unwrap().get_nns().is_some());
+    assert!(
+        owned
+            .instance()
+            .topology()
+            .await
+            .unwrap()
+            .get_nns()
+            .is_some()
+    );
     assert!(process_state(pid).is_some());
-    let canister = owned.instance().create_canister().unwrap();
-    assert!(owned.instance().canister_exists(canister).unwrap());
+    let canister = owned.instance().create_canister().await.unwrap();
+    assert!(owned.instance().canister_exists(canister).await.unwrap());
     let borrowed = PocketIcStartupConfig::Connect {
         server_url: (server.url()).into(),
         timeout: Duration::from_secs(30),
     }
     .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .await
     .unwrap();
     assert!(borrowed.server().is_none());
     drop(borrowed);
-    assert!(owned.instance().canister_exists(canister).unwrap());
+    assert!(owned.instance().canister_exists(canister).await.unwrap());
     drop(owned);
     assert_eq!(process_state(pid), None);
     assert!(!directory.exists());
 }
 
 #[cfg(unix)]
-#[test]
+#[tokio::test]
 #[ignore = "requires POCKET_IC_BIN=<caller-provided PocketIC server binary>"]
-fn explicit_transfer_preserves_the_external_server_and_client_identity() {
+async fn explicit_transfer_preserves_the_external_server_and_client_identity() {
     let owned = PocketIcStartupConfig::Spawn {
         server_binary: PathBuf::from(std::env::var_os("POCKET_IC_BIN").unwrap()),
         timeout: Duration::from_secs(30),
@@ -372,17 +368,18 @@ fn explicit_transfer_preserves_the_external_server_and_client_identity() {
         server_output_files: None,
     }
     .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .await
     .unwrap();
-    let id = owned.instance().instance_id();
+    let id = owned.instance().instance_id;
     let pid = owned.server().unwrap().process_id();
     let (instance, server) = owned.into_parts();
     assert!(process_state(pid).is_some());
     let borrowed = PocketIcInstance::from_borrowed_server(instance);
     assert!(borrowed.server().is_none());
-    assert_eq!(borrowed.instance().instance_id(), id);
-    let canister = borrowed.instance().create_canister().unwrap();
-    assert!(borrowed.instance().canister_exists(canister).unwrap());
-    drop(borrowed);
+    assert_eq!(borrowed.instance().instance_id, id);
+    let canister = borrowed.instance().create_canister().await.unwrap();
+    assert!(borrowed.instance().canister_exists(canister).await.unwrap());
+    borrowed.close().await.unwrap();
     assert!(
         process_state(pid).is_some(),
         "borrowed teardown stopped the external server"
@@ -394,74 +391,76 @@ fn explicit_transfer_preserves_the_external_server_and_client_identity() {
         timeout: Duration::from_secs(30),
     }
     .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .await
     .unwrap();
-    let canister = other.instance().create_canister().unwrap();
-    assert!(other.instance().canister_exists(canister).unwrap());
-    drop(other);
+    let canister = other.instance().create_canister().await.unwrap();
+    assert!(other.instance().canister_exists(canister).await.unwrap());
+    other.close().await.unwrap();
     drop(server);
     assert_eq!(process_state(pid), None);
 }
 
 #[cfg(unix)]
-#[test]
+#[tokio::test]
 #[ignore = "requires POCKET_IC_BIN=<caller-provided PocketIC server binary>"]
-fn owned_async_instance_and_borrowed_connections_preserve_lifetimes() {
+async fn explicit_close_and_borrowed_connections_preserve_lifetimes() {
     let binary = PathBuf::from(std::env::var_os("POCKET_IC_BIN").unwrap());
-    let runtime = test_runtime();
-    runtime.block_on(async {
-        let owned = PocketIcStartupConfig::Spawn {
-            server_binary: (&binary).into(),
-            timeout: Duration::from_secs(30),
-            server_hard_ttl: None,
-            server_idle_ttl: None,
-            server_output_files: None,
-        }
-        .build_instance_async(
-            PocketIcBuilder::new()
-                .with_application_subnet()
-                .with_nns_subnet(),
-        )
-        .await
-        .unwrap();
-        let server = owned.server().unwrap();
-        let pid = server.process_id();
-        let directory = server.server.files.directory.path().to_path_buf();
-        assert!(
-            owned
-                .instance()
-                .topology()
-                .await
-                .unwrap()
-                .get_nns()
-                .is_some()
-        );
-        let canister = owned.instance().create_canister().await.unwrap();
-        assert!(owned.instance().canister_exists(canister).await.unwrap());
-        let borrowed = PocketIcStartupConfig::Connect {
-            server_url: (server.url()).into(),
-            timeout: Duration::from_secs(30),
-        }
-        .build_instance_async(PocketIcBuilder::new().with_application_subnet())
-        .await
-        .unwrap();
-        assert!(borrowed.server().is_none());
-        let (borrowed, external_server) = borrowed.into_parts();
-        borrowed.drop().await.unwrap();
-        drop(external_server);
-        assert!(owned.instance().canister_exists(canister).await.unwrap());
-        let (instance, server) = owned.into_parts();
-        instance.drop().await.unwrap();
-        assert!(process_state(pid).is_some());
-        drop(server);
-        assert_eq!(process_state(pid), None);
-        assert!(!directory.exists());
-    });
+    let owned = PocketIcStartupConfig::Spawn {
+        server_binary: (&binary).into(),
+        timeout: Duration::from_secs(30),
+        server_hard_ttl: None,
+        server_idle_ttl: None,
+        server_output_files: None,
+    }
+    .build_instance(
+        PocketIcBuilder::new()
+            .with_application_subnet()
+            .with_nns_subnet(),
+    )
+    .await
+    .unwrap();
+    let server = owned.server().unwrap();
+    let pid = server.process_id();
+    let directory = server.server.files.directory.path().to_path_buf();
+    assert!(
+        owned
+            .instance()
+            .topology()
+            .await
+            .unwrap()
+            .get_nns()
+            .is_some()
+    );
+    let canister = owned.instance().create_canister().await.unwrap();
+    assert!(owned.instance().canister_exists(canister).await.unwrap());
+    let borrowed = PocketIcStartupConfig::Connect {
+        server_url: (server.url()).into(),
+        timeout: Duration::from_secs(30),
+    }
+    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .await
+    .unwrap();
+    assert!(borrowed.server().is_none());
+    let (borrowed, external_server) = borrowed.into_parts();
+    borrowed.drop().await.unwrap();
+    drop(external_server);
+    assert!(owned.instance().canister_exists(canister).await.unwrap());
+    let (instance, server) = owned.into_parts();
+    instance.drop().await.unwrap();
+    assert!(process_state(pid).is_some());
+    drop(server);
+    assert_eq!(process_state(pid), None);
+    assert!(!directory.exists());
 }
 
 #[cfg(unix)]
-#[test]
+#[tokio::test]
 #[ignore = "requires POCKET_IC_BIN=<caller-provided PocketIC server binary>"]
-fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
+#[expect(
+    clippy::too_many_lines,
+    reason = "one ownership lifecycle spans install failure, recovery, capture and server teardown"
+)]
+async fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
     use crate::pic::{
         CachedPocketIcBaseline, CanisterInstallError, InstallSpec, StandaloneCanisterFixture,
     };
@@ -474,9 +473,10 @@ fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
         server_output_files: None,
     }
     .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .await
     .unwrap();
     let pid = owned.server().unwrap().process_id();
-    let instance_id = owned.instance().instance_id();
+    let instance_id = owned.instance().instance_id;
     let error = StandaloneCanisterFixture::try_install(
         owned,
         InstallSpec {
@@ -487,6 +487,7 @@ fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
             label: Some("invalid-owned-wasm".into()),
         },
     )
+    .await
     .err()
     .expect("invalid Wasm must fail installation");
     let CanisterInstallError::InstallCode {
@@ -498,13 +499,18 @@ fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
         panic!("invalid Wasm must fail at installation: {error}");
     };
     assert_eq!(label.as_deref(), Some("invalid-owned-wasm"));
-    assert!(source.to_string().contains("CanisterInvalidWasm"));
+    assert!(matches!(
+        source,
+        crate::pocket_ic::ClientError::Canister(response)
+            if response.error_code == crate::pocket_ic::ErrorCode::CanisterInvalidWasm
+    ));
     error
         .pocket_ic()
         .canister_status(*canister_id, None)
+        .await
         .expect("retained server must permit inspecting the failed canister");
     let (owned, _) = error.into_parts();
-    assert_eq!(owned.instance().instance_id(), instance_id);
+    assert_eq!(owned.instance().instance_id, instance_id);
     assert_eq!(owned.server().unwrap().process_id(), pid);
     assert!(process_state(pid).is_some());
 
@@ -518,9 +524,14 @@ fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
             label: None,
         },
     )
+    .await
     .expect("install standalone fixture");
     let (owned, canister) = fixture.into_parts();
-    owned.instance().stop_canister(canister, None).unwrap();
+    owned
+        .instance()
+        .stop_canister(canister, None)
+        .await
+        .unwrap();
     assert_eq!(owned.server().unwrap().process_id(), pid);
     let baseline = CachedPocketIcBaseline::capture(
         owned,
@@ -530,18 +541,22 @@ fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
         }],
         (),
     )
+    .await
     .unwrap();
     baseline
         .pocket_ic()
         .uninstall_canister(canister, None)
+        .await
         .unwrap();
     baseline
         .restore(crate::pic::SnapshotRestoreFunding::Preserve)
+        .await
         .unwrap();
     assert!(
         baseline
             .pocket_ic()
             .canister_status(canister, None)
+            .await
             .unwrap()
             .module_hash
             .is_some()
@@ -556,9 +571,9 @@ fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
 }
 
 #[cfg(unix)]
-#[test]
+#[tokio::test]
 #[ignore = "requires POCKET_IC_BIN=<caller-provided PocketIC server binary>"]
-fn failed_baseline_capture_reaps_the_owned_server() {
+async fn failed_baseline_capture_reaps_the_owned_server() {
     use crate::pic::CachedPocketIcBaseline;
     use ic_platform_types::principal::ExternalPrincipal as Principal;
 
@@ -571,6 +586,7 @@ fn failed_baseline_capture_reaps_the_owned_server() {
         server_output_files: None,
     }
     .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .await
     .unwrap();
     let pid = owned.server().unwrap().process_id();
     let capture = CachedPocketIcBaseline::capture(
@@ -580,7 +596,8 @@ fn failed_baseline_capture_reaps_the_owned_server() {
             sender: None,
         }],
         (),
-    );
+    )
+    .await;
     assert!(
         capture.is_err(),
         "missing canister must refuse snapshot capture"

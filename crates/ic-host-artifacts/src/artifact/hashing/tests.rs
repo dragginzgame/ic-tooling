@@ -1,5 +1,5 @@
 use super::HashingWriter;
-use crate::artifact::{Sha256Digest, WriterError, test_support::InvalidWriter};
+use crate::artifact::{Sha256Digest, WriterError, tests::support::InvalidWriter};
 use std::io::{self, IoSlice, Write};
 
 #[test]

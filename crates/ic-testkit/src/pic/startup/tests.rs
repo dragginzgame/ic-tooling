@@ -70,10 +70,6 @@ fn original_failure_output_and_both_typed_cleanup_reports_survive_projection() {
         PocketIcStartupFailure::BuilderFailed {
             source: ClientError::Protocol("original-client-failure".into()),
         },
-        PocketIcStartupFailure::BuilderDisconnected,
-        PocketIcStartupFailure::BuilderThreadSpawn {
-            source: std::io::Error::from_raw_os_error(9),
-        },
         PocketIcStartupFailure::Io {
             operation: "original-io",
             path: "port".into(),
@@ -110,10 +106,7 @@ fn original_failure_output_and_both_typed_cleanup_reports_survive_projection() {
         assert_eq!(command.term_error.as_ref().unwrap().raw_os_error(), Some(4));
         assert_eq!(server.group_error.as_ref().unwrap().raw_os_error(), Some(1));
         assert_eq!(server.wait_error.as_ref().unwrap().raw_os_error(), Some(10));
-        if matches!(
-            error.failure(),
-            PocketIcStartupFailure::Io { .. } | PocketIcStartupFailure::BuilderThreadSpawn { .. }
-        ) {
+        if matches!(error.failure(), PocketIcStartupFailure::Io { .. }) {
             assert_eq!(
                 error
                     .source()
@@ -149,55 +142,6 @@ fn original_failure_output_and_both_typed_cleanup_reports_survive_projection() {
     assert_eq!(error.to_string(), error.failure().to_string());
     assert!(error.command_cleanup().is_none());
     assert!(error.server_cleanup().is_none());
-}
-
-#[cfg(unix)]
-#[test]
-fn builder_failures_finalize_the_owned_server_and_keep_output() {
-    for disconnected in [false, true] {
-        let script = TestServerScript::new(
-            "builder-failure",
-            "#!/bin/sh\nprintf '%s\n%s\n' \"$$\" \"$2\"\nprintf 'builder-diagnostic' >&2\nprintf '34567\n' > \"$2\"\nexec sleep 30\n",
-        );
-        let managed = script
-            .config(Duration::from_secs(2))
-            .start_managed_server()
-            .unwrap();
-        let pid = managed.process_id();
-        let directory = managed.server.files.directory.path().to_path_buf();
-        let (sender, receiver) = mpsc::channel();
-        if !disconnected {
-            sender
-                .send(Err(ClientError::Protocol(
-                    "original-builder-failure".into(),
-                )))
-                .unwrap();
-        }
-        drop(sender);
-        let error = super::await_builder(
-            receiver,
-            &mut super::InstanceStartup {
-                deadline: &super::StartupDeadline {
-                    started: Instant::now(),
-                    deadline: Instant::now() + Duration::from_secs(2),
-                    timeout: Duration::from_secs(2),
-                },
-                server_url: "http://127.0.0.1:34567/",
-                server: Some(managed.server),
-            },
-        )
-        .err()
-        .unwrap();
-        assert!(matches!(
-            (disconnected, error.failure()),
-            (true, PocketIcStartupFailure::BuilderDisconnected)
-                | (false, PocketIcStartupFailure::BuilderFailed { .. })
-        ));
-        assert_eq!(error.output().stderr(), "builder-diagnostic");
-        assert!(error.server_cleanup().is_none());
-        assert!(!directory.exists());
-        assert_eq!(process_state(pid), None);
-    }
 }
 
 #[cfg(unix)]
@@ -383,8 +327,8 @@ fn version_capture_cleans_wrapper_descendants_on_exit_and_timeout() {
 }
 
 #[cfg(unix)]
-#[test]
-fn owned_builder_failure_retains_server_output_and_reaps_child() {
+#[tokio::test]
+async fn owned_builder_failure_retains_server_output_and_reaps_child() {
     let script = TestServerScript::new(
         "builder-panic",
         "#!/bin/sh\nprintf '%s' \"$$\" > \"$0.pid\"\nprintf 'builder stdout'\nprintf 'builder stderr' >&2\nprintf '34567\\n' > \"$2\"\nexec sleep 30\n",
@@ -392,6 +336,7 @@ fn owned_builder_failure_retains_server_output_and_reaps_child() {
     let error = script
         .config(Duration::from_secs(2))
         .build_instance(PocketIcBuilder::new())
+        .await
         .err()
         .unwrap();
     let PocketIcStartupFailure::BuilderFailed { source } = error.failure() else {
@@ -789,8 +734,8 @@ fn caller_output_files_refuse_existing_entries_and_keep_partial_preparation() {
 }
 
 #[cfg(unix)]
-#[test]
-fn managed_startup_reports_an_exited_server_with_bounded_output() {
+#[tokio::test]
+async fn managed_startup_reports_an_exited_server_with_bounded_output() {
     let script = TestServerScript::new(
         "exit",
         "#!/bin/sh\nif [ \"$1\" != \"--port-file\" ] || [ -e \"$2\" ]; then exit 97; fi\nprintf 'synthetic server stdout'\nprintf 'synthetic bind failure' >&2\nexit 23\n",
@@ -798,7 +743,8 @@ fn managed_startup_reports_an_exited_server_with_bounded_output() {
 
     let result = script
         .config(Duration::from_secs(2))
-        .build_instance(PocketIcBuilder::new().with_application_subnet());
+        .build_instance(PocketIcBuilder::new().with_application_subnet())
+        .await;
 
     let error = result.err().unwrap();
     let PocketIcStartupFailure::ServerExited {
@@ -837,8 +783,8 @@ fn managed_startup_rejects_oversized_port_files_and_cleans_up() {
 }
 
 #[cfg(unix)]
-#[test]
-fn managed_startup_terminates_a_server_that_never_becomes_ready() {
+#[tokio::test]
+async fn managed_startup_terminates_a_server_that_never_becomes_ready() {
     let script = TestServerScript::new(
         "timeout",
         "#!/bin/sh\nif [ \"$1\" != \"--port-file\" ] || [ -e \"$2\" ]; then exit 97; fi\nexec sleep 30\n",
@@ -848,7 +794,8 @@ fn managed_startup_terminates_a_server_that_never_becomes_ready() {
 
     let result = script
         .config(timeout)
-        .build_instance(PocketIcBuilder::new().with_application_subnet());
+        .build_instance(PocketIcBuilder::new().with_application_subnet())
+        .await;
 
     assert!(
         started.elapsed() < Duration::from_secs(2),
@@ -966,9 +913,9 @@ fn managed_server_passes_an_explicit_hard_ttl() {
 }
 
 #[cfg(unix)]
-#[test]
+#[tokio::test]
 #[ignore = "requires POCKET_IC_BIN=<caller-provided PocketIC server binary>"]
-fn caller_provided_server_publishes_port_constructs_instance_and_cleans_up() {
+async fn caller_provided_server_publishes_port_constructs_instance_and_cleans_up() {
     let binary = std::env::var_os("POCKET_IC_BIN")
         .map(PathBuf::from)
         .expect("set POCKET_IC_BIN to the exact server binary");
@@ -986,6 +933,7 @@ fn caller_provided_server_publishes_port_constructs_instance_and_cleans_up() {
         server_output_files: None,
     }
     .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .await
     .expect("owned managed spawn must construct an instance");
     let record_file = wrapper.path().with_extension("record");
     let record = fs::read_to_string(&record_file).unwrap();
@@ -1016,6 +964,7 @@ fn caller_provided_server_publishes_port_constructs_instance_and_cleans_up() {
         timeout: Duration::from_secs(30),
     }
     .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .await
     .expect("construct instance through caller-provided server");
 
     drop(pocket_ic);

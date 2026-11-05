@@ -13,13 +13,13 @@ use ic_testkit::pocket_ic::{PocketIc, common::rest::RawMessageId};
 
 use std::time::Duration;
 
-#[test]
-fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
-    let owned = support::pocket_ic();
+#[tokio::test]
+async fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
+    let owned = support::pocket_ic().await;
     let pic = owned.instance();
     let caller = Principal::anonymous();
-    let provider = pic.create_canister().unwrap();
-    pic.add_cycles(provider, 10_000_000_000_000).unwrap();
+    let provider = pic.create_canister().await.unwrap();
+    pic.add_cycles(provider, 10_000_000_000_000).await.unwrap();
     let replies: [&[u8]; 3] = [
         b"original first\0",
         b"original second\xff",
@@ -45,44 +45,40 @@ fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
         50_000_000_000,
         100_000,
     )
+    .await
     .unwrap();
     validate(fixture.wasm(), 100_000).unwrap();
     pic.install_canister(provider, fixture.wasm().to_vec(), vec![], None)
+        .await
         .unwrap();
 
-    let consumer = install_consumer(pic, provider);
+    let consumer = install_consumer(pic, provider).await;
 
     let mut calls: Vec<RawMessageId> = vec![];
     for slot in 0..3 {
-        calls.push(pic.submit_call(consumer, caller, "start", vec![]).unwrap());
-        let mut observed = false;
-        for _ in 0..20 {
-            pic.tick().unwrap();
-            if fixture
-                .pending(pic)
-                .unwrap()
-                .iter()
-                .any(|request| request.slot() == slot)
-            {
-                observed = true;
-                break;
-            }
-        }
-        assert!(observed, "slot {slot} must reach the real HTTP barrier");
+        calls.push(
+            pic.submit_call(consumer, caller, "start", vec![])
+                .await
+                .unwrap(),
+        );
+        support::await_held_slot(pic, &fixture, slot).await;
     }
-    let pending = fixture.pending(pic).unwrap();
+    let pending = fixture.pending(pic).await.unwrap();
     assert_eq!(pending.len(), 3);
-    pic.update_call(consumer, caller, "cancel", vec![]).unwrap();
+    pic.update_call(consumer, caller, "cancel", vec![])
+        .await
+        .unwrap();
     assert_eq!(
         pic.query_call(consumer, caller, "committed", vec![])
+            .await
             .unwrap(),
         1_u32.to_le_bytes()
     );
     for _ in 0..5 {
-        pic.tick().unwrap();
+        pic.tick().await.unwrap();
     }
     for call in &calls {
-        assert!(pic.ingress_status(call.clone()).unwrap().is_none());
+        assert!(pic.ingress_status(call.clone()).await.unwrap().is_none());
     }
 
     for slot in [1, 0, 2] {
@@ -90,49 +86,55 @@ fn holds_real_intercanister_calls_until_exact_out_of_order_release() {
             .iter()
             .find(|request| request.slot() == slot)
             .unwrap();
-        fixture.release(pic, request).unwrap();
+        fixture.release(pic, request).await.unwrap();
         assert!(matches!(
-            fixture.release(pic, request),
+            fixture.release(pic, request).await,
             Err(HeldReplyError::UnknownRequest)
         ));
-        assert_eq!(pic.await_call(calls[slot].clone()).unwrap(), replies[slot]);
-        for held in fixture.pending(pic).unwrap() {
+        assert_eq!(
+            pic.await_call(calls[slot].clone()).await.unwrap(),
+            replies[slot]
+        );
+        for held in fixture.pending(pic).await.unwrap() {
             assert!(
                 pic.ingress_status(calls[held.slot()].clone())
+                    .await
                     .unwrap()
                     .is_none()
             );
         }
     }
-    assert_eq!(fixture.pending(pic).unwrap(), vec![]);
+    assert_eq!(fixture.pending(pic).await.unwrap(), vec![]);
     assert!(
-        pic.update_call(provider, caller, "read", vec![]).is_err(),
+        pic.update_call(provider, caller, "read", vec![])
+            .await
+            .is_err(),
         "slots are never reused"
     );
 
-    assert_fixture_admission(pic, &fixture);
+    assert_fixture_admission(pic, &fixture).await;
 }
 
-fn assert_fixture_admission(pic: &PocketIc, fixture: &HeldReplyFixture) {
+async fn assert_fixture_admission(pic: &PocketIc, fixture: &HeldReplyFixture) {
     // Same server, distinct instance must not accept the controller/token.
-    let other = support::pocket_ic();
+    let other = support::pocket_ic().await;
     assert!(matches!(
-        fixture.pending(other.instance()),
+        fixture.pending(other.instance()).await,
         Err(HeldReplyError::WrongInstance)
     ));
-    pic.auto_progress().unwrap();
+    pic.auto_progress().await.unwrap();
     assert!(matches!(
-        fixture.pending(pic),
+        fixture.pending(pic).await,
         Err(HeldReplyError::AutomaticProgress)
     ));
-    pic.stop_progress().unwrap();
+    pic.stop_progress().await.unwrap();
 }
 
-fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
+async fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
     // A real consumer canister retains its ingress context across a provider call.
     // Its independent update commits while provider replies remain held.
-    let consumer = pic.create_canister().unwrap();
-    pic.add_cycles(consumer, 10_000_000_000_000).unwrap();
+    let consumer = pic.create_canister().await.unwrap();
+    pic.add_cycles(consumer, 10_000_000_000_000).await.unwrap();
     let principal = support::wat_bytes(provider.as_slice());
     let source = format!(
         r#"(module
@@ -162,14 +164,14 @@ fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
         (call $append (i32.const 100) (i32.const 4)) (call $reply)))"#,
         length = provider.as_slice().len()
     );
-    support::install_wat(pic, consumer, &source, 10_000);
+    support::install_wat(pic, consumer, &source, 10_000).await;
 
     consumer
 }
 
-#[test]
-fn expired_and_foreign_requests_never_release_another_original() {
-    let owned = support::pocket_ic();
+#[tokio::test]
+async fn expired_and_foreign_requests_never_release_another_original() {
+    let owned = support::pocket_ic().await;
     let pic = owned.instance();
     let caller = Principal::anonymous();
     let methods = [RawReplyMethod {
@@ -180,8 +182,8 @@ fn expired_and_foreign_requests_never_release_another_original() {
     let mut fixtures = vec![];
     let mut calls = vec![];
     for _ in 0..2 {
-        let id = pic.create_canister().unwrap();
-        pic.add_cycles(id, 10_000_000_000_000).unwrap();
+        let id = pic.create_canister().await.unwrap();
+        pic.add_cycles(id, 10_000_000_000_000).await.unwrap();
         let fixture = HeldReplyFixture::new(
             pic,
             id,
@@ -194,18 +196,20 @@ fn expired_and_foreign_requests_never_release_another_original() {
             50_000_000_000,
             10_000,
         )
+        .await
         .unwrap();
         pic.install_canister(id, fixture.wasm().to_vec(), vec![], None)
+            .await
             .unwrap();
-        calls.push(pic.submit_call(id, caller, "hold", vec![]).unwrap());
+        calls.push(pic.submit_call(id, caller, "hold", vec![]).await.unwrap());
         fixtures.push(fixture);
     }
     let mut requests: Vec<Vec<HeldRequest>> = vec![];
     for fixture in &fixtures {
         let mut pending = vec![];
         for _ in 0..20 {
-            pic.tick().unwrap();
-            pending = fixture.pending(pic).unwrap();
+            pic.tick().await.unwrap();
+            pending = fixture.pending(pic).await.unwrap();
             if !pending.is_empty() {
                 break;
             }
@@ -214,21 +218,21 @@ fn expired_and_foreign_requests_never_release_another_original() {
         requests.push(pending);
     }
     assert!(matches!(
-        fixtures[0].release(pic, &requests[1][0]),
+        fixtures[0].release(pic, &requests[1][0]).await,
         Err(HeldReplyError::UnknownRequest)
     ));
     for call in &calls {
-        assert!(pic.ingress_status(call.clone()).unwrap().is_none());
+        assert!(pic.ingress_status(call.clone()).await.unwrap().is_none());
     }
-    pic.advance_time(Duration::from_secs(61)).unwrap();
+    pic.advance_time(Duration::from_secs(61)).await.unwrap();
     for call in calls {
-        let rejection = pic.await_call(call).unwrap_err();
+        let rejection = pic.await_call(call).await.unwrap_err();
         assert!(rejection.to_string().contains("held reply barrier failed"));
     }
     for (fixture, request) in fixtures.iter_mut().zip(requests) {
-        assert_eq!(fixture.pending(pic).unwrap(), vec![]);
+        assert_eq!(fixture.pending(pic).await.unwrap(), vec![]);
         assert!(matches!(
-            fixture.release(pic, &request[0]),
+            fixture.release(pic, &request[0]).await,
             Err(HeldReplyError::UnknownRequest)
         ));
     }

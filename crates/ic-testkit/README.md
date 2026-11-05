@@ -45,10 +45,10 @@ published support crate solely for target-specific feature isolation. The
 intentional; native Testkit is not a Candid-free profile.
 
 The optional native `wire` feature adds `pic::query_wire` and `pic::update_wire`.
-Enable it on your Testkit dependency and declare `ic-wire = "0.16.0"` for your native
-Serde contracts. Each helper takes an explicit target/caller, a `WireCallSpec`
+Enable it on your Testkit dependency and declare `ic-wire = "0.17.0"` for your native
+Serde contracts. Await each helper. Each helper takes an explicit target/caller, a `WireCallSpec`
 with the exported name, method ID and request/response limits, and a borrowed
-request. Align your direct Wire dependency to 0.16 when supplying limits or matching
+request. Align your direct Wire dependency to 0.17 when supplying limits or matching
 typed codec errors. It executes one PocketIC operation without update retries; a refused reply
 does not prove absence of effects. It preserves
 application-level results. `WireCallError` retains typed codec causes, complete
@@ -63,7 +63,7 @@ before returning. Wire validates primitives in one pass; collection and custom
 visitor normalization is consumer-owned. Re-encoding a decoded value need not
 reproduce the received frame. Use raw calls to retain original bytes for exact
 retries, signatures or hashes. Encode and decode budgets apply independently.
-Call `query_wire::<Request, Response>(pic, canister, caller, spec, &request)` or
+Await `query_wire::<Request, Response>(pic, canister, caller, spec, &request)` or
 `update_wire` with the same arguments. The caller owns the Serde types and
 per-direction limits; finite-codec budgets need requalification for native Serde.
 See the [0.65 migration](../../docs/changelog/0.65.md).
@@ -98,7 +98,10 @@ focused extension traits provide reusable harness behavior. Import all upstream
 client and DTO identities directly from `ic_testkit::pocket_ic`; Testkit owns no
 parallel client owner. See the [client migration](../../docs/testkit/client-migration.md).
 The client and managed server remain privately paired. Use `server()` for shared
-server inspection and `into_parts()` only when taking over teardown ordering.
+server inspection, await `close()` for explicit instance deletion, and use
+`into_parts()` only when taking over teardown ordering. The client and network
+helpers are async-only; the caller owns the runtime. Rust Drop performs no client
+network I/O. See the [async migration](../../docs/testkit/client-migration.md).
 Wrap a client on an externally owned server with
 `PocketIcInstance::from_borrowed_server(client)`.
 See the [0.66 migration](../../docs/changelog/0.66.md).

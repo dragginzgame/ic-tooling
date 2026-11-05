@@ -1,5 +1,5 @@
 use super::{BoundedWriter, WriterError};
-use crate::artifact::test_support::InvalidWriter;
+use crate::artifact::tests::support::InvalidWriter;
 use std::io::{self, IoSlice, Write};
 
 #[test]

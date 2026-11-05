@@ -32,8 +32,8 @@ fn preparation_and_recovery_keep_display_and_unboxed_primary_sources() {
     );
 }
 
-#[test]
-fn phase_timing_preserves_absence_zero_and_saturation() {
+#[tokio::test]
+async fn phase_timing_preserves_absence_zero_and_saturation() {
     let mut timings = BaselinePoolTimings::default();
     assert_eq!(timings.restore(), None);
     add_timing(&mut timings.restore, Duration::ZERO);

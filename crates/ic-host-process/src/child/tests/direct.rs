@@ -25,7 +25,7 @@ fn supplied_direct_child_keeps_io_and_is_reaped_on_success_or_cancellation() {
         let result = communicate_child_with_observer(
             &mut child,
             None,
-            crate::test_support::LIMITS,
+            crate::tests::support::LIMITS,
             SuccessfulExit::Cleanup,
             || cancelled,
             |_, _| Ok(()),
@@ -64,7 +64,7 @@ fn direct_spawn_preserves_inherited_group_context_and_io() {
     let evidence = communicate_child_with_observer(
         &mut child,
         Some(b"input\n"),
-        crate::test_support::LIMITS,
+        crate::tests::support::LIMITS,
         SuccessfulExit::Cleanup,
         || false,
         |_, bytes| {

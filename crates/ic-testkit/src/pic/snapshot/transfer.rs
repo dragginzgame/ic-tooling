@@ -52,7 +52,7 @@ impl From<SnapshotError> for Failure {
     }
 }
 
-pub(super) fn upload(
+pub(super) async fn upload(
     pic: &PocketIc,
     canister_id: Principal,
     sender: Option<Principal>,
@@ -60,14 +60,16 @@ pub(super) fn upload(
     pending: &mut Vec<Vec<u8>>,
 ) -> Result<Vec<u8>, Failure> {
     let sender = sender.unwrap_or_else(Principal::anonymous);
-    let metadata = pic.read_canister_snapshot_metadata(
-        sender,
-        ReadCanisterSnapshotMetadataArgs {
-            canister_id,
-            snapshot_id: original.to_vec(),
-        },
-        CALL_LIMITS,
-    )?;
+    let metadata = pic
+        .read_canister_snapshot_metadata(
+            sender,
+            ReadCanisterSnapshotMetadataArgs {
+                canister_id,
+                snapshot_id: original.to_vec(),
+            },
+            CALL_LIMITS,
+        )
+        .await?;
     let mut transfer = SnapshotTransfer::new(
         canister_id,
         sender,
@@ -77,7 +79,7 @@ pub(super) fn upload(
     )?;
     // The first advance only creates the upload. Retain its exact identity
     // before any chunk can fail, so Testkit's outer capture can roll it back.
-    transfer.advance(pic)?;
+    transfer.advance(pic).await?;
     let uploaded = transfer
         .uploaded_snapshot()
         .ok_or(Failure::Invalid(
@@ -86,7 +88,7 @@ pub(super) fn upload(
         .to_vec();
     pending.push(uploaded.clone());
     while !matches!(transfer.status(), TransferStatus::Complete) {
-        transfer.advance(pic)?;
+        transfer.advance(pic).await?;
     }
     Ok(uploaded)
 }

@@ -9,9 +9,9 @@ use ic_testkit::pic::{
 };
 use ic_testkit::pocket_ic::CanisterSettings;
 
-#[test]
-fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() {
-    let owned = support::pocket_ic();
+#[tokio::test]
+async fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() {
+    let owned = support::pocket_ic().await;
     let pocket_ic = owned.instance();
     let status_sender = Principal::from_slice(&[41]);
     let log_sender = Principal::from_slice(&[42]);
@@ -24,6 +24,7 @@ fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() {
                 ..CanisterSettings::default()
             }),
         )
+        .await
         .unwrap();
 
     let request = CanisterDiagnosticsRequest {
@@ -32,7 +33,7 @@ fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() {
         log_sender,
         log_limits: CanisterLogRenderLimits::default(),
     };
-    let report = pocket_ic.collect_canister_diagnostics(request);
+    let report = pocket_ic.collect_canister_diagnostics(request).await;
 
     assert_eq!(report.request, request);
     assert!(report.status.is_ok(), "{report}");
@@ -57,6 +58,7 @@ fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() {
                 request,
             },
         ])
+        .await
         .expect("valid labeled diagnostics batch");
     assert_eq!(batch.entries.len(), 2);
     assert_eq!(batch.entries[0].label, "denied");

@@ -4,13 +4,11 @@ mod support;
 
 use std::{
     num::NonZeroUsize,
-    panic::{AssertUnwindSafe, catch_unwind},
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, AtomicUsize, Ordering},
         mpsc,
     },
-    thread,
     time::Duration,
 };
 
@@ -65,10 +63,10 @@ struct TwoCanisterMetadata {
     baseline_cycles: [u128; 2],
 }
 
-fn lifecycle(
-    call: impl FnOnce() -> Result<(), ic_testkit::pocket_ic::ClientError>,
+async fn lifecycle(
+    call: impl AsyncFnOnce() -> Result<(), ic_testkit::pocket_ic::ClientError>,
 ) -> Result<(), TestRecipeError> {
-    call().map_err(TestRecipeError::Lifecycle)
+    call().await.map_err(TestRecipeError::Lifecycle)
 }
 
 #[derive(Debug)]
@@ -119,7 +117,7 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
         &self.requirements
     }
 
-    fn build(&self) -> Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error> {
+    async fn build(&self) -> Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error> {
         self.controls.builds.fetch_add(1, Ordering::SeqCst);
         if self.controls.fail_next_build.swap(false, Ordering::SeqCst) {
             return Err(TestRecipeError::Synthetic("requested build failure"));
@@ -142,20 +140,22 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
                 timeout: OPERATION_TIMEOUT,
             }
             .build_instance(PocketIcBuilder::new().with_application_subnet())
+            .await
             .map_err(TestRecipeError::Startup)?
         } else {
-            support::pocket_ic()
+            support::pocket_ic().await
         };
         let canister_ids = [
-            pocket_ic.instance().create_canister().unwrap(),
-            pocket_ic.instance().create_canister().unwrap(),
+            pocket_ic.instance().create_canister().await.unwrap(),
+            pocket_ic.instance().create_canister().await.unwrap(),
         ];
         for canister_id in canister_ids {
             pocket_ic
                 .instance()
                 .install_canister(canister_id, EMPTY_WASM.to_vec(), vec![], None)
+                .await
                 .unwrap();
-            lifecycle(|| pocket_ic.instance().stop_canister(canister_id, None))?;
+            lifecycle(async || pocket_ic.instance().stop_canister(canister_id, None).await).await?;
         }
 
         let mut baseline = CachedPocketIcBaseline::capture(
@@ -170,24 +170,36 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
                 baseline_cycles: [0; 2],
             },
         )
+        .await
         .map_err(TestRecipeError::from)?;
         for id in canister_ids {
-            lifecycle(|| baseline.pocket_ic().start_canister(id, None))?;
+            lifecycle(async || baseline.pocket_ic().start_canister(id, None).await).await?;
         }
         let baseline_time_nanos = baseline
             .pocket_ic()
             .get_time()
+            .await
             .unwrap()
             .as_nanos_since_unix_epoch();
-        let baseline_cycles =
-            canister_ids.map(|id| baseline.pocket_ic().cycle_balance(id).unwrap());
+        let baseline_cycles = [
+            baseline
+                .pocket_ic()
+                .cycle_balance(canister_ids[0])
+                .await
+                .unwrap(),
+            baseline
+                .pocket_ic()
+                .cycle_balance(canister_ids[1])
+                .await
+                .unwrap(),
+        ];
         let metadata = baseline.metadata_mut();
         metadata.baseline_time_nanos = baseline_time_nanos;
         metadata.baseline_cycles = baseline_cycles;
         Ok(baseline)
     }
 
-    fn prepare_restore(
+    async fn prepare_restore(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
     ) -> Result<(), Self::Error> {
@@ -199,10 +211,11 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             "requested recipe-hook panic"
         );
         if self.guarded_domain == Some(GuardedDomain::Cycles) {
-            let current_cycles = baseline
-                .metadata()
-                .canister_ids
-                .map(|id| baseline.pocket_ic().cycle_balance(id).unwrap());
+            let [first, second] = baseline.metadata().canister_ids;
+            let current_cycles = [
+                baseline.pocket_ic().cycle_balance(first).await.unwrap(),
+                baseline.pocket_ic().cycle_balance(second).await.unwrap(),
+            ];
             if current_cycles != baseline.metadata().baseline_cycles {
                 return Err(TestRecipeError::DomainMutation("canister-cycles"));
             }
@@ -216,12 +229,12 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
         }
 
         for id in baseline.metadata().canister_ids {
-            lifecycle(|| baseline.pocket_ic().stop_canister(id, None))?;
+            lifecycle(async || baseline.pocket_ic().stop_canister(id, None).await).await?;
         }
         Ok(())
     }
 
-    fn reset_non_snapshot_state(
+    async fn reset_non_snapshot_state(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
     ) -> Result<ResetReceipt, Self::Error> {
@@ -234,6 +247,7 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
                 if baseline
                     .pocket_ic()
                     .get_time()
+                    .await
                     .unwrap()
                     .as_nanos_since_unix_epoch()
                     != baseline.metadata().baseline_time_nanos
@@ -253,12 +267,13 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
                     .tracked_extra_canister
                     .lock()
                     .unwrap_or_else(std::sync::PoisonError::into_inner);
-                if extra_canister.is_some_and(|canister_id| {
-                    baseline
+                if let Some(canister_id) = extra_canister
+                    && baseline
                         .pocket_ic()
                         .canister_status(canister_id, None)
+                        .await
                         .is_ok()
-                }) {
+                {
                     return Err(TestRecipeError::DomainMutation("extra-canister"));
                 }
                 Ok(ResetReceipt {
@@ -285,7 +300,7 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
         }
     }
 
-    fn drive_to_readiness(
+    async fn drive_to_readiness(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
     ) -> Result<(), Self::Error> {
@@ -297,12 +312,12 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             return Err(TestRecipeError::Synthetic("requested readiness failure"));
         }
         for id in baseline.metadata().canister_ids {
-            lifecycle(|| baseline.pocket_ic().start_canister(id, None))?;
+            lifecycle(async || baseline.pocket_ic().start_canister(id, None).await).await?;
         }
         Ok(())
     }
 
-    fn validate(
+    async fn validate(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
         preparation: &PreparedBaseline,
@@ -331,6 +346,7 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             let status = baseline
                 .pocket_ic()
                 .canister_status(canister_id, None)
+                .await
                 .map_err(|_| TestRecipeError::Synthetic("canister status failed"))?;
             if status.module_hash.is_none() {
                 return Err(TestRecipeError::Synthetic(
@@ -392,8 +408,8 @@ impl std::error::Error for TestRecipeError {
     }
 }
 
-#[test]
-fn multi_canister_pool_restores_and_explicitly_rebuilds_one_slot() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn multi_canister_pool_restores_and_explicitly_rebuilds_one_slot() {
     let controls = RecipeControls::default();
     let pool = CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(1).unwrap(),
@@ -401,7 +417,7 @@ fn multi_canister_pool_restores_and_explicitly_rebuilds_one_slot() {
     );
     assert_eq!(pool.capacity().get(), 1);
 
-    let (baseline, outcome) = pool.acquire().expect("first baseline should build");
+    let (baseline, outcome) = pool.acquire().await.expect("first baseline should build");
     let timings = outcome.timings;
     assert!(timings.build().is_some());
     assert!(timings.restore().is_none());
@@ -410,15 +426,16 @@ fn multi_canister_pool_restores_and_explicitly_rebuilds_one_slot() {
         outcome.disposition,
         BaselinePoolDisposition::Built
     ));
-    let first_instance = baseline.pocket_ic().instance_id();
+    let first_instance = baseline.pocket_ic().instance_id;
     let canister_ids = baseline.metadata().canister_ids;
     baseline
         .pocket_ic()
         .uninstall_canister(canister_ids[0], None)
+        .await
         .expect("test should mutate one captured canister");
     drop(baseline);
 
-    let (mut baseline, outcome) = pool.acquire().expect("baseline should restore");
+    let (mut baseline, outcome) = pool.acquire().await.expect("baseline should restore");
     let timings = outcome.timings;
     assert!(timings.build().is_none());
     assert!(timings.restore().is_some());
@@ -431,12 +448,13 @@ fn multi_canister_pool_restores_and_explicitly_rebuilds_one_slot() {
     ));
     assert_eq!(controls.built_validations.load(Ordering::SeqCst), 1);
     assert_eq!(controls.restored_validations.load(Ordering::SeqCst), 1);
-    assert_eq!(baseline.pocket_ic().instance_id(), first_instance);
+    assert_eq!(baseline.pocket_ic().instance_id, first_instance);
     for canister_id in canister_ids {
         assert!(
             baseline
                 .pocket_ic()
                 .canister_status(canister_id, None)
+                .await
                 .expect("restored canister status should remain readable")
                 .module_hash
                 .is_some(),
@@ -449,7 +467,10 @@ fn multi_canister_pool_restores_and_explicitly_rebuilds_one_slot() {
     });
     drop(baseline);
 
-    let (baseline, outcome) = pool.acquire().expect("invalid slot should rebuild once");
+    let (baseline, outcome) = pool
+        .acquire()
+        .await
+        .expect("invalid slot should rebuild once");
     assert!(matches!(
         outcome.disposition,
         BaselinePoolDisposition::Rebuilt(RebuildReason::RecipeClassified { code }) if code == "caller-selected"
@@ -459,25 +480,25 @@ fn multi_canister_pool_restores_and_explicitly_rebuilds_one_slot() {
     drop(baseline);
 }
 
-#[test]
-fn cached_baseline_rejects_an_empty_capture() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cached_baseline_rejects_an_empty_capture() {
     assert!(matches!(
-        CachedPocketIcBaseline::capture(support::pocket_ic(), [], ()),
+        CachedPocketIcBaseline::capture(support::pocket_ic().await, [], ()).await,
         Err(ControllerSnapshotError::EmptyCanisterSet),
     ));
 }
 
-#[test]
-fn fatal_restore_discards_the_slot_and_finalizes_failure_timings() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn fatal_restore_discards_the_slot_and_finalizes_failure_timings() {
     let controls = RecipeControls::default();
     let pool = CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(1).unwrap(),
         TwoCanisterRecipe::new(controls.clone()),
     );
-    drop(pool.acquire().expect("first baseline should build").0);
+    drop(pool.acquire().await.expect("first baseline should build").0);
     controls.fail_next_restore.store(true, Ordering::SeqCst);
     controls.fatal_restore.store(true, Ordering::SeqCst);
-    let Err(error) = pool.acquire() else {
+    let Err(error) = pool.acquire().await else {
         panic!("fatal restore failure must be returned without recovery");
     };
     assert!(matches!(&error, BaselinePoolError::Preparation { .. }));
@@ -488,7 +509,10 @@ fn fatal_restore_discards_the_slot_and_finalizes_failure_timings() {
     assert!(timings.total() >= timings.restore().unwrap());
     assert_eq!(controls.builds.load(Ordering::SeqCst), 1);
 
-    let (baseline, outcome) = pool.acquire().expect("discarded slot should build fresh");
+    let (baseline, outcome) = pool
+        .acquire()
+        .await
+        .expect("discarded slot should build fresh");
     assert!(matches!(
         outcome.disposition,
         BaselinePoolDisposition::Built
@@ -497,17 +521,20 @@ fn fatal_restore_discards_the_slot_and_finalizes_failure_timings() {
     drop(baseline);
 }
 
-#[test]
-fn reused_slot_failure_rebuilds_once_and_preserves_a_failed_recovery() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn reused_slot_failure_rebuilds_once_and_preserves_a_failed_recovery() {
     let controls = RecipeControls::default();
     let pool = CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(1).unwrap(),
         TwoCanisterRecipe::new(controls.clone()),
     );
-    drop(pool.acquire().expect("first baseline should build").0);
+    drop(pool.acquire().await.expect("first baseline should build").0);
 
     controls.fail_next_restore.store(true, Ordering::SeqCst);
-    let (baseline, outcome) = pool.acquire().expect("restore failure should rebuild");
+    let (baseline, outcome) = pool
+        .acquire()
+        .await
+        .expect("restore failure should rebuild");
     assert!(matches!(
         outcome.disposition,
         BaselinePoolDisposition::Rebuilt(RebuildReason::SnapshotRestoreFailure)
@@ -516,7 +543,7 @@ fn reused_slot_failure_rebuilds_once_and_preserves_a_failed_recovery() {
 
     controls.fail_next_restore.store(true, Ordering::SeqCst);
     controls.fail_next_build.store(true, Ordering::SeqCst);
-    let Err(error) = pool.acquire() else {
+    let Err(error) = pool.acquire().await else {
         panic!("a failed restore plus failed rebuild must be returned");
     };
     let timings = error.timings();
@@ -540,23 +567,29 @@ fn reused_slot_failure_rebuilds_once_and_preserves_a_failed_recovery() {
     ));
 }
 
-#[test]
-fn canonical_restore_failure_preserves_the_snapshot_cause_and_failed_rebuild() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn canonical_restore_failure_preserves_the_snapshot_cause_and_failed_rebuild() {
     let controls = RecipeControls::default();
     let pool = CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(1).unwrap(),
         TwoCanisterRecipe::new(controls.clone()),
     );
-    let (baseline, _) = pool.acquire().unwrap();
+    let (baseline, _) = pool.acquire().await.unwrap();
     let canister = baseline.metadata().canister_ids[0];
-    baseline.pocket_ic().stop_canister(canister, None).unwrap();
+    baseline
+        .pocket_ic()
+        .stop_canister(canister, None)
+        .await
+        .unwrap();
     let snapshots = baseline
         .pocket_ic()
         .list_canister_snapshots(canister, None)
+        .await
         .unwrap();
     baseline
         .pocket_ic()
         .delete_canister_snapshot(canister, None, snapshots[0].id.clone())
+        .await
         .unwrap();
     drop(baseline);
     controls.fail_next_build.store(true, Ordering::SeqCst);
@@ -564,7 +597,7 @@ fn canonical_restore_failure_preserves_the_snapshot_cause_and_failed_rebuild() {
         original,
         rebuild,
         timings,
-    }) = pool.acquire()
+    }) = pool.acquire().await
     else {
         panic!("failed canonical restore and failed recovery must both be retained");
     };
@@ -583,8 +616,8 @@ fn canonical_restore_failure_preserves_the_snapshot_cause_and_failed_rebuild() {
     assert!(timings.build().is_some());
 }
 
-#[test]
-fn failed_initial_build_reports_partial_timings() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn failed_initial_build_reports_partial_timings() {
     let controls = RecipeControls::default();
     controls.fail_next_build.store(true, Ordering::SeqCst);
     let pool = CachedPocketIcBaselinePool::new(
@@ -592,7 +625,7 @@ fn failed_initial_build_reports_partial_timings() {
         TwoCanisterRecipe::new(controls),
     );
 
-    let Err(error) = pool.acquire() else {
+    let Err(error) = pool.acquire().await else {
         panic!("the requested initial build failure must be returned");
     };
     let timings = error.timings();
@@ -612,11 +645,16 @@ fn failed_initial_build_reports_partial_timings() {
     ));
 }
 
-#[test]
-fn incomplete_or_mismatched_reset_evidence_rebuilds_before_warm_validation() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn incomplete_or_mismatched_reset_evidence_rebuilds_before_warm_validation() {
     let controls = RecipeControls::default();
     let pool = guarded_pool(controls.clone(), GuardedDomain::ExtraCanisters);
-    drop(pool.acquire().expect("initial baseline should build").0);
+    drop(
+        pool.acquire()
+            .await
+            .expect("initial baseline should build")
+            .0,
+    );
     for fault in [
         &controls.omit_next_coverage,
         &controls.mismatch_next_coverage,
@@ -626,6 +664,7 @@ fn incomplete_or_mismatched_reset_evidence_rebuilds_before_warm_validation() {
         fault.store(true, Ordering::SeqCst);
         let (baseline, outcome) = pool
             .acquire()
+            .await
             .expect("invalid reset evidence should rebuild");
         assert_eq!(
             outcome.disposition,
@@ -639,6 +678,7 @@ fn incomplete_or_mismatched_reset_evidence_rebuilds_before_warm_validation() {
         drop(baseline);
         let (baseline, outcome) = pool
             .acquire()
+            .await
             .expect("subsequent evidence should admit warm reuse");
         assert_eq!(outcome.disposition, BaselinePoolDisposition::Restored);
         assert_eq!(
@@ -649,14 +689,14 @@ fn incomplete_or_mismatched_reset_evidence_rebuilds_before_warm_validation() {
     }
 }
 
-#[test]
-fn reset_readiness_and_validation_failures_have_distinct_rebuild_reasons() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn reset_readiness_and_validation_failures_have_distinct_rebuild_reasons() {
     let controls = RecipeControls::default();
     let pool = CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(1).unwrap(),
         TwoCanisterRecipe::new(controls.clone()),
     );
-    drop(pool.acquire().expect("first baseline should build").0);
+    drop(pool.acquire().await.expect("first baseline should build").0);
 
     for (flag, expected) in [
         (&controls.fail_next_reset, RebuildReason::ResetFailure),
@@ -672,6 +712,7 @@ fn reset_readiness_and_validation_failures_have_distinct_rebuild_reasons() {
         flag.store(true, Ordering::SeqCst);
         let (baseline, outcome) = pool
             .acquire()
+            .await
             .expect("classified preparation failure should rebuild once");
         assert!(matches!(
             outcome.disposition,
@@ -683,9 +724,9 @@ fn reset_readiness_and_validation_failures_have_distinct_rebuild_reasons() {
     assert_eq!(controls.builds.load(Ordering::SeqCst), 4);
 }
 
-#[test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "launches and kills a dedicated PocketIC server; run explicitly in isolation"]
-fn killed_dedicated_server_rebuilds_on_a_fresh_server() {
+async fn killed_dedicated_server_rebuilds_on_a_fresh_server() {
     let server = PocketIcStartupConfig::Spawn {
         server_binary: (std::env::var_os("POCKET_IC_BIN")
             .expect("prepare POCKET_IC_BIN for the dedicated server probe"))
@@ -709,6 +750,7 @@ fn killed_dedicated_server_rebuilds_on_a_fresh_server() {
     );
     drop(
         pool.acquire()
+            .await
             .expect("dedicated-server baseline should build")
             .0,
     );
@@ -717,6 +759,7 @@ fn killed_dedicated_server_rebuilds_on_a_fresh_server() {
 
     let (baseline, outcome) = pool
         .acquire()
+        .await
         .expect("dead dedicated transport should rebuild on the default server");
     assert!(matches!(
         outcome.disposition,
@@ -726,20 +769,25 @@ fn killed_dedicated_server_rebuilds_on_a_fresh_server() {
     drop(baseline);
 }
 
-#[test]
-fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations() {
     {
         let controls = RecipeControls::default();
         let pool = guarded_pool(controls.clone(), GuardedDomain::Time);
-        let (baseline, _) = pool.acquire().expect("time-guarded baseline should build");
+        let (baseline, _) = pool
+            .acquire()
+            .await
+            .expect("time-guarded baseline should build");
         baseline
             .pocket_ic()
             .advance_time(Duration::from_secs(1))
+            .await
             .unwrap();
         drop(baseline);
 
         let (baseline, outcome) = pool
             .acquire()
+            .await
             .expect("time mutation should rebuild the guarded slot");
         assert_rebuilt_for_domain(&outcome, "pocket-ic-time");
         assert_eq!(controls.builds.load(Ordering::SeqCst), 2);
@@ -749,16 +797,21 @@ fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations() {
     {
         let controls = RecipeControls::default();
         let pool = guarded_pool(controls.clone(), GuardedDomain::Cycles);
-        let (baseline, _) = pool.acquire().expect("cycle-guarded baseline should build");
+        let (baseline, _) = pool
+            .acquire()
+            .await
+            .expect("cycle-guarded baseline should build");
         let canister_id = baseline.metadata().canister_ids[0];
         let _ = baseline
             .pocket_ic()
             .add_cycles(canister_id, 1_000_000)
+            .await
             .unwrap();
         drop(baseline);
 
         let (baseline, outcome) = pool
             .acquire()
+            .await
             .expect("cycle mutation should rebuild the guarded slot");
         assert_rebuilt_for_domain(&outcome, "canister-cycles");
         assert_eq!(controls.builds.load(Ordering::SeqCst), 2);
@@ -770,8 +823,9 @@ fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations() {
         let pool = guarded_pool(controls.clone(), GuardedDomain::ExtraCanisters);
         let (baseline, _) = pool
             .acquire()
+            .await
             .expect("extra-canister-guarded baseline should build");
-        let extra_canister = baseline.pocket_ic().create_canister().unwrap();
+        let extra_canister = baseline.pocket_ic().create_canister().await.unwrap();
         *controls
             .tracked_extra_canister
             .lock()
@@ -780,6 +834,7 @@ fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations() {
 
         let (baseline, outcome) = pool
             .acquire()
+            .await
             .expect("extra canister should rebuild the guarded slot");
         assert_rebuilt_for_domain(&outcome, "extra-canister");
         assert_eq!(controls.builds.load(Ordering::SeqCst), 2);
@@ -787,25 +842,27 @@ fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations() {
     }
 }
 
-#[test]
-fn panic_while_leased_invalidates_without_hiding_the_panic() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn panic_while_leased_invalidates_without_hiding_the_panic() {
     let controls = RecipeControls::default();
     let pool = CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(1).unwrap(),
         TwoCanisterRecipe::new(controls.clone()),
     );
-    drop(pool.acquire().expect("first baseline should build").0);
+    drop(pool.acquire().await.expect("first baseline should build").0);
 
-    let panic = catch_unwind(AssertUnwindSafe(|| {
+    let panic = support::catch_async_panic(async || {
         let (_baseline, _outcome) = pool
             .acquire()
+            .await
             .expect("baseline should restore before panic");
         panic!("synthetic test panic");
-    }));
+    });
     assert!(panic.is_err(), "the caller panic must keep unwinding");
 
     let (baseline, outcome) = pool
         .acquire()
+        .await
         .expect("slot invalidated by unwind should rebuild");
     assert!(matches!(
         outcome.disposition,
@@ -815,19 +872,19 @@ fn panic_while_leased_invalidates_without_hiding_the_panic() {
     drop(baseline);
 }
 
-#[test]
-fn recipe_hook_panic_invalidates_without_becoming_a_cache_miss() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn recipe_hook_panic_invalidates_without_becoming_a_cache_miss() {
     let controls = RecipeControls::default();
     let pool = CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(1).unwrap(),
         TwoCanisterRecipe::new(controls.clone()),
     );
-    drop(pool.acquire().expect("first baseline should build").0);
+    drop(pool.acquire().await.expect("first baseline should build").0);
 
     controls.panic_next_restore.store(true, Ordering::SeqCst);
-    let panic = catch_unwind(AssertUnwindSafe(|| {
-        let _ = pool.acquire();
-    }));
+    let panic = support::catch_async_panic(async || {
+        let _ = pool.acquire().await;
+    });
     assert!(panic.is_err(), "the recipe panic must keep unwinding");
     assert_eq!(
         controls.builds.load(Ordering::SeqCst),
@@ -837,6 +894,7 @@ fn recipe_hook_panic_invalidates_without_becoming_a_cache_miss() {
 
     let (baseline, outcome) = pool
         .acquire()
+        .await
         .expect("slot invalidated by recipe panic should rebuild later");
     assert!(matches!(
         outcome.disposition,
@@ -846,13 +904,13 @@ fn recipe_hook_panic_invalidates_without_becoming_a_cache_miss() {
     drop(baseline);
 }
 
-#[test]
-fn runtime_capacity_allows_two_independent_baseline_leases() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn runtime_capacity_allows_two_independent_baseline_leases() {
     let pool = Arc::new(CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(2).unwrap(),
         TwoCanisterRecipe::new(RecipeControls::default()),
     ));
-    let (first, first_outcome) = pool.acquire().expect("first slot should build");
+    let (first, first_outcome) = pool.acquire().await.expect("first slot should build");
     assert!(matches!(
         first_outcome.disposition,
         BaselinePoolDisposition::Built
@@ -860,13 +918,16 @@ fn runtime_capacity_allows_two_independent_baseline_leases() {
 
     let worker_pool = Arc::clone(&pool);
     let (acquired_tx, acquired_rx) = mpsc::channel();
-    let worker = thread::spawn(move || {
-        let (second, outcome) = worker_pool.acquire().expect("second slot should build");
+    let worker = support::spawn_async(async move || {
+        let (second, outcome) = worker_pool
+            .acquire()
+            .await
+            .expect("second slot should build");
         acquired_tx
             .send((
                 (
                     second.pocket_ic().get_server_url(),
-                    second.pocket_ic().instance_id(),
+                    second.pocket_ic().instance_id,
                 ),
                 outcome,
             ))
@@ -883,7 +944,7 @@ fn runtime_capacity_allows_two_independent_baseline_leases() {
     assert_ne!(
         (
             first.pocket_ic().get_server_url(),
-            first.pocket_ic().instance_id()
+            first.pocket_ic().instance_id
         ),
         second_instance
     );
@@ -891,24 +952,27 @@ fn runtime_capacity_allows_two_independent_baseline_leases() {
     worker.join().expect("capacity worker should exit cleanly");
 }
 
-#[test]
-fn capacity_one_reports_time_waiting_for_the_held_slot() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn capacity_one_reports_time_waiting_for_the_held_slot() {
     let pool = Arc::new(CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(1).unwrap(),
         TwoCanisterRecipe::new(RecipeControls::default()),
     ));
-    let (first, _) = pool.acquire().expect("first slot should build");
+    let (first, _) = pool.acquire().await.expect("first slot should build");
 
     let worker_pool = Arc::clone(&pool);
     let (attempting_tx, attempting_rx) = mpsc::channel();
     let (acquired_tx, acquired_rx) = mpsc::channel();
-    let worker = thread::spawn(move || {
+    let worker = support::spawn_async(async move || {
         attempting_tx
             .send(())
             .expect("wait-timing coordinator should remain live");
-        let (baseline, outcome) = worker_pool.acquire().expect("held slot should restore");
+        let (baseline, outcome) = worker_pool
+            .acquire()
+            .await
+            .expect("held slot should restore");
         acquired_tx
-            .send((baseline.pocket_ic().instance_id(), outcome))
+            .send((baseline.pocket_ic().instance_id, outcome))
             .expect("wait-timing receiver should remain live");
     });
 
@@ -921,7 +985,7 @@ fn capacity_one_reports_time_waiting_for_the_held_slot() {
             .is_err(),
         "capacity one must not release a second lease while the first is held",
     );
-    let first_instance = first.pocket_ic().instance_id();
+    let first_instance = first.pocket_ic().instance_id;
     drop(first);
 
     let (second_instance, outcome) = acquired_rx
@@ -941,18 +1005,24 @@ fn capacity_one_reports_time_waiting_for_the_held_slot() {
         .expect("wait-timing worker should exit cleanly");
 }
 
-#[test]
-fn one_slot_survives_one_hundred_consecutive_restores() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn one_slot_survives_one_hundred_consecutive_restores() {
     let controls = RecipeControls::default();
     let pool = CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(1).unwrap(),
         TwoCanisterRecipe::new(controls.clone()),
     );
-    drop(pool.acquire().expect("stress baseline should build").0);
+    drop(
+        pool.acquire()
+            .await
+            .expect("stress baseline should build")
+            .0,
+    );
 
     for iteration in 0..100 {
         let (baseline, outcome) = pool
             .acquire()
+            .await
             .unwrap_or_else(|error| panic!("stress restore {iteration} should succeed: {error}"));
         assert!(matches!(
             outcome.disposition,
@@ -963,6 +1033,7 @@ fn one_slot_survives_one_hundred_consecutive_restores() {
         baseline
             .pocket_ic()
             .uninstall_canister(canister_id, None)
+            .await
             .unwrap_or_else(|error| panic!("stress mutation {iteration} failed: {error}"));
         drop(baseline);
     }

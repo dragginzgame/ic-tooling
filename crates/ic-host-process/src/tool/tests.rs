@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::{Fixture, LIMITS, VERSION, admit, tool_path};
+use crate::tests::support::{Fixture, LIMITS, VERSION, admit, tool_path};
 use ic_host_fs::read::hash_file;
 use std::os::unix::ffi::OsStringExt as _;
 

@@ -48,3 +48,13 @@ Keep this pin until an intentional joint adapter upgrade qualifies client/facade
 type identity and the installed management/snapshot contract. Run the focused
 `client_management_identity` test and the `client_installed` test with an explicitly
 admitted 16.1 server; native host and Wasm graph obligations remain separate.
+
+### Async-only client contract
+
+The next Testkit minor keeps one async PocketIC implementation. The caller owns
+its Tokio runtime. Network and lifecycle helpers must not recreate blocking
+wrappers or private runtimes. Explicit instance/baseline close and raw client
+async deletion retain server custody; Rust Drop performs no client network I/O.
+Keep cancellation/no-replay evidence and force cancelled pool preparations to
+rebuild before reuse. Pure fixture generation and command-process execution stay
+synchronous. See [the migration](docs/testkit/client-migration.md).

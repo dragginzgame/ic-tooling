@@ -18,7 +18,7 @@ use std::{path::Path, time::Duration};
 #[cfg(unix)]
 use crate::artifacts::{
     SharedIncrementalTargetMaintenanceOutcome, WasmBuildInputSnapshot,
-    test_support::fake_wasm_build_spec,
+    support_tests::fake_wasm_build_spec,
 };
 use crate::testing::fs::unique_temp_directory;
 #[cfg(unix)]

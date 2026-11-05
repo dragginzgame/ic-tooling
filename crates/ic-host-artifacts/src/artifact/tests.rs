@@ -1,4 +1,6 @@
-use super::test_support::{DeniedReader, InvalidReader};
+pub(super) mod support;
+
+use super::tests::support::{DeniedReader, InvalidReader};
 use super::*;
 use std::{fmt::Write as _, io::Cursor};
 

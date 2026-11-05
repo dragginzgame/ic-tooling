@@ -1,5 +1,5 @@
-#[test]
-fn cleanup_preserves_causes_and_senders_and_continues_after_each_failure() {
+#[tokio::test]
+async fn cleanup_preserves_causes_and_senders_and_continues_after_each_failure() {
     use super::{ControllerSnapshot, SnapshotCleanupFailure, cleanup_captured_snapshots};
     use crate::pocket_ic::{ClientError, ErrorCode, RejectCode, RejectResponse};
     use ic_platform_types::principal::ExternalPrincipal as Principal;
@@ -26,16 +26,20 @@ fn cleanup_preserves_causes_and_senders_and_continues_after_each_failure() {
     };
     let mut calls = Vec::new();
     let failures = cleanup_captured_snapshots(snapshots, |id, selected_sender, snapshot_id| {
-        assert_eq!(snapshot_id, [7]);
-        calls.push((id, selected_sender));
-        if id == ids[1] {
-            return Err(ClientError::Canister(rejection.clone()));
-        }
-        if id == ids[2] {
-            return Err(ClientError::Protocol("synthetic cleanup failure".into()));
-        }
-        Ok(())
-    });
+        let result = (|| {
+            assert_eq!(snapshot_id, [7]);
+            calls.push((id, selected_sender));
+            if id == ids[1] {
+                return Err(ClientError::Canister(rejection.clone()));
+            }
+            if id == ids[2] {
+                return Err(ClientError::Protocol("synthetic cleanup failure".into()));
+            }
+            Ok(())
+        })();
+        std::future::ready(result)
+    })
+    .await;
     assert_eq!(calls, ids.map(|id| (id, sender)));
     let [
         SnapshotCleanupFailure {

@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    test_support::{Fixture, LIMITS, VERSION, admit},
+    tests::support::{Fixture, LIMITS, VERSION, admit},
     tool::{ExecutionFailure, OutputStream},
 };
 use std::{fs, path::Path};

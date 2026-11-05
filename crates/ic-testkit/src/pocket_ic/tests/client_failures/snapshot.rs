@@ -80,8 +80,8 @@ fn call(request: &str) -> RawCanisterCall {
     serde_json::from_str(request.split_once('\n').unwrap().1).unwrap()
 }
 
-#[test]
-fn sync_copy_preserves_exact_dto_bytes_sparse_globals_and_sender() {
+#[tokio::test]
+async fn sync_copy_preserves_exact_dto_bytes_sparse_globals_and_sender() {
     let mut steps = uploaded_steps();
     steps.extend(call_steps(
         encode_args((ReadCanisterSnapshotDataResult {
@@ -93,11 +93,11 @@ fn sync_copy_preserves_exact_dto_bytes_sparse_globals_and_sender() {
     let server = Server::new(steps);
     let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
     let mut copy = transfer(metadata());
-    copy.advance(&client).unwrap();
+    copy.advance(&client).await.unwrap();
     assert_eq!(copy.uploaded_snapshot(), Some([2].as_slice()));
     assert_eq!(copy.transferred_bytes(), 0);
-    copy.advance(&client).unwrap();
-    copy.advance(&client).unwrap();
+    copy.advance(&client).await.unwrap();
+    copy.advance(&client).await.unwrap();
     assert!(matches!(copy.status(), TransferStatus::Complete));
     let requests = server.finish();
     assert_eq!(requests.len(), 6);
@@ -155,17 +155,16 @@ async fn partial_and_oversized_regions_refuse_without_uploading_or_losing_custod
             encode_args((ReadCanisterSnapshotDataResult { chunk },)).unwrap(),
         ));
         let server = Server::new(steps);
-        let client =
-            nonblocking::PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
+        let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
         let mut copy = transfer(metadata());
-        copy.advance_async(&client).await.unwrap();
+        copy.advance(&client).await.unwrap();
         assert!(matches!(
-            copy.advance_async(&client).await,
+            copy.advance(&client).await,
             Err(SnapshotError::Invalid(_))
         ));
         assert_eq!(copy.uploaded_snapshot(), Some([2].as_slice()));
         assert!(matches!(copy.status(), TransferStatus::Reading(_)));
-        assert!(copy.advance_async(&client).await.is_err());
+        assert!(copy.advance(&client).await.is_err());
         assert_eq!(server.finish().len(), 4);
     }
 }
@@ -192,11 +191,10 @@ async fn chunk_hash_and_total_budget_are_checked_before_upload() {
             encode_args((ReadCanisterSnapshotDataResult { chunk: data },)).unwrap(),
         ));
         let server = Server::new(steps);
-        let client =
-            nonblocking::PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-        copy.advance_async(&client).await.unwrap();
+        let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
+        copy.advance(&client).await.unwrap();
         assert!(matches!(
-            copy.advance_async(&client).await,
+            copy.advance(&client).await,
             Err(SnapshotError::Invalid(_))
         ));
         assert_eq!(server.finish().len(), 4);
@@ -216,11 +214,10 @@ async fn interrupted_upload_retains_id_ingress_and_no_replay() {
     lost[1].status = 0;
     steps.extend(lost);
     let server = Server::new(steps);
-    let client =
-        nonblocking::PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
+    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
     let mut copy = transfer(metadata());
-    copy.advance_async(&client).await.unwrap();
-    let error = copy.advance_async(&client).await.unwrap_err();
+    copy.advance(&client).await.unwrap();
+    let error = copy.advance(&client).await.unwrap_err();
     assert!(matches!(
         error,
         SnapshotError::Call {
@@ -231,7 +228,7 @@ async fn interrupted_upload_retains_id_ingress_and_no_replay() {
     assert!(matches!(copy.status(), TransferStatus::Writing(_)));
     assert_eq!(copy.ingress().unwrap().message_id, [1, 2]);
     assert_eq!(copy.uploaded_snapshot(), Some([2].as_slice()));
-    assert!(copy.advance_async(&client).await.is_err());
+    assert!(copy.advance(&client).await.is_err());
     assert_eq!(server.finish().len(), 6);
 }
 
@@ -240,18 +237,17 @@ async fn cancelled_metadata_upload_preserves_accepted_ingress() {
     let mut steps = uploaded_steps();
     steps[1].stall = true;
     let server = Server::new(steps);
-    let client =
-        nonblocking::PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
+    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
     let mut copy = transfer(metadata());
     assert!(
-        tokio::time::timeout(Duration::from_millis(60), copy.advance_async(&client))
+        tokio::time::timeout(Duration::from_millis(60), copy.advance(&client))
             .await
             .is_err()
     );
     assert!(matches!(copy.status(), TransferStatus::UploadingMetadata));
     assert!(copy.ingress().is_some());
     assert!(copy.uploaded_snapshot().is_none());
-    assert!(copy.advance_async(&client).await.is_err());
+    assert!(copy.advance(&client).await.is_err());
     assert_eq!(server.finish().len(), 2);
 }
 
@@ -264,8 +260,7 @@ async fn reply_limits_and_codec_errors_keep_accepted_ingress() {
             encode_args((vec![0u8; 1000],)).unwrap()
         };
         let server = Server::new(call_steps(reply));
-        let client =
-            nonblocking::PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
+        let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
         let mut budget = limits().call;
         if mode == "http" {
             budget.http_bytes = 100;
@@ -356,11 +351,10 @@ async fn async_copy_bounds_each_region_and_preserves_valid_chunk_store() {
         steps.extend(call_steps(encode_args(()).unwrap()));
     }
     let server = Server::new(steps);
-    let client =
-        nonblocking::PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
+    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
     let mut copy = transfer(meta);
     while !matches!(copy.status(), TransferStatus::Complete) {
-        copy.advance_async(&client).await.unwrap();
+        copy.advance(&client).await.unwrap();
     }
     assert_eq!(copy.transferred_bytes(), 10);
     let requests = server.finish();

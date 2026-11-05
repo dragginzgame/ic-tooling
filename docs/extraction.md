@@ -33,7 +33,7 @@ operations belong to the maintained client in `ic_testkit::pocket_ic`, under the
 same package version as Testkit's `pic` lifecycle helpers. Candid and management
 adapters retain Platform without its PocketIC feature. The workspace manifest
 owns exact dependency versions; the [client migration](testkit/client-migration.md)
-describes the pending ownership cutover.
+describes the async-only client and explicit teardown contract.
 
 Host Tools selects Platform for external Candid decoding, native parsing and
 optional certification. Platform owns those protocol adapters; Tools retains

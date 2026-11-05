@@ -27,12 +27,16 @@ pub enum TickUntilError<E> {
 ///
 /// # Errors
 /// Returns the first client failure without dispatching remaining ticks.
-pub fn advance_and_tick(pic: &PocketIc, advance: Duration, ticks: u32) -> Result<(), ClientError> {
+pub async fn advance_and_tick(
+    pic: &PocketIc,
+    advance: Duration,
+    ticks: u32,
+) -> Result<(), ClientError> {
     if !advance.is_zero() {
-        pic.advance_time(advance)?;
+        pic.advance_time(advance).await?;
     }
     for _ in 0..ticks {
-        pic.tick()?;
+        pic.tick().await?;
     }
     Ok(())
 }
@@ -51,33 +55,34 @@ pub fn advance_and_tick(pic: &PocketIc, advance: Duration, ticks: u32) -> Result
 ///
 /// # Errors
 /// Returns the predicate error or `ProgressLimit` when all permitted rounds remain pending.
-pub fn tick_until<T, E>(
+pub async fn tick_until<T, E>(
     pic: &PocketIc,
     max_rounds: u32,
     advance: Duration,
-    mut poll: impl FnMut(&PocketIc) -> Poll<Result<T, E>>,
+    mut poll: impl AsyncFnMut(&PocketIc) -> Poll<Result<T, E>>,
 ) -> Result<T, TickUntilError<E>> {
     poll_with_rounds(
         max_rounds,
-        || advance_and_tick(pic, advance, 1),
-        || poll(pic),
+        async || advance_and_tick(pic, advance, 1).await,
+        async || poll(pic).await,
     )
+    .await
 }
 
-fn poll_with_rounds<T, E>(
+async fn poll_with_rounds<T, E>(
     max_rounds: u32,
-    mut round: impl FnMut() -> Result<(), ClientError>,
-    mut poll: impl FnMut() -> Poll<Result<T, E>>,
+    mut round: impl AsyncFnMut() -> Result<(), ClientError>,
+    mut poll: impl AsyncFnMut() -> Poll<Result<T, E>>,
 ) -> Result<T, TickUntilError<E>> {
     let mut rounds = 0;
     loop {
-        match poll() {
+        match poll().await {
             Poll::Ready(result) => return result.map_err(TickUntilError::Failed),
             Poll::Pending if rounds == max_rounds => {
                 return Err(TickUntilError::ProgressLimit { rounds });
             }
             Poll::Pending => {
-                round().map_err(TickUntilError::Progress)?;
+                round().await.map_err(TickUntilError::Progress)?;
                 rounds += 1;
             }
         }

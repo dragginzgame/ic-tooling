@@ -3,7 +3,7 @@ use std::num::NonZeroUsize;
 use super::*;
 use crate::pic::CachedPocketIcBaselinePool;
 
-fn build_fixture() -> io::Result<StandaloneCanisterFixture> {
+async fn build_fixture() -> io::Result<StandaloneCanisterFixture> {
     panic!("constructing an empty pool must not invoke its builder")
 }
 
@@ -19,9 +19,9 @@ fn runtime_capacity_preserves_lazy_fixture_construction() {
     }
 }
 
-#[test]
-fn builder_errors_preserve_the_cause_and_release_the_slot_for_another_attempt() {
-    let recipe = StandaloneCanisterRecipe::new(SnapshotRestoreFunding::Preserve, || {
+#[tokio::test]
+async fn builder_errors_preserve_the_cause_and_release_the_slot_for_another_attempt() {
+    let recipe = StandaloneCanisterRecipe::new(SnapshotRestoreFunding::Preserve, async || {
         Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
             std::fmt::Error,
@@ -36,7 +36,7 @@ fn builder_errors_preserve_the_cause_and_release_the_slot_for_another_attempt() 
                     source,
                 },
             timings,
-        }) = pool.acquire()
+        }) = pool.acquire().await
         else {
             panic!("builder failure must return at the build stage");
         };

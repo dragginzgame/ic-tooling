@@ -25,7 +25,7 @@ impl<T> CachedPocketIcBaseline<T> {
     ///
     /// # Errors
     /// Returns a controller snapshot error if target admission or snapshot capture fails.
-    pub fn capture<I>(
+    pub async fn capture<I>(
         instance: PocketIcInstance<PocketIc>,
         targets: I,
         metadata: T,
@@ -34,10 +34,20 @@ impl<T> CachedPocketIcBaseline<T> {
         I: IntoIterator<Item = CanisterSnapshotTarget>,
     {
         let mut targets = targets.into_iter().peekable();
-        if targets.peek().is_none() {
-            return Err(ControllerSnapshotError::EmptyCanisterSet);
-        }
-        let snapshots = instance.instance().capture_snapshots(targets)?;
+        let capture = if targets.peek().is_none() {
+            Err(ControllerSnapshotError::EmptyCanisterSet)
+        } else {
+            instance.instance().capture_snapshots(targets).await
+        };
+        let snapshots = match capture {
+            Ok(snapshots) => snapshots,
+            Err(error) => {
+                if let Err(cleanup) = instance.close().await {
+                    tracing::warn!("PocketIC deletion after capture failure failed: {cleanup}");
+                }
+                return Err(error);
+            }
+        };
         Ok(Self {
             instance,
             snapshots,
@@ -52,10 +62,26 @@ impl<T> CachedPocketIcBaseline<T> {
     ///
     /// # Errors
     /// Returns a controller snapshot error if funding or snapshot restoration fails.
-    pub fn restore(&self, funding: SnapshotRestoreFunding) -> Result<(), ControllerSnapshotError> {
+    #[expect(
+        clippy::future_not_send,
+        reason = "baseline metadata may be local; pool recipes separately require Sync metadata"
+    )]
+    pub async fn restore(
+        &self,
+        funding: SnapshotRestoreFunding,
+    ) -> Result<(), ControllerSnapshotError> {
         self.instance
             .instance()
             .restore_snapshots(&self.snapshots, funding)
+            .await
+    }
+
+    /// Explicitly delete the instance before releasing its managed server.
+    /// Cancellation on a borrowed server requires caller reconciliation.
+    /// # Errors
+    /// Returns the client deletion failure, without retrying it.
+    pub async fn close(self) -> Result<(), crate::pocket_ic::ClientError> {
+        self.instance.close().await
     }
 
     /// Borrow the owned `PocketIC` instance behind this cached baseline.

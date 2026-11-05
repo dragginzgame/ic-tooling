@@ -1,7 +1,7 @@
 use std::{fs, os::unix::fs::PermissionsExt as _, process::Command, thread};
 
 use super::write_executable_script;
-use crate::test_support::Fixture;
+use crate::tests::support::Fixture;
 
 #[test]
 fn process_state_observes_a_live_process_and_a_reaped_child() {

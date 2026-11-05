@@ -22,7 +22,7 @@ fn medians_and_nearest_ranks_preserve_distinct_definitions() {
     assert_eq!(result.count, 4);
     assert_eq!((result.mean, result.p50, result.p95), (2.5, 2.5, 4.0));
     let mut values =
-        core::array::from_fn::<_, 20, _>(|index| f64::from(u32::try_from(20 - index).unwrap()));
+        std::array::from_fn::<_, 20, _>(|index| f64::from(u32::try_from(20 - index).unwrap()));
     let result = summarize_samples(&mut values).unwrap().unwrap();
     assert!((result.mean - 10.5).abs() <= 10.5 * 4.0 * f64::EPSILON);
     assert_eq!((result.p50, result.p95), (10.5, 19.0));

@@ -103,7 +103,7 @@ fn sum_optional_durations(
 }
 
 #[cfg(test)]
-pub(crate) mod test_support;
+pub(crate) mod support_tests;
 
 #[cfg(all(test, unix))]
 mod host_tests;

@@ -1,4 +1,4 @@
-use crate::pocket_ic::{ClientError, PocketIc, nonblocking};
+use crate::pocket_ic::{ClientError, PocketIc};
 use std::{
     io::{Read, Write},
     net::TcpListener,
@@ -131,43 +131,31 @@ impl Server {
     }
 }
 
-#[test]
-fn missing_server_is_refused_before_any_external_effect() {
+#[tokio::test]
+async fn missing_server_is_refused_before_any_external_effect() {
     assert!(matches!(
-        crate::pocket_ic::PocketIcBuilder::new().build(),
-        Err(ClientError::MissingServerUrl)
-    ));
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    assert!(matches!(
-        runtime.block_on(crate::pocket_ic::PocketIcBuilder::new().build_async()),
+        crate::pocket_ic::PocketIcBuilder::new().build().await,
         Err(ClientError::MissingServerUrl)
     ));
 }
 
-#[test]
-fn instance_listing_uses_only_the_supplied_endpoint() {
-    for asynchronous in [false, true] {
+#[tokio::test]
+async fn instance_listing_uses_only_the_supplied_endpoint() {
+    {
         let server = Server::new(vec![Step::reply(
             "/instances",
             200,
             r#"["Available","Busy"]"#,
         )]);
-        let instances = if asynchronous {
-            tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(nonblocking::PocketIc::list_instances(server.url.clone()))
-        } else {
-            PocketIc::list_instances(server.url.clone())
-        }
-        .unwrap();
+        let instances = PocketIc::list_instances(server.url.clone()).await.unwrap();
         assert_eq!(instances, ["Available", "Busy"]);
         assert_eq!(server.finish().len(), 1);
     }
 }
 
-#[test]
-fn sync_and_async_preserve_failure_sources_and_never_resubmit_lost_requests() {
-    for asynchronous in [false, true] {
+#[tokio::test]
+async fn client_preserves_failure_sources_and_never_resubmit_lost_requests() {
+    {
         for failure in ["reset", "body", "json", "server", "timeout"] {
             let mut step = Step::reply("/instances/7/update/tick", 200, "null");
             match failure {
@@ -182,18 +170,8 @@ fn sync_and_async_preserve_failure_sources_and_never_resubmit_lost_requests() {
                 _ => unreachable!(),
             }
             let server = Server::new(vec![step]);
-            let error = if asynchronous {
-                let runtime = tokio::runtime::Runtime::new().unwrap();
-                let client = nonblocking::PocketIc::new_from_existing_instance(
-                    server.url.clone(),
-                    7,
-                    Some(50),
-                );
-                runtime.block_on(client.tick()).unwrap_err()
-            } else {
-                let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(50));
-                client.tick().unwrap_err()
-            };
+            let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(50));
+            let error = client.tick().await.unwrap_err();
             match (&error, failure) {
                 (ClientError::Transport { .. }, "reset")
                 | (ClientError::Body { .. }, "body")
@@ -238,8 +216,7 @@ async fn accepted_operation_is_polled_without_replaying_the_update() {
         Step::reply("/read_graph/state/ours", 200, "null"),
         Step::reply("/prune_graph/state/ours", 200, "null"),
     ]);
-    let client =
-        nonblocking::PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
+    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
     client.tick().await.unwrap();
     let requests = tokio::task::spawn_blocking(move || server.finish())
         .await
@@ -261,8 +238,7 @@ async fn lost_poll_retains_our_operation_identity() {
         ),
         Step::reply("/read_graph/state/ours", 0, ""),
     ]);
-    let client =
-        nonblocking::PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
+    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
     let error = client.tick().await.unwrap_err();
     let operation = error.request_context().unwrap().operation.as_ref().unwrap();
     assert_eq!(operation.state_label, "state");
@@ -270,8 +246,8 @@ async fn lost_poll_retains_our_operation_identity() {
     assert_eq!(server.finish().len(), 2);
 }
 
-#[test]
-fn rejection_remains_distinct_from_transport_failure() {
+#[tokio::test]
+async fn rejection_remains_distinct_from_transport_failure() {
     let server = Server::new(vec![Step::reply(
         "/instances/7/read/query",
         200,
@@ -279,7 +255,10 @@ fn rejection_remains_distinct_from_transport_failure() {
     )]);
     let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
     let id = candid::Principal::anonymous();
-    let ClientError::Canister(rejection) = client.query_call(id, id, "reject", vec![]).unwrap_err()
+    let ClientError::Canister(rejection) = client
+        .query_call(id, id, "reject", vec![])
+        .await
+        .unwrap_err()
     else {
         panic!("expected canister rejection")
     };
@@ -287,8 +266,8 @@ fn rejection_remains_distinct_from_transport_failure() {
     assert_eq!(server.finish().len(), 1);
 }
 
-#[test]
-fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
+#[tokio::test]
+async fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
     let server = Server::new(vec![
         Step::reply(
             "/instances",
@@ -302,23 +281,27 @@ fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
     let mut client = crate::pocket_ic::PocketIcBuilder::new()
         .with_server_url(server.url.clone())
         .build()
+        .await
         .unwrap();
     let blob = client
         .upload_blob(
             vec![0, 255],
             crate::pocket_ic::common::rest::BlobCompression::NoCompression,
         )
+        .await
         .unwrap();
     assert_eq!(blob.0, [0, 255]);
     assert!(matches!(
-        client.upload_blob(
-            vec![],
-            crate::pocket_ic::common::rest::BlobCompression::NoCompression
-        ),
+        client
+            .upload_blob(
+                vec![],
+                crate::pocket_ic::common::rest::BlobCompression::NoCompression
+            )
+            .await,
         Err(ClientError::Protocol(_))
     ));
     assert!(matches!(
-        client.drop_and_take_state(),
+        client.drop_and_take_state().await,
         Err(ClientError::Transport { .. })
     ));
     drop(client);
@@ -332,7 +315,7 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
     let server = Server::new(vec![Step::reply("/instances", 200, "{")]);
     let error = crate::pocket_ic::PocketIcBuilder::new()
         .with_server_url(server.url.clone())
-        .build_async()
+        .build()
         .await
         .err()
         .unwrap();
@@ -349,7 +332,7 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
         ),
         delayed,
     ]);
-    let client = nonblocking::PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(50));
+    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(50));
     let error = client.tick().await.unwrap_err();
     assert!(matches!(error, ClientError::Timeout { .. }));
     assert_eq!(
@@ -375,8 +358,7 @@ async fn ingress_id_survives_loss_after_successful_submission() {
         ),
         Step::reply("/instances/7/update/await_ingress_message", 0, ""),
     ]);
-    let client =
-        nonblocking::PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
+    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
     let id = candid::Principal::anonymous();
     let error = client
         .update_call(id, id, "once", vec![7])

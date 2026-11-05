@@ -9,8 +9,6 @@ use ic_host_process::tool::{
 use std::{fmt, path::Path};
 
 #[cfg(test)]
-mod test_support;
-#[cfg(test)]
 mod tests;
 
 /// A Candid extraction failed, retaining process bytes where invocation occurred.

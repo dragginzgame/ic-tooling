@@ -1,5 +1,5 @@
 // Each integration target uses only the fixtures it needs.
-#![allow(
+#![expect(
     dead_code,
     reason = "integration targets select different subsets of this shared support module"
 )]

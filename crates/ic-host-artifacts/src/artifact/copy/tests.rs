@@ -1,7 +1,7 @@
 use super::*;
 use crate::artifact::{
     Sha256Digest,
-    test_support::{DeniedReader, InvalidReader},
+    tests::support::{DeniedReader, InvalidReader},
 };
 use std::io::Cursor;
 

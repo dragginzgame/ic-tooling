@@ -109,6 +109,10 @@ pub enum ControllerSnapshotError {
 }
 
 /// Exact-sender capture and restore of related canister snapshots.
+#[expect(
+    async_fn_in_trait,
+    reason = "extension futures may retain caller-owned non-Send callbacks, iterators or writers; pool recipes separately require Send"
+)]
 pub trait PocketIcSnapshotExt {
     /// Capture snapshots with one explicit sender per canister.
     ///
@@ -124,9 +128,12 @@ pub trait PocketIcSnapshotExt {
     /// stable memory, certified data and chunk store. Transfer uses bounded
     /// management messages; total work follows the captured state size.
     ///
+    /// Cancellation cannot await rollback. Use isolated server custody or reconcile
+    /// any temporary snapshots explicitly when cancelling on a borrowed server.
+    ///
     /// # Errors
     /// Returns a target-admission or snapshot-capture error, retaining completed work.
-    fn capture_snapshots<I>(
+    async fn capture_snapshots<I>(
         &self,
         targets: I,
     ) -> Result<ControllerSnapshots, ControllerSnapshotError>
@@ -147,7 +154,7 @@ pub trait PocketIcSnapshotExt {
     ///
     /// # Errors
     /// Returns a funding or restoration error, retaining partial progress.
-    fn restore_snapshots(
+    async fn restore_snapshots(
         &self,
         snapshots: &ControllerSnapshots,
         funding: SnapshotRestoreFunding,
@@ -155,29 +162,29 @@ pub trait PocketIcSnapshotExt {
 }
 
 impl PocketIcSnapshotExt for PocketIc {
-    fn capture_snapshots<I>(
+    async fn capture_snapshots<I>(
         &self,
         targets: I,
     ) -> Result<ControllerSnapshots, ControllerSnapshotError>
     where
         I: IntoIterator<Item = CanisterSnapshotTarget>,
     {
-        capture_snapshot_set(self, targets)
+        capture_snapshot_set(self, targets).await
     }
 
-    fn restore_snapshots(
+    async fn restore_snapshots(
         &self,
         snapshots: &ControllerSnapshots,
         funding: SnapshotRestoreFunding,
     ) -> Result<(), ControllerSnapshotError> {
         for (canister_id, snapshot_id, sender) in snapshots.iter() {
-            restore_controller_snapshot(self, canister_id, snapshot_id, funding, sender)?;
+            restore_controller_snapshot(self, canister_id, snapshot_id, funding, sender).await?;
         }
         Ok(())
     }
 }
 
-fn capture_snapshot_set<I>(
+async fn capture_snapshot_set<I>(
     pocket_ic: &PocketIc,
     targets: I,
 ) -> Result<ControllerSnapshots, ControllerSnapshotError>
@@ -200,7 +207,7 @@ where
     let mut snapshots = BTreeMap::new();
     for (canister_id, sender) in ordered_targets {
         let mut pending = Vec::new();
-        let failure = match try_take_snapshot(pocket_ic, canister_id, sender, &mut pending) {
+        let failure = match try_take_snapshot(pocket_ic, canister_id, sender, &mut pending).await {
             Ok(snapshot) => {
                 snapshots.insert(canister_id, snapshot);
                 continue;
@@ -223,7 +230,8 @@ where
             |canister_id, sender, snapshot_id| {
                 pocket_ic.delete_canister_snapshot(canister_id, sender, snapshot_id)
             },
-        );
+        )
+        .await;
         return Err(match failure {
             transfer::Failure::Call(failure) => ControllerSnapshotError::CaptureFailed {
                 canister_id,
@@ -275,16 +283,20 @@ impl ControllerSnapshots {
     }
 }
 
-fn try_take_snapshot(
+async fn try_take_snapshot(
     pocket_ic: &PocketIc,
     canister_id: Principal,
     sender: Option<Principal>,
     pending: &mut Vec<Vec<u8>>,
 ) -> Result<ControllerSnapshot, transfer::Failure> {
-    let snapshot = pocket_ic.take_canister_snapshot(canister_id, sender, None)?;
+    let snapshot = pocket_ic
+        .take_canister_snapshot(canister_id, sender, None)
+        .await?;
     pending.push(snapshot.id.clone());
-    let uploaded = transfer::upload(pocket_ic, canister_id, sender, &snapshot.id, pending)?;
-    pocket_ic.delete_canister_snapshot(canister_id, sender, snapshot.id)?;
+    let uploaded = transfer::upload(pocket_ic, canister_id, sender, &snapshot.id, pending).await?;
+    pocket_ic
+        .delete_canister_snapshot(canister_id, sender, snapshot.id)
+        .await?;
     pending.clear();
     Ok(ControllerSnapshot {
         snapshot_id: uploaded,
@@ -292,13 +304,17 @@ fn try_take_snapshot(
     })
 }
 
-fn cleanup_captured_snapshots(
+async fn cleanup_captured_snapshots<F, Fut>(
     snapshots: impl IntoIterator<Item = (Principal, ControllerSnapshot)>,
-    mut remove: impl FnMut(Principal, Option<Principal>, Vec<u8>) -> Result<(), ClientError>,
-) -> Vec<SnapshotCleanupFailure> {
+    mut remove: F,
+) -> Vec<SnapshotCleanupFailure>
+where
+    F: FnMut(Principal, Option<Principal>, Vec<u8>) -> Fut,
+    Fut: std::future::Future<Output = Result<(), ClientError>>,
+{
     let mut failures = Vec::new();
     for (canister_id, snapshot) in snapshots {
-        let cleanup = remove(canister_id, snapshot.sender, snapshot.snapshot_id.clone());
+        let cleanup = remove(canister_id, snapshot.sender, snapshot.snapshot_id.clone()).await;
         if let Err(source) = cleanup {
             failures.push(SnapshotCleanupFailure {
                 canister_id,
@@ -311,23 +327,28 @@ fn cleanup_captured_snapshots(
     failures
 }
 
-fn restore_controller_snapshot(
+async fn restore_controller_snapshot(
     pocket_ic: &PocketIc,
     canister_id: Principal,
     snapshot_id: &[u8],
     funding: SnapshotRestoreFunding,
     sender: Option<Principal>,
 ) -> Result<(), ControllerSnapshotError> {
-    apply_snapshot_restore_funding(pocket_ic, canister_id, funding)
-        .and_then(|()| pocket_ic.load_canister_snapshot(canister_id, sender, snapshot_id.to_vec()))
-        .map_err(|source| ControllerSnapshotError::RestoreFailed {
-            canister_id,
-            sender,
-            source: Box::new(source),
-        })
+    async {
+        apply_snapshot_restore_funding(pocket_ic, canister_id, funding).await?;
+        pocket_ic
+            .load_canister_snapshot(canister_id, sender, snapshot_id.to_vec())
+            .await
+    }
+    .await
+    .map_err(|source| ControllerSnapshotError::RestoreFailed {
+        canister_id,
+        sender,
+        source: Box::new(source),
+    })
 }
 
-fn apply_snapshot_restore_funding(
+async fn apply_snapshot_restore_funding(
     pocket_ic: &PocketIc,
     canister_id: Principal,
     funding: SnapshotRestoreFunding,
@@ -335,9 +356,9 @@ fn apply_snapshot_restore_funding(
     match funding {
         SnapshotRestoreFunding::Preserve => {}
         SnapshotRestoreFunding::TopUpTo { minimum_cycles } => {
-            let top_up = minimum_cycles.saturating_sub(pocket_ic.cycle_balance(canister_id)?);
+            let top_up = minimum_cycles.saturating_sub(pocket_ic.cycle_balance(canister_id).await?);
             if top_up > 0 {
-                pocket_ic.add_cycles(canister_id, top_up)?;
+                pocket_ic.add_cycles(canister_id, top_up).await?;
             }
         }
     }

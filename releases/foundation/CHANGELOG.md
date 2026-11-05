@@ -6,6 +6,13 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.74.4] - Unreleased
+
+### 🧪 Testing
+
+- Place private Artifacts and Process test helpers under their owning `tests/`
+  modules, preserving their effective visibility and test behavior.
+
 ## [0.74.3] - 2026-11-04
 
 ### 🧹 Cleanup

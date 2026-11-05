@@ -77,15 +77,15 @@ fn recipe_error(error: impl Error + Send + Sync + 'static) -> RecipeError {
     RecipeError(Box::new(error))
 }
 
-fn lifecycle(
-    call: impl FnOnce() -> std::result::Result<(), ic_testkit::pocket_ic::ClientError>,
+async fn lifecycle(
+    call: impl AsyncFnOnce() -> std::result::Result<(), ic_testkit::pocket_ic::ClientError>,
 ) -> std::result::Result<(), RecipeError> {
-    call().map_err(recipe_error)
+    call().await.map_err(recipe_error)
 }
 
 impl Recipe {
     // Fresh construction intentionally does not pay for snapshot capture.
-    fn create(
+    async fn create(
         &self,
     ) -> std::result::Result<(PocketIcInstance<PocketIc>, [Principal; 2]), RecipeError> {
         let pic = PocketIcStartupConfig::Connect {
@@ -97,17 +97,26 @@ impl Recipe {
                 .with_application_subnet()
                 .with_max_request_time_ms(Some(30_000)),
         )
+        .await
         .map_err(recipe_error)?;
         let ids = [
-            pic.instance().create_canister().map_err(recipe_error)?,
-            pic.instance().create_canister().map_err(recipe_error)?,
+            pic.instance()
+                .create_canister()
+                .await
+                .map_err(recipe_error)?,
+            pic.instance()
+                .create_canister()
+                .await
+                .map_err(recipe_error)?,
         ];
         for id in ids {
             pic.instance()
                 .add_cycles(id, 5_000_000_000_000)
+                .await
                 .map_err(recipe_error)?;
             pic.instance()
                 .install_canister(id, self.wasm.to_vec(), vec![], None)
+                .await
                 .map_err(recipe_error)?;
             update_wire::<u32, ()>(
                 pic.instance(),
@@ -116,12 +125,13 @@ impl Recipe {
                 probe_wire_spec(SEED_STATE),
                 &self.state_bytes,
             )
+            .await
             .map_err(recipe_error)?;
         }
         Ok((pic, ids))
     }
 
-    fn validate_state(
+    async fn validate_state(
         &self,
         pic: &PocketIc,
         ids: &[Principal; 2],
@@ -141,6 +151,7 @@ impl Recipe {
                 probe_wire_spec(INSPECT_STATE),
                 &(),
             )
+            .await
             .map_err(recipe_error)?;
             if state != expected {
                 return Err(recipe_error(io::Error::other(format!(
@@ -151,7 +162,7 @@ impl Recipe {
         Ok(())
     }
 
-    fn exercise(&self, pic: &PocketIc, ids: &[Principal; 2]) -> Result<()> {
+    async fn exercise(&self, pic: &PocketIc, ids: &[Principal; 2]) -> Result<()> {
         for id in ids {
             update_wire::<_, ()>(
                 pic,
@@ -159,9 +170,10 @@ impl Recipe {
                 Principal::anonymous(),
                 probe_wire_spec(MUTATE_STATE),
                 &(),
-            )?;
+            )
+            .await?;
         }
-        self.validate_state(pic, ids, true)?;
+        self.validate_state(pic, ids, true).await?;
         Ok(())
     }
 }
@@ -174,10 +186,12 @@ impl PocketIcBaselineRecipe for Recipe {
         &self.requirements
     }
 
-    fn build(&self) -> std::result::Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error> {
-        let (pic, ids) = self.create()?;
+    async fn build(
+        &self,
+    ) -> std::result::Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error> {
+        let (pic, ids) = self.create().await?;
         for id in ids {
-            lifecycle(|| pic.instance().stop_canister(id, None))?;
+            lifecycle(async || pic.instance().stop_canister(id, None).await).await?;
         }
         let baseline = CachedPocketIcBaseline::capture(
             pic,
@@ -187,17 +201,18 @@ impl PocketIcBaselineRecipe for Recipe {
             }),
             ids,
         )
+        .await
         .map_err(recipe_error)?;
-        self.drive_to_readiness(&baseline)?;
+        self.drive_to_readiness(&baseline).await?;
         Ok(baseline)
     }
 
-    fn prepare_restore(
+    async fn prepare_restore(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
     ) -> std::result::Result<(), Self::Error> {
         for id in baseline.metadata() {
-            lifecycle(|| baseline.pocket_ic().stop_canister(*id, None))?;
+            lifecycle(async || baseline.pocket_ic().stop_canister(*id, None).await).await?;
         }
         Ok(())
     }
@@ -205,28 +220,30 @@ impl PocketIcBaselineRecipe for Recipe {
     fn reset_non_snapshot_state(
         &self,
         _baseline: &CachedPocketIcBaseline<Self::Metadata>,
-    ) -> std::result::Result<ResetReceipt, Self::Error> {
+    ) -> impl std::future::Future<Output = std::result::Result<ResetReceipt, Self::Error>> + Send
+    {
         // This workload mutates only captured canister state. Time and cycle
         // balances are deliberately not asserted to rewind.
-        Ok(ResetReceipt::default())
+        std::future::ready(Ok(ResetReceipt::default()))
     }
 
-    fn drive_to_readiness(
+    async fn drive_to_readiness(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
     ) -> std::result::Result<(), Self::Error> {
         for id in baseline.metadata() {
-            lifecycle(|| baseline.pocket_ic().start_canister(*id, None))?;
+            lifecycle(async || baseline.pocket_ic().start_canister(*id, None).await).await?;
         }
         Ok(())
     }
 
-    fn validate(
+    async fn validate(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
         _preparation: &PreparedBaseline,
     ) -> std::result::Result<(), Self::Error> {
-        self.validate_state(baseline.pocket_ic(), baseline.metadata(), false)?;
+        self.validate_state(baseline.pocket_ic(), baseline.metadata(), false)
+            .await?;
         Ok(())
     }
 
@@ -258,53 +275,69 @@ fn ms(duration: Duration) -> f64 {
     duration.as_secs_f64() * 1000.0
 }
 
-fn fresh_sample(recipe: &Recipe, iteration: usize) -> Result<Sample> {
+async fn fresh_sample(recipe: &Recipe, iteration: usize) -> Result<Sample> {
     let started = Instant::now();
-    let (pic, ids) = recipe.create()?;
+    let (pic, ids) = recipe.create().await?;
     let build_ms = Some(ms(started.elapsed()));
     let validation_started = Instant::now();
-    recipe.validate_state(pic.instance(), &ids, false)?;
+    recipe.validate_state(pic.instance(), &ids, false).await?;
     let phases = Phases {
         build_ms,
         validation_ms: Some(ms(validation_started.elapsed())),
         acquisition_ms: ms(started.elapsed()),
         ..Phases::default()
     };
-    measure_sample(iteration, started, phases, pic, |owned| {
-        recipe.exercise(owned.instance(), &ids)
-    })
+    measure_sample(
+        iteration,
+        started,
+        phases,
+        pic,
+        async |owned| recipe.exercise(owned.instance(), &ids).await,
+        async |owned| owned.close().await.map_err(Into::into),
+    )
+    .await
 }
 
-fn pooled_sample(
+async fn pooled_sample(
     pool: &CachedPocketIcBaselinePool<Recipe>,
     recipe: &Recipe,
     iteration: usize,
 ) -> Result<Sample> {
     let started = Instant::now();
-    let (fixture, outcome) = pool.acquire()?;
+    let (fixture, outcome) = pool.acquire().await?;
     if !matches!(outcome.disposition, BaselinePoolDisposition::Restored) {
         return Err(io::Error::other("measured pooled acquisition was not a warm restore").into());
     }
     let phases = outcome.timings.into();
-    measure_sample(iteration, started, phases, fixture, |owned| {
-        recipe.exercise(owned.pocket_ic(), owned.metadata())
-    })
+    measure_sample(
+        iteration,
+        started,
+        phases,
+        fixture,
+        async |owned| recipe.exercise(owned.pocket_ic(), owned.metadata()).await,
+        async |owned| {
+            drop(owned);
+            Ok(())
+        },
+    )
+    .await
 }
 
 // Both modes measure the same body and release boundaries. The caller supplies
 // the acquisition phases and retains its distinct fresh/warm admission policy.
-fn measure_sample<T>(
+async fn measure_sample<T>(
     iteration: usize,
     started: Instant,
     phases: Phases,
     fixture: T,
-    exercise: impl FnOnce(&T) -> Result<()>,
+    exercise: impl AsyncFnOnce(&T) -> Result<()>,
+    release_fixture: impl AsyncFnOnce(T) -> Result<()>,
 ) -> Result<Sample> {
     let body = Instant::now();
-    exercise(&fixture)?;
+    exercise(&fixture).await?;
     let body_ms = ms(body.elapsed());
     let release = Instant::now();
-    drop(fixture);
+    release_fixture(fixture).await?;
     Ok(Sample {
         iteration,
         phases,
@@ -317,21 +350,23 @@ fn measure_sample<T>(
 fn run_tasks(
     iterations: NonZeroUsize,
     workers: NonZeroUsize,
-    sample: impl Fn(usize) -> Result<Sample> + Sync,
+    sample: impl AsyncFn(usize) -> Result<Sample> + Sync,
 ) -> Result<(Vec<Sample>, f64)> {
+    let runtime = tokio::runtime::Handle::current();
     let barrier = Barrier::new(workers.get() + 1);
     thread::scope(|scope| -> Result<_> {
         let handles = (0..workers.get())
             .map(|worker| {
                 let barrier = &barrier;
                 let sample = &sample;
+                let runtime = &runtime;
                 scope.spawn(move || -> Result<Vec<Sample>> {
                     barrier.wait();
                     (worker..iterations.get())
                         .step_by(workers.get())
                         .map(|iteration| {
                             check_shutdown()?;
-                            sample(iteration)
+                            runtime.block_on(sample(iteration))
                         })
                         .collect()
                 })
@@ -358,7 +393,18 @@ fn run_tasks(
     })
 }
 
-pub fn run(arguments: WorkerArguments) -> Result<()> {
+async fn close_pool(pool: CachedPocketIcBaselinePool<Recipe>) -> Result<()> {
+    let failures = pool.close().await;
+    for error in &failures {
+        eprintln!("instance deletion failed: {error}");
+    }
+    if let Some(error) = failures.into_iter().next() {
+        return Err(error.into());
+    }
+    Ok(())
+}
+
+pub async fn run(arguments: WorkerArguments) -> Result<()> {
     // Install before creating any owned server. A stop arriving earlier may
     // terminate this resource-free process; later stops must unwind ownership.
     #[cfg(unix)]
@@ -405,30 +451,32 @@ pub fn run(arguments: WorkerArguments) -> Result<()> {
         let mut held = Vec::new();
         for _ in 0..capacity.get() {
             check_shutdown()?;
-            let (fixture, outcome) = pool.acquire()?;
+            let (fixture, outcome) = pool.acquire().await?;
             if !matches!(outcome.disposition, BaselinePoolDisposition::Built) {
                 return Err(io::Error::other("initial slot was not built").into());
             }
             cold.push(Phases::from(outcome.timings));
             // The first timed restore must prove it undoes a real mutation too.
-            recipe.exercise(fixture.pocket_ic(), fixture.metadata())?;
+            recipe
+                .exercise(fixture.pocket_ic(), fixture.metadata())
+                .await?;
             held.push(fixture);
         }
         drop(held);
     }
     let preparation_wall_ms = ms(preparation.elapsed());
     let (mut samples, wall_ms) = match mode {
-        Mode::Fresh => run_tasks(iterations, workers, |iteration| {
-            fresh_sample(&recipe, iteration)
+        Mode::Fresh => run_tasks(iterations, workers, async |iteration| {
+            fresh_sample(&recipe, iteration).await
         }),
-        Mode::Pooled => run_tasks(iterations, workers, |iteration| {
-            pooled_sample(&pool, &recipe, iteration)
+        Mode::Pooled => run_tasks(iterations, workers, async |iteration| {
+            pooled_sample(&pool, &recipe, iteration).await
         }),
     }?;
     check_shutdown()?;
     samples.sort_by_key(|sample| sample.iteration);
     let teardown = Instant::now();
-    drop(pool);
+    close_pool(pool).await?;
     let pool_teardown_ms = ms(teardown.elapsed());
     let fixture_wall_ms = ms(fixture_started.elapsed());
     let teardown = Instant::now();

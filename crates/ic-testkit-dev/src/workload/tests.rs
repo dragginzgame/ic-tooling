@@ -10,12 +10,12 @@ fn sample(iteration: usize) -> Sample {
     }
 }
 
-#[test]
-fn task_collection_preserves_worker_order_and_every_iteration() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn task_collection_preserves_worker_order_and_every_iteration() {
     let (samples, _) = run_tasks(
         NonZeroUsize::new(5).unwrap(),
         NonZeroUsize::new(2).unwrap(),
-        |iteration| Ok(sample(iteration)),
+        async |iteration| Ok(sample(iteration)),
     )
     .unwrap();
     assert_eq!(
@@ -27,14 +27,14 @@ fn task_collection_preserves_worker_order_and_every_iteration() {
     );
 }
 
-#[test]
-fn task_failure_joins_later_workers_and_preserves_the_first_cause() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn task_failure_joins_later_workers_and_preserves_the_first_cause() {
     for first_panics in [false, true] {
         let completed = AtomicBool::new(false);
         let error = run_tasks(
             NonZeroUsize::new(3).unwrap(),
             NonZeroUsize::new(3).unwrap(),
-            |iteration| match iteration {
+            async |iteration| match iteration {
                 0 if first_panics => panic!("first worker panic"),
                 0 => Err(io::Error::from_raw_os_error(28).into()),
                 1 if !first_panics => panic!("later worker panic"),

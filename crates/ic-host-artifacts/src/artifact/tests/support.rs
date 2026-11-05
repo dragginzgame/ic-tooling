@@ -1,6 +1,6 @@
 use std::io::{self, Read, Write};
 
-pub(super) struct DeniedReader;
+pub(in crate::artifact) struct DeniedReader;
 
 impl Read for DeniedReader {
     fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
@@ -8,7 +8,7 @@ impl Read for DeniedReader {
     }
 }
 
-pub(super) struct InvalidReader;
+pub(in crate::artifact) struct InvalidReader;
 
 impl Read for InvalidReader {
     fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
@@ -16,7 +16,7 @@ impl Read for InvalidReader {
     }
 }
 
-pub(super) struct InvalidWriter;
+pub(in crate::artifact) struct InvalidWriter;
 
 impl Write for InvalidWriter {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {

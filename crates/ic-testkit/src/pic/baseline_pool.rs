@@ -1,7 +1,6 @@
 use std::{
     num::NonZeroUsize,
     ops::Deref,
-    panic::{AssertUnwindSafe, catch_unwind},
     time::{Duration, Instant},
 };
 
@@ -197,6 +196,8 @@ pub enum RebuildReason {
     ExplicitLeaseInvalidation,
     /// A lease was dropped while its thread was unwinding.
     UnwindWhileLeased,
+    /// Async slot preparation was cancelled before its invariants were restored.
+    PreparationCancelled,
     /// Recipe-specific structured reason.
     RecipeClassified {
         /// Caller-defined rebuild reason.
@@ -318,7 +319,7 @@ impl<E> PreparationFailure<E> {
 /// Caller-owned build, preflight and non-snapshot reset policy for one pooled baseline.
 pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
     /// Metadata retained beside every baseline owned by this recipe.
-    type Metadata: Send + 'static;
+    type Metadata: Send + Sync + 'static;
     /// Structured caller error shared by recipe lifecycle stages.
     type Error: std::error::Error + Send + Sync + 'static;
 
@@ -331,7 +332,11 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
     ///
     /// # Errors
     /// Returns the recipe error if construction or baseline capture fails.
-    fn build(&self) -> Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error>;
+    fn build(
+        &self,
+    ) -> impl std::future::Future<
+        Output = Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error>,
+    > + Send;
 
     /// Admit recipe-specific preconditions before the pool restores snapshots.
     ///
@@ -345,8 +350,8 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
     fn prepare_restore(
         &self,
         _baseline: &CachedPocketIcBaseline<Self::Metadata>,
-    ) -> Result<(), Self::Error> {
-        Ok(())
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
+        async { Ok(()) }
     }
 
     /// Reset state not covered by canister snapshots.
@@ -356,7 +361,7 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
     fn reset_non_snapshot_state(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
-    ) -> Result<ResetReceipt, Self::Error>;
+    ) -> impl std::future::Future<Output = Result<ResetReceipt, Self::Error>> + Send;
 
     /// Drive the topology to the recipe's readiness boundary.
     /// Successful completion permits final invariant validation.
@@ -368,7 +373,7 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
     fn drive_to_readiness(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
-    ) -> Result<(), Self::Error>;
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
 
     /// Validate the same baseline invariants after build and restore.
     /// Success admits this pool-owned recipe's baseline for leasing.
@@ -379,7 +384,7 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
         preparation: &PreparedBaseline,
-    ) -> Result<(), Self::Error>;
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
 
     /// Classify a restored-slot recipe failure as fatal or rebuildable.
     fn classify_failure(
@@ -608,6 +613,18 @@ where
         }
     }
 
+    /// Delete all idle instances, retaining every deletion failure. No leases may remain.
+    /// Borrowed server owners must outlive this operation. Cancellation requires caller reconciliation.
+    pub async fn close(self) -> Vec<crate::pocket_ic::ClientError> {
+        let mut failures = Vec::new();
+        for baseline in self.slots.into_values() {
+            if let Err(error) = baseline.close().await {
+                failures.push(error);
+            }
+        }
+        failures
+    }
+
     /// Maximum number of simultaneously leased `PocketIC` baselines.
     #[must_use]
     pub const fn capacity(&self) -> NonZeroUsize {
@@ -629,21 +646,23 @@ where
         clippy::significant_drop_tightening,
         reason = "lease and coordinator scope deliberately cover the complete operation"
     )]
-    pub fn acquire(
+    pub async fn acquire(
         &self,
     ) -> Result<
         (CachedPocketIcBaselinePoolGuard<'_, R>, BaselinePoolOutcome),
         BaselinePoolError<R::Error>,
     > {
         let total_started = Instant::now();
-        let mut slot = self.slots.acquire();
+        let mut slot = self.slots.acquire().await;
+        slot.begin_preparation();
         let mut timings = BaselinePoolTimings {
             wait: slot.wait(),
             ..BaselinePoolTimings::default()
         };
         let slot_index = slot.slot_index();
 
-        let result = self.prepare_slot(&mut slot, &mut timings);
+        let result = Box::pin(self.prepare_slot(&mut slot, &mut timings)).await;
+        slot.finish_preparation();
         timings.total = total_started.elapsed();
         let disposition = result.map_err(|error| error.with_timings(timings))?;
         Ok((
@@ -656,21 +675,21 @@ where
         ))
     }
 
-    fn prepare_slot(
+    async fn prepare_slot(
         &self,
         slot: &mut BoundedSlotLease<'_, CachedPocketIcBaseline<R::Metadata>, RebuildReason>,
         timings: &mut BaselinePoolTimings,
     ) -> Result<BaselinePoolDisposition, PreparationFailure<R::Error>> {
         let (disposition, original) = match slot.state() {
             Slot::Reusable(_) => {
-                let Err(original) = self.prepare_reused(slot, timings) else {
+                let Err(original) = self.prepare_reused(slot, timings).await else {
                     return Ok(BaselinePoolDisposition::Restored);
                 };
                 let FailureDisposition::Rebuild(reason) = self.failure_disposition(&original)
                 else {
                     // A failed restore may have partially changed the instance.
                     // Discard it without treating a fatal failure as a rebuild.
-                    Self::discard_stale_slot(slot, timings);
+                    Self::discard_stale_slot(slot, timings).await;
                     return Err(PreparationFailure::Single(original));
                 };
                 (BaselinePoolDisposition::Rebuilt(reason), Some(original))
@@ -679,6 +698,10 @@ where
             Slot::Invalidated { reason, .. } => {
                 (BaselinePoolDisposition::Rebuilt(reason.clone()), None)
             }
+            Slot::Interrupted(_) => (
+                BaselinePoolDisposition::Rebuilt(RebuildReason::PreparationCancelled),
+                None,
+            ),
             Slot::Unwound(_) => (
                 BaselinePoolDisposition::Rebuilt(RebuildReason::UnwindWhileLeased),
                 None,
@@ -686,9 +709,9 @@ where
         };
 
         if slot.get().is_some() {
-            Self::discard_stale_slot(slot, timings);
+            Self::discard_stale_slot(slot, timings).await;
         }
-        let build = self.build_slot(slot, timings);
+        let build = self.build_slot(slot, timings).await;
         if let Err(error) = build {
             return Err(match original {
                 Some(original) => PreparationFailure::Recovery {
@@ -702,7 +725,7 @@ where
         Ok(disposition)
     }
 
-    fn prepare_reused(
+    async fn prepare_reused(
         &self,
         slot: &BoundedSlotLease<'_, CachedPocketIcBaseline<R::Metadata>, RebuildReason>,
         timings: &mut BaselinePoolTimings,
@@ -712,53 +735,63 @@ where
             .expect("reusable baseline slot must be populated");
 
         let started = Instant::now();
-        let restore = self
-            .recipe
-            .prepare_restore(baseline)
-            .map_err(|source| BaselinePoolPreparationError::Recipe {
-                stage: BaselinePreparationStage::RestoreCanisters,
-                source,
-            })
-            .and_then(|()| {
-                baseline
-                    .restore(self.recipe.reset_requirements().funding)
-                    .map_err(BaselinePoolPreparationError::Restore)
-            });
+        let restore = async {
+            self.recipe
+                .prepare_restore(baseline)
+                .await
+                .map_err(|source| BaselinePoolPreparationError::Recipe {
+                    stage: BaselinePreparationStage::RestoreCanisters,
+                    source,
+                })?;
+            baseline
+                .restore(self.recipe.reset_requirements().funding)
+                .await
+                .map_err(BaselinePoolPreparationError::Restore)
+        }
+        .await;
         add_timing(&mut timings.restore, started.elapsed());
         restore?;
 
         let reset = timed_recipe_stage(
             &mut timings.reset,
             BaselinePreparationStage::ResetNonSnapshotState,
-            || self.recipe.reset_non_snapshot_state(baseline),
-        )?;
+            self.recipe.reset_non_snapshot_state(baseline),
+        )
+        .await?;
         timed_recipe_stage(
             &mut timings.readiness,
             BaselinePreparationStage::DriveToReadiness,
-            || self.recipe.drive_to_readiness(baseline),
-        )?;
+            self.recipe.drive_to_readiness(baseline),
+        )
+        .await?;
         self.recipe
             .reset_requirements()
             .verify(reset)
             .map_err(BaselinePoolPreparationError::Contract)?;
 
         let preparation = PreparedBaseline::Restored { reset };
-        self.validate_baseline(baseline, &preparation, timings)?;
+        self.validate_baseline(baseline, &preparation, timings)
+            .await?;
         Ok(())
     }
 
-    fn build_slot(
+    async fn build_slot(
         &self,
         slot: &mut BoundedSlotLease<'_, CachedPocketIcBaseline<R::Metadata>, RebuildReason>,
         timings: &mut BaselinePoolTimings,
     ) -> Result<(), BaselinePoolPreparationError<R::Error>> {
-        let baseline =
-            timed_recipe_stage(&mut timings.build, BaselinePreparationStage::Build, || {
-                self.recipe.build()
-            })?;
+        let baseline = timed_recipe_stage(
+            &mut timings.build,
+            BaselinePreparationStage::Build,
+            self.recipe.build(),
+        )
+        .await?;
 
-        if let Err(error) = self.validate_baseline(&baseline, &PreparedBaseline::Built, timings) {
-            drop_baseline_safely(baseline);
+        if let Err(error) = self
+            .validate_baseline(&baseline, &PreparedBaseline::Built, timings)
+            .await
+        {
+            drop_baseline_safely(baseline).await;
             return Err(error);
         }
         let replaced = slot.replace(baseline);
@@ -766,7 +799,7 @@ where
         Ok(())
     }
 
-    fn validate_baseline(
+    async fn validate_baseline(
         &self,
         baseline: &CachedPocketIcBaseline<R::Metadata>,
         preparation: &PreparedBaseline,
@@ -776,9 +809,12 @@ where
             PreparedBaseline::Built => BaselinePreparationStage::ValidateBuilt,
             PreparedBaseline::Restored { .. } => BaselinePreparationStage::ValidateRestored,
         };
-        timed_recipe_stage(&mut timings.validation, stage, || {
-            self.recipe.validate(baseline, preparation)
-        })
+        timed_recipe_stage(
+            &mut timings.validation,
+            stage,
+            self.recipe.validate(baseline, preparation),
+        )
+        .await
     }
 
     fn failure_disposition(
@@ -798,13 +834,13 @@ where
         }
     }
 
-    fn discard_stale_slot(
+    async fn discard_stale_slot(
         slot: &mut BoundedSlotLease<'_, CachedPocketIcBaseline<R::Metadata>, RebuildReason>,
         timings: &mut BaselinePoolTimings,
     ) {
         let started = Instant::now();
         if let Some(stale) = slot.take() {
-            drop_baseline_safely(stale);
+            drop_baseline_safely(stale).await;
         }
         timings.stale_teardown = Some(started.elapsed());
     }
@@ -839,13 +875,13 @@ where
     }
 }
 
-fn timed_recipe_stage<T, E>(
+async fn timed_recipe_stage<T, E>(
     timing: &mut Option<Duration>,
     stage: BaselinePreparationStage,
-    operation: impl FnOnce() -> Result<T, E>,
+    operation: impl std::future::Future<Output = Result<T, E>>,
 ) -> Result<T, BaselinePoolPreparationError<E>> {
     let started = Instant::now();
-    let result = operation();
+    let result = operation.await;
     add_timing(timing, started.elapsed());
     result.map_err(|source| BaselinePoolPreparationError::Recipe { stage, source })
 }
@@ -857,8 +893,10 @@ const fn add_timing(total: &mut Option<Duration>, elapsed: Duration) {
     });
 }
 
-fn drop_baseline_safely<M>(baseline: CachedPocketIcBaseline<M>) {
-    let _ = catch_unwind(AssertUnwindSafe(|| drop(baseline)));
+async fn drop_baseline_safely<M>(baseline: CachedPocketIcBaseline<M>) {
+    if let Err(error) = baseline.close().await {
+        tracing::warn!("PocketIC baseline deletion failed: {error}");
+    }
 }
 
 impl std::fmt::Display for BaselinePreparationStage {

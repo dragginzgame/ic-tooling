@@ -1,5 +1,5 @@
 // Each integration target uses only the fixtures it needs.
-#![allow(
+#![expect(
     dead_code,
     reason = "integration targets use different subsets of the shared server/wait helpers"
 )]
@@ -11,9 +11,10 @@ pub fn startup_config() -> ic_testkit::pic::PocketIcStartupConfig {
         .expect("prepare POCKET_IC_BIN or configure IC_TESTKIT_POCKET_IC_URL for live tests")
 }
 
-pub fn pocket_ic() -> ic_testkit::pic::PocketIcInstance<ic_testkit::pocket_ic::PocketIc> {
+pub async fn pocket_ic() -> ic_testkit::pic::PocketIcInstance<ic_testkit::pocket_ic::PocketIc> {
     startup_config()
         .build_instance(ic_testkit::pocket_ic::PocketIcBuilder::new().with_application_subnet())
+        .await
         .expect("construct explicitly configured test instance")
 }
 
@@ -28,7 +29,7 @@ pub fn wat_bytes(bytes: &[u8]) -> String {
 }
 
 #[cfg(feature = "held-reply-fixtures")]
-pub fn install_wat(
+pub async fn install_wat(
     pic: &ic_testkit::pocket_ic::PocketIc,
     canister: ic_platform_types::principal::ExternalPrincipal,
     source: &str,
@@ -43,5 +44,53 @@ pub fn install_wat(
     )
     .unwrap();
     ic_host_artifacts::wasm::validate(&wasm, module_bytes).unwrap();
-    pic.install_canister(canister, wasm, vec![], None).unwrap();
+    pic.install_canister(canister, wasm, vec![], None)
+        .await
+        .unwrap();
+}
+
+/// Catch an async caller panic on its own runtime, retaining borrowed test inputs.
+pub fn catch_async_panic<T: Send>(
+    operation: impl AsyncFnOnce() -> T + Send,
+) -> std::thread::Result<T> {
+    let runtime = tokio::runtime::Handle::current();
+    std::thread::scope(|scope| {
+        scope
+            .spawn(|| {
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    runtime.block_on(operation())
+                }))
+            })
+            .join()
+            .expect("panic catcher itself should remain live")
+    })
+}
+
+/// Each blocking test coordinator delegates async simulator work to a caller-owned runtime.
+pub fn spawn_async<T: Send + 'static>(
+    operation: impl AsyncFnOnce() -> T + Send + 'static,
+) -> std::thread::JoinHandle<T> {
+    let runtime = tokio::runtime::Handle::current();
+    std::thread::spawn(move || runtime.block_on(operation()))
+}
+
+#[cfg(feature = "held-reply-fixtures")]
+pub async fn await_held_slot(
+    pic: &ic_testkit::pocket_ic::PocketIc,
+    fixture: &ic_testkit::pic::fixtures::held::HeldReplyFixture,
+    slot: usize,
+) {
+    for _ in 0..20 {
+        pic.tick().await.unwrap();
+        if fixture
+            .pending(pic)
+            .await
+            .unwrap()
+            .iter()
+            .any(|request| request.slot() == slot)
+        {
+            return;
+        }
+    }
+    panic!("slot {slot} must reach the real HTTP barrier");
 }

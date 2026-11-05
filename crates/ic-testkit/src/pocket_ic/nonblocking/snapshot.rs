@@ -153,7 +153,7 @@ impl PocketIc {
 impl SnapshotTransfer {
     /// Copy one chunk, or create the upload and return its ID before copying data.
     /// Dropping this future leaves the attempted status and accepted ingress in self.
-    pub async fn advance_async(&mut self, client: &PocketIc) -> Result<(), SnapshotError> {
+    pub async fn advance(&mut self, client: &PocketIc) -> Result<(), SnapshotError> {
         if matches!(self.status, TransferStatus::Complete) {
             return Ok(());
         }

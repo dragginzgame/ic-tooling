@@ -7,6 +7,20 @@ license.workspace = true
 publish = false
 repository.workspace = true
 
+[package.metadata.shared-tooling.loc]
+category = "build_tooling"
+
+[package.metadata.shared-tooling.loc.paths]
+"src/bin/tests/mod.rs" = "tests"
+"src/fixture_reuse_driver/arguments/tests.rs" = "tests"
+"src/fixture_reuse_driver/report/tests.rs" = "tests"
+"src/fixture_reuse_driver/tests.rs" = "tests"
+"src/fixture_reuse_protocol/tests.rs" = "tests"
+"src/statistics/tests.rs" = "tests"
+"src/workload/tests.rs" = "tests"
+"src/workload.rs" = "benchmarks"
+"tests" = "tests"
+
 [dependencies]
 clap = { workspace = true, features = ["derive", "string"] }
 ic-build = { workspace = true }
@@ -21,6 +35,7 @@ libc = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "net", "time"] }
 
 [target.'cfg(unix)'.dependencies]
 rustix = { workspace = true, features = ["process"] }
@@ -30,6 +45,7 @@ ic-host-fs = { workspace = true, features = ["test-support"] }
 ic-host-tools = { workspace = true, features = ["registry", "certificate"] }
 ic-platform = { workspace = true, features = ["principal", "certification"] }
 ic-wire.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [lints]
 workspace = true

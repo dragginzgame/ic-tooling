@@ -90,7 +90,6 @@ pub struct PocketIc {
     reqwest_client: reqwest::Client,
     // the instance should only be deleted when dropping this handle if this handle owns the instance
     owns_instance: bool,
-    pub(crate) cleanup_attempted: bool,
     state_dir: Option<PocketIcState>,
     _log_guard: Option<WorkerGuard>,
 }
@@ -102,7 +101,7 @@ impl PocketIc {
         PocketIcBuilder::new()
             .with_server_url(server_url)
             .with_application_subnet()
-            .build_async()
+            .build()
             .await
     }
 
@@ -128,7 +127,6 @@ impl PocketIc {
             server_url,
             reqwest_client,
             owns_instance: false,
-            cleanup_attempted: false,
             state_dir: None,
             _log_guard: log_guard,
         }
@@ -234,7 +232,6 @@ impl PocketIc {
             server_url,
             reqwest_client,
             owns_instance: true,
-            cleanup_attempted: false,
             state_dir,
             _log_guard: log_guard,
         })
@@ -243,10 +240,6 @@ impl PocketIc {
     pub async fn drop_and_take_state(&mut self) -> Result<Option<PocketIcState>, ClientError> {
         self.do_drop().await?;
         Ok(self.state_dir.take())
-    }
-
-    pub(crate) fn take_state_internal(&mut self) -> Option<PocketIcState> {
-        self.state_dir.take()
     }
 
     /// Returns the URL of the PocketIC server on which this PocketIC instance is running.
@@ -1731,7 +1724,6 @@ impl PocketIc {
     }
 
     pub(crate) async fn do_drop(&mut self) -> Result<(), ClientError> {
-        self.cleanup_attempted = true;
         if self.owns_instance {
             let url = self.instance_url();
             let mut exchange = Exchange::new(&url, self.max_request_time_ms);

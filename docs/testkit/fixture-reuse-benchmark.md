@@ -85,7 +85,11 @@ canisters through update calls, and verifies the mutation through query calls.
 Warm acquisitions must restore the seed and report `Restored`; unexpected builds,
 recovery, state mismatches, or failed calls stop the measurement.
 
-Fresh fixtures create, install, seed, validate, mutate, and drop an independent
+The async-only worker owns one multithread Tokio runtime for its complete
+fixture lifetime. Scoped task threads use that runtime handle; pooled HTTP
+connections never depend on a per-task runtime.
+
+Fresh fixtures create, install, seed, validate, mutate, and explicitly close an independent
 PocketIC instance for every task. They do **not** capture unused snapshots.
 Pooled fixtures capture and validate each slot once, then restore it for every
 task. All slots are prepared and mutated before timing begins, so the first
@@ -98,7 +102,8 @@ process and one explicit managed PocketIC server. Instances share that server
 within the run. Repeat order rotates over all selected cases.
 
 On Ctrl-C, the driver asks the current worker to stop scheduling new iterations.
-Active operations finish, then the worker drops its fixtures and owned server.
+Active operations finish, then the worker awaits instance/pool close and stops its
+owned server. All of this happens before the caller-owned runtime is dropped.
 The driver waits for that cleanup; it does not start another mode or write a
 partial report. Sampling errors and callback panics request the same cooperative
 stop and wait for completion; the original error or panic is preserved.

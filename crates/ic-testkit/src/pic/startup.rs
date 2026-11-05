@@ -4,7 +4,6 @@ use std::{
     io,
     path::{Path, PathBuf},
     process::{Command, ExitStatus, Stdio},
-    sync::mpsc::{self, RecvTimeoutError},
     thread,
     time::{Duration, Instant},
 };
@@ -68,16 +67,10 @@ pub struct PocketIcManagedServer {
 
 /// An upstream instance together with the server owned by its construction.
 ///
-/// Fields are ordered so a synchronous [`PocketIc`] is deleted before the server
-/// is terminated. Connect mode borrows the caller's server and returns `None`.
-/// Native `PocketIC` operations remain available through [`Self::instance`].
-/// [`Self::into_parts`] explicitly transfers teardown ordering to the caller.
-///
-/// `PocketIC` 16 synchronous deletion has no request deadline and can block drop.
-/// Its nonblocking instance has no automatic deletion: call
-/// [`Self::into_parts`], then `instance.drop().await` while retaining `server`,
-/// when deletion matters, especially with a borrowed server. Dropping an owned
-/// server stops all its instances.
+/// Call [`Self::close`] to await instance deletion while retaining server custody.
+/// Rust Drop performs no client network I/O; it stops an owned server and all its
+/// instances. Connect mode borrows the caller's server, so explicit close matters.
+/// [`Self::into_parts`] transfers teardown ordering and reconciliation to the caller.
 ///
 /// Field projection cannot silently detach the client from its server:
 /// ```compile_fail
@@ -146,6 +139,19 @@ impl<T> PocketIcInstance<T> {
     #[must_use]
     pub fn into_parts(self) -> (T, Option<PocketIcManagedServer>) {
         (self.instance, self.server)
+    }
+}
+
+impl PocketIcInstance<PocketIc> {
+    /// Delete this instance while retaining its managed server until the request finishes.
+    /// Dropping the future stops an owned server; borrowed servers require caller reconciliation.
+    /// # Errors
+    /// Returns the client deletion failure, without retrying it.
+    pub async fn close(self) -> Result<(), ClientError> {
+        let (instance, server) = self.into_parts();
+        let result = instance.drop().await;
+        drop(server);
+        result
     }
 }
 
@@ -322,21 +328,12 @@ pub enum PocketIcStartupFailure {
         /// Caller-selected deadline budget.
         timeout: Duration,
     },
-    /// Spawning the bounded builder worker failed.
-    #[error("failed to spawn PocketIC builder worker: {source}")]
-    BuilderThreadSpawn {
-        /// Underlying operation failure.
-        source: io::Error,
-    },
     /// Upstream `PocketIC` construction failed before returning an instance.
     #[error("PocketIC startup failed: {source}")]
     BuilderFailed {
         /// Underlying operation failure.
         source: ClientError,
     },
-    /// The bounded builder worker ended without returning a result.
-    #[error("PocketIC builder worker disconnected without a result")]
-    BuilderDisconnected,
     /// The command completed, but the owned server could not be cleaned up.
     #[error("PocketIC server cleanup failed after command exited with {command_status}")]
     ServerCleanup {
@@ -442,49 +439,10 @@ impl PocketIcStartupConfig {
         }
     }
 
-    /// Construct a synchronous instance and retain its exact managed server.
+    /// Construct an instance on the caller's Tokio runtime.
     ///
-    /// One deadline covers server readiness and instance creation. Topology,
-    /// state paths and request policy remain on the caller's builder. Spawn mode
-    /// terminates the server on failure and retains it on success; connect mode
-    /// never claims the external server. See [`PocketIcInstance`] for drop limits.
-    ///
-    /// ```no_run
-    /// use ic_testkit::pocket_ic::PocketIcBuilder;
-    /// use ic_testkit::pic::PocketIcStartupConfig;
-    /// use std::{path::Path, time::Duration};
-    /// # fn run(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    /// let owned = PocketIcStartupConfig::Spawn { server_binary: binary.into(), timeout: Duration::from_secs(60), server_hard_ttl: None, server_idle_ttl: None, server_output_files: None }
-    ///     .build_instance(PocketIcBuilder::new().with_application_subnet())?;
-    /// let canister = owned.instance().create_canister()?;
-    /// assert!(owned.instance().canister_exists(canister)?);
-    /// // Drop deletes the instance, then terminates and reaps the owned server.
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// # Errors
-    /// Returns configuration, startup, deadline or instance-creation failures with cleanup evidence.
-    pub fn build_instance(
-        self,
-        builder: PocketIcBuilder,
-    ) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
-        let startup = StartupDeadline::new(&self)?;
-        let (server, url) = match self {
-            Self::Connect { server_url, .. } => (None, server_url),
-            spawn @ Self::Spawn { .. } => {
-                let (server, url) = spawn.spawn_server(startup.started)?.wait_ready(&startup)?;
-                (Some(server), url)
-            }
-        };
-        build_bounded(builder, &url, &startup, server)
-    }
-
-    /// Construct an upstream nonblocking instance on the caller's Tokio runtime.
-    ///
-    /// Uses the same deadline, readiness checks, typed client/exit failures and
-    /// bounded output as [`Self::build_instance`], without running the synchronous
-    /// instance constructor. Requires a Tokio runtime with its time driver enabled.
+    /// Preserves deadline, readiness, typed client/exit failures and bounded output.
+    /// Requires a Tokio runtime with its time driver enabled.
     /// Readiness and instance waits yield; process spawning and small file reads
     /// remain synchronous, as does exact owned-child cleanup. The deadline cannot
     /// preempt synchronous work inside an upstream future poll (such as copying
@@ -503,7 +461,7 @@ impl PocketIcStartupConfig {
     /// use std::{path::Path, time::Duration};
     /// # async fn run(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
     /// let owned = PocketIcStartupConfig::Spawn { server_binary: binary.into(), timeout: Duration::from_secs(60), server_hard_ttl: None, server_idle_ttl: None, server_output_files: None }
-    ///     .build_instance_async(PocketIcBuilder::new().with_application_subnet()).await?;
+    ///     .build_instance(PocketIcBuilder::new().with_application_subnet()).await?;
     /// let canister = owned.instance().create_canister().await?;
     /// assert!(owned.instance().canister_exists(canister).await?);
     /// let (instance, server) = owned.into_parts();
@@ -515,11 +473,10 @@ impl PocketIcStartupConfig {
     ///
     /// # Errors
     /// Returns configuration, startup, deadline or instance-creation failures with cleanup evidence.
-    pub async fn build_instance_async(
+    pub async fn build_instance(
         self,
         builder: PocketIcBuilder,
-    ) -> Result<PocketIcInstance<crate::pocket_ic::nonblocking::PocketIc>, PocketIcStartupError>
-    {
+    ) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
         let startup = StartupDeadline::new(&self)?;
         let (server, server_url) = match self {
             Self::Connect { server_url, .. } => (None, server_url),
@@ -537,7 +494,7 @@ impl PocketIcStartupConfig {
                 (Some(server), server_url)
             }
         };
-        build_async_bounded(builder, &server_url, &startup, server).await
+        build_bounded(builder, &server_url, &startup, server).await
     }
 
     /// Start a caller-owned managed server without constructing an instance.
@@ -572,7 +529,7 @@ impl PocketIcStartupConfig {
     }
 
     // Only validated spawn configurations reach this projection. Keeping it here
-    // gives sync, async and server-only construction the same spawn settings.
+    // gives instance and server-only construction the same spawn settings.
     fn spawn_server(self, started: Instant) -> Result<ManagedServer, PocketIcStartupError> {
         let Self::Spawn {
             server_binary,
@@ -882,65 +839,6 @@ impl InstanceStartup<'_> {
     }
 }
 
-fn build_bounded(
-    builder: PocketIcBuilder,
-    server_url: &str,
-    startup: &StartupDeadline,
-    server: Option<ManagedServer>,
-) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
-    let mut startup = InstanceStartup {
-        deadline: startup,
-        server_url,
-        server,
-    };
-    let builder = startup.configure_builder(builder)?;
-    let (sender, receiver) = mpsc::sync_channel(1);
-    if let Err(source) = thread::Builder::new()
-        .name("ic-testkit-pocket-ic-startup".to_owned())
-        .spawn(move || {
-            let result = builder.build();
-            let _ = sender.send(result);
-        })
-    {
-        return Err(startup.fail(PocketIcStartupError::new(
-            PocketIcStartupFailure::BuilderThreadSpawn { source },
-        )));
-    }
-    await_builder(receiver, &mut startup)
-}
-
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "consume the receiver so failed startup disconnects late builders"
-)]
-fn await_builder(
-    receiver: mpsc::Receiver<Result<PocketIc, ClientError>>,
-    startup: &mut InstanceStartup<'_>,
-) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
-    loop {
-        let now = startup.check_deadline()?;
-        let wait = startup.wait_interval(now);
-        match receiver.recv_timeout(wait) {
-            Ok(Ok(pocket_ic)) => {
-                return startup.admit(pocket_ic);
-            }
-            Ok(Err(source)) => {
-                return Err(startup.fail(PocketIcStartupError::new(
-                    PocketIcStartupFailure::BuilderFailed { source },
-                )));
-            }
-            Err(RecvTimeoutError::Disconnected) => {
-                return Err(startup.fail(PocketIcStartupError::new(
-                    PocketIcStartupFailure::BuilderDisconnected,
-                )));
-            }
-            Err(RecvTimeoutError::Timeout) => {
-                startup.check_server()?;
-            }
-        }
-    }
-}
-
 fn configured_builder(
     builder: PocketIcBuilder,
     server_url: &str,
@@ -965,19 +863,19 @@ fn check_server(server: &mut Option<ManagedServer>) -> Result<(), PocketIcStartu
     Ok(())
 }
 
-async fn build_async_bounded(
+async fn build_bounded(
     builder: PocketIcBuilder,
     server_url: &str,
     startup: &StartupDeadline,
     server: Option<ManagedServer>,
-) -> Result<PocketIcInstance<crate::pocket_ic::nonblocking::PocketIc>, PocketIcStartupError> {
+) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
     let mut startup = InstanceStartup {
         deadline: startup,
         server_url,
         server,
     };
     let builder = startup.configure_builder(builder)?;
-    let mut construction = std::pin::pin!(builder.build_async());
+    let mut construction = std::pin::pin!(builder.build());
     // Drop this local before the pending upstream future on cancellation.
     let mut startup = startup;
     loop {

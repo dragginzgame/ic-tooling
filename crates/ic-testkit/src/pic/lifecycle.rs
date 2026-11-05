@@ -32,6 +32,10 @@ pub struct RetryPolicy {
 ///
 /// The extension creates canisters using `PocketIC` defaults. `InstallSpec::cycles`
 /// is an additional top-up, not the complete initial balance.
+#[expect(
+    async_fn_in_trait,
+    reason = "extension futures may retain caller-owned non-Send callbacks, iterators or writers; pool recipes separately require Send"
+)]
 pub trait CanisterInstallExt {
     /// Create and install one canister from a reusable specification.
     ///
@@ -42,14 +46,18 @@ pub trait CanisterInstallExt {
     ///
     /// # Errors
     /// Returns the failed creation or installation stage, retaining canister identity when available.
-    fn try_create_and_install(&self, spec: InstallSpec) -> Result<Principal, CanisterInstallError>;
+    async fn try_create_and_install(
+        &self,
+        spec: InstallSpec,
+    ) -> Result<Principal, CanisterInstallError>;
 
     /// Advance simulated time once, then tick twice for an install-code cooldown.
     /// Zero duration skips time reads/writes while retaining both ticks.
     ///
     /// # Errors
     /// Returns the first client failure without dispatching remaining ticks.
-    fn wait_out_install_code_rate_limit(&self, cooldown: Duration) -> Result<(), ClientError>;
+    async fn wait_out_install_code_rate_limit(&self, cooldown: Duration)
+    -> Result<(), ClientError>;
 
     /// Retry only while `PocketIC` reports install-code rate limiting.
     ///
@@ -60,22 +68,26 @@ pub trait CanisterInstallExt {
     /// # Errors
     /// Returns non-rate-limit failures immediately, or the final rate-limit rejection.
     /// A cooldown failure stops further installation attempts.
-    fn retry_install_code<T, F>(&self, policy: RetryPolicy, op: F) -> Result<T, ClientError>
+    async fn retry_install_code<T, F>(&self, policy: RetryPolicy, op: F) -> Result<T, ClientError>
     where
-        F: FnMut() -> Result<T, ClientError>;
+        F: AsyncFnMut() -> Result<T, ClientError>;
 }
 
 impl CanisterInstallExt for PocketIc {
     /// Install one arbitrary wasm module from a generic install specification.
-    fn try_create_and_install(&self, spec: InstallSpec) -> Result<Principal, CanisterInstallError> {
-        let canister_id =
-            self.create_canister()
-                .map_err(|source| CanisterInstallError::CreateCanister {
-                    label: spec.label.clone(),
-                    source,
-                })?;
+    async fn try_create_and_install(
+        &self,
+        spec: InstallSpec,
+    ) -> Result<Principal, CanisterInstallError> {
+        let canister_id = self.create_canister().await.map_err(|source| {
+            CanisterInstallError::CreateCanister {
+                label: spec.label.clone(),
+                source,
+            }
+        })?;
         if spec.cycles > 0 {
             self.add_cycles(canister_id, spec.cycles)
+                .await
                 .map_err(|source| CanisterInstallError::AddCycles {
                     canister_id,
                     label: spec.label.clone(),
@@ -85,6 +97,7 @@ impl CanisterInstallExt for PocketIc {
 
         // Move the Wasm and init payload while retaining the label for failures.
         self.install_canister(canister_id, spec.wasm, spec.init_bytes, spec.install_sender)
+            .await
             .map_err(|source| CanisterInstallError::InstallCode {
                 canister_id,
                 label: spec.label,
@@ -95,37 +108,41 @@ impl CanisterInstallExt for PocketIc {
     }
 
     /// Wait out the `PocketIC` `install_code` cooldown window inside the same instance.
-    fn wait_out_install_code_rate_limit(&self, cooldown: Duration) -> Result<(), ClientError> {
-        super::time::advance_and_tick(self, cooldown, 2)
+    async fn wait_out_install_code_rate_limit(
+        &self,
+        cooldown: Duration,
+    ) -> Result<(), ClientError> {
+        super::time::advance_and_tick(self, cooldown, 2).await
     }
 
-    fn retry_install_code<T, F>(&self, policy: RetryPolicy, op: F) -> Result<T, ClientError>
+    async fn retry_install_code<T, F>(&self, policy: RetryPolicy, op: F) -> Result<T, ClientError>
     where
-        F: FnMut() -> Result<T, ClientError>,
+        F: AsyncFnMut() -> Result<T, ClientError>,
     {
-        retry_install_code_with(policy, op, || {
-            self.wait_out_install_code_rate_limit(policy.cooldown)
+        retry_install_code_with(policy, op, async || {
+            self.wait_out_install_code_rate_limit(policy.cooldown).await
         })
+        .await
     }
 }
 
-fn retry_install_code_with<T, F, W>(
+async fn retry_install_code_with<T, F, W>(
     policy: RetryPolicy,
     mut op: F,
     mut wait_out_cooldown: W,
 ) -> Result<T, ClientError>
 where
-    F: FnMut() -> Result<T, ClientError>,
-    W: FnMut() -> Result<(), ClientError>,
+    F: AsyncFnMut() -> Result<T, ClientError>,
+    W: AsyncFnMut() -> Result<(), ClientError>,
 {
     let mut retries = 1..policy.max_attempts.get();
     loop {
-        match op() {
+        match op().await {
             Err(ClientError::Canister(err))
                 if err.error_code == ErrorCode::CanisterInstallCodeRateLimited
                     && retries.next().is_some() =>
             {
-                wait_out_cooldown()?;
+                wait_out_cooldown().await?;
             }
             result => return result,
         }

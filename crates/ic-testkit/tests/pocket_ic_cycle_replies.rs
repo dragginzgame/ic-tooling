@@ -20,36 +20,39 @@ const LIMITS: RawReplyLimits = RawReplyLimits {
 };
 const REPLIES: [&[u8]; 3] = [b"acknowledged", b"provider error", b"\xff\0"];
 
-#[test]
-fn installed_zero_partial_full_acceptance_preserves_bytes_refunds_and_balances() {
+#[tokio::test]
+async fn installed_zero_partial_full_acceptance_preserves_bytes_refunds_and_balances() {
     // System subnet fees are zero: exact balance deltas isolate actual transfers,
     // while callbacks still execute real inter-canister calls and IC refund APIs.
     let owned = support::startup_config()
         .build_instance(PocketIcBuilder::new().with_system_subnet())
+        .await
         .unwrap();
     let pic = owned.instance();
     for cap in [0, 3_000, ATTACHED, u128::MAX] {
-        let provider = funded(pic);
-        let initial = pic.cycle_balance(provider).unwrap();
+        let provider = funded(pic).await;
+        let initial = pic.cycle_balance(provider).await.unwrap();
         let methods = methods();
         let wasm = cycle_reply_canister(&methods, LIMITS, cap, 10_000).unwrap();
         validate(&wasm, 10_000).unwrap();
         assert_eq!(
-            pic.cycle_balance(provider).unwrap(),
+            pic.cycle_balance(provider).await.unwrap(),
             initial,
             "construction accepts nothing"
         );
-        pic.install_canister(provider, wasm, vec![], None).unwrap();
+        pic.install_canister(provider, wasm, vec![], None)
+            .await
+            .unwrap();
         assert_eq!(
-            pic.cycle_balance(provider).unwrap(),
+            pic.cycle_balance(provider).await.unwrap(),
             initial,
             "installation accepts nothing"
         );
-        let consumer = install_consumer(pic, provider);
+        let consumer = install_consumer(pic, provider).await;
         let accepted = cap.min(ATTACHED);
         for reply in REPLIES {
-            let source = pic.cycle_balance(consumer).unwrap();
-            let destination = pic.cycle_balance(provider).unwrap();
+            let source = pic.cycle_balance(consumer).await.unwrap();
+            let destination = pic.cycle_balance(provider).await.unwrap();
             let result = pic
                 .update_call(
                     consumer,
@@ -57,13 +60,20 @@ fn installed_zero_partial_full_acceptance_preserves_bytes_refunds_and_balances()
                     "send",
                     ATTACHED.to_le_bytes().to_vec(),
                 )
+                .await
                 .unwrap();
             assert_result(&result, ATTACHED - accepted, false, reply);
-            assert_eq!(pic.cycle_balance(consumer).unwrap(), source - accepted);
-            assert_eq!(pic.cycle_balance(provider).unwrap(), destination + accepted);
+            assert_eq!(
+                pic.cycle_balance(consumer).await.unwrap(),
+                source - accepted
+            );
+            assert_eq!(
+                pic.cycle_balance(provider).await.unwrap(),
+                destination + accepted
+            );
         }
-        let source = pic.cycle_balance(consumer).unwrap();
-        let destination = pic.cycle_balance(provider).unwrap();
+        let source = pic.cycle_balance(consumer).await.unwrap();
+        let destination = pic.cycle_balance(provider).await.unwrap();
         let result = pic
             .update_call(
                 consumer,
@@ -71,25 +81,27 @@ fn installed_zero_partial_full_acceptance_preserves_bytes_refunds_and_balances()
                 "send",
                 ATTACHED.to_le_bytes().to_vec(),
             )
+            .await
             .unwrap();
         assert_result(&result, ATTACHED, true, b"held reply slots exhausted");
         assert_eq!(
-            pic.cycle_balance(consumer).unwrap(),
+            pic.cycle_balance(consumer).await.unwrap(),
             source,
             "exhaustion refunds everything"
         );
-        assert_eq!(pic.cycle_balance(provider).unwrap(), destination);
+        assert_eq!(pic.cycle_balance(provider).await.unwrap(), destination);
     }
 }
 
-#[test]
-fn barrier_setup_trap_rolls_back_acceptance_and_slot_consumption() {
+#[tokio::test]
+async fn barrier_setup_trap_rolls_back_acceptance_and_slot_consumption() {
     let owned = support::startup_config()
         .build_instance(PocketIcBuilder::new().with_system_subnet())
+        .await
         .unwrap();
     let pic = owned.instance();
-    let provider = funded(pic);
-    let destination = pic.cycle_balance(provider).unwrap();
+    let provider = funded(pic).await;
+    let destination = pic.cycle_balance(provider).await.unwrap();
     // More than the provider can send even after accepting the attached cycles.
     let barrier_cycles = destination + ATTACHED + BARRIER_CYCLES;
     let mut fixture = HeldReplyFixture::new_with_cycle_acceptance(
@@ -101,11 +113,13 @@ fn barrier_setup_trap_rolls_back_acceptance_and_slot_consumption() {
         3_000,
         10_000,
     )
+    .await
     .unwrap();
     pic.install_canister(provider, fixture.wasm().to_vec(), vec![], None)
+        .await
         .unwrap();
-    let consumer = install_consumer(pic, provider);
-    let source = pic.cycle_balance(consumer).unwrap();
+    let consumer = install_consumer(pic, provider).await;
+    let source = pic.cycle_balance(consumer).await.unwrap();
     let result = pic
         .update_call(
             consumer,
@@ -113,18 +127,19 @@ fn barrier_setup_trap_rolls_back_acceptance_and_slot_consumption() {
             "send",
             ATTACHED.to_le_bytes().to_vec(),
         )
+        .await
         .unwrap();
     assert_eq!(
         u128::from_le_bytes(result[..16].try_into().unwrap()),
         ATTACHED
     );
     assert_ne!(u32::from_le_bytes(result[16..20].try_into().unwrap()), 0);
-    assert_eq!(pic.cycle_balance(consumer).unwrap(), source);
-    assert_eq!(pic.cycle_balance(provider).unwrap(), destination);
-    assert_eq!(fixture.pending(pic).unwrap(), []);
+    assert_eq!(pic.cycle_balance(consumer).await.unwrap(), source);
+    assert_eq!(pic.cycle_balance(provider).await.unwrap(), destination);
+    assert_eq!(fixture.pending(pic).await.unwrap(), []);
 
     // Repair only the funding, retaining the installed module and its state.
-    pic.add_cycles(provider, barrier_cycles).unwrap();
+    pic.add_cycles(provider, barrier_cycles).await.unwrap();
     let call = pic
         .submit_call(
             consumer,
@@ -132,32 +147,37 @@ fn barrier_setup_trap_rolls_back_acceptance_and_slot_consumption() {
             "send",
             ATTACHED.to_le_bytes().to_vec(),
         )
+        .await
         .unwrap();
     let mut pending = vec![];
     for _ in 0..20 {
-        pic.tick().unwrap();
-        pending = fixture.pending(pic).unwrap();
+        pic.tick().await.unwrap();
+        pending = fixture.pending(pic).await.unwrap();
         if !pending.is_empty() {
             break;
         }
     }
     assert_eq!(pending.len(), 1);
     assert_eq!(pending[0].slot(), 0, "the trapped update consumed no slot");
-    assert_eq!(pic.cycle_balance(provider).unwrap(), destination + 3_000);
-    fixture.release(pic, &pending[0]).unwrap();
-    let result = pic.await_call(call).unwrap();
+    assert_eq!(
+        pic.cycle_balance(provider).await.unwrap(),
+        destination + 3_000
+    );
+    fixture.release(pic, &pending[0]).await.unwrap();
+    let result = pic.await_call(call).await.unwrap();
     assert_result(&result, ATTACHED - 3_000, false, REPLIES[0]);
-    assert_eq!(pic.cycle_balance(consumer).unwrap(), source - 3_000);
+    assert_eq!(pic.cycle_balance(consumer).await.unwrap(), source - 3_000);
 }
 
-#[test]
-fn held_acceptance_commits_before_release_and_survives_timeout() {
+#[tokio::test]
+async fn held_acceptance_commits_before_release_and_survives_timeout() {
     let owned = support::startup_config()
         .build_instance(PocketIcBuilder::new().with_system_subnet())
+        .await
         .unwrap();
     let pic = owned.instance();
-    let provider = funded(pic);
-    let destination = pic.cycle_balance(provider).unwrap();
+    let provider = funded(pic).await;
+    let destination = pic.cycle_balance(provider).await.unwrap();
     let methods = methods();
     let mut fixture = HeldReplyFixture::new_with_cycle_acceptance(
         pic,
@@ -168,13 +188,15 @@ fn held_acceptance_commits_before_release_and_survives_timeout() {
         3_000,
         10_000,
     )
+    .await
     .unwrap();
-    assert_eq!(pic.cycle_balance(provider).unwrap(), destination);
+    assert_eq!(pic.cycle_balance(provider).await.unwrap(), destination);
     validate(fixture.wasm(), 10_000).unwrap();
     pic.install_canister(provider, fixture.wasm().to_vec(), vec![], None)
+        .await
         .unwrap();
-    let consumer = install_consumer(pic, provider);
-    let source = pic.cycle_balance(consumer).unwrap();
+    let consumer = install_consumer(pic, provider).await;
+    let source = pic.cycle_balance(consumer).await.unwrap();
     let mut calls = vec![];
     for slot in 0..2 {
         calls.push(
@@ -184,39 +206,33 @@ fn held_acceptance_commits_before_release_and_survives_timeout() {
                 "send",
                 ATTACHED.to_le_bytes().to_vec(),
             )
+            .await
             .unwrap(),
         );
-        let mut observed = false;
-        for _ in 0..20 {
-            pic.tick().unwrap();
-            if fixture
-                .pending(pic)
-                .unwrap()
-                .iter()
-                .any(|request| request.slot() == slot)
-            {
-                observed = true;
-                break;
-            }
-        }
-        assert!(observed, "real barrier for slot {slot}");
+        support::await_held_slot(pic, &fixture, slot).await;
         assert_eq!(
-            pic.cycle_balance(provider).unwrap(),
+            pic.cycle_balance(provider).await.unwrap(),
             destination + (slot as u128 + 1) * 3_000 - (slot as u128 + 1) * BARRIER_CYCLES
         );
     }
-    assert_eq!(pic.cycle_balance(consumer).unwrap(), source - 2 * ATTACHED);
-    let pending = fixture.pending(pic).unwrap();
+    assert_eq!(
+        pic.cycle_balance(consumer).await.unwrap(),
+        source - 2 * ATTACHED
+    );
+    let pending = fixture.pending(pic).await.unwrap();
     for slot in [1, 0] {
         let request = pending
             .iter()
             .find(|request| request.slot() == slot)
             .unwrap();
-        fixture.release(pic, request).unwrap();
-        let result = pic.await_call(calls[slot].clone()).unwrap();
+        fixture.release(pic, request).await.unwrap();
+        let result = pic.await_call(calls[slot].clone()).await.unwrap();
         assert_result(&result, ATTACHED - 3_000, false, REPLIES[slot]);
     }
-    assert_eq!(pic.cycle_balance(consumer).unwrap(), source - 2 * 3_000);
+    assert_eq!(
+        pic.cycle_balance(consumer).await.unwrap(),
+        source - 2 * 3_000
+    );
 
     let call = pic
         .submit_call(
@@ -225,18 +241,19 @@ fn held_acceptance_commits_before_release_and_survives_timeout() {
             "send",
             ATTACHED.to_le_bytes().to_vec(),
         )
+        .await
         .unwrap();
     let mut pending = vec![];
     for _ in 0..20 {
-        pic.tick().unwrap();
-        pending = fixture.pending(pic).unwrap();
+        pic.tick().await.unwrap();
+        pending = fixture.pending(pic).await.unwrap();
         if !pending.is_empty() {
             break;
         }
     }
     assert_eq!(pending.len(), 1);
-    pic.advance_time(Duration::from_secs(61)).unwrap();
-    let result = pic.await_call(call).unwrap();
+    pic.advance_time(Duration::from_secs(61)).await.unwrap();
+    let result = pic.await_call(call).await.unwrap();
     assert_result(
         &result,
         ATTACHED - 3_000,
@@ -244,11 +261,11 @@ fn held_acceptance_commits_before_release_and_survives_timeout() {
         b"held reply barrier failed",
     );
     assert_eq!(
-        pic.cycle_balance(consumer).unwrap(),
+        pic.cycle_balance(consumer).await.unwrap(),
         source - 3 * 3_000,
         "timeout cannot undo previously committed acceptance"
     );
-    assert!(fixture.release(pic, &pending[0]).is_err());
+    assert!(fixture.release(pic, &pending[0]).await.is_err());
 }
 
 fn methods() -> Vec<RawReplyMethod<'static>> {
@@ -262,9 +279,9 @@ fn methods() -> Vec<RawReplyMethod<'static>> {
         .collect()
 }
 
-fn funded(pic: &PocketIc) -> Principal {
-    let id = pic.create_canister().unwrap();
-    pic.add_cycles(id, 10_000_000_000_000).unwrap();
+async fn funded(pic: &PocketIc) -> Principal {
+    let id = pic.create_canister().await.unwrap();
+    pic.add_cycles(id, 10_000_000_000_000).await.unwrap();
     id
 }
 
@@ -280,8 +297,8 @@ fn assert_result(result: &[u8], refunded: u128, rejected: bool, reply: &[u8]) {
     assert_eq!(&result[20..], reply);
 }
 
-fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
-    let consumer = funded(pic);
+async fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
+    let consumer = funded(pic).await;
     let principal = support::wat_bytes(provider.as_slice());
     // The test transport returns IC-observed refunded cycles, rejection code and
     // exact provider bytes. No journal observation or application DTO is injected.
@@ -318,20 +335,22 @@ fn install_consumer(pic: &PocketIc, provider: Principal) -> Principal {
  (if (call $perform) (then unreachable))))"#,
         length = provider.as_slice().len()
     );
-    support::install_wat(pic, consumer, &source, 10_000);
+    support::install_wat(pic, consumer, &source, 10_000).await;
     consumer
 }
 
-#[test]
-fn application_subnet_uses_the_same_real_refund_path() {
+#[tokio::test]
+async fn application_subnet_uses_the_same_real_refund_path() {
     // Application-subnet execution fees are separate from callback refunds.
     // Exact gross balance conservation is qualified on the system subnet above.
-    let owned = support::pocket_ic();
+    let owned = support::pocket_ic().await;
     let pic = owned.instance();
-    let provider = funded(pic);
+    let provider = funded(pic).await;
     let wasm = cycle_reply_canister(&methods(), LIMITS, 3_000, 10_000).unwrap();
-    pic.install_canister(provider, wasm, vec![], None).unwrap();
-    let consumer = install_consumer(pic, provider);
+    pic.install_canister(provider, wasm, vec![], None)
+        .await
+        .unwrap();
+    let consumer = install_consumer(pic, provider).await;
     for reply in REPLIES {
         let result = pic
             .update_call(
@@ -340,6 +359,7 @@ fn application_subnet_uses_the_same_real_refund_path() {
                 "send",
                 ATTACHED.to_le_bytes().to_vec(),
             )
+            .await
             .unwrap();
         assert_result(&result, ATTACHED - 3_000, false, reply);
     }

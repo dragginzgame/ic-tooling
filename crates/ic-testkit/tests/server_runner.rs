@@ -301,8 +301,8 @@ fn command_completion_stops_remaining_owned_descendants() {
     assert!(stopped(fixture.pid("server.pid")));
 }
 
-#[test]
-fn server_exit_returns_diagnostics_and_stops_the_pending_command_group() {
+#[tokio::test]
+async fn server_exit_returns_diagnostics_and_stops_the_pending_command_group() {
     use ic_testkit::pic::{PocketIcStartupConfig, PocketIcStartupFailure};
 
     let fixture = Fixture::new();
@@ -361,9 +361,9 @@ fn real_server_runs_a_separate_process_using_environment_startup() {
     );
 }
 
-#[test]
+#[tokio::test]
 #[ignore = "invoked by the real server runner test in a separate process"]
-fn runner_environment_worker() {
+async fn runner_environment_worker() {
     use ic_testkit::pic::PocketIcStartupConfig;
     use ic_testkit::pocket_ic::PocketIcBuilder;
     if std::env::var_os("IC_TESTKIT_TEST_PRECLIENT_DELAY").is_some() {
@@ -373,6 +373,7 @@ fn runner_environment_worker() {
     let pic = PocketIcStartupConfig::from_env(Duration::from_secs(30))
         .unwrap()
         .build_instance(PocketIcBuilder::new().with_application_subnet())
+        .await
         .unwrap();
     assert_eq!(
         pic.instance().get_server_url().as_str(),

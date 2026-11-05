@@ -30,7 +30,7 @@ one Testkit module, without a second wrapper package or separate release group.
 ## Tooling maintenance after transfer
 
 `tooling-maintenance.patch` records the subsequent explicit-server API cut and
-blocking-forwarder simplification. Its independent checksum is checked before
+blocking-forwarder simplification and the subsequent async-only cut. Its independent checksum is checked before
 reversing it, then the unchanged transfer and upstream reconstruction checks run.
 Original donor/upstream hashes and patches are not refreshed to admit these edits.
 Mutation checks also reject changes to this maintenance patch.
@@ -42,3 +42,17 @@ before runtime construction or network effects. Sync/async `new` and
 own provisioning and server custody. Protocol bytes, crypto, typed failures,
 accepted-operation custody, snapshot transfer and external DTO identities stay
 unchanged. Existing private state-directory custody remains imported behavior.
+
+## Async-only client maintenance
+
+The next Testkit minor removes the blocking facade and its private runtimes,
+channels and destructor I/O. The maintained async implementation moves from the
+public nonblocking path into the private client module and is exported once as
+PocketIc. Builders and helpers await the caller-owned runtime. Explicit close
+retains the managed server through deletion; cancellation and uncertain remote
+outcomes require caller reconciliation. Original protocol identities, request
+custody, no-replay behavior and bounded snapshot transfer remain intact.
+
+The maintenance patch reverses the complete cut, including test migrations and
+the private module move, before the unchanged donor and upstream checks run.
+Original provenance hashes, imported licenses and upstream patches are unchanged.

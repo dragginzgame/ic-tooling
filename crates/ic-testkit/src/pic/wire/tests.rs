@@ -12,8 +12,8 @@ const LIMITS: Limits = Limits {
     depth: 16,
 };
 
-#[test]
-fn borrowed_requests_return_owned_responses() {
+#[tokio::test]
+async fn borrowed_requests_return_owned_responses() {
     use ic_wire::{Bytes, BytesRef};
     const BORROWED: WireCallSpec = WireCallSpec {
         method: "borrowed",
@@ -37,7 +37,7 @@ fn borrowed_requests_return_owned_responses() {
             ),
             BORROWED,
             &request,
-            |frame| {
+            async |frame| {
                 calls += 1;
                 assert_eq!(
                     native::decode_request::<BytesRef<'_, 8>>(BORROWED.method_id, &frame, LIMITS)
@@ -53,6 +53,7 @@ fn borrowed_requests_return_owned_responses() {
                 .unwrap())
             },
         )
+        .await
         .unwrap();
         assert_eq!(calls, 1);
         response
@@ -80,8 +81,8 @@ const BAD_REPLY: WireCallSpec = WireCallSpec {
     ..SAMPLE
 };
 
-#[test]
-fn one_call_preserves_method_context_and_application_results() {
+#[tokio::test]
+async fn one_call_preserves_method_context_and_application_results() {
     for operation in ["query_call", "update_call"] {
         for value in [Ok(u64::MAX), Err(())] {
             let ctx = context(
@@ -96,7 +97,7 @@ fn one_call_preserves_method_context_and_application_results() {
             assert_eq!(ctx.method, SAMPLE.method);
             assert_eq!(ctx.method_id, SAMPLE.method_id);
             let mut calls = 0;
-            let result = call_wire::<u32, Result<u64, ()>>(ctx, SAMPLE, &u32::MAX, |bytes| {
+            let result = call_wire::<u32, Result<u64, ()>>(ctx, SAMPLE, &u32::MAX, async |bytes| {
                 calls += 1;
                 assert_eq!(
                     native::decode_request::<u32>(SAMPLE.method_id, &bytes, LIMITS),
@@ -104,6 +105,7 @@ fn one_call_preserves_method_context_and_application_results() {
                 );
                 Ok(native::encode_response(SAMPLE.method_id, &value, LIMITS).unwrap())
             })
+            .await
             .unwrap();
             assert_eq!(result, value);
             assert_eq!(calls, 1);
@@ -111,8 +113,8 @@ fn one_call_preserves_method_context_and_application_results() {
     }
 }
 
-#[test]
-fn request_admission_precedes_transport() {
+#[tokio::test]
+async fn request_admission_precedes_transport() {
     for request_limits in [
         BAD_REQUEST.request_limits,
         Limits { nodes: 3, ..LIMITS },
@@ -135,8 +137,9 @@ fn request_admission_precedes_transport() {
             ),
             spec,
             &1,
-            |_| panic!("refused request must not reach transport"),
+            async |_| panic!("refused request must not reach transport"),
         )
+        .await
         .unwrap_err();
         assert!(matches!(
             error,
@@ -153,8 +156,8 @@ fn request_admission_precedes_transport() {
     }
 }
 
-#[test]
-fn invalid_responses_preserve_typed_refusal_and_context_without_payload_logs() {
+#[tokio::test]
+async fn invalid_responses_preserve_typed_refusal_and_context_without_payload_logs() {
     let valid = native::encode_response(SAMPLE.method_id, &Ok::<u64, ()>(7), LIMITS).unwrap();
     let mut wrong_method = valid.clone();
     wrong_method[2] ^= 1;
@@ -181,8 +184,9 @@ fn invalid_responses_preserve_typed_refusal_and_context_without_payload_logs() {
             Principal::from_slice(&[1]),
             Principal::from_slice(&[2]),
         );
-        let error =
-            call_wire::<u32, Result<u64, ()>>(ctx.clone(), SAMPLE, &7, |_| Ok(reply)).unwrap_err();
+        let error = call_wire::<u32, Result<u64, ()>>(ctx.clone(), SAMPLE, &7, async |_| Ok(reply))
+            .await
+            .unwrap_err();
         assert!(
             std::error::Error::source(&error)
                 .unwrap()
@@ -203,8 +207,8 @@ fn invalid_responses_preserve_typed_refusal_and_context_without_payload_logs() {
     }
 }
 
-#[test]
-fn sixteen_bit_responses_preserve_boundaries_and_malformed_refusals() {
+#[tokio::test]
+async fn sixteen_bit_responses_preserve_boundaries_and_malformed_refusals() {
     for (payload, expected) in [
         ([0xff, 0xff, 0x03].as_slice(), Some((u16::MAX, i16::MIN))),
         (
@@ -226,12 +230,12 @@ fn sixteen_bit_responses_preserve_boundaries_and_malformed_refusals() {
             Principal::anonymous(),
             Principal::anonymous(),
         );
-        let unsigned = call_wire::<(), u16>(ctx.clone(), SAMPLE, &(), |_| Ok(reply.clone()));
-        let signed = call_wire::<(), i16>(ctx, SAMPLE, &(), |_| Ok(reply.clone()));
+        let unsigned = call_wire::<(), u16>(ctx.clone(), SAMPLE, &(), async |_| Ok(reply.clone()));
+        let signed = call_wire::<(), i16>(ctx, SAMPLE, &(), async |_| Ok(reply.clone()));
         if let Some(expected) = expected {
-            assert_eq!((unsigned.unwrap(), signed.unwrap()), expected);
+            assert_eq!((unsigned.await.unwrap(), signed.await.unwrap()), expected);
         } else {
-            for result in [unsigned.map(i32::from), signed.map(i32::from)] {
+            for result in [unsigned.await.map(i32::from), signed.await.map(i32::from)] {
                 let Err(WireCallError::Decode { source, .. }) = result else {
                     panic!("malformed 16-bit response must retain its codec refusal");
                 };
@@ -241,8 +245,8 @@ fn sixteen_bit_responses_preserve_boundaries_and_malformed_refusals() {
     }
 }
 
-#[test]
-fn declared_decoder_work_budget_is_not_replaced_with_a_default() {
+#[tokio::test]
+async fn declared_decoder_work_budget_is_not_replaced_with_a_default() {
     let reply = native::encode_response(SAMPLE.method_id, &Ok::<u64, ()>(1), LIMITS).unwrap();
     // Native decoding owns both work-budget and oversized-frame admission.
     for reply in [reply, vec![0; LIMITS.bytes + 1]] {
@@ -253,8 +257,10 @@ fn declared_decoder_work_budget_is_not_replaced_with_a_default() {
             Principal::anonymous(),
             Principal::anonymous(),
         );
-        let error = call_wire::<u32, Result<u64, ()>>(ctx.clone(), BAD_REPLY, &1, |_| Ok(reply))
-            .unwrap_err();
+        let error =
+            call_wire::<u32, Result<u64, ()>>(ctx.clone(), BAD_REPLY, &1, async |_| Ok(reply))
+                .await
+                .unwrap_err();
         let WireCallError::Decode {
             context,
             bytes,
@@ -269,8 +275,8 @@ fn declared_decoder_work_budget_is_not_replaced_with_a_default() {
     }
 }
 
-#[test]
-fn rejection_remains_structured_and_is_never_retried() {
+#[tokio::test]
+async fn rejection_remains_structured_and_is_never_retried() {
     let response = RejectResponse {
         reject_code: RejectCode::CanisterReject,
         reject_message: "original rejection payload".repeat(1024),
@@ -284,10 +290,11 @@ fn rejection_remains_structured_and_is_never_retried() {
         Principal::from_slice(&[2]),
     );
     let mut calls = 0;
-    let error = call_wire::<u32, Result<u64, ()>>(ctx.clone(), SAMPLE, &1, |_| {
+    let error = call_wire::<u32, Result<u64, ()>>(ctx.clone(), SAMPLE, &1, async |_| {
         calls += 1;
         Err(ClientError::Canister(response.clone()))
     })
+    .await
     .unwrap_err();
     assert_eq!(calls, 1);
     assert!(error.to_string().len() < 512);
@@ -298,33 +305,37 @@ fn rejection_remains_structured_and_is_never_retried() {
     assert!(matches!(*source, ClientError::Canister(saved) if saved == response));
 }
 
-#[test]
-fn transport_classification_and_original_unrelated_panics_are_preserved() {
+#[tokio::test]
+async fn transport_classification_and_original_unrelated_panics_are_preserved() {
     let ctx = context(
         "query_call",
         SAMPLE,
         Principal::anonymous(),
         Principal::anonymous(),
     );
-    let error = call_wire::<u32, Result<u64, ()>>(ctx.clone(), SAMPLE, &1, |_| {
+    let error = call_wire::<u32, Result<u64, ()>>(ctx.clone(), SAMPLE, &1, async |_| {
         Err(ClientError::Protocol(
             "application worker channel closed".into(),
         ))
     })
+    .await
     .unwrap_err();
     assert!(!is_dead_pocket_ic_transport_error(&error));
     let payload = Box::new(9_u8);
     let original = std::ptr::from_ref(payload.as_ref());
-    let error = std::panic::catch_unwind(|| {
-        call_wire::<u32, Result<u64, ()>>(ctx, SAMPLE, &1, |_| std::panic::panic_any(payload))
+    let error = tokio::spawn(async move {
+        call_wire::<u32, Result<u64, ()>>(ctx, SAMPLE, &1, async |_| std::panic::panic_any(payload))
+            .await
     })
-    .unwrap_err();
+    .await
+    .unwrap_err()
+    .into_panic();
     let resumed = error.downcast::<Box<u8>>().unwrap();
     assert_eq!(std::ptr::from_ref(resumed.as_ref().as_ref()), original);
 }
 
-#[test]
-fn deserialize_only_and_normalizing_responses_are_admitted() {
+#[tokio::test]
+async fn deserialize_only_and_normalizing_responses_are_admitted() {
     use serde::Deserialize;
     use std::collections::BTreeMap;
 
@@ -344,17 +355,18 @@ fn deserialize_only_and_normalizing_responses_are_admitted() {
         Principal::anonymous(),
         Principal::anonymous(),
     );
-    let decoded = call_wire::<(), ResponseOnly>(ctx.clone(), SAMPLE, &(), |_| {
+    let decoded = call_wire::<(), ResponseOnly>(ctx.clone(), SAMPLE, &(), async |_| {
         Ok(native::encode_response(SAMPLE.method_id, &7_u32, LIMITS).unwrap())
     });
-    assert_eq!(decoded.unwrap().0, 7);
+    assert_eq!(decoded.await.unwrap().0, 7);
 
     // Keep the caller-owned received frame for byte identity. Wire permits map
     // insertion order to differ from the BTreeMap's normalized iteration order.
     let mut received = native::encode_response(SAMPLE.method_id, &(), LIMITS).unwrap();
     received.extend_from_slice(&[2, 2, 20, 1, 10]);
-    let value =
-        call_wire::<(), BTreeMap<u8, u8>>(ctx, SAMPLE, &(), |_| Ok(received.clone())).unwrap();
+    let value = call_wire::<(), BTreeMap<u8, u8>>(ctx, SAMPLE, &(), async |_| Ok(received.clone()))
+        .await
+        .unwrap();
     assert_eq!(value, BTreeMap::from([(1, 10), (2, 20)]));
     let reencoded = native::encode_response(SAMPLE.method_id, &value, LIMITS).unwrap();
     assert_ne!(received, reencoded);

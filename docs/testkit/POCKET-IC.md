@@ -61,7 +61,7 @@ would still need an explicit owner.
 
 ## Bounded startup and process lifetime
 
-Testkit's `build_instance` and `build_instance_async` use the explicit configuration, preserve a typed
+Testkit's async `build_instance` uses the explicit configuration, preserve a typed
 `PocketIcStartupFailure`, and return `PocketIcInstance<T>` with the upstream
 instance and its server lifetime. Startup cancellation/failure cleans up the
 owned child; borrowed-server failure leaves ownership with its caller.
@@ -91,20 +91,20 @@ from ordinary simulator behavior.
 
 ### Bounded instance teardown
 
-The construction deadline ends when startup returns. PocketIC 16.1's synchronous
-instance destructor sends HTTP DELETE through a client without a request timeout;
-its operation retry budget does not bound that wait. Testkit returns the upstream
-instance and preserves this limitation. Catching a panic cannot bound a blocked
-request. The nonblocking instance instead requires an explicit
-`instance.drop().await` while the server remains available.
+The construction deadline ends when startup returns. All client network operations
+use the caller's Tokio runtime. Await `owned.close().await` to delete an instance
+while retaining its managed server, or await `client.drop().await` before releasing
+a separately held server. Rust Drop performs no client network I/O. Dropping a
+managed server still stops its instances and terminates/reaps its process group.
+Borrowed servers and uncertain deletion outcomes remain caller-owned.
 
-The controlled loopback test observes DELETE, confirms the child is still waiting,
-then acknowledges it and verifies completion. The parent bounds its own waits and
-owns child termination/reaping. It needs no PocketIC binary:
+The controlled loopback test observes DELETE, confirms that explicit close is
+waiting, then acknowledges it and verifies completion. Its parent bounds its own
+waits and owns child termination/reaping; no PocketIC binary is required:
 
 ```bash
 cargo test -p ic-testkit --locked --test pocket_ic_teardown \
-  instance_drop_waits_for_the_deletion_response -- --exact --nocapture
+  instance_close_waits_for_the_deletion_response -- --exact --nocapture
 ```
 
 ### Temporary-directory ownership
@@ -124,37 +124,11 @@ PocketIC's upstream Candid helpers remain upstream APIs. Testkit offers optional
 method-bound Wire calls for owned application endpoints and raw operations for
 caller-owned external protocol adapters. It does not add a Candid codec layer.
 
-Some upstream operations still panic instead of returning structured failures.
-Testkit owns `try_pocket_ic_operation` as the maintained boundary for recognized
-synchronous transport panics. Wire calls use that same boundary; callers can
-also apply it to raw operations without mirroring the simulator API. It returns
-the original successful value, preserves upstream returned rejections and resumes
-unrelated panic payloads. The closure runs once, with no automatic update replay.
-Disconnects do not prove whether an update was accepted or an instance died.
-
-The selected client's panic shapes are maintained here. Upstream has already
-discarded the typed request cause, so this remains heuristic classification;
-it cannot bound a blocked operation or catch asynchronous future polling. The
-separate internal startup/install/diagnostic capture boundary intentionally
-retains every panic for cleanup or collect-all behavior. Neither helper changes
-the process panic hook. A supplying upstream API could eventually replace this
-recognizer, but local support does not depend on that producer change.
-
-### Resolver constraint
-
-PocketIC 16.1.0 itself requires exactly `thiserror` 2.0.18, preserving that
-selection in Testkit's native graph. The combined catalog uses a compatible
-`2.0.18` requirement so unrelated Host-only consumers do not inherit a direct
-PocketIC-specific exact pin. The lockfile still selects 2.0.18; no client patch
-or dependency upgrade accompanies consolidation. Qualify the declaration with
-`make dependency-pins-check` and the selected packages with
-`cargo check -p ic-testkit -p ic-testkit-dev --locked`.
-
-Routing the client through Platform retains that transitive requirement. Cargo
-cannot combine it with an incompatible same-major requirement such as `^2.0.21`
-in the same graph. Testkit's operation adapter cannot alter this constraint;
-revisit the pin when deliberately changing the selected client. See
-[#100 — PocketIC exact thiserror pin forces consumer lockfile downgrades](https://github.com/dragginzgame/ic-testkit/issues/100).
+The maintained async client returns typed transport, body, server, codec and
+canister failures. Accepted operation/ingress identities survive failures; an
+uncertain update is never replayed automatically. Wire delegates to that same
+client and preserves the typed cause. Unrelated Rust panics propagate. The former
+panic-string transport adapter and blocking client are absent.
 
 `CanisterInstallExt` preserves create, funding and installation failures. Retry
 policy uses `ErrorCode::CanisterInstallCodeRateLimited` and caller-selected

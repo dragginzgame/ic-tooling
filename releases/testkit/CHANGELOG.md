@@ -6,6 +6,35 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.87.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Keep one async PocketIC client at `ic_testkit::pocket_ic::PocketIc`. Remove
+  the blocking facade, its private runtimes/worker channels and the public
+  `nonblocking` path. Await `builder.build()`, `config.build_instance(builder)`,
+  network operations and Testkit lifecycle/Wire helpers. Async retry/readiness
+  callbacks and Send pool recipe futures replace their synchronous contracts.
+  The caller owns the runtime; server 16.1 and external protocol identities stay
+  unchanged. See the [migration guide](../../docs/testkit/client-migration.md).
+- Replace client destructor I/O with explicit async deletion. Await instance or
+  baseline `close()`, or raw `PocketIc::drop()`, while retaining the server.
+  Close pools before releasing borrowed servers and retain their deletion failures.
+  Owned server Drop still stops/reaps its process group; uncertain remote effects
+  require caller reconciliation without automatic replay.
+
+### 🧹 Cleanup
+
+- Check integration helper dead-code expectations, use typed install-error
+  assertions and derive the example recipe's mechanical error forwarding.
+  Declare the private tooling and benchmark package roles for source reports.
+- Delegate FIFO pool capacity and queued cancellation to Tokio. Cancelled slot
+  preparation forces a rebuild before reuse, preserving its value for teardown.
+  Retain fatal/recovery distinctions, snapshot rollback and typed failure evidence.
+- Narrow Tokio's production features and migrate workspace callers, benchmark
+  release measurement and native contract tests. Preserve donor/upstream source
+  reconstruction with a separately checked maintenance patch.
+
 ## [0.86.0] - 2026-11-04
 
 ### ⚠️ Breaking

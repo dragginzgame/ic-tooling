@@ -10,6 +10,8 @@ reset, release, tag or upload is implied by establishing this group.
 
 ### 🧪 Testing
 
+- Move private artifact/Candid helpers into `support_tests.rs` and `tests/`,
+  and make integration helper dead-code suppressions checked lint expectations.
 - Reuse unchanged product-evidence fixture execution across release groups, with
   new source/group admissions and original proof/log custody. Ordinary CI still
   runs the fixture; Rust, runtime and archive qualification remain fresh.

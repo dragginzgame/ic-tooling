@@ -1509,7 +1509,7 @@ fn filesystem_boundaries_reject_cache_inputs_and_destination_aliases() {
 #[cfg(unix)]
 fn cargo_boundary_observations_are_lazy_and_scoped_to_one_validation() {
     let (root, build) =
-        crate::artifacts::test_support::fake_wasm_build_spec("boundary-observations");
+        crate::artifacts::support_tests::fake_wasm_build_spec("boundary-observations");
     let resolved = resolve_cargo_build_inputs(&build).unwrap();
     let outside = root.join("published");
     let mut observations = super::CargoInputBoundaries::default();

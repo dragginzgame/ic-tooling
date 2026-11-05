@@ -131,7 +131,9 @@ fn secondary_server_cleanup_preserves_failed_command_status() {
         assert_eq!(failure_exit_code(&failure), ExitCode::from(expected));
     }
     assert_eq!(
-        failure_exit_code(&PocketIcStartupFailure::BuilderDisconnected),
+        failure_exit_code(&PocketIcStartupFailure::InvalidConfiguration {
+            message: "invalid".into()
+        }),
         ExitCode::FAILURE
     );
 }

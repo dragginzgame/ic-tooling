@@ -20,11 +20,11 @@ impl StandaloneCanisterFixture {
     ///
     /// # Errors
     /// Returns the installation failure with the owned instance for caller recovery.
-    pub fn try_install(
+    pub async fn try_install(
         instance: PocketIcInstance<PocketIc>,
         spec: InstallSpec,
     ) -> Result<Self, StandaloneCanisterInstallError> {
-        let canister_id = match instance.instance().try_create_and_install(spec) {
+        let canister_id = match instance.instance().try_create_and_install(spec).await {
             Ok(canister_id) => canister_id,
             Err(error) => return Err(StandaloneCanisterInstallError::new(instance, error)),
         };

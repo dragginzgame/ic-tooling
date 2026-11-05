@@ -5,7 +5,6 @@ mod support;
 use std::{
     io,
     num::NonZeroUsize,
-    panic::{AssertUnwindSafe, catch_unwind},
     sync::{
         Arc, LazyLock,
         atomic::{AtomicUsize, Ordering},
@@ -28,9 +27,11 @@ const READY_TIMEOUT: Duration = Duration::from_secs(60);
 const OPERATION_TIMEOUT: Duration = Duration::from_secs(30);
 const EMPTY_WASM: &[u8] = b"\0asm\x01\0\0\0";
 
-type SingleCanisterPool = CachedPocketIcBaselinePool<
-    StandaloneCanisterRecipe<fn() -> io::Result<StandaloneCanisterFixture>>,
+type FixtureFuture = std::pin::Pin<
+    Box<dyn std::future::Future<Output = io::Result<StandaloneCanisterFixture>> + Send>,
 >;
+type SingleCanisterPool =
+    CachedPocketIcBaselinePool<StandaloneCanisterRecipe<fn() -> FixtureFuture>>;
 
 static STANDALONE_RESTORE_POOL: LazyLock<SingleCanisterPool> = LazyLock::new(|| {
     single_canister_pool(
@@ -51,12 +52,13 @@ static STANDALONE_PANIC_POOL: LazyLock<SingleCanisterPool> = LazyLock::new(|| {
     )
 });
 
-fn single_canister_pool<B>(
+fn single_canister_pool<B, Fut>(
     capacity: NonZeroUsize,
     build: B,
 ) -> CachedPocketIcBaselinePool<StandaloneCanisterRecipe<B>>
 where
-    B: Fn() -> io::Result<StandaloneCanisterFixture> + Send + Sync + 'static,
+    B: Fn() -> Fut + Send + Sync + 'static,
+    Fut: std::future::Future<Output = io::Result<StandaloneCanisterFixture>> + Send,
 {
     CachedPocketIcBaselinePool::new(
         capacity,
@@ -91,17 +93,18 @@ enum Event {
     },
 }
 
-#[test]
-fn upstream_supports_two_overlapping_instances() {
-    assert_two_instances_overlap(move || {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn upstream_supports_two_overlapping_instances() {
+    assert_two_instances_overlap(async move || {
         support::startup_config()
             .build_instance(ic_testkit::pocket_ic::PocketIcBuilder::new().with_application_subnet())
+            .await
             .expect("build explicitly configured upstream instance")
     });
 }
 
-#[test]
-fn startup_configuration_returns_a_typed_startup_error() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn startup_configuration_returns_a_typed_startup_error() {
     let missing_binary = std::env::temp_dir().join(format!(
         "ic-testkit-missing-pocket-ic-{}",
         std::process::id()
@@ -113,7 +116,8 @@ fn startup_configuration_returns_a_typed_startup_error() {
         server_idle_ttl: None,
         server_output_files: None,
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet());
+    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .await;
 
     let error = result.err().unwrap();
     assert!(
@@ -121,14 +125,15 @@ fn startup_configuration_returns_a_typed_startup_error() {
     );
 }
 
-#[test]
-fn standalone_accepts_a_caller_built_instance_and_preserves_it_in_parts() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn standalone_accepts_a_caller_built_instance_and_preserves_it_in_parts() {
     let caller_built = support::startup_config()
         .build_instance(
             PocketIcBuilder::new()
                 .with_application_subnet()
                 .with_ii_subnet(),
         )
+        .await
         .expect("build explicitly configured custom topology");
     let fixture = StandaloneCanisterFixture::try_install(
         caller_built,
@@ -140,19 +145,22 @@ fn standalone_accepts_a_caller_built_instance_and_preserves_it_in_parts() {
             label: None,
         },
     )
+    .await
     .expect("install standalone fixture");
     let (owned, canister_id) = fixture.into_parts();
     let pocket_ic = owned.instance();
 
     pocket_ic
         .canister_status(canister_id, None)
+        .await
         .expect("PocketIC returned by into_parts should remain usable");
 }
 
-#[test]
-fn bounded_standalone_pool_restores_and_reuses_one_slot() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn bounded_standalone_pool_restores_and_reuses_one_slot() {
     let (fixture, outcome) = STANDALONE_RESTORE_POOL
         .acquire()
+        .await
         .expect("first standalone pool fixture should capture");
     assert!(matches!(
         &outcome.disposition,
@@ -161,16 +169,18 @@ fn bounded_standalone_pool_restores_and_reuses_one_slot() {
     let timings = outcome.timings;
     assert!(timings.build().is_some());
     assert!(timings.restore().is_none());
-    let first_instance = fixture.pocket_ic().instance_id();
+    let first_instance = fixture.pocket_ic().instance_id;
     let canister_id = *fixture.metadata();
     fixture
         .pocket_ic()
         .uninstall_canister(canister_id, None)
+        .await
         .expect("test should mutate the leased canister");
     assert!(
         fixture
             .pocket_ic()
             .canister_status(canister_id, None)
+            .await
             .expect("mutated canister status should remain readable")
             .module_hash
             .is_none(),
@@ -180,6 +190,7 @@ fn bounded_standalone_pool_restores_and_reuses_one_slot() {
 
     let (fixture, outcome) = STANDALONE_RESTORE_POOL
         .acquire()
+        .await
         .expect("cached standalone pool fixture should restore");
     assert!(matches!(
         &outcome.disposition,
@@ -192,11 +203,12 @@ fn bounded_standalone_pool_restores_and_reuses_one_slot() {
     let timings = outcome.timings;
     assert!(timings.build().is_none());
     assert!(timings.restore().is_some());
-    assert_eq!(fixture.pocket_ic().instance_id(), first_instance);
+    assert_eq!(fixture.pocket_ic().instance_id, first_instance);
     assert!(
         fixture
             .pocket_ic()
             .canister_status(canister_id, None)
+            .await
             .expect("restored canister status should remain readable")
             .module_hash
             .is_some(),
@@ -206,16 +218,17 @@ fn bounded_standalone_pool_restores_and_reuses_one_slot() {
 
     let (fixture, outcome) = STANDALONE_RESTORE_POOL
         .acquire()
+        .await
         .expect("standalone pool snapshot should remain reusable");
     assert!(
         matches!(outcome.disposition, BaselinePoolDisposition::Restored),
         "third lease should reuse the same pool slot"
     );
-    assert_eq!(fixture.pocket_ic().instance_id(), first_instance);
+    assert_eq!(fixture.pocket_ic().instance_id, first_instance);
 }
 
-#[test]
-fn bounded_standalone_pool_allows_capacity_scoped_overlap() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn bounded_standalone_pool_allows_capacity_scoped_overlap() {
     let capacity = NonZeroUsize::new(2).unwrap();
     let pool = Arc::new(single_canister_pool(
         capacity,
@@ -224,6 +237,7 @@ fn bounded_standalone_pool_allows_capacity_scoped_overlap() {
     assert_eq!(pool.capacity(), capacity);
     let (first, first_outcome) = pool
         .acquire()
+        .await
         .expect("first overlapping fixture should capture");
     assert!(
         !matches!(first_outcome.disposition, BaselinePoolDisposition::Restored),
@@ -232,15 +246,16 @@ fn bounded_standalone_pool_allows_capacity_scoped_overlap() {
 
     let (ready_tx, ready_rx) = mpsc::channel();
     let worker_pool = Arc::clone(&pool);
-    let worker = thread::spawn(move || {
+    let worker = support::spawn_async(async move || {
         let (second, second_outcome) = worker_pool
             .acquire()
+            .await
             .expect("second overlapping fixture should capture");
         ready_tx
             .send((
                 (
                     second.pocket_ic().get_server_url(),
-                    second.pocket_ic().instance_id(),
+                    second.pocket_ic().instance_id,
                 ),
                 second_outcome,
             ))
@@ -260,7 +275,7 @@ fn bounded_standalone_pool_allows_capacity_scoped_overlap() {
     assert_ne!(
         (
             first.pocket_ic().get_server_url(),
-            first.pocket_ic().instance_id()
+            first.pocket_ic().instance_id
         ),
         second_instance
     );
@@ -269,28 +284,30 @@ fn bounded_standalone_pool_allows_capacity_scoped_overlap() {
     worker.join().expect("overlap worker should exit cleanly");
 }
 
-#[test]
-fn bounded_standalone_pool_waits_when_capacity_is_exhausted() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn bounded_standalone_pool_waits_when_capacity_is_exhausted() {
     let (first, first_outcome) = STANDALONE_CAPACITY_POOL
         .acquire()
+        .await
         .expect("first capacity-limited fixture should capture");
     assert!(
         !matches!(first_outcome.disposition, BaselinePoolDisposition::Restored),
         "first pool slot should be new"
     );
-    let first_instance = first.pocket_ic().instance_id();
+    let first_instance = first.pocket_ic().instance_id;
 
     let (attempting_tx, attempting_rx) = mpsc::channel();
     let (acquired_tx, acquired_rx) = mpsc::channel();
-    let worker = thread::spawn(move || {
+    let worker = support::spawn_async(async move || {
         attempting_tx
             .send(())
             .expect("capacity test coordinator should remain live");
         let (second, outcome) = STANDALONE_CAPACITY_POOL
             .acquire()
+            .await
             .expect("waiting fixture should restore after release");
         acquired_tx
-            .send((second.pocket_ic().instance_id(), outcome))
+            .send((second.pocket_ic().instance_id, outcome))
             .expect("capacity result receiver should remain live");
     });
 
@@ -322,10 +339,11 @@ fn bounded_standalone_pool_waits_when_capacity_is_exhausted() {
     worker.join().expect("capacity worker should exit cleanly");
 }
 
-#[test]
-fn bounded_standalone_pool_rebuilds_after_a_leased_test_panics() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn bounded_standalone_pool_rebuilds_after_a_leased_test_panics() {
     let (fixture, outcome) = STANDALONE_PANIC_POOL
         .acquire()
+        .await
         .expect("first panic-test fixture should capture");
     assert!(!matches!(
         outcome.disposition,
@@ -333,20 +351,22 @@ fn bounded_standalone_pool_rebuilds_after_a_leased_test_panics() {
     ));
     drop(fixture);
 
-    let panic = catch_unwind(AssertUnwindSafe(|| {
+    let panic = support::catch_async_panic(async || {
         let (_fixture, outcome) = STANDALONE_PANIC_POOL
             .acquire()
+            .await
             .expect("panic-test fixture should restore");
         assert!(matches!(
             outcome.disposition,
             BaselinePoolDisposition::Restored
         ));
         panic!("synthetic pooled-test panic");
-    }));
+    });
     assert!(panic.is_err(), "the test panic must keep unwinding");
 
     let (fixture, outcome) = STANDALONE_PANIC_POOL
         .acquire()
+        .await
         .expect("the invalidated standalone slot should rebuild");
     assert!(matches!(
         &outcome.disposition,
@@ -359,13 +379,13 @@ fn bounded_standalone_pool_rebuilds_after_a_leased_test_panics() {
     drop(fixture);
 }
 
-#[test]
-fn structured_standalone_acquisition_error_retains_build_timings() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn structured_standalone_acquisition_error_retains_build_timings() {
     let pool = single_canister_pool(
         NonZeroUsize::new(1).unwrap(),
         build_deleted_standalone_fixture,
     );
-    let Err(error) = pool.acquire() else {
+    let Err(error) = pool.acquire().await else {
         panic!("capturing a deleted fixture canister must fail");
     };
 
@@ -385,8 +405,8 @@ fn structured_standalone_acquisition_error_retains_build_timings() {
     ));
 }
 
-#[test]
-fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition() {
     let builds = Arc::new(AtomicUsize::new(0));
     let builder_count = Arc::clone(&builds);
     let pool = single_canister_pool(NonZeroUsize::new(1).unwrap(), move || {
@@ -395,6 +415,7 @@ fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition() {
     });
     let (fixture, outcome) = pool
         .acquire()
+        .await
         .expect("standalone fixture should build before restore failure");
     assert!(matches!(
         outcome.disposition,
@@ -404,6 +425,7 @@ fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition() {
     drop(fixture);
     let (fixture, outcome) = pool
         .acquire()
+        .await
         .expect("owned builder baseline should restore");
     assert!(matches!(
         outcome.disposition,
@@ -413,14 +435,16 @@ fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition() {
     fixture
         .pocket_ic()
         .stop_canister(*fixture.metadata(), None)
+        .await
         .expect("stop fixture canister before deleting it");
     fixture
         .pocket_ic()
         .delete_canister(*fixture.metadata(), None)
+        .await
         .expect("delete fixture canister before restore");
     drop(fixture);
 
-    let Err(error) = pool.acquire() else {
+    let Err(error) = pool.acquire().await else {
         panic!("restoring a deleted fixture canister must fail");
     };
     let timings = error.timings();
@@ -441,6 +465,7 @@ fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition() {
 
     let (fixture, outcome) = pool
         .acquire()
+        .await
         .expect("partially restored standalone slot should rebuild next");
     assert!(matches!(
         &outcome.disposition,
@@ -453,8 +478,8 @@ fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition() {
     drop(fixture);
 }
 
-#[test]
-fn single_canister_recipe_applies_funding_before_warm_restore() {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn single_canister_recipe_applies_funding_before_warm_restore() {
     let recipe = StandaloneCanisterRecipe::new(
         SnapshotRestoreFunding::TopUpTo {
             minimum_cycles: 1_000_000_000_000_000_000,
@@ -462,29 +487,32 @@ fn single_canister_recipe_applies_funding_before_warm_restore() {
         build_empty_standalone_fixture,
     );
     let pool = CachedPocketIcBaselinePool::new(NonZeroUsize::new(1).unwrap(), recipe);
-    let (baseline, first) = pool.acquire().unwrap();
+    let (baseline, first) = pool.acquire().await.unwrap();
     assert!(matches!(first.disposition, BaselinePoolDisposition::Built));
-    let instance = baseline.pocket_ic().instance_id();
+    let instance = baseline.pocket_ic().instance_id;
     let initial_cycles = baseline
         .pocket_ic()
         .cycle_balance(*baseline.metadata())
+        .await
         .unwrap();
     baseline
         .pocket_ic()
         .uninstall_canister(*baseline.metadata(), None)
+        .await
         .unwrap();
     drop(baseline);
 
-    let (baseline, restored) = pool.acquire().unwrap();
+    let (baseline, restored) = pool.acquire().await.unwrap();
     assert!(matches!(
         restored.disposition,
         BaselinePoolDisposition::Restored
     ));
-    assert_eq!(baseline.pocket_ic().instance_id(), instance);
+    assert_eq!(baseline.pocket_ic().instance_id, instance);
     assert!(
         baseline
             .pocket_ic()
             .cycle_balance(*baseline.metadata())
+            .await
             .unwrap()
             > initial_cycles
     );
@@ -492,15 +520,16 @@ fn single_canister_recipe_applies_funding_before_warm_restore() {
         baseline
             .pocket_ic()
             .canister_status(*baseline.metadata(), None)
+            .await
             .unwrap()
             .module_hash
             .is_some()
     );
 }
 
-#[test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "requires POCKET_IC_BIN and stops a dedicated test-owned server"]
-fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again() {
+async fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again() {
     let server = PocketIcStartupConfig::Spawn {
         server_binary: (std::env::var_os("POCKET_IC_BIN")
             .expect("prepare POCKET_IC_BIN for dedicated-server recovery"))
@@ -516,35 +545,41 @@ fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again() {
     let builds = Arc::new(AtomicUsize::new(0));
     let builder_count = Arc::clone(&builds);
     let pool = single_canister_pool(NonZeroUsize::new(1).unwrap(), move || {
-        match builder_count.fetch_add(1, Ordering::SeqCst) {
-            0 => StandaloneCanisterFixture::try_install(
-                PocketIcStartupConfig::Connect {
-                    server_url: (&url).into(),
-                    timeout: READY_TIMEOUT,
-                }
-                .build_instance(PocketIcBuilder::new().with_application_subnet())
-                .unwrap(),
-                InstallSpec {
-                    wasm: EMPTY_WASM.to_vec(),
-                    init_bytes: vec![],
-                    cycles: 0,
-                    install_sender: None,
-                    label: None,
-                },
-            )
-            .map_err(io::Error::other),
-            1 => build_deleted_standalone_fixture(),
-            _ => build_empty_standalone_fixture(),
+        let attempt = builder_count.fetch_add(1, Ordering::SeqCst);
+        let url = url.clone();
+        async move {
+            match attempt {
+                0 => StandaloneCanisterFixture::try_install(
+                    PocketIcStartupConfig::Connect {
+                        server_url: (&url).into(),
+                        timeout: READY_TIMEOUT,
+                    }
+                    .build_instance(PocketIcBuilder::new().with_application_subnet())
+                    .await
+                    .unwrap(),
+                    InstallSpec {
+                        wasm: EMPTY_WASM.to_vec(),
+                        init_bytes: vec![],
+                        cycles: 0,
+                        install_sender: None,
+                        label: None,
+                    },
+                )
+                .await
+                .map_err(io::Error::other),
+                1 => build_deleted_standalone_fixture().await,
+                _ => build_empty_standalone_fixture().await,
+            }
         }
     });
-    drop(pool.acquire().unwrap().0);
+    drop(pool.acquire().await.unwrap().0);
     drop(server);
 
     let Err(BaselinePoolError::RecoveryFailed {
         original,
         rebuild,
         timings,
-    }) = pool.acquire()
+    }) = pool.acquire().await
     else {
         panic!("dead transport and failed capture must retain both causes");
     };
@@ -562,7 +597,7 @@ fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again() {
     assert!(timings.stale_teardown().is_some());
     assert_eq!(builds.load(Ordering::SeqCst), 2);
 
-    let (fixture, outcome) = pool.acquire().unwrap();
+    let (fixture, outcome) = pool.acquire().await.unwrap();
     assert!(matches!(
         outcome.disposition,
         BaselinePoolDisposition::Built
@@ -573,41 +608,50 @@ fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again() {
     drop(fixture);
 }
 
-fn build_empty_standalone_fixture() -> io::Result<StandaloneCanisterFixture> {
-    StandaloneCanisterFixture::try_install(
-        support::pocket_ic(),
-        InstallSpec {
-            wasm: EMPTY_WASM.to_vec(),
-            init_bytes: vec![],
-            cycles: 0,
-            install_sender: None,
-            label: None,
-        },
-    )
-    .map_err(io::Error::other)
+fn build_empty_standalone_fixture() -> FixtureFuture {
+    Box::pin(async {
+        StandaloneCanisterFixture::try_install(
+            support::pocket_ic().await,
+            InstallSpec {
+                wasm: EMPTY_WASM.to_vec(),
+                init_bytes: vec![],
+                cycles: 0,
+                install_sender: None,
+                label: None,
+            },
+        )
+        .await
+        .map_err(io::Error::other)
+    })
 }
 
-fn build_counted_empty_standalone_fixture() -> io::Result<StandaloneCanisterFixture> {
-    STANDALONE_PANIC_BUILDS.fetch_add(1, Ordering::SeqCst);
-    build_empty_standalone_fixture()
+fn build_counted_empty_standalone_fixture() -> FixtureFuture {
+    Box::pin(async {
+        STANDALONE_PANIC_BUILDS.fetch_add(1, Ordering::SeqCst);
+        build_empty_standalone_fixture().await
+    })
 }
 
-fn build_deleted_standalone_fixture() -> io::Result<StandaloneCanisterFixture> {
-    let fixture = build_empty_standalone_fixture()?;
-    fixture
-        .pocket_ic()
-        .stop_canister(fixture.canister_id(), None)
-        .expect("stop fixture canister before deleting it");
-    fixture
-        .pocket_ic()
-        .delete_canister(fixture.canister_id(), None)
-        .expect("delete fixture canister before snapshot capture");
-    Ok(fixture)
+fn build_deleted_standalone_fixture() -> FixtureFuture {
+    Box::pin(async {
+        let fixture = build_empty_standalone_fixture().await?;
+        fixture
+            .pocket_ic()
+            .stop_canister(fixture.canister_id(), None)
+            .await
+            .expect("stop fixture canister before deleting it");
+        fixture
+            .pocket_ic()
+            .delete_canister(fixture.canister_id(), None)
+            .await
+            .expect("delete fixture canister before snapshot capture");
+        Ok(fixture)
+    })
 }
 
 fn assert_two_instances_overlap<F>(build: F)
 where
-    F: Fn() -> PocketIcInstance<PocketIc> + Send + Sync + 'static,
+    F: AsyncFn() -> PocketIcInstance<PocketIc> + Send + Sync + 'static,
 {
     let build = Arc::new(build);
     let (event_tx, event_rx) = mpsc::channel();
@@ -623,14 +667,15 @@ where
 
         start_txs.push(start_tx);
         command_txs.push(command_tx);
-        workers.push(thread::spawn(move || {
+        workers.push(support::spawn_async(async move || {
             run_worker(
                 worker,
                 worker_build.as_ref(),
                 start_rx,
                 command_rx,
                 worker_events,
-            );
+            )
+            .await;
         }));
     }
     drop(event_tx);
@@ -734,23 +779,23 @@ fn coordinate_workers(
 }
 
 #[expect(
-    clippy::needless_pass_by_value,
-    reason = "worker owns channel endpoints and disconnects them on return"
+    clippy::future_not_send,
+    reason = "test worker polls borrowed builders and blocking channels on its own runtime"
 )]
-fn run_worker<F>(
+async fn run_worker<F>(
     worker: usize,
     build: &F,
     start: Receiver<()>,
     commands: Receiver<Command>,
     events: Sender<Event>,
 ) where
-    F: Fn() -> PocketIcInstance<PocketIc>,
+    F: AsyncFn() -> PocketIcInstance<PocketIc>,
 {
     if start.recv().is_err() {
         return;
     }
 
-    let owned = build();
+    let owned = build().await;
     let pocket_ic = owned.instance();
     if events.send(Event::Ready { worker }).is_err() {
         return;
@@ -760,12 +805,14 @@ fn run_worker<F>(
     while let Ok(command) = commands.recv() {
         match command {
             Command::Initialize => {
-                let id = pocket_ic.create_canister().unwrap();
+                let id = pocket_ic.create_canister().await.unwrap();
                 pocket_ic
                     .install_canister(id, EMPTY_WASM.to_vec(), vec![], None)
+                    .await
                     .unwrap();
                 let balance = pocket_ic
                     .add_cycles(id, (worker as u128 + 1) * 1_000_000)
+                    .await
                     .unwrap();
                 canister_id = Some(id);
                 if events
@@ -783,13 +830,17 @@ fn run_worker<F>(
                 let id = canister_id.expect("worker must initialize before probing");
                 pocket_ic
                     .canister_status(id, None)
+                    .await
                     .expect("surviving PocketIC instance should remain usable");
                 if events.send(Event::Probed { worker }).is_err() {
                     return;
                 }
             }
             Command::Drop => {
-                drop(owned);
+                owned
+                    .close()
+                    .await
+                    .expect("delete worker instance before reporting teardown");
                 let _ = events.send(Event::Dropped { worker });
                 return;
             }

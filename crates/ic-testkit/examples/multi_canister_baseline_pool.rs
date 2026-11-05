@@ -7,7 +7,7 @@
 //! ```
 use ic_testkit::pocket_ic::ClientError;
 
-use std::{error::Error, fmt, num::NonZeroUsize, time::Duration};
+use std::{error::Error, num::NonZeroUsize, time::Duration};
 
 use ic_platform::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
@@ -29,17 +29,21 @@ struct TopologyMetadata {
     canister_ids: [Principal; 2],
 }
 
-fn lifecycle(
-    call: impl FnOnce() -> Result<(), ic_testkit::pocket_ic::ClientError>,
+async fn lifecycle(
+    call: impl AsyncFnOnce() -> Result<(), ic_testkit::pocket_ic::ClientError>,
 ) -> Result<(), RecipeError> {
-    call().map_err(RecipeError::Lifecycle)
+    call().await.map_err(RecipeError::Lifecycle)
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 enum RecipeError {
-    Lifecycle(ClientError),
-    Startup(PocketIcStartupError),
-    Snapshot(ControllerSnapshotError),
+    #[error("{0}")]
+    Lifecycle(#[source] ClientError),
+    #[error("{0}")]
+    Startup(#[source] PocketIcStartupError),
+    #[error("{0}")]
+    Snapshot(#[source] ControllerSnapshotError),
+    #[error("{0}")]
     Validation(&'static str),
 }
 
@@ -62,19 +66,21 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
         &self.requirements
     }
 
-    fn build(&self) -> Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error> {
+    async fn build(&self) -> Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error> {
         let pocket_ic = PocketIcStartupConfig::from_env(Duration::from_secs(30))?
-            .build_instance(PocketIcBuilder::new().with_application_subnet())?;
+            .build_instance(PocketIcBuilder::new().with_application_subnet())
+            .await?;
         let canister_ids = [
-            pocket_ic.instance().create_canister().unwrap(),
-            pocket_ic.instance().create_canister().unwrap(),
+            pocket_ic.instance().create_canister().await.unwrap(),
+            pocket_ic.instance().create_canister().await.unwrap(),
         ];
         for canister_id in canister_ids {
             pocket_ic
                 .instance()
                 .install_canister(canister_id, EMPTY_WASM.to_vec(), vec![], None)
+                .await
                 .unwrap();
-            lifecycle(|| pocket_ic.instance().stop_canister(canister_id, None))?;
+            lifecycle(async || pocket_ic.instance().stop_canister(canister_id, None).await).await?;
         }
 
         let baseline = CachedPocketIcBaseline::capture(
@@ -85,17 +91,18 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             }),
             TopologyMetadata { canister_ids },
         )
+        .await
         .map_err(RecipeError::Snapshot)?;
-        self.drive_to_readiness(&baseline)?;
+        self.drive_to_readiness(&baseline).await?;
         Ok(baseline)
     }
 
-    fn prepare_restore(
+    async fn prepare_restore(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
     ) -> Result<(), Self::Error> {
         for id in baseline.metadata().canister_ids {
-            lifecycle(|| baseline.pocket_ic().stop_canister(id, None))?;
+            lifecycle(async || baseline.pocket_ic().stop_canister(id, None).await).await?;
         }
         Ok(())
     }
@@ -103,23 +110,23 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
     fn reset_non_snapshot_state(
         &self,
         _baseline: &CachedPocketIcBaseline<Self::Metadata>,
-    ) -> Result<ResetReceipt, Self::Error> {
+    ) -> impl std::future::Future<Output = Result<ResetReceipt, Self::Error>> + Send {
         // This recipe is suitable only for tests whose relevant mutations are
         // fully contained in the two captured canisters.
-        Ok(ResetReceipt::default())
+        std::future::ready(Ok(ResetReceipt::default()))
     }
 
-    fn drive_to_readiness(
+    async fn drive_to_readiness(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
     ) -> Result<(), Self::Error> {
         for id in baseline.metadata().canister_ids {
-            lifecycle(|| baseline.pocket_ic().start_canister(id, None))?;
+            lifecycle(async || baseline.pocket_ic().start_canister(id, None).await).await?;
         }
         Ok(())
     }
 
-    fn validate(
+    async fn validate(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
         _preparation: &PreparedBaseline,
@@ -128,6 +135,7 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             let status = baseline
                 .pocket_ic()
                 .canister_status(canister_id, None)
+                .await
                 .map_err(|_| RecipeError::Validation("canister status failed"))?;
             if status.module_hash.is_none() {
                 return Err(RecipeError::Validation(
@@ -164,46 +172,31 @@ impl From<ControllerSnapshotError> for RecipeError {
     }
 }
 
-impl fmt::Display for RecipeError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Startup(error) => error.fmt(formatter),
-            Self::Lifecycle(error) => error.fmt(formatter),
-            Self::Snapshot(error) => error.fmt(formatter),
-            Self::Validation(message) => formatter.write_str(message),
-        }
-    }
-}
-
-impl Error for RecipeError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::Startup(error) => Some(error),
-            Self::Lifecycle(error) => Some(error),
-            Self::Snapshot(error) => Some(error),
-            Self::Validation(_) => None,
-        }
-    }
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     let pool = CachedPocketIcBaselinePool::new(
         NonZeroUsize::new(1).expect("one is nonzero"),
         TwoCanisterRecipe::new(),
     );
 
-    let (baseline, first) = pool.acquire()?;
+    let (baseline, first) = pool.acquire().await?;
     assert!(matches!(first.disposition, BaselinePoolDisposition::Built));
     println!("first acquisition: {first:?}");
     drop(baseline);
 
-    let (baseline, second) = pool.acquire()?;
+    let (baseline, second) = pool.acquire().await?;
     assert!(matches!(
         second.disposition,
         BaselinePoolDisposition::Restored
     ));
     println!("second acquisition: {second:?}");
     drop(baseline);
-
+    let failures = pool.close().await;
+    for error in &failures {
+        eprintln!("instance deletion failed: {error}");
+    }
+    if let Some(error) = failures.into_iter().next() {
+        return Err(error.into());
+    }
     Ok(())
 }

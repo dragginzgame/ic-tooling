@@ -298,12 +298,16 @@ impl fmt::Display for CanisterDiagnosticsReport {
 }
 
 /// Reusable structured `PocketIC` failure diagnostics.
+#[expect(
+    async_fn_in_trait,
+    reason = "extension futures may retain caller-owned non-Send callbacks, iterators or writers; pool recipes separately require Send"
+)]
 pub trait PocketIcDiagnosticsExt {
     /// Collect status and bounded logs using the request's exact senders.
     ///
     /// Both calls are attempted independently. Typed client failures remain in
     /// the report so diagnostics can stay subordinate to the original failure.
-    fn collect_canister_diagnostics(
+    async fn collect_canister_diagnostics(
         &self,
         request: CanisterDiagnosticsRequest,
     ) -> CanisterDiagnosticsReport;
@@ -320,13 +324,13 @@ pub trait PocketIcDiagnosticsExt {
     ///
     /// # Errors
     /// Returns the writer’s I/O error when diagnostics cannot be written.
-    fn write_canister_diagnostics(
+    async fn write_canister_diagnostics(
         &self,
         request: CanisterDiagnosticsRequest,
         context: &str,
         writer: &mut dyn io::Write,
     ) -> io::Result<()> {
-        let report = self.collect_canister_diagnostics(request);
+        let report = self.collect_canister_diagnostics(request).await;
         writeln!(writer, "{context}: {report}")
     }
 
@@ -339,25 +343,24 @@ pub trait PocketIcDiagnosticsExt {
     ///
     /// # Errors
     /// Rejects invalid or duplicate labels before collecting diagnostics.
-    fn collect_canister_diagnostics_batch(
+    async fn collect_canister_diagnostics_batch(
         &self,
         requests: &[LabeledCanisterDiagnosticsRequest],
     ) -> Result<CanisterDiagnosticsBatchReport, BatchLabelError> {
         validate_labels(requests.iter().map(|request| request.label.as_str()))?;
         let started = Instant::now();
-        let entries = requests
-            .iter()
-            .map(|labeled| {
-                let entry_started = Instant::now();
-                let request = labeled.request;
-                let report = self.collect_canister_diagnostics(request);
-                CanisterDiagnosticsBatchEntry {
-                    label: labeled.label.clone(),
-                    report,
-                    entry_elapsed: entry_started.elapsed(),
-                }
-            })
-            .collect();
+        let mut entries = Vec::with_capacity(requests.len());
+        for labeled in requests {
+            let entry_started = Instant::now();
+            let request = labeled.request;
+            let report = self.collect_canister_diagnostics(request).await;
+            entries.push(CanisterDiagnosticsBatchEntry {
+                label: labeled.label.clone(),
+                report,
+                entry_elapsed: entry_started.elapsed(),
+            });
+        }
+
         Ok(CanisterDiagnosticsBatchReport {
             entries,
             total: started.elapsed(),
@@ -366,13 +369,16 @@ pub trait PocketIcDiagnosticsExt {
 }
 
 impl PocketIcDiagnosticsExt for PocketIc {
-    fn collect_canister_diagnostics(
+    async fn collect_canister_diagnostics(
         &self,
         request: CanisterDiagnosticsRequest,
     ) -> CanisterDiagnosticsReport {
-        let status = self.canister_status(request.canister_id, Some(request.status_sender));
+        let status = self
+            .canister_status(request.canister_id, Some(request.status_sender))
+            .await;
         let logs = self
             .fetch_canister_logs(request.canister_id, request.log_sender)
+            .await
             .map(|records| render_log_records(records, request.log_limits));
 
         CanisterDiagnosticsReport {

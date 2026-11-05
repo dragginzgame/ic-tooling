@@ -42,7 +42,7 @@ use std::{
 };
 
 #[cfg(unix)]
-use crate::artifacts::test_support::{FakeWasmCargo, fake_wasm_build_spec, write_fake_wasm_cargo};
+use crate::artifacts::support_tests::{FakeWasmCargo, fake_wasm_build_spec, write_fake_wasm_cargo};
 #[cfg(unix)]
 use std::{
     fs::FileTimes,

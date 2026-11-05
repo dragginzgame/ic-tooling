@@ -109,7 +109,7 @@ impl HeldReplyFixture {
     ///
     /// # Errors
     /// Rejects invalid method limits, oversized modules or failed simulator inspection.
-    pub fn new(
+    pub async fn new(
         pic: &PocketIc,
         canister: Principal,
         methods: &[RawReplyMethod<'_>],
@@ -126,6 +126,7 @@ impl HeldReplyFixture {
             None,
             module_bytes,
         )
+        .await
     }
 
     /// Generate held replies accepting at most `accept_cycles` per admitted call.
@@ -139,7 +140,7 @@ impl HeldReplyFixture {
     ///
     /// # Errors
     /// Rejects invalid method limits, oversized modules or failed simulator inspection.
-    pub fn new_with_cycle_acceptance(
+    pub async fn new_with_cycle_acceptance(
         pic: &PocketIc,
         canister: Principal,
         methods: &[RawReplyMethod<'_>],
@@ -157,9 +158,10 @@ impl HeldReplyFixture {
             Some(accept_cycles),
             module_bytes,
         )
+        .await
     }
 
-    fn build(
+    async fn build(
         pic: &PocketIc,
         canister: Principal,
         methods: &[RawReplyMethod<'_>],
@@ -168,7 +170,7 @@ impl HeldReplyFixture {
         accept_cycles: Option<u128>,
         module_bytes: usize,
     ) -> Result<Self, HeldReplyError> {
-        manual(pic)?;
+        manual(pic).await?;
         let prefix = format!("https://ic-testkit.invalid/held/{canister}/");
         let wasm = module(
             methods,
@@ -180,7 +182,7 @@ impl HeldReplyFixture {
         Ok(Self {
             wasm,
             server: pic.get_server_url().to_string(),
-            instance: pic.instance_id(),
+            instance: pic.instance_id,
             prefix,
             released: vec![false; methods.len()],
         })
@@ -196,10 +198,11 @@ impl HeldReplyFixture {
     ///
     /// # Errors
     /// Returns an admission or transport error when the instance cannot be inspected.
-    pub fn pending(&self, pic: &PocketIc) -> Result<Vec<HeldRequest>, HeldReplyError> {
-        self.admit(pic)?;
+    pub async fn pending(&self, pic: &PocketIc) -> Result<Vec<HeldRequest>, HeldReplyError> {
+        self.admit(pic).await?;
         Ok(pic
-            .get_canister_http()?
+            .get_canister_http()
+            .await?
             .into_iter()
             .filter_map(|request| {
                 let slot = self.pending_slot(&request)?;
@@ -224,11 +227,15 @@ impl HeldReplyFixture {
     ///
     /// # Errors
     /// Rejects unknown or consumed request tokens and preserves transport failures.
-    pub fn release(&mut self, pic: &PocketIc, request: &HeldRequest) -> Result<(), HeldReplyError> {
-        self.admit(pic)?;
+    pub async fn release(
+        &mut self,
+        pic: &PocketIc,
+        request: &HeldRequest,
+    ) -> Result<(), HeldReplyError> {
+        self.admit(pic).await?;
         // Observe the server before rejecting a token, retaining admission and
         // transport error precedence without constructing every pending token.
-        let pending = pic.get_canister_http()?;
+        let pending = pic.get_canister_http().await?;
         let owner = (self.server.as_str(), self.instance, self.prefix.as_str());
         let requested_owner = (
             request.server.as_str(),
@@ -254,7 +261,8 @@ impl HeldReplyFixture {
                 body: vec![],
             }),
             additional_responses: vec![],
-        })?;
+        })
+        .await?;
         Ok(())
     }
 
@@ -270,16 +278,16 @@ impl HeldReplyFixture {
         .then_some(slot)
     }
 
-    fn admit(&self, pic: &PocketIc) -> Result<(), HeldReplyError> {
-        if pic.instance_id() != self.instance || pic.get_server_url().as_str() != self.server {
+    async fn admit(&self, pic: &PocketIc) -> Result<(), HeldReplyError> {
+        if pic.instance_id != self.instance || pic.get_server_url().as_str() != self.server {
             return Err(HeldReplyError::WrongInstance);
         }
-        manual(pic)
+        manual(pic).await
     }
 }
 
-fn manual(pic: &PocketIc) -> Result<(), HeldReplyError> {
-    if pic.auto_progress_enabled()? {
+async fn manual(pic: &PocketIc) -> Result<(), HeldReplyError> {
+    if pic.auto_progress_enabled().await? {
         return Err(HeldReplyError::AutomaticProgress);
     }
     Ok(())

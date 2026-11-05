@@ -29,7 +29,7 @@ use ic_testkit_perf_probe::protocol::{
 use std::process::Command;
 const PERF_PROBE_PACKAGE: &str = "ic-testkit-perf-probe";
 
-fn install_probe() -> StandaloneCanisterFixture {
+async fn install_probe() -> StandaloneCanisterFixture {
     let mut workspace = workspace_root_command(
         env!("CARGO_MANIFEST_DIR"),
         Command::new(std::env::var_os("CARGO").unwrap_or_else(|| env!("CARGO").into())),
@@ -90,6 +90,7 @@ fn install_probe() -> StandaloneCanisterFixture {
         ic_testkit::pic::PocketIcStartupConfig::from_env(std::time::Duration::from_secs(30))
             .expect("configure prepared PocketIC")
             .build_instance(ic_testkit::pocket_ic::PocketIcBuilder::new().with_application_subnet())
+            .await
             .expect("construct explicitly configured test instance"),
         InstallSpec {
             wasm,
@@ -99,12 +100,13 @@ fn install_probe() -> StandaloneCanisterFixture {
             label: None,
         },
     )
+    .await
     .expect("install standalone fixture")
 }
 
-#[test]
-fn perf_probe_canister_emits_parseable_benchmark_markers() {
-    let fixture = install_probe();
+#[tokio::test]
+async fn perf_probe_canister_emits_parseable_benchmark_markers() {
+    let fixture = install_probe().await;
     let result = update_wire::<_, u64>(
         fixture.pocket_ic(),
         fixture.canister_id(),
@@ -112,6 +114,7 @@ fn perf_probe_canister_emits_parseable_benchmark_markers() {
         probe_wire_spec(BENCHMARK_ONCE),
         &(),
     )
+    .await
     .expect("benchmark_once update call");
 
     assert_eq!(result, 1_498_500);
@@ -119,6 +122,7 @@ fn perf_probe_canister_emits_parseable_benchmark_markers() {
     let logs = fixture
         .pocket_ic()
         .fetch_canister_logs(fixture.canister_id(), Principal::anonymous())
+        .await
         .expect("fetch perf probe logs");
     let log_text = logs
         .iter()
@@ -156,12 +160,12 @@ fn perf_probe_canister_emits_parseable_benchmark_markers() {
         spans.spans
     );
 
-    assert_probe_contract(&fixture);
-    assert_probe_trap(&fixture);
-    assert_callers(&fixture);
+    assert_probe_contract(&fixture).await;
+    assert_probe_trap(&fixture).await;
+    assert_callers(&fixture).await;
 }
 
-fn assert_probe_trap(fixture: &StandaloneCanisterFixture) {
+async fn assert_probe_trap(fixture: &StandaloneCanisterFixture) {
     let error = update_wire::<(), ()>(
         fixture.pocket_ic(),
         fixture.canister_id(),
@@ -169,6 +173,7 @@ fn assert_probe_trap(fixture: &StandaloneCanisterFixture) {
         probe_wire_spec(BENCHMARK_TRAP),
         &(),
     )
+    .await
     .expect_err("the probe deliberately traps");
     let WireCallError::Call { source, .. } = error else {
         panic!("structured rejection required")
@@ -184,6 +189,7 @@ fn assert_probe_trap(fixture: &StandaloneCanisterFixture) {
             probe_wire_spec(PING),
             &()
         )
+        .await
         .unwrap()
         .as_str(),
         "pong"
@@ -196,6 +202,7 @@ fn assert_probe_trap(fixture: &StandaloneCanisterFixture) {
             PING.name,
             ic_wire::native::encode_request(PING.id, &(), PING.request_limits).unwrap(),
         )
+        .await
         .expect("the same canister remains callable after the trap");
     assert_eq!(
         ic_wire::native::decode_response::<ic_wire::Text<4>>(PING.id, &reply, PING.response_limits)
@@ -236,23 +243,29 @@ fn assert_probe_trap(fixture: &StandaloneCanisterFixture) {
     }
 }
 
-fn assert_probe_contract(fixture: &StandaloneCanisterFixture) {
+async fn assert_probe_contract(fixture: &StandaloneCanisterFixture) {
     let pic = fixture.pocket_ic();
     let id = fixture.canister_id();
     let caller = Principal::anonymous();
     for size in [0_u32, 3] {
-        update_wire::<_, ()>(pic, id, caller, probe_wire_spec(SEED_STATE), &size).unwrap();
+        update_wire::<_, ()>(pic, id, caller, probe_wire_spec(SEED_STATE), &size)
+            .await
+            .unwrap();
         let expected = State {
             mutations: 0,
             bytes: u64::from(size),
             first: (size > 0).then_some(42),
         };
         assert_eq!(
-            query_wire::<_, State>(pic, id, caller, probe_wire_spec(INSPECT_STATE), &()).unwrap(),
+            query_wire::<_, State>(pic, id, caller, probe_wire_spec(INSPECT_STATE), &())
+                .await
+                .unwrap(),
             expected
         );
     }
-    update_wire::<_, ()>(pic, id, caller, probe_wire_spec(MUTATE_STATE), &()).unwrap();
+    update_wire::<_, ()>(pic, id, caller, probe_wire_spec(MUTATE_STATE), &())
+        .await
+        .unwrap();
     let request =
         ic_wire::native::encode_request(SEED_STATE.id, &99_u32, SEED_STATE.request_limits).unwrap();
     let bad = [
@@ -267,6 +280,7 @@ fn assert_probe_contract(fixture: &StandaloneCanisterFixture) {
         let oversized = bytes.len() > protocol::FRAME_BYTES;
         let error = pic
             .update_call(id, caller, SEED_STATE.name, bytes)
+            .await
             .expect_err("invalid request refuses before seeding");
         if oversized {
             assert!(
@@ -276,7 +290,9 @@ fn assert_probe_contract(fixture: &StandaloneCanisterFixture) {
             );
         }
         assert_eq!(
-            query_wire::<_, State>(pic, id, caller, probe_wire_spec(INSPECT_STATE), &()).unwrap(),
+            query_wire::<_, State>(pic, id, caller, probe_wire_spec(INSPECT_STATE), &())
+                .await
+                .unwrap(),
             State {
                 mutations: 1,
                 bytes: 3,
@@ -290,10 +306,11 @@ fn assert_probe_contract(fixture: &StandaloneCanisterFixture) {
         INSPECT_STATE.name,
         ic_wire::native::encode_request(PING.id, &(), PING.request_limits).unwrap(),
     )
+    .await
     .expect_err("query must check its method identity too");
 }
 
-fn assert_callers(fixture: &StandaloneCanisterFixture) {
+async fn assert_callers(fixture: &StandaloneCanisterFixture) {
     for caller in [Principal::anonymous(), Principal::from_slice(&[7, 3])] {
         let query = query_wire::<_, ic_wire::Bytes<29>>(
             fixture.pocket_ic(),
@@ -302,6 +319,7 @@ fn assert_callers(fixture: &StandaloneCanisterFixture) {
             probe_wire_spec(QUERY_CALLER),
             &(),
         )
+        .await
         .unwrap();
         assert_eq!(query.as_slice(), caller.as_slice());
         let update = update_wire::<_, ic_wire::Bytes<29>>(
@@ -311,6 +329,7 @@ fn assert_callers(fixture: &StandaloneCanisterFixture) {
             probe_wire_spec(UPDATE_CALLER),
             &(),
         )
+        .await
         .unwrap();
         assert_eq!(update.as_slice(), caller.as_slice());
     }

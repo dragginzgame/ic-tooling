@@ -7,6 +7,12 @@ version = "0.86.0"
 publish = false
 repository.workspace = true
 
+[package.metadata.shared-tooling.loc]
+category = "benchmarks"
+
+[package.metadata.shared-tooling.loc.paths]
+"src/protocol/tests.rs" = "tests"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 

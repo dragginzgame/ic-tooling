@@ -1,5 +1,5 @@
 use super::*;
-use crate::artifact::test_support::InvalidReader;
+use crate::artifact::tests::support::InvalidReader;
 use std::io::{self, Cursor};
 
 struct Fragmented {

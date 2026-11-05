@@ -45,9 +45,10 @@ impl<B> StandaloneCanisterRecipe<B> {
     }
 }
 
-impl<B> PocketIcBaselineRecipe for StandaloneCanisterRecipe<B>
+impl<B, Fut> PocketIcBaselineRecipe for StandaloneCanisterRecipe<B>
 where
-    B: Fn() -> io::Result<StandaloneCanisterFixture> + Send + Sync + 'static,
+    B: Fn() -> Fut + Send + Sync + 'static,
+    Fut: std::future::Future<Output = io::Result<StandaloneCanisterFixture>> + Send,
 {
     type Metadata = Principal;
     // Retain the typed snapshot/contract cause without another error vocabulary.
@@ -57,19 +58,20 @@ where
         &self.requirements
     }
 
-    fn build(&self) -> Result<CachedPocketIcBaseline<Principal>, io::Error> {
-        let (pocket_ic, canister_id) = (self.build)()?.into_parts();
-        pocket_ic
-            .instance()
-            .stop_canister(canister_id, None)
-            .map_err(|source| {
-                io::Error::other(super::ControllerSnapshotError::CaptureFailed {
-                    canister_id,
-                    sender: None,
-                    source: Box::new(source),
-                    cleanup_failures: Vec::new(),
-                })
-            })?;
+    async fn build(&self) -> Result<CachedPocketIcBaseline<Principal>, io::Error> {
+        let (pocket_ic, canister_id) = (self.build)().await?.into_parts();
+        if let Err(source) = pocket_ic.instance().stop_canister(canister_id, None).await {
+            let error = io::Error::other(super::ControllerSnapshotError::CaptureFailed {
+                canister_id,
+                sender: None,
+                source: Box::new(source),
+                cleanup_failures: Vec::new(),
+            });
+            if let Err(cleanup) = pocket_ic.close().await {
+                tracing::warn!("PocketIC deletion after stop failure failed: {cleanup}");
+            }
+            return Err(error);
+        }
         let baseline = CachedPocketIcBaseline::capture(
             pocket_ic,
             [CanisterSnapshotTarget {
@@ -78,35 +80,43 @@ where
             }],
             canister_id,
         )
+        .await
         .map_err(io::Error::other)?;
-        self.drive_to_readiness(&baseline)?;
+        if let Err(error) = self.drive_to_readiness(&baseline).await {
+            if let Err(cleanup) = baseline.close().await {
+                tracing::warn!("PocketIC deletion after readiness failure failed: {cleanup}");
+            }
+            return Err(error);
+        }
         Ok(baseline)
     }
 
     fn reset_non_snapshot_state(
         &self,
         _baseline: &CachedPocketIcBaseline<Principal>,
-    ) -> Result<ResetReceipt, io::Error> {
-        Ok(ResetReceipt::default())
+    ) -> impl std::future::Future<Output = Result<ResetReceipt, io::Error>> + Send {
+        std::future::ready(Ok(ResetReceipt::default()))
     }
 
-    fn prepare_restore(
+    async fn prepare_restore(
         &self,
         baseline: &CachedPocketIcBaseline<Principal>,
     ) -> Result<(), io::Error> {
         baseline
             .pocket_ic()
             .stop_canister(*baseline.metadata(), None)
+            .await
             .map_err(io::Error::other)
     }
 
-    fn drive_to_readiness(
+    async fn drive_to_readiness(
         &self,
         baseline: &CachedPocketIcBaseline<Principal>,
     ) -> Result<(), io::Error> {
         baseline
             .pocket_ic()
             .start_canister(*baseline.metadata(), None)
+            .await
             .map_err(io::Error::other)
     }
 
@@ -114,8 +124,8 @@ where
         &self,
         _baseline: &CachedPocketIcBaseline<Principal>,
         _preparation: &PreparedBaseline,
-    ) -> Result<(), io::Error> {
-        Ok(())
+    ) -> impl std::future::Future<Output = Result<(), io::Error>> + Send {
+        std::future::ready(Ok(()))
     }
 
     fn classify_failure(

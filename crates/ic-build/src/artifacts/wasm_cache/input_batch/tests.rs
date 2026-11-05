@@ -1,5 +1,5 @@
 use super::*;
-use crate::artifacts::test_support::fake_wasm_build_spec;
+use crate::artifacts::support_tests::fake_wasm_build_spec;
 use std::{fs, thread};
 #[cfg(unix)]
 #[test]
