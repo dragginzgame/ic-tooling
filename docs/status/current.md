@@ -2,6 +2,16 @@
 
 ## Ready-batch deployment — 2026-11-05
 
+Deployment remains unprepared/unpublished. Input monitoring identified
+`cargo update -v` from the checkout's VS Code terminal at 11:47 UTC rewriting
+Cargo.lock; release attempts were stopped and the updater must be paused before
+another qualification. Both original and refreshed incoming selections are
+retained in `target/deploy-ready-20261105/`. A diagnostic trace recorded no root
+lock writes by archive commands; tracing distorted a pool test, so that attempt
+was stopped and its owned processes terminated. It is not qualification evidence.
+Intel optimizer CI's registry timeout also exposed a missing pipeline-failure
+guard; the workflow now uses the same explicit fail-fast Bash as other native CI.
+
 The renewed deployment request includes the completed Host Tools #335 decoders.
 Its 11 focused ICP tests and strict minimal-feature Clippy passed locally. The
 selected order is Foundation 0.74.4, Build 0.74.4, Tools 0.82.1 and Testkit 0.87.0,

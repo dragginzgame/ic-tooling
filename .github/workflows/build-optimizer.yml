@@ -10,6 +10,9 @@ concurrency:
   # Routine revisions supersede each other; explicit qualification runs finish.
   group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && format('qualification-{0}', github.run_id) || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+defaults:
+  run:
+    shell: /bin/bash --noprofile --norc -e -o pipefail {0}
 jobs:
   wasm-optimizer:
     strategy:

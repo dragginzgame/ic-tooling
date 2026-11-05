@@ -18,6 +18,8 @@ reset, release, tag or upload is implied by establishing this group.
 
 ### 🧪 Testing
 
+- Stop optimizer qualification at a failed tool/dependency setup pipeline, retaining
+  the original failure instead of masking it with successful log capture.
 - Add Tools and Build focused release contracts, selected only after a matching
   full/focused comparison on Linux and both native macOS hosts. Retain owner
   feature profiles, declared consumers, fresh archives and conservative fallback
