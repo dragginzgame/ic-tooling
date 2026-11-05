@@ -101,6 +101,12 @@ They do not execute product fixture bodies. The `tooling` roster explicitly runs
 each Make, release, publication and qualification fixture once during complete CI;
 ordinary development selects the affected entrypoint directly.
 
+Build's `artifact_helpers` Cargo-membership fixture deliberately uses the native
+system temporary directory outside this checkout. It qualifies implicit excluded
+packages without an enclosing Cargo workspace; placing it under `target/` would
+change Cargo's ancestor lookup. Its created directory is removed on success and
+retained on assertion failure. Other fixtures keep their caller-selected scratch.
+
 Standard `make fmt` and `make fmt-check` report each manifest/Rustfmt pass and
 its elapsed time. An unchanged successful selection can reuse its formatting
 receipt after prepared-tool admission; `FORMAT_RUST_ARGS=--no-cache` runs all

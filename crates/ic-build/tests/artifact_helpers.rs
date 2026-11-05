@@ -2,13 +2,20 @@
 
 mod support;
 
-use ic_build::testing::fs::unique_temp_directory as unique_temp_dir;
 use std::fs;
 use support::discover_workspace;
 
 #[test]
 fn workspace_discovery_obeys_cargo_membership_and_independent_roots() {
-    let root = unique_temp_dir("cargo-workspace-discovery");
+    // Cargo's implicit exclusion lookup must have no enclosing workspace. This
+    // fixture deliberately escapes TMPDIR when callers place it under target/.
+    let parent = if cfg!(unix) {
+        std::path::PathBuf::from("/tmp")
+    } else {
+        std::env::temp_dir()
+    };
+    let root = ic_host_fs::testing::create_fixture_directory(&parent, "cargo-workspace-discovery")
+        .unwrap();
     fs::write(root.join("Cargo.toml"), "[workspace]\nmembers = [\"apps/demo/worker\", \"external\"]\nexclude = [\"excluded\", \"testing\"]\nresolver = \"2\"\n").unwrap();
     for (name, relative, extra) in [
         ("worker", "apps/demo/worker", ""),

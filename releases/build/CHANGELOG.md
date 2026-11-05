@@ -12,7 +12,9 @@ reset, release, tag or upload is implied by establishing this group.
 
 - Keep Cargo discovery and root-package fixtures valid when caller-selected
   temporary directories are beneath another workspace. Preserve real ancestor
-  discovery and explicitly isolate the root-package Cargo fixture.
+  discovery and explicitly isolate the root-package Cargo fixture. Keep the
+  implicit-exclusion fixture outside enclosing workspaces, documenting that
+  specific temporary-directory exception.
 
 ### 🧪 Testing
 
