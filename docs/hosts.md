@@ -118,9 +118,10 @@ warning-denied lint gate. CI/release validation runs it before expensive tests
 and builds after prerequisite admission. Publication and its dry run use that
 same gate before packaging or registry dispatch; ordinary package checks keep
 their selected scope. These entrypoint rules do not authorize a full local gate.
-Native/Text-only release plans can select package/consumer lint and the
+Native, Text, Tools and Build release plans can select package/consumer lint and the
 [focused contracts](design/release-validation.md) after baseline admission;
-the other groups and uncertain/shared changes retain the full gate. CI and
+Foundation, Testkit and uncertain/shared changes retain the full gate. Tools/Build
+need a new matched three-host comparison before they can narrow. CI and
 publication keep their complete gates. The `release-scope-*` targets in that
 guide expose the selected owner checks without executing a release.
 Independent group versions are literal in every member; root Cargo metadata has

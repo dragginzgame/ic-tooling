@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared companions: ci/release-validation.json ci/release-validation-coverage.json ci/cargo-release-groups.json scripts/ci/validation-evidence.pl
 set -euo pipefail
-[[ $# == 1 && ( $1 == full || $1 == focused ) ]] || exit 2
+[[ $# == 1 && ( $1 == full || $1 == focused || $1 == groups ) ]] || exit 2
 root="$(cd -P "${BASH_SOURCE[0]%/*}/../.." && pwd -P)"
 cd "$root"
 mkdir -p target
@@ -29,18 +29,21 @@ jq -ner --arg mode "$1" --rawfile roster "$scratch/stages" \
     ($roster | split("\n") | map(select(length > 0))) as $stages |
     if all($stages[]; startswith("release-stage-")) then
         ($stages | map(ltrimstr("release-stage-"))) as $targets |
-        if $c.schema != 1 or ($c.focused_stages | names | not) or ($c.common | names | not)
+        if $c.schema != 1 or ($c.focused | names | not) or ($c.focused_stages | names | not) or ($c.common | names | not)
             or any($c.focused_stages[]; startswith("release-scope-") | not)
-            or any($c.exclusions[]; (.targets | names | not) or
+            or any($c.exclusions[]; (.targets | names | not) or (.groups | names | not) or
+                any(.groups[]; . as $group | $c.focused | index($group) == null) or
                 (.reason | type != "string" or (test("\\S") | not) or test("[\u0000-\u001f\u007f]")))
         then error("invalid product coverage") else
             [$targets[] | select(startswith("release-scope-"))] as $focused |
             [$targets[] | select(startswith("release-scope-") | not)] as $full |
-            ($c.common + [$c.exclusions[].targets[]]) as $covered |
-            if $focused != $c.focused_stages or ($covered | unique | length) != ($covered | length)
-                or ($full | sort) != ($covered | sort)
+            if $focused != $c.focused_stages or any($c.focused[];
+                . as $group |
+                ($c.common + [$c.exclusions[] | select(.groups | index($group)) | .targets[]]) as $covered |
+                ($covered | unique | length) != ($covered | length) or
+                ($full | sort) != ($covered | sort))
             then error("missing, duplicate or unknown stage coverage")
-            else (if $mode == "full" then $full else $focused end)[] end
+            else (if $mode == "full" then $full elif $mode == "groups" then $c.focused else $focused end)[] end
         end
     else error("invalid Tooling stage prefix") end' > "$scratch/selected"
 cat "$scratch/selected"

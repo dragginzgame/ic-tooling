@@ -1,7 +1,7 @@
 //! Qualify exact per-package archives through IC Build's owning engine.
 
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     error::Error,
     fmt::Write as _,
     io::Write as _,
@@ -9,7 +9,10 @@ use std::{
     process::{Command, ExitCode},
 };
 
-use ic_build::cargo::observation::{CargoMetadataSpec, decode_metadata};
+use ic_build::cargo::observation::{
+    CargoMetadataSpec, decode_metadata,
+    schema::{DependencyKind, Metadata},
+};
 use ic_build::cargo::packages::{
     PackageArchiveSpec, PackageCommandError, PackageQualificationLimits, capture_package_command,
     qualify_package_archives_with,
@@ -63,8 +66,10 @@ fn run() -> Result<(), Box<dyn Error>> {
                 .action(clap::ArgAction::Append),
         )
         .get_matches();
+    let public = include_str!("../../../../ci/public-packages.txt");
+    let explicit = arguments.get_many::<String>("package").is_some();
     let roster = selected_roster(
-        include_str!("../../../../ci/public-packages.txt"),
+        public,
         arguments
             .get_many::<String>("package")
             .into_iter()
@@ -94,8 +99,12 @@ fn run() -> Result<(), Box<dyn Error>> {
         source_entries: 8192,
         source_depth: 64,
     };
-    let versions = workspace_versions(workspace, &evidence, limits.process)?;
-    let packages = archive_specs(&versions, &roster)?;
+    let metadata = workspace_metadata(workspace, &evidence, limits.process)?;
+    let versions = workspace_versions(&metadata);
+    let closure = archive_closure(&metadata, &roster, public)?;
+    std::fs::write(evidence.join("selected-packages"), &roster)?;
+    std::fs::write(evidence.join("archive-packages"), &closure)?;
+    let packages = archive_specs(&versions, &closure)?;
     // Build owns an initially empty evidence directory; selection diagnostics
     // remain alongside it in the driver's retained attempt.
     let archives = evidence.join("archives");
@@ -126,7 +135,14 @@ fn run() -> Result<(), Box<dyn Error>> {
             command.arg("-xzf").arg(archive).arg("-C").arg(destination);
             command
         },
-        |root| qualify_archive_tests(root, &target.join("archive-build-cache"), limits.process),
+        |root| {
+            qualify_archive_tests(
+                root,
+                &target.join("archive-build-cache"),
+                limits.process,
+                explicit.then_some(roster.as_str()),
+            )
+        },
     )?;
     Ok(())
 }
@@ -135,6 +151,7 @@ fn qualify_archive_tests(
     root: &Path,
     cache: &Path,
     limits: OutputLimits,
+    selected: Option<&str>,
 ) -> Result<(), Box<dyn Error>> {
     // This cache contains only regenerable compiler outputs. Keep its lock
     // across invalidation and both test commands; ordinary workspace artifacts
@@ -146,11 +163,8 @@ fn qualify_archive_tests(
     )?;
     for (stage, args) in [
         ("rebuild-packages", &["clean", "--workspace"][..]),
-        (
-            "test-targets",
-            &["test", "--workspace", "--all-targets"][..],
-        ),
-        ("test-docs", &["test", "--workspace", "--doc"][..]),
+        ("test-targets", &["test", "--all-targets"][..]),
+        ("test-docs", &["test", "--doc"][..]),
     ] {
         let mut command = Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()));
         command
@@ -164,6 +178,13 @@ fn qualify_archive_tests(
         // Workspace-only cleaning rebuilds all extracted packages, including
         // same-version payloads with fixed tar mtimes, retaining registry builds.
         if stage != "rebuild-packages" {
+            if let Some(selected) = selected {
+                for package in selected.lines() {
+                    command.args(["--package", package]);
+                }
+            } else {
+                command.arg("--workspace");
+            }
             command.args(["--all-features", "--message-format=json"]);
         }
         std::fs::write(root.join("current-stage"), stage)?;
@@ -173,7 +194,8 @@ fn qualify_archive_tests(
             &root.join(format!("{stage}.json")),
             &root.join(format!("{stage}.stderr")),
             limits,
-        )?;
+        )
+        .map_err(|error| error as Box<dyn Error>)?;
     }
     Ok(())
 }
@@ -227,11 +249,11 @@ fn selected_roster<'a>(
     })
 }
 
-fn workspace_versions(
+fn workspace_metadata(
     workspace: &Path,
     evidence: &Path,
     limits: OutputLimits,
-) -> Result<BTreeMap<String, String>, Box<dyn Error>> {
+) -> Result<Metadata, Box<dyn Error>> {
     let mut command = CargoMetadataSpec {
         manifest_path: &workspace.join("Cargo.toml"),
         include_dependencies: false,
@@ -251,12 +273,59 @@ fn workspace_versions(
         limits,
     )
     .map_err(|error| error as Box<dyn Error>)?;
-    let metadata = decode_metadata(&output.stdout)?;
-    Ok(metadata
+    Ok(decode_metadata(&output.stdout)?)
+}
+
+fn workspace_versions(metadata: &Metadata) -> BTreeMap<String, String> {
+    metadata
         .workspace_packages()
         .into_iter()
         .map(|package| (package.name.to_string(), package.version.to_string()))
-        .collect())
+        .collect()
+}
+
+fn archive_closure(
+    metadata: &Metadata,
+    selected: &str,
+    public: &str,
+) -> Result<String, Box<dyn Error>> {
+    let members: BTreeMap<_, _> = metadata
+        .workspace_packages()
+        .into_iter()
+        .map(|package| (package.name.as_str(), package))
+        .collect();
+    let mut pending: Vec<_> = selected.lines().collect();
+    let mut closure = BTreeSet::new();
+    while let Some(name) = pending.pop() {
+        if !closure.insert(name) {
+            continue;
+        }
+        let package = members
+            .get(name)
+            .ok_or("archive package is not a workspace member")?;
+        if !public.lines().any(|eligible| eligible == name) {
+            return Err(format!("private dependency cannot be archived: {name}").into());
+        }
+        for dependency in &package.dependencies {
+            if dependency.path.is_none() {
+                continue;
+            }
+            let target = members
+                .get(dependency.name.as_str())
+                .ok_or("local dependency is outside the workspace")?;
+            if dependency.path.as_deref() != target.manifest_path.parent() {
+                return Err("local dependency path differs from its workspace member".into());
+            }
+            if dependency.kind == DependencyKind::Development
+                && target.publish.as_ref().is_some_and(Vec::is_empty)
+                && dependency.req.comparators.is_empty()
+            {
+                continue;
+            }
+            pending.push(target.name.as_str());
+        }
+    }
+    Ok(closure.into_iter().collect::<Vec<_>>().join("\n"))
 }
 
 fn archive_specs<'a>(

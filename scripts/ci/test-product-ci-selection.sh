@@ -114,15 +114,16 @@ SH
     local $ENV{RUNNER_TEMP} = "$checkout/runner";
     local $ENV{TMPDIR} = "$checkout/temporary";
     my $targets = join ' ', map { "release-scope-$_" } qw(tools-check lint graphs tests docs archives);
-    my @expected = ('workspace', "native\t$targets", "text\t$targets", 'archives');
+    my @expected = ('workspace', (map { "$_\t$targets" } qw(native text tools build)), 'archives');
     chdir $checkout or die $!;
-    for my $failure ('', qw(workspace native text)) {
+    for my $failure ('', qw(workspace native text tools build)) {
         local $ENV{WORKFLOW_FAIL} = $failure;
         write_file($ENV{WORKFLOW_EVENTS}, '');
         my $status = system('bash', '-e', '-o', 'pipefail', "$checkout/qualify.sh");
         is($status >> 8, $failure ? 29 : 0, "matched-input workflow propagates $failure status");
         my @events = split /\n/, read_file($ENV{WORKFLOW_EVENTS});
-        my $count = $failure eq 'workspace' ? 1 : $failure eq 'native' ? 2 : $failure eq 'text' ? 3 : 4;
+        my %stops = (workspace => 1, native => 2, text => 3, tools => 4, build => 5);
+        my $count = $stops{$failure} // scalar @expected;
         is_deeply(\@events, [@expected[0 .. $count-1]], "matched-input workflow stops at $failure boundary");
     }
     chdir $root or die $!;

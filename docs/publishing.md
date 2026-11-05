@@ -79,11 +79,13 @@ workspace checks, isolated feature profiles, Testkit Wasm and unsupported-filesy
 compilation. `make compiler-check` admits the actual compiler; `make ci` retains
 the complete gate without the retired `msrv-qualification` target.
 Release verification uses Tooling's [source-bound group plans](design/release-validation.md)
-through Shared's [plan runner](release-group-validation.md). Foundation, Build,
-Tools and Testkit retain the complete gate. Native and Text may narrow only from
+through Shared's [plan runner](release-group-validation.md). Foundation and Testkit
+retain the complete gate. Native, Text, Tools and Build may narrow only from
 an admitted complete three-host baseline with unchanged shared inputs and bounded
-consumer relationships. Missing evidence, shared changes or uncertain scope select
-the complete gate; selecting a group alone never omits qualification. Ordinary CI
+consumer relationships. Tools/Build need a fresh comparison that executes their
+new focused contracts on all three hosts; older Native/Text qualification is
+insufficient. Missing evidence, shared changes or uncertain scope select the
+complete gate; selecting a group alone never omits qualification. Ordinary CI
 and publication qualification keep their complete workspace gates.
 Both numbered pending-heading spellings, `## [X.Y.Z]` and
 `## [X.Y.Z] - Unreleased`, are finalized to the saved UTC date during preparation.

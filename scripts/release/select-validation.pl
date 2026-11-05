@@ -56,7 +56,7 @@ my %common = map { $_ => 1 } @{$coverage->{common}};
 my %exclusions = map {
     my $contract = $_;
     map { $_ => $contract->{reason} } @{$contract->{targets}}
-} @{$coverage->{exclusions}};
+} grep { grep { $_ eq $group } @{$_->{groups}} } @{$coverage->{exclusions}};
 my $baseline = $json->decode(read_file($baseline_path));
 my $narrow = 0;
 my $reason = $coverage->{fallback}{$group} // 'No admitted full native CI baseline is available.';
@@ -119,8 +119,12 @@ my @changes;
 if (grep($_ eq $group, @{$coverage->{focused}})) {
     if ($baseline && qualified_baseline($baseline) && supported_environment()) {
         @changes = grep { length } split /\0/, git('diff', '--name-only', '--no-renames', '-z', $baseline->{source}, $source, '--');
-        my $package = $group eq 'native' ? 'ic-testkit-native' : 'ic-host-text';
-        my $safe = 1;
+        my ($selected_group) = grep { $_->{name} eq $group } @{$groups->{groups}};
+        my $package = $selected_group->{primary};
+        my %packages = (native => 'ic-testkit-native', text => 'ic-host-text',
+            tools => 'ic-host-tools', build => 'ic-build');
+        my $safe = exists($packages{$group}) && $package eq $packages{$group}
+            && join(',', @{$selected_group->{members}}) eq $package;
         for my $path (@changes) {
             next if $path =~ m{\Acrates/\Q$package\E/(?:src/|tests/|README\.md\z)};
             next if $path =~ m{\Areleases/[^/]+/CHANGELOG\.md\z} || $path eq 'docs/status/current.md';
@@ -130,8 +134,17 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
         }
         if ($safe) {
             my $metadata = $json->decode(command('cargo', 'metadata', '--no-deps', '--locked', '--offline', '--format-version', '1'));
-            my @parents = sort map { $_->{name} } grep { my $p = $_; grep { $_->{name} eq $package } @{$p->{dependencies}} } @{$metadata->{packages}};
-            my @expected = $group eq 'native' ? () : ('ic-host-tools','ic-testkit-dev');
+            my @parents = sort map {
+                my $parent = $_;
+                map { "$parent->{name}:" . ($_->{kind} // 'normal') }
+                    grep { $_->{name} eq $package } @{$parent->{dependencies}}
+            } @{$metadata->{packages}};
+            my %consumers = (
+                native => [], text => ['ic-host-tools:normal','ic-testkit-dev:normal'],
+                tools => ['ic-testkit-dev:dev'], build => ['ic-testkit-dev:normal'],
+            );
+            exists $consumers{$group} or die "missing focused consumer contract\n";
+            my @expected = sort @{$consumers{$group}};
             $safe &&= join(',', @parents) eq join(',', @expected);
             my ($owner) = grep { $_->{name} eq $package } @{$metadata->{packages}};
             $safe &&= defined($owner) && ($group ne 'native' || !@{$owner->{dependencies}});
@@ -144,6 +157,16 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
                     $safe &&= $path =~ m{\Acrates/ic-host-tools/src/icp_project/} ||
                         $path =~ m{\Acrates/ic-testkit-dev/src/fixture_reuse_driver/} ||
                         $path eq 'crates/ic-testkit-dev/src/bin/check_packages.rs';
+                }
+            }
+            if ($group eq 'tools' || $group eq 'build') {
+                my $import = $group eq 'tools' ? 'ic_host_tools' : 'ic_build';
+                my $references = git('grep', '-l', $import, $source, '--', 'crates/ic-testkit-dev');
+                for my $path (grep { length } split /\n/, $references) {
+                    $path =~ s/^\Q$source\E://;
+                    my $public = $path eq 'crates/ic-testkit-dev/tests/public_contracts.rs';
+                    my $build = $path =~ m{\Acrates/ic-testkit-dev/(?:src/(?:fixture_reuse_driver/|bin/(?:tests/|check_packages\.rs\z))|tests/canister_benchmark\.rs\z)};
+                    $safe &&= $public || ($group eq 'build' && $build);
                 }
             }
         }

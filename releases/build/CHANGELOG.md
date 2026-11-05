@@ -18,6 +18,14 @@ reset, release, tag or upload is implied by establishing this group.
 
 ### 🧪 Testing
 
+- Add Tools and Build focused release contracts, selected only after a matching
+  full/focused comparison on Linux and both native macOS hosts. Retain owner
+  feature profiles, declared consumers, fresh archives and conservative fallback
+  for shared/mixed changes, new callers or missing qualification.
+- Admit local dependency archives for selected-package qualification without
+  executing unrelated support-package tests. Preserve external selections,
+  source/provenance guards, typed command-failure diagnostics and the complete
+  default archive gate.
 - Move private artifact/Candid helpers into `support_tests.rs` and `tests/`,
   and make integration helper dead-code suppressions checked lint expectations.
 - Reuse unchanged product-evidence fixture execution across release groups, with

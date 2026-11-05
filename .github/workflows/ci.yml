@@ -154,10 +154,11 @@ jobs:
           targets=()
           bash scripts/ci/validation-roster.sh focused > "$RUNNER_TEMP/release-validation/targets"
           while IFS= read -r target; do targets+=("$target"); done < "$RUNNER_TEMP/release-validation/targets"
-          for group in native text; do
+          bash scripts/ci/validation-roster.sh groups > "$RUNNER_TEMP/release-validation/groups"
+          while IFS= read -r group; do
             RELEASE_GROUP="$group" VALIDATION_LOG_DIR="$RUNNER_TEMP/release-validation/$group" \
               bash scripts/ci/run-validation-targets.sh "${targets[@]}"
-          done
+          done < "$RUNNER_TEMP/release-validation/groups"
           bash scripts/ci/archive-product-evidence.sh "$PWD" "$RUNNER_TEMP" \
             "$RUNNER_TEMP/release-validation/archives.tar.gz"
       - name: Retain release-validation comparison

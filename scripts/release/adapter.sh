@@ -106,7 +106,7 @@ case "$operation" in
             'select(.source == $source and .group == $group) | .selection' "$selected_context")"
         case "$scope" in focused|full) ;; *) fail 'invalid gate selection' ;; esac
         setup_tools() {
-            if [[ "$scope" == focused ]]; then make --no-print-directory install-host-tools install-rust-tools install-release-editor
+            if [[ "$scope" == focused && "$RELEASE_GROUP" != build ]]; then make --no-print-directory install-host-tools install-rust-tools install-release-editor
             else make --no-print-directory install-tools; fi
         }
         fresh_tool_setup=false

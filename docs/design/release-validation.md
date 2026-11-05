@@ -23,9 +23,9 @@ Fresh discovery and saved-baseline recovery share one
 | Group | Release qualification |
 |---|---|
 | Foundation | Full gate: primitive feature profiles, Build/Tools/Testkit reverse consumers, native/Wasm graphs and installed archives. |
-| Build | Full gate: artifact/cache protocols, release editor, optimizer ownership, private drivers and exact archives. Hosted optimizer qualification remains an independent CI obligation. |
+| Build | Focused only when admitted below: artifact/cache and release-editor tests, normal/CLI graphs, private driver/archive checks, real Wasm-probe consumer and exact Build archive. Hosted optimizer qualification remains an independent CI obligation. Otherwise full gate. |
 | Text | Focused only when admitted below: default/all-feature/YAML rendering, dependency graphs, Tools' `icp-project` consumer, private driver/report tests and installed Text archive. Otherwise full gate. |
-| Tools | Full gate: separate IC adapter feature profiles, external identities, registry-only consumers and installed archives. |
+| Tools | Focused only when admitted below: every isolated IC adapter profile, external identities, the private public-contract consumer, native/Wasm graphs and exact Tools archive. Otherwise full gate. |
 | Testkit | Full gate: simulator/server lifecycle, public identities, feature boundaries, Wasm/probe singleton graphs and installed archives. |
 | Native | Focused only when admitted below: dependency-free native/Wasm graphs, allocation/unwind tests, documentation and installed Native archive. Otherwise full gate. |
 
@@ -34,10 +34,12 @@ ancestor of the selected source. Each of Linux x86-64, macOS 15 Intel and macOS
 15 Apple Silicon must have actually executed native CI/publication qualification
 and retained successful qualification. A green docs-only run, incomplete matrix,
 failed job, missing compiler lane or truncated response does not qualify.
-All three jobs must also execute the focused release contracts and retain their
+All three jobs must also execute every group listed by `validation-roster.sh groups`
+and retain their
 matched-input comparison. Earlier full-CI runs without those proofs keep the
 full release gate. Routine native CI runs the existing complete gate once.
-Explicit qualification dispatches additionally run both focused profiles on that
+Explicit qualification dispatches additionally run the Native, Text, Tools and
+Build focused profiles on that
 same source, lock, compiler and host. Their comparison artifact retains full-gate
 elapsed time, focused commands/logs/timings and exact
 installed-archive evidence; cache targets are excluded.
@@ -84,12 +86,31 @@ owners must remain Tools and Dev, with runtime callsites confined to the checked
 reviewed mapping. This is explicit contract admission, not automatic dependency
 inference or an operator-controlled skip switch.
 
+Tools has only Dev's development edge, with Rust callers confined to
+`tests/public_contracts.rs`. Build has only Dev's normal edge; its driver,
+archive-qualification binary/tests, public contract and canister benchmark are
+the admitted call surfaces. A new consumer, dependency kind or Rust call surface
+selects the full gate. Per-group exclusion annotations explain every omitted
+full stage; Tools/Build do not inherit Native/Text's unrelated exclusion claims.
+The new plans cannot use historical Native/Text comparisons: changes to the
+mapping, dispatcher and workflow force full validation until a new three-host
+comparison includes all four profiles. Mixed-group changes and Shared Tooling
+refreshes still select the full gate.
+
 Every focused plan retains snapshot/symlink/compiler/pin/format/document checks.
 Tool admission includes host parsers, Cargo tools and the release editor, without
-installing the simulator or optimizer. Preflight retains locked workspace fetch
+installing the simulator or optimizer for Native, Text and Tools. Build retains
+the complete product-tool admission for its real Wasm-probe consumer and existing
+optimizer contracts. Preflight retains locked workspace fetch
 and metadata admission. Focused lint precedes runtime and archive execution.
-Native/Text archives use the same IC Build engine as the full public roster,
+Focused archives use the same IC Build engine as the full public roster,
 including normalized source/lock/provenance checks and extracted-package tests.
+The archive set includes the selected packages' local normal, build and development
+dependency closure, including aliases and optional/target edges. Only path-only
+private development helpers omitted by Cargo packaging are excluded; other
+private or outside-workspace path dependencies refuse. Dependency archives are
+admitted and rebuilt, while runtime/doctest execution selects only the requested
+packages. Without an explicit selection the driver retains whole-workspace tests.
 The private archive driver still compiles its normal dependencies, including
 Build and the client; focused selection excludes unrelated test/server execution,
 not every possible dependency compilation. No archive stage is reused. Tooling's
@@ -163,7 +184,7 @@ there is no whole-gate reuse or reinterpretation of earlier release receipts.
 ## Qualification and limits
 
 `make release-validation-plan-check` exercises all six group fallbacks against
-the same full-gate roster, focused Native/Text selection, required/excluded failure
+the same full-gate roster, focused group selection, required/excluded failure
 injection, discovery refusals, source/environment drift and receipt custody.
 Its Make effects are substituted. `bash scripts/release/test-adapter.sh` retains
 the real six-group metadata, rollback, commit and recovery contracts, also with
@@ -189,13 +210,19 @@ effects prove the preserved 35-stage order, one lint pass, pipe jobserver access
 and failure stopping before later checks. The default Make fixture includes this
 focused case for complete tooling qualification.
 
-Actual focused commands are `RELEASE_GROUP=native` or `RELEASE_GROUP=text` with
+Actual focused commands select `RELEASE_GROUP=native`, `text`, `tools` or `build` with
 `make release-scope-lint`, `release-scope-graphs`, `release-scope-tests`,
 `release-scope-docs` and `release-scope-archives`. These are owner-specific checks;
-the four other groups intentionally refuse those focused targets. Linux and both
+Foundation and Testkit intentionally refuse those focused targets. Linux and both
 native macOS hosts remain required; report their evidence separately. Preserve
 matched-input comparison and command/timing observations before claiming savings.
 Shared-input changes retain full release qualification until their own complete
 native CI baseline exists. Historical rollout qualification completed in
 [#314 — Qualify group-scoped release validation](https://github.com/dragginzgame/ic-tooling/issues/314);
 that evidence does not qualify later runner or mapping changes.
+
+For selection and command-routing development, run
+`bash scripts/release/test-validation.sh --case selection`. It substitutes
+product effects and proves per-owner omissions, missing-baseline fallback,
+mixed-source fallback and refusal of new consumer surfaces; it does not qualify
+native execution. Full CI keeps the complete fixture entrypoint.

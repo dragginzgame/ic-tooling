@@ -10,12 +10,12 @@
   ],
   "focused": [
     "native",
-    "text"
+    "text",
+    "tools",
+    "build"
   ],
   "fallback": {
     "foundation": "Foundation primitives have Build, Tools and Testkit reverse consumers, including installed and Wasm contracts.",
-    "build": "Build changes require artifact, editor and optimizer owner qualification plus archive and private-driver contracts.",
-    "tools": "Tools owns distinct external adapters and public identities; retain all isolated profiles and consumers.",
     "testkit": "Testkit owns simulator lifecycle, Wasm/probe singletons and installed/server contracts."
   },
   "exclusions": [
@@ -23,7 +23,13 @@
       "targets": [
         "tools-check"
       ],
-      "reason": "Focused tool admission retains host parsers, Cargo tools and the release editor. No selected contract installs the simulator or optimizer."
+      "reason": "Focused admission retains host parsers, Cargo tools and the release editor. Build additionally admits its existing simulator and optimizer inputs; the other selected contracts require neither.",
+      "groups": [
+        "native",
+        "text",
+        "tools",
+        "build"
+      ]
     },
     {
       "targets": [
@@ -31,14 +37,26 @@
         "docs-workspace",
         "test-workspace-installed"
       ],
-      "reason": "Focused lint, documentation and runtime tests retain the selected package and its admitted direct/reverse consumer contracts. Simulator-backed workspace tests have no edge to this scope."
+      "reason": "Owner-specific lint, documentation, tests and declared reverse-consumer checks replace workspace aggregates. Build retains the real private Wasm-probe consumer; unrelated simulator lifecycle tests remain outside the selected contract.",
+      "groups": [
+        "native",
+        "text",
+        "tools",
+        "build"
+      ]
     },
     {
       "targets": [
         "formatting-hook-check",
         "tooling-command-check"
       ],
-      "reason": "Shared scripts, hooks, recipes and fixtures are unchanged from the complete three-host baseline; source/configuration changes select the full gate."
+      "reason": "Shared scripts, hooks, recipes and fixtures are unchanged from the complete three-host baseline; source/configuration changes select the full gate.",
+      "groups": [
+        "native",
+        "text",
+        "tools",
+        "build"
+      ]
     },
     {
       "targets": [
@@ -51,14 +69,50 @@
         "test-artifacts-text",
         "check-fs-non-unix"
       ],
-      "reason": "Foundation and Build implementations, dependencies and feature contracts are unchanged and have no production edge to Native or Text."
+      "reason": "Foundation and Build implementations, dependencies and feature contracts are unchanged and have no production edge to Native or Text.",
+      "groups": [
+        "native",
+        "text"
+      ]
+    },
+    {
+      "groups": [
+        "tools",
+        "build"
+      ],
+      "targets": [
+        "test-artifacts-minimal",
+        "test-fs-minimal",
+        "test-fs-capability",
+        "test-fs-temporary-file",
+        "test-artifacts-wasm",
+        "test-artifacts-encoding",
+        "test-artifacts-text",
+        "check-fs-non-unix"
+      ],
+      "reason": "Foundation source and features are unchanged. Selected owner/consumer tests retain their primitive integrations and dependency graphs; Foundation or dependency changes select the full gate."
     },
     {
       "targets": [
         "tools-features-check",
         "isolated-features-check"
       ],
-      "reason": "Native has no dependency or reverse consumer. Text retains its feature/graph checks, YAML profile and actual Tools icp-project consumer in the focused graph/test stages."
+      "reason": "Native has no dependency or reverse consumer. Text retains its feature/graph checks, YAML profile and actual Tools icp-project consumer in the focused graph/test stages.",
+      "groups": [
+        "native",
+        "text"
+      ]
+    },
+    {
+      "groups": [
+        "tools",
+        "build"
+      ],
+      "targets": [
+        "tools-features-check",
+        "isolated-features-check"
+      ],
+      "reason": "The existing normal/build feature graph matrix runs in focused graphs. Tools retains every isolated adapter profile in focused tests; Build has no production edge to Tools or Text."
     },
     {
       "targets": [
@@ -66,13 +120,35 @@
         "testkit-wasm-check",
         "testkit-installed-check"
       ],
-      "reason": "Public Testkit, simulator/server lifecycle and Wasm probe contracts do not consume Native or Text. The private driver’s Text rendering is exercised in focused tests."
+      "reason": "Public Testkit, simulator/server lifecycle and Wasm probe contracts do not consume Native or Text. The private driver’s Text rendering is exercised in focused tests.",
+      "groups": [
+        "native",
+        "text"
+      ]
+    },
+    {
+      "groups": [
+        "tools",
+        "build"
+      ],
+      "targets": [
+        "testkit-graph-check",
+        "testkit-wasm-check",
+        "testkit-installed-check"
+      ],
+      "reason": "Testkit lifecycle and protocol implementations are unchanged. Build still compiles and installs the real private Wasm probe; Tools retains its typed public consumer without simulator execution. Testkit source or dependency changes select the full gate."
     },
     {
       "targets": [
         "testkit-package-check"
       ],
-      "reason": "Focused archive qualification uses the same IC Build archive engine, exact selected public package, normalized source/lock admission and installed archive tests."
+      "reason": "Focused archive qualification uses the same IC Build engine, exact selected public package, normalized source/lock admission and installed archive tests.",
+      "groups": [
+        "native",
+        "text",
+        "tools",
+        "build"
+      ]
     },
     {
       "targets": [
@@ -85,13 +161,48 @@
         "test-tools-encoding",
         "test-tools-registry"
       ],
-      "reason": "Native has no Tools consumer. Text’s runtime caller is confined to icp-project, exercised separately; the remaining IC adapters do not use Text and are unchanged."
+      "reason": "Native has no Tools consumer. Text’s runtime caller is confined to icp-project, exercised separately; the remaining IC adapters do not use Text and are unchanged.",
+      "groups": [
+        "native",
+        "text"
+      ]
+    },
+    {
+      "groups": [
+        "tools",
+        "build"
+      ],
+      "targets": [
+        "test-tools-default",
+        "test-tools-interface",
+        "test-tools-certificate",
+        "test-tools-candid",
+        "test-tools-combined",
+        "test-tools-agent",
+        "test-tools-encoding",
+        "test-tools-registry"
+      ],
+      "reason": "Tools runs every existing isolated adapter profile through focused tests. Build has no production dependency on Tools and its unchanged external adapters."
     },
     {
       "targets": [
         "test-wasm-inspection"
       ],
-      "reason": "Wasm inspection does not depend on Native or Text; its source, graph and public identities are unchanged."
+      "reason": "Wasm inspection does not depend on Native or Text; its source, graph and public identities are unchanged.",
+      "groups": [
+        "native",
+        "text"
+      ]
+    },
+    {
+      "groups": [
+        "tools",
+        "build"
+      ],
+      "targets": [
+        "test-wasm-inspection"
+      ],
+      "reason": "The Wasm inspector is an unchanged Foundation application with no dependency on Tools or Build; its source, graph and public identities are unchanged."
     }
   ],
   "focused_stages": [

@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # Consumer scope, whole-source custody and receipt tests; Cargo/Make effects substituted.
+selection_only=false
+if [[ $# != 0 ]]; then
+    [[ $# == 2 && $1 == --case && $2 == selection ]] || exit 2
+    selection_only=true
+fi
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 unset TOOLING_STAGE_ADMISSIONS
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE
@@ -21,6 +26,13 @@ rm "$fixture/checkout/source-metadata.json"
 bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$fixture/checkout"
 # Preserve the known runtime caller surfaces for Text's reverse-consumer mapping.
 for path in crates/ic-host-tools/src/icp_project/mod.rs crates/ic-testkit-dev/src/fixture_reuse_driver/mod.rs; do
+    mkdir -p "$fixture/checkout/${path%/*}"
+    cp "$root/$path" "$fixture/checkout/$path"
+done
+# Keep the actual, explicitly qualified reverse-call surfaces for Tools/Build.
+for path in crates/ic-testkit-dev/tests/public_contracts.rs crates/ic-testkit-dev/tests/canister_benchmark.rs \
+    crates/ic-testkit-dev/src/bin/check_packages.rs crates/ic-testkit-dev/src/bin/tests/mod.rs \
+    crates/ic-testkit-dev/src/fixture_reuse_driver/preparation/mod.rs; do
     mkdir -p "$fixture/checkout/${path%/*}"
     cp "$root/$path" "$fixture/checkout/$path"
 done
@@ -98,6 +110,138 @@ make_plan() {
 }
 refuse() { if "$@"; then echo 'unexpected validation admission' >&2; exit 1; fi; }
 absent() { local status=0; "$@" || status=$?; [[ $status == 1 ]]; }
+check_focus_routing() {
+    local real_bash selected stage
+    real_bash=$(command -v bash)
+    mkdir -p "$fixture/routing-bin" target/debug
+    export ROUTING_REAL_BASH="$real_bash" ROUTING_EVENTS="$fixture/routing-events"
+    cat > "$fixture/routing-bin/cargo" <<'STUB'
+#!/bin/bash
+set -euo pipefail
+printf 'cargo %s\n' "$*" >> "$ROUTING_EVENTS"
+STUB
+    cat > "$fixture/routing-bin/make" <<'STUB'
+#!/bin/bash
+set -euo pipefail
+printf 'make %s\n' "$*" >> "$ROUTING_EVENTS"
+[[ ${ROUTING_FAIL:-} != profiles ]] || exit 23
+STUB
+    cat > "$fixture/routing-bin/bash" <<'STUB'
+#!/bin/bash
+set -euo pipefail
+if [[ $1 == scripts/ci/check-tools-features.sh ]]; then
+    printf 'graphs\n' >> "$ROUTING_EVENTS"
+else exec "$ROUTING_REAL_BASH" "$@"; fi
+STUB
+    cat > target/debug/ic-testkit-server <<'STUB'
+#!/bin/bash
+[[ $* == check ]] || exit 2
+printf '/fixture/admitted-pocket-ic\n'
+STUB
+    chmod +x "$fixture/routing-bin/"* target/debug/ic-testkit-server
+    for selected in tools build; do
+        : > "$ROUTING_EVENTS"
+        for stage in tools lint graphs tests docs archives; do
+            PATH="$fixture/routing-bin:$PATH" RELEASE_GROUP="$selected" \
+                "$real_bash" "$root/scripts/release/validation-focus.sh" "$stage"
+        done
+        grep -Fx graphs "$ROUTING_EVENTS" >/dev/null
+        grep -F -- '--test public_contracts' "$ROUTING_EVENTS" >/dev/null
+        if [[ $selected == tools ]]; then
+            grep -F -- '--package ic-host-tools' "$ROUTING_EVENTS" >/dev/null
+            grep -F 'test-tools-ledger-evidence' "$ROUTING_EVENTS" >/dev/null
+            absent grep -F -- '--test canister_benchmark' "$ROUTING_EVENTS"
+            : > "$ROUTING_EVENTS"
+            refuse env PATH="$fixture/routing-bin:$PATH" RELEASE_GROUP=tools ROUTING_FAIL=profiles \
+                "$real_bash" "$root/scripts/release/validation-focus.sh" tests
+            absent grep -F -- '--test public_contracts' "$ROUTING_EVENTS"
+        else
+            grep -Fx 'make --no-print-directory tools-check' "$ROUTING_EVENTS" >/dev/null
+            grep -F -- '--package ic-build' "$ROUTING_EVENTS" >/dev/null
+            grep -F -- '--test canister_benchmark' "$ROUTING_EVENTS" >/dev/null
+            absent grep -F 'test-tools-ledger-evidence' "$ROUTING_EVENTS"
+        fi
+    done
+}
+check_new_scopes() {
+    local selected package
+    for selected in tools build; do
+        git checkout -q "$baseline"
+        package=$(jq -er --arg group "$selected" '.groups[] | select(.name == $group) | .primary' ci/cargo-release-groups.json)
+        printf '\npub const QUALIFICATION_FIXTURE: u8 = 1;\n' >> "crates/$package/src/lib.rs"
+        git add "crates/$package/src/lib.rs"
+        git commit -qm "$selected-only"
+        RELEASE_SOURCE=$(git rev-parse HEAD) RELEASE_GROUP=$selected
+        make_plan "$selected-only"
+        jq -e '.selection == "focused"' "$directory/context.json" >/dev/null
+        # Keep each omission explained for this owner, rather than reusing
+        # Native/Text exclusions that would omit the selected owner's contracts.
+        jq -e 'all(.stages[]; .required or (.reason | type == "string" and length > 0))' "$directory/plan.json" >/dev/null
+        : > "$VALIDATION_TEST_EVENTS"
+        bash scripts/release/validation.sh run "$pointer" > "$fixture/$selected.run.log" 2>&1
+        bash scripts/release/validation.sh receipt "$pointer" > "$fixture/$selected.receipt"
+        grep -Fx release-scope-tests "$VALIDATION_TEST_EVENTS" >/dev/null
+        absent grep -Fx test-workspace-installed "$VALIDATION_TEST_EVENTS"
+        # Old qualification without the new mapping cannot enable the scope.
+        cp "$fixture/baseline.json" "$fixture/qualified-baseline"
+        printf 'null\n' > "$fixture/baseline.json"
+        make_plan "$selected-no-baseline"
+        jq -e '.selection == "full"' "$directory/context.json" >/dev/null
+        mv "$fixture/qualified-baseline" "$fixture/baseline.json"
+        printf '\npub fn unqualified_consumer() {}\n' >> crates/ic-testkit-dev/src/lib.rs
+        git add crates/ic-testkit-dev/src/lib.rs
+        git commit -qm other-owner
+        RELEASE_SOURCE=$(git rev-parse HEAD)
+        make_plan "$selected-mixed"
+        jq -e '.selection == "full"' "$directory/context.json" >/dev/null
+        git checkout -q "$baseline"
+        # A new use in an unqualified consumer surface broadens even when the
+        # baseline already contains that source and Cargo's parent is unchanged.
+        printf 'use %s as supplier;\n' "${package//-/_}" >> crates/ic-testkit-dev/src/lib.rs
+        git add crates/ic-testkit-dev/src/lib.rs
+        git commit -qm new-consumer-surface
+        RELEASE_SOURCE=$(git rev-parse HEAD)
+        jq --arg source "$RELEASE_SOURCE" '.source = $source | .jobs.jobs |= map(if has("head_sha") then .head_sha = $source else . end)' \
+            "$fixture/baseline.json" > "$fixture/consumer-baseline"
+        cp "$fixture/baseline.json" "$fixture/qualified-baseline"
+        cp "$fixture/consumer-baseline" "$fixture/baseline.json"
+        make_plan "$selected-new-surface"
+        jq -e '.selection == "full"' "$directory/context.json" >/dev/null
+        mv "$fixture/qualified-baseline" "$fixture/baseline.json"
+        git checkout -q "$baseline"
+        jq '.exclusions[0].reason += " Revised mapping."' ci/release-validation-coverage.json > "$fixture/new-mapping"
+        cp "$fixture/new-mapping" ci/release-validation-coverage.json
+        git add ci/release-validation-coverage.json
+        git commit -qm qualification-mapping-changed
+        RELEASE_SOURCE=$(git rev-parse HEAD)
+        make_plan "$selected-old-mapping"
+        jq -e '.selection == "full"' "$directory/context.json" >/dev/null
+        git checkout -q "$baseline"
+        printf '\n[build-dependencies]\n%s = { workspace = true }\n' "$package" >> crates/ic-testkit-dev/Cargo.toml
+        git add crates/ic-testkit-dev/Cargo.toml
+        git commit -qm new-dependency-kind
+        RELEASE_SOURCE=$(git rev-parse HEAD)
+        jq --arg source "$RELEASE_SOURCE" '.source = $source | .jobs.jobs |= map(if has("head_sha") then .head_sha = $source else . end)' \
+            "$fixture/baseline.json" > "$fixture/consumer-baseline"
+        cp "$fixture/baseline.json" "$fixture/qualified-baseline"
+        cp "$fixture/consumer-baseline" "$fixture/baseline.json"
+        make_plan "$selected-new-kind"
+        jq -e '.selection == "full"' "$directory/context.json" >/dev/null
+        mv "$fixture/qualified-baseline" "$fixture/baseline.json"
+    done
+    git checkout -q "$baseline"
+    jq '.exclusions[0].groups -= ["tools"]' ci/release-validation-coverage.json > "$fixture/incomplete-owner"
+    cp "$fixture/incomplete-owner" ci/release-validation-coverage.json
+    refuse bash scripts/ci/validation-roster.sh full > "$fixture/incomplete-owner.log" 2>&1
+    git restore -- ci/release-validation-coverage.json
+}
+check_focus_routing
+check_new_scopes
+if [[ $selection_only == true ]]; then
+    fixture_complete=true
+    echo 'Tools/Build focused plans, owner exclusions, missing evidence and consumer/mixed-source fallback passed (Make effects substituted).'
+    exit 0
+fi
 # Exercise read-only discovery itself, including green docs-only/incomplete runs.
 cat > "$fixture/bin/gh" <<'STUB'
 #!/usr/bin/env bash

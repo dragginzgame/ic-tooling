@@ -43,7 +43,7 @@ fn archive_selection_preserves_mixed_versions_and_refuses_missing_members() {
         .unwrap();
     }
     std::fs::write(root.join("Cargo.lock"), lock).unwrap();
-    let versions = workspace_versions(
+    let metadata = workspace_metadata(
         root,
         root,
         OutputLimits {
@@ -53,11 +53,133 @@ fn archive_selection_preserves_mixed_versions_and_refuses_missing_members() {
         },
     )
     .unwrap();
+    let versions = workspace_versions(&metadata);
     let packages = archive_specs(&versions, "foundation\nintegration\n").unwrap();
     assert_eq!(packages[0].version, "0.73.0");
     assert_eq!(packages[1].version, "0.74.0");
     assert!(packages.iter().all(|package| package.patch_registry));
     assert!(archive_specs(&versions, "missing-member").is_err());
+}
+
+fn archive_limits() -> PackageQualificationLimits {
+    PackageQualificationLimits {
+        process: OutputLimits {
+            stdout: OutputLimit::Terminate(4 * 1024 * 1024),
+            stderr: OutputLimit::Terminate(1024 * 1024),
+            timeout: Some(std::time::Duration::from_secs(60)),
+        },
+        file_bytes: 4 * 1024 * 1024,
+        source_entries: 100,
+        source_depth: 10,
+    }
+}
+
+fn archive_fixture(label: &str) -> ic_host_fs::testing::FixtureDirectory {
+    let parent = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("target");
+    ic_host_fs::testing::FixtureDirectory::new(&parent, label).unwrap()
+}
+
+#[test]
+fn focused_archives_keep_local_dependencies_without_running_their_tests() {
+    let fixture = archive_fixture("archive-local-closure");
+    let source = fixture.path().join("source");
+    std::fs::create_dir(&source).unwrap();
+    std::fs::write(
+        source.join("Cargo.toml"),
+        "[workspace]\nmembers=['owner','support','private','unrelated']\nresolver='3'\n",
+    )
+    .unwrap();
+    for name in ["owner", "support", "private", "unrelated"] {
+        std::fs::create_dir_all(source.join(name).join("src")).unwrap();
+        let extra = match name {
+            "owner" => {
+                "[dependencies]\nrenamed={package='support',path='../support',version='0.1.0'}\n[dev-dependencies]\nprivate={path='../private'}\n"
+            }
+            "private" => "publish=false\n",
+            _ => "",
+        };
+        std::fs::write(
+            source.join(name).join("Cargo.toml"),
+            format!("[package]\nname='{name}'\nversion='0.1.0'\nedition='2024'\n{extra}"),
+        )
+        .unwrap();
+        let body = if name == "owner" {
+            "pub fn value()->u32 { renamed::value() }\n#[test] fn selected_owner() { assert_eq!(value(), 7); }\n"
+        } else {
+            "pub fn value()->u32 { 7 }\n#[test] fn unselected_support() { panic!(\"support tests must not run\"); }\n"
+        };
+        std::fs::write(source.join(name).join("src/lib.rs"), body).unwrap();
+    }
+    assert!(
+        archive_cargo(&source)
+            .current_dir(&source)
+            .args(["generate-lockfile", "--offline"])
+            .status()
+            .unwrap()
+            .success()
+    );
+    let limits = archive_limits();
+    let mut metadata = workspace_metadata(&source, fixture.path(), limits.process).unwrap();
+    let public = "owner\nsupport\nunrelated\n";
+    let closure = archive_closure(&metadata, "owner", public).unwrap();
+    assert_eq!(closure, "owner\nsupport");
+    assert!(archive_closure(&metadata, "missing", public).is_err());
+    let versions = workspace_versions(&metadata);
+    let packages = archive_specs(&versions, &closure).unwrap();
+    let evidence = fixture.path().join("evidence");
+    std::fs::create_dir(&evidence).unwrap();
+    std::fs::create_dir_all(source.join("target/package")).unwrap();
+    let cache = fixture.path().join("cache");
+    ic_build::cargo::packages::qualify_package_archives_with(
+        &source,
+        &source.join("target/package"),
+        &evidence,
+        &packages,
+        &CargoFeatureSelection::default(),
+        limits,
+        || archive_cargo(&source),
+        |archive, destination| {
+            let mut command = Command::new("tar");
+            command.arg("-xzf").arg(archive).arg("-C").arg(destination);
+            command
+        },
+        |root| qualify_archive_tests(root, &cache, limits.process, Some("owner")),
+    )
+    .unwrap();
+    let output = std::fs::read_to_string(evidence.join("test-targets.json")).unwrap();
+    assert!(output.contains("selected_owner ... ok"));
+    assert!(!output.contains("unselected_support"));
+    let error = qualify_archive_tests(&evidence, &cache, limits.process, None).unwrap_err();
+    assert!(
+        error
+            .downcast_ref::<PackageCommandError>()
+            .is_some_and(|error| error.stage == "test-targets")
+    );
+    assert!(
+        std::fs::read_to_string(evidence.join("test-targets.json"))
+            .unwrap()
+            .contains("unselected_support ... FAILED")
+    );
+    for kind in [DependencyKind::Normal, DependencyKind::Development] {
+        let owner = metadata
+            .packages
+            .iter_mut()
+            .find(|p| p.name == "owner")
+            .unwrap();
+        let private = owner
+            .dependencies
+            .iter_mut()
+            .find(|d| d.name == "private")
+            .unwrap();
+        private.kind = kind;
+        private.req = "=0.1.0".parse().unwrap();
+        assert!(archive_closure(&metadata, "owner", public).is_err());
+    }
 }
 
 #[test]
@@ -109,13 +231,7 @@ fn archive_cargo(source: &Path) -> Command {
 
 #[cfg(unix)]
 fn archive_cache_fixture() -> ic_host_fs::testing::FixtureDirectory {
-    let parent = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("target");
-    let fixture = ic_host_fs::testing::FixtureDirectory::new(&parent, "archive-cache").unwrap();
+    let fixture = archive_fixture("archive-cache");
     let source = fixture.path().join("source");
     std::fs::create_dir_all(source.join("src")).unwrap();
     std::fs::create_dir(source.join("target")).unwrap();
@@ -144,7 +260,7 @@ fn reject_fixed_mtime_workspace(root: &Path, cache: &Path, limits: OutputLimits)
         .unwrap()
         .set_modified(modified)
         .unwrap();
-    let error = qualify_archive_tests(root, cache, limits).unwrap_err();
+    let error = qualify_archive_tests(root, cache, limits, None).unwrap_err();
     assert!(failure_report(error.as_ref()).contains("test-targets"));
     assert!(
         std::fs::read_to_string(root.join("test-targets.json"))
@@ -168,16 +284,7 @@ fn archive_cache_reuses_dependencies_and_rebuilds_same_version_payloads() {
         all_features: true,
         ..CargoFeatureSelection::default()
     };
-    let limits = PackageQualificationLimits {
-        process: OutputLimits {
-            stdout: OutputLimit::Terminate(4 * 1024 * 1024),
-            stderr: OutputLimit::Terminate(1024 * 1024),
-            timeout: Some(std::time::Duration::from_secs(60)),
-        },
-        file_bytes: 4 * 1024 * 1024,
-        source_entries: 100,
-        source_depth: 10,
-    };
+    let limits = archive_limits();
     let mut mtimes = Vec::new();
     for attempt in ["cold", "warm", "changed"] {
         if attempt == "changed" {
@@ -199,7 +306,7 @@ fn archive_cache_reuses_dependencies_and_rebuilds_same_version_payloads() {
                 command.arg("-xzf").arg(archive).arg("-C").arg(destination);
                 command
             },
-            |root| qualify_archive_tests(root, &cache, limits.process),
+            |root| qualify_archive_tests(root, &cache, limits.process, None),
         );
         eprintln!("Archive compiler cache {attempt}: {:?}", started.elapsed());
         if attempt != "changed"

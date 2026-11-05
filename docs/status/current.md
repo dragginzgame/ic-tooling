@@ -1,11 +1,23 @@
 # Current handoff
 
+## Tools/Build focused qualification — 2026-11-05
+
+The maintainer requested focused Tools and Build release plans. Their selected
+owner/consumer commands, per-group omissions, archive dependency closure and
+conservative fallback are implemented. Local evidence is under
+`target/group-validation-20261105/`; matched hosted comparison remains required
+before these scopes can narrow a release. The CI profile list comes from the
+validated coverage policy. Foundation/Testkit, Shared refreshes and mixed-group
+changes retain full validation. See [the qualification contract](../design/release-validation.md).
+Concurrent Host Tools/#335 work and Cargo.lock selections are outside this batch.
+
 ## Shared adoption and async-cut deployment — 2026-11-05
 
 The maintainer authorized deployment of the reviewed batch based on `1401a36f`.
 The selected order is Foundation 0.74.4, Build 0.74.4, then Testkit 0.87.0 from
 ordinary main, through the standard release and separate publication adapters.
-Source integration and qualification are in progress; no new publication is
+Reviewed source and fixture fixes are pushed through `6e6475a8`. Release
+qualification stopped on concurrent source edits; no new publication is
 claimed here. Current attempt evidence is under `target/deploy-async087-20261105/`.
 Unrelated incoming Cargo.lock selections are saved there and will be restored
 after release; the release lock includes only the async cut's required changes.
