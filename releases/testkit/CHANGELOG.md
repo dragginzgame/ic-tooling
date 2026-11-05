@@ -32,6 +32,8 @@ Joint history through 0.76.1 remains there once, with its original scope.
 
 ### 🧹 Cleanup
 
+- Refresh compatible locked dependencies, including Runtime 0.19.2 and Candid
+  0.10.40, while retaining the exact management DTO pin and native/Wasm boundaries.
 - Check integration helper dead-code expectations, use typed install-error
   assertions and derive the example recipe's mechanical error forwarding.
   Declare the private tooling and benchmark package roles for source reports.

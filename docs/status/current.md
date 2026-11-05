@@ -8,12 +8,13 @@ separate crates.io publication. Evidence is under
 `target/deploy-platform023-20261105/`; durable incoming lock/source backups are in
 `.git/release-state/deployment-platform023-20261105/`. Hosted CI is asynchronous.
 
-The release lock is derived from committed main with only Platform 0.23.0,
-required Types 0.18.1 and removed workspace dependency edges. Runtime and unrelated
-patch selections retain the committed release graph. The newer incoming lock is
-kept separately and will be restored with only released workspace versions
-aligned after publication. Do not overwrite those snapshots or mix their
-unrelated selections into the release. Standard release gates remain required.
+The initial gate refused a lockfile rewrite to the saved incoming selections.
+The maintainer then explicitly authorized including those current selections in
+the release. The admitted graph now includes their compatible patch refresh,
+including Runtime 0.19.2 and Candid 0.10.40. Fresh qualification must run against
+that committed graph; the interrupted attempt is not reusable. Both the earlier
+release-only lock and the complete incoming selection remain in retained evidence.
+Do not restore an older snapshot after publication. Standard gates remain required.
 
 ## Published Platform 0.23 adoption — 2026-11-05
 

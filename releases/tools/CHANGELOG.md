@@ -16,6 +16,7 @@ Joint history through 0.76.1 remains there once, with its original scope.
 
 ### 🧹 Cleanup
 
+- Refresh compatible locked dependencies using the maintainer-selected graph.
 - Remove the retired certificate test profile from CI and release validation.
   Platform owns decoder tests; Tooling retains its shared-type consumer check.
 
