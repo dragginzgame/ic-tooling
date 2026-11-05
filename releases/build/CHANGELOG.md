@@ -8,6 +8,12 @@ reset, release, tag or upload is implied by establishing this group.
 
 ## [0.74.4] - Unreleased
 
+### 🩹 Fixed
+
+- Keep Cargo discovery and root-package fixtures valid when caller-selected
+  temporary directories are beneath another workspace. Preserve real ancestor
+  discovery and explicitly isolate the root-package Cargo fixture.
+
 ### 🧪 Testing
 
 - Move private artifact/Candid helpers into `support_tests.rs` and `tests/`,

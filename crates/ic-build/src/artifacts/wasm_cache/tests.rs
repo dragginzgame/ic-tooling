@@ -1388,7 +1388,7 @@ fn semantic_workspace_projection_falls_back_for_workspace_root_packages() {
     fs::create_dir_all(root.join("src")).expect("create root package source directory");
     fs::write(
         root.join("Cargo.toml"),
-        "[package]\nname = \"root_canister\"\nversion = \"0.0.0\"\nedition = \"2024\"\n",
+        "[package]\nname = \"root_canister\"\nversion = \"0.0.0\"\nedition = \"2024\"\n[workspace]\n",
     )
     .expect("write root package manifest");
     fs::write(root.join("src/lib.rs"), "pub fn root_canister() {}\n")

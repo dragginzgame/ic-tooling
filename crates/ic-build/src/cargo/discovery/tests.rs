@@ -4,6 +4,7 @@ use crate::testing::fs::unique_temp_directory;
 #[test]
 fn nearest_declaration_accepts_file_start_and_standalone_package() {
     let root = unique_temp_directory("declared-workspace");
+    let enclosing_workspace = declared_workspace_root_from(&root).unwrap();
     let nested = root.join("nested");
     fs::create_dir_all(&nested).unwrap();
     fs::write(root.join("Cargo.toml"), "[workspace]\nmembers=[]").unwrap();
@@ -20,7 +21,12 @@ fn nearest_declaration_accepts_file_start_and_standalone_package() {
     );
     fs::remove_file(root.join("Cargo.toml")).unwrap();
     fs::write(&manifest, "description='literal [workspace]'").unwrap();
-    assert_eq!(declared_workspace_root_from(&manifest).unwrap(), None);
+    // A caller may place scratch beneath an existing workspace. Removing our
+    // marker reveals that ancestor; the description must not become a marker.
+    assert_eq!(
+        declared_workspace_root_from(&manifest).unwrap(),
+        enclosing_workspace
+    );
     fs::remove_dir_all(root).unwrap();
 }
 
