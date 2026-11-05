@@ -28,6 +28,8 @@ Joint history through 0.76.1 remains there once, with its original scope.
 - Check integration helper dead-code expectations, use typed install-error
   assertions and derive the example recipe's mechanical error forwarding.
   Declare the private tooling and benchmark package roles for source reports.
+- Isolate the private driver's negative Git fixture from ancestor repository
+  discovery when caller-selected scratch is beneath the checkout.
 - Delegate FIFO pool capacity and queued cancellation to Tokio. Cancelled slot
   preparation forces a rebuild before reuse, preserving its value for teardown.
   Retain fatal/recovery distinctions, snapshot rollback and typed failure evidence.

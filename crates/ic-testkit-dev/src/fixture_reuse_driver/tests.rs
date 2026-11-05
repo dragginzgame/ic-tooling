@@ -143,6 +143,9 @@ fn git_observations_preserve_dirty_path_bytes_and_typed_failures() {
     }
 
     let missing = fixture_directory();
+    // An invalid Git marker prevents discovery of an enclosing checkout when
+    // caller-selected temporary storage is beneath that checkout's target/.
+    fs::write(missing.path().join(".git"), "gitdir: absent\n").unwrap();
     let error = git_provenance(&missing.path().canonicalize().unwrap(), limits).unwrap_err();
     assert!(
         error
