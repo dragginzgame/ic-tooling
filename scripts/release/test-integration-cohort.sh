@@ -29,9 +29,7 @@ finish() {
 trap 'finish "$?"' EXIT
 export RUSTUP_AUTO_INSTALL=0
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/target}"
-"$parser" -p toml -o json '.' Cargo.toml |
-    jq '.workspace.dependencies |= with_entries(
-        .value |= if type == "string" then {version: .} else . end)' > "$fixture/catalog.json"
+cargo metadata --locked --offline --format-version 1 > "$fixture/source-metadata.json"
 mkdir "$fixture/src"
 cp crates/ic-testkit-dev/tests/public_contracts.rs "$fixture/src/lib.rs"
 cat > "$fixture/Cargo.toml" <<'TOML'
@@ -43,18 +41,24 @@ publish = false
 [workspace]
 [dependencies]
 TOML
-# Keep manifest generation and identity assertions on the same selected inputs.
+# Keep manifest generation and identity assertions on the same resolved inputs.
+# Catalog requirements are compatible minimums, not exact selected patch versions.
 # The facade may coexist with another version; canonical Types/Wire remain singleton.
-jq -e '.workspace.dependencies as $d |
+jq -e '. as $source |
     ["ic-build", "ic-host-artifacts", "ic-host-process", "ic-host-tools",
      "ic-testkit", "ic-platform", "ic-platform-types", "ic-wire"] |
-    map(. as $name | {
-        name: $name, version: $d[$name].version, singleton: ($name != "ic-platform"),
+    map(. as $name |
+        [$source.resolve.nodes[] |
+            select(.id as $id | $source.workspace_members | index($id)) |
+            .deps[] | select(.name == ($name | gsub("-"; "_"))) | .pkg] | unique as $ids |
+        if ($ids | length) != 1 then error("expected one direct workspace selection for " + $name) else
+        ($source.packages[] | select(.id == $ids[0])) as $package | {
+        name: $name, version: $package.version, singleton: ($name != "ic-platform"),
         features: (if $name == "ic-host-tools" then ["registry"]
             elif $name == "ic-testkit" then ["wire"]
             elif $name == "ic-platform" then ["principal", "ic-protocol"]
             else [] end)
-    })' "$fixture/catalog.json" > "$fixture/selection.json"
+    } end)' "$fixture/source-metadata.json" > "$fixture/selection.json"
 # These are new registry-only inputs, never edits to release metadata or root lock.
 jq -er '.[] |
     if (.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) then

@@ -1,20 +1,45 @@
 # Current handoff
 
-## Platform codec deployment in progress — 2026-11-05
+## Delivered Platform codec integration — 2026-11-05
 
-The maintainer authorized Tools 0.83.0 followed by Testkit 0.87.0, using ordinary
-`/home/adam/projects/ic-tooling` main, direct origin/main plus group tags and
-separate crates.io publication. Evidence is under
-`target/deploy-platform023-20261105/`; durable incoming lock/source backups are in
-`.git/release-state/deployment-platform023-20261105/`. Hosted CI is asynchronous.
+| Group | Published package | Release commit / tag |
+| --- | --- | --- |
+| Tools | ic-host-tools 0.83.0 | `094b7787` / `tools-v0.83.0` |
+| Testkit | ic-testkit 0.87.0 | `e3b8a885` / `testkit-v0.87.0` |
 
-The initial gate refused a lockfile rewrite to the saved incoming selections.
-The maintainer then explicitly authorized including those current selections in
-the release. The admitted graph now includes their compatible patch refresh,
-including Runtime 0.19.2 and Candid 0.10.40. Fresh qualification must run against
-that committed graph; the interrupted attempt is not reusable. Both the earlier
-release-only lock and the complete incoming selection remain in retained evidence.
-Do not restore an older snapshot after publication. Standard gates remain required.
+Both complete 34-stage Linux release gates passed on Rust 1.99.1, including
+native/Wasm graphs, installed metrics/management/snapshots, fresh archives and
+workspace execution. Both releases are pushed to origin/main with their tags and
+published to crates.io. Downloaded archives match their index checksums, local
+publication archives and exact clean release Git provenance. Private Dev/probe
+versions follow Testkit 0.87.0; Foundation/Build, Text and Native were not advanced.
+
+The registry-only consumer passes all three public-contract cases with Tools
+0.83.0, Testkit 0.87.0, Platform 0.23.0 and the exact locked Types/Wire versions.
+Evidence: `target/published-integration.5dfo1w/`. Its verifier now obtains exact
+versions from direct workspace resolve edges; catalog minimums such as Types
+0.18.0 must not replace the qualified 0.18.1 selection. The earlier incompatible
+minimum-pin attempt remains at `target/published-integration.qqDxMm/`.
+
+The maintainer explicitly included the incoming lock selections after the first
+gate refused their rewrite. Runtime 0.19.2, Candid 0.10.40 and compatible patches
+are committed release inputs. Do not restore older snapshots over them. The failed
+attempt is retained, not reused. Tools' first atomic push was rejected by GitHub
+with `fatal error in commit_refs`; remote inspection showed neither ref delivered,
+and exact `release-resume` completed the saved commit/tag push without a new bump.
+
+Deployment evidence is under `target/deploy-platform023-20261105/`, with durable
+backups/receipts in `.git/release-state/deployment-platform023-20261105/` and the
+standard group plans. Source integration is `b0e267b9`; approved lock integration
+is `3f559604`. Hosted native qualification remains asynchronous; its run identities
+belong in this deployment's `native-ci.json`. Linux success does not establish a
+new native macOS pass. No artifacts or prior release evidence were cleaned.
+
+Tools consumers remove the retired certificate feature/module and import
+Platform 0.23's strict certificate codecs directly. Testkit consumers await its
+client/lifecycle calls and explicit teardown; see the
+[client migration](../testkit/client-migration.md). Query verification policy and
+PocketIC transport/orchestration retain their owners.
 
 ## Published Platform 0.23 adoption — 2026-11-05
 
@@ -38,8 +63,8 @@ feature graphs and Testkit Wasm compilation. The existing installed 16.1 client
 test now also reads real certified subnet metrics; metrics, management and bounded
 snapshot restoration passed together. Six library cases remain explicitly ignored;
 the focused checks do not claim their execution. Native macOS qualification and
-complete release/archive gates have not run for this adoption. Source changes
-remain local; Tools 0.83.0 and Testkit 0.87.0 are pending releases.
+complete release/archive gates were separate from this initial focused evidence.
+Subsequent full Linux release and registry evidence is recorded above.
 
 ## Certificate/protocol owner extraction — 2026-11-05
 
@@ -67,7 +92,7 @@ The original 0.22.2 supplier gap and draft's non-optional metrics mismatch were
 resolved by Platform 0.23.0 and its adoption above. Platform retains the optional
 CBOR leaf grammar; Testkit adds no local CBOR-byte handling or null-as-error policy.
 
-## Delivered groups and interrupted Testkit release — 2026-11-05
+## Earlier delivered groups and interrupted Testkit release — 2026-11-05
 
 | Group | Published version | Release commit / tag |
 | --- | --- | --- |
@@ -189,11 +214,12 @@ release batch used only its admitted dependency graph; unrelated maintainer
 selections remain in the Git-side backups described above. Do not include them
 implicitly in supplier adoption or overwrite them while updating release versions.
 
-Last published Testkit is 0.86.0: release commit
+The previous Testkit 0.86.0 publication used release commit
 `71de6abfc21d8a26d33b3ac485499890654513db`, tag `testkit-v0.86.0`, preceded by
 Wire adoption `0a70714040588e2367d62ef4af1859f191e6a0de`. Foundation/Build 0.74.4,
 Tools 0.82.1, Text 0.74.2 and Native 0.80.0 are published. Build's additive archive
-API shipped in 0.74.4; Testkit 0.87.0 and Tools 0.83.0 remain pending.
+API shipped in 0.74.4. The latest Tools 0.83.0 and Testkit 0.87.0 delivery is
+recorded at the top of this handoff.
 
 The complete 35-stage Linux gate and separate publication/readback for Testkit
 0.86.0 passed. Its archive SHA-256 is
