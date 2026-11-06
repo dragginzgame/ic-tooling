@@ -1,5 +1,93 @@
 # Current handoff
 
+## Testkit 0.89.0 deployment — in progress
+
+Delivery is authorized from the normal checkout's `main` to
+`dragginzgame/ic-tooling:main`, followed by `testkit-v0.89.0` and crates.io
+publication of `ic-testkit`. Private Dev/probe follow 0.89.0; other release groups
+retain their versions. Current qualified cc 1.11.1 / flate2 1.1.11 lock selections
+are included as release inputs. The complete Testkit gate precedes version
+preparation; native hosted qualification runs asynchronously. The isolated
+logging child now also tolerates aggregate installed-test selection without its
+parent-only environment. All four local fixes remain subject to actual delivery
+and acceptance verification before issue closure.
+
+## Local logging ownership and fixture scratch — 2026-11-06
+
+The unused root Semver catalog entry is removed; transitive Semver remains.
+Tooling #333 removes client-side log-file/global-subscriber setup and the retained
+worker. Imported tracing events remain compatible with application-owned
+projection into `ic-logging`. That canonical sink and a registry-only subscriber
+are test dependencies; the production graph excludes both logging engines and
+the sink. Nine unused logging-support packages leave the lock. The new
+checksummed logging patch reverses before the existing source-provenance chain;
+original donor/upstream fingerprints and licenses are unchanged.
+
+Tooling #334 puts local shell/browser source fixtures under workspace `target/tmp`
+by default and preserves explicit/aliased `TMPDIR`, refusal and retention behavior.
+The product driver owns the final imported release-command probe too, so nested
+probes share the same scratch selection. Old `/tmp` evidence, Git-side release
+records, persistent state and tool stores are untouched. See the
+[scratch contract](../design/fixture-scratch.md).
+
+Focused Linux evidence passes installed multi-client/borrowed-handle cleanup with
+early and late application logging, invalid legacy logging settings, strict
+selected Clippy, source reconstruction/mutation rejection, native/Wasm normal
+graphs, scratch/retention/Make routing and ten browser source-fixture checks.
+Native macOS has not been rerun. An independent updater selected flate2 1.1.11
+during final checks; it and the incoming cc 1.11.1 are preserved. Other retained
+package versions/checksums are unchanged; focused Rust checks use this final lock.
+
+Pending Testkit is now 0.89.0 because removing implicit logging/environment
+behavior needs caller migration; the earlier II fixture notes move with it.
+Package versions remain unchanged. GitHub Shared 0.30.6 is still the latest
+committed supplier and is already adopted. Tooling #335 is closed after verifying
+IcyDB's default branch requires Tools 0.83.0 and uses both published decoders.
+No staging, commit, push, release or publication was performed in this batch.
+
+## Local Candid source admission — 2026-11-06
+
+Tooling #337 adopts Shared 0.30.6 at
+`45c0295e23d3d23225e31f47c018c30ff0c75581` through its canonical exporter;
+all 173 snapshot files were verified against that commit. The unmodified Candid
+checker and source masker scan all 435 maintained Rust files under `crates`,
+`apps`, `scripts` and `docs`, including native tests and the independent recipe
+driver. Three exact external declarations remain admitted: Tools' bounded
+decoder and legacy ledger record, and native PocketIC's management-snapshot
+helper. No owned application or codec-comparison allowances were added.
+
+The common dependency-admission target runs this check once with the complete
+policy, including during group-selected validation. Focused consumer controls
+prove rejection through Platform re-exports and cfg-disabled fixture aliases,
+stop metadata validation on failure, and check Make execution is not duplicated.
+The source scan, consumer control, ShellCheck and local documentation links pass;
+no Cargo compilation or native-host qualification was run for this tooling change.
+Root release notes and the [coverage guide](../design/candid-boundary.md) describe
+the maintained scope and lexical limitations. CBOR enforcement is separate.
+Package versions and Rust public APIs are unchanged; the preceding #336 work is
+preserved locally. No integration commit, push or publication is included.
+
+## Local Internet Identity fixture — 2026-11-06
+
+The repository fixture for Tooling #336 pins official II release
+`release-2026-10-02` / `b9a8aaf43977adc1a2edf6ce98729826fc45133c`, verifies
+the matched backend/frontend and original interfaces, and disables dummy auth.
+The private driver uses existing Testkit startup/teardown owners and upstream
+Candid definitions; no published API or Canic policy changes. The compatible
+test-tooling addition is carried under pending Testkit 0.89.0; package versions,
+release tags and the published baseline below are unchanged.
+
+Linux Chromium 156.0.8078.4 completed real virtual-WebAuthn registration,
+AuthClient 10.0.2 `signIn`/`getIdentity`, matching signed-ingress caller bytes,
+typed wrong-root rejection and replica rejection of an altered signature.
+`target/ii-336-accepted/` retains the provider connection, trace, exact tool
+hashes, proof and successful closed-gateway teardown receipt. Input-rejection
+tests, selected driver Clippy and formatting checks pass. Startup/ready signal
+cancellation and pre-start tamper rejection pass with retained receipts under
+`target/ii-336-lifecycle-final/`. Native macOS has not
+been qualified for this fixture. See the
+[consumer guide](../../testing/browser/internet-identity/README.md).
+
 ## Delivered Build/Testkit hard cut — 2026-11-06
 
 | Group | Published package | Release commit / tag |

@@ -21,11 +21,11 @@ unset TOOLING_STAGE_ADMISSIONS IC_TOOLING_RELEASE_GROUP TOOLING_RELEASE_GROUP
 # Substitute Cargo has no source metadata; exercise every formatter pass while
 # Shared's producer fixtures own exact-input reuse and invalidation coverage.
 export FORMAT_RUST_ARGS=--no-cache
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
+# shellcheck source=scripts/ci/product-fixture.sh
+source "$root/scripts/ci/product-fixture.sh"
 # shellcheck source=scripts/ci/make-adapter-probes.sh
 source "$root/scripts/ci/make-adapter-probes.sh"
-fixture="$(fixture_create "${TMPDIR:-/tmp}/host-make-snapshot.XXXXXX")"
+fixture="$(tooling_fixture_create "$root" host-make-snapshot)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Host Make evidence retained"' EXIT
 export TMPDIR="${fixture%/*}"
@@ -116,6 +116,8 @@ check_tooling_roster() {
 fixture scripts/ci/test-qualification-record.sh
 fixture scripts/ci/test-tools-layering.sh
 fixture scripts/ci/test-product-ci-selection.sh
+fixture scripts/ci/test-product-candid-boundary.sh
+fixture scripts/ci/test-product-fixture-scratch.sh
 fixture scripts/ci/test-product-evidence.sh
 fixture scripts/ci/test-host-fixture-retention.sh
 fixture scripts/release/test-stage-reuse.sh

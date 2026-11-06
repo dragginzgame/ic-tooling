@@ -1,0 +1,26 @@
+{
+  "release": "release-2026-10-02",
+  "revision": "b9a8aaf43977adc1a2edf6ce98729826fc45133c",
+  "assets": [
+    {
+      "name": "backend.wasm.gz",
+      "url": "https://github.com/dfinity/internet-identity/releases/download/release-2026-10-02/internet_identity_backend.wasm.gz",
+      "sha256": "67a1cadff8105890630c847676fed88dbf2c2e6715f9354e057523c1cb76fdf0"
+    },
+    {
+      "name": "frontend.wasm.gz",
+      "url": "https://github.com/dfinity/internet-identity/releases/download/release-2026-10-02/internet_identity_frontend.wasm.gz",
+      "sha256": "a8bf61eb5745e241f0fe54e35e915cf9f68b4068c36bf7119637c85af04b111b"
+    },
+    {
+      "name": "backend.did",
+      "url": "https://github.com/dfinity/internet-identity/releases/download/release-2026-10-02/internet_identity.did",
+      "sha256": "21b52160c84f50cd9e6628c5767131b4df5eb84fc919b51c81200a039ca2a491"
+    },
+    {
+      "name": "frontend.did",
+      "url": "https://raw.githubusercontent.com/dfinity/internet-identity/b9a8aaf43977adc1a2edf6ce98729826fc45133c/src/internet_identity_frontend/internet_identity_frontend.did",
+      "sha256": "c5473e0fd3d706eba9ae14b475d6749a3437b989f0c0223b7f65250726ec4eba"
+    }
+  ]
+}

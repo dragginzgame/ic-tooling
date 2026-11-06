@@ -1,9 +1,26 @@
 # Async-only PocketIC client
 
-The next Testkit minor release removes the blocking client. Testkit 0.86 and
+Testkit 0.87 removed the blocking client. Testkit 0.86 and
 earlier retain the old API. The maintained implementation remains in this
 package; PocketIC server 16.1, external DTO identities, protocol bytes,
 no-replay behavior and snapshot transfer budgets are unchanged.
+
+## Application-owned logging in 0.89
+
+Clients no longer inspect `POCKET_IC_LOG_DIR` or `POCKET_IC_LOG_DIR_LEVELS`,
+create directories/files, start a logging worker or initialize a process-global
+subscriber. Configure logging at the application entrypoint before constructing
+clients. Testkit retains its imported tracing events for compatibility; choosing
+a subscriber, fields, clock, limits, sink and retention belongs to the caller.
+
+Use the canonical `ic-logging::Log` for retained application logs. An application
+that needs imported client events can project selected tracing metadata into its
+own bounded log through an application-owned subscriber/layer. The installed
+`client_installed` logging test demonstrates this projection with a registry-only
+test dependency; no native adapter crate or subscriber engine is added to Testkit.
+The production graph retains `tracing` events and excludes `ic-logging`,
+`tracing-appender` and `tracing-subscriber`. Protocol bytes, async teardown and
+accepted-ingress custody are unchanged.
 
 ## Imports and calls
 

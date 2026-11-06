@@ -7,9 +7,9 @@ root="${BASH_SOURCE[0]}"
 [[ "$root" == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
-fixture="$(fixture_create "${TMPDIR:-/tmp}/host-formatting.XXXXXX")"
+# shellcheck source=scripts/ci/product-fixture.sh
+source "$root/scripts/ci/product-fixture.sh"
+fixture="$(tooling_fixture_create "$root" host-formatting)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Host formatting input retained"' EXIT
 

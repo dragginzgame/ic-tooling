@@ -164,7 +164,7 @@ or section banners.
   in `[package.metadata.shared-tooling.loc]`; use `category = "tests"`,
   `"examples"`, `"benchmarks"` or `"build_tooling"`. Names and `publish = false` are not declarations
   of purpose. Explicit path classifications and generated flags follow the
-  [LOC reporting contract](../fleet-tools.md#source-classification).
+  [LOC reporting contract](https://github.com/dragginzgame/shared-tooling/blob/08cd17240fd60dfd309e35eb131e73323e883e6f/docs/fleet-tools.md#source-classification).
 - Put cross-module behavior tests at the subsystem boundary they exercise.
 - Add negative coverage for public validation and trust boundaries.
 - Test maintained contracts rather than private implementation layout.

@@ -19,9 +19,9 @@ root="${BASH_SOURCE[0]}"
 [[ "$root" == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
-fixture="$(fixture_create "${TMPDIR:-/tmp}/tooling-release-groups.XXXXXX")"
+# shellcheck source=scripts/ci/product-fixture.sh
+source "$root/scripts/ci/product-fixture.sh"
+fixture="$(tooling_fixture_create "$root" tooling-release-groups)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Release adapter fixtures retained"' EXIT
 # Shared retains failed group observations. Keep controlled failure probes

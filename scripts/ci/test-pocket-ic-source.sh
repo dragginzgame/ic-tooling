@@ -8,9 +8,10 @@ fixture="$(mktemp -d "$root/target/pocket-ic-source-test.XXXXXX")"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "PocketIC source evidence retained"' EXIT
 bash "$root/scripts/ci/check-pocket-ic-source.sh"
-for mutation in import body license adaptation snapshot-adaptation module-adaptation tooling-adaptation protocol-adaptation surface-adaptation http-body; do
+for mutation in import body license adaptation snapshot-adaptation module-adaptation tooling-adaptation protocol-adaptation surface-adaptation logging-adaptation http-body; do
     cp -R "$root/crates/ic-testkit" "$fixture/$mutation"
     case "$mutation" in
+        logging-adaptation) printf '\nchanged logging patch\n' >> "$fixture/$mutation/pocket-ic-provenance/logging-owner.patch" ;;
         surface-adaptation) printf '\nchanged surface patch\n' >> "$fixture/$mutation/pocket-ic-provenance/surface-cut.patch" ;;
         tooling-adaptation) printf '\nchanged maintenance patch\n' >> "$fixture/$mutation/pocket-ic-provenance/tooling-maintenance.patch" ;;
         protocol-adaptation) printf '\nchanged protocol patch\n' >> "$fixture/$mutation/pocket-ic-provenance/protocol-codec.patch" ;;

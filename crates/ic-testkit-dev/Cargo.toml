@@ -21,10 +21,14 @@ category = "build_tooling"
 "src/workload.rs" = "benchmarks"
 "tests" = "tests"
 
+[[bin]]
+name = "internet_identity_fixture"
+path = "tests/support/internet_identity_fixture.rs"
+
 [dependencies]
 clap = { workspace = true, features = ["derive", "string"] }
 ic-build = { workspace = true }
-ic-host-artifacts = { workspace = true }
+ic-host-artifacts = { workspace = true, features = ["wasm-text"] }
 ic-host-fs = { workspace = true, features = ["temporary-file"] }
 ic-host-process = { workspace = true }
 ic-host-text = { workspace = true }
@@ -35,7 +39,7 @@ libc = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread", "net", "time"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "time"] }
 
 [target.'cfg(unix)'.dependencies]
 rustix = { workspace = true, features = ["process"] }

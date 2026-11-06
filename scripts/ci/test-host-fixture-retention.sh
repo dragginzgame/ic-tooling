@@ -7,11 +7,11 @@ root="${BASH_SOURCE[0]}"
 [[ "$root" == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
+# shellcheck source=scripts/ci/product-fixture.sh
+source "$root/scripts/ci/product-fixture.sh"
 # shellcheck source=scripts/ci/fixture-retention-probes.sh
 source "$root/scripts/ci/fixture-retention-probes.sh"
-fixture="$(fixture_create "${TMPDIR:-/tmp}/host-fixture-retention.XXXXXX")"
+fixture="$(tooling_fixture_create "$root" host-fixture-retention)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Host fixture retention evidence retained"' EXIT
 export TMPDIR="${fixture%/*}"

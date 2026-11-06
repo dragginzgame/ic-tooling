@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml make/release-validation-local.mk scripts/ci/workspace-validation.sh scripts/ci/run-tooling-checks.sh
+# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml make/release-validation-local.mk scripts/ci/workspace-validation.sh scripts/ci/run-tooling-checks.sh scripts/ci/check-product-candid-boundary.sh
 PACKAGE ?= ic-host-artifacts
 RELEASE_DELIVERY ?= direct
 export RELEASE_GROUP
@@ -126,7 +126,10 @@ tools-features-check:
 	+bash scripts/ci/check-tools-features.sh
 compiler-check:
 	+bash scripts/ci/check-rust-toolchain.sh "$(CURDIR)"
-dependency-pins-check:
+.PHONY: candid-boundary-check
+candid-boundary-check:
+	bash scripts/ci/check-product-candid-boundary.sh
+dependency-pins-check: candid-boundary-check
 	+bash scripts/ci/check-dependency-pins.sh --cargo-inheritance
 check-doc-links:
 	bash scripts/ci/check-product-doc-links.sh
@@ -135,7 +138,6 @@ release-adapter-check:
 tooling-command-check: export IC_TOOLING_RELEASE_GROUP = $(if $(filter command line,$(origin TOOLING_RELEASE_GROUP)),$(TOOLING_RELEASE_GROUP),)
 tooling-command-check:
 	+bash scripts/ci/run-tooling-checks.sh
-	+RELEASE_GROUP=foundation bash scripts/ci/check-release-commands.sh "$(CURDIR)" ci/tool-versions.env ci/release-delivery.txt make/consumer.mk make/tools.mk make/testkit.mk make/rust-format.mk make/release.mk make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/check-release-delivery.sh scripts/ci/run-formatting.sh scripts/ci/run-rust-formatting.pl scripts/ci/RustSource.pm
 publish publish-check: export IC_TOOLING_PUBLISH_SELECTION = $(PACKAGE)
 publish:
 	+bash scripts/publish/workspace.sh publish $(if $(filter command line,$(origin PACKAGE)),--packages "$$IC_TOOLING_PUBLISH_SELECTION")

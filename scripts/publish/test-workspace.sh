@@ -9,9 +9,9 @@ root="${BASH_SOURCE[0]}"
 [[ "$root" == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
-FIXTURE_ROOT="$(fixture_create "${TMPDIR:-/tmp}/ic-host-publish-test.XXXXXX")"
+# shellcheck source=scripts/ci/product-fixture.sh
+source "$root/scripts/ci/product-fixture.sh"
+FIXTURE_ROOT="$(tooling_fixture_create "$root" ic-host-publish-test)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$FIXTURE_ROOT" "Publication fixtures retained"' EXIT
 export TMPDIR="${FIXTURE_ROOT%/*}"

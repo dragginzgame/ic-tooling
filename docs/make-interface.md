@@ -52,7 +52,7 @@ consumer adoption uses `consumer.mk` instead of including the same modules twice
 Shared Tooling itself selects the non-Rust profile. Its source checkout has no
 consumer snapshot to verify; `shared-tooling-check` is for adopted copies.
 
-Tooling adoption uses the [agent audit tasks](fleet-tools.md#tooling-adoption-audit),
+Tooling adoption uses the [agent audit tasks](https://github.com/dragginzgame/shared-tooling/blob/08cd17240fd60dfd309e35eb131e73323e883e6f/docs/fleet-tools.md#tooling-adoption-audit),
 not a consumer LOC target or deployment gate. `make cloc` remains the Rust LOC
 report, with `CLOC_ROOT` and optional `CLOC_SUBCRATES=1`.
 

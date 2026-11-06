@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd -P)"
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
-fixture="$(fixture_create "${TMPDIR:-/tmp}/tooling-ci-selection.XXXXXX")"
+# shellcheck source=scripts/ci/product-fixture.sh
+source "$root/scripts/ci/product-fixture.sh"
+fixture="$(tooling_fixture_create "$root" tooling-ci-selection)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "CI selection fixture retained"' EXIT
 "$root/.tools/host/bin/yq" -o json '.' "$root/.github/workflows/ci.yml" > "$fixture/workflow.json"

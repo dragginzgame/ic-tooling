@@ -1,5 +1,12 @@
 # PocketIC client transfer
 
+The separately checksummed `logging-owner.patch` removes implicit client log
+directory creation, worker retention and global subscriber initialization.
+Imported tracing events remain compatible with a caller-selected subscriber;
+applications own their `ic-logging` sink, clock, limits and retention. The guard
+reverses this layer before the surface cut and original reconstruction chain.
+Original donor/upstream fingerprints, licenses and other patches are unchanged.
+
 Tooling #324 / Platform #139 transfer the complete maintained client from
 Platform commit `41688ced81066b90aee756def7468a8388ee67e9`, package source 0.20.0.
 This includes the subsequent macOS blocking-socket test fix from `79f905f`.

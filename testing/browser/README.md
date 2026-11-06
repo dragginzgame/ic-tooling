@@ -23,3 +23,7 @@ not Windows process termination.
 
 Run `node --test testing/browser/session.test.mjs`. Tests use disposable Node
 children; installed PocketIC/browser qualification remains with the consumer.
+
+The [pinned Internet Identity fixture](internet-identity/README.md) supplies local
+II provider endpoints and trust roots plus an explicit real AuthClient/Chromium
+virtual-passkey acceptance command.

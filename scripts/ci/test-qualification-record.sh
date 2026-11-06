@@ -3,9 +3,9 @@
 set -euo pipefail
 unset CARGO RUSTC
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
-fixture="$(fixture_create "${TMPDIR:-/tmp}/qualification-record.XXXXXX")"
+# shellcheck source=scripts/ci/product-fixture.sh
+source "$root/scripts/ci/product-fixture.sh"
+fixture="$(tooling_fixture_create "$root" qualification-record)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Qualification record evidence retained"' EXIT
 mkdir "$fixture/repository" "$fixture/bin"

@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { withFixtureSession } from './session.mjs';
+import { scratchDirectory } from './tests/scratch.mjs';
 
 async function fixture(body, run, overrides = {}) {
-  const root = await mkdtemp(join(tmpdir(), 'testkit-browser-'));
+  const root = await scratchDirectory('testkit-browser-');
   const readyPath = join(root, 'ready.json'), logPath = join(root, 'fixture.log');
   try {
     return await withFixtureSession({command:process.execPath,

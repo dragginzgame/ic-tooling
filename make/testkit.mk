@@ -14,7 +14,7 @@ testkit-wasm-check:
 	+cargo check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
 	+cargo check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 testkit-browser-check:
-	node --test testing/browser/session.test.mjs
+	node --test testing/browser/session.test.mjs testing/browser/internet-identity/inputs.test.mjs testing/browser/tests/scratch.test.mjs
 testkit-check: build-server-cli
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit -p ic-testkit-dev -p ic-testkit-native --all-features --locked --offline
 testkit-installed-check: build-server-cli

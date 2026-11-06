@@ -1,5 +1,6 @@
 //! Installed management and IC packet compatibility through the Testkit client.
 #![cfg(not(target_family = "wasm"))]
+mod logging;
 mod snapshot;
 
 use ic_testkit::pic::{PocketIcManagedServer, PocketIcStartupConfig};

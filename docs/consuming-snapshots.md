@@ -1,5 +1,5 @@
 # Consuming Shared Tooling Snapshots
-<!-- Shared companions: docs/rust-toolchains.md scripts/distribution/maintenance-files.txt -->
+<!-- Shared companions: docs/rust-toolchains.md scripts/distribution/maintenance-files.txt scripts/distribution/governance-files.txt docs/ic-tools.md docs/verification-helpers.md docs/local-setup.md docs/make-interface.md tasks/snapshot-drift.md rules/dependency-pinning.md rules/changelogs.md -->
 
 CI and release behavior must not depend on a sibling checkout, a moving Git
 branch, or network availability. Consumers vendor a reviewed file set and
@@ -1011,7 +1011,7 @@ recipes only after testing their actual callers and hook, following the
 Rust toolchain. Shared Tooling itself selects `CLOC_REPORT` and `CLOC_ROOT` before
 the include to summarize sibling workspaces; consumers normally use the defaults.
 Installing the raw cloc executable alone does not add these Make commands.
-Use the [tooling audit tasks](fleet-tools.md#tooling-adoption-audit) for snapshot
+Use the [tooling audit tasks](https://github.com/dragginzgame/shared-tooling/blob/08cd17240fd60dfd309e35eb131e73323e883e6f/docs/fleet-tools.md#tooling-adoption-audit) for snapshot
 integrity, applicable upstream changes and actual consumer wiring. The former
 `cloc-tooling` command is retired; Rust LOC remains available through `cloc.sh`.
 
@@ -1150,3 +1150,30 @@ fields fail closed before Cargo runs. The selected consumer must be the workspac
 root with a regular `Cargo.toml`; failed or incomplete Cargo output and mismatched
 workspace identity refuse before any success report. This opt-in policy is
 separate from version pinning; consumers choose their own ownership rules.
+
+
+### CBOR boundary coverage
+
+With `--external-ic`, the Cargo checker includes the centrally maintained CBOR
+inventory as a snapshot companion; local allowed-package lists cannot relax it.
+Pair this with `check-candid-boundary.pl --cbor ROOT POLICY SOURCE...` and the
+browser SDK boundary checker, which also rejects direct CBOR packages/imports.
+Do not copy the package list into each consumer or replay Shared's generic tests.
+
+Run Cargo admission separately for every maintained independent Cargo workspace,
+including fixtures and generators; a parent workspace's metadata does not cover
+excluded packages. Select browser and generated source roots explicitly. An
+alternate `manifest.toml` template is not admitted by Cargo metadata: retire an
+obsolete executable fixture, or check its actual materialized Cargo workspace
+through the owning fixture workflow before compilation. Review the template and
+its materialization as inputs; a root-only pass does not cover them. Do not rename
+or materialize consumer manifests inside the shared checker.
+
+Platform implementation roots are producers, not browser consumer roots. Rust
+source exceptions use exact file/crate entries with reasons and review conditions;
+Cargo/browser consumer checks have no generic bypass flag. A new exceptional
+package owner needs an explicit reviewed shared-policy change, not a permissive
+consumer allowlist. Source masking/literal imports are lexical evidence only;
+dynamic imports, generated aliases, copied parsers and byte compatibility retain
+explicit review/consumer qualification obligations. No automatic release gate or
+fleet adoption is activated by exporting these helpers.

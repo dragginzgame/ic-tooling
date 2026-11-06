@@ -24,6 +24,8 @@ authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
 description = "Host-side artifact, filesystem, process and IC tooling"
 
 [workspace.dependencies]
+# Production dependencies
+
 # Foundation
 # Changelog : releases/foundation/CHANGELOG.md
 ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.74.4", default-features = false }
@@ -47,8 +49,6 @@ ic-host-tools = { path = "crates/ic-host-tools", version = "0.83.0", default-fea
 # Testkit (Dev and perf probe are private qualification crates)
 # Changelog : releases/testkit/CHANGELOG.md
 ic-testkit = { path = "crates/ic-testkit", version = "0.88.0", default-features = false }
-ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.88.0" }
-ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.88.0" }
 
 # Native allocation measurement
 # Changelog : releases/native/CHANGELOG.md
@@ -71,16 +71,12 @@ ic-platform-types = { version = "0.18.0", default-features = false }
 libc = "0.2.190"
 prost = "0.14.3"
 rustix = { version = "1.1.4", default-features = false, features = ["std", "fs"] }
-semver = { version = "1.0.9", features = ["serde"] }
 sha2 = "0.10.9"
-strum = { version = "0.28.0", features = ["derive"] }
 tempfile = "3.27.0"
 thiserror = "2.0.18"
 toml = "1"
 toml_edit = "0.25.17"
 tracing = "0.1.41"
-tracing-appender = "0.2.3"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt", "json", "time"] }
 unicode-width = "0.2.3"
 url = "2.5.7"
 wasm-encoder = { version = "0.263", default-features = false }
@@ -97,6 +93,13 @@ serde = { version = "1.0.228", default-features = false }
 serde_json = "1.0.150"
 tokio = { version = "1.52.3", default-features = false }
 wasmparser = { version = "0.263", default-features = false, features = ["std", "features"] }
+# Tests and tooling only
+
+ic-logging = "0.24.8"
+ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.88.0" }
+ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.88.0" }
+strum = { version = "0.28.0", features = ["derive"] }
+tracing-subscriber = { version = "0.3.19", default-features = false, features = ["registry"] }
 
 [workspace.lints.rust]
 missing_docs = "warn"

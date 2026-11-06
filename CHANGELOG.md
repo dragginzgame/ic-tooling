@@ -1,5 +1,28 @@
 # IC Tooling release notes
 
+## Pending workspace tooling
+
+### 🧹 Cleanup
+
+- Remove the unused root Semver catalog entry. Semver may remain transitively;
+  unrelated lock selections are preserved. Logging support used only by the
+  application-owner test stays in test dependencies.
+
+### 🧪 Testing
+
+- Default local shell/browser qualification fixtures to workspace `target/tmp`,
+  including nested probes invoked through Make. Explicit `TMPDIR`, physical path
+  custody and failure retention remain supported; existing evidence is retained.
+  [#334 — Keep qualification fixture scratch under the workspace target](https://github.com/dragginzgame/ic-tooling/issues/334).
+
+- Adopt Shared Tooling 0.30.6 and enforce its Candid source boundary across
+  maintained Rust packages, tests and fixture drivers. Exact external-protocol
+  declarations remain permitted; new owned Candid payloads fail source admission.
+  See [#337 — Enforce the maintained Rust Candid boundary](https://github.com/dragginzgame/ic-tooling/issues/337)
+  and the [coverage and exception guide](docs/design/candid-boundary.md).
+
+## Release groups
+
 | Release group | Packages | Release notes |
 | --- | --- | --- |
 | Foundation | Artifacts, FS, HTTP, Process and the Wasm inspector | [Foundation ledger](releases/foundation/CHANGELOG.md) |

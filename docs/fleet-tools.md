@@ -112,6 +112,9 @@ Counts use copies of the exact bytes inspected, with `source_sha256` in each
 file record. This prevents edits during cloc from changing classified counts;
 it is not an atomic snapshot of a concurrently edited workspace. A nonempty
 file omitted by cloc fails the report instead of silently contributing zero.
+Module traversal queues file visits and releases each token tree before visiting
+the next file. Inline partitioning reloads captured bytes one file at a time;
+peak parser memory follows file size rather than the whole workspace's tokens.
 
 JSON schema **2** contains `manifest`, `crates`, `totals`, `files` and
 `diagnostics`. Crate rows have `crate` and `counts`; each count object has the six
@@ -119,7 +122,8 @@ category keys above plus `total`. File records retain category, counts, target
 categories, `source_sha256`, `shared` and `generated` flags. Category counts sum exactly to the
 all-source total. Schema 1's `runtime_loc`, percentages and test-function counts
 are removed; update consumers rather than retaining aliases. Failure emits no
-partial workspace JSON. Text output announces the number of diagnostic notes.
+partial workspace JSON. Text uses `???` for unclassified LOC; diagnostic notes
+remain in JSON. Use `cloc.sh --help` for commands and diagnostic guidance.
 
 ## Tooling adoption audit
 

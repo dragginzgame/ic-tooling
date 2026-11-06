@@ -1,5 +1,8 @@
 # IC Tooling qualification
 
+Local shell/browser fixture defaults and explicit outside-target selections are
+documented in [qualification scratch ownership](design/fixture-scratch.md).
+
 Host profiles below remain independent. Build and Testkit share the root
 workspace and release matrix, with separate optimizer, browser-session and
 PocketIC lifecycle workflow jobs. `make testkit-check` runs aggregate Testkit
@@ -395,6 +398,12 @@ in the original repository. The refreshed fixture has local Linux execution with
 substituted host identities here; native macOS qualification remains separate.
 
 ## Dependency exclusions and deployment evidence
+
+`make candid-boundary-check` is the lightweight, offline
+[maintained Rust Candid source check](design/candid-boundary.md). The common
+`dependency-pins-check` stage runs it before dependency metadata admission.
+Its focused consumer rejection control is
+`bash scripts/ci/test-product-candid-boundary.sh`; neither command compiles Rust.
 
 `make tools-features-check` checks transitive normal/build dependency exclusions
 for the native target (or `CARGO_BUILD_TARGET`), including the combined Tools

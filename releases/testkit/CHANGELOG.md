@@ -6,6 +6,27 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.89.0] - Unreleased
+
+### ⚠️ Breaking
+
+- PocketIC clients no longer read `POCKET_IC_LOG_DIR` or
+  `POCKET_IC_LOG_DIR_LEVELS`, create log files, retain a logging worker or install
+  a global subscriber. Applications own their `ic-logging` sink and any projection
+  of imported tracing events. See the
+  [logging migration](../../docs/testkit/client-migration.md#application-owned-logging-in-089)
+  and [#333 — Return client logging setup to the application](https://github.com/dragginzgame/ic-tooling/issues/333).
+
+### 🧪 Testing
+
+- Supply a pinned local Internet Identity browser fixture with explicit provider
+  identities and trust roots. Real AuthClient sign-in, virtual-passkey use and
+  signed-ingress acceptance retain certificate/signature rejection controls.
+  Consumers reuse the repository fixture at an immutable Git revision; no new
+  published API or authentication policy is added. See the
+  [fixture guide](../../testing/browser/internet-identity/README.md) and
+  [#336 — Real local Internet Identity acceptance](https://github.com/dragginzgame/ic-tooling/issues/336).
+
 ## [0.88.0] - 2026-11-06
 
 ### ⚠️ Breaking

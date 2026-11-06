@@ -7,9 +7,9 @@ root="${root%/.}"
 [[ $# -le 1 ]] || exit 2
 # An explicit old script permits before/after regression qualification.
 policy="${1:-$root/scripts/ci/check-tools-features.sh}"
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
-fixture="$(fixture_create "${TMPDIR:-/tmp}/tooling-layering.XXXXXX")"
+# shellcheck source=scripts/ci/product-fixture.sh
+source "$root/scripts/ci/product-fixture.sh"
+fixture="$(tooling_fixture_create "$root" tooling-layering)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Layering fixture retained"' EXIT
 export LAYER_PROBE_REAL_CARGO

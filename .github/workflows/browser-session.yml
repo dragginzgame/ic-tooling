@@ -24,4 +24,4 @@ jobs:
         with:
           node-version-file: .node-version
           package-manager-cache: false
-      - run: node --test testing/browser/session.test.mjs
+      - run: node --test testing/browser/session.test.mjs testing/browser/internet-identity/inputs.test.mjs testing/browser/tests/scratch.test.mjs
