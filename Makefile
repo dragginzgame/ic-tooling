@@ -3,9 +3,8 @@
 PACKAGE ?= ic-host-artifacts
 RELEASE_DELIVERY ?= direct
 export RELEASE_GROUP
-RELEASE_FROZEN_GROUPS ?= $(RELEASE_GROUP)
-RELEASE_FROZEN_PUBLISH_TARGET ?= publish
-RELEASE_FROZEN_SETUP_TARGET ?= release-candidate-setup
+RELEASE_PUBLISH_TARGET ?= publish
+RELEASE_SETUP_TARGET ?= release-candidate-setup
 override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
 # Host commands use this checkout's reviewed snapshot, including parse-time probes.
 override SHARED_TOOLING_ROOT := $(CURDIR)
@@ -23,12 +22,12 @@ export YQ := $(CURDIR)/.tools/host/bin/yq
 # Shared selects prepare before fresh version lookup, check during recovery.
 # The standard preflight still owns editor/server setup and the product gate.
 release-candidate-setup:
-ifeq ($(RELEASE_FROZEN_SETUP_MODE),prepare)
+ifeq ($(RELEASE_SETUP_MODE),prepare)
 	+$(MAKE) --no-print-directory install-host-tools
-else ifeq ($(RELEASE_FROZEN_SETUP_MODE),check)
+else ifeq ($(RELEASE_SETUP_MODE),check)
 	+$(MAKE) --no-print-directory host-tools-check
 else
-	@echo 'Select RELEASE_FROZEN_SETUP_MODE=prepare or check' >&2; exit 2
+	@echo 'Select RELEASE_SETUP_MODE=prepare or check' >&2; exit 2
 endif
 
 # Refuse before the shared runner acquires its lock or any publication starts.
@@ -36,8 +35,8 @@ ifneq ($(filter $(SHARED_RELEASE_TARGETS) publish publish-check,$(MAKECMDGOALS))
 _tooling_release_selection := $(RELEASE_GROUP)
 _tooling_release_selection_mode :=
 ifneq ($(filter release-patch release-minor release-major,$(MAKECMDGOALS)),)
-ifneq ($(FROZEN_RELEASE_ACTIVE),1)
-_tooling_release_selection := $(RELEASE_FROZEN_GROUPS)
+ifneq ($(RELEASE_BATCH_ACTIVE),1)
+_tooling_release_selection := $(RELEASE_GROUPS)
 _tooling_release_selection_mode := batch
 endif
 endif
@@ -63,7 +62,7 @@ help:
 	@echo 'Full release validation: ci (pinned compiler, workspace Clippy, native/Wasm and isolated features); compiler-check admits identities'
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
 	@echo 'Frozen Git + crates.io releases: release-patch/minor/major RELEASE_GROUP=foundation|build|text|tools|testkit|native'
-	@echo 'Batch selection: RELEASE_FROZEN_GROUPS=group,group; resume: release-batch-resume BATCH=batch-XXXXXXXX'
+	@echo 'Batch selection: RELEASE_GROUPS=group,group; resume: release-batch-resume BATCH=batch-XXXXXXXX'
 	@echo 'Shared batch custody: release-batch-status, release-batch-reconcile, release-batch-retire BATCH=batch-XXXXXXXX'
 	@echo 'Legacy resume: release-resume RELEASE_GROUP=<same-group> VERSION=X.Y.Z'
 	@echo 'crates.io publication: publish-check (dry run), publish (upload); offline fixture: publish-command-check'

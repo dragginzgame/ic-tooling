@@ -18,8 +18,8 @@ root="${root%/.}"
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 unset SHARED_TOOLING_ROOT
 unset TOOLING_STAGE_ADMISSIONS IC_TOOLING_RELEASE_GROUP TOOLING_RELEASE_GROUP
-unset RELEASE_FROZEN_GROUPS RELEASE_FROZEN_PUBLISH_TARGET RELEASE_FROZEN_SETUP_TARGET FROZEN_RELEASE_ACTIVE
-unset RELEASE_FROZEN_SETUP_MODE PUBLICATION_RESULT
+unset RELEASE_GROUPS RELEASE_PUBLISH_TARGET RELEASE_SETUP_TARGET RELEASE_BATCH_ACTIVE
+unset RELEASE_SETUP_MODE PUBLICATION_RESULT
 # Substitute Cargo has no source metadata; exercise every formatter pass while
 # Shared's producer fixtures own exact-input reuse and invalidation coverage.
 export FORMAT_RUST_ARGS=--no-cache
@@ -86,7 +86,7 @@ printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
 STUB
 # Qualify only the consumer's dispatch here; actual hooks and lock isolation
 # have their own product fixture and installed release evidence.
-cat > "$fixture/local/scripts/ci/run-frozen-release.pl" <<'STUB'
+cat > "$fixture/local/scripts/ci/run-release-batch.pl" <<'STUB'
 use strict;
 use warnings;
 open my $out, '>>', $ENV{HOST_MAKE_EVENTS} or die $!;
@@ -246,6 +246,19 @@ make --no-print-directory release-version RELEASE_DELIVERY=pr \
 make --no-print-directory help RELEASE_DELIVERY=pr > "$fixture/unrelated-delivery.log" 2>&1
 [[ ! -s "$HOST_MAKE_EVENTS" ]] || exit 1
 if [[ $selected_case == release-routing ]]; then
+    # A retired roster must refuse, rather than silently selecting one group.
+    : > "$HOST_MAKE_EVENTS"
+    if make --no-print-directory release-patch RELEASE_GROUP=testkit RELEASE_FROZEN_GROUPS=native,testkit \
+        > "$fixture/retired-roster.log" 2>&1; then exit 1; fi
+    grep -F 'Retired release settings: RELEASE_FROZEN_GROUPS' "$fixture/retired-roster.log" > /dev/null
+    [[ ! -s $HOST_MAKE_EVENTS ]]
+    # Clearing the roster cannot dispatch a selected group against live inputs.
+    for kind in patch minor major; do
+        : > "$HOST_MAKE_EVENTS"
+        if make --no-print-directory "release-$kind" RELEASE_GROUP=testkit RELEASE_GROUPS= \
+            > "$fixture/empty-roster-$kind.log" 2>&1; then exit 1; fi
+        [[ ! -s $HOST_MAKE_EVENTS ]]
+    done
     # The captured checkout must use the existing single-group state machine.
     cat > scripts/dev/install-host-tools.sh <<'STUB'
 #!/usr/bin/env bash
@@ -258,7 +271,7 @@ exit "${HOST_MAKE_BOOTSTRAP_STATUS:-0}"
 STUB
     for kind in patch minor major; do
         : > "$HOST_MAKE_EVENTS"
-        make --no-print-directory "release-$kind" RELEASE_GROUP=testkit FROZEN_RELEASE_ACTIVE=1 \
+        make --no-print-directory "release-$kind" RELEASE_GROUP=testkit RELEASE_BATCH_ACTIVE=1 \
             RELEASE_REMOTE=review RELEASE_BRANCH=release-review > "$fixture/captured-$kind.log" 2>&1
         printf '%s review release-review\n' "$kind" > "$fixture/expected"
         cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
@@ -266,7 +279,7 @@ STUB
     for mode in prepare check; do
         : > "$HOST_MAKE_EVENTS"
         make --no-print-directory release-candidate-setup RELEASE_GROUP=testkit \
-            "RELEASE_FROZEN_SETUP_MODE=$mode" > "$fixture/setup-$mode.log" 2>&1
+            "RELEASE_SETUP_MODE=$mode" > "$fixture/setup-$mode.log" 2>&1
         event=host-bootstrap
         [[ $mode != check ]] || event=host-check
         printf '%s\n' "$event" > "$fixture/expected"
@@ -274,14 +287,14 @@ STUB
     done
     : > "$HOST_MAKE_EVENTS"
     if HOST_MAKE_BOOTSTRAP_STATUS=23 make --no-print-directory release-candidate-setup \
-        RELEASE_GROUP=testkit RELEASE_FROZEN_SETUP_MODE=prepare > "$fixture/bootstrap-failure.log" 2>&1; then exit 1; fi
+        RELEASE_GROUP=testkit RELEASE_SETUP_MODE=prepare > "$fixture/bootstrap-failure.log" 2>&1; then exit 1; fi
     printf 'host-bootstrap\n' > "$fixture/expected"
     cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
     : > "$HOST_MAKE_EVENTS"
     for target in release-batch-status release-batch-resume release-batch-reconcile release-batch-retire; do
         if make --no-print-directory "$target" > "$fixture/missing-$target.log" 2>&1; then exit 1; fi
     done
-    if make --no-print-directory release-candidate-setup RELEASE_FROZEN_SETUP_MODE=invalid \
+    if make --no-print-directory release-candidate-setup RELEASE_SETUP_MODE=invalid \
         > "$fixture/invalid-setup.log" 2>&1; then exit 1; fi
     [[ ! -s $HOST_MAKE_EVENTS ]]
     make --no-print-directory release-batch-resume BATCH=batch-_fixture PUBLICATION_RESULT=published \

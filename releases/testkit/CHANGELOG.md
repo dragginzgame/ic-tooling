@@ -6,6 +6,16 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.89.4] - Unreleased
+
+### 🧹 Cleanup
+
+- Centralize canister-scoped management-call routing without changing public
+  signatures, protocol DTOs, sender selection or fallible/no-replay behavior.
+  Preserve the independent donor reconstruction with a checksummed routing patch.
+- Share empty-canister setup across pool and concurrency tests while keeping
+  lifecycle assertions and fault injection in their owning tests.
+
 ## [0.89.3] - 2026-11-06
 
 ### 🧪 Testing

@@ -1,5 +1,5 @@
-use super::CacheOutcomeCounts;
 use super::cache_fs::{CacheRetentionLimits, canonicalize_allow_missing};
+use super::{CacheBatchEntry, CacheOutcomeCounts};
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
 
 use std::{
@@ -36,7 +36,7 @@ pub struct LabeledWasmBuildSpec {
 /// Ordered outcomes and failures from a collect-all Wasm build batch.
 #[derive(Debug)]
 pub struct WasmBuildBatchReport {
-    entries: Vec<WasmBuildBatchEntry>,
+    entries: Vec<CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>>,
     input_resolution: WasmBuildBatchInputMetrics,
     total: Duration,
 }
@@ -61,15 +61,6 @@ pub struct WasmBuildInputSnapshotMetrics {
     input_resolution_timings: WasmInputResolutionTimings,
     reader_reuses: usize,
     invalidated: bool,
-}
-
-/// One ordered caller-labeled result from a Wasm build batch.
-#[derive(Debug)]
-pub struct WasmBuildBatchEntry {
-    index: usize,
-    label: String,
-    result: Result<WasmBuildOutcome, (WasmBuildError, WasmBuildFailureDetails)>,
-    entry_elapsed: Duration,
 }
 
 /// Structural error that prevents a labeled Wasm batch from starting.
@@ -220,78 +211,20 @@ impl WasmBuildInputSnapshotMetrics {
     }
 }
 
-impl WasmBuildBatchEntry {
-    /// Zero-based position in the supplied labeled specification slice.
-    #[must_use]
-    pub const fn index(&self) -> usize {
-        self.index
-    }
+/// Build error together with the phase and partial timings at the failure.
+pub type WasmBuildBatchFailure = (WasmBuildError, WasmBuildFailureDetails);
 
-    /// Caller-owned stable label.
-    #[must_use]
-    pub fn label(&self) -> &str {
-        &self.label
-    }
-
-    /// Structured success or failure for this entry.
-    ///
-    /// # Errors
-    /// Returns this entry's recorded build error when the entry failed.
-    pub const fn result(&self) -> Result<&WasmBuildOutcome, &WasmBuildError> {
-        match &self.result {
-            Ok(outcome) => Ok(outcome),
-            Err((error, _)) => Err(error),
-        }
-    }
-
-    /// Successful Wasm outcome, when this entry succeeded.
-    #[must_use]
-    pub fn outcome(&self) -> Option<&WasmBuildOutcome> {
-        self.result.as_ref().ok()
-    }
-
-    /// Structured build failure, when this entry failed.
+impl CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure> {
+    /// The build error, independently of its partial phase/timing details.
     #[must_use]
     pub fn error(&self) -> Option<&WasmBuildError> {
-        self.result().err()
+        self.failure().map(|(error, _)| error)
     }
 
     /// Structured phase and partial timings when this entry failed.
     #[must_use]
-    pub const fn failure_details(&self) -> Option<WasmBuildFailureDetails> {
-        match &self.result {
-            Ok(_) => None,
-            Err((_, details)) => Some(*details),
-        }
-    }
-
-    /// Complete wall-clock time retained for this entry.
-    #[must_use]
-    pub const fn entry_elapsed(&self) -> Duration {
-        self.entry_elapsed
-    }
-
-    /// Whether this entry completed successfully.
-    #[must_use]
-    pub const fn is_success(&self) -> bool {
-        self.result.is_ok()
-    }
-
-    /// Consume the entry into its identity, result, optional failure details, and wall time.
-    pub fn into_parts(
-        self,
-    ) -> (
-        usize,
-        String,
-        Result<WasmBuildOutcome, WasmBuildError>,
-        Option<WasmBuildFailureDetails>,
-        Duration,
-    ) {
-        let (result, failure) = match self.result {
-            Ok(outcome) => (Ok(outcome), None),
-            Err((error, details)) => (Err(error), Some(details)),
-        };
-        (self.index, self.label, result, failure, self.entry_elapsed)
+    pub fn failure_details(&self) -> Option<WasmBuildFailureDetails> {
+        self.failure().map(|(_, details)| *details)
     }
 }
 
@@ -348,23 +281,27 @@ pub enum WasmBuildBatchProgressEvent {
 impl WasmBuildBatchReport {
     /// Ordered labeled entries.
     #[must_use]
-    pub fn entries(&self) -> &[WasmBuildBatchEntry] {
+    pub fn entries(&self) -> &[CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>] {
         &self.entries
     }
 
     /// Consume the report into its ordered labeled entries.
     #[must_use]
-    pub fn into_entries(self) -> Vec<WasmBuildBatchEntry> {
+    pub fn into_entries(self) -> Vec<CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>> {
         self.entries
     }
 
     /// Successful entries, retaining the canonical identity, result and timings.
-    pub fn outcomes(&self) -> impl Iterator<Item = &WasmBuildBatchEntry> {
+    pub fn outcomes(
+        &self,
+    ) -> impl Iterator<Item = &CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>> {
         self.entries.iter().filter(|entry| entry.is_success())
     }
 
     /// Failed entries; inspect `error()` and `failure_details()` on each entry.
-    pub fn failures(&self) -> impl Iterator<Item = &WasmBuildBatchEntry> {
+    pub fn failures(
+        &self,
+    ) -> impl Iterator<Item = &CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>> {
         self.entries.iter().filter(|entry| !entry.is_success())
     }
 
@@ -376,7 +313,7 @@ impl WasmBuildBatchReport {
         &self,
     ) -> impl Iterator<
         Item = (
-            &WasmBuildBatchEntry,
+            &CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>,
             &SharedIncrementalTargetMaintenanceOutcome,
         ),
     > {
@@ -398,7 +335,7 @@ impl WasmBuildBatchReport {
     /// Whether every specification completed successfully.
     #[must_use]
     pub fn is_success(&self) -> bool {
-        self.entries.iter().all(WasmBuildBatchEntry::is_success)
+        self.entries.iter().all(CacheBatchEntry::is_success)
     }
 
     /// Aggregate outcome, input-resolution reuse, and timing counters.
@@ -412,7 +349,7 @@ impl WasmBuildBatchReport {
             total: self.total,
             ..WasmBuildBatchMetrics::default()
         };
-        for outcome in self.entries.iter().filter_map(WasmBuildBatchEntry::outcome) {
+        for outcome in self.entries.iter().filter_map(CacheBatchEntry::outcome) {
             metrics.counts.record(outcome.is_reused());
             metrics.successful_timings = metrics
                 .successful_timings
@@ -669,7 +606,7 @@ where
                 WasmBuildFailureDetails::specification(entry_started.elapsed()),
             )),
         };
-        entries.push(WasmBuildBatchEntry {
+        entries.push(CacheBatchEntry {
             index,
             label: labeled.label.clone(),
             result,

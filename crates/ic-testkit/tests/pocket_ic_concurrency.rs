@@ -17,7 +17,7 @@ use std::{
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolError, BaselinePoolPreparationError,
-    BaselinePreparationStage, CachedPocketIcBaselinePool, ControllerSnapshotError, InstallSpec,
+    BaselinePreparationStage, CachedPocketIcBaselinePool, ControllerSnapshotError,
     PocketIcInstance, PocketIcStartupConfig, PocketIcStartupFailure, RebuildReason,
     SnapshotRestoreFunding, StandaloneCanisterFixture, StandaloneCanisterRecipe,
 };
@@ -25,7 +25,6 @@ use ic_testkit::pocket_ic::{PocketIc, PocketIcBuilder};
 
 const READY_TIMEOUT: Duration = Duration::from_secs(60);
 const OPERATION_TIMEOUT: Duration = Duration::from_secs(30);
-const EMPTY_WASM: &[u8] = b"\0asm\x01\0\0\0";
 
 type FixtureFuture = std::pin::Pin<
     Box<dyn std::future::Future<Output = io::Result<StandaloneCanisterFixture>> + Send>,
@@ -135,18 +134,10 @@ async fn standalone_accepts_a_caller_built_instance_and_preserves_it_in_parts() 
         )
         .await
         .expect("build explicitly configured custom topology");
-    let fixture = StandaloneCanisterFixture::try_install(
-        caller_built,
-        InstallSpec {
-            wasm: EMPTY_WASM.to_vec(),
-            init_bytes: vec![],
-            cycles: 0,
-            install_sender: None,
-            label: None,
-        },
-    )
-    .await
-    .expect("install standalone fixture");
+    let fixture =
+        StandaloneCanisterFixture::try_install(caller_built, support::empty_install_spec())
+            .await
+            .expect("install standalone fixture");
     let (owned, canister_id) = fixture.into_parts();
     let pocket_ic = owned.instance();
 
@@ -557,13 +548,7 @@ async fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again
                     .build_instance(PocketIcBuilder::new().with_application_subnet())
                     .await
                     .unwrap(),
-                    InstallSpec {
-                        wasm: EMPTY_WASM.to_vec(),
-                        init_bytes: vec![],
-                        cycles: 0,
-                        install_sender: None,
-                        label: None,
-                    },
+                    support::empty_install_spec(),
                 )
                 .await
                 .map_err(io::Error::other),
@@ -612,13 +597,7 @@ fn build_empty_standalone_fixture() -> FixtureFuture {
     Box::pin(async {
         StandaloneCanisterFixture::try_install(
             support::pocket_ic().await,
-            InstallSpec {
-                wasm: EMPTY_WASM.to_vec(),
-                init_bytes: vec![],
-                cycles: 0,
-                install_sender: None,
-                label: None,
-            },
+            support::empty_install_spec(),
         )
         .await
         .map_err(io::Error::other)
@@ -805,11 +784,7 @@ async fn run_worker<F>(
     while let Ok(command) = commands.recv() {
         match command {
             Command::Initialize => {
-                let id = pocket_ic.create_canister().await.unwrap();
-                pocket_ic
-                    .install_canister(id, EMPTY_WASM.to_vec(), vec![], None)
-                    .await
-                    .unwrap();
+                let id = support::install_empty_canister(pocket_ic).await;
                 let balance = pocket_ic
                     .add_cycles(id, (worker as u128 + 1) * 1_000_000)
                     .await

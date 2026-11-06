@@ -1,5 +1,18 @@
 # IC Tooling release notes
 
+## Pending workspace tooling
+
+### 🔧 Changed
+
+- Adopt Shared Tooling 0.31.0's release-batch interface, schema-2 publication
+  custody and checksum-verification fixes. Rename the local release settings,
+  tests and guide references together; retired roster settings refuse explicitly.
+  Shared owns automatic single-group capture; Tooling retains setup/publication
+  choices and preserves historical batch records with their original identities.
+- Derive focused release package identities from the release-group catalog and
+  retain reverse-consumer contracts in one coverage policy. Unknown or changed
+  scopes continue to select the complete gate.
+
 ## Shared Tooling 0.30.9 deployment — 2026-11-06
 
 ### 🔧 Changed

@@ -14,6 +14,12 @@
     "tools",
     "build"
   ],
+  "consumers": {
+    "native": [],
+    "text": ["ic-host-tools:normal", "ic-testkit-dev:normal"],
+    "tools": ["ic-testkit-dev:dev"],
+    "build": ["ic-testkit-dev:normal"]
+  },
   "fallback": {
     "foundation": "Foundation primitives have Build, Tools and Testkit reverse consumers, including installed and Wasm contracts.",
     "testkit": "Testkit owns simulator lifecycle, Wasm/probe singletons and installed/server contracts."

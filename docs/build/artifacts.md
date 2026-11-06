@@ -26,9 +26,17 @@ old inherited execution cannot authorize a cleared-environment cache hit.
 Recipes build under new keys; retained entries, stamp formats and namespaces
 stay intact without a migration reader or automatic cleanup.
 
-Consuming a Wasm batch entry retains `(index, label, result, failure_details, elapsed)`.
-Failure details remain paired internally and are exposed separately by this
-released projection. No tuple migration is required in 0.17.
+The next Build minor, 0.76, replaces `WasmBuildBatchEntry` and
+`ArtifactCacheBatchEntry<E>` with `CacheBatchEntry<T, E>`. Report types and their
+domain metrics remain distinct. Most callers can infer the entry type; replace
+explicit entry imports with `CacheBatchEntry`. Consuming either entry returns
+`(index, label, result, elapsed)`. For Wasm, the result's failure is the complete
+`WasmBuildBatchFailure` pair `(WasmBuildError, WasmBuildFailureDetails)`; match
+`Err((error, details))` instead of reading a separate optional fifth field.
+Borrowing callers can still use `error()` and `failure_details()`, or inspect
+the complete pair through `result()`/`failure()`. No compatibility aliases remain.
+Test-support callers also pass the package name explicitly as the fixture
+writer's second argument: `write_fixture_package(directory, name, tail, source)`.
 
 Native `target_kind` takes
 `cargo::native::NativeTargetKind::Binary` or `NativeTargetKind::Example`, replacing

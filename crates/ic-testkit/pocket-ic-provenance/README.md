@@ -1,5 +1,11 @@
 # PocketIC client transfer
 
+`management-routing.patch` centralizes the repeated canister-scoped management
+destination, effective-principal and optional-sender projection. Public method
+signatures, method strings, DTOs, protocol bytes and fallible/no-replay execution
+are unchanged. The source guard reverses this separately checksummed layer first,
+then reconstructs every existing donor/upstream layer without changing its hashes.
+
 The separately checksummed `logging-owner.patch` removes implicit client log
 directory creation, worker retention and global subscriber initialization.
 Imported tracing events remain compatible with a caller-selected subscriber;

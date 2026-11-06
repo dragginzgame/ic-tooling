@@ -2,13 +2,11 @@
 set -euo pipefail
 # Product contracts admitted only by a matching three-host comparison.
 [[ $# == 1 ]] || exit 2
-case ${RELEASE_GROUP:-} in
-    native) package=ic-testkit-native ;;
-    text) package=ic-host-text ;;
-    tools) package=ic-host-tools ;;
-    build) package=ic-build ;;
-    *) echo 'focused release checks require native, text, tools or build' >&2; exit 2 ;;
-esac
+package=$(jq -er --arg group "${RELEASE_GROUP:-}" \
+    --slurpfile coverage ci/release-validation-coverage.json '
+    .groups[] | select(.name == $group) |
+    select($coverage[0].focused | index($group)) | .primary
+' ci/cargo-release-groups.json)
 case "$1" in
     tools)
         if [[ $RELEASE_GROUP == build ]]; then

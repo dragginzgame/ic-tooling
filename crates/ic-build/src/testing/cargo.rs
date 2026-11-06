@@ -45,6 +45,7 @@ pub fn write_workspace(root: &Path, members: &[&str]) -> io::Result<()> {
 /// Returns directory creation, manifest or source write errors.
 pub fn write_fixture_package(
     directory: &Path,
+    name: &str,
     manifest_tail: &str,
     source: &str,
 ) -> io::Result<()> {
@@ -52,7 +53,7 @@ pub fn write_fixture_package(
     fs::write(
         directory.join("Cargo.toml"),
         format!(
-            "[package]\nname = \"fixture\"\nversion = \"0.0.0\"\nedition = \"2024\"\n{manifest_tail}"
+            "[package]\nname = \"{name}\"\nversion = \"0.0.0\"\nedition = \"2024\"\n{manifest_tail}"
         ),
     )?;
     fs::write(directory.join("src/lib.rs"), source)
@@ -82,14 +83,7 @@ pub fn write_nested_workspace_fixture(root: &Path) -> io::Result<()> {
         ),
     ] {
         let directory = root.join(directory);
-        fs::create_dir_all(directory.join("src"))?;
-        fs::write(
-            directory.join("Cargo.toml"),
-            format!(
-                "[package]\nname = \"{name}\"\nversion = \"0.0.0\"\nedition = \"2024\"\n{tail}"
-            ),
-        )?;
-        fs::write(directory.join("src/lib.rs"), "pub fn value() {}\n")?;
+        write_fixture_package(&directory, name, tail, "pub fn value() {}\n")?;
     }
     Ok(())
 }

@@ -811,18 +811,15 @@ impl PocketIc {
         canister_id: CanisterId,
         sender: Option<Principal>,
     ) -> Result<CanisterStatusResult, ClientError> {
-        Ok(
-            call_candid_as::<(CanisterIdRecord,), (CanisterStatusResult,)>(
-                self,
-                Principal::management_canister(),
-                RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-                sender.unwrap_or(Principal::anonymous()),
+        Ok(self
+            .management_call::<(CanisterIdRecord,), (CanisterStatusResult,)>(
+                canister_id,
+                sender,
                 "canister_status",
                 (CanisterIdRecord { canister_id },),
             )
             .await?
-            .0,
-        )
+            .0)
     }
 
     /// Create a canister with default settings as the anonymous principal.
@@ -937,6 +934,30 @@ impl PocketIc {
         .canister_id)
     }
 
+    // One routing owner for canister-scoped management calls. Each public method
+    // retains its protocol method/DTO and the ordinary fallible, no-replay path.
+    async fn management_call<Input, Output>(
+        &self,
+        canister_id: CanisterId,
+        sender: Option<Principal>,
+        method: &str,
+        input: Input,
+    ) -> Result<Output, ClientError>
+    where
+        Input: ArgumentEncoder,
+        Output: for<'a> ArgumentDecoder<'a>,
+    {
+        call_candid_as(
+            self,
+            Principal::management_canister(),
+            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
+            sender.unwrap_or(Principal::anonymous()),
+            method,
+            input,
+        )
+        .await
+    }
+
     /// Upload a WASM chunk to the WASM chunk store of a canister.
     /// Returns the WASM chunk hash.
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
@@ -946,17 +967,16 @@ impl PocketIc {
         sender: Option<Principal>,
         chunk: Vec<u8>,
     ) -> Result<Vec<u8>, ClientError> {
-        Ok(call_candid_as::<_, (UploadChunkResult,)>(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
-            "upload_chunk",
-            (UploadChunkArgs { canister_id, chunk },),
-        )
-        .await?
-        .0
-        .hash)
+        Ok(self
+            .management_call::<_, (UploadChunkResult,)>(
+                canister_id,
+                sender,
+                "upload_chunk",
+                (UploadChunkArgs { canister_id, chunk },),
+            )
+            .await?
+            .0
+            .hash)
     }
 
     /// List WASM chunk hashes in the WASM chunk store of a canister.
@@ -966,19 +986,18 @@ impl PocketIc {
         canister_id: CanisterId,
         sender: Option<Principal>,
     ) -> Result<Vec<Vec<u8>>, ClientError> {
-        Ok(call_candid_as::<_, (StoredChunksResult,)>(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
-            "stored_chunks",
-            (CanisterIdRecord { canister_id },),
-        )
-        .await?
-        .0
-        .into_iter()
-        .map(|chunk| chunk.hash)
-        .collect())
+        Ok(self
+            .management_call::<_, (StoredChunksResult,)>(
+                canister_id,
+                sender,
+                "stored_chunks",
+                (CanisterIdRecord { canister_id },),
+            )
+            .await?
+            .0
+            .into_iter()
+            .map(|chunk| chunk.hash)
+            .collect())
     }
 
     /// Clear the WASM chunk store of a canister.
@@ -988,11 +1007,9 @@ impl PocketIc {
         canister_id: CanisterId,
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
-        call_candid_as(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
+        self.management_call(
+            canister_id,
+            sender,
             "clear_chunk_store",
             (CanisterIdRecord { canister_id },),
         )
@@ -1011,11 +1028,9 @@ impl PocketIc {
         wasm_module_hash: Vec<u8>,
         arg: Vec<u8>,
     ) -> Result<(), ClientError> {
-        call_candid_as(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
+        self.management_call(
+            canister_id,
+            sender,
             "install_chunked_code",
             (InstallChunkedCodeArgs {
                 mode,
@@ -1042,11 +1057,9 @@ impl PocketIc {
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
         if wasm_module.len() + arg.len() < INSTALL_CHUNKED_CODE_THRESHOLD {
-            call_candid_as::<(InstallCodeArgs,), ()>(
-                self,
-                Principal::management_canister(),
-                RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-                sender.unwrap_or(Principal::anonymous()),
+            self.management_call::<(InstallCodeArgs,), ()>(
+                canister_id,
+                sender,
                 "install_code",
                 (InstallCodeArgs {
                     mode,
@@ -1148,11 +1161,9 @@ impl PocketIc {
         canister_id: CanisterId,
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
-        call_candid_as::<(CanisterIdRecord,), ()>(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
+        self.management_call::<(CanisterIdRecord,), ()>(
+            canister_id,
+            sender,
             "uninstall_code",
             (CanisterIdRecord { canister_id },),
         )
@@ -1167,21 +1178,20 @@ impl PocketIc {
         sender: Option<Principal>,
         replace_snapshot: Option<Vec<u8>>,
     ) -> Result<Snapshot, ClientError> {
-        Ok(call_candid_as::<_, (Snapshot,)>(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
-            "take_canister_snapshot",
-            (TakeCanisterSnapshotArgs {
+        Ok(self
+            .management_call::<_, (Snapshot,)>(
                 canister_id,
-                replace_snapshot,
-                uninstall_code: None,
-                sender_canister_version: None,
-            },),
-        )
-        .await?
-        .0)
+                sender,
+                "take_canister_snapshot",
+                (TakeCanisterSnapshotArgs {
+                    canister_id,
+                    replace_snapshot,
+                    uninstall_code: None,
+                    sender_canister_version: None,
+                },),
+            )
+            .await?
+            .0)
     }
 
     /// Load canister snapshot.
@@ -1192,11 +1202,9 @@ impl PocketIc {
         sender: Option<Principal>,
         snapshot_id: Vec<u8>,
     ) -> Result<(), ClientError> {
-        call_candid_as(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
+        self.management_call(
+            canister_id,
+            sender,
             "load_canister_snapshot",
             (LoadCanisterSnapshotArgs {
                 canister_id,
@@ -1214,16 +1222,15 @@ impl PocketIc {
         canister_id: CanisterId,
         sender: Option<Principal>,
     ) -> Result<Vec<Snapshot>, ClientError> {
-        Ok(call_candid_as::<_, (Vec<Snapshot>,)>(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
-            "list_canister_snapshots",
-            (CanisterIdRecord { canister_id },),
-        )
-        .await?
-        .0)
+        Ok(self
+            .management_call::<_, (Vec<Snapshot>,)>(
+                canister_id,
+                sender,
+                "list_canister_snapshots",
+                (CanisterIdRecord { canister_id },),
+            )
+            .await?
+            .0)
     }
 
     /// Delete canister snapshot.
@@ -1234,11 +1241,9 @@ impl PocketIc {
         sender: Option<Principal>,
         snapshot_id: Vec<u8>,
     ) -> Result<(), ClientError> {
-        call_candid_as(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
+        self.management_call(
+            canister_id,
+            sender,
             "delete_canister_snapshot",
             (DeleteCanisterSnapshotArgs {
                 canister_id,
@@ -1256,11 +1261,9 @@ impl PocketIc {
         sender: Option<Principal>,
         settings: CanisterSettings,
     ) -> Result<(), ClientError> {
-        call_candid_as::<_, ()>(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
+        self.management_call::<_, ()>(
+            canister_id,
+            sender,
             "update_settings",
             (UpdateSettingsArgs {
                 canister_id,
@@ -1283,11 +1286,9 @@ impl PocketIc {
             controllers: Some(new_controllers),
             ..CanisterSettings::default()
         };
-        call_candid_as::<(UpdateSettingsArgs,), ()>(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
+        self.management_call::<(UpdateSettingsArgs,), ()>(
+            canister_id,
+            sender,
             "update_settings",
             (UpdateSettingsArgs {
                 canister_id,
@@ -1305,11 +1306,9 @@ impl PocketIc {
         canister_id: CanisterId,
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
-        call_candid_as::<(CanisterIdRecord,), ()>(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
+        self.management_call::<(CanisterIdRecord,), ()>(
+            canister_id,
+            sender,
             "start_canister",
             (CanisterIdRecord { canister_id },),
         )
@@ -1323,11 +1322,9 @@ impl PocketIc {
         canister_id: CanisterId,
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
-        call_candid_as::<(CanisterIdRecord,), ()>(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
+        self.management_call::<(CanisterIdRecord,), ()>(
+            canister_id,
+            sender,
             "stop_canister",
             (CanisterIdRecord { canister_id },),
         )
@@ -1341,11 +1338,9 @@ impl PocketIc {
         canister_id: CanisterId,
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
-        call_candid_as::<(CanisterIdRecord,), ()>(
-            self,
-            Principal::management_canister(),
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender.unwrap_or(Principal::anonymous()),
+        self.management_call::<(CanisterIdRecord,), ()>(
+            canister_id,
+            sender,
             "delete_canister",
             (CanisterIdRecord { canister_id },),
         )

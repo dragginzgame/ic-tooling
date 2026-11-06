@@ -12,9 +12,9 @@ use ic_host_process::testing::write_executable_script;
 use ic_host_fs::read::read_file;
 
 use ic_build::artifacts::{
-    ArtifactCacheError, ArtifactCachePreparation, ArtifactCacheSpec, CacheRetentionLimits,
-    LabeledWasmBuildSpec, SharedIncrementalTargetMaintenanceOutcome, WasmBuildBatchConfig,
-    WasmBuildBatchContractError, WasmBuildBatchEntry, WasmBuildBatchMetrics,
+    ArtifactCacheError, ArtifactCachePreparation, ArtifactCacheSpec, CacheBatchEntry,
+    CacheRetentionLimits, LabeledWasmBuildSpec, SharedIncrementalTargetMaintenanceOutcome,
+    WasmBuildBatchConfig, WasmBuildBatchContractError, WasmBuildBatchMetrics,
     WasmBuildBatchProgressEvent, WasmBuildBatchReport, WasmBuildError, WasmBuildInputSnapshot,
     WasmBuildOutcome, WasmBuildPhase, WasmBuildProgressConfig, WasmBuildProgressEvent,
     build_wasm_canisters_cached, prepare_artifact_cache, prune_wasm_build_cache,
@@ -415,7 +415,7 @@ fn independent_wasm_batch_preserves_standalone_feature_resolution() {
     assert_eq!(
         batch
             .outcomes()
-            .map(WasmBuildBatchEntry::label)
+            .map(CacheBatchEntry::label)
             .collect::<Vec<_>>(),
         ["feature-a", "feature-b"]
     );

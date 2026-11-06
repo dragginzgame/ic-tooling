@@ -28,6 +28,7 @@ fn fixture() -> PathBuf {
     let root = ic_build::testing::fs::unique_temp_directory("handoff");
     ic_build::testing::cargo::write_fixture_package(
         &root.join("workspace"),
+        "fixture",
         "[workspace]\n[lib]\ncrate-type = [\"cdylib\"]\n",
         "pub fn fixture() {}\n",
     )

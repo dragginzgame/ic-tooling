@@ -23,7 +23,6 @@ use ic_testkit::pic::{
 };
 use ic_testkit::pocket_ic::PocketIcBuilder;
 
-const EMPTY_WASM: &[u8] = b"\0asm\x01\0\0\0";
 const OPERATION_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -252,15 +251,10 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             support::pocket_ic().await
         };
         let canister_ids = [
-            pocket_ic.instance().create_canister().await.unwrap(),
-            pocket_ic.instance().create_canister().await.unwrap(),
+            support::install_empty_canister(pocket_ic.instance()).await,
+            support::install_empty_canister(pocket_ic.instance()).await,
         ];
         for canister_id in canister_ids {
-            pocket_ic
-                .instance()
-                .install_canister(canister_id, EMPTY_WASM.to_vec(), vec![], None)
-                .await
-                .unwrap();
             lifecycle(async || pocket_ic.instance().stop_canister(canister_id, None).await).await?;
         }
 

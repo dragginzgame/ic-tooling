@@ -6,6 +6,25 @@
 
 pub mod wait;
 
+pub fn empty_install_spec() -> ic_testkit::pic::InstallSpec {
+    ic_testkit::pic::InstallSpec {
+        wasm: b"\0asm\x01\0\0\0".to_vec(),
+        init_bytes: vec![],
+        cycles: 0,
+        install_sender: None,
+        label: None,
+    }
+}
+
+pub async fn install_empty_canister(
+    pic: &ic_testkit::pocket_ic::PocketIc,
+) -> ic_platform_types::principal::ExternalPrincipal {
+    use ic_testkit::pic::CanisterInstallExt as _;
+    pic.try_create_and_install(empty_install_spec())
+        .await
+        .expect("install empty fixture canister")
+}
+
 pub fn startup_config() -> ic_testkit::pic::PocketIcStartupConfig {
     ic_testkit::pic::PocketIcStartupConfig::from_env(std::time::Duration::from_secs(30))
         .expect("prepare POCKET_IC_BIN or configure IC_TESTKIT_POCKET_IC_URL for live tests")

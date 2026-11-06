@@ -9,9 +9,9 @@ use super::{
     WasmBuildBatchContractError, WasmBuildBatchProgressEvent, build_wasm_canisters_cached_batch,
 };
 use crate::artifacts::{
-    CacheRetentionLimits, SharedIncrementalTargetMaintenanceConfig,
-    SharedIncrementalTargetMaintenanceFailureMode, WasmBuildBatchEntry, WasmBuildError,
-    WasmBuildPhase, WasmBuildProgressConfig, WasmBuildSpec,
+    CacheBatchEntry, CacheRetentionLimits, SharedIncrementalTargetMaintenanceConfig,
+    SharedIncrementalTargetMaintenanceFailureMode, WasmBuildError, WasmBuildPhase,
+    WasmBuildProgressConfig, WasmBuildSpec,
 };
 use std::{path::Path, time::Duration};
 
@@ -161,7 +161,7 @@ fn batch_retains_every_indexed_failure() {
     assert_eq!(
         report
             .failures()
-            .map(WasmBuildBatchEntry::label)
+            .map(CacheBatchEntry::label)
             .collect::<Vec<_>>(),
         ["root", "worker"]
     );
@@ -608,10 +608,9 @@ fn a_missing_input_does_not_fail_other_compatible_batch_entries() {
                 let failed = entry.label() == "bad";
                 assert_eq!(entry.result().is_err(), failed);
                 assert_eq!(entry.failure_details().is_some(), failed);
-                let (_, label, result, details, _) = entry.into_parts();
+                let (_, label, result, _) = entry.into_parts();
                 assert_eq!(result.is_err(), label == "bad");
-                if let Err(error) = result {
-                    let details = details.unwrap();
+                if let Err((error, details)) = result {
                     assert!(matches!(error, WasmBuildError::Io { .. }));
                     assert_eq!(details.phase(), WasmBuildPhase::ContentHashing);
                 }

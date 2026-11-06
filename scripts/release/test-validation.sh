@@ -234,6 +234,12 @@ check_new_scopes() {
     cp "$fixture/incomplete-owner" ci/release-validation-coverage.json
     refuse bash scripts/ci/validation-roster.sh full > "$fixture/incomplete-owner.log" 2>&1
     git restore -- ci/release-validation-coverage.json
+    jq 'del(.consumers.build)' ci/release-validation-coverage.json > "$fixture/incomplete-consumers"
+    cp "$fixture/incomplete-consumers" ci/release-validation-coverage.json
+    refuse perl scripts/release/select-validation.pl "$RELEASE_SOURCE" "$RELEASE_GROUP" \
+        "$fixture/baseline.json" "$fixture/missing-consumer-plan" "$fixture/missing-consumer-context" \
+        > "$fixture/incomplete-consumers.log" 2>&1
+    git restore -- ci/release-validation-coverage.json
 }
 check_focus_routing
 check_new_scopes

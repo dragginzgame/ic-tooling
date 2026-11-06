@@ -8,6 +8,7 @@ inventory="$(mktemp)"
 trap 'rm -f "$inventory"' EXIT
 git ls-files --cached --others --exclude-standard -z -- '*.md' > "$inventory"
 while IFS= read -r -d '' document; do
+    [[ -f "$document" ]] || continue
     case "$document" in
         README.md|AGENTS.md|CHANGELOG.md|releases/*|docs/*|crates/*|apps/*|testing/*)
             documents+=("$document") ;;

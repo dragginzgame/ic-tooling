@@ -554,6 +554,8 @@ staged_manifest="$STAGING_DIR/manifest"
         printf 'file\t%s\t%s\t%s\n' "$digest" "$executable" "$path"
     done
 } >"$staged_manifest"
+bash "$SCRIPT_ROOT/scripts/ci/verify-shared-tooling-snapshot.sh" \
+    --read-manifest "$staged_manifest" --require-annotations >/dev/null
 
 # Check every destination before replacing any file. A retry may already have
 # installed these exact bytes; accepting them preserves content and index state.
@@ -748,7 +750,7 @@ if [[ -n "$requested_revision" ]]; then
     verification_args=(--source "$SOURCE_ROOT" --revision "$source_revision")
 fi
 bash "$SCRIPT_ROOT/scripts/ci/verify-shared-tooling-snapshot.sh" \
-    --consumer "$CONSUMER_ROOT" \
+    --consumer "$CONSUMER_ROOT" --require-annotations \
     --manifest "$MANIFEST_PATH" ${verification_args[@]+"${verification_args[@]}"}
 
 # Retire receipts only after the new authoritative manifest and bytes verify.

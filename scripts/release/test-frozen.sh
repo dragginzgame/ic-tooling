@@ -5,8 +5,8 @@ set -euo pipefail
 [[ $# == 0 ]] || exit 2
 root=$(cd -P "${BASH_SOURCE[0]%/*}/../.." && pwd -P)
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES SHARED_TOOLING_ROOT
-unset RELEASE_GROUP RELEASE_FROZEN_GROUPS RELEASE_FROZEN_PUBLISH_TARGET RELEASE_FROZEN_SETUP_TARGET
-unset RELEASE_FROZEN_SETUP_MODE FROZEN_RELEASE_ACTIVE
+unset RELEASE_GROUP RELEASE_GROUPS RELEASE_PUBLISH_TARGET RELEASE_SETUP_TARGET
+unset RELEASE_SETUP_MODE RELEASE_BATCH_ACTIVE
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
 unset CARGO_TARGET_DIR CARGO_HOME
 export CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
@@ -18,6 +18,11 @@ trap 'status=$?; printf "Frozen hook evidence retained: %s\n" "$fixture" >&2; ex
 normal="$fixture/normal"
 mkdir "$normal"
 git -C "$root" archive HEAD | tar -xf - -C "$normal"
+# Retired managed files must not survive from the committed fixture baseline.
+git -C "$root" diff HEAD --name-only --diff-filter=D -z > "$fixture/consumer-deletions"
+while IFS= read -r -d '' path; do
+    rm -- "$normal/$path"
+done < "$fixture/consumer-deletions"
 # Adopted managed payloads may be pending delivery. Qualify those exact verified
 # bytes rather than accidentally testing the preceding committed supplier.
 bash "$root/scripts/ci/verify-shared-tooling-snapshot.sh" --consumer "$root"
@@ -30,7 +35,8 @@ done < "$fixture/snapshot-records"
 cp "$root/.shared-tooling.snapshot" "$normal/.shared-tooling.snapshot"
 # Include pending consumer changes too, while keeping its unrelated live lock
 # out of the captured graph. Lasting work stays in the normal checkout.
-git -C "$root" diff HEAD --name-only -z > "$fixture/consumer-changes"
+git -C "$root" diff HEAD --name-only --diff-filter=d -z > "$fixture/consumer-changes"
+git -C "$root" ls-files --others --exclude-standard -z >> "$fixture/consumer-changes"
 while IFS= read -r -d '' path; do
     [[ $path != Cargo.lock ]] || continue
     [[ -f "$root/$path" && ! -L "$root/$path" ]]
@@ -96,7 +102,7 @@ done
 if (cd "$normal" && bash scripts/release/group.sh ci/cargo-release-groups.json build,foundation batch) > "$fixture/order-refusal.log" 2>&1; then exit 1; fi
 : > "$fixture/fail-once"
 : > "$fixture/publication-stop-once"
-if make --no-print-directory -C "$normal" release-patch RELEASE_FROZEN_GROUPS=native,testkit > "$fixture/interrupted.log" 2>&1; then exit 1; fi
+if make --no-print-directory -C "$normal" release-patch RELEASE_GROUPS=native,testkit > "$fixture/interrupted.log" 2>&1; then exit 1; fi
 intents=("$normal"/.git/release-state/frozen/batch-*/intent.json)
 [[ ${#intents[@]} == 1 && -f ${intents[0]} ]]
 jq -e '.phase == "releasing" and .index == 0' "${intents[0]}" > /dev/null
@@ -105,7 +111,8 @@ batch=$(basename "${intents[0]%/*}")
 [[ $(git -C "$normal" rev-parse HEAD) == "$source" ]]
 cp "$normal/Cargo.lock" "$fixture/expected-deferred-Cargo.lock"
 if make --no-print-directory -C "$normal" release-batch-resume "BATCH=$batch" > "$fixture/resumed.log" 2>&1; then exit 1; fi
-jq -e '.phase == "publishing" and .index == 0' "${intents[0]}" > /dev/null
+jq -e '.schema == 2 and .phase == "publishing" and .index == 0 and
+    (.release_commit | test("^[0-9a-f]{40}$"))' "${intents[0]}" > /dev/null
 printf 'native\n' > "$fixture/expected-publications"
 cmp "$fixture/expected-publications" "$fixture/publications"
 if make --no-print-directory -C "$normal" release-batch-resume "BATCH=$batch" > "$fixture/uncertain-publication.log" 2>&1; then exit 1; fi

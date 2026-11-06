@@ -11,6 +11,7 @@ pub(super) fn fake_wasm_build_spec(label: &str) -> (PathBuf, super::wasm_cache::
     crate::testing::cargo::write_workspace(&root, &["fixture"]).expect("write workspace manifest");
     crate::testing::cargo::write_fixture_package(
         &root.join("fixture"),
+        "fixture",
         "[lib]\ncrate-type = [\"cdylib\"]\n",
         "pub fn value() -> u8 { 1 }\n",
     )

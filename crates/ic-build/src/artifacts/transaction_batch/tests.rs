@@ -2,7 +2,7 @@ use ic_host_artifacts::batch::BatchLabelError;
 use std::{cell::Cell, error::Error as _, fs, io};
 
 use super::{
-    ArtifactCacheBatchEntry, ArtifactCacheBatchFailure, ArtifactCacheBatchFailureTimings,
+    ArtifactCacheBatchFailure, ArtifactCacheBatchFailureTimings, CacheBatchEntry,
     LabeledArtifactCacheSpec, build_artifact_caches_batch,
 };
 use crate::artifacts::{
@@ -154,7 +154,7 @@ fn callback_failure_retains_label_timings_and_later_transaction() {
     assert_eq!(
         report
             .outcomes()
-            .map(ArtifactCacheBatchEntry::label)
+            .map(CacheBatchEntry::label)
             .collect::<Vec<_>>(),
         ["first", "third"]
     );

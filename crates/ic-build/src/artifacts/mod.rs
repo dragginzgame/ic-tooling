@@ -60,6 +60,7 @@
 #[cfg(unix)]
 pub mod candid;
 
+mod batch;
 mod cache_fs;
 mod digest;
 mod evidence;
@@ -109,6 +110,7 @@ pub(crate) mod support_tests;
 mod host_tests;
 
 pub use crate::cargo::observation::facts::CargoBuildFacts;
+pub use batch::CacheBatchEntry;
 pub use cache_fs::{ArtifactCacheMaintenance, ArtifactCachePruneReport, CacheRetentionLimits};
 pub use digest::InputDigest;
 pub use evidence::{WasmArtifactReceipt, WasmBuildEvidence};
@@ -124,12 +126,11 @@ pub use transaction::{
     ArtifactOutputValidation, prepare_artifact_cache, prune_artifact_cache,
 };
 pub use transaction_batch::{
-    ArtifactCacheBatchEntry, ArtifactCacheBatchFailure, ArtifactCacheBatchFailureTimings,
-    ArtifactCacheBatchMetrics, ArtifactCacheBatchReport, LabeledArtifactCacheSpec,
-    build_artifact_caches_batch,
+    ArtifactCacheBatchFailure, ArtifactCacheBatchFailureTimings, ArtifactCacheBatchMetrics,
+    ArtifactCacheBatchReport, LabeledArtifactCacheSpec, build_artifact_caches_batch,
 };
 pub use wasm_batch::{
-    LabeledWasmBuildSpec, WasmBuildBatchConfig, WasmBuildBatchContractError, WasmBuildBatchEntry,
+    LabeledWasmBuildSpec, WasmBuildBatchConfig, WasmBuildBatchContractError, WasmBuildBatchFailure,
     WasmBuildBatchMetrics, WasmBuildBatchProgressEvent, WasmBuildBatchReport,
     WasmBuildInputSnapshot, WasmBuildInputSnapshotMetrics, build_wasm_canisters_cached_batch,
 };

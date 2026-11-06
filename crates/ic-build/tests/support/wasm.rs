@@ -6,6 +6,7 @@ use std::{io, path::Path};
 pub fn write_workspace(root: &Path) -> io::Result<()> {
     ic_build::testing::cargo::write_fixture_package(
         root,
+        "fixture",
         "[workspace]\n[lib]\ncrate-type = [\"cdylib\"]\n",
         "pub fn value() -> u32 { 7 }\n",
     )?;

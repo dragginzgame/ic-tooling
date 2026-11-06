@@ -229,20 +229,13 @@ fn default_builds_share_cargo_state_across_fingerprints() {
 }
 
 fn write_projection_package(root: &Path, package: &str, manifest_suffix: &str) {
-    let directory = root.join(package);
-    fs::create_dir_all(directory.join("src")).expect("create projection fixture package");
-    fs::write(
-        directory.join("Cargo.toml"),
-        format!(
-            "[package]\nname = \"{package}\"\nversion = \"0.0.0\"\nedition = \"2024\"\n{manifest_suffix}"
-        ),
+    crate::testing::cargo::write_fixture_package(
+        &root.join(package),
+        package,
+        manifest_suffix,
+        &format!("pub fn {package}() {{}}\n"),
     )
-    .expect("write projection fixture package manifest");
-    fs::write(
-        directory.join("src/lib.rs"),
-        format!("pub fn {package}() {{}}\n"),
-    )
-    .expect("write projection fixture source");
+    .expect("write projection fixture package");
 }
 
 #[test]
@@ -888,8 +881,13 @@ fn public_cargo_input_snapshot_detects_local_source_changes() {
     let package = root.join("fixture");
     crate::testing::cargo::write_workspace(&root, &["fixture"])
         .expect("write fixture workspace manifest");
-    crate::testing::cargo::write_fixture_package(&package, "", "pub fn value() -> u8 { 1 }\n")
-        .expect("write fixture package");
+    crate::testing::cargo::write_fixture_package(
+        &package,
+        "fixture",
+        "",
+        "pub fn value() -> u8 { 1 }\n",
+    )
+    .expect("write fixture package");
     let spec = WasmBuildSpec::new(
         &root,
         &root.join("target"),
@@ -1776,19 +1774,9 @@ fn shared_target_maintenance_refuses_isolated_mode_and_leaves_missing_targets_un
 fn shared_target_maintenance_clears_cargo_state_but_preserves_coordination() {
     let root = unique_temp_directory("shared-target-maintenance");
     let package = root.join("fixture");
-    fs::create_dir_all(package.join("src")).expect("create maintenance fixture package");
-    fs::write(
-        root.join("Cargo.toml"),
-        "[workspace]\nmembers = [\"fixture\"]\nresolver = \"2\"\n",
-    )
-    .expect("write maintenance fixture workspace");
-    fs::write(
-        package.join("Cargo.toml"),
-        "[package]\nname = \"fixture\"\nversion = \"0.0.0\"\nedition = \"2024\"\n",
-    )
-    .expect("write maintenance fixture manifest");
-    fs::write(package.join("src/lib.rs"), "pub fn fixture() {}\n")
-        .expect("write maintenance fixture source");
+    crate::testing::cargo::write_workspace(&root, &["fixture"]).unwrap();
+    crate::testing::cargo::write_fixture_package(&package, "fixture", "", "pub fn fixture() {}\n")
+        .unwrap();
     let target = root.join("shared-target");
     fs::create_dir_all(target.join("debug/deps")).expect("create shared Cargo state");
     fs::write(target.join("debug/deps/object.o"), vec![7_u8; 128])
@@ -1833,20 +1821,10 @@ fn shared_target_maintenance_clears_cargo_state_but_preserves_coordination() {
 fn scheduled_shared_target_maintenance_skips_expensive_work_inside_interval() {
     let root = unique_temp_directory("scheduled-shared-target-maintenance");
     let package = root.join("fixture");
-    fs::create_dir_all(package.join("src")).expect("create scheduled fixture package");
+    crate::testing::cargo::write_workspace(&root, &["fixture"]).unwrap();
+    crate::testing::cargo::write_fixture_package(&package, "fixture", "", "pub fn fixture() {}\n")
+        .unwrap();
     let workspace_manifest = root.join("Cargo.toml");
-    fs::write(
-        &workspace_manifest,
-        "[workspace]\nmembers = [\"fixture\"]\nresolver = \"2\"\n",
-    )
-    .expect("write scheduled fixture workspace");
-    fs::write(
-        package.join("Cargo.toml"),
-        "[package]\nname = \"fixture\"\nversion = \"0.0.0\"\nedition = \"2024\"\n",
-    )
-    .expect("write scheduled fixture manifest");
-    fs::write(package.join("src/lib.rs"), "pub fn fixture() {}\n")
-        .expect("write scheduled fixture source");
     let target = root.join("shared-target");
     fs::create_dir_all(target.join("debug/deps")).expect("create scheduled Cargo state");
     fs::write(target.join("debug/deps/object.o"), vec![7_u8; 128])

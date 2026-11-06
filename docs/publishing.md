@@ -5,16 +5,18 @@
 The maintainer-operated `make release-patch`, `make release-minor` and
 `make release-major` commands use the [shared release contract](releases.md).
 Host's [delivery policy](../ci/release-delivery.txt) selects `RELEASE_DELIVERY=direct`.
-Normal increment commands use Shared's [frozen release batches](frozen-releases.md):
+Normal increment commands use Shared's [frozen release batches](release-batches.md):
 capture committed source, qualify, prepare, commit/tag, atomically push, then
 publish each selected group to crates.io. **Do not follow a successful release
 with a second `make publish`.** Other delivery selections are rejected;
 the shared runner's optional PR flow is not qualified by this adapter.
 
 Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools`, `testkit` or `native` explicitly
-for a single-group release. For a batch, select `RELEASE_FROZEN_GROUPS` once as a
+for a single-group release. For a batch, select `RELEASE_GROUPS` once as a
 comma-separated supplier-first roster. Unknown, duplicate and reversed workspace
 dependency selections refuse before capture; every group uses the same increment.
+Shared defaults the roster to the selected group. Clearing the roster cannot
+return a selected group to live-checkout delivery.
 The
 [group policy](../ci/cargo-release-groups.json) retains one qualification workspace
 with independent version sources and ledgers; see
@@ -22,18 +24,22 @@ with independent version sources and ledgers; see
 
 ```sh
 make release-minor RELEASE_GROUP=tools
-make release-patch RELEASE_FROZEN_GROUPS=foundation,build
+make release-patch RELEASE_GROUPS=foundation,build
 make release-batch-status BATCH=batch-XXXXXXXX
 make release-batch-resume BATCH=batch-XXXXXXXX
 ```
 
-The default `RELEASE_FROZEN_PUBLISH_TARGET=publish` keeps Git and registry
+The default `RELEASE_PUBLISH_TARGET=publish` keeps Git and registry
 delivery in the same captured batch while preserving their separate receipts.
 Select an empty value explicitly for Git-only delivery. `release-resume
 RELEASE_GROUP=... VERSION=...` is for historical normal-checkout attempts; batch
 recovery uses the recorded batch ID and resumes the captured single-group plan
 internally. Uncertain publication refuses redispatch. Verify registry/receipts,
 then use `PUBLICATION_RESULT=published` or `not-published` on batch resume.
+
+Shared 0.31 uses schema-2 batch journals and a recorded publication commit.
+Historical schema-1 batches require their original reviewed tooling for recovery;
+do not rewrite their journals or infer delivery from the current branch.
 
 The runner prints `target/release-frozen/BATCH` and durable state under
 `.git/release-state/frozen/BATCH`, with a source pin under `refs/releases/frozen/`.

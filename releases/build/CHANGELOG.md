@@ -6,6 +6,17 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.76.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Use `CacheBatchEntry<T, E>` for both cache batch engines instead of their
+  separate entry types. Wasm failures retain their error and phase/timings
+  together in `WasmBuildBatchFailure`; consuming an entry returns one complete
+  result. Reports retain their distinct domain metrics and collect-all behavior.
+- Pass the package name explicitly to the test-support fixture writer; named
+  packages, nested workspaces and cache fixtures now share that writer.
+
 ## [0.75.0] - 2026-11-06
 
 ### ⚠️ Breaking

@@ -47,6 +47,8 @@ my @groups = sort map { $_->{name} } @{$groups->{groups}};
 grep($_ eq $group, @groups) or die "unknown release group\n";
 join(',', sort(@{$coverage->{focused}}, keys %{$coverage->{fallback}})) eq join(',', @groups)
     or die "incomplete group coverage\n";
+join(',', sort keys %{$coverage->{consumers}}) eq join(',', sort @{$coverage->{focused}})
+    or die "incomplete focused consumer coverage\n";
 my %owned = map { $_ => 1 } map { @{$_->{members}} } @{$groups->{groups}};
 my @focus = grep { length } split /\n/, command('bash', 'scripts/ci/validation-roster.sh', 'focused');
 my %focus = map { $_ => 1 } @focus;
@@ -121,10 +123,7 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
         @changes = grep { length } split /\0/, git('diff', '--name-only', '--no-renames', '-z', $baseline->{source}, $source, '--');
         my ($selected_group) = grep { $_->{name} eq $group } @{$groups->{groups}};
         my $package = $selected_group->{primary};
-        my %packages = (native => 'ic-testkit-native', text => 'ic-host-text',
-            tools => 'ic-host-tools', build => 'ic-build');
-        my $safe = exists($packages{$group}) && $package eq $packages{$group}
-            && join(',', @{$selected_group->{members}}) eq $package;
+        my $safe = join(',', @{$selected_group->{members}}) eq $package;
         for my $path (@changes) {
             next if $path =~ m{\Acrates/\Q$package\E/(?:src/|tests/|README\.md\z)};
             next if $path =~ m{\Areleases/[^/]+/CHANGELOG\.md\z} || $path eq 'docs/status/current.md';
@@ -139,12 +138,7 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
                 map { "$parent->{name}:" . ($_->{kind} // 'normal') }
                     grep { $_->{name} eq $package } @{$parent->{dependencies}}
             } @{$metadata->{packages}};
-            my %consumers = (
-                native => [], text => ['ic-host-tools:normal','ic-testkit-dev:normal'],
-                tools => ['ic-testkit-dev:dev'], build => ['ic-testkit-dev:normal'],
-            );
-            exists $consumers{$group} or die "missing focused consumer contract\n";
-            my @expected = sort @{$consumers{$group}};
+            my @expected = sort @{$coverage->{consumers}{$group}};
             $safe &&= join(',', @parents) eq join(',', @expected);
             my ($owner) = grep { $_->{name} eq $package } @{$metadata->{packages}};
             $safe &&= defined($owner) && ($group ne 'native' || !@{$owner->{dependencies}});

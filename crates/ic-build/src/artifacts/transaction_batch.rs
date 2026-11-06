@@ -1,4 +1,4 @@
-use super::CacheOutcomeCounts;
+use super::{CacheBatchEntry, CacheOutcomeCounts};
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
 
 use std::time::{Duration, Instant};
@@ -21,17 +21,8 @@ pub struct LabeledArtifactCacheSpec {
 /// Ordered labeled entries from a collect-all artifact transaction batch.
 #[derive(Debug)]
 pub struct ArtifactCacheBatchReport<E> {
-    entries: Vec<ArtifactCacheBatchEntry<E>>,
+    entries: Vec<CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>>,
     total: Duration,
-}
-
-/// One ordered labeled result from a generic artifact batch.
-#[derive(Debug)]
-pub struct ArtifactCacheBatchEntry<E> {
-    index: usize,
-    label: String,
-    result: Result<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>,
-    entry_elapsed: Duration,
 }
 
 /// Partial phase timings retained for one failed artifact batch entry.
@@ -113,23 +104,33 @@ impl LabeledArtifactCacheSpec {
 impl<E> ArtifactCacheBatchReport<E> {
     /// Ordered labeled entries.
     #[must_use]
-    pub fn entries(&self) -> &[ArtifactCacheBatchEntry<E>] {
+    pub fn entries(
+        &self,
+    ) -> &[CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>] {
         &self.entries
     }
 
     /// Consume the report into its ordered labeled entries.
     #[must_use]
-    pub fn into_entries(self) -> Vec<ArtifactCacheBatchEntry<E>> {
+    pub fn into_entries(
+        self,
+    ) -> Vec<CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>> {
         self.entries
     }
 
     /// Successful entries, retaining the canonical identity, result and timings.
-    pub fn outcomes(&self) -> impl Iterator<Item = &ArtifactCacheBatchEntry<E>> {
+    pub fn outcomes(
+        &self,
+    ) -> impl Iterator<Item = &CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>>
+    {
         self.entries.iter().filter(|entry| entry.is_success())
     }
 
     /// Failed entries; inspect `failure()` on each entry.
-    pub fn failures(&self) -> impl Iterator<Item = &ArtifactCacheBatchEntry<E>> {
+    pub fn failures(
+        &self,
+    ) -> impl Iterator<Item = &CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>>
+    {
         self.entries.iter().filter(|entry| !entry.is_success())
     }
 
@@ -142,7 +143,7 @@ impl<E> ArtifactCacheBatchReport<E> {
     /// Whether every specification completed successfully.
     #[must_use]
     pub fn is_success(&self) -> bool {
-        self.entries.iter().all(ArtifactCacheBatchEntry::is_success)
+        self.entries.iter().all(CacheBatchEntry::is_success)
     }
 
     /// Aggregate outcome counters and successful-acquisition timings.
@@ -153,75 +154,13 @@ impl<E> ArtifactCacheBatchReport<E> {
             total: self.total,
             ..ArtifactCacheBatchMetrics::default()
         };
-        for outcome in self
-            .entries
-            .iter()
-            .filter_map(ArtifactCacheBatchEntry::outcome)
-        {
+        for outcome in self.entries.iter().filter_map(CacheBatchEntry::outcome) {
             metrics.counts.record(outcome.is_reused());
             metrics.successful_timings = metrics
                 .successful_timings
                 .saturating_add(outcome.record().timings());
         }
         metrics
-    }
-}
-
-impl<E> ArtifactCacheBatchEntry<E> {
-    /// Zero-based position in the supplied specification slice.
-    #[must_use]
-    pub const fn index(&self) -> usize {
-        self.index
-    }
-
-    /// Caller-owned stable label.
-    #[must_use]
-    pub fn label(&self) -> &str {
-        &self.label
-    }
-
-    /// Structured success or failure for this entry.
-    ///
-    /// # Errors
-    /// Returns this entry's recorded preparation, population or publication failure.
-    pub const fn result(&self) -> Result<&ArtifactCacheOutcome, &ArtifactCacheBatchFailure<E>> {
-        self.result.as_ref()
-    }
-
-    /// Successful artifact outcome, when this entry succeeded.
-    #[must_use]
-    pub fn outcome(&self) -> Option<&ArtifactCacheOutcome> {
-        self.result.as_ref().ok()
-    }
-
-    /// Structured batch failure, when this entry failed.
-    #[must_use]
-    pub fn failure(&self) -> Option<&ArtifactCacheBatchFailure<E>> {
-        self.result.as_ref().err()
-    }
-
-    /// Complete wall-clock time retained for this entry.
-    #[must_use]
-    pub const fn entry_elapsed(&self) -> Duration {
-        self.entry_elapsed
-    }
-
-    /// Whether this entry completed successfully.
-    #[must_use]
-    pub const fn is_success(&self) -> bool {
-        self.result.is_ok()
-    }
-
-    /// Consume the entry into its ordered identity, result, and wall time.
-    pub fn into_parts(
-        self,
-    ) -> (
-        usize,
-        String,
-        Result<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>,
-        Duration,
-    ) {
-        (self.index, self.label, self.result, self.entry_elapsed)
     }
 }
 
@@ -388,7 +327,7 @@ fn build_artifact_cache_entry<E>(
     index: usize,
     labeled: &LabeledArtifactCacheSpec,
     populate: &mut impl FnMut(&str, &ArtifactBuildTransaction) -> Result<(), E>,
-) -> ArtifactCacheBatchEntry<E> {
+) -> CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>> {
     let entry_started = Instant::now();
     let mut timings = ArtifactCacheBatchFailureTimings::default();
     let result = (|| {
@@ -437,7 +376,7 @@ fn build_artifact_cache_entry<E>(
             timings,
         },
     });
-    ArtifactCacheBatchEntry {
+    CacheBatchEntry {
         index,
         label: labeled.label.clone(),
         result,
