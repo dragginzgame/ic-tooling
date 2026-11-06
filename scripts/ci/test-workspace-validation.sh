@@ -55,7 +55,7 @@ export WORKSPACE_TEST_EVENTS="$fixture/events"
 cat >> Makefile <<'MAKE'
 
 # Keep prerequisite routing, substituting its build/tool effects as well.
-format-tools-check build-server-cli:
+format-tools-check build-server-cli candid-boundary-check:
 	+@perl scripts/ci/check-pipe-jobserver.pl
 MAKE
 while IFS= read -r target; do

@@ -416,6 +416,10 @@ cargo_targets=(check clippy clippy-workspace docs-check test test-artifacts-mini
     test-wasm-inspection)
 helper_targets=(publish publish-check dependency-pins-check
     release-adapter-check tooling-command-check publish-command-check)
+# This fixture has substituted Cargo metadata and no product source tree.
+# The Candid consumer control owns the real scan and rejection ordering;
+# here retain its Make prerequisite while qualifying the metadata jobserver.
+printf '#!/usr/bin/env bash\nexit 0\n' > scripts/ci/check-product-candid-boundary.sh
 for target in "${cargo_targets[@]}" "${helper_targets[@]}"; do
     : > "$HOST_MAKE_EVENTS"
     PATH="$fixture/local:$PATH" HOST_MAKE_VERIFY_JOBSERVER=1 make "${jobserver_options[@]}" "MAKE=$(command -v make)" "$target" RELEASE_GROUP=foundation \
