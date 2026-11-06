@@ -1,29 +1,41 @@
 # Current handoff
 
-## Testkit 0.89.1 deployment — in progress
+## Testkit 0.89.1 delivered — 2026-11-06
 
-The II attachment update is authorized for delivery from the normal checkout's
-`main` to `dragginzgame/ic-tooling:main`, with tag `testkit-v0.89.1` and
-crates.io publication of `ic-testkit`. Private Dev/probe follow the patch; other
-groups retain their versions. Unrelated incoming lock selections are preserved
-as original bytes and a patch in
-`.git/release-state/deployment-testkit-0.89.1/`; release qualification uses the
-committed dependency graph, then restores those selections. The complete local
-Testkit gate is required; hosted native qualification runs asynchronously.
-
-### II attachment implementation
-
-The fixture's schema-1 connection record now adds `serverUrl` and numeric
-`instanceId` for borrowed native attachment. The
+`ic-testkit 0.89.1` is published from clean release commit
+`7d7ffbfcdd4a39061c0cd2c33809b661cd3c76e5`; `main` and `testkit-v0.89.1`
+are pushed to `dragginzgame/ic-tooling`. Private Dev/probe follow 0.89.1 and
+remain unpublished; other groups retain their versions. Canic can pin that tag
+for the repository II driver, whose schema-1 record now adds `serverUrl` and
+numeric `instanceId` for borrowed native attachment. The
 [consumer guide](../../testing/browser/internet-identity/README.md#native-attachment-and-cleanup-ownership)
 documents application setup, request/runtime ownership, session lifetime and
-exclusive fixture-owned instance/gateway/server teardown. The installed browser
-acceptance confirms a live management instance and both closed endpoints after
-cleanup, alongside real II sign-in, signed ingress and rejection controls.
-Evidence is `target/evidence/ii-attachment-001/`; selected driver Clippy,
-formatting and documentation links pass on Linux. Native macOS was not rerun.
-That focused proof used the incoming lock selections. Pending notes select
-0.89.1; package versions remain 0.89.0 until successful release qualification.
+exclusive fixture-owned instance/gateway/server teardown. Updating the crate
+alone does not supply this private repository fixture.
+
+All 34 complete Linux release stages passed on Rust 1.99.1, with logs under
+`.git/release-state/testkit-gate.IsJ5dt/logs/validation.FqfebM/`. The downloaded
+registry archive matches uploaded bytes and exact clean Git provenance, with
+registry checksum `dd2879282c81fc23e57d00e89dd8f8a87564c624110f0c7bf800e704aaffa944`.
+The registry-only consumer passes all three public contract cases; evidence is
+`target/published-integration.0JkRBU/`.
+
+Final installed Chromium acceptance on the release dependency graph confirms a
+live management instance, real II sign-in, matching signed-ingress caller,
+wrong-root/altered-signature refusal and exit-zero teardown closing both gateway
+and management server. `target/evidence/ii-testkit-0.89.1-001/` retains its proof,
+trace and cleanup receipts. Earlier focused proof with incoming patch selections
+remains at `target/evidence/ii-attachment-001/`.
+
+The normal checkout contains the release. Its unrelated incoming lock selections
+are restored and remain uncommitted; their exact original bytes/patch and a
+restoration comparison are retained in
+`.git/release-state/deployment-testkit-0.89.1/`. Release qualification/publication
+used the committed graph; restoration changes only the three owned Testkit
+versions relative to the saved original. No historical artifact cleanup occurred.
+Native macOS is not claimed for this batch; the complete native matrix is
+[running asynchronously](https://github.com/dragginzgame/ic-tooling/actions/runs/42210498533)
+at the release commit.
 
 ## Testkit 0.89.0 delivered — 2026-11-06
 
