@@ -26,7 +26,7 @@ old inherited execution cannot authorize a cleared-environment cache hit.
 Recipes build under new keys; retained entries, stamp formats and namespaces
 stay intact without a migration reader or automatic cleanup.
 
-The next Build minor, 0.76, replaces `WasmBuildBatchEntry` and
+Build 0.76 replaces `WasmBuildBatchEntry` and
 `ArtifactCacheBatchEntry<E>` with `CacheBatchEntry<T, E>`. Report types and their
 domain metrics remain distinct. Most callers can infer the entry type; replace
 explicit entry imports with `CacheBatchEntry`. Consuming either entry returns
