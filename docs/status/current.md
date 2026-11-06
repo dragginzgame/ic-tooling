@@ -1,43 +1,78 @@
 # Current handoff
 
-## Testkit 0.89.2 frozen publication — in progress
+## Testkit 0.89.2 delivered through frozen publication — 2026-11-06
 
-The maintainer authorized publishing the shared pool shutdown addition from
-the normal checkout's `main` to `dragginzgame/ic-tooling:main`, followed by
-`testkit-v0.89.2` and crates.io publication of `ic-testkit`. Private Dev/probe
-follow the patch; other release groups remain unchanged. The first normal-tree
-attempt stopped before version preparation after an independent writer restored
-the incoming lock during the gate. Its logs remain at
-`.git/release-state/deployment-testkit-0.89.2/pool-release.log`. The scoped frozen
-activation stash is restored, and its identity remains recorded in the same
-directory. User approval now covers the scoped Shared fix and frozen publication.
+`ic-testkit 0.89.2` is published from clean release commit
+`33c44602ec27c996ab67eb92458bf5022e630760`; `main` and `testkit-v0.89.2`
+are pushed to `dragginzgame/ic-tooling`. Private Dev/probe follow the patch and
+remain unpublished. Other groups retain their versions. Source integration is
+`9eba165d`; Shared adoption and qualified frozen activation are `2ff0b115`.
 
-Shared 0.30.8 is delivered at `dc9df707b3b1e616973494eab961c1c214d12260` and
-adopted through the exporter; all 175 files match that commit. The validator
-accepts emitted underscores without changing recovery paths. All 19 Shared
-frozen-release checks pass with forced underscore IDs. Snapshot/source comparison
-verifies every adopted payload; changed-script ShellCheck and documentation links
-pass. Tooling's retained hook qualification uses the real metadata, Git and
-publication dry-run hooks, with product gate bodies substituted. Its first
-publication refused an offline registry request; explicit not-published recovery
-completed that dry run, followed by uncertain-outcome refusal and published
-receipt reconciliation in the local fixture. No registry upload occurs in this
-qualification. Attempt logs remain at `target/tmp/frozen-release.MLbx9d/`;
-`qualification.json` records the completed two-group proof, including clean
-archive identities, completed resume without replay and stale-remote refusal.
-This is recovered qualification, not an uninterrupted script pass. The live
-installed gate remains independently required.
+Normal release increment commands now capture committed source, qualify,
+commit/tag/push and publish. Do not follow a successful default release with a
+second publication. Select the affected supplier-first roster once; recover
+using `make release-batch-resume BATCH=...`. See the
+[publishing guide](../publishing.md). Git-only delivery requires explicitly
+clearing `RELEASE_FROZEN_PUBLISH_TARGET`.
 
-The incoming lock bytes and patch are retained as `pool-release-Cargo.lock`
-and `pool-release-Cargo.lock.patch` in the same record directory. A later writer
-also advanced Logging to 0.24.10; preserve that newer lock before capture and
-reconciliation. Qualification uses the committed graph and restores unrelated
-selections afterward.
-Earlier frozen qualification and pool development evidence below retain their
-original scope; no new release completion or native macOS qualification is
-claimed before the required gate and registry verification.
+Actual batch `batch-c3bPF1yB` completed from
+`target/release-frozen/batch-c3bPF1yB/`, with durable Git, intent and plans under
+`.git/release-state/frozen/batch-c3bPF1yB/`. All 34 complete Linux release stages
+passed on Rust 1.99.1, including fresh archives, native/Wasm graphs and installed
+PocketIC contracts. Gate logs remain under that checkout's
+`target/release-validation/testkit-gate.hjklTi/logs/validation.CYPGTe/`.
+Publication evidence is `target/publish/publish.53uLfL/` in the same checkout.
 
-## Local shared pool shutdown — 2026-11-06
+The downloaded registry archive matches the upload archive and exact clean Git
+provenance, with checksum
+`65358cb9f4473db0f059e252d57d0d946b9d33c29c79b01fba34597024ab8e02`.
+All three registry-only public-contract cases pass; retained consumer evidence is
+`target/published-integration.LLQca4/` in the captured checkout. Small readback,
+remote-ref, lock-restoration and CI receipts remain under
+`.git/release-state/deployment-testkit-0.89.2/` in the normal checkout.
+
+The normal checkout is fast-forwarded to the delivered release. Its newest
+unrelated lock selections, including Logging 0.24.10 and newer TOML patches,
+remain uncommitted. `deferred-latest` identifies their exact original backup;
+restoration comparison changes only the three owned Testkit versions to 0.89.2.
+The live normal lock changed during deployment while the captured graph stayed
+fixed; none of those deferred selections entered this release. Earlier lock
+backups, failed attempts and the restored activation stash are retained.
+
+Native macOS qualification is separate from Linux success. The complete native
+matrix is [running asynchronously](https://github.com/dragginzgame/ic-tooling/actions/runs/42233444909)
+at the exact release commit; no new macOS pass is claimed. No artifacts were
+cleaned.
+
+## Shared Tooling 0.30.8 and frozen-hook qualification — 2026-11-06
+
+Shared `dc9df707b3b1e616973494eab961c1c214d12260` is delivered and adopted
+through the supported exporter; all 175 payloads match the independently selected
+GitHub source. Its validator accepts underscores emitted in batch IDs without
+changing recovery paths. All 19 Shared frozen-release cases pass with forced
+underscore IDs. Changed-script ShellCheck and documentation links pass.
+
+All six actual metadata/recovery adapter selections and the affected Make fixture
+pass with documented setup/product-effect substitutes. The installed consumer
+hook qualification uses actual metadata, Git and publication dry runs with product
+gate bodies substituted. `target/tmp/frozen-release.MLbx9d/qualification.json`
+records two clean archive identities, deferred normal-lock preservation,
+interrupted/uncertain recovery, completed resume without replay and stale-remote
+refusal. No registry upload occurred in that fixture. Its offline publication
+refusal was recovered through explicit not-published reconciliation; the local
+injected uncertain result was reconciled as published after the successful dry
+run. This is recovered qualification, not an uninterrupted script pass. The
+maintained probe now permits registry access only for its publication dry runs
+and checks Cargo 1.99's retained dry-run archives.
+
+Earlier attempts under `target/tmp/frozen-release.*` retain their original
+diagnostics: missing fixture admissions, supplier underscore refusal, a unit-test
+lint and offline registry refusal. The first ordinary-tree release stopped before
+version preparation on a lock rewrite; its `pool-release.log` remains in the
+normal checkout's deployment record. The completed frozen batch independently
+qualified the live product gate and registry upload above.
+
+## Shared pool shutdown — delivered in Testkit 0.89.2
 
 `CachedPocketIcBaselinePool::shutdown(&self)` now closes admission, awaits
 already admitted work/leases and attempts every retained baseline deletion,
@@ -54,41 +89,18 @@ Selected library/integration Clippy, twelve pool unit checks and two actual
 PocketIC 16.1 installed checks pass on Linux. The installed proof uses a static
 pool with a `'static` guard, queued rejection, lease-return ordering, managed
 server teardown and two borrowed-server deletion failures. Logs are retained at
-`target/evidence/pool-shutdown.lGjQv6/`. Native macOS was not rerun. Incoming
-Cargo.lock bytes remain unchanged. Pending 0.89.2 notes cover this compatible
-addition; manifests, commits and published packages are unchanged by this work.
-Frozen activation continues below under the approved Shared fix.
-
-## Frozen activation and Testkit 0.89.2 — in progress
-
-Shared 0.30.7 adoption is pushed as `081e5f3a`. Local, uncommitted changes now
-select captured release/publication by default, admit supplier-first rosters,
-query all group versions without local parser selection, prepare captured host
-parsers before the standard runner, and expose batch-ID recovery. All six actual
-metadata/recovery adapter selections and the affected Make fixture pass with
-their documented setup/product-effect substitutes. The installed frozen-hook
-fixture retains attempts under `target/tmp/frozen-release.*`; no production
-0.89.2 release or upload has started.
-
-Qualification exposed a supplier bug: Shared's File::Temp generated
-`batch-_iD7NvIE`, but `run-frozen-release.pl` rejects underscores during resume.
-The second attempt is retained at `target/tmp/frozen-release.XsSki2/`; the first
-attempt also retains the fixture's missing reusable-stage proof diagnostic.
-The scoped Shared validator/regression fix is now approved, delivered and adopted
-as recorded above. The retained recovered fixture now qualifies those hooks;
-the live release gate and registry upload remain pending. Incoming lock bytes
-are backed up in
-`.git/release-state/deployment-testkit-0.89.2/`. Native macOS remains separate.
+`target/evidence/pool-shutdown.lGjQv6/`. These focused cases precede the complete
+Linux release gate above. Native macOS remains asynchronous.
 
 ## Shared Tooling 0.30.7 delivery — 2026-11-06
 
 The supported exporter adopted GitHub commit
 `22a853e26c05ec323f06c57fa316c08b808f252b`; all 175 managed files match that
 independently selected source. The snapshot brings release-efficiency guidance
-and opt-in frozen batch mechanics. Tooling has not qualified its actual hooks
-for frozen delivery, so both frozen selections remain unset; the publishing
-guide records this boundary. No concurrent-lock isolation or elapsed-time
-improvement is claimed by snapshot adoption alone.
+and opt-in frozen batch mechanics. At that adoption, Tooling had not qualified
+its actual frozen hooks, so both selections remained unset. Subsequent activation
+and actual delivery are recorded above; snapshot adoption alone did not establish
+concurrent-lock isolation or elapsed-time improvement.
 
 The focused `test-make-snapshot.sh --case release-routing` proves ordinary
 patch/minor/major/resume dispatch through the checkout's Makefiles, group and
@@ -99,7 +111,7 @@ qualification was performed. Incoming Cargo.lock bytes are unchanged. The
 maintainer authorized direct `main` delivery of this tooling-only adoption to
 `dragginzgame/ic-tooling`, followed by consumer qualification and activation of
 frozen releases. No crate version change is needed for this first delivery;
-the subsequent Testkit 0.89.2 release will exercise qualified frozen delivery.
+the subsequent Testkit 0.89.2 release exercised qualified frozen delivery.
 
 ## Testkit 0.89.1 delivered — 2026-11-06
 

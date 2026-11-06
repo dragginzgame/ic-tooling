@@ -1,6 +1,6 @@
 # IC Tooling release notes
 
-## Pending workspace tooling
+## Frozen deployment — 2026-11-06
 
 ### 🔧 Changed
 
