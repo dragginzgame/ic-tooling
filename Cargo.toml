@@ -34,7 +34,7 @@ ic-host-wasm-inspect = { path = "apps/ic-host-wasm-inspect", version = "0.74.4" 
 
 # Build
 # Changelog : releases/build/CHANGELOG.md
-ic-build = { path = "crates/ic-build", version = "0.74.4", default-features = false }
+ic-build = { path = "crates/ic-build", version = "0.75.0", default-features = false }
 
 # Text
 # Changelog : releases/text/CHANGELOG.md

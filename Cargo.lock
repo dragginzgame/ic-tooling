@@ -1493,7 +1493,7 @@ dependencies = [
 
 [[package]]
 name = "ic-build"
-version = "0.74.4"
+version = "0.75.0"
 dependencies = [
  "cargo_metadata",
  "clap",

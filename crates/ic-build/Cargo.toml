@@ -2,7 +2,7 @@
 name = "ic-build"
 edition.workspace = true
 rust-version.workspace = true
-version = "0.74.4"
+version = "0.75.0"
 repository.workspace = true
 description = "Cargo and Wasm builds, exact inputs and retained artifact caches"
 readme = "README.md"
