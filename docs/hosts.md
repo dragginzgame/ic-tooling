@@ -218,9 +218,8 @@ retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.99
 and native Linux/macOS matrix as the existing libraries.
 
 Platform 0.23 delegates IC system calls and the executor to independent Runtime
-0.19. Testkit's
-Wasm graph excludes external `ic0` and `ic-cdk-executor` packages; the private
-performance probe enables Platform's executor through `cdk`. Wasm compilation
+0.19. Testkit's portable library has no Runtime dependency; the private
+performance probe enables Runtime's executor through `cdk`. Wasm compilation
 checks this selection separately from native execution and installed IC behavior.
 Platform selects its internal singleton guard only for executor/runtime
 users. The graph policies exclude it from Host/Tools and Testkit, and require it
@@ -244,8 +243,7 @@ registry `pocket-ic` and `ic-platform-pocket-ic` are excluded.
 Wasm graphs exclude the native client
 implementation as well. The installed PocketIC server remains pinned to 16.1.0.
 
-Testkit owns its native benchmark-average projection with checked integer
-arithmetic. Native and Wasm graphs exclude Metrics; the library has no recording
+Native and Wasm Testkit graphs exclude Metrics; the library has no recording
 or instrumentation dependency. Default native and all-feature Wasm Testkit still
 exclude Wire; Host/Build retain their Metrics exclusions.
 
@@ -471,5 +469,5 @@ Read-only admission waits are explicit at the shared installer interface; see
 
 The optional artifact profile targets run their own Wasm inspection, encoding or
 text tests with defaults disabled. Minimal core tests run once; the complete
-workspace suite separately covers all-feature composition. Native Testkit owns
-benchmark analysis and checked averages; native and Wasm graphs exclude Metrics.
+workspace suite separately covers all-feature composition. Native and Wasm Testkit graphs exclude Metrics; fixture-reuse measurements
+and reports belong to the private development driver.

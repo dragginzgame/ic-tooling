@@ -35,9 +35,10 @@ external identities, fallible/no-replay behavior and bounded snapshot transfer.
 The exact donor and upstream reconstruction guards own its source provenance.
 The native module retains donor lint policy for unchanged imported bodies.
 The client requires an explicit server URL; `pic` owns server provisioning and
-managed startup. The imported `PocketIcState` still uses tempfile for instance
-state custody. This exception does not authorize new temporary-file implementations
-or changes to hash, key or signature algorithms. Keep all client dependencies native.
+managed startup. Persistent instance directories are caller-owned paths; the
+client creates no temporary state handles or clones. Changes to hash, key or
+signature algorithms remain outside this maintenance scope. Keep all client
+dependencies native.
 
 ### Management DTO identity
 

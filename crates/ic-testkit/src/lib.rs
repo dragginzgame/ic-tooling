@@ -6,27 +6,14 @@
 //! managed-server startup and bounded readiness polling. It does not provide a
 //! simulator wrapper or a host-wide runtime lock.
 //!
-//! The crate also provides:
-//!
-//! - marker parsing, aggregation, comparison, and reports in [`benchmark`];
-//! - canister-side marker emission in `performance` (Wasm only);
-//! - deterministic test principals through [`fake_principal`].
-//!
-//! The `pic` helpers are unavailable
-//! when compiling for `wasm32`; parsing and analysis are native-only. Benchmark
-//! data types, checked marker formatting and marker emission remain
-//! available to canister code.
-
-pub mod benchmark;
+//! Deterministic test principals through [`fake_principal`] are available on
+//! every target. The client and `pic` helpers are native-only.
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pocket_ic;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pic;
-
-#[cfg(target_arch = "wasm32")]
-pub mod performance;
 
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 

@@ -1,5 +1,66 @@
 # Current handoff
 
+## Pending Build/Testkit hard cut — 2026-11-06
+
+The maintainer authorized removing unused surfaces across the workspace. The
+pending groups are Build 0.75.0 and Testkit 0.88.0; package versions remain at
+their published values. The maintainer has now authorized deployment from the
+ordinary main checkout to origin/main and crates.io, Build before Testkit.
+The incoming Platform 0.23.2/Wire 0.17.3 patch selections are reviewed and included
+in fresh release qualification; earlier focused evidence used 0.23.0/0.17.2.
+Their incoming lock/diff is preserved under `target/deploy-hard-cut-20261106/`.
+No artifact cleanup is included. The owning ledgers and Testkit's
+[client migration](../testkit/client-migration.md) describe the breaking changes.
+
+Testkit removes benchmark markers/reporting and their example/tests, unused
+PocketIC endpoint variants and orphaned DTOs, and unsupported builder families.
+The supported builder carries one typed creation request, retaining the features
+used by Canic, Auth and Backup: NNS/II/system/application subnets, selected ICP
+system canisters, time/progress, gateways and caller-owned persistent paths.
+Temporary state handles and read-only cloning are removed. Topology response
+kinds/configurations remain complete. Ordinary routing, payloads, accepted
+receipts, typed errors, no-replay behavior and bounded snapshots remain intact.
+The independently checked surface patch reverses all changes before the
+unchanged donor/upstream fingerprints and licenses are verified.
+
+The latest slice removes unused JSON-schema derivations and production enum
+iteration. No sibling schema/iteration consumers were found. Rejection-code
+iteration is now test-only through the native dev-dependency. Schemars,
+Schemars Derive, Serde Derive Internals and Dyn Clone leave the resolved graph;
+Strum/macros leave Testkit's production graph. Earlier cuts removed direct
+Slog/Tempfile and the portable Runtime dependency. The probe no longer depends
+on Testkit. Dependency changes preserve all unrelated selected versions.
+
+Build removes standalone shared-target inspection, unused configuration readers
+and the public cache-mode type. Existing builders, retention outcomes and
+strict/best-effort behavior remain. Both active cache flows and Canic/IcyDB
+progress/timing consumers are retained. The remaining target observation belongs
+to maintenance; no replacement inspection wrapper or compatibility aliases exist.
+No sibling source or existing persistent directory was modified.
+
+Focused Linux evidence remains in these directories:
+
+- `target/hard-cut-20261105/`: initial client failure/snapshot and installed
+  Wire/trap checks, source reconstruction/mutations and portable compilation.
+- `target/pocket-builder-cut-20261105/`: 19 client cases, strict Testkit/Dev
+  Clippy and graph checks. Installed PocketIC 16.1 booted all five retained
+  system-canister features with gateway/progress, then deleted and reopened the
+  caller's directory with the same canister. Its state evidence remains under
+  `target/tmp/pocket-builder-state-1383307-0/`.
+- `target/build-surface-cut-20261105/`: nine cache/batch boundary cases and
+  strict Build/Dev Clippy. Seeded old use-marker coverage proves an exact hit
+  neither spawns Cargo nor changes shared-target size/use time.
+- `target/testkit-traits-cut-20261106/`: exhaustive rejection-code JSON/value
+  qualification, strict Testkit/Dev Clippy, production graph exclusions,
+  provenance/mutations, declarations, formatting, shell lint and doc links.
+  This slice changes derivations/dependency roles, not runtime codec bodies;
+  no new installed-host qualification was run for it.
+
+The same classifier measures production Rust 33,228 -> 31,520 and all Rust
+84,199 -> 81,278, with no unclassified lines. The latest trait slice removes
+72 production lines. Full release qualification and native macOS qualification
+remain separate; no new macOS pass is claimed for these pending changes.
+
 ## Delivered Platform codec integration — 2026-11-05
 
 | Group | Published package | Release commit / tag |

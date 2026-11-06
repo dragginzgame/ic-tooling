@@ -12,9 +12,8 @@
 //! Build with an explicit server URL and await operations. Explicitly await
 //! `PocketIc::drop` before releasing a borrowed server; Rust Drop performs no I/O.
 use self::common::rest::{
-    AutoProgressConfig, ExtendedSubnetConfigSet, IcpConfig, IcpFeatures, InitialTime,
-    InstanceHttpGatewayConfig, RawSubnetBlockmakers, RawTickConfigs, RawTime, SubnetId, SubnetKind,
-    SubnetSpec,
+    AutoProgressConfig, IcpFeatures, InitialTime, InstanceConfig, InstanceHttpGatewayConfig,
+    RawSubnetBlockmakers, RawTickConfigs, RawTime, SubnetId,
 };
 use candid::Principal;
 pub use ic_management_canister_types::{
@@ -23,16 +22,11 @@ pub use ic_management_canister_types::{
 };
 pub use ic_platform::ic_protocol::SubnetMetrics;
 use reqwest::Url;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use slog::Level;
 use std::{
-    net::SocketAddr,
     path::PathBuf,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use strum_macros::EnumIter;
-use tempfile::TempDir;
 
 mod error;
 mod http;
@@ -51,69 +45,12 @@ pub const LATEST_SERVER_VERSION: &str = "16.1.0";
 // the default timeout of a PocketIC operation
 const DEFAULT_MAX_REQUEST_TIME_MS: u64 = 300_000;
 
-enum PocketIcStateKind {
-    /// A persistent state dir managed by the user.
-    StateDir(PathBuf),
-    /// A fresh temporary directory used if the user does not provide
-    /// a persistent state directory managed by the user.
-    /// The temporary directory is deleted when `PocketIcState` is dropped
-    /// unless `PocketIcState` is turned into a persistent state
-    /// at the path given by `PocketIcState::into_path`.
-    TempDir(TempDir),
-}
-
-pub struct PocketIcState {
-    state: PocketIcStateKind,
-}
-
-impl PocketIcState {
-    #[expect(
-        clippy::new_without_default,
-        reason = "preserve the imported PocketIC contract without an unrelated API change"
-    )]
-    pub fn new() -> Self {
-        let temp_dir = TempDir::new().unwrap();
-        Self {
-            state: PocketIcStateKind::TempDir(temp_dir),
-        }
-    }
-
-    pub fn new_from_path(state_dir: PathBuf) -> Self {
-        Self {
-            state: PocketIcStateKind::StateDir(state_dir),
-        }
-    }
-
-    pub fn into_path(self) -> PathBuf {
-        match self.state {
-            PocketIcStateKind::StateDir(state_dir) => state_dir,
-            PocketIcStateKind::TempDir(temp_dir) => temp_dir.keep(),
-        }
-    }
-
-    pub(crate) fn state_dir(&self) -> PathBuf {
-        match &self.state {
-            PocketIcStateKind::StateDir(state_dir) => state_dir.clone(),
-            PocketIcStateKind::TempDir(temp_dir) => temp_dir.path().to_path_buf(),
-        }
-    }
-}
-
+/// Select the supported instance configuration and an admitted server endpoint.
+/// Persistent state paths remain caller-owned; this builder creates no directories.
 pub struct PocketIcBuilder {
-    config: Option<ExtendedSubnetConfigSet>,
-    http_gateway_config: Option<InstanceHttpGatewayConfig>,
+    config: InstanceConfig,
     server_url: Option<Url>,
     max_request_time_ms: Option<u64>,
-    read_only_state_dir: Option<PathBuf>,
-    state_dir: Option<PocketIcState>,
-    icp_config: IcpConfig,
-    log_level: Option<Level>,
-    bitcoind_addr: Option<Vec<SocketAddr>>,
-    dogecoind_addr: Option<Vec<SocketAddr>>,
-    icp_features: IcpFeatures,
-    initial_time: Option<InitialTime>,
-    mainnet_nns_subnet_id: Option<bool>,
-    disable_ingress_validation: Option<bool>,
 }
 
 #[expect(
@@ -123,45 +60,20 @@ pub struct PocketIcBuilder {
 impl PocketIcBuilder {
     pub fn new() -> Self {
         Self {
-            config: None,
-            http_gateway_config: None,
+            config: InstanceConfig {
+                icp_features: Some(IcpFeatures::default()),
+                ..InstanceConfig::default()
+            },
             server_url: None,
             max_request_time_ms: Some(DEFAULT_MAX_REQUEST_TIME_MS),
-            read_only_state_dir: None,
-            state_dir: None,
-            icp_config: IcpConfig::default(),
-            log_level: None,
-            bitcoind_addr: None,
-            dogecoind_addr: None,
-            icp_features: IcpFeatures::default(),
-            initial_time: None,
-            mainnet_nns_subnet_id: None,
-            disable_ingress_validation: None,
         }
     }
 
-    pub fn new_with_config(config: impl Into<ExtendedSubnetConfigSet>) -> Self {
-        let mut builder = Self::new();
-        builder.config = Some(config.into());
-        builder
-    }
-
     pub async fn build(self) -> Result<PocketIc, ClientError> {
-        PocketIc::from_components(
-            self.config.unwrap_or_default(),
+        PocketIc::from_config(
             self.server_url.ok_or(ClientError::MissingServerUrl)?,
             self.max_request_time_ms,
-            self.read_only_state_dir,
-            self.state_dir,
-            self.icp_config,
-            self.log_level,
-            self.bitcoind_addr,
-            self.dogecoind_addr,
-            self.icp_features,
-            self.initial_time,
-            self.http_gateway_config,
-            self.mainnet_nns_subnet_id,
-            self.disable_ingress_validation,
+            self.config,
         )
         .await
     }
@@ -177,255 +89,65 @@ impl PocketIcBuilder {
         self
     }
 
+    /// Select a caller-owned persistent instance directory accessible to the server.
+    /// Instance deletion and client Drop never remove this directory.
     pub fn with_state_dir(mut self, state_dir: PathBuf) -> Self {
-        self.state_dir = Some(PocketIcState::new_from_path(state_dir));
+        self.config.state_dir = Some(state_dir);
         self
     }
 
-    pub fn with_state(mut self, state_dir: PocketIcState) -> Self {
-        self.state_dir = Some(state_dir);
-        self
-    }
-
-    pub fn with_read_only_state(mut self, read_only_state_dir: &PocketIcState) -> Self {
-        self.read_only_state_dir = Some(read_only_state_dir.state_dir());
-        self
-    }
-
-    pub fn with_icp_config(mut self, icp_config: IcpConfig) -> Self {
-        self.icp_config = icp_config;
-        self
-    }
-
-    pub fn with_log_level(mut self, log_level: Level) -> Self {
-        self.log_level = Some(log_level);
-        self
-    }
-
-    pub fn with_bitcoind_addr(self, bitcoind_addr: SocketAddr) -> Self {
-        self.with_bitcoind_addrs(vec![bitcoind_addr])
-    }
-
-    pub fn with_bitcoind_addrs(self, bitcoind_addrs: Vec<SocketAddr>) -> Self {
-        Self {
-            bitcoind_addr: Some(bitcoind_addrs),
-            ..self
-        }
-    }
-
-    pub fn with_dogecoind_addrs(self, dogecoind_addrs: Vec<SocketAddr>) -> Self {
-        Self {
-            dogecoind_addr: Some(dogecoind_addrs),
-            ..self
-        }
-    }
-
-    /// Add an empty NNS subnet unless an NNS subnet has already been added.
+    /// Add the unique NNS subnet.
     pub fn with_nns_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config.nns = Some(config.nns.unwrap_or_default());
-        self.config = Some(config);
+        self.config.subnet_config_set.nns.get_or_insert_default();
         self
     }
 
-    /// Add an NNS subnet with state loaded from the given state directory.
-    /// Note that the provided path must be accessible for the PocketIC server process.
-    ///
-    /// `path_to_state` should lead to a directory which is expected to have
-    /// the following structure:
-    ///
-    /// path_to_state/
-    ///  |-- backups
-    ///  |-- checkpoints
-    ///  |-- diverged_checkpoints
-    ///  |-- diverged_state_markers
-    ///  |-- fs_tmp
-    ///  |-- page_deltas
-    ///  |-- states_metadata.pbuf
-    ///  |-- tip
-    ///  `-- tmp
-    pub fn with_nns_state(self, path_to_state: PathBuf) -> Self {
-        self.with_subnet_state(SubnetKind::NNS, path_to_state)
-    }
-
-    /// Add a subnet with state loaded from the given state directory.
-    /// Note that the provided path must be accessible for the PocketIC server process.
-    ///
-    /// `path_to_state` should point to a directory which is expected to have
-    /// the following structure:
-    ///
-    /// path_to_state/
-    ///  |-- backups
-    ///  |-- checkpoints
-    ///  |-- diverged_checkpoints
-    ///  |-- diverged_state_markers
-    ///  |-- fs_tmp
-    ///  |-- page_deltas
-    ///  |-- states_metadata.pbuf
-    ///  |-- tip
-    ///  `-- tmp
-    pub fn with_subnet_state(mut self, subnet_kind: SubnetKind, path_to_state: PathBuf) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        #[cfg(not(windows))]
-        let state_dir = path_to_state;
-        #[cfg(windows)]
-        let state_dir = wsl_path(&path_to_state, "subnet state").into();
-        let subnet_spec = SubnetSpec::default().with_state_dir(state_dir);
-        match subnet_kind {
-            SubnetKind::NNS => config.nns = Some(subnet_spec),
-            SubnetKind::SNS => config.sns = Some(subnet_spec),
-            SubnetKind::II => config.ii = Some(subnet_spec),
-            SubnetKind::Fiduciary => config.fiduciary = Some(subnet_spec),
-            SubnetKind::Bitcoin => config.bitcoin = Some(subnet_spec),
-            SubnetKind::TestThresholdKeys => config.test_threshold_keys = Some(subnet_spec),
-            SubnetKind::Application => config.application.push(subnet_spec),
-            SubnetKind::CloudEngine => config.cloud_engine.push(subnet_spec),
-            SubnetKind::System => config.system.push(subnet_spec),
-            SubnetKind::VerifiedApplication => config.verified_application.push(subnet_spec),
-        };
-        self.config = Some(config);
-        self
-    }
-
-    /// Add an empty sns subnet unless an SNS subnet has already been added.
-    pub fn with_sns_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config.sns = Some(config.sns.unwrap_or_default());
-        self.config = Some(config);
-        self
-    }
-
-    /// Add an empty II subnet unless an II subnet has already been added.
+    /// Add the unique Internet Identity subnet.
     pub fn with_ii_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config.ii = Some(config.ii.unwrap_or_default());
-        self.config = Some(config);
+        self.config.subnet_config_set.ii.get_or_insert_default();
         self
     }
 
-    /// Add an empty fiduciary subnet unless a fiduciary subnet has already been added.
-    pub fn with_fiduciary_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config.fiduciary = Some(config.fiduciary.unwrap_or_default());
-        self.config = Some(config);
-        self
-    }
-
-    /// Add an empty bitcoin subnet unless a bitcoin subnet has already been added.
-    pub fn with_bitcoin_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config.bitcoin = Some(config.bitcoin.unwrap_or_default());
-        self.config = Some(config);
-        self
-    }
-
-    /// Add an empty test threshold keys subnet unless a test threshold keys subnet has already been added.
-    pub fn with_test_threshold_keys_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config.test_threshold_keys = Some(config.test_threshold_keys.unwrap_or_default());
-        self.config = Some(config);
-        self
-    }
-
-    /// Add an empty generic system subnet.
     pub fn with_system_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config.system.push(SubnetSpec::default());
-        self.config = Some(config);
-        self
-    }
-
-    /// Add an empty generic application subnet.
-    pub fn with_application_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config.application.push(SubnetSpec::default());
-        self.config = Some(config);
-        self
-    }
-
-    /// Add an empty generic verified application subnet.
-    pub fn with_verified_application_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config.verified_application.push(SubnetSpec::default());
-        self.config = Some(config);
-        self
-    }
-
-    /// Add an empty generic application subnet with benchmarking instruction configuration.
-    pub fn with_benchmarking_application_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config
-            .application
-            .push(SubnetSpec::default().with_benchmarking_instruction_config());
-        self.config = Some(config);
-        self
-    }
-
-    /// Add an empty generic system subnet with benchmarking instruction configuration.
-    pub fn with_benchmarking_system_subnet(mut self) -> Self {
-        let mut config = self.config.unwrap_or_default();
-        config
+        self.config
+            .subnet_config_set
             .system
-            .push(SubnetSpec::default().with_benchmarking_instruction_config());
-        self.config = Some(config);
+            .push(Default::default());
         self
     }
 
-    /// Enables selected ICP features supported by PocketIC and implemented by system canisters
-    /// (deployed to the PocketIC instance automatically when creating a new PocketIC instance).
-    /// Subnets to which the system canisters are deployed are automatically declared as empty subnets,
-    /// e.g., `PocketIcBuilder::with_nns_subnet` is implicitly implied by specifying the `icp_token` feature.
+    pub fn with_application_subnet(mut self) -> Self {
+        self.config
+            .subnet_config_set
+            .application
+            .push(Default::default());
+        self
+    }
+
+    /// Select system canisters provisioned and validated by the PocketIC server.
     pub fn with_icp_features(mut self, icp_features: IcpFeatures) -> Self {
-        self.icp_features = icp_features;
+        self.config.icp_features = Some(icp_features);
         self
     }
 
-    /// Sets the initial timestamp of the new instance to the provided value which must be at least
-    /// - 10 May 2021 10:00:01 AM CEST if the `cycles_minting` feature is enabled in `icp_features`;
-    /// - 06 May 2021 21:17:10 CEST otherwise.
-    #[deprecated(note = "Use `with_initial_time` instead")]
-    pub fn with_initial_timestamp(mut self, initial_timestamp_nanos: u64) -> Self {
-        self.initial_time = Some(InitialTime::Timestamp(RawTime {
-            nanos_since_epoch: initial_timestamp_nanos,
-        }));
-        self
-    }
-
-    /// Sets the initial time of the new instance to the provided value which must be at least
-    /// - 10 May 2021 10:00:01 AM CEST if the `cycles_minting` feature is enabled in `icp_features`;
-    /// - 06 May 2021 21:17:10 CEST otherwise.
+    /// Select the initial timestamp, subject to the server's system-canister minimum.
     pub fn with_initial_time(mut self, initial_time: Time) -> Self {
-        self.initial_time = Some(InitialTime::Timestamp(RawTime {
+        self.config.initial_time = Some(InitialTime::Timestamp(RawTime {
             nanos_since_epoch: initial_time.as_nanos_since_unix_epoch(),
         }));
         self
     }
 
-    /// Configures the new instance to make progress automatically,
-    /// i.e., periodically update the time of the IC instance
-    /// to the real time and execute rounds on the subnets.
-    /// Building the instance only returns after the certified time
-    /// of the IC instance has been updated for the first time.
+    /// Progress automatically from certified real time after instance creation.
     pub fn with_auto_progress(mut self) -> Self {
-        let config = AutoProgressConfig {
+        self.config.initial_time = Some(InitialTime::AutoProgress(AutoProgressConfig {
             artificial_delay_ms: None,
-        };
-        self.initial_time = Some(InitialTime::AutoProgress(config));
+        }));
         self
     }
 
     pub fn with_http_gateway(mut self, http_gateway_config: InstanceHttpGatewayConfig) -> Self {
-        self.http_gateway_config = Some(http_gateway_config);
-        self
-    }
-
-    pub fn with_mainnet_nns_subnet_id(mut self) -> Self {
-        self.mainnet_nns_subnet_id = Some(true);
-        self
-    }
-
-    pub fn disable_ingress_validation(mut self) -> Self {
-        self.disable_ingress_validation = Some(true);
+        self.config.http_gateway_config = Some(http_gateway_config);
         self
     }
 }
@@ -521,20 +243,8 @@ pub enum TryFromError {
 /// convention: the most significant digit is the corresponding reject
 /// code and the rest is just a sequentially assigned two-digit
 /// number.
-#[derive(
-    PartialOrd,
-    Ord,
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    EnumIter,
-)]
+#[derive(PartialOrd, Ord, Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(test, derive(strum::EnumIter))]
 pub enum ErrorCode {
     // 1xx -- `RejectCode::SysFatal`
     SubnetOversubscribed = 101,
@@ -694,20 +404,8 @@ impl std::fmt::Display for ErrorCode {
 ///
 /// They can be derived from the most significant digit of the
 /// corresponding error code.
-#[derive(
-    PartialOrd,
-    Ord,
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    EnumIter,
-)]
+#[derive(PartialOrd, Ord, Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(test, derive(strum::EnumIter))]
 pub enum RejectCode {
     SysFatal = 1,
     SysTransient = 2,
@@ -733,7 +431,7 @@ impl TryFrom<u64> for RejectCode {
 }
 
 /// User-facing type describing an unsuccessful (also called reject) call response.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RejectResponse {
     pub reject_code: RejectCode,
     pub reject_message: String,
@@ -848,23 +546,6 @@ fn wsl_path(path: &PathBuf, desc: &str) -> String {
             desc, path, e
         )
     })
-}
-
-pub fn copy_dir(
-    src: impl AsRef<std::path::Path>,
-    dst: impl AsRef<std::path::Path>,
-) -> std::io::Result<()> {
-    std::fs::create_dir_all(&dst)?;
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        if ty.is_dir() {
-            copy_dir(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        } else {
-            std::fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        }
-    }
-    Ok(())
 }
 
 #[cfg(test)]

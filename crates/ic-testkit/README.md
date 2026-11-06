@@ -19,19 +19,18 @@ For typed application calls, enable the `wire` feature and depend directly on
 `ic-wire` for method contracts. Testkit does not own Candid codecs or call helpers.
 
 The minimum and pinned development compiler is Rust 1.99.1, and the selected PocketIC line is 16.
-Canisters using benchmark markers can add the crate under `[dependencies]`.
-The Wasm library selects `ic-platform-runtime` directly for raw IC0 counters and
-marker logging, without the facade, executor or Candid. `fake_principal` selects
-`ic-platform-types` directly and retains the same external Principal identity.
-The private performance probe selects Runtime's entrypoint macros directly;
-native simulator operations use `ic_testkit::pocket_ic`. Testkit keeps
-its separate Platform dependency for Candid and management adapters.
-`pic` is host-only. `performance` is Wasm-only;
-`benchmark` counters, checked marker formatting and `fake_principal` are available
-on both targets. Parsing, pairing, aggregation and comparison are native-only.
-Native CSV and Markdown directory output lives in the repository's
-`benchmark_report` example. Standalone recipe builders return
-`std::io::Result<StandaloneCanisterFixture>`.
+Testkit's portable library provides deterministic test principals through
+`ic-platform-types`, without an IC runtime dependency. The private performance
+probe selects Runtime's entrypoints directly. Native simulator operations use
+`ic_testkit::pocket_ic`; `pic` supplies host-only lifecycle and fixture helpers.
+Testkit keeps its separate Platform dependency for Candid and management adapters.
+Standalone recipe builders return `std::io::Result<StandaloneCanisterFixture>`.
+
+The builder supports NNS/II/system/application subnets, selected system canisters,
+time/progress, gateways and caller-owned persistent directories. Pass a path with
+`with_state_dir`; client teardown preserves it. Temporary state handles, custom
+creation DTOs and unused special-purpose configuration families are removed in
+the pending 0.88 [hard cut](../../docs/testkit/client-migration.md#instance-configuration).
 
 External interfaces that require Candid remain caller-owned: use a direct
 Platform dependency for encoding/decoding, then send the bytes through the
@@ -83,8 +82,6 @@ This is the PocketIC package in the IC Tooling workspace. It provides:
 - controller-aware, caller-labeled collect-all diagnostics
 - explicit diagnostic reporting to a caller-selected writer; status/log failures
   stay in the report and writer I/O errors return unchanged
-- compact benchmark marker parsing, aggregation and comparison
-- canister-side `performance::measure` marker emission
 
 `ic-testkit` does not wrap the PocketIC simulator API or serialize independent
 instances. `pic::server_assets` owns explicit server provisioning and offline
@@ -185,17 +182,6 @@ compiled by the crate's normal all-target checks. The
 [transactional external-artifact example](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-build/examples/transactional_artifact_cache.rs)
 is compiled and maintained by IC Build.
 
-Benchmark aggregate/comparison rows and aggregate errors expose
-`scope: BenchmarkScope::{Suite, All}` for their identity; `average(scale)` returns
-checked floor-rounded `u128` means with Testkit's `BenchmarkAverageError`.
-`compare_benchmark_aggregates(current, previous, scale)` returns
-current/previous means and run counts, preserving missing rows and measured zero.
-Duplicate scope/span rows on either side return `BenchmarkComparisonError`;
-its `Average` variant preserves projection failures.
-Approximate percentage fields are removed. Aggregate CSV/text uses scale one in
-original counter units; comparison CSV includes both scales. Exact totals remain
-available, and zero runs/scaled overflow return typed errors. Write the changed
-columns to new report directories; retained reports are not reinterpreted.
 Baseline recipes construct `ResetRequirements { funding, policies }` with the
 fixed optional fields in `ResetPolicies`. Their resets independently report
 `ResetReceipt { policies }`; absence differs from an explicit irrelevant policy. The pool
@@ -204,17 +190,12 @@ restoration returns unit. `ResetReceipt` covers non-snapshot guarantees. These a
 
 Generic Cargo/Wasm builds, retained artifact caches and freshness APIs belong to
 [IC Build](https://github.com/dragginzgame/ic-build). Depend on it directly and use
-`ic_build::artifacts`; Testkit keeps PocketIC lifecycle and benchmark policy.
+`ic_build::artifacts`; Testkit keeps PocketIC lifecycle helpers.
 
 Pass `fixture.pocket_ic()` and `fixture.canister_id()` explicitly to
 `query_wire` or `update_wire` with the `wire` feature. The standalone fixture owns
 installation and lifetime; Wire owns method contracts and codec limits.
 See the [canonical migration notes](../../releases/testkit/CHANGELOG.md).
-
-Benchmark commands own run identities, provenance, history selection and any
-metadata sidecars. The repository's `benchmark_report` example renders supplied
-measurements as CSV and Markdown; it has no metadata schema, reader or
-history-discovery policy.
 
 ### Raw reply canister fixtures
 

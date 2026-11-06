@@ -46,21 +46,13 @@ ic-management-canister-types = { workspace = true }
 ic-platform = { workspace = true, features = ["candid", "management-canister-types", "ic-protocol"] }
 ic-wire = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["blocking", "http2", "json", "multipart", "rustls", "socks", "stream"] }
-schemars = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
-slog = { workspace = true, features = ["max_level_trace", "nested-values", "release_max_level_trace"] }
-strum = { workspace = true }
-strum_macros = { workspace = true }
-tempfile = { workspace = true }
 tokio = { workspace = true, features = ["rt", "sync", "time", "net"] }
 tracing = { workspace = true }
 tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-ic-platform-runtime = { workspace = true, features = ["ic0"] }
 
 [target.'cfg(all(unix, not(target_family = "wasm")))'.dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }
@@ -70,6 +62,7 @@ ic-host-process = { workspace = true, features = ["test-support"] }
 clap = { workspace = true, features = ["string"] }
 ic-host-artifacts = { workspace = true, features = ["wasm-validation", "wasm-text"] }
 serde_json = { workspace = true }
+strum = { workspace = true }
 tokio = { workspace = true, features = ["macros", "net", "rt-multi-thread"] }
 
 [[test]]

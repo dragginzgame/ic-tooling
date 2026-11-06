@@ -1,22 +1,19 @@
 // Copyright DFINITY Foundation. Licensed under Apache-2.0.
 use crate::pocket_ic::common::rest::{
     AutoProgressConfig, BlobCompression, BlobId, CanisterHttpRequest, CreateHttpGatewayResponse,
-    CreateInstanceResponse, ExtendedSubnetConfigSet, HttpGatewayBackend, HttpGatewayConfig,
-    HttpGatewayInfo, HttpsConfig, IcpConfig, IcpFeatures, InitialTime, InstanceConfig,
-    InstanceHttpGatewayConfig, InstanceId, MockCanisterHttpResponse,
-    MockFlexibleCanisterHttpResponse, RawAddCycles, RawCanisterCall, RawCanisterHttpRequest,
-    RawCanisterId, RawCanisterResult, RawCanisterSnapshotDownload, RawCanisterSnapshotId,
-    RawCanisterSnapshotUpload, RawCycles, RawEffectivePrincipal, RawIngressStatusArgs,
-    RawMessageId, RawMockCanisterHttpResponse, RawMockFlexibleCanisterHttpResponse, RawPrincipalId,
-    RawSenderInfo, RawSetStableMemory, RawStableMemory, RawSubnetId, RawTickConfigs, RawTime,
-    RawVerifyCanisterSigArg, SubnetId, Topology,
+    CreateInstanceResponse, HttpGatewayBackend, HttpGatewayConfig, HttpGatewayInfo, HttpsConfig,
+    InstanceConfig, InstanceId, MockCanisterHttpResponse, RawAddCycles, RawCanisterCall,
+    RawCanisterHttpRequest, RawCanisterId, RawCanisterResult, RawCanisterSnapshotDownload,
+    RawCanisterSnapshotId, RawCanisterSnapshotUpload, RawCycles, RawEffectivePrincipal,
+    RawIngressStatusArgs, RawMessageId, RawMockCanisterHttpResponse, RawPrincipalId,
+    RawSetStableMemory, RawStableMemory, RawSubnetId, RawTickConfigs, RawTime, SubnetId, Topology,
 };
 #[cfg(windows)]
 use crate::pocket_ic::wsl_path;
 use crate::pocket_ic::{ClientError, Operation, RequestContext, http::Exchange};
 use crate::pocket_ic::{
     CreateCanisterParams, CreateCanisterPlacement, IngressStatusResult, PocketIcBuilder,
-    PocketIcState, RejectResponse, TickConfigs, Time, copy_dir,
+    RejectResponse, TickConfigs, Time,
 };
 use backon::{BackoffBuilder, ExponentialBuilder};
 use candid::{
@@ -28,8 +25,7 @@ use ic_management_canister_types::{
     CanisterStatusResult, ChunkHash, DeleteCanisterSnapshotArgs, FetchCanisterLogsResult,
     InstallChunkedCodeArgs, InstallCodeArgs, LoadCanisterSnapshotArgs,
     ProvisionalCreateCanisterWithCyclesArgs, Snapshot, StoredChunksResult,
-    TakeCanisterSnapshotArgs, UpdateSettingsArgs, UpgradeFlags, UploadChunkArgs, UploadChunkResult,
-    WasmMemoryPersistence,
+    TakeCanisterSnapshotArgs, UpdateSettingsArgs, UploadChunkArgs, UploadChunkResult,
 };
 use ic_platform::certification::cbor::decode_certificate;
 use ic_platform::certification::{Certificate, Label, LookupResult};
@@ -42,10 +38,8 @@ use ic_platform::ic_protocol::{
 use reqwest::{StatusCode, Url};
 use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
-use slog::Level;
-use std::fs::read_dir;
 use std::future::Future;
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{debug, instrument};
@@ -94,7 +88,6 @@ pub struct PocketIc {
     reqwest_client: reqwest::Client,
     // the instance should only be deleted when dropping this handle if this handle owns the instance
     owns_instance: bool,
-    state_dir: Option<PocketIcState>,
     _log_guard: Option<WorkerGuard>,
 }
 
@@ -131,74 +124,21 @@ impl PocketIc {
             server_url,
             reqwest_client,
             owns_instance: false,
-            state_dir: None,
             _log_guard: log_guard,
         }
     }
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "retained upstream client method signature"
-    )]
-    pub(crate) async fn from_components(
-        subnet_config_set: impl Into<ExtendedSubnetConfigSet>,
+    pub(crate) async fn from_config(
         server_url: Url,
         max_request_time_ms: Option<u64>,
-        read_only_state_dir: Option<PathBuf>,
-        mut state_dir: Option<PocketIcState>,
-        icp_config: IcpConfig,
-        log_level: Option<Level>,
-        bitcoind_addr: Option<Vec<SocketAddr>>,
-        dogecoind_addr: Option<Vec<SocketAddr>>,
-        icp_features: IcpFeatures,
-        initial_time: Option<InitialTime>,
-        http_gateway_config: Option<InstanceHttpGatewayConfig>,
-        mainnet_nns_subnet_id: Option<bool>,
-        disable_ingress_validation: Option<bool>,
+        instance_config: InstanceConfig,
     ) -> Result<Self, ClientError> {
-        let subnet_config_set: ExtendedSubnetConfigSet = subnet_config_set.into();
-
-        // copy the read-only state dir to the state dir
-        // (creating an empty temp dir to serve as the state dir if no state dir is provided)
-        if let Some(read_only_state_dir) = read_only_state_dir {
-            if let Some(ref state_dir) = state_dir {
-                let mut state_dir_contents = read_dir(state_dir.state_dir())?;
-                if state_dir_contents.next().is_some() {
-                    return Err(ClientError::Protocol(
-                        "PocketIC instance state must be empty if a read-only state is mounted."
-                            .into(),
-                    ));
-                }
-            } else {
-                state_dir = Some(PocketIcState::new());
-            };
-            copy_dir(
-                read_only_state_dir,
-                state_dir
-                    .as_ref()
-                    .map(|state_dir| state_dir.state_dir())
-                    .unwrap(),
-            )?;
-        };
-
+        #[cfg(windows)]
         let instance_config = InstanceConfig {
-            subnet_config_set,
-            http_gateway_config,
-            #[cfg(not(windows))]
-            state_dir: state_dir.as_ref().map(|state_dir| state_dir.state_dir()),
-            #[cfg(windows)]
-            state_dir: state_dir
-                .as_ref()
-                .map(|state_dir| wsl_path(&state_dir.state_dir(), "state directory").into()),
-            icp_config: Some(icp_config),
-            log_level: log_level.map(|l| l.to_string()),
-            bitcoind_addr,
-            dogecoind_addr,
-            icp_features: Some(icp_features),
-            incomplete_state: None,
-            initial_time,
-            mainnet_nns_subnet_id,
-            disable_ingress_validation,
+            state_dir: instance_config
+                .state_dir
+                .map(|path| wsl_path(&path, "state directory").into()),
+            ..instance_config
         };
 
         let test_driver_pid = std::process::id();
@@ -236,14 +176,8 @@ impl PocketIc {
             server_url,
             reqwest_client,
             owns_instance: true,
-            state_dir,
             _log_guard: log_guard,
         })
-    }
-
-    pub async fn drop_and_take_state(&mut self) -> Result<Option<PocketIcState>, ClientError> {
-        self.do_drop().await?;
-        Ok(self.state_dir.take())
     }
 
     /// Returns the URL of the PocketIC server on which this PocketIC instance is running.
@@ -324,32 +258,6 @@ impl PocketIc {
         Exchange::new(&url, None)
             .json(&client, client.get(url.clone()))
             .await
-    }
-
-    /// Verify a canister signature.
-    #[instrument(skip_all, fields(instance_id=self.instance_id))]
-    pub async fn verify_canister_signature(
-        &self,
-        msg: Vec<u8>,
-        sig: Vec<u8>,
-        pubkey: Vec<u8>,
-        root_pubkey: Vec<u8>,
-    ) -> Result<(), ClientError> {
-        let url = self.server_url.join("verify_signature").unwrap();
-        let result: Result<(), String> = Exchange::new(&url, self.max_request_time_ms)
-            .json(
-                &self.reqwest_client,
-                self.reqwest_client
-                    .post(url.clone())
-                    .json(&RawVerifyCanisterSigArg {
-                        msg,
-                        sig,
-                        pubkey,
-                        root_pubkey,
-                    }),
-            )
-            .await?;
-        result.map_err(ClientError::Protocol)
     }
 
     /// Make the IC produce and progress by one block.
@@ -685,30 +593,7 @@ impl PocketIc {
         .await
     }
 
-    async fn submit_call_with_effective_principal_and_sender_info_inner(
-        &self,
-        canister_id: CanisterId,
-        effective_principal: RawEffectivePrincipal,
-        sender: Principal,
-        method: &str,
-        payload: Vec<u8>,
-        sender_info: Option<RawSenderInfo>,
-    ) -> Result<RawMessageId, ClientError> {
-        let endpoint = "update/submit_ingress_message";
-        let raw_canister_call = RawCanisterCall {
-            sender: sender.as_slice().to_vec(),
-            canister_id: canister_id.as_slice().to_vec(),
-            method: method.to_string(),
-            payload,
-            effective_principal,
-            sender_info,
-        };
-        self.post::<Result<RawMessageId, RejectResponse>, _>(endpoint, raw_canister_call)
-            .await?
-            .map_err(ClientError::from)
-    }
-
-    /// Submit an update call with a provided effective principal (without executing it immediately).
+    /// Submit an update with explicit routing, retaining its accepted ingress receipt.
     pub async fn submit_call_with_effective_principal(
         &self,
         canister_id: CanisterId,
@@ -717,56 +602,18 @@ impl PocketIc {
         method: &str,
         payload: Vec<u8>,
     ) -> Result<RawMessageId, ClientError> {
-        self.submit_call_with_effective_principal_and_sender_info_inner(
-            canister_id,
+        let endpoint = "update/submit_ingress_message";
+        let raw_canister_call = RawCanisterCall {
+            sender: sender.as_slice().to_vec(),
+            canister_id: canister_id.as_slice().to_vec(),
+            method: method.to_string(),
+            payload,
             effective_principal,
-            sender,
-            method,
-            payload,
-            None,
-        )
-        .await
-    }
-
-    /// Submit an update call with a provided effective principal and sender info (without executing it immediately).
-    pub async fn submit_call_with_effective_principal_and_sender_info(
-        &self,
-        canister_id: CanisterId,
-        effective_principal: RawEffectivePrincipal,
-        sender: Principal,
-        method: &str,
-        payload: Vec<u8>,
-        sender_info: RawSenderInfo,
-    ) -> Result<RawMessageId, ClientError> {
-        self.submit_call_with_effective_principal_and_sender_info_inner(
-            canister_id,
-            effective_principal,
-            sender,
-            method,
-            payload,
-            Some(sender_info),
-        )
-        .await
-    }
-
-    /// Submit an update call with sender info (without executing it immediately).
-    pub async fn submit_call_with_sender_info(
-        &self,
-        canister_id: CanisterId,
-        sender: Principal,
-        method: &str,
-        payload: Vec<u8>,
-        sender_info: RawSenderInfo,
-    ) -> Result<RawMessageId, ClientError> {
-        self.submit_call_with_effective_principal_and_sender_info(
-            canister_id,
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender,
-            method,
-            payload,
-            sender_info,
-        )
-        .await
+            sender_info: None,
+        };
+        self.post::<Result<RawMessageId, RejectResponse>, _>(endpoint, raw_canister_call)
+            .await?
+            .map_err(ClientError::from)
     }
 
     /// Await an update call submitted previously by `submit_call` or `submit_call_with_effective_principal`.
@@ -882,67 +729,25 @@ impl PocketIc {
         .await
     }
 
-    async fn update_call_with_effective_principal_and_sender_info_inner(
+    /// Submit once with explicit routing, then await the accepted ingress.
+    pub async fn update_call_with_effective_principal(
         &self,
         canister_id: CanisterId,
         effective_principal: RawEffectivePrincipal,
         sender: Principal,
         method: &str,
         payload: Vec<u8>,
-        sender_info: Option<RawSenderInfo>,
     ) -> Result<Vec<u8>, ClientError> {
         let message_id = self
-            .submit_call_with_effective_principal_and_sender_info_inner(
+            .submit_call_with_effective_principal(
                 canister_id,
                 effective_principal,
                 sender,
                 method,
                 payload,
-                sender_info,
             )
             .await?;
         self.await_call(message_id).await
-    }
-
-    /// Execute an update call with a provided effective principal and sender info on a canister.
-    pub async fn update_call_with_effective_principal_and_sender_info(
-        &self,
-        canister_id: CanisterId,
-        effective_principal: RawEffectivePrincipal,
-        sender: Principal,
-        method: &str,
-        payload: Vec<u8>,
-        sender_info: RawSenderInfo,
-    ) -> Result<Vec<u8>, ClientError> {
-        self.update_call_with_effective_principal_and_sender_info_inner(
-            canister_id,
-            effective_principal,
-            sender,
-            method,
-            payload,
-            Some(sender_info),
-        )
-        .await
-    }
-
-    /// Execute an update call with sender info on a canister.
-    pub async fn update_call_with_sender_info(
-        &self,
-        canister_id: CanisterId,
-        sender: Principal,
-        method: &str,
-        payload: Vec<u8>,
-        sender_info: RawSenderInfo,
-    ) -> Result<Vec<u8>, ClientError> {
-        self.update_call_with_effective_principal_and_sender_info(
-            canister_id,
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender,
-            method,
-            payload,
-            sender_info,
-        )
-        .await
     }
 
     /// Execute a query call on a canister.
@@ -977,59 +782,16 @@ impl PocketIc {
         payload: Vec<u8>,
     ) -> Result<Vec<u8>, ClientError> {
         let endpoint = "read/query";
-        self.canister_call(
-            endpoint,
+        let raw_canister_call = RawCanisterCall {
+            sender: sender.as_slice().to_vec(),
+            canister_id: canister_id.as_slice().to_vec(),
+            method: method.to_string(),
+            payload,
             effective_principal,
-            canister_id,
-            sender,
-            method,
-            payload,
-            None,
-        )
-        .await
-    }
-
-    /// Execute a query call with a provided effective principal and sender info on a canister.
-    pub async fn query_call_with_effective_principal_and_sender_info(
-        &self,
-        canister_id: CanisterId,
-        effective_principal: RawEffectivePrincipal,
-        sender: Principal,
-        method: &str,
-        payload: Vec<u8>,
-        sender_info: RawSenderInfo,
-    ) -> Result<Vec<u8>, ClientError> {
-        let endpoint = "read/query";
-        self.canister_call(
-            endpoint,
-            effective_principal,
-            canister_id,
-            sender,
-            method,
-            payload,
-            Some(sender_info),
-        )
-        .await
-    }
-
-    /// Execute a query call with sender info on a canister.
-    pub async fn query_call_with_sender_info(
-        &self,
-        canister_id: CanisterId,
-        sender: Principal,
-        method: &str,
-        payload: Vec<u8>,
-        sender_info: RawSenderInfo,
-    ) -> Result<Vec<u8>, ClientError> {
-        self.query_call_with_effective_principal_and_sender_info(
-            canister_id,
-            RawEffectivePrincipal::CanisterId(canister_id.as_slice().to_vec()),
-            sender,
-            method,
-            payload,
-            sender_info,
-        )
-        .await
+            sender_info: None,
+        };
+        let result: RawCanisterResult = self.post(endpoint, raw_canister_call).await?;
+        Result::<Vec<u8>, RejectResponse>::from(result).map_err(ClientError::from)
     }
 
     /// Fetch canister logs via a query call to the management canister.
@@ -1366,28 +1128,6 @@ impl PocketIc {
     ) -> Result<(), ClientError> {
         self.install_canister_helper(
             CanisterInstallMode::Upgrade(None),
-            canister_id,
-            wasm_module,
-            arg,
-            sender,
-        )
-        .await
-    }
-
-    /// Upgrade a Motoko EOP canister with a new WASM module.
-    #[instrument(skip(self, wasm_module, arg), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), wasm_module_len = %wasm_module.len(), arg_len = %arg.len(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
-    pub async fn upgrade_eop_canister(
-        &self,
-        canister_id: CanisterId,
-        wasm_module: Vec<u8>,
-        arg: Vec<u8>,
-        sender: Option<Principal>,
-    ) -> Result<(), ClientError> {
-        self.install_canister_helper(
-            CanisterInstallMode::Upgrade(Some(UpgradeFlags {
-                wasm_memory_persistence: Some(WasmMemoryPersistence::Keep),
-                skip_pre_upgrade: None,
-            })),
             canister_id,
             wasm_module,
             arg,
@@ -1839,48 +1579,6 @@ impl PocketIc {
         }
     }
 
-    async fn canister_call(
-        &self,
-        endpoint: &str,
-        effective_principal: RawEffectivePrincipal,
-        canister_id: CanisterId,
-        sender: Principal,
-        method: &str,
-        payload: Vec<u8>,
-        sender_info: Option<RawSenderInfo>,
-    ) -> Result<Vec<u8>, ClientError> {
-        let raw_canister_call = RawCanisterCall {
-            sender: sender.as_slice().to_vec(),
-            canister_id: canister_id.as_slice().to_vec(),
-            method: method.to_string(),
-            payload,
-            effective_principal,
-            sender_info,
-        };
-
-        let result: RawCanisterResult = self.post(endpoint, raw_canister_call).await?;
-        Result::<Vec<u8>, RejectResponse>::from(result).map_err(ClientError::from)
-    }
-
-    pub async fn update_call_with_effective_principal(
-        &self,
-        canister_id: CanisterId,
-        effective_principal: RawEffectivePrincipal,
-        sender: Principal,
-        method: &str,
-        payload: Vec<u8>,
-    ) -> Result<Vec<u8>, ClientError> {
-        self.update_call_with_effective_principal_and_sender_info_inner(
-            canister_id,
-            effective_principal,
-            sender,
-            method,
-            payload,
-            None,
-        )
-        .await
-    }
-
     /// Get the pending canister HTTP outcalls.
     /// Note that an additional `PocketIc::tick` is necessary after a canister
     /// executes a message making a canister HTTP outcall for the HTTP outcall
@@ -1888,9 +1586,8 @@ impl PocketIc {
     /// Note that, unless a PocketIC instance is in auto progress mode,
     /// a response to the pending canister HTTP outcalls
     /// must be produced by the test driver and passed on to the PocketIC instace
-    /// using `PocketIc::mock_canister_http_response`, or, for a *flexible* outcall
-    /// (`CanisterHttpReplication::Flexible`), using
-    /// `PocketIc::mock_flexible_canister_http_response`.
+    /// using `PocketIc::mock_canister_http_response`. Flexible outcall mocking is
+    /// not supported by this client.
     /// In auto progress mode, the PocketIC server produces a response for every
     /// pending canister HTTP outcall by actually making an HTTP request
     /// to the specified URL.
@@ -1903,9 +1600,7 @@ impl PocketIc {
 
     /// Mock a response to a pending canister HTTP outcall: the same response for
     /// every node of the subnet, or one response per node if
-    /// `MockCanisterHttpResponse::additional_responses` is non-empty. For a
-    /// *flexible* outcall, whose committee nodes are answered individually, see
-    /// `PocketIc::mock_flexible_canister_http_response`.
+    /// `MockCanisterHttpResponse::additional_responses` is non-empty.
     #[instrument(ret, skip(self), fields(instance_id=self.instance_id))]
     pub async fn mock_canister_http_response(
         &self,
@@ -1915,33 +1610,6 @@ impl PocketIc {
         let raw_mock_canister_http_response: RawMockCanisterHttpResponse =
             mock_canister_http_response.into();
         self.post(endpoint, raw_mock_canister_http_response).await
-    }
-
-    /// Mock the responses of the committee nodes of a pending *flexible* canister
-    /// HTTP outcall, i.e. one made through the `flexible_http_request` management
-    /// canister endpoint.
-    ///
-    /// This takes at most one response per node of the outcall's committee (whose
-    /// size is the `total_requests` of the outcall's `CanisterHttpReplication::Flexible`
-    /// replication). Providing fewer responses than the committee size
-    /// models the remaining committee nodes never responding: with at least
-    /// `min_responses` successful ones among them the outcall still succeeds, and
-    /// with fewer it stays pending until the time is advanced past its 60 second
-    /// timeout, at which point it fails with a timeout error.
-    ///
-    /// All responses to an outcall must be provided in a single call: once any
-    /// response to it has been mocked, the outcall no longer shows up in
-    /// `PocketIc::get_canister_http` and further responses to it cannot be mocked.
-    #[instrument(ret, skip(self), fields(instance_id=self.instance_id))]
-    pub async fn mock_flexible_canister_http_response(
-        &self,
-        mock_flexible_canister_http_response: MockFlexibleCanisterHttpResponse,
-    ) -> Result<(), ClientError> {
-        let endpoint = "update/mock_flexible_canister_http";
-        let raw_mock_flexible_canister_http_response: RawMockFlexibleCanisterHttpResponse =
-            mock_flexible_canister_http_response.into();
-        self.post(endpoint, raw_mock_flexible_canister_http_response)
-            .await
     }
 
     /// Download a canister snapshot to a given snapshot directory.

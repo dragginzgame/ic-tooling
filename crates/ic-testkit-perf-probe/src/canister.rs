@@ -3,7 +3,6 @@ use crate::protocol::{
     SEED_STATE, State, UPDATE_CALLER,
 };
 use ic_platform_runtime::cdk::{query, update};
-use ic_testkit::performance;
 use ic_wire::{Bytes, Text, native};
 use serde::{Serialize, de::DeserializeOwned};
 use std::cell::RefCell;
@@ -64,14 +63,11 @@ fn ping() -> Text<4> {
     encode_with = "encode::<u64, {BENCHMARK_ONCE.id}>"
 )]
 fn benchmark_once() -> u64 {
-    performance::measure("probe/benchmark_once:start").expect("static benchmark label");
-
     let mut acc = 0_u64;
     for n in 0..1_000 {
         acc = acc.wrapping_add(n * 3);
     }
 
-    performance::measure("probe/benchmark_once:end").expect("static benchmark label");
     acc
 }
 
@@ -81,7 +77,6 @@ fn benchmark_once() -> u64 {
     encode_with = "encode_unit::<{BENCHMARK_TRAP.id}>"
 )]
 fn benchmark_start_then_trap() {
-    performance::measure("probe/benchmark_start_then_trap:start").expect("static benchmark label");
     ic_platform_runtime::ic0::trap(b"intentional perf probe trap");
 }
 

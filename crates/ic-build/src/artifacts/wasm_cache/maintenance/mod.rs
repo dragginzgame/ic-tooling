@@ -82,11 +82,20 @@ pub(super) fn maintain_shared_incremental_target_locked(
     lock_wait: Duration,
 ) -> Result<SharedIncrementalTargetMaintenance, WasmBuildError> {
     let started = Instant::now();
-    let (logical_size_bytes_before, last_used_before) = observe_shared_target(
-        canonical,
-        "measure shared incremental Cargo target before maintenance",
-        "read shared incremental Cargo target use time before maintenance",
-    )?;
+    let logical_size_bytes_before = directory_logical_size(canonical).map_err(|source| {
+        WasmBuildError::io(
+            "measure shared incremental Cargo target before maintenance",
+            canonical.to_owned(),
+            source,
+        )
+    })?;
+    let last_used_before = cache_entry_last_used(canonical).map_err(|source| {
+        WasmBuildError::io(
+            "read shared incremental Cargo target use time before maintenance",
+            canonical.to_owned(),
+            source,
+        )
+    })?;
     let expired = policy.max_age().is_some_and(|max_age| {
         SystemTime::now()
             .duration_since(last_used_before)
@@ -120,20 +129,6 @@ pub(super) fn maintain_shared_incremental_target_locked(
         lock_wait,
         maintenance: started.elapsed(),
     })
-}
-
-// Both callers hold the target lock; keep size/use-time observation order and
-// their operation-specific diagnostic context at this shared read boundary.
-pub(super) fn observe_shared_target(
-    target: &Path,
-    size_operation: &'static str,
-    use_operation: &'static str,
-) -> Result<(u64, SystemTime), WasmBuildError> {
-    let size = directory_logical_size(target)
-        .map_err(|source| WasmBuildError::io(size_operation, target.to_owned(), source))?;
-    let last_used = cache_entry_last_used(target)
-        .map_err(|source| WasmBuildError::io(use_operation, target.to_owned(), source))?;
-    Ok((size, last_used))
 }
 
 fn clear_shared_incremental_target_contents(target_dir: &Path) -> Result<(), WasmBuildError> {

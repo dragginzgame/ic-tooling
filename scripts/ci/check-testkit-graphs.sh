@@ -17,7 +17,9 @@ policy=(--consumer "$consumer" --require ic-platform-types=1 --forbid ic-metrics
 runtime_policy=("${policy[@]}")
 policy+=(--forbid ic-platform-runtime-guard)
 native_policy=("${policy[@]}" --require ic-platform=1 --forbid ic-platform-pocket-ic
-    --forbid-feature ic-platform/pocket-ic --forbid ic-platform-runtime)
+    --forbid-feature ic-platform/pocket-ic --forbid ic-platform-runtime
+    --forbid slog --forbid tempfile --forbid schemars
+    --forbid strum --forbid strum_macros)
 
 perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --package ic-testkit-native --target "$host" --all-features \
@@ -44,17 +46,15 @@ perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
 perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --package ic-testkit-native --target wasm32-unknown-unknown --all-features \
     --require ic-testkit-native=1 --forbid-pattern '^(?!ic-testkit-native$)'
-testkit_wasm="$(perl scripts/ci/check-cargo-graph.pl "${policy[@]}" --package ic-testkit \
+perl scripts/ci/check-cargo-graph.pl "${policy[@]}" --package ic-testkit \
     --target wasm32-unknown-unknown --all-features --forbid-pattern '^ic-host-' \
     --forbid reqwest --forbid tokio --forbid tempfile --forbid flate2 --forbid ic-certification --forbid ic-transport-types \
     --forbid candid --forbid candid_derive --forbid ic-platform-pocket-ic --forbid ic-wire --forbid clap \
     --forbid wat --forbid wast --forbid wasm-encoder --forbid wasmparser --forbid ic-management-canister-types \
-    --forbid ic-platform --forbid ic-platform-macros --require ic-platform-runtime=1 --json --observations)"
-jq -e 'any(.observations[]; .name == "ic-platform-runtime" and
-    (.features | index("ic0") != null and index("executor") == null and index("runtime") == null))' \
-    <<< "$testkit_wasm" > /dev/null
+    --forbid ic-platform --forbid ic-platform-macros --forbid ic-platform-runtime
 probe_wasm="$(perl scripts/ci/check-cargo-graph.pl "${runtime_policy[@]}" --package ic-testkit-perf-probe \
     --target wasm32-unknown-unknown --forbid-pattern '^ic-host-' \
+    --forbid ic-testkit \
     --forbid candid --forbid candid_derive --forbid ic-platform-pocket-ic --forbid clap \
     --forbid ic-platform --require ic-wire=1 --require ic-platform-runtime=1 --require ic-platform-runtime-guard=1 --json --observations)"
 jq -e 'any(.observations[]; .name == "ic-platform-runtime" and

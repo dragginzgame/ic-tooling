@@ -17,8 +17,8 @@ use ic_build::artifacts::{
     WasmBuildBatchContractError, WasmBuildBatchEntry, WasmBuildBatchMetrics,
     WasmBuildBatchProgressEvent, WasmBuildBatchReport, WasmBuildError, WasmBuildInputSnapshot,
     WasmBuildOutcome, WasmBuildPhase, WasmBuildProgressConfig, WasmBuildProgressEvent,
-    build_wasm_canisters_cached, inspect_shared_incremental_target, prepare_artifact_cache,
-    prune_wasm_build_cache, resolve_cargo_build_inputs,
+    build_wasm_canisters_cached, prepare_artifact_cache, prune_wasm_build_cache,
+    resolve_cargo_build_inputs,
 };
 use std::{
     fs,
@@ -767,18 +767,6 @@ fn shared_incremental_wasm_cache_keeps_mutable_cargo_state_outside_exact_entries
     );
     assert!(shared_target.join("wasm32-unknown-unknown").is_dir());
     assert!(marker.is_file());
-    let inspection = inspect_shared_incremental_target(&spec)
-        .expect("inspect shared Cargo target")
-        .expect("built shared Cargo target should exist");
-    assert_eq!(
-        inspection.target_dir(),
-        shared_target
-            .canonicalize()
-            .expect("canonicalize shared Cargo target")
-    );
-    assert!(inspection.logical_size_bytes() > 0);
-    let last_used = inspection.last_used();
-
     let cache_entry = first.record().exact_cache_path();
     assert!(cache_entry.is_dir());
     assert!(
@@ -798,15 +786,6 @@ fn shared_incremental_wasm_cache_keeps_mutable_cargo_state_outside_exact_entries
             .is_none(),
         "an immediate exact hit should not acquire the shared-target lock"
     );
-    assert_eq!(
-        inspect_shared_incremental_target(&spec)
-            .expect("reinspect shared Cargo target")
-            .expect("shared Cargo target must still exist")
-            .last_used(),
-        last_used,
-        "an exact hit must not touch caller-owned shared Cargo state"
-    );
-
     let changed = spec
         .clone()
         .with_environment(ic_build::testing::cargo::environment_with([(

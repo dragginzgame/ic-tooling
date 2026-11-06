@@ -15,8 +15,7 @@ The private test-canister package is `ic-testkit-perf-probe` under
 `crates/ic-testkit-perf-probe`. Cargo package selections use hyphens; Rust imports
 and Cargo's generated `ic_testkit_perf_probe.wasm` retain underscores.
 
-The private fixture reporter owns complete-sample floating-point statistics;
-Testkit owns the public benchmark's checked integer averages.
+The private fixture reporter owns complete-sample floating-point statistics.
 Focused reporter qualification runs the `statistics::tests` and
 `fixture_reuse_driver::report::tests` selections with
 `cargo test -p ic-testkit-dev --lib --locked --offline`.
@@ -179,14 +178,10 @@ selects `wire` explicitly, while the development package also selects it for its
 fixture callers. Reply length checks follow PocketIC allocation. Auth and Wire
 retain their own protocol, trust and replay qualification when adopting the helpers.
 
-Platform now supplies `debug_print`, completing the removal of Testkit's direct
-`ic0` dependency under [Platform #11 — Expose debug_print for Testkit benchmark marker emission](https://github.com/dragginzgame/ic-platform/issues/11).
-The direct-dependency policy permits no workspace package to declare Candid,
-CDK-family crates, `ic0`, PocketIC or the private Platform macro implementation directly.
-One upstream `ic0` 1.2.0 identity remains transitive through Platform.
-Counter 1, 65,536-byte stable-page conversion and marker formatting remain
-unchanged. The live probe test checks marker spans, the intentional rejection
-text and a successful query after the trap.
+Testkit's portable library selects Types for deterministic principals without
+Runtime or IC system calls. The private probe selects Runtime directly for its
+canister entrypoints. Its installed test checks bounded Wire requests, caller
+identity, state admission, intentional rejection and a successful query after a trap.
 
 `make dependency-pins-check` runs Shared Tooling's direct-dependency checker
 against `ci/cargo-dependency-boundaries.json`. It checks canonical package names
@@ -202,7 +197,7 @@ the graph gate separately enforces the selected native/Wasm profiles above.
 | Linux x86-64 | Native builds, PocketIC lifecycle, provisioning and operator workflows; CI uses Ubuntu 24.04 |
 | macOS 15 Apple Silicon | The same native contracts; CI uses `macos-15` |
 | macOS 15 Intel | The same native contracts; CI uses `macos-15-intel` |
-| `wasm32-unknown-unknown` | Portable benchmark/principal APIs; the private probe qualifies canister markers and Wire calls |
+| `wasm32-unknown-unknown` | Portable principal API; the private probe qualifies installed Wire calls |
 
 Use Bash 3.2 or newer, GNU Make, Git, Perl and the native Unix utilities named in
 [Shared Tooling's setup prerequisites](../local-setup.md#bootstrap-prerequisites).
@@ -269,7 +264,7 @@ or deployed consumer acceptance.
 
 The private driver now consumes registry Build 0.22.1 with the same Host 0.31
 child and output-limit identities. Its actual Cargo selections, renamed probe
-build and installed marker test qualify this caller without a compatibility
+build and installed Wire test qualify this caller without a compatibility
 layer or unpublished source override. Other consumers retain their acceptance
 under [Build #9 — Qualify consumers against the current exposed Host boundary](https://github.com/dragginzgame/ic-build/issues/9).
 
@@ -316,7 +311,6 @@ change. Use this workspace's `target/`.
 | Canister library | `cargo check -p ic-testkit --lib --target wasm32-unknown-unknown --locked` |
 | Development build/report adapter | `cargo check -p ic-testkit-dev --all-targets --locked`; `cargo test -p ic-testkit-dev --lib --locked` |
 | Operator and private CLI parsing | `cargo test -p ic-testkit --features cli --bin ic-testkit-server --locked`; `cargo test -p ic-testkit --features cli --test server_runner --locked`; `cargo test -p ic-testkit-dev --lib --locked arguments`; `cargo test -p ic-testkit-dev --lib --locked fixture_reuse_protocol` |
-| Benchmark parser and example | `cargo test -p ic-testkit --test benchmark --locked`; `cargo test -p ic-testkit --example benchmark_report --locked` |
 | Shared snapshot and real tooling callers | `make shared-tooling-check`; `make tools-check dependency-pins-check`; select the affected hook/release-adapter checks from the Makefile |
 | Formatting and API documentation | `make fmt-check`; `RUSTDOCFLAGS="-D warnings" cargo doc -p ic-testkit --no-deps --locked`; `cargo test -p ic-testkit --doc --locked` |
 
@@ -329,8 +323,8 @@ POCKET_IC_BIN="$server" cargo test -p ic-testkit-dev --test canister_benchmark -
 ```
 
 Select a relevant `pocket_ic_*` integration target for runtime contract changes.
-The live marker test consumes IC Build's retained artifact and validates actual
-Testkit emission/decoding; generic artifact-cache regression tests belong to
+The installed Wire test consumes IC Build's retained artifact and validates actual
+Wire request/reply admission and trap handling; generic artifact-cache regression tests belong to
 IC Build. The optional full fixture-reuse workload remains outside ordinary CI.
 Shared Tooling's exported fixtures remain reviewed snapshot payloads for focused
 changed-contract qualification. Routine CI uses the consumer checks below.

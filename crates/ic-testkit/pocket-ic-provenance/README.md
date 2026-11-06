@@ -66,3 +66,29 @@ transport and certificate identities, self-described envelope bytes, metric
 ranges and no-authentication behavior remain unchanged. The guard reverses
 this layer before the existing maintenance/transfer patches and original
 fingerprints; none of those protected hashes is refreshed.
+
+## Supported client surface
+
+The maintainer authorized removing unused client APIs. `surface-cut.patch`
+records removal of sender-info call variants, server-side signature verification,
+Motoko EOP upgrade convenience and flexible HTTP response mocking, together with
+their endpoint-only DTOs. It also removes the unused count/boolean subnet
+configuration conversion and orphaned server response/blob DTOs. Ordinary calls
+retain their routing, absent sender-info
+field, accepted receipts and no-replay behavior. Flexible-outcall response grammar
+remains decodable. The guard verifies and reverses this layer before the unchanged
+codec, maintenance and original-source checks; mutation coverage binds the new
+patch as well. Original donor/upstream hashes and licenses remain unchanged.
+
+The same pending surface patch narrows builder configuration to maintained
+consumers. One typed request replaces the component forwarding path. Persistent
+directories remain caller-owned; temporary state handles/read-only copying,
+unused subnet/configuration families and dead server-validation copies are
+removed. The server retains validation, feature provisioning and defaults for
+unselected options. Topology response enums remain complete. Selected creation
+requests and installed persistent-state reuse have their own focused checks.
+
+The pending patch also removes unused JSON-schema derivations and production
+enum iteration. The rejection-code catalog retains test-only iteration, so its
+exhaustive protocol-value checks do not require a production macro/trait surface.
+Serde derives, field attributes, external identities and codec bodies are unchanged.

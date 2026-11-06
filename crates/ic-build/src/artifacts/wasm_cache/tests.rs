@@ -16,7 +16,7 @@ use super::{
     WasmBuildBatchInputResolver, WasmBuildError, WasmBuildOutcome, WasmBuildPhase,
     WasmBuildProgressConfig, WasmBuildProgressEvent, WasmBuildSpec, artifact_stamp_path,
     build_wasm_canisters_cached, ensure_cache_directory_tag, finish_fingerprint_build,
-    inspect_shared_incremental_target, integrated_shared_maintenance_result, lock_wasm_build_cache,
+    integrated_shared_maintenance_result, lock_wasm_build_cache,
     lock_wasm_build_cache_with_progress, maintain_shared_incremental_target,
     maintain_shared_incremental_target_at_most_every, materialize_artifacts,
     perform_configured_shared_incremental_target_maintenance, prune_wasm_build_cache,
@@ -1706,9 +1706,36 @@ fn build_spec_requires_at_least_one_package() {
     ));
 }
 
+#[cfg(unix)]
 #[test]
-fn shared_target_inspection_is_explicit_and_does_not_create_a_missing_target() {
-    let root = unique_temp_directory("shared-target-inspection");
+fn shared_target_exact_hit_preserves_size_and_last_build_use() {
+    let (root, spec) = fake_wasm_build_spec("shared-target-exact-hit");
+    let target = root.join("incremental");
+    let spec = spec.with_shared_incremental_target(&target);
+    let cold = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
+    write_last_used(&target, UNIX_EPOCH + Duration::from_secs(1)).unwrap();
+    let observe = || {
+        (
+            ic_host_fs::read::directory_logical_size(&target).unwrap(),
+            crate::artifacts::cache_fs::cache_entry_last_used(&target).unwrap(),
+        )
+    };
+    let before = observe();
+    let warm = build_wasm_canisters_cached(&spec, |_| panic!("an exact hit must not spawn Cargo"))
+        .unwrap();
+    assert!(warm.is_reused());
+    assert_eq!(
+        observe(),
+        before,
+        "an exact hit must not touch shared Cargo state or its last-use marker"
+    );
+    drop((cold, warm));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn shared_target_maintenance_refuses_isolated_mode_and_leaves_missing_targets_uncreated() {
+    let root = unique_temp_directory("shared-target-missing");
     let target = root.join("missing-shared-target");
     let isolated = WasmBuildSpec::new(
         &root,
@@ -1719,17 +1746,14 @@ fn shared_target_inspection_is_explicit_and_does_not_create_a_missing_target() {
     )
     .with_isolated_builds();
     assert!(matches!(
-        inspect_shared_incremental_target(&isolated),
+        maintain_shared_incremental_target_at_most_every(
+            &isolated,
+            CacheRetentionLimits::new(),
+            Duration::from_secs(60),
+        ),
         Err(WasmBuildError::InvalidSpec { .. })
     ));
-
     let shared = isolated.with_shared_incremental_target(&target);
-    assert!(
-        inspect_shared_incremental_target(&shared)
-            .expect("inspect missing shared target")
-            .is_none()
-    );
-    assert!(!target.exists());
     let scheduled = maintain_shared_incremental_target_at_most_every(
         &shared,
         CacheRetentionLimits::new(),
@@ -1745,7 +1769,7 @@ fn shared_target_inspection_is_explicit_and_does_not_create_a_missing_target() {
     assert_eq!(scheduled.lock_wait(), None);
     assert_eq!(scheduled.schedule_check(), None);
     assert!(!target.exists());
-    fs::remove_dir_all(root).expect("remove shared-target inspection fixture");
+    fs::remove_dir_all(root).expect("remove missing shared-target fixture");
 }
 
 #[test]
@@ -1920,46 +1944,6 @@ fn zero_progress_heartbeat_is_rejected_for_a_valid_build() {
     assert!(outcome.record().artifacts()[0].is_file());
     drop(outcome);
     fs::remove_dir_all(root).expect("remove heartbeat fixture");
-}
-
-#[test]
-fn maintenance_configuration_is_readable_and_strict_by_default() {
-    let shared_policy = CacheRetentionLimits::new().with_max_size_bytes(1024 * 1024);
-    let shared_interval = Duration::from_hours(1);
-    let shared_config =
-        SharedIncrementalTargetMaintenanceConfig::new(shared_policy, shared_interval);
-    let exact_policy = CacheRetentionLimits::new().with_max_size_bytes(2 * 1024 * 1024);
-    let exact_interval = Duration::from_mins(30);
-    let spec = WasmBuildSpec::new(
-        Path::new("."),
-        Path::new("target"),
-        &["fixture"],
-        crate::testing::cargo::environment(),
-        CONFIGURATION_LIMITS,
-    )
-    .with_shared_incremental_target("target/shared")
-    .with_shared_incremental_target_maintenance(shared_config)
-    .with_prune_policy_at_most_every(exact_policy, exact_interval);
-
-    assert_eq!(shared_config.policy(), shared_policy);
-    assert_eq!(shared_config.minimum_interval(), shared_interval);
-    assert_eq!(
-        shared_config.failure_mode(),
-        SharedIncrementalTargetMaintenanceFailureMode::Strict
-    );
-    assert_eq!(
-        spec.shared_incremental_target_maintenance(),
-        Some(shared_config)
-    );
-    assert_eq!(spec.prune_policy(), Some(exact_policy));
-    assert_eq!(spec.prune_interval(), Some(exact_interval));
-    for always in [
-        spec.clone().with_prune_policy(exact_policy),
-        spec.with_prune_policy_at_most_every(exact_policy, Duration::ZERO),
-    ] {
-        assert_eq!(always.prune_policy(), Some(exact_policy));
-        assert_eq!(always.prune_interval(), None);
-    }
 }
 
 #[cfg(unix)]

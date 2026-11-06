@@ -9,22 +9,19 @@ Small canisters used by `ic-testkit` to test its own PocketIC harness behavior.
 The fixture package lives under `crates/ic-testkit-perf-probe` in the root
 workspace. It is a test canister, not an application example.
 
-The probe selects the root-catalogued Platform facade's `cdk` feature, which
-forwards to the canonical Runtime owner for entrypoints, execution and IC0.
+The probe selects Runtime's `cdk` feature for entrypoints, execution and IC0.
 Probe methods use bounded IC Wire controls shared with native callers; rebuild
 the probe and callers together when changing that private protocol. Its Wasm
 normal/build graph contains neither Candid nor full `ic-cdk`. The published
-Testkit Wasm library selects only the raw system boundary; the probe's executor
-and runtime features belong to this test canister.
+Testkit library is not a dependency of this canister.
 Entry points omit the unsupported no-op `hidden` option while
 retaining their guards, explicit codecs and existing exported method names.
 
 ## Current Fixtures
 
-- `ic-testkit-perf-probe`: emits compact `ICTK|...` benchmark markers via
-  `ic_testkit::performance::measure`. It exposes `ping`,
-  `benchmark_once`, and `benchmark_start_then_trap` to exercise successful
-  spans and unmatched start markers after a trap.
+- `ic-testkit-perf-probe`: exercises bounded Wire calls, deterministic work,
+  caller identity, snapshot-contained state and a deliberate trap. The private
+  fixture-reuse driver also uses this workload to compare fresh and pooled runs.
 
 Install the Wasm target for the repository toolchain first:
 
@@ -41,11 +38,11 @@ make build-test-canisters
 This builds `ic_testkit_perf_probe.wasm` under
 `target/pic-wasm/wasm32-unknown-unknown/debug/`.
 
-Run only the live marker fixture test with:
+Run only the installed Wire fixture test with:
 
 ```sh
 cargo test -p ic-testkit-dev --locked --test canister_benchmark \
-  perf_probe_canister_emits_parseable_benchmark_markers -- --exact --nocapture
+  perf_probe_wire_calls_preserve_state_and_typed_failures -- --exact --nocapture
 ```
 
 The test uses IC Build to retain its own exact Wasm in a temporary target
@@ -56,7 +53,7 @@ Startup requires an explicit prepared `POCKET_IC_BIN` or caller-owned
 reviewed binary through `make install-server` and
 `target/debug/ic-testkit-server check` before direct live-test invocations.
 
-Run the live marker qualification through the repository's prepared-server
+Run the installed Wire qualification through the repository's prepared-server
 check with:
 
 ```sh
@@ -65,5 +62,5 @@ make test-canisters
 
 The main CI test command includes this integration target. Generic build/cache
 mechanics are qualified by IC Build; this consumer test verifies its retained
-Wasm together with Testkit's actual marker emission, parsing and trap handling.
+Wasm together with Testkit's Wire calls, state admission and trap handling.
 The standalone fixture build is a manual command, not a prerequisite for testing.

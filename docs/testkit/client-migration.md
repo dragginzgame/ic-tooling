@@ -31,6 +31,54 @@ Builders without a URL return `ClientError::MissingServerUrl`. Provision with
 `ic-testkit-server setup` or `pic::server_assets::setup`, admit installations
 with `check`, and start a selected binary through `PocketIcStartupConfig`.
 
+## Supported surface in the pending 0.88 hard cut
+
+Benchmark marker emission, parsing, aggregation/comparison and the report example
+are removed. Testkit's portable library retains deterministic principals without
+a Runtime dependency. Application measurement formats and reports belong to
+their consumers; the private fixture-reuse benchmark remains maintained.
+
+The client removes sender-info query/update/submit variants, server-side
+`verify_canister_signature`, `upgrade_eop_canister` and flexible HTTP response
+mocking, including its mock-response DTOs. Ordinary calls and
+`*_with_effective_principal` retain the same bytes and routing. There are no
+replacement aliases or automatic behavior changes. Consumers needing a removed
+operation must provide an explicit external-protocol adapter and qualify it.
+HTTP outcall discovery still decodes both replication modes; ordinary HTTP
+response mocking, stable memory, live gateways and snapshot transfer remain.
+
+The old count/boolean `SubnetConfigSet` is removed; configure subnets through
+the supported builder methods. Unused server-oriented
+`ApiResponse`, `HttpGatewayDetails` and `BinaryBlob` DTOs are also removed.
+The client continues decoding current server responses through its typed
+request/receipt and error owners.
+
+### Instance configuration
+
+Testkit's PocketIC DTOs no longer implement `schemars::JsonSchema` or
+`strum::IntoEnumIterator` in production. Schema/report projections belong to
+consumers. Serde codecs and external management/Principal identities remain
+unchanged; exhaustive rejection-code iteration is retained in Testkit's tests.
+
+`PocketIcBuilder` creates NNS, II, system and application subnets, selects initial
+time or automatic progress, gateways and caller-owned persistent state paths.
+`IcpFeatures` retains registry, cycles minting, ICP token, cycles token and II
+provisioning. Canic's existing feature selections remain supported. The server
+owns subnet validation, feature provisioning and defaults for other settings.
+
+Custom creation via `new_with_config` and public instance/subnet configuration
+DTOs is removed. Subnet state import, benchmarking presets, special-subnet
+conveniences, Bitcoin/Dogecoin node addresses, ICP flag/log overrides, mainnet
+NNS IDs and disabled ingress validation are removed. Use `with_initial_time`
+instead of the retired deprecated timestamp setter. Topology responses still
+decode all server subnet kinds, instruction configurations and cost schedules.
+
+Use `with_state_dir(path)` for a caller-owned persistent directory. Temporary
+`PocketIcState` handles, `with_state`, `with_read_only_state`, `copy_dir` and
+`drop_and_take_state` are removed. Retain the path yourself and await `drop()` or
+the managed instance's `close()`; deletion never removes that caller-owned
+directory. These changes neither rewrite nor remove existing instance state.
+
 ## IC packet codecs
 
 Platform 0.23 owns read-state envelope encoding and certificate/subnet-metrics decoding.

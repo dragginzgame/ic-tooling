@@ -26,8 +26,8 @@ failure-evidence contracts; consumer adoption is separate from this implementati
 ## Direct Types, Runtime and external IC owners
 
 Testkit selects published `ic-platform-types` for its existing external Principal
-identity and `ic-platform-runtime` for Wasm IC0. The raw Wasm library excludes the
-facade, executor, macros and Candid. The private performance probe selects
+identity. The portable library excludes Runtime, the facade, executor, macros
+and Candid. The private performance probe selects
 Runtime's CDK entrypoints and one guarded executor directly. Native simulator
 operations belong to the maintained client in `ic_testkit::pocket_ic`, under the
 same package version as Testkit's `pic` lifecycle helpers. Candid and management

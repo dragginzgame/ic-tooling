@@ -12,14 +12,10 @@ use ic_host_process::{
     tool::{CompletedExecution, OutputLimit, OutputLimits, capture_command},
 };
 use ic_platform::principal::ExternalPrincipal as Principal;
-use ic_testkit::pocket_ic::ClientError;
-use ic_testkit::{
-    benchmark::{
-        BenchmarkEventSource, BenchmarkParserConfig, pair_benchmark_spans,
-        parse_benchmark_events_from_source,
-    },
-    pic::{InstallSpec, StandaloneCanisterFixture, WireCallError, query_wire, update_wire},
+use ic_testkit::pic::{
+    InstallSpec, StandaloneCanisterFixture, WireCallError, query_wire, update_wire,
 };
+use ic_testkit::pocket_ic::ClientError;
 use ic_testkit_dev::probe_wire_spec;
 use ic_testkit_perf_probe::protocol::{
     self, BENCHMARK_ONCE, BENCHMARK_TRAP, INSPECT_STATE, MUTATE_STATE, PING, QUERY_CALLER,
@@ -105,7 +101,7 @@ async fn install_probe() -> StandaloneCanisterFixture {
 }
 
 #[tokio::test]
-async fn perf_probe_canister_emits_parseable_benchmark_markers() {
+async fn perf_probe_wire_calls_preserve_state_and_typed_failures() {
     let fixture = install_probe().await;
     let result = update_wire::<_, u64>(
         fixture.pocket_ic(),
@@ -118,47 +114,6 @@ async fn perf_probe_canister_emits_parseable_benchmark_markers() {
     .expect("benchmark_once update call");
 
     assert_eq!(result, 1_498_500);
-
-    let logs = fixture
-        .pocket_ic()
-        .fetch_canister_logs(fixture.canister_id(), Principal::anonymous())
-        .await
-        .expect("fetch perf probe logs");
-    let log_text = logs
-        .iter()
-        .map(|record| String::from_utf8_lossy(&record.content))
-        .collect::<Vec<_>>()
-        .join("\n");
-    let parsed = parse_benchmark_events_from_source(
-        &log_text,
-        &BenchmarkParserConfig::default(),
-        BenchmarkEventSource::FetchedLog,
-    );
-    let spans = pair_benchmark_spans(&parsed.events);
-
-    assert!(
-        parsed.malformed_markers.is_empty(),
-        "unexpected malformed markers: {:?}",
-        parsed.malformed_markers
-    );
-    assert!(
-        spans.invalid_spans.is_empty(),
-        "unexpected invalid spans: {:?}",
-        spans.invalid_spans
-    );
-    assert!(
-        spans.unpaired_markers.is_empty(),
-        "unexpected unpaired markers: {:?}",
-        spans.unpaired_markers
-    );
-    assert!(
-        spans
-            .spans
-            .iter()
-            .any(|span| span.span_label == "probe/benchmark_once" && span.delta.instructions > 0),
-        "expected a positive instruction delta in spans: {:?}",
-        spans.spans
-    );
 
     assert_probe_contract(&fixture).await;
     assert_probe_trap(&fixture).await;

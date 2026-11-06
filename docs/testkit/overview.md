@@ -102,7 +102,7 @@ See [server ownership](POCKET-IC.md#server-selection-and-provisioning).
 - Explicit server startup/custody, installation, snapshots and bounded readiness.
 - Optional typed Wire calls and raw/held reply fixtures.
 - Recipe-owned baseline reuse with bounded concurrent capacity.
-- Controller-aware diagnostics and benchmark marker analysis/emission.
+- Controller-aware diagnostics.
 - Deterministic fixture principals.
 
 ### A typical complex-suite workflow
@@ -274,19 +274,11 @@ Depend on `ic-build` directly for Cargo/Wasm recipes, exact inputs, retained cac
 and artifact transactions. Testkit owns simulator integration. The private probe
 and benchmark drivers demonstrate this dependency direction without a re-export.
 
-## Benchmark markers and reports
+## Fixture reuse measurement
 
-Canister-side `performance::measure` emits bounded markers. Native `benchmark`
-parses/pairs markers, aggregates exact integer counters, compares supplied runs
-and renders reports. Scope is `BenchmarkScope::{Suite, All}`; averages use checked
-scaled floor division. Missing rows differ from measured zero, and duplicate rows,
-zero runs and overflow retain typed errors.
-
-Consumers own run identities, thresholds, normalization, history, metadata and
-report destinations. The [benchmark report example](../../crates/ic-testkit/examples/benchmark_report/main.rs)
-renders supplied measurements; it does not discover history or choose policy.
 The [fixture reuse workload](fixture-reuse-benchmark.md) compares fresh and pooled
-paths with explicit close and separate server teardown measurements.
+paths with explicit close and separate server teardown measurements. Collection
+and reporting belong to the private development driver, not the public library.
 
 ## Deterministic principals
 
@@ -297,7 +289,7 @@ It does not create identities or credentials.
 
 Host owns byte/stream, filesystem and process primitives. Build owns Cargo recipes,
 input evidence, artifact caches and package qualification. Text owns generic
-formatting/parsing. Testkit owns the maintained client and simulator/benchmark
+formatting/parsing. Testkit owns the maintained client and simulator
 helpers. Native owns dependency-free allocation measurement. IC Storage owns
 memory-IO metering; Canic owns its operational Metrics integration.
 

@@ -1,39 +1,35 @@
 // Copyright DFINITY Foundation. Licensed under Apache-2.0.
 //! The PocketIC server and the PocketIc library interface with HTTP/JSON.
-//! The types in this module are used to serialize and deserialize data
-//! from and to JSON, and are used by both crates.
+//! This module retains the protocol DTOs used by the maintained client.
+//! The server owns configuration validation and system-canister provisioning.
 
 use crate::pocket_ic::RejectResponse;
 use candid::Principal;
 use hex;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::net::SocketAddr;
 use std::path::PathBuf;
-use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
 
 pub type InstanceId = usize;
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct AutoProgressConfig {
     pub artificial_delay_ms: Option<u64>,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum HttpGatewayBackend {
     Replica(String),
     PocketIcInstance(InstanceId),
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct HttpsConfig {
     pub cert_path: String,
     pub key_path: String,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct InstanceHttpGatewayConfig {
     pub ip_addr: Option<String>,
     pub port: Option<u16>,
@@ -42,7 +38,7 @@ pub struct InstanceHttpGatewayConfig {
     pub domain_custom_provider_local_file: Option<String>,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct HttpGatewayConfig {
     pub ip_addr: Option<String>,
     pub port: Option<u16>,
@@ -52,28 +48,19 @@ pub struct HttpGatewayConfig {
     pub domain_custom_provider_local_file: Option<String>,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct HttpGatewayDetails {
-    pub instance_id: InstanceId,
-    pub port: u16,
-    pub forward_to: HttpGatewayBackend,
-    pub domains: Option<Vec<String>>,
-    pub https_config: Option<HttpsConfig>,
-}
-
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct HttpGatewayInfo {
     pub instance_id: InstanceId,
     pub port: u16,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CreateHttpGatewayResponse {
     Created(HttpGatewayInfo),
     Error { message: String },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CreateInstanceResponse {
     Created {
         instance_id: InstanceId,
@@ -85,7 +72,7 @@ pub enum CreateInstanceResponse {
     },
 }
 
-#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct RawTime {
     pub nanos_since_epoch: u64,
 }
@@ -95,7 +82,7 @@ pub struct RawTime {
 /// If a canister ID is provided, the call will be sent to the management
 /// canister of the subnet where the canister is on.
 /// If None, the call will be sent to any management canister.
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 pub enum RawEffectivePrincipal {
     None,
     SubnetId(
@@ -126,7 +113,7 @@ impl std::fmt::Display for RawEffectivePrincipal {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawMessageId {
     pub effective_principal: RawEffectivePrincipal,
     #[serde(deserialize_with = "base64::deserialize")]
@@ -134,13 +121,13 @@ pub struct RawMessageId {
     pub message_id: Vec<u8>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawIngressStatusArgs {
     pub raw_message_id: RawMessageId,
     pub raw_caller: Option<RawPrincipalId>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawSenderInfo {
     #[serde(deserialize_with = "base64::deserialize")]
     #[serde(serialize_with = "base64::serialize")]
@@ -150,7 +137,7 @@ pub struct RawSenderInfo {
     pub signer: Vec<u8>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawCanisterCall {
     #[serde(deserialize_with = "base64::deserialize")]
     #[serde(serialize_with = "base64::serialize")]
@@ -167,7 +154,7 @@ pub struct RawCanisterCall {
     pub sender_info: Option<RawSenderInfo>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum RawCanisterResult {
     Ok(
         #[serde(deserialize_with = "base64::deserialize")]
@@ -195,7 +182,7 @@ impl From<RawCanisterResult> for Result<Vec<u8>, RejectResponse> {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawSetStableMemory {
     #[serde(deserialize_with = "base64::deserialize")]
     #[serde(serialize_with = "base64::serialize")]
@@ -203,34 +190,25 @@ pub struct RawSetStableMemory {
     pub blob_id: BlobId,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawStableMemory {
     #[serde(deserialize_with = "base64::deserialize")]
     #[serde(serialize_with = "base64::serialize")]
     pub blob: Vec<u8>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ApiError {
     pub(crate) message: String,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct StartedOrBusyResponse {
     pub state_label: String,
     pub op_id: String,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
-#[serde(untagged)]
-pub enum ApiResponse<T> {
-    Success(T),
-    Busy { state_label: String, op_id: String },
-    Started { state_label: String, op_id: String },
-    Error { message: String },
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawAddCycles {
     #[serde(deserialize_with = "base64::deserialize")]
     #[serde(serialize_with = "base64::serialize")]
@@ -238,14 +216,12 @@ pub struct RawAddCycles {
     pub amount: u128,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawCycles {
     pub cycles: u128,
 }
 
-#[derive(
-    Clone, Serialize, Hash, Eq, PartialEq, Ord, PartialOrd, Deserialize, Debug, JsonSchema,
-)]
+#[derive(Clone, Serialize, Hash, Eq, PartialEq, Ord, PartialOrd, Deserialize, Debug)]
 pub struct RawPrincipalId {
     // raw bytes of the principal
     #[serde(deserialize_with = "base64::deserialize")]
@@ -267,7 +243,7 @@ impl From<RawPrincipalId> for Principal {
     }
 }
 
-#[derive(Clone, Serialize, Eq, PartialEq, Ord, PartialOrd, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Eq, PartialEq, Ord, PartialOrd, Deserialize, Debug)]
 pub struct RawCanisterId {
     // raw bytes of the principal
     #[serde(deserialize_with = "base64::deserialize")]
@@ -289,7 +265,7 @@ impl From<RawCanisterId> for Principal {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 pub struct RawSubnetId {
     #[serde(deserialize_with = "base64::deserialize")]
     #[serde(serialize_with = "base64::serialize")]
@@ -312,9 +288,7 @@ impl From<RawSubnetId> for Principal {
     }
 }
 
-#[derive(
-    Clone, Serialize, Deserialize, Debug, JsonSchema, PartialEq, Eq, PartialOrd, Ord, Hash,
-)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawNodeId {
     #[serde(deserialize_with = "base64::deserialize")]
     #[serde(serialize_with = "base64::serialize")]
@@ -335,35 +309,19 @@ impl From<Principal> for RawNodeId {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
 pub struct RawTickConfigs {
     pub blockmakers: Option<Vec<RawSubnetBlockmakers>>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct RawSubnetBlockmakers {
     pub subnet: RawSubnetId,
     pub blockmaker: RawNodeId,
     pub failed_blockmakers: Vec<RawNodeId>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-pub struct RawVerifyCanisterSigArg {
-    #[serde(deserialize_with = "base64::deserialize")]
-    #[serde(serialize_with = "base64::serialize")]
-    pub msg: Vec<u8>,
-    #[serde(deserialize_with = "base64::deserialize")]
-    #[serde(serialize_with = "base64::serialize")]
-    pub sig: Vec<u8>,
-    #[serde(deserialize_with = "base64::deserialize")]
-    #[serde(serialize_with = "base64::serialize")]
-    pub pubkey: Vec<u8>,
-    #[serde(deserialize_with = "base64::deserialize")]
-    #[serde(serialize_with = "base64::serialize")]
-    pub root_pubkey: Vec<u8>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct BlobId(
     #[serde(deserialize_with = "base64::deserialize")]
     #[serde(serialize_with = "base64::serialize")]
@@ -376,13 +334,7 @@ impl std::fmt::Display for BlobId {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct BinaryBlob {
-    pub data: Vec<u8>,
-    pub compression: BlobCompression,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BlobCompression {
     Gzip,
     NoCompression,
@@ -410,20 +362,7 @@ pub mod base64 {
 
 // ================================================================================================================= //
 
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    Eq,
-    Hash,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    EnumIter,
-)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum SubnetKind {
     Application,
     Bitcoin,
@@ -437,166 +376,7 @@ pub enum SubnetKind {
     VerifiedApplication,
 }
 
-impl SubnetKind {
-    pub fn is_named(self) -> bool {
-        NamedSubnet::try_from(self).is_ok()
-    }
-}
-
-/// Named subnets have a fixed canister ID range on the IC mainnet and at most one
-/// instance per PocketIC instance.
-#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema, EnumIter)]
-pub enum NamedSubnet {
-    NNS,
-    SNS,
-    II,
-    Fiduciary,
-    Bitcoin,
-    TestThresholdKeys,
-}
-
-impl From<NamedSubnet> for SubnetKind {
-    fn from(named: NamedSubnet) -> Self {
-        match named {
-            NamedSubnet::NNS => SubnetKind::NNS,
-            NamedSubnet::SNS => SubnetKind::SNS,
-            NamedSubnet::II => SubnetKind::II,
-            NamedSubnet::Fiduciary => SubnetKind::Fiduciary,
-            NamedSubnet::Bitcoin => SubnetKind::Bitcoin,
-            NamedSubnet::TestThresholdKeys => SubnetKind::TestThresholdKeys,
-        }
-    }
-}
-
-/// The exhaustive match over `SubnetKind` enforces structural consistency: adding a new
-/// `SubnetKind` variant is a compile error until it is explicitly placed in either the named
-/// or unnamed arm here and in `From<NamedSubnet> for SubnetKind`.
-impl TryFrom<SubnetKind> for NamedSubnet {
-    type Error = ();
-    fn try_from(kind: SubnetKind) -> Result<Self, Self::Error> {
-        match kind {
-            SubnetKind::NNS => Ok(NamedSubnet::NNS),
-            SubnetKind::SNS => Ok(NamedSubnet::SNS),
-            SubnetKind::II => Ok(NamedSubnet::II),
-            SubnetKind::Fiduciary => Ok(NamedSubnet::Fiduciary),
-            SubnetKind::Bitcoin => Ok(NamedSubnet::Bitcoin),
-            SubnetKind::TestThresholdKeys => Ok(NamedSubnet::TestThresholdKeys),
-            SubnetKind::Application
-            | SubnetKind::CloudEngine
-            | SubnetKind::System
-            | SubnetKind::VerifiedApplication => Err(()),
-        }
-    }
-}
-
-/// This represents which named subnets the user wants to create, and how
-/// many of the general app/system subnets, which are indistinguishable.
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default, JsonSchema)]
-pub struct SubnetConfigSet {
-    pub nns: bool,
-    pub sns: bool,
-    pub ii: bool,
-    pub fiduciary: bool,
-    pub bitcoin: bool,
-    pub test_threshold_keys: bool,
-    pub system: usize,
-    pub application: usize,
-    pub cloud_engine: usize,
-    pub verified_application: usize,
-}
-
-impl SubnetConfigSet {
-    pub fn validate(&self) -> Result<(), String> {
-        if self.system > 0
-            || self.application > 0
-            || self.cloud_engine > 0
-            || self.verified_application > 0
-            || self.nns
-            || self.sns
-            || self.ii
-            || self.fiduciary
-            || self.bitcoin
-            || self.test_threshold_keys
-        {
-            return Ok(());
-        }
-        Err("SubnetConfigSet must contain at least one subnet".to_owned())
-    }
-}
-
-impl From<SubnetConfigSet> for ExtendedSubnetConfigSet {
-    fn from(
-        SubnetConfigSet {
-            nns,
-            sns,
-            ii,
-            fiduciary: fid,
-            bitcoin,
-            test_threshold_keys,
-            system,
-            application,
-            cloud_engine,
-            verified_application,
-        }: SubnetConfigSet,
-    ) -> Self {
-        ExtendedSubnetConfigSet {
-            nns: if nns {
-                Some(SubnetSpec::default())
-            } else {
-                None
-            },
-            sns: if sns {
-                Some(SubnetSpec::default())
-            } else {
-                None
-            },
-            ii: if ii {
-                Some(SubnetSpec::default())
-            } else {
-                None
-            },
-            fiduciary: if fid {
-                Some(SubnetSpec::default())
-            } else {
-                None
-            },
-            bitcoin: if bitcoin {
-                Some(SubnetSpec::default())
-            } else {
-                None
-            },
-            test_threshold_keys: if test_threshold_keys {
-                Some(SubnetSpec::default())
-            } else {
-                None
-            },
-            system: vec![SubnetSpec::default(); system],
-            application: vec![SubnetSpec::default(); application],
-            cloud_engine: vec![SubnetSpec::default(); cloud_engine],
-            verified_application: vec![SubnetSpec::default(); verified_application],
-        }
-    }
-}
-
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub enum IcpConfigFlag {
-    Disabled,
-    Enabled,
-}
-
-/// Specifies ICP config of this instance.
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default, JsonSchema)]
-pub struct IcpConfig {
-    /// Beta features (disabled on the ICP mainnet).
-    pub beta_features: Option<IcpConfigFlag>,
-    /// Limits on function name length in canister WASM (enabled on the ICP mainnet).
-    pub function_name_length_limits: Option<IcpConfigFlag>,
-    /// Rate-limiting of canister execution (enabled on the ICP mainnet).
-    /// Canister execution refers to instructions and memory writes here.
-    pub canister_execution_rate_limiting: Option<IcpConfigFlag>,
-}
-
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default, JsonSchema)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default)]
 pub enum IcpFeaturesConfig {
     /// Default configuration of an ICP feature resembling mainnet configuration as closely as possible.
     #[default]
@@ -606,12 +386,10 @@ pub enum IcpFeaturesConfig {
 /// Specifies ICP features enabled by deploying their corresponding system canisters
 /// when creating a PocketIC instance and keeping them up to date
 /// during the PocketIC instance lifetime.
-/// The subnets to which the corresponding system canisters are deployed must be empty,
-/// i.e., their corresponding field in `ExtendedSubnetConfigSet` must be `None`
-/// or `Some(config)` with `config.state_config = SubnetStateConfig::New`.
+/// The PocketIC server admits and provisions the required empty subnets.
 /// An ICP feature is enabled if its `IcpFeaturesConfig` is provided, i.e.,
 /// if the corresponding field is not `None`.
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default, JsonSchema)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default)]
 pub struct IcpFeatures {
     /// Deploys the NNS registry canister and keeps its content in sync with registry used internally by PocketIC.
     /// Subnets: NNS.
@@ -626,33 +404,12 @@ pub struct IcpFeatures {
     /// Deploys the cycles ledger and index canisters and initializes the cycles account of the anonymous principal with 2^127 cycles.
     /// Subnets: II.
     pub cycles_token: Option<IcpFeaturesConfig>,
-    /// Deploys the NNS governance and root canisters and sets up an initial NNS neuron with 1 ICP stake.
-    /// The initial NNS neuron is controlled by the anonymous principal.
-    /// Subnets: NNS.
-    pub nns_governance: Option<IcpFeaturesConfig>,
-    /// Deploys the SNS-W and aggregator canisters, sets up the SNS subnet list in the SNS-W canister according to PocketIC topology,
-    /// and uploads the SNS canister WASMs to the SNS-W canister.
-    /// Subnets: NNS, SNS.
-    pub sns: Option<IcpFeaturesConfig>,
     /// Deploys the Internet Identity canister.
     /// Subnets: II.
     pub ii: Option<IcpFeaturesConfig>,
-    /// Deploys the NNS frontend dapp. The HTTP gateway must be specified via `http_gateway_config` in `InstanceConfig`
-    /// and the ICP features `cycles_minting`, `icp_token`, `nns_governance`, `sns`, `ii` must all be enabled.
-    /// Subnets: NNS.
-    pub nns_ui: Option<IcpFeaturesConfig>,
-    /// Deploys the Bitcoin canister under the testnet canister ID `g4xu7-jiaaa-aaaan-aaaaq-cai` and configured for the regtest network.
-    /// Subnets: Bitcoin.
-    pub bitcoin: Option<IcpFeaturesConfig>,
-    /// Deploys the Dogecoin canister under the mainnet canister ID `gordg-fyaaa-aaaan-aaadq-cai` and configured for the regtest network.
-    /// Subnets: Bitcoin.
-    pub dogecoin: Option<IcpFeaturesConfig>,
-    /// Deploys the canister migration orchestrator canister.
-    /// Subnets: NNS.
-    pub canister_migration: Option<IcpFeaturesConfig>,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum InitialTime {
     /// Sets the initial timestamp of the new instance to the provided value which must be at least
     /// - 10 May 2021 10:00:01 AM CEST if the `cycles_minting` feature is enabled in `icp_features`;
@@ -666,31 +423,17 @@ pub enum InitialTime {
     AutoProgress(AutoProgressConfig),
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default, JsonSchema)]
-pub enum IncompleteStateFlag {
-    #[default]
-    Disabled,
-    Enabled,
-}
-
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default, JsonSchema)]
-pub struct InstanceConfig {
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default)]
+pub(crate) struct InstanceConfig {
     pub subnet_config_set: ExtendedSubnetConfigSet,
     pub http_gateway_config: Option<InstanceHttpGatewayConfig>,
     pub state_dir: Option<PathBuf>,
-    pub icp_config: Option<IcpConfig>,
-    pub log_level: Option<String>,
-    pub bitcoind_addr: Option<Vec<SocketAddr>>,
-    pub dogecoind_addr: Option<Vec<SocketAddr>>,
     pub icp_features: Option<IcpFeatures>,
-    pub incomplete_state: Option<IncompleteStateFlag>,
     pub initial_time: Option<InitialTime>,
-    pub mainnet_nns_subnet_id: Option<bool>,
-    pub disable_ingress_validation: Option<bool>,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default, JsonSchema)]
-pub struct ExtendedSubnetConfigSet {
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, Default)]
+pub(crate) struct ExtendedSubnetConfigSet {
     pub nns: Option<SubnetSpec>,
     pub sns: Option<SubnetSpec>,
     pub ii: Option<SubnetSpec>,
@@ -704,67 +447,14 @@ pub struct ExtendedSubnetConfigSet {
     pub verified_application: Vec<SubnetSpec>,
 }
 
-/// Specifies various configurations for a subnet.
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct SubnetSpec {
+/// The client creates new subnets with the server's production defaults.
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
+pub(crate) struct SubnetSpec {
     state_config: SubnetStateConfig,
     instruction_config: SubnetInstructionConfig,
     subnet_admins: Option<Vec<RawPrincipalId>>,
     #[serde(default)]
     cost_schedule: CanisterCyclesCostSchedule,
-}
-
-impl SubnetSpec {
-    pub fn with_state_dir(mut self, path: PathBuf) -> SubnetSpec {
-        self.state_config = SubnetStateConfig::FromPath(path);
-        self
-    }
-
-    pub fn with_benchmarking_instruction_config(mut self) -> SubnetSpec {
-        self.instruction_config = SubnetInstructionConfig::Benchmarking;
-        self
-    }
-
-    pub fn get_state_path(&self) -> Option<PathBuf> {
-        self.state_config.get_path()
-    }
-
-    pub fn get_instruction_config(&self) -> SubnetInstructionConfig {
-        self.instruction_config.clone()
-    }
-
-    pub fn is_supported(&self) -> bool {
-        match &self.state_config {
-            SubnetStateConfig::New => true,
-            SubnetStateConfig::FromPath(..) => true,
-            SubnetStateConfig::FromBlobStore(..) => false,
-        }
-    }
-
-    pub fn with_subnet_admins(mut self, subnet_admins: Vec<Principal>) -> SubnetSpec {
-        self.subnet_admins = Some(
-            subnet_admins
-                .into_iter()
-                .map(RawPrincipalId::from)
-                .collect(),
-        );
-        self
-    }
-
-    pub fn with_cost_schedule(mut self, cost_schedule: CanisterCyclesCostSchedule) -> SubnetSpec {
-        self.cost_schedule = cost_schedule;
-        self
-    }
-
-    pub fn get_subnet_admins(&self) -> Option<Vec<Principal>> {
-        self.subnet_admins
-            .clone()
-            .map(|subnet_admins| subnet_admins.into_iter().map(Principal::from).collect())
-    }
-
-    pub fn get_cost_schedule(&self) -> CanisterCyclesCostSchedule {
-        self.cost_schedule
-    }
 }
 
 impl Default for SubnetSpec {
@@ -779,9 +469,7 @@ impl Default for SubnetSpec {
 }
 
 /// Specifies instruction limits for canister execution on this subnet.
-#[derive(
-    Debug, Clone, Eq, Hash, PartialEq, Ord, PartialOrd, Serialize, Deserialize, JsonSchema,
-)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum SubnetInstructionConfig {
     /// Use default instruction limits as in production.
     Production,
@@ -789,202 +477,17 @@ pub enum SubnetInstructionConfig {
     Benchmarking,
 }
 
-/// Specifies whether the subnet should be created from scratch or loaded
-/// from a path.
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub enum SubnetStateConfig {
+/// Server representation for a fresh subnet.
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
+enum SubnetStateConfig {
     /// Create new subnet with empty state.
     New,
-    /// Load existing subnet state from the given path.
-    /// The path must be on a filesystem accessible to the server process.
-    FromPath(PathBuf),
-    /// Load existing subnet state from blobstore. Needs to be uploaded first!
-    /// Not implemented!
-    FromBlobStore(BlobId),
-}
-
-impl SubnetStateConfig {
-    pub fn get_path(&self) -> Option<PathBuf> {
-        match self {
-            SubnetStateConfig::FromPath(path) => Some(path.clone()),
-            SubnetStateConfig::FromBlobStore(_) => None,
-            SubnetStateConfig::New => None,
-        }
-    }
-}
-
-impl ExtendedSubnetConfigSet {
-    fn named_subnet_spec(&self, named: NamedSubnet) -> Option<SubnetSpec> {
-        match named {
-            NamedSubnet::NNS => self.nns.clone(),
-            NamedSubnet::SNS => self.sns.clone(),
-            NamedSubnet::II => self.ii.clone(),
-            NamedSubnet::Fiduciary => self.fiduciary.clone(),
-            NamedSubnet::Bitcoin => self.bitcoin.clone(),
-            NamedSubnet::TestThresholdKeys => self.test_threshold_keys.clone(),
-        }
-    }
-
-    // Return the configured named subnets in order.
-    pub fn get_named(&self) -> Vec<(SubnetKind, Option<PathBuf>, SubnetInstructionConfig)> {
-        NamedSubnet::iter()
-            .filter_map(|named| {
-                self.named_subnet_spec(named).map(|spec| {
-                    (
-                        SubnetKind::from(named),
-                        spec.get_state_path(),
-                        spec.get_instruction_config(),
-                    )
-                })
-            })
-            .collect()
-    }
-
-    pub fn validate(&self) -> Result<(), String> {
-        let all_but_application_and_cloud_engine = self
-            .nns
-            .iter()
-            .chain(&self.sns)
-            .chain(&self.ii)
-            .chain(&self.fiduciary)
-            .chain(&self.bitcoin)
-            .chain(&self.test_threshold_keys)
-            .chain(&self.system)
-            .chain(&self.verified_application);
-
-        let all = all_but_application_and_cloud_engine
-            .clone()
-            .chain(&self.application)
-            .chain(&self.cloud_engine);
-
-        // 1. Check for invalid admins using a clone of the iterator (to prevent its consumption).
-        if all_but_application_and_cloud_engine
-            .clone()
-            .any(|spec| spec.subnet_admins.is_some())
-        {
-            return Err(
-                "Subnet admins can only be specified for subnet of kind `Application` or `CloudEngine`".into(),
-            );
-        }
-
-        // 2. Check for invalid cost schedules using a clone of the iterator (to prevent its consumption).
-        if all_but_application_and_cloud_engine
-            .clone()
-            .any(|spec| spec.cost_schedule != Default::default())
-        {
-            return Err("Non-default cost schedule can only be specified for subnet of kind `Application` or `CloudEngine`".into());
-        }
-
-        // 3. Check for invalid combinations of subnet admins and cost schedule using a clone of the iterator (to prevent its consumption).
-        if all.clone().any(|spec| {
-            spec.subnet_admins.is_some() && spec.cost_schedule != CanisterCyclesCostSchedule::Free
-        }) {
-            return Err(
-                "Subnet admins can only be specified for subnet with cost schedule of kind `Free`"
-                    .into(),
-            );
-        }
-
-        // 4. Cloud engines must have a "free" cost schedule.
-        if self
-            .cloud_engine
-            .iter()
-            .any(|spec| spec.cost_schedule != CanisterCyclesCostSchedule::Free)
-        {
-            return Err(
-                "Every subnet of kind `CloudEngine` must have cost schedule of kind `Free`".into(),
-            );
-        }
-
-        // 5. Check for existence across everything (again cloning the iterator to prevent its consumption).
-        let has_any = all.clone().next().is_some();
-
-        if !has_any {
-            return Err("ExtendedSubnetConfigSet must contain at least one subnet".into());
-        }
-
-        Ok(())
-    }
-
-    pub fn try_with_icp_features(mut self, icp_features: &IcpFeatures) -> Result<Self, String> {
-        let check_empty_subnet = |subnet: &Option<SubnetSpec>, subnet_desc, icp_feature| {
-            if let Some(config) = subnet
-                && !matches!(config.state_config, SubnetStateConfig::New)
-            {
-                return Err(format!(
-                    "The {subnet_desc} subnet must be empty when specifying the `{icp_feature}` ICP feature."
-                ));
-            }
-            Ok(())
-        };
-        // using `let IcpFeatures { }` with explicit field names
-        // to force an update after adding a new field to `IcpFeatures`
-        let IcpFeatures {
-            registry,
-            cycles_minting,
-            icp_token,
-            cycles_token,
-            nns_governance,
-            sns,
-            ii,
-            nns_ui,
-            bitcoin,
-            dogecoin,
-            canister_migration,
-        } = icp_features;
-        // NNS canisters
-        for (flag, icp_feature_str) in [
-            (registry, "registry"),
-            (cycles_minting, "cycles_minting"),
-            (icp_token, "icp_token"),
-            (nns_governance, "nns_governance"),
-            (sns, "sns"),
-            (nns_ui, "nns_ui"),
-            (canister_migration, "canister_migration"),
-        ] {
-            if flag.is_some() {
-                check_empty_subnet(&self.nns, "NNS", icp_feature_str)?;
-                self.nns = Some(self.nns.unwrap_or_default());
-            }
-        }
-        // canisters on the II subnet
-        for (flag, icp_feature_str) in [(cycles_token, "cycles_token"), (ii, "ii")] {
-            if flag.is_some() {
-                check_empty_subnet(&self.ii, "II", icp_feature_str)?;
-                self.ii = Some(self.ii.unwrap_or_default());
-            }
-        }
-        // canisters on the SNS subnet
-        if sns.is_some() {
-            check_empty_subnet(&self.sns, "SNS", "sns")?;
-            self.sns = Some(self.sns.unwrap_or_default());
-        }
-        // canisters on the Bitcoin subnet
-        for (flag, icp_feature_str) in [(bitcoin, "bitcoin"), (dogecoin, "dogecoin")] {
-            if flag.is_some() {
-                check_empty_subnet(&self.bitcoin, "Bitcoin", icp_feature_str)?;
-                self.bitcoin = Some(self.bitcoin.unwrap_or_default());
-            }
-        }
-        Ok(self)
-    }
 }
 
 /// Specifies how to charge canisters for their use of computational resources (such as
 /// executing instructions, storing data, network, etc.).
 #[derive(
-    Debug,
-    Default,
-    Hash,
-    Clone,
-    Copy,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Serialize,
-    Deserialize,
-    JsonSchema,
+    Debug, Default, Hash, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize,
 )]
 pub enum CanisterCyclesCostSchedule {
     #[default]
@@ -993,7 +496,7 @@ pub enum CanisterCyclesCostSchedule {
 }
 
 /// Configuration details for a subnet, returned by PocketIc server
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct SubnetConfig {
     pub subnet_kind: SubnetKind,
     pub subnet_admins: Option<Vec<RawPrincipalId>>,
@@ -1005,7 +508,7 @@ pub struct SubnetConfig {
     pub canister_ranges: Vec<CanisterIdRange>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct CanisterIdRange {
     pub start: RawCanisterId,
     pub end: RawCanisterId,
@@ -1018,7 +521,7 @@ impl CanisterIdRange {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct Topology {
     pub subnet_configs: BTreeMap<SubnetId, SubnetConfig>,
     pub default_effective_canister_id: RawCanisterId,
@@ -1107,9 +610,7 @@ impl Topology {
     }
 }
 
-#[derive(
-    Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, JsonSchema,
-)]
+#[derive(Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum CanisterHttpMethod {
     GET,
     POST,
@@ -1119,18 +620,14 @@ pub enum CanisterHttpMethod {
     PATCH,
 }
 
-#[derive(
-    Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, JsonSchema,
-)]
+#[derive(Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CanisterHttpHeader {
     pub name: String,
     pub value: String,
 }
 
 /// How a canister HTTP outcall is replicated across the nodes of its subnet.
-#[derive(
-    Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, JsonSchema,
-)]
+#[derive(Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum CanisterHttpReplication {
     /// Every node of the subnet performs the outcall and a response is delivered
     /// once `n - f` of them agree on it. Too many differing responses make the
@@ -1149,7 +646,7 @@ pub enum CanisterHttpReplication {
     /// A committee of `total_requests` nodes performs the outcall and between
     /// `min_responses` and `max_responses` of their (potentially differing)
     /// responses are delivered to the calling canister. Mock such an outcall
-    /// with `PocketIc::mock_flexible_canister_http_response`.
+    /// by a caller with a flexible-outcall server adapter.
     Flexible {
         /// The number of nodes performing the outcall.
         total_requests: u32,
@@ -1161,9 +658,7 @@ pub enum CanisterHttpReplication {
 }
 
 /// The pricing model applied to a canister HTTP outcall.
-#[derive(
-    Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, JsonSchema,
-)]
+#[derive(Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum CanisterHttpPricingVersion {
     /// The whole cost of the outcall is charged up front, based on the largest
     /// response it could receive.
@@ -1174,7 +669,7 @@ pub enum CanisterHttpPricingVersion {
     PayAsYouGo,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawCanisterHttpRequest {
     pub subnet_id: RawSubnetId,
     pub request_id: u64,
@@ -1238,9 +733,7 @@ impl From<CanisterHttpRequest> for RawCanisterHttpRequest {
     }
 }
 
-#[derive(
-    Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, JsonSchema,
-)]
+#[derive(Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CanisterHttpReply {
     pub status: u16,
     pub headers: Vec<CanisterHttpHeader>,
@@ -1249,24 +742,20 @@ pub struct CanisterHttpReply {
     pub body: Vec<u8>,
 }
 
-#[derive(
-    Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, JsonSchema,
-)]
+#[derive(Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CanisterHttpReject {
     pub reject_code: u64,
     /// Bounded by the 1 KiB a node truncates its reject messages to.
     pub message: String,
 }
 
-#[derive(
-    Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, JsonSchema,
-)]
+#[derive(Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum CanisterHttpResponse {
     CanisterHttpReply(CanisterHttpReply),
     CanisterHttpReject(CanisterHttpReject),
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawMockCanisterHttpResponse {
     pub subnet_id: RawSubnetId,
     pub request_id: u64,
@@ -1277,7 +766,7 @@ pub struct RawMockCanisterHttpResponse {
 /// Mocked responses to a pending canister HTTP outcall made through the
 /// `http_request` management canister endpoint — whether fully replicated or
 /// non-replicated (see [`CanisterHttpReplication`]). A *flexible* outcall is
-/// answered with [`MockFlexibleCanisterHttpResponse`] instead.
+/// answered by a caller with a flexible-outcall server adapter instead.
 ///
 /// This answers for every node of the subnet, which is what an `http_request`
 /// outcall needs: a fully replicated one is performed by all of them, and a
@@ -1349,79 +838,7 @@ impl From<MockCanisterHttpResponse> for RawMockCanisterHttpResponse {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
-pub struct RawMockFlexibleCanisterHttpResponse {
-    pub subnet_id: RawSubnetId,
-    pub request_id: u64,
-    pub responses: Vec<CanisterHttpResponse>,
-}
-
-/// Mocked responses to a pending *flexible* canister HTTP outcall, i.e. one made
-/// through the `flexible_http_request` management canister endpoint.
-///
-/// A flexible outcall is performed by a committee of `total_requests` nodes whose
-/// differing responses are all legitimate, several of which are delivered, and which
-/// need not all arrive (see [`CanisterHttpReplication::Flexible`]). Leaving some of them
-/// silent is what models a slow or unresponsive committee.
-#[derive(Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub struct MockFlexibleCanisterHttpResponse {
-    pub subnet_id: Principal,
-    pub request_id: u64,
-    /// One response per committee node that responded. Each response is attributed
-    /// to a different committee node.
-    ///
-    /// There may be at most `total_requests` responses; providing fewer models a
-    /// committee whose remaining nodes never respond. What the outcall reports is
-    /// then decided in this order:
-    /// - once the outcall is older than its 60 second timeout it reports a
-    ///   `timeout`;
-    /// - at least `min_responses` replies deliver a result — unless they cannot be
-    ///   delivered, in which case one of the outcomes below applies instead;
-    /// - more than `total_requests - min_responses` rejects — i.e. so
-    ///   many that `min_responses` replies can no longer be reached — deliver a
-    ///   `too_many_rejects` error naming the rejecting nodes;
-    /// - if the smallest replies that would have to be delivered together do not
-    ///   fit into the 2 MiB a block has for HTTP outcall responses, a
-    ///   `responses_too_large` error (each response may still be within the 2 MB
-    ///   cap on a single one);
-    /// - if what the nodes left unspent of their per-replica cycles allowances no
-    ///   longer covers putting a response into a block, an `out_of_cycles`;
-    /// - anything else leaves the outcall pending, so that advancing the time past
-    ///   its timeout delivers a `timeout` error.
-    ///
-    /// All of these are replies to the calling canister, not rejections of its
-    /// call.
-    pub responses: Vec<CanisterHttpResponse>,
-}
-
-impl From<RawMockFlexibleCanisterHttpResponse> for MockFlexibleCanisterHttpResponse {
-    fn from(raw_mock_flexible_canister_http_response: RawMockFlexibleCanisterHttpResponse) -> Self {
-        Self {
-            subnet_id: candid::Principal::from_slice(
-                &raw_mock_flexible_canister_http_response.subnet_id.subnet_id,
-            ),
-            request_id: raw_mock_flexible_canister_http_response.request_id,
-            responses: raw_mock_flexible_canister_http_response.responses,
-        }
-    }
-}
-
-impl From<MockFlexibleCanisterHttpResponse> for RawMockFlexibleCanisterHttpResponse {
-    fn from(mock_flexible_canister_http_response: MockFlexibleCanisterHttpResponse) -> Self {
-        Self {
-            subnet_id: RawSubnetId {
-                subnet_id: mock_flexible_canister_http_response
-                    .subnet_id
-                    .as_slice()
-                    .to_vec(),
-            },
-            request_id: mock_flexible_canister_http_response.request_id,
-            responses: mock_flexible_canister_http_response.responses,
-        }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawCanisterSnapshotDownload {
     pub sender: RawPrincipalId,
     pub canister_id: RawCanisterId,
@@ -1431,7 +848,7 @@ pub struct RawCanisterSnapshotDownload {
     pub snapshot_dir: PathBuf,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawCanisterSnapshotUpload {
     pub sender: RawPrincipalId,
     pub canister_id: RawCanisterId,
@@ -1439,7 +856,7 @@ pub struct RawCanisterSnapshotUpload {
     pub snapshot_dir: PathBuf,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawCanisterSnapshotId {
     #[serde(deserialize_with = "base64::deserialize")]
     #[serde(serialize_with = "base64::serialize")]

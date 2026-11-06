@@ -6,6 +6,41 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.88.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Remove benchmark log markers, parsing, aggregation, comparison and the report
+  example. Consumers own measurement/report formats; Testkit no longer needs
+  Runtime on Wasm. The private fixture-reuse workload and installed Wire/trap
+  qualification remain supported.
+- Remove unused PocketIC sender-info call variants, server-side signature
+  verification, Motoko EOP upgrade convenience and flexible HTTP response
+  mocking. Ordinary and explicitly routed calls retain their protocol bytes,
+  typed failures and accepted-ingress custody. See the
+  [client migration](../../docs/testkit/client-migration.md).
+- Drop the unused count/boolean subnet configuration and orphaned server-side
+  response/blob DTOs. Configure instances through the supported builder methods;
+  creation DTOs and subnet specifications are now internal.
+- Narrow the PocketIC builder to the configurations used by maintained consumers.
+  Remove custom subnet/state cloning, compiler-limit presets, Bitcoin/Dogecoin
+  nodes, configuration overrides and unused system-canister features. Persistent
+  state directories, NNS/II/system/application subnets, selected ICP features,
+  initial time/progress and gateways remain supported. The builder carries one
+  typed creation request; the server retains validation and provisioning.
+- Remove temporary state handles and state-taking deletion. Callers retain their
+  persistent path and await explicit deletion; existing state directories are
+  preserved. Testkit drops its direct `slog` and `tempfile` dependencies.
+- Remove unused JSON-schema and runtime enum-iteration implementations from
+  Testkit's PocketIC DTOs. Serde wire bytes and external DTO identities remain
+  unchanged. Schema generation leaves the dependency graph; enum iteration
+  remains a dev-dependency for exhaustive protocol-catalog tests.
+
+### 🔧 Dependencies
+
+- Include the incoming compatible Platform 0.23.2 and Wire 0.17.3 lock selections
+  in release qualification, retaining the exact management DTO identity.
+
 ## [0.87.0] - 2026-11-05
 
 ### ⚠️ Breaking

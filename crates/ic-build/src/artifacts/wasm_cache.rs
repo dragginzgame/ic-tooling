@@ -42,7 +42,7 @@ pub(super) use input_batch::{
 use maintenance::integrated_shared_maintenance_result;
 use maintenance::{
     SharedIncrementalTargetMaintenanceSchedule, maintain_shared_incremental_target_locked,
-    observe_shared_target, perform_configured_shared_incremental_target_maintenance,
+    perform_configured_shared_incremental_target_maintenance,
     perform_due_shared_incremental_target_maintenance,
     schedule_shared_incremental_target_maintenance,
 };
@@ -152,9 +152,8 @@ pub struct SharedIncrementalTargetMaintenanceConfig {
 }
 
 /// Cargo-target ownership mode for one exact cached Wasm build.
-#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum WasmBuildCacheMode {
+enum WasmBuildCacheMode {
     /// Build each exact fingerprint in its own content-addressed Cargo target.
     Isolated,
     /// Build misses in caller-owned shared Cargo incremental state, then cache final Wasm files.
@@ -311,15 +310,6 @@ impl DiscoveredBuildInputs {
             validation_digest,
         })
     }
-}
-
-/// Lock-coordinated disk-usage observation for a caller-owned shared Cargo target.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SharedIncrementalTargetInspection {
-    target_dir: PathBuf,
-    logical_size_bytes: u64,
-    last_used: SystemTime,
-    lock_wait: Duration,
 }
 
 /// Result of explicit shared Cargo target maintenance.
@@ -946,33 +936,6 @@ impl WasmBuildSpec {
         &self.packages
     }
 
-    /// Cargo-target ownership mode used for cache misses.
-    #[must_use]
-    pub const fn cache_mode(&self) -> &WasmBuildCacheMode {
-        &self.cache_mode
-    }
-
-    /// Exact-entry retention policy attached to this specification, when configured.
-    #[must_use]
-    pub const fn prune_policy(&self) -> Option<CacheRetentionLimits> {
-        match self.pruning {
-            Some((policy, _)) => Some(policy),
-            None => None,
-        }
-    }
-
-    /// Positive minimum interval between exact-entry retention attempts.
-    ///
-    /// Both always-run builders, including an explicit zero interval, return
-    /// `None`. Use [`Self::prune_policy`] to distinguish disabled maintenance.
-    #[must_use]
-    pub const fn prune_interval(&self) -> Option<Duration> {
-        match self.pruning {
-            Some((_, interval)) if !interval.is_zero() => Some(interval),
-            _ => None,
-        }
-    }
-
     /// Shared incremental-target maintenance attached to this specification.
     #[must_use]
     pub const fn shared_incremental_target_maintenance(
@@ -1575,32 +1538,6 @@ fn observe_cargo_resolution(
     ))
 }
 
-impl SharedIncrementalTargetInspection {
-    /// Canonical shared Cargo target directory that was inspected.
-    #[must_use]
-    pub fn target_dir(&self) -> &Path {
-        &self.target_dir
-    }
-
-    /// Logical bytes currently occupied by the complete shared target.
-    #[must_use]
-    pub const fn logical_size_bytes(&self) -> u64 {
-        self.logical_size_bytes
-    }
-
-    /// Most recent build use recorded by IC Build, or the directory mtime for older targets.
-    #[must_use]
-    pub const fn last_used(&self) -> SystemTime {
-        self.last_used
-    }
-
-    /// Time spent waiting for another process using the shared target.
-    #[must_use]
-    pub const fn lock_wait(&self) -> Duration {
-        self.lock_wait
-    }
-}
-
 impl SharedIncrementalTargetMaintenanceConfig {
     /// Schedule one strict retention pass at most once per interval.
     #[must_use]
@@ -1620,24 +1557,6 @@ impl SharedIncrementalTargetMaintenanceConfig {
     ) -> Self {
         self.failure_mode = failure_mode;
         self
-    }
-
-    /// Configured whole-target retention policy.
-    #[must_use]
-    pub const fn policy(self) -> CacheRetentionLimits {
-        self.policy
-    }
-
-    /// Minimum interval between successful matching maintenance passes.
-    #[must_use]
-    pub const fn minimum_interval(self) -> Duration {
-        self.minimum_interval
-    }
-
-    /// Configured maintenance failure handling.
-    #[must_use]
-    pub const fn failure_mode(self) -> SharedIncrementalTargetMaintenanceFailureMode {
-        self.failure_mode
     }
 }
 
@@ -1859,35 +1778,6 @@ pub fn resolve_cargo_build_inputs_with_probe_policy(
 ) -> Result<ResolvedCargoBuildInputs, WasmBuildError> {
     validate_spec(spec)?;
     build_fingerprint_with_policy(spec, &mut ProgressReporter::silent(), &mut Some(policy))
-}
-
-/// Inspect one configured shared Cargo target under its build coordination lock.
-///
-/// Returns `None` without creating anything when the caller-owned target does
-/// not exist. This operation never removes Cargo state.
-///
-/// # Errors
-/// Returns target-boundary, coordination-lock, size-inspection or use-marker errors.
-pub fn inspect_shared_incremental_target(
-    spec: &WasmBuildSpec,
-) -> Result<Option<SharedIncrementalTargetInspection>, WasmBuildError> {
-    let target_dir = configured_shared_incremental_target(spec)?;
-    if !shared_incremental_target_exists(&target_dir, "inspect shared incremental Cargo target")? {
-        return Ok(None);
-    }
-
-    let (_lock, lock_wait, canonical) = lock_shared_incremental_target(&target_dir)?;
-    let (logical_size_bytes, last_used) = observe_shared_target(
-        &canonical,
-        "measure shared incremental Cargo target",
-        "read shared incremental Cargo target use time",
-    )?;
-    Ok(Some(SharedIncrementalTargetInspection {
-        target_dir: canonical,
-        logical_size_bytes,
-        last_used,
-        lock_wait,
-    }))
 }
 
 /// Apply explicit whole-target retention to caller-owned shared Cargo state.

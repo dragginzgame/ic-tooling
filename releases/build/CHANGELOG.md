@@ -6,6 +6,16 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.75.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Remove unused standalone shared-target inspection and configuration readers.
+  Cache ownership mode is now internal; select it through the existing shared
+  or isolated builders. Retention builders and their strict/best-effort behavior
+  remain supported. Existing maintenance outcomes retain sizes, use times and
+  coordination details; no compatibility inspection wrapper remains.
+
 ## [0.74.4] - 2026-11-05
 
 ### 🩹 Fixed

@@ -764,10 +764,8 @@ High-frequency suites can use `with_prune_policy_at_most_every` to retain the
 same limits while replacing repeated hit-path directory scans with a small
 namespace marker check. The original `with_prune_policy` continues to run on
 every successful acquisition. An explicit zero interval has the same behavior:
-it skips the due-marker read and still records the maintenance attempt. Both
-always-run forms return `None` from `WasmBuildSpec::prune_interval()`; inspect
-`prune_policy()` to distinguish disabled maintenance. Positive intervals retain
-their marker checks and nonfatal read-error evidence. Thresholds, marker bytes,
+it skips the due-marker read and still records the maintenance attempt.
+Positive intervals retain their marker checks and nonfatal read-error evidence. Thresholds, marker bytes,
 retained-entry protection and attempt-based scheduling are unchanged.
 
 `WasmBuildTimings::input_resolution` returns the structured Cargo/rustc
@@ -819,7 +817,6 @@ exact immutable final Wasm entries:
 use ic_host_process::child::OwnedChild;
 use ic_build::artifacts::{
     CacheRetentionLimits, WasmBuildSpec, build_wasm_canisters_cached,
-    inspect_shared_incremental_target,
 };
 
 # let workspace = std::path::PathBuf::from(".");
@@ -837,17 +834,12 @@ let spec = WasmBuildSpec::new(
     std::time::Duration::from_secs(24 * 60 * 60),
 );
 let outcome = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)?;
-let shared_usage = inspect_shared_incremental_target(&spec)?
-    .expect("configured acquisition creates the shared target");
 let maintenance = outcome
     .record()
     .shared_incremental_maintenance()
     .expect("shared maintenance was configured");
 eprintln!(
-    "shared_bytes={} maintenance={} {}",
-    shared_usage.logical_size_bytes(),
-    maintenance,
-    outcome,
+    "maintenance={maintenance} {outcome}",
 );
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
@@ -858,9 +850,8 @@ across processes; Cargo builds incrementally, then IC Build re-resolves
 every exact input and publishes only the final Wasm files. A source race
 rejects publication, while a failed build preserves the caller-owned
 incremental state. Retention owns only immutable output entries, not the
-shared Cargo target. `inspect_shared_incremental_target` takes the same
-cross-process lock and reports its canonical path, logical size, last recorded
-build use, and lock wait without removing caller-owned Cargo state.
+shared Cargo target. Maintenance outcomes retain canonical paths, logical sizes,
+last recorded build use and lock wait from their existing coordinated operation.
 `maintain_shared_incremental_target` is an explicit whole-target operation: if
 an age or size threshold is exceeded it removes every other child while
 retaining the root, cache tag, and live coordination lock. Callers must not

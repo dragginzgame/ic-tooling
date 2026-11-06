@@ -278,7 +278,7 @@ async fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
         Step::reply("/blobstore/", 200, "not hex"),
         Step::reply("/instances/7/", 0, ""),
     ]);
-    let mut client = crate::pocket_ic::PocketIcBuilder::new()
+    let client = crate::pocket_ic::PocketIcBuilder::new()
         .with_server_url(server.url.clone())
         .build()
         .await
@@ -301,10 +301,9 @@ async fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
         Err(ClientError::Protocol(_))
     ));
     assert!(matches!(
-        client.drop_and_take_state().await,
+        client.drop().await,
         Err(ClientError::Transport { .. })
     ));
-    drop(client);
     let requests = server.finish();
     assert_eq!(requests.len(), 4);
     assert!(requests[3].starts_with("DELETE "));
@@ -373,6 +372,157 @@ async fn ingress_id_survives_loss_after_successful_submission() {
     let requests = server.finish();
     assert_eq!(requests.len(), 2);
     assert!(requests[1].contains(r#""message_id":"AQI=""#));
+}
+
+#[tokio::test]
+async fn routed_calls_preserve_payloads_and_await_only_the_accepted_ingress() {
+    use crate::pocket_ic::common::rest::RawEffectivePrincipal;
+
+    let server = Server::new(vec![
+        Step::reply("/instances/7/read/query", 200, r#"{"Ok":"AP8="}"#),
+        Step::reply(
+            "/instances/7/update/submit_ingress_message",
+            200,
+            r#"{"Ok":{"effective_principal":{"SubnetId":"CQ=="},"message_id":"AQI="}}"#,
+        ),
+        Step::reply(
+            "/instances/7/update/await_ingress_message",
+            200,
+            r#"{"Ok":"AP8="}"#,
+        ),
+    ]);
+    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
+    let canister = candid::Principal::from_slice(&[3]);
+    let sender = candid::Principal::from_slice(&[7]);
+    let route = RawEffectivePrincipal::SubnetId(vec![9]);
+    assert_eq!(
+        client
+            .query_call_with_effective_principal(
+                canister,
+                route.clone(),
+                sender,
+                "read",
+                vec![0, 255],
+            )
+            .await
+            .unwrap(),
+        [0, 255]
+    );
+    assert_eq!(
+        client
+            .update_call_with_effective_principal(canister, route, sender, "write", vec![0, 255],)
+            .await
+            .unwrap(),
+        [0, 255]
+    );
+    let requests = server.finish();
+    assert_eq!(requests.len(), 3);
+    for (request, method) in requests[..2].iter().zip(["read", "write"]) {
+        let body: serde_json::Value =
+            serde_json::from_str(request.split_once('\n').unwrap().1).unwrap();
+        assert_eq!(
+            body,
+            serde_json::json!({
+                "sender": "Bw==", "canister_id": "Aw==",
+                "effective_principal": {"SubnetId": "CQ=="},
+                "method": method, "payload": "AP8=",
+            })
+        );
+    }
+    assert!(requests[2].contains(r#""message_id":"AQI=""#));
+    assert!(requests[2].contains(r#""effective_principal":{"SubnetId":"CQ=="}"#));
+}
+
+#[tokio::test]
+async fn creation_preserves_supported_topology_state_gateway_features_and_time() {
+    use crate::pocket_ic::{
+        PocketIcBuilder, Time,
+        common::rest::{IcpFeatures, IcpFeaturesConfig, InstanceHttpGatewayConfig},
+    };
+    let created = r#"{"Created":{"instance_id":7,"topology":{"subnet_configs":{},"default_effective_canister_id":{"canister_id":""}},"http_gateway_info":null}}"#;
+    let server = Server::new(vec![
+        Step::reply("/instances", 200, created),
+        Step::reply("/instances/7/", 200, "null"),
+        Step::reply("/instances", 200, created),
+        Step::reply("/instances/7/", 200, "null"),
+    ]);
+    for auto_progress in [false, true] {
+        let enabled = Some(IcpFeaturesConfig::DefaultConfig);
+        let builder = PocketIcBuilder::new()
+            .with_server_url(server.url.clone())
+            .with_state_dir("/caller-owned/state".into())
+            .with_nns_subnet()
+            .with_nns_subnet()
+            .with_ii_subnet()
+            .with_ii_subnet()
+            .with_system_subnet()
+            .with_application_subnet()
+            .with_application_subnet()
+            .with_icp_features(IcpFeatures {
+                registry: enabled.clone(),
+                cycles_minting: enabled.clone(),
+                icp_token: enabled.clone(),
+                cycles_token: enabled.clone(),
+                ii: enabled,
+            })
+            .with_http_gateway(InstanceHttpGatewayConfig {
+                ip_addr: Some("127.0.0.1".into()),
+                port: Some(8080),
+                domains: None,
+                https_config: None,
+                domain_custom_provider_local_file: None,
+            });
+        let builder = if auto_progress {
+            builder
+                .with_initial_time(Time::from_nanos_since_unix_epoch(42))
+                .with_auto_progress()
+        } else {
+            builder
+                .with_auto_progress()
+                .with_initial_time(Time::from_nanos_since_unix_epoch(42))
+        };
+        builder.build().await.unwrap().drop().await.unwrap();
+    }
+    let requests = server.finish();
+    assert_eq!(requests.len(), 4);
+    let subnet = serde_json::json!({
+        "state_config": "New", "instruction_config": "Production",
+        "subnet_admins": null, "cost_schedule": "Normal",
+    });
+    for (index, request) in [requests[0].as_str(), requests[2].as_str()]
+        .into_iter()
+        .enumerate()
+    {
+        let body: serde_json::Value =
+            serde_json::from_str(request.split_once('\n').unwrap().1).unwrap();
+        let initial_time = if index == 0 {
+            serde_json::json!({"Timestamp": {"nanos_since_epoch": 42}})
+        } else {
+            serde_json::json!({"AutoProgress": {"artificial_delay_ms": null}})
+        };
+        assert_eq!(
+            body,
+            serde_json::json!({
+                "subnet_config_set": {
+                    "nns": subnet, "ii": subnet, "sns": null, "fiduciary": null,
+                    "bitcoin": null, "test_threshold_keys": null, "system": [subnet],
+                    "application": [subnet, subnet], "cloud_engine": [],
+                    "verified_application": [],
+                },
+                "http_gateway_config": {
+                    "ip_addr": "127.0.0.1", "port": 8080, "domains": null,
+                    "https_config": null, "domain_custom_provider_local_file": null,
+                },
+                "state_dir": "/caller-owned/state",
+                "icp_features": {
+                    "registry": "DefaultConfig", "cycles_minting": "DefaultConfig",
+                    "icp_token": "DefaultConfig", "cycles_token": "DefaultConfig",
+                    "ii": "DefaultConfig",
+                },
+                "initial_time": initial_time,
+            })
+        );
+    }
 }
 
 mod snapshot;
