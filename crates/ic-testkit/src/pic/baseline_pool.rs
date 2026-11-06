@@ -275,6 +275,11 @@ pub enum BaselinePoolPreparationError<E> {
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum BaselinePoolError<E> {
+    /// Shutdown has begun; no baseline was prepared or exposed.
+    Closed {
+        /// Queue wait before shutdown was observed.
+        timings: Box<BaselinePoolTimings>,
+    },
     /// Initial construction or a non-rebuilt preparation failed.
     Preparation {
         /// Recipe or contract failure that stopped acquisition.
@@ -592,7 +597,9 @@ impl<E> BaselinePoolError<E> {
     #[must_use]
     pub const fn timings(&self) -> BaselinePoolTimings {
         match self {
-            Self::Preparation { timings, .. } | Self::RecoveryFailed { timings, .. } => **timings,
+            Self::Closed { timings }
+            | Self::Preparation { timings, .. }
+            | Self::RecoveryFailed { timings, .. } => **timings,
         }
     }
 }
@@ -613,16 +620,29 @@ where
         }
     }
 
-    /// Delete all idle instances, retaining every deletion failure. No leases may remain.
-    /// Borrowed server owners must outlive this operation. Cancellation requires caller reconciliation.
+    /// Consume the pool and await [`Self::shutdown`], retaining every deletion failure.
     pub async fn close(self) -> Vec<crate::pocket_ic::ClientError> {
-        let mut failures = Vec::new();
-        for baseline in self.slots.into_values() {
-            if let Err(error) = baseline.close().await {
-                failures.push(error);
-            }
-        }
-        failures
+        self.shutdown().await
+    }
+
+    /// Stop admission, await all leases, and attempt every cached instance deletion.
+    ///
+    /// Works through a shared or static reference. Acquisitions after shutdown
+    /// begins return [`BaselinePoolError::Closed`]; queued acquisitions cannot
+    /// prepare another baseline. Already exposed leases remain usable until
+    /// their guards are dropped. Do not await shutdown while holding a lease
+    /// in the same task. Borrowed server owners must outlive this operation.
+    ///
+    /// Deletion failures do not stop remaining deletions. Concurrent shutdowns
+    /// serialize; each call returns its own failures, and completed attempts
+    /// are never replayed. The caller must inspect every returned error.
+    ///
+    /// Cancellation leaves admission closed and retains unattempted baselines
+    /// for a later shutdown. An in-flight deletion has an unknown outcome and
+    /// requires caller reconciliation; it is not retried. Rust Drop performs
+    /// no client network I/O.
+    pub async fn shutdown(&self) -> Vec<crate::pocket_ic::ClientError> {
+        self.slots.shutdown(CachedPocketIcBaseline::close).await
     }
 
     /// Maximum number of simultaneously leased `PocketIC` baselines.
@@ -653,7 +673,16 @@ where
         BaselinePoolError<R::Error>,
     > {
         let total_started = Instant::now();
-        let mut slot = self.slots.acquire().await;
+        let mut slot = self.slots.acquire().await.ok_or_else(|| {
+            let wait = total_started.elapsed();
+            BaselinePoolError::Closed {
+                timings: Box::new(BaselinePoolTimings {
+                    wait,
+                    total: wait,
+                    ..BaselinePoolTimings::default()
+                }),
+            }
+        })?;
         slot.begin_preparation();
         let mut timings = BaselinePoolTimings {
             wait: slot.wait(),
@@ -918,6 +947,7 @@ where
 {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Closed { .. } => formatter.write_str("baseline pool is shut down"),
             Self::Preparation { error, .. } => error.fmt(formatter),
             Self::RecoveryFailed {
                 original, rebuild, ..
@@ -935,6 +965,7 @@ where
 {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
+            Self::Closed { .. } => None,
             Self::Preparation { error, .. } => Some(error),
             Self::RecoveryFailed { original, .. } => Some(original.as_ref()),
         }

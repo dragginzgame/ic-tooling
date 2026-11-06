@@ -6,6 +6,15 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.89.2] - Unreleased
+
+### ➕ Added
+
+- Await `CachedPocketIcBaselinePool::shutdown(&self)` for shared or process-wide
+  pools. Shutdown rejects queued/new acquisitions, waits for leases, attempts
+  every cached deletion and returns every failure without replaying requests.
+  Keep the runtime and borrowed server alive through completion.
+
 ## [0.89.1] - 2026-11-06
 
 ### 🧪 Testing

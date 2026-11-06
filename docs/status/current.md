@@ -1,5 +1,66 @@
 # Current handoff
 
+## Testkit 0.89.2 pool publication — in progress
+
+The maintainer authorized publishing the shared pool shutdown addition from
+the normal checkout's `main` to `dragginzgame/ic-tooling:main`, followed by
+`testkit-v0.89.2` and crates.io publication of `ic-testkit`. Private Dev/probe
+follow the patch; other release groups remain unchanged. This release uses the
+qualified normal-checkout workflow. Shared's frozen batch-ID fix has not landed,
+so incomplete activation is preserved in the scoped stash recorded by
+`.git/release-state/deployment-testkit-0.89.2/frozen-activation-stash`, rather than
+being included in the published release. Restore that work after publication.
+
+The latest incoming lock bytes and patch are retained as `pool-release-Cargo.lock`
+and `pool-release-Cargo.lock.patch` in the same record directory. Qualification
+uses the committed graph and restores the unrelated selections afterward.
+Earlier frozen qualification and pool development evidence below retain their
+original scope; no new release completion or native macOS qualification is
+claimed before the required gate and registry verification.
+
+## Local shared pool shutdown — 2026-11-06
+
+`CachedPocketIcBaselinePool::shutdown(&self)` now closes admission, awaits
+already admitted work/leases and attempts every retained baseline deletion,
+returning all deletion failures. Existing consuming `close(self)` delegates to
+it. `BaselinePoolError::Closed` extends the existing non-exhaustive acquisition
+error. The bounded slot coordinator owns the shared lifecycle gate; there is no
+private runtime, background cleanup or client network I/O in Drop. Concurrent
+shutdowns serialize and report their own attempts. Cancellation retains
+unattempted baselines; an in-flight deletion needs caller reconciliation and is
+not replayed. Callers cannot hold a lease in the task awaiting shutdown and must
+retain borrowed servers until completion.
+
+Selected library/integration Clippy, twelve pool unit checks and two actual
+PocketIC 16.1 installed checks pass on Linux. The installed proof uses a static
+pool with a `'static` guard, queued rejection, lease-return ordering, managed
+server teardown and two borrowed-server deletion failures. Logs are retained at
+`target/evidence/pool-shutdown.lGjQv6/`. Native macOS was not rerun. Incoming
+Cargo.lock bytes remain unchanged. Pending 0.89.2 notes cover this compatible
+addition; manifests, commits and published packages are unchanged by this work.
+The frozen activation work and pending Shared source-fix approval below remain
+separate and preserved.
+
+## Frozen activation and Testkit 0.89.2 — in progress
+
+Shared 0.30.7 adoption is pushed as `081e5f3a`. Local, uncommitted changes now
+select captured release/publication by default, admit supplier-first rosters,
+query all group versions without local parser selection, prepare captured host
+parsers before the standard runner, and expose batch-ID recovery. All six actual
+metadata/recovery adapter selections and the affected Make fixture pass with
+their documented setup/product-effect substitutes. The installed frozen-hook
+fixture retains attempts under `target/tmp/frozen-release.*`; no production
+0.89.2 release or upload has started.
+
+Qualification exposed a supplier bug: Shared's File::Temp generated
+`batch-_iD7NvIE`, but `run-frozen-release.pl` rejects underscores during resume.
+The second attempt is retained at `target/tmp/frozen-release.XsSki2/`; the first
+attempt also retains the fixture's missing reusable-stage proof diagnostic.
+Explicit authorization for the scoped Shared validator/regression fix is pending.
+Do not describe the local frozen defaults as qualified or deployed yet. Incoming
+lock bytes remain unchanged and are backed up in
+`.git/release-state/deployment-testkit-0.89.2/`. Native macOS remains separate.
+
 ## Shared Tooling 0.30.7 delivery — 2026-11-06
 
 The supported exporter adopted GitHub commit

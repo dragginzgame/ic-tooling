@@ -1,10 +1,14 @@
 use std::{
     collections::VecDeque,
+    future::Future,
     num::NonZeroUsize,
-    sync::{Mutex, OnceLock},
+    sync::{
+        Mutex, OnceLock,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{Duration, Instant},
 };
-use tokio::sync::{Semaphore, SemaphorePermit};
+use tokio::sync::{RwLock, RwLockReadGuard, Semaphore, SemaphorePermit};
 
 type AvailableSlots<T, R> = Mutex<VecDeque<(usize, Slot<T, R>)>>;
 
@@ -12,6 +16,8 @@ pub(super) struct BoundedSlotPool<T, R> {
     capacity: NonZeroUsize,
     state: OnceLock<AvailableSlots<T, R>>,
     permits: Semaphore,
+    closed: AtomicBool,
+    lifecycle: RwLock<()>,
 }
 
 pub(super) enum Slot<T, R> {
@@ -39,6 +45,7 @@ pub(super) struct BoundedSlotLease<'a, T, R> {
     _permit: SemaphorePermit<'a>,
     wait: Duration,
     preparing: bool,
+    _lifecycle: RwLockReadGuard<'a, ()>,
 }
 
 impl<T, R> BoundedSlotPool<T, R> {
@@ -47,27 +54,40 @@ impl<T, R> BoundedSlotPool<T, R> {
             capacity,
             state: OnceLock::new(),
             permits: Semaphore::const_new(capacity.get()),
+            closed: AtomicBool::new(false),
+            lifecycle: RwLock::const_new(()),
         }
     }
 
-    pub(super) async fn acquire(&self) -> BoundedSlotLease<'_, T, R> {
+    pub(super) async fn acquire(&self) -> Option<BoundedSlotLease<'_, T, R>> {
+        if self.closed.load(Ordering::Acquire) {
+            return None;
+        }
+        let lifecycle = self.lifecycle.read().await;
+        if self.closed.load(Ordering::Acquire) {
+            return None;
+        }
         let state = self.state();
         let started = Instant::now();
         // Tokio owns FIFO admission and cancellation of queued acquisitions.
         let permit = self.permits.acquire().await.expect("pool is never closed");
+        if self.closed.load(Ordering::Acquire) {
+            return None;
+        }
         let (slot_index, slot) = state
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .pop_front()
             .expect("each admitted permit owns one available slot");
-        BoundedSlotLease {
+        Some(BoundedSlotLease {
             pool: self,
             slot_index,
             slot,
             _permit: permit,
             wait: started.elapsed(),
             preparing: false,
-        }
+            _lifecycle: lifecycle,
+        })
     }
 
     pub(super) const fn capacity(&self) -> NonZeroUsize {
@@ -80,16 +100,35 @@ impl<T, R> BoundedSlotPool<T, R> {
         })
     }
 
-    pub(super) fn into_values(self) -> impl Iterator<Item = T> {
-        self.state
-            .into_inner()
-            .into_iter()
-            .flat_map(|state| {
-                state
-                    .into_inner()
-                    .unwrap_or_else(std::sync::PoisonError::into_inner)
-            })
-            .filter_map(|(_, slot)| slot.into_value())
+    pub(super) async fn shutdown<E, F>(&self, mut delete: impl FnMut(T) -> F) -> Vec<E>
+    where
+        F: Future<Output = Result<(), E>>,
+    {
+        self.closed.store(true, Ordering::Release);
+        let _lifecycle = self.lifecycle.write().await;
+        let mut failures = Vec::new();
+        while let Some(value) = self.take_value() {
+            if let Err(error) = delete(value).await {
+                failures.push(error);
+            }
+        }
+        failures
+    }
+
+    // Exclusive shutdown owns admission. Taking one value at a time retains
+    // unattempted values if deletion is cancelled; no cleanup occurs in Drop.
+    fn take_value(&self) -> Option<T> {
+        let mut state = self
+            .state
+            .get()?
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        while let Some((_, slot)) = state.pop_front() {
+            if let Some(value) = slot.into_value() {
+                return Some(value);
+            }
+        }
+        None
     }
 }
 

@@ -5,7 +5,7 @@ mod support;
 use std::{
     num::NonZeroUsize,
     sync::{
-        Arc, Mutex,
+        Arc, Mutex, OnceLock,
         atomic::{AtomicBool, AtomicUsize, Ordering},
         mpsc,
     },
@@ -16,15 +16,121 @@ use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolError, BaselinePoolOutcome, BaselinePoolPreparationError,
     BaselinePreparationStage, CachedPocketIcBaseline, CachedPocketIcBaselinePool,
-    CanisterSnapshotTarget, ControllerSnapshotError, ExtraCanisterPolicy, FailureDisposition,
-    PocketIcBaselineRecipe, PocketIcStartupConfig, PocketIcStartupError, PreparedBaseline,
-    RebuildReason, ResetPolicies, ResetReceipt, ResetRequirements, SnapshotRestoreFunding,
-    TimeResetPolicy, is_dead_pocket_ic_transport_error,
+    CachedPocketIcBaselinePoolGuard, CanisterSnapshotTarget, ControllerSnapshotError,
+    ExtraCanisterPolicy, FailureDisposition, PocketIcBaselineRecipe, PocketIcStartupConfig,
+    PocketIcStartupError, PreparedBaseline, RebuildReason, ResetPolicies, ResetReceipt,
+    ResetRequirements, SnapshotRestoreFunding, TimeResetPolicy, is_dead_pocket_ic_transport_error,
 };
 use ic_testkit::pocket_ic::PocketIcBuilder;
 
 const EMPTY_WASM: &[u8] = b"\0asm\x01\0\0\0";
 const OPERATION_TIMEOUT: Duration = Duration::from_secs(30);
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn pool_shutdown_accepts_static_leases_and_waits_before_deletion() {
+    use std::future::Future as _;
+    static POOL: OnceLock<CachedPocketIcBaselinePool<TwoCanisterRecipe>> = OnceLock::new();
+    let pool = POOL.get_or_init(|| {
+        CachedPocketIcBaselinePool::new(
+            NonZeroUsize::new(2).unwrap(),
+            TwoCanisterRecipe::new(RecipeControls::default()),
+        )
+    });
+    let (first, _): (
+        CachedPocketIcBaselinePoolGuard<'static, TwoCanisterRecipe>,
+        _,
+    ) = pool.acquire().await.unwrap();
+    let (second, _) = pool.acquire().await.unwrap();
+    let urls = [
+        first.pocket_ic().get_server_url(),
+        second.pocket_ic().get_server_url(),
+    ];
+    let mut queued = Box::pin(pool.acquire());
+    assert!(
+        std::future::poll_fn(|cx| std::task::Poll::Ready(queued.as_mut().poll(cx)))
+            .await
+            .is_pending()
+    );
+    let mut shutdown = Box::pin(pool.shutdown());
+    assert!(
+        std::future::poll_fn(|cx| std::task::Poll::Ready(shutdown.as_mut().poll(cx)))
+            .await
+            .is_pending()
+    );
+    assert!(matches!(
+        pool.acquire().await,
+        Err(BaselinePoolError::Closed { .. })
+    ));
+    drop(first);
+    assert!(matches!(
+        queued.await,
+        Err(BaselinePoolError::Closed { .. })
+    ));
+    second.pocket_ic().topology().await.unwrap(); // held work remains usable.
+    drop(second);
+    assert!(
+        tokio::time::timeout(OPERATION_TIMEOUT, shutdown)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    for url in urls {
+        assert!(
+            ic_testkit::pocket_ic::PocketIc::list_instances(url)
+                .await
+                .is_err()
+        );
+    }
+    assert!(pool.shutdown().await.is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn pool_shutdown_returns_every_borrowed_server_deletion_failure() {
+    let server = PocketIcStartupConfig::Spawn {
+        server_binary: std::env::var_os("POCKET_IC_BIN")
+            .expect("admit the installed server first")
+            .into(),
+        timeout: OPERATION_TIMEOUT,
+        server_hard_ttl: Some(Duration::from_secs(60)),
+        server_idle_ttl: None,
+        server_output_files: None,
+    }
+    .start_managed_server()
+    .unwrap();
+    let controls = RecipeControls::default();
+    let pool = CachedPocketIcBaselinePool::new(
+        NonZeroUsize::new(3).unwrap(),
+        TwoCanisterRecipe::new(controls.clone()),
+    );
+    *controls.first_server_url.lock().unwrap() = Some(server.url().to_owned());
+    let (first, _) = pool.acquire().await.unwrap();
+    *controls.first_server_url.lock().unwrap() = Some(server.url().to_owned());
+    let (second, _) = pool.acquire().await.unwrap();
+    assert_ne!(
+        first.pocket_ic().instance_id,
+        second.pocket_ic().instance_id
+    );
+    drop((first, second));
+    drop(server); // only this test's dedicated borrowed server is stopped.
+    let failures = tokio::time::timeout(OPERATION_TIMEOUT, pool.shutdown())
+        .await
+        .unwrap();
+    assert_eq!(
+        failures.len(),
+        2,
+        "failure of the first delete cannot skip the second"
+    );
+    assert!(
+        failures
+            .iter()
+            .all(|error| is_dead_pocket_ic_transport_error(error))
+    );
+    assert_eq!(controls.builds.load(Ordering::SeqCst), 2);
+    assert!(
+        pool.shutdown().await.is_empty(),
+        "failed deletes are not replayed"
+    );
+}
 
 #[derive(Clone, Default)]
 struct RecipeControls {

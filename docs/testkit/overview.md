@@ -253,6 +253,12 @@ warm failure gets at most one recovery build; failures retain both causes. Fatal
 failures, explicit invalidation, panic and cancelled preparation remain distinct.
 Dropping the lease returns its slot. Await `pool.close()` after every lease ends,
 before stopping a borrowed server, and retain every returned deletion failure.
+For a shared or `static` pool use `pool.shutdown().await`: it closes admission,
+awaits lease return, and reports every attempted deletion failure. Future/queued
+acquisitions return `BaselinePoolError::Closed`. Do not hold a lease in the task
+awaiting shutdown; keep the caller's runtime and borrowed servers alive until
+shutdown completes. Cancellation and no-replay custody are described in the
+[client migration](client-migration.md).
 
 ## Diagnostics and time
 

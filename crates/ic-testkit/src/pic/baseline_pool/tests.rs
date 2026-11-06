@@ -30,6 +30,16 @@ fn preparation_and_recovery_keep_display_and_unboxed_primary_sources() {
             .unwrap()
             .is::<super::BaselinePoolPreparationError<io::Error>>()
     );
+    let closed: super::BaselinePoolError<io::Error> = super::BaselinePoolError::Closed {
+        timings: Box::new(BaselinePoolTimings {
+            wait: Duration::from_millis(2),
+            total: Duration::from_millis(2),
+            ..BaselinePoolTimings::default()
+        }),
+    };
+    assert_eq!(closed.to_string(), "baseline pool is shut down");
+    assert!(closed.source().is_none());
+    assert_eq!(closed.timings().wait(), Duration::from_millis(2));
 }
 
 #[tokio::test]

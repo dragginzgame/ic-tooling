@@ -143,6 +143,15 @@ reset state. Fatal failures, one permitted recovery build and both recovery caus
 remain distinct. Dropping a lease returns its slot; it does not delete the baseline.
 Await `pool.close().await` after all leases end, before stopping a borrowed
 server; it returns every instance deletion failure. Do not discard those failures.
+For process-wide or `static` pools, await `pool.shutdown().await` through a shared
+reference. Shutdown is terminal: queued/new acquisitions return
+`BaselinePoolError::Closed`, while already admitted work and held leases must
+finish before deletion. Release every lease before awaiting shutdown in the same
+task. Inspect all returned deletion errors before stopping a borrowed server.
+Concurrent shutdowns serialize and each call reports its own deletion attempts;
+completed attempts are never retried. Cancellation keeps admission closed and
+retains unattempted baselines. Reconcile the unknown outcome of an in-flight
+deletion explicitly before shutting down the external server.
 
 Wire requests, local baseline metadata and diagnostic writers may be non-Send;
 use their futures on the calling runtime. The pool's separate Send requirements
