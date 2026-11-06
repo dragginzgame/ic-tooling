@@ -1,16 +1,40 @@
 # Current handoff
 
-## Testkit 0.89.0 deployment — in progress
+## Testkit 0.89.0 delivered — 2026-11-06
 
-Delivery is authorized from the normal checkout's `main` to
-`dragginzgame/ic-tooling:main`, followed by `testkit-v0.89.0` and crates.io
-publication of `ic-testkit`. Private Dev/probe follow 0.89.0; other release groups
-retain their versions. Current qualified cc 1.11.1 / flate2 1.1.11 lock selections
-are included as release inputs. The complete Testkit gate precedes version
-preparation; native hosted qualification runs asynchronously. The isolated
-logging child now also tolerates aggregate installed-test selection without its
-parent-only environment. All four local fixes remain subject to actual delivery
-and acceptance verification before issue closure.
+`ic-testkit 0.89.0` is published to crates.io from clean release commit
+`094d1447c07681c8ef973c0b0e5d9c1193e6c0b4`; `main` and `testkit-v0.89.0`
+are pushed to `dragginzgame/ic-tooling`. Private Dev/probe follow 0.89.0 and
+remain unpublished. Other groups retain their versions. The normal checkout
+contains the release, including the reviewed cc 1.11.1 / flate2 1.1.11 selections.
+Consumers must adopt [application-owned logging](../testkit/client-migration.md#application-owned-logging-in-089).
+
+All 34 complete Linux release stages passed on Rust 1.99.1, including installed
+PocketIC 16.1 contracts, native/Wasm graphs, normalized archive qualification,
+workspace tests, Clippy and formatting. Initial routing fixtures incorrectly ran
+the new Candid prerequisite without a source tree; `8b376d8d` corrects their
+substitutes while retaining the separate real rejection control. The isolated
+logging child also safely tolerates aggregate installed-test selection. The
+failed attempt and successful gate remain under `.git/release-state/`; final
+logs are `testkit-gate.ee7pAE/logs/validation.lc3NoV`.
+
+The downloaded registry archive matches the uploaded bytes and registry checksum
+`a8cc750166a6898536fd89ebfc8870195e822fe1c2fd1f04a2275e912f671517`,
+with exact clean release provenance. The registry-only consumer passes all three
+public contract cases; evidence is `target/published-integration.cMEai9/`.
+Final Chromium 156.0.8078.4 acceptance passes real virtual-WebAuthn II sign-in,
+`getIdentity`, matching signed-ingress caller identity, wrong-root refusal and
+altered-signature refusal. `target/evidence/ii-testkit-0.89.0-001/` retains proof,
+trace, input/tool hashes and exit-zero/closed-gateway teardown. This is virtual
+authenticator integration evidence, not physical-authenticator assurance.
+
+Issues #333, #334, #336 and #337 are closed after delivery and acceptance; #335
+was already closed following IcyDB adoption. Native macOS remains unqualified
+for this batch. The complete Linux/macOS 15 Intel/Apple Silicon matrix is
+[dispatched asynchronously](https://github.com/dragginzgame/ic-tooling/actions/runs/42200448086)
+at the release commit; its completion is not claimed here. No historical
+artifact cleanup was performed. The preparation notes below retain their
+original scope and are superseded by this delivery record.
 
 ## Local logging ownership and fixture scratch — 2026-11-06
 
