@@ -48,7 +48,7 @@ ic-host-tools = { path = "crates/ic-host-tools", version = "0.83.0", default-fea
 
 # Testkit (Dev and perf probe are private qualification crates)
 # Changelog : releases/testkit/CHANGELOG.md
-ic-testkit = { path = "crates/ic-testkit", version = "0.88.0", default-features = false }
+ic-testkit = { path = "crates/ic-testkit", version = "0.89.0", default-features = false }
 
 # Native allocation measurement
 # Changelog : releases/native/CHANGELOG.md
@@ -96,8 +96,8 @@ wasmparser = { version = "0.263", default-features = false, features = ["std", "
 # Tests and tooling only
 
 ic-logging = "0.24.8"
-ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.88.0" }
-ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.88.0" }
+ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.89.0" }
+ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.89.0" }
 strum = { version = "0.28.0", features = ["derive"] }
 tracing-subscriber = { version = "0.3.19", default-features = false, features = ["registry"] }
 
