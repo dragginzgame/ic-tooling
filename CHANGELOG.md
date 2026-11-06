@@ -1,6 +1,6 @@
 # IC Tooling release notes
 
-## Pending workspace tooling
+## Shared Tooling 0.30.9 deployment — 2026-11-06
 
 ### 🔧 Changed
 
