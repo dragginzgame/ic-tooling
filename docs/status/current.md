@@ -1,5 +1,26 @@
 # Current handoff
 
+## Shared Tooling 0.30.7 delivery — 2026-11-06
+
+The supported exporter adopted GitHub commit
+`22a853e26c05ec323f06c57fa316c08b808f252b`; all 175 managed files match that
+independently selected source. The snapshot brings release-efficiency guidance
+and opt-in frozen batch mechanics. Tooling has not qualified its actual hooks
+for frozen delivery, so both frozen selections remain unset; the publishing
+guide records this boundary. No concurrent-lock isolation or elapsed-time
+improvement is claimed by snapshot adoption alone.
+
+The focused `test-make-snapshot.sh --case release-routing` proves ordinary
+patch/minor/major/resume dispatch through the checkout's Makefiles, group and
+destination propagation, local snapshot authority and unsupported-delivery
+refusal, with release runners substituted. ShellCheck and documentation links
+pass. The broad producer and release suites were not rerun; no native macOS
+qualification was performed. Incoming Cargo.lock bytes are unchanged. The
+maintainer authorized direct `main` delivery of this tooling-only adoption to
+`dragginzgame/ic-tooling`, followed by consumer qualification and activation of
+frozen releases. No crate version change is needed for this first delivery;
+the subsequent Testkit 0.89.2 release will exercise qualified frozen delivery.
+
 ## Testkit 0.89.1 delivered — 2026-11-06
 
 `ic-testkit 0.89.1` is published from clean release commit

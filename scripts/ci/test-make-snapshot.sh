@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Shared companions: scripts/ci/test-workspace-validation.sh
 set -euo pipefail
-selection=all
+selected_case=all
 if [[ $# != 0 ]]; then
-    [[ $# == 2 && $1 == --case && $2 == tooling-roster ]] || {
-        echo 'usage: test-make-snapshot.sh [--case tooling-roster]' >&2; exit 2;
+    [[ $# == 2 && $1 == --case && ( $2 == tooling-roster || $2 == release-routing ) ]] || {
+        echo 'usage: test-make-snapshot.sh [--case tooling-roster|release-routing]' >&2; exit 2;
     }
-    selection=tooling-roster
+    selected_case="$2"
 fi
 
 # Qualify Host's checkout-local routing using its actual Makefile and snapshot.
@@ -18,6 +18,7 @@ root="${root%/.}"
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 unset SHARED_TOOLING_ROOT
 unset TOOLING_STAGE_ADMISSIONS IC_TOOLING_RELEASE_GROUP TOOLING_RELEASE_GROUP
+unset RELEASE_FROZEN_GROUPS RELEASE_FROZEN_PUBLISH_TARGET FROZEN_RELEASE_ACTIVE
 # Substitute Cargo has no source metadata; exercise every formatter pass while
 # Shared's producer fixtures own exact-input reuse and invalidation coverage.
 export FORMAT_RUST_ARGS=--no-cache
@@ -82,6 +83,9 @@ cat > "$fixture/local/scripts/ci/run-release.sh" <<'STUB'
 if [[ "${HOST_MAKE_ASSERT_RELEASE_GROUP:-0}" == 1 ]]; then [[ "${RELEASE_GROUP:-}" == testkit ]] || exit 94; fi
 printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
 STUB
+# Frozen hooks are not qualified here. Fail before effects if ordinary targets
+# accidentally select that runner; Shared owns its opt-in runner fixtures.
+printf 'die "Unexpected frozen release dispatch\\n";\n' > "$fixture/local/scripts/ci/run-frozen-release.pl"
 mkdir -p "$fixture/local/scripts/dev"
 for helper in scripts/dev/install-git-hooks.sh scripts/ci/verify-shared-tooling-snapshot.sh; do
     cat > "$fixture/local/$helper" <<'STUB'
@@ -169,7 +173,7 @@ STUB
     grep -Fx 'fixture scripts/ci/test-host-fixture-retention.sh' "$HOST_MAKE_EVENTS" >/dev/null
 }
 
-if [[ $selection == tooling-roster ]]; then
+if [[ $selected_case == tooling-roster ]]; then
     prepare_tooling_stubs
     check_tooling_roster
     fixture_complete=true
@@ -178,6 +182,10 @@ if [[ $selection == tooling-roster ]]; then
 fi
 printf 'override RELEASE_REMOTE := recursive\n' > overrides.mk
 recursive_make="$(command -v make) --no-print-directory -f Makefile -f overrides.mk"
+routing_targets=(release-patch release-minor release-major release-resume)
+if [[ $selected_case == all ]]; then
+    routing_targets=(help fmt-check "${routing_targets[@]}" install-hooks shared-tooling-check)
+fi
 for selection in ordinary environment command nested recursive; do
     unset SHARED_TOOLING_ROOT
     remote=review
@@ -197,7 +205,7 @@ for selection in ordinary environment command nested recursive; do
         command+=("MAKE=$recursive_make")
         remote=recursive
     fi
-    for target in help fmt-check release-resume install-hooks shared-tooling-check; do
+    for target in "${routing_targets[@]}"; do
         : > "$HOST_MAKE_EVENTS"
         "${command[@]}" "$target" "FORMAT_CARGO=$PWD/cargo" \
             VERSION=0.9.5 RELEASE_REMOTE=review RELEASE_BRANCH=release-review \
@@ -207,6 +215,7 @@ for selection in ordinary environment command nested recursive; do
             help) : > "$fixture/expected" ;;
             fmt-check) printf 'sort --workspace --grouped --check\nfmt --all -- --check\n' > "$fixture/expected" ;;
             release-resume) printf 'resume 0.9.5 %s release-review\n' "$remote" > "$fixture/expected" ;;
+            release-patch|release-minor|release-major) printf '%s %s release-review\n' "${target#release-}" "$remote" > "$fixture/expected" ;;
             install-hooks) printf 'install-git-hooks.sh --consumer %s\n' "$PWD" > "$fixture/expected" ;;
             shared-tooling-check) printf 'verify-shared-tooling-snapshot.sh --consumer %s --manifest .shared-tooling.snapshot\n' "$PWD" > "$fixture/expected" ;;
         esac
@@ -228,6 +237,11 @@ make --no-print-directory release-version RELEASE_DELIVERY=pr \
 [[ "$status" == 2 && ! -s "$HOST_MAKE_EVENTS" ]] || exit 1
 make --no-print-directory help RELEASE_DELIVERY=pr > "$fixture/unrelated-delivery.log" 2>&1
 [[ ! -s "$HOST_MAKE_EVENTS" ]] || exit 1
+if [[ $selected_case == release-routing ]]; then
+    fixture_complete=true
+    echo 'Ordinary release routing and delivery refusal passed (runner effects substituted; frozen mode disabled)'
+    exit 0
+fi
 # Exercise the actual Host aggregate under parallel Make. Each stage must run
 # once in shared order, and a failure must prevent every later stage.
 mkdir -p "$fixture/local/scripts/dev"

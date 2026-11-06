@@ -87,6 +87,9 @@ Tooling changes use the affected consumer check: `make release-adapter-check`,
 `make release-validation-plan-check`, `bash scripts/ci/test-make-snapshot.sh` or
 `bash scripts/ci/test-host-fixture-retention.sh`. The shared
 [validation policy](../DRAGGINZGAME.md#validation-and-evidence) owns execution cadence.
+Select `bash scripts/ci/test-make-snapshot.sh --case release-routing` for ordinary
+release Make dispatch and delivery refusal, with runner effects substituted.
+It does not qualify frozen delivery hooks.
 For receipt/prepared-version changes shared by all groups, select a representative
 owner with `bash scripts/release/test-adapter.sh --group testkit`; the default
 entrypoint retains all six groups for complete release qualification.

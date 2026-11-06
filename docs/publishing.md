@@ -10,6 +10,13 @@ are rejected before execution;
 the shared runner's optional PR flow is not qualified by this adapter.
 These commands do not publish crates to a registry.
 
+Shared Tooling 0.30.7 supplies opt-in
+[frozen release batches](frozen-releases.md). This adapter has not qualified its
+release/publication hooks in that managed delivery checkout, so
+`RELEASE_FROZEN_GROUPS` and `RELEASE_FROZEN_PUBLISH_TARGET` remain unset. Ordinary
+commands continue using the normal checkout and its existing source admission.
+Snapshot adoption alone does not qualify isolation from concurrent lock writes.
+
 Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools`, `testkit` or `native` explicitly on
 every release command and exact-version resume. The
 [group policy](../ci/cargo-release-groups.json) retains one qualification workspace

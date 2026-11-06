@@ -1,5 +1,13 @@
 # IC Tooling release notes
 
+## Shared Tooling 0.30.7 adoption — 2026-11-06
+
+### 🔧 Changed
+
+- Adopt Shared Tooling 0.30.7 release-efficiency guidance and its opt-in frozen
+  release runner. Frozen delivery remains disabled until Tooling's actual hooks
+  are qualified; ordinary release commands retain their existing source custody.
+
 ## Workspace tooling — 2026-11-06
 
 ### 🧹 Cleanup

@@ -488,6 +488,11 @@ contracts; ordinary development does not require rereading these mechanics.
   Prepare shared test artifacts once for their exact inputs, then let applicable
   suites consume them. Different features, targets, hosts, archives and installed
   contracts remain distinct obligations.
+- Do not follow Clippy with `cargo check` merely to repeat the same compilation.
+  Compare package, target, feature, profile, compiler/configuration and generated
+  inputs, and remove the duplicate stage only after qualifying that it owns no
+  distinct obligation. Default-feature, Wasm, separate host and archive checks
+  remain when they establish different contracts. Keep early fail-closed lint.
 - A later release or publication step must freshly admit its inputs, but need
   not automatically repeat every earlier check. Reuse only through the qualified
   [stage evidence contract](../docs/release-validation-reuse.md); missing or
