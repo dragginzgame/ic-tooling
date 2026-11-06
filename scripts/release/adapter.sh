@@ -17,7 +17,8 @@ bash "$tooling_root/scripts/ci/check-release-delivery.sh" \
 fail() { echo "release metadata refused: $1" >&2; exit 1; }
 group() { bash "$tooling_root/scripts/ci/cargo-release-group.sh" "$1" "$RELEASE_GROUP" "${@:2}"; }
 case "$operation" in
-    version|files) group "$operation"; exit ;;
+    version) exec bash "$tooling_root/scripts/release/group.sh" ci/cargo-release-groups.json "$RELEASE_GROUP" version ;;
+    files) group "$operation"; exit ;;
     preflight|verify|prepare|check|commit-check|committed-check) ;;
     *) echo 'usage: adapter.sh version|files|preflight|verify|prepare|check|commit-check|committed-check' >&2; exit 2 ;;
 esac

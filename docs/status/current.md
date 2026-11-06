@@ -1,19 +1,38 @@
 # Current handoff
 
-## Testkit 0.89.2 pool publication — in progress
+## Testkit 0.89.2 frozen publication — in progress
 
 The maintainer authorized publishing the shared pool shutdown addition from
 the normal checkout's `main` to `dragginzgame/ic-tooling:main`, followed by
 `testkit-v0.89.2` and crates.io publication of `ic-testkit`. Private Dev/probe
-follow the patch; other release groups remain unchanged. This release uses the
-qualified normal-checkout workflow. Shared's frozen batch-ID fix has not landed,
-so incomplete activation is preserved in the scoped stash recorded by
-`.git/release-state/deployment-testkit-0.89.2/frozen-activation-stash`, rather than
-being included in the published release. Restore that work after publication.
+follow the patch; other release groups remain unchanged. The first normal-tree
+attempt stopped before version preparation after an independent writer restored
+the incoming lock during the gate. Its logs remain at
+`.git/release-state/deployment-testkit-0.89.2/pool-release.log`. The scoped frozen
+activation stash is restored, and its identity remains recorded in the same
+directory. User approval now covers the scoped Shared fix and frozen publication.
 
-The latest incoming lock bytes and patch are retained as `pool-release-Cargo.lock`
-and `pool-release-Cargo.lock.patch` in the same record directory. Qualification
-uses the committed graph and restores the unrelated selections afterward.
+Shared 0.30.8 is delivered at `dc9df707b3b1e616973494eab961c1c214d12260` and
+adopted through the exporter; all 175 files match that commit. The validator
+accepts emitted underscores without changing recovery paths. All 19 Shared
+frozen-release checks pass with forced underscore IDs. Snapshot/source comparison
+verifies every adopted payload; changed-script ShellCheck and documentation links
+pass. Tooling's retained hook qualification uses the real metadata, Git and
+publication dry-run hooks, with product gate bodies substituted. Its first
+publication refused an offline registry request; explicit not-published recovery
+completed that dry run, followed by uncertain-outcome refusal and published
+receipt reconciliation in the local fixture. No registry upload occurs in this
+qualification. Attempt logs remain at `target/tmp/frozen-release.MLbx9d/`;
+`qualification.json` records the completed two-group proof, including clean
+archive identities, completed resume without replay and stale-remote refusal.
+This is recovered qualification, not an uninterrupted script pass. The live
+installed gate remains independently required.
+
+The incoming lock bytes and patch are retained as `pool-release-Cargo.lock`
+and `pool-release-Cargo.lock.patch` in the same record directory. A later writer
+also advanced Logging to 0.24.10; preserve that newer lock before capture and
+reconciliation. Qualification uses the committed graph and restores unrelated
+selections afterward.
 Earlier frozen qualification and pool development evidence below retain their
 original scope; no new release completion or native macOS qualification is
 claimed before the required gate and registry verification.
@@ -38,8 +57,7 @@ server teardown and two borrowed-server deletion failures. Logs are retained at
 `target/evidence/pool-shutdown.lGjQv6/`. Native macOS was not rerun. Incoming
 Cargo.lock bytes remain unchanged. Pending 0.89.2 notes cover this compatible
 addition; manifests, commits and published packages are unchanged by this work.
-The frozen activation work and pending Shared source-fix approval below remain
-separate and preserved.
+Frozen activation continues below under the approved Shared fix.
 
 ## Frozen activation and Testkit 0.89.2 — in progress
 
@@ -56,9 +74,10 @@ Qualification exposed a supplier bug: Shared's File::Temp generated
 `batch-_iD7NvIE`, but `run-frozen-release.pl` rejects underscores during resume.
 The second attempt is retained at `target/tmp/frozen-release.XsSki2/`; the first
 attempt also retains the fixture's missing reusable-stage proof diagnostic.
-Explicit authorization for the scoped Shared validator/regression fix is pending.
-Do not describe the local frozen defaults as qualified or deployed yet. Incoming
-lock bytes remain unchanged and are backed up in
+The scoped Shared validator/regression fix is now approved, delivered and adopted
+as recorded above. The retained recovered fixture now qualifies those hooks;
+the live release gate and registry upload remain pending. Incoming lock bytes
+are backed up in
 `.git/release-state/deployment-testkit-0.89.2/`. Native macOS remains separate.
 
 ## Shared Tooling 0.30.7 delivery — 2026-11-06

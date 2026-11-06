@@ -89,7 +89,10 @@ Tooling changes use the affected consumer check: `make release-adapter-check`,
 [validation policy](../DRAGGINZGAME.md#validation-and-evidence) owns execution cadence.
 Select `bash scripts/ci/test-make-snapshot.sh --case release-routing` for ordinary
 release Make dispatch and delivery refusal, with runner effects substituted.
-It does not qualify frozen delivery hooks.
+It does not qualify frozen delivery hooks. Installed frozen-hook qualification
+uses `bash scripts/release/test-frozen.sh`; it retains actual metadata/Git and
+publication-dry-run evidence, with product gate bodies substituted. Complete
+installed release and registry proof remain separate.
 For receipt/prepared-version changes shared by all groups, select a representative
 owner with `bash scripts/release/test-adapter.sh --group testkit`; the default
 entrypoint retains all six groups for complete release qualification.

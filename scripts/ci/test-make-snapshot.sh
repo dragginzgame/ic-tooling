@@ -83,9 +83,15 @@ cat > "$fixture/local/scripts/ci/run-release.sh" <<'STUB'
 if [[ "${HOST_MAKE_ASSERT_RELEASE_GROUP:-0}" == 1 ]]; then [[ "${RELEASE_GROUP:-}" == testkit ]] || exit 94; fi
 printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
 STUB
-# Frozen hooks are not qualified here. Fail before effects if ordinary targets
-# accidentally select that runner; Shared owns its opt-in runner fixtures.
-printf 'die "Unexpected frozen release dispatch\\n";\n' > "$fixture/local/scripts/ci/run-frozen-release.pl"
+# Qualify only the consumer's dispatch here; actual hooks and lock isolation
+# have their own product fixture and installed release evidence.
+cat > "$fixture/local/scripts/ci/run-frozen-release.pl" <<'STUB'
+use strict;
+use warnings;
+open my $out, '>>', $ENV{HOST_MAKE_EVENTS} or die $!;
+print {$out} 'frozen ', join(' ', @ARGV), "\n" or die $!;
+close $out or die $!;
+STUB
 mkdir -p "$fixture/local/scripts/dev"
 for helper in scripts/dev/install-git-hooks.sh scripts/ci/verify-shared-tooling-snapshot.sh; do
     cat > "$fixture/local/$helper" <<'STUB'
@@ -215,7 +221,7 @@ for selection in ordinary environment command nested recursive; do
             help) : > "$fixture/expected" ;;
             fmt-check) printf 'sort --workspace --grouped --check\nfmt --all -- --check\n' > "$fixture/expected" ;;
             release-resume) printf 'resume 0.9.5 %s release-review\n' "$remote" > "$fixture/expected" ;;
-            release-patch|release-minor|release-major) printf '%s %s release-review\n' "${target#release-}" "$remote" > "$fixture/expected" ;;
+            release-patch|release-minor|release-major) printf 'frozen --root %s --groups testkit --kind %s --remote %s --branch release-review --delivery direct --publish-target publish\n' "$PWD" "${target#release-}" "$remote" > "$fixture/expected" ;;
             install-hooks) printf 'install-git-hooks.sh --consumer %s\n' "$PWD" > "$fixture/expected" ;;
             shared-tooling-check) printf 'verify-shared-tooling-snapshot.sh --consumer %s --manifest .shared-tooling.snapshot\n' "$PWD" > "$fixture/expected" ;;
         esac
@@ -238,8 +244,26 @@ make --no-print-directory release-version RELEASE_DELIVERY=pr \
 make --no-print-directory help RELEASE_DELIVERY=pr > "$fixture/unrelated-delivery.log" 2>&1
 [[ ! -s "$HOST_MAKE_EVENTS" ]] || exit 1
 if [[ $selected_case == release-routing ]]; then
+    # The captured checkout must use the existing single-group state machine.
+    cat > scripts/dev/install-host-tools.sh <<'STUB'
+#!/usr/bin/env bash
+printf 'host-bootstrap\n' >> "$HOST_MAKE_EVENTS"
+exit "${HOST_MAKE_BOOTSTRAP_STATUS:-0}"
+STUB
+    for kind in patch minor major; do
+        : > "$HOST_MAKE_EVENTS"
+        make --no-print-directory "release-$kind" RELEASE_GROUP=testkit FROZEN_RELEASE_ACTIVE=1 \
+            RELEASE_REMOTE=review RELEASE_BRANCH=release-review > "$fixture/captured-$kind.log" 2>&1
+        printf 'host-bootstrap\n%s review release-review\n' "$kind" > "$fixture/expected"
+        cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
+    done
+    : > "$HOST_MAKE_EVENTS"
+    if HOST_MAKE_BOOTSTRAP_STATUS=23 make --no-print-directory release-patch \
+        RELEASE_GROUP=testkit FROZEN_RELEASE_ACTIVE=1 > "$fixture/bootstrap-failure.log" 2>&1; then exit 1; fi
+    printf 'host-bootstrap\n' > "$fixture/expected"
+    cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
     fixture_complete=true
-    echo 'Ordinary release routing and delivery refusal passed (runner effects substituted; frozen mode disabled)'
+    echo 'Frozen entrypoint, captured group routing and delivery refusal passed (runner effects substituted)'
     exit 0
 fi
 # Exercise the actual Host aggregate under parallel Make. Each stage must run

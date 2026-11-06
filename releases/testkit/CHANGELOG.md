@@ -15,6 +15,12 @@ Joint history through 0.76.1 remains there once, with its original scope.
   every cached deletion and returns every failure without replaying requests.
   Keep the runtime and borrowed server alive through completion.
 
+### 🧪 Testing
+
+- Use Shared's frozen source for maintainer release and publication, deferring
+  concurrent normal-checkout dependency edits. Normal release commands include
+  publication; use the retained batch ID for recovery.
+
 ## [0.89.1] - 2026-11-06
 
 ### 🧪 Testing

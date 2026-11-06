@@ -154,10 +154,9 @@ async fn shutdown_waits_for_leases_rejects_waiters_and_keeps_all_failures() {
     let failures = shutdown.await;
     assert_eq!(failures, vec![1, 2]);
     assert_eq!(*attempts.lock().unwrap(), vec![1, 2]);
-    assert!(
-        pool.shutdown(|value| async move { Err(value) })
-            .await
-            .is_empty()
+    assert_eq!(
+        pool.shutdown(|value| async move { Err(value) }).await,
+        Vec::<usize>::new()
     );
 }
 

@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.30.7
+# version	0.30.8
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	22a853e26c05ec323f06c57fa316c08b808f252b
+revision	dc9df707b3b1e616973494eab961c1c214d12260
 # entrypoint	.githooks/pre-commit
 # entrypoint	.github/actions/prepare-common-tools/action.yml
 # entrypoint	.github/actions/retain-failure-evidence/action.yml
@@ -255,7 +255,7 @@ file	a8dcf0bfa4f93b0cff1f891823b8ce20e039fca5f8ebb0996c83c8409a35eed0	-	docs/rel
 file	2ffaf2b8b67faee706f9d3648033ca4ecae263a5a2bb3beb3257f6374ddfc7d9	-	docs/release-validation-reuse.md
 file	3eccf509c260f7471d138b79f8edbe6ff86616a471e7d09caea029e92d408b55	-	docs/ci-change-selection.md
 file	27e4279cd48e0c40597aba3f25f4ec06faf69c77882968b21f28719790825258	-	make/cargo-publication.mk
-file	52e16c6758af2c75570a9b317bae7bfd9f72e4dcfe5e25cf8018f49f31cbb3ed	x	scripts/ci/run-frozen-release.pl
+file	7798f1f836080763c05f4f3dbd0acac89ef01011d4b99dc3cf28ed32816d9eeb	x	scripts/ci/run-frozen-release.pl
 file	1b01f4b482fb85986d1ffab592626ccbfec187ac7a5133ab946b0acd51a18381	-	scripts/ci/check-release-delivery.sh
 file	4594fcf9c2bd3d30302a750361394c2aa81dd6807f77a64c5e0be9142e83a72f	x	scripts/ci/run-rust-formatting.pl
 file	60061c6787d8a36916c7bbefd808eb856099cc1b5007203d7c96b44d7528f4ed	x	scripts/ci/tool-catalog-records.pl

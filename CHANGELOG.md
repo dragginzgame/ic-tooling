@@ -1,5 +1,15 @@
 # IC Tooling release notes
 
+## Pending workspace tooling
+
+### 🔧 Changed
+
+- Use captured source for normal release and publication commands, deferring
+  later normal-checkout edits. Select supplier-first batches once and resume
+  using the retained batch ID; successful default releases already publish.
+- Adopt Shared Tooling 0.30.8 so generated underscore-containing batch IDs can
+  resume from their original recovery records.
+
 ## Shared Tooling 0.30.7 adoption — 2026-11-06
 
 ### 🔧 Changed

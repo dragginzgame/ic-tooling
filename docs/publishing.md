@@ -4,29 +4,55 @@
 
 The maintainer-operated `make release-patch`, `make release-minor` and
 `make release-major` commands use the [shared release contract](releases.md).
-Host's [delivery policy](../ci/release-delivery.txt) selects `RELEASE_DELIVERY=direct`:
-preparation, commit, tag and atomic branch/tag push. Other delivery selections
-are rejected before execution;
+Host's [delivery policy](../ci/release-delivery.txt) selects `RELEASE_DELIVERY=direct`.
+Normal increment commands use Shared's [frozen release batches](frozen-releases.md):
+capture committed source, qualify, prepare, commit/tag, atomically push, then
+publish each selected group to crates.io. **Do not follow a successful release
+with a second `make publish`.** Other delivery selections are rejected;
 the shared runner's optional PR flow is not qualified by this adapter.
-These commands do not publish crates to a registry.
 
-Shared Tooling 0.30.7 supplies opt-in
-[frozen release batches](frozen-releases.md). This adapter has not qualified its
-release/publication hooks in that managed delivery checkout, so
-`RELEASE_FROZEN_GROUPS` and `RELEASE_FROZEN_PUBLISH_TARGET` remain unset. Ordinary
-commands continue using the normal checkout and its existing source admission.
-Snapshot adoption alone does not qualify isolation from concurrent lock writes.
-
-Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools`, `testkit` or `native` explicitly on
-every release command and exact-version resume. The
+Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools`, `testkit` or `native` explicitly
+for a single-group release. For a batch, select `RELEASE_FROZEN_GROUPS` once as a
+comma-separated supplier-first roster. Unknown, duplicate and reversed workspace
+dependency selections refuse before capture; every group uses the same increment.
+The
 [group policy](../ci/cargo-release-groups.json) retains one qualification workspace
 with independent version sources and ledgers; see
 [release ownership](design/release-groups.md). For example:
 
 ```sh
 make release-minor RELEASE_GROUP=tools
-make release-resume RELEASE_GROUP=tools VERSION=X.Y.Z
+make release-patch RELEASE_FROZEN_GROUPS=foundation,build
+make release-batch-resume BATCH=batch-XXXXXXXX
 ```
+
+The default `RELEASE_FROZEN_PUBLISH_TARGET=publish` keeps Git and registry
+delivery in the same captured batch while preserving their separate receipts.
+Select an empty value explicitly for Git-only delivery. `release-resume
+RELEASE_GROUP=... VERSION=...` is for historical normal-checkout attempts; batch
+recovery uses the recorded batch ID and resumes the captured single-group plan
+internally. Uncertain publication refuses redispatch. Verify registry/receipts,
+then use `PUBLICATION_RESULT=published` or `not-published` on batch resume.
+
+The runner prints `target/release-frozen/BATCH` and durable state under
+`.git/release-state/frozen/BATCH`, with a source pin under `refs/releases/frozen/`.
+Start from clean committed source. Later normal-checkout lock/source edits stay
+deferred and cannot change active validation or uploads. The runner does not
+update the normal branch: after completion, fetch and fast-forward it while
+preserving and reapplying any deferred lock selections. Retain candidate Git,
+plans, publication receipts and unfinished work; normal `cargo clean` removes the
+managed checkout too, so it cannot run during delivery. Git/Cargo context
+overrides and mutable ancestor configuration retain Shared's explicit limits.
+
+Fresh captured checkouts discover primary versions through read-only Cargo
+metadata, then prepare their own host parsers before the single-group runner's
+independent version admission. Tool setup uses existing owners and verified shared
+stores; no normal-checkout tools, locks or compilation artifacts are copied.
+`bash scripts/release/test-frozen.sh` qualifies six fresh group queries, real
+metadata/Git hooks, two selected publication dry runs, deferred lock bytes,
+interrupted/uncertain recovery, completed resume and remote conflicts. Its product
+gate bodies are substituted; the installed release gate and actual registry
+receipts remain independent required proof.
 
 Every package has an explicit version owned by its group primary; the root
 Cargo metadata has no version. Root `CHANGELOG.md` indexes the
@@ -38,7 +64,8 @@ Cargo metadata has no version. Root `CHANGELOG.md` indexes the
 notes remain in the [frozen ledger](../releases/integration/CHANGELOG.md), with
 earlier coordinated notes retained in [shared history](../releases/history.md).
 Group tags and saved plans are prefixed with the group.
-One repository-wide release lock still excludes overlapping attempts.
+One queue per normal checkout serializes frozen batches; the captured checkout
+retains its standard single-group release lock.
 
 Prepare the development toolchain selected in [rust-toolchain.toml](../rust-toolchain.toml),
 then run `make install-tools` and `make tools-check`. Shared Tooling owns
@@ -57,8 +84,8 @@ can prepare a missing editor after source admission without per-shell exports;
 standalone verification never installs. Workspace libraries and release
 qualification require the pinned Rust 1.99.1 compiler. No Cargo-edit command renders release metadata.
 
-The read-only `make release-version RELEASE_GROUP=<group>` query needs prepared
-host parsers and the locked offline Cargo graph; it never installs them. Prepare
+The read-only `make release-version RELEASE_GROUP=<group>` query needs Cargo,
+jq and the locked offline workspace metadata; it installs no tools. Prepare
 tools with `make install-tools` / `make tools-check` and missing dependencies
 explicitly with `cargo fetch --locked`. Explicit server setup fetches locked dependencies before
 building its setup CLI offline. Selected release preflight admits its
@@ -171,8 +198,9 @@ prepared Cargo 1.99, Git, tar and the pinned local jq. Cargo owns dependency ord
 package verification and index waiting. Package policy restricts each package to
 crates.io; the wrapper always selects that registry explicitly. Credentials stay
 with Cargo's normal login or credential-provider configuration. Neither command
-creates commits, changes versions, creates tags or pushes Git refs. Git release
-commands never invoke publication automatically.
+creates commits, changes versions, creates tags or pushes Git refs. Normal frozen
+release commands invoke this upload target after Git delivery; standalone
+publication remains available for separately reconciled Git-only releases.
 
 Before any upload, the wrapper prepares all selected archives with `cargo package
 --package NAME@VERSION` for every selected public package, with

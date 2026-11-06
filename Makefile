@@ -3,6 +3,8 @@
 PACKAGE ?= ic-host-artifacts
 RELEASE_DELIVERY ?= direct
 export RELEASE_GROUP
+RELEASE_FROZEN_GROUPS ?= $(RELEASE_GROUP)
+RELEASE_FROZEN_PUBLISH_TARGET ?= publish
 override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
 # Host commands use this checkout's reviewed snapshot, including parse-time probes.
 override SHARED_TOOLING_ROOT := $(CURDIR)
@@ -15,10 +17,23 @@ include make/consumer.mk
 include make/testkit.mk
 include make/release-validation-local.mk
 export YQ := $(CURDIR)/.tools/host/bin/yq
+ifeq ($(FROZEN_RELEASE_ACTIVE),1)
+# Shared independently checks the group version before its preflight hook.
+# Admit parser tools in the captured checkout before entering that state machine.
+release-patch release-minor release-major release-resume: install-host-tools
+endif
 
 # Refuse before the shared runner acquires its lock or any publication starts.
 ifneq ($(filter $(SHARED_RELEASE_TARGETS) publish publish-check,$(MAKECMDGOALS)),)
-ifneq ($(shell bash '$(subst ','"'"',$(CURDIR))/scripts/release/group.sh' '$(subst ','"'"',$(CURDIR))/ci/cargo-release-groups.json' '$(subst ','"'"',$(RELEASE_GROUP))' && printf admitted),admitted)
+_tooling_release_selection := $(RELEASE_GROUP)
+_tooling_release_selection_mode :=
+ifneq ($(filter release-patch release-minor release-major,$(MAKECMDGOALS)),)
+ifneq ($(FROZEN_RELEASE_ACTIVE),1)
+_tooling_release_selection := $(RELEASE_FROZEN_GROUPS)
+_tooling_release_selection_mode := batch
+endif
+endif
+ifneq ($(shell bash '$(subst ','"'"',$(CURDIR))/scripts/release/group.sh' '$(subst ','"'"',$(CURDIR))/ci/cargo-release-groups.json' '$(subst ','"'"',$(_tooling_release_selection))' $(_tooling_release_selection_mode) && printf admitted),admitted)
 $(error Explicit RELEASE_GROUP=foundation, build, text, tools, testkit or native is required)
 endif
 endif
@@ -39,8 +54,9 @@ help:
 	@echo 'Source reports: cloc (this workspace); fleet reports run in Shared Tooling'
 	@echo 'Full release validation: ci (pinned compiler, workspace Clippy, native/Wasm and isolated features); compiler-check admits identities'
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
-	@echo 'Maintainer releases: release-patch/minor/major RELEASE_GROUP=foundation|build|text|tools|testkit|native'
-	@echo 'Resume: release-resume RELEASE_GROUP=<same-group> VERSION=X.Y.Z'
+	@echo 'Frozen Git + crates.io releases: release-patch/minor/major RELEASE_GROUP=foundation|build|text|tools|testkit|native'
+	@echo 'Batch selection: RELEASE_FROZEN_GROUPS=group,group; resume: release-batch-resume BATCH=batch-XXXXXXXX'
+	@echo 'Legacy resume: release-resume RELEASE_GROUP=<same-group> VERSION=X.Y.Z'
 	@echo 'crates.io publication: publish-check (dry run), publish (upload); offline fixture: publish-command-check'
 	@echo 'Publication: select RELEASE_GROUP=foundation|build|text|tools|testkit|native; PACKAGE="crate ..." narrows that group'
 .PHONY: formatting-hook-check
@@ -156,6 +172,11 @@ test-workspace-installed:
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --workspace --all-targets --all-features --locked --offline
 release-version:
 	+@bash scripts/release/adapter.sh version
+.PHONY: release-batch-resume
+release-batch-resume: export TOOLING_FROZEN_BATCH = $(BATCH)
+release-batch-resume: export TOOLING_FROZEN_PUBLICATION_RESULT = $(PUBLICATION_RESULT)
+release-batch-resume:
+	+@perl scripts/ci/run-frozen-release.pl --root "$(CURDIR)" --resume "$$TOOLING_FROZEN_BATCH" $(if $(PUBLICATION_RESULT),--publication-result "$$TOOLING_FROZEN_PUBLICATION_RESULT",)
 release-preflight:
 	+@bash scripts/release/adapter.sh preflight
 release-verify:

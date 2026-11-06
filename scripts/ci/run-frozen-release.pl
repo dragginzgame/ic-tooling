@@ -69,7 +69,7 @@ run($^X,"$RealBin/check-retained-state.pl",'--root',$state);
 my ($record,$id);
 if (defined $resume) {
     !defined($groups) && !defined($publish) or die "resume uses the saved group and publication roster\n";
-    $resume =~ /\Abatch-[A-Za-z0-9]+\z/ or die "invalid batch identity\n";
+    $resume =~ /\Abatch-[A-Za-z0-9_]+\z/ or die "invalid batch identity\n";
     $id=$resume; $record=read_json("$state/$id/intent.json");
 } else {
     $kind =~ /\A(?:patch|minor|major)\z/ or die "invalid release kind\n";

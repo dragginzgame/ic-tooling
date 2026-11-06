@@ -114,19 +114,7 @@ for selected_group in "${groups[@]}"; do
     checkout="$fixture/$selected_group checkout"
     mkdir "$checkout"
     bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$root" "$checkout"
-    bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$checkout"
-    # This fixture checks adapter effects and proof custody, rather than replaying
-    # all 35 dummy product targets for each preparation/recovery probe. Retain
-    # the real selector and focused vocabulary in this disposable checkout.
-    jq -cS '.stages |= map(select(startswith("release-stage-release-scope-") or
-        . == "release-stage-shared-tooling-check" or
-        . == "release-stage-clippy-workspace" or
-        . == "release-stage-tooling-command-check"))' \
-        "$checkout/ci/release-validation.json" > "$fixture/policy"
-    mv "$fixture/policy" "$checkout/ci/release-validation.json"
-    jq -cS '.common = ["shared-tooling-check", "clippy-workspace", "tooling-command-check"] |
-        .exclusions = []' "$checkout/ci/release-validation-coverage.json" > "$fixture/coverage"
-    mv "$fixture/coverage" "$checkout/ci/release-validation-coverage.json"
+    bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$checkout" --compact
     mv "$checkout/source-metadata.json" "$fixture/$selected_group.source-metadata.json"
     cd "$checkout"
     git init -q -b main
