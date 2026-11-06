@@ -18,7 +18,8 @@ root="${root%/.}"
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 unset SHARED_TOOLING_ROOT
 unset TOOLING_STAGE_ADMISSIONS IC_TOOLING_RELEASE_GROUP TOOLING_RELEASE_GROUP
-unset RELEASE_FROZEN_GROUPS RELEASE_FROZEN_PUBLISH_TARGET FROZEN_RELEASE_ACTIVE
+unset RELEASE_FROZEN_GROUPS RELEASE_FROZEN_PUBLISH_TARGET RELEASE_FROZEN_SETUP_TARGET FROZEN_RELEASE_ACTIVE
+unset RELEASE_FROZEN_SETUP_MODE PUBLICATION_RESULT
 # Substitute Cargo has no source metadata; exercise every formatter pass while
 # Shared's producer fixtures own exact-input reuse and invalidation coverage.
 export FORMAT_RUST_ARGS=--no-cache
@@ -188,7 +189,7 @@ if [[ $selected_case == tooling-roster ]]; then
 fi
 printf 'override RELEASE_REMOTE := recursive\n' > overrides.mk
 recursive_make="$(command -v make) --no-print-directory -f Makefile -f overrides.mk"
-routing_targets=(release-patch release-minor release-major release-resume)
+routing_targets=(release-patch release-minor release-major release-resume release-batch-status release-batch-resume release-batch-reconcile release-batch-retire)
 if [[ $selected_case == all ]]; then
     routing_targets=(help fmt-check "${routing_targets[@]}" install-hooks shared-tooling-check)
 fi
@@ -215,13 +216,14 @@ for selection in ordinary environment command nested recursive; do
         : > "$HOST_MAKE_EVENTS"
         "${command[@]}" "$target" "FORMAT_CARGO=$PWD/cargo" \
             VERSION=0.9.5 RELEASE_REMOTE=review RELEASE_BRANCH=release-review \
-            RELEASE_GROUP=testkit HOST_MAKE_ASSERT_RELEASE_GROUP=1 \
+            RELEASE_GROUP=testkit HOST_MAKE_ASSERT_RELEASE_GROUP=1 BATCH=batch-_fixture \
             > "$fixture/$selection-$target.log" 2>&1
         case "$target" in
             help) : > "$fixture/expected" ;;
             fmt-check) printf 'sort --workspace --grouped --check\nfmt --all -- --check\n' > "$fixture/expected" ;;
             release-resume) printf 'resume 0.9.5 %s release-review\n' "$remote" > "$fixture/expected" ;;
-            release-patch|release-minor|release-major) printf 'frozen --root %s --groups testkit --kind %s --remote %s --branch release-review --delivery direct --publish-target publish\n' "$PWD" "${target#release-}" "$remote" > "$fixture/expected" ;;
+            release-patch|release-minor|release-major) printf 'frozen --root %s --groups testkit --kind %s --remote %s --branch release-review --delivery direct --publish-target publish --setup-target release-candidate-setup\n' "$PWD" "${target#release-}" "$remote" > "$fixture/expected" ;;
+            release-batch-*) printf 'frozen --root %s --%s batch-_fixture --delivery direct\n' "$PWD" "${target#release-batch-}" > "$fixture/expected" ;;
             install-hooks) printf 'install-git-hooks.sh --consumer %s\n' "$PWD" > "$fixture/expected" ;;
             shared-tooling-check) printf 'verify-shared-tooling-snapshot.sh --consumer %s --manifest .shared-tooling.snapshot\n' "$PWD" > "$fixture/expected" ;;
         esac
@@ -247,20 +249,44 @@ if [[ $selected_case == release-routing ]]; then
     # The captured checkout must use the existing single-group state machine.
     cat > scripts/dev/install-host-tools.sh <<'STUB'
 #!/usr/bin/env bash
-printf 'host-bootstrap\n' >> "$HOST_MAKE_EVENTS"
+if [[ " $* " == *' --check '* ]]; then
+    printf 'host-check\n' >> "$HOST_MAKE_EVENTS"
+else
+    printf 'host-bootstrap\n' >> "$HOST_MAKE_EVENTS"
+fi
 exit "${HOST_MAKE_BOOTSTRAP_STATUS:-0}"
 STUB
     for kind in patch minor major; do
         : > "$HOST_MAKE_EVENTS"
         make --no-print-directory "release-$kind" RELEASE_GROUP=testkit FROZEN_RELEASE_ACTIVE=1 \
             RELEASE_REMOTE=review RELEASE_BRANCH=release-review > "$fixture/captured-$kind.log" 2>&1
-        printf 'host-bootstrap\n%s review release-review\n' "$kind" > "$fixture/expected"
+        printf '%s review release-review\n' "$kind" > "$fixture/expected"
+        cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
+    done
+    for mode in prepare check; do
+        : > "$HOST_MAKE_EVENTS"
+        make --no-print-directory release-candidate-setup RELEASE_GROUP=testkit \
+            "RELEASE_FROZEN_SETUP_MODE=$mode" > "$fixture/setup-$mode.log" 2>&1
+        event=host-bootstrap
+        [[ $mode != check ]] || event=host-check
+        printf '%s\n' "$event" > "$fixture/expected"
         cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
     done
     : > "$HOST_MAKE_EVENTS"
-    if HOST_MAKE_BOOTSTRAP_STATUS=23 make --no-print-directory release-patch \
-        RELEASE_GROUP=testkit FROZEN_RELEASE_ACTIVE=1 > "$fixture/bootstrap-failure.log" 2>&1; then exit 1; fi
+    if HOST_MAKE_BOOTSTRAP_STATUS=23 make --no-print-directory release-candidate-setup \
+        RELEASE_GROUP=testkit RELEASE_FROZEN_SETUP_MODE=prepare > "$fixture/bootstrap-failure.log" 2>&1; then exit 1; fi
     printf 'host-bootstrap\n' > "$fixture/expected"
+    cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
+    : > "$HOST_MAKE_EVENTS"
+    for target in release-batch-status release-batch-resume release-batch-reconcile release-batch-retire; do
+        if make --no-print-directory "$target" > "$fixture/missing-$target.log" 2>&1; then exit 1; fi
+    done
+    if make --no-print-directory release-candidate-setup RELEASE_FROZEN_SETUP_MODE=invalid \
+        > "$fixture/invalid-setup.log" 2>&1; then exit 1; fi
+    [[ ! -s $HOST_MAKE_EVENTS ]]
+    make --no-print-directory release-batch-resume BATCH=batch-_fixture PUBLICATION_RESULT=published \
+        > "$fixture/reconciled-resume.log" 2>&1
+    printf 'frozen --root %s --resume batch-_fixture --delivery direct --publication-result published\n' "$PWD" > "$fixture/expected"
     cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
     fixture_complete=true
     echo 'Frozen entrypoint, captured group routing and delivery refusal passed (runner effects substituted)'

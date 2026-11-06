@@ -23,6 +23,7 @@ with independent version sources and ledgers; see
 ```sh
 make release-minor RELEASE_GROUP=tools
 make release-patch RELEASE_FROZEN_GROUPS=foundation,build
+make release-batch-status BATCH=batch-XXXXXXXX
 make release-batch-resume BATCH=batch-XXXXXXXX
 ```
 
@@ -38,15 +39,23 @@ The runner prints `target/release-frozen/BATCH` and durable state under
 `.git/release-state/frozen/BATCH`, with a source pin under `refs/releases/frozen/`.
 Start from clean committed source. Later normal-checkout lock/source edits stay
 deferred and cannot change active validation or uploads. The runner does not
-update the normal branch: after completion, fetch and fast-forward it while
-preserving and reapplying any deferred lock selections. Retain candidate Git,
+update the normal branch automatically. After preserving deferred work, use
+Shared's `release-batch-reconcile BATCH=...` on a clean checkout to import and
+fast-forward the delivered refs, then deliberately reapply the deferred changes.
+Reconciliation never stashes, resets or resolves conflicts. Retain candidate Git,
 plans, publication receipts and unfinished work; normal `cargo clean` removes the
 managed checkout too, so it cannot run during delivery. Git/Cargo context
 overrides and mutable ancestor configuration retain Shared's explicit limits.
+`release-batch-retire BATCH=...` explicitly deletes that completed batch's
+checkout, ignored build/tool outputs and recovery records after integration and
+custody checks. Preserve needed evidence separately before selecting it; adoption
+or successful publication does not authorize retirement.
 
-Fresh captured checkouts discover primary versions through read-only Cargo
-metadata, then prepare their own host parsers before the single-group runner's
-independent version admission. Tool setup uses existing owners and verified shared
+Shared invokes `release-candidate-setup` before fresh version lookup and before
+resumed release/publication hooks. Its `prepare` mode selects host parsers; `check`
+admits the saved selection offline without installation. The standard release
+preflight retains editor/server setup and full product qualification. Read-only
+version queries still use Cargo metadata without installing tools. Setup uses existing owners and verified shared
 stores; no normal-checkout tools, locks or compilation artifacts are copied.
 `bash scripts/release/test-frozen.sh` qualifies six fresh group queries, real
 metadata/Git hooks, two selected publication dry runs, deferred lock bytes,

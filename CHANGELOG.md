@@ -1,5 +1,14 @@
 # IC Tooling release notes
 
+## Pending workspace tooling
+
+### 🔧 Changed
+
+- Adopt Shared Tooling 0.30.9's frozen setup and batch custody interfaces. Use
+  Shared's status, resume and guarded reconciliation commands; remove the local
+  resume wrapper and parser bootstrap prerequisite. Recovery checks prepared
+  parsers offline. Explicit retirement remains a separate operator action.
+
 ## Frozen deployment — 2026-11-06
 
 ### 🔧 Changed

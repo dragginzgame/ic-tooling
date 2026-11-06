@@ -5,6 +5,7 @@ RELEASE_DELIVERY ?= direct
 export RELEASE_GROUP
 RELEASE_FROZEN_GROUPS ?= $(RELEASE_GROUP)
 RELEASE_FROZEN_PUBLISH_TARGET ?= publish
+RELEASE_FROZEN_SETUP_TARGET ?= release-candidate-setup
 override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
 # Host commands use this checkout's reviewed snapshot, including parse-time probes.
 override SHARED_TOOLING_ROOT := $(CURDIR)
@@ -17,10 +18,17 @@ include make/consumer.mk
 include make/testkit.mk
 include make/release-validation-local.mk
 export YQ := $(CURDIR)/.tools/host/bin/yq
-ifeq ($(FROZEN_RELEASE_ACTIVE),1)
-# Shared independently checks the group version before its preflight hook.
-# Admit parser tools in the captured checkout before entering that state machine.
-release-patch release-minor release-major release-resume: install-host-tools
+
+.PHONY: release-candidate-setup
+# Shared selects prepare before fresh version lookup, check during recovery.
+# The standard preflight still owns editor/server setup and the product gate.
+release-candidate-setup:
+ifeq ($(RELEASE_FROZEN_SETUP_MODE),prepare)
+	+$(MAKE) --no-print-directory install-host-tools
+else ifeq ($(RELEASE_FROZEN_SETUP_MODE),check)
+	+$(MAKE) --no-print-directory host-tools-check
+else
+	@echo 'Select RELEASE_FROZEN_SETUP_MODE=prepare or check' >&2; exit 2
 endif
 
 # Refuse before the shared runner acquires its lock or any publication starts.
@@ -56,6 +64,7 @@ help:
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
 	@echo 'Frozen Git + crates.io releases: release-patch/minor/major RELEASE_GROUP=foundation|build|text|tools|testkit|native'
 	@echo 'Batch selection: RELEASE_FROZEN_GROUPS=group,group; resume: release-batch-resume BATCH=batch-XXXXXXXX'
+	@echo 'Shared batch custody: release-batch-status, release-batch-reconcile, release-batch-retire BATCH=batch-XXXXXXXX'
 	@echo 'Legacy resume: release-resume RELEASE_GROUP=<same-group> VERSION=X.Y.Z'
 	@echo 'crates.io publication: publish-check (dry run), publish (upload); offline fixture: publish-command-check'
 	@echo 'Publication: select RELEASE_GROUP=foundation|build|text|tools|testkit|native; PACKAGE="crate ..." narrows that group'
@@ -172,11 +181,6 @@ test-workspace-installed:
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --workspace --all-targets --all-features --locked --offline
 release-version:
 	+@bash scripts/release/adapter.sh version
-.PHONY: release-batch-resume
-release-batch-resume: export TOOLING_FROZEN_BATCH = $(BATCH)
-release-batch-resume: export TOOLING_FROZEN_PUBLICATION_RESULT = $(PUBLICATION_RESULT)
-release-batch-resume:
-	+@perl scripts/ci/run-frozen-release.pl --root "$(CURDIR)" --resume "$$TOOLING_FROZEN_BATCH" $(if $(PUBLICATION_RESULT),--publication-result "$$TOOLING_FROZEN_PUBLICATION_RESULT",)
 release-preflight:
 	+@bash scripts/release/adapter.sh preflight
 release-verify:

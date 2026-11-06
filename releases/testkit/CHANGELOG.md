@@ -6,6 +6,14 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.89.3] - Unreleased
+
+### 🧪 Testing
+
+- Deliver Testkit through Shared Tooling 0.30.9's captured setup and recovery
+  hooks, preserving deferred checkout edits and using guarded reconciliation
+  after publication. Public Rust contracts and dependency selections are unchanged.
+
 ## [0.89.2] - 2026-11-06
 
 ### ➕ Added
