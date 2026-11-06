@@ -1,5 +1,30 @@
 # Current handoff
 
+## Testkit 0.89.1 deployment — in progress
+
+The II attachment update is authorized for delivery from the normal checkout's
+`main` to `dragginzgame/ic-tooling:main`, with tag `testkit-v0.89.1` and
+crates.io publication of `ic-testkit`. Private Dev/probe follow the patch; other
+groups retain their versions. Unrelated incoming lock selections are preserved
+as original bytes and a patch in
+`.git/release-state/deployment-testkit-0.89.1/`; release qualification uses the
+committed dependency graph, then restores those selections. The complete local
+Testkit gate is required; hosted native qualification runs asynchronously.
+
+### II attachment implementation
+
+The fixture's schema-1 connection record now adds `serverUrl` and numeric
+`instanceId` for borrowed native attachment. The
+[consumer guide](../../testing/browser/internet-identity/README.md#native-attachment-and-cleanup-ownership)
+documents application setup, request/runtime ownership, session lifetime and
+exclusive fixture-owned instance/gateway/server teardown. The installed browser
+acceptance confirms a live management instance and both closed endpoints after
+cleanup, alongside real II sign-in, signed ingress and rejection controls.
+Evidence is `target/evidence/ii-attachment-001/`; selected driver Clippy,
+formatting and documentation links pass on Linux. Native macOS was not rerun.
+That focused proof used the incoming lock selections. Pending notes select
+0.89.1; package versions remain 0.89.0 until successful release qualification.
+
 ## Testkit 0.89.0 delivered — 2026-11-06
 
 `ic-testkit 0.89.0` is published to crates.io from clean release commit

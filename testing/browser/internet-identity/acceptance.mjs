@@ -33,6 +33,14 @@ const connection = await withFixtureSession({ command: driver,
 }, async input => {
   assert.equal(input.schema, 1); assert.equal(input.dummyAuth, false); assert.equal(input.fetchRootKey, true);
   assert.equal(input.revision, pins.revision);
+  const serverUrl = new URL(input.serverUrl);
+  assert.equal(serverUrl.protocol, 'http:');
+  assert.ok(['127.0.0.1', 'localhost'].includes(serverUrl.hostname));
+  assert.ok(Number.isSafeInteger(input.instanceId) && input.instanceId >= 0);
+  const instancesResponse = await fetch(new URL('instances', serverUrl), { signal: AbortSignal.timeout(5_000) });
+  assert.equal(instancesResponse.status, 200);
+  const instances = await instancesResponse.json();
+  assert.ok(['Available', 'Busy'].includes(instances[input.instanceId]), 'attachment selects a live instance');
   for (const [field, name] of [['backendModuleHash', 'backend.wasm.gz'], ['frontendModuleHash', 'frontend.wasm.gz']]) {
     assert.equal(Buffer.from(input[field]).toString('hex'), pins.assets.find(asset => asset.name === name).sha256);
   }
@@ -125,6 +133,7 @@ const connection = await withFixtureSession({ command: driver,
     assert.ok(statuses.some(item => item.status === 400 && item.path.includes(input.callerCanisterId)), 'replica rejected the forged signature');
     await context.tracing.stop({ path: join(evidence, 'browser.zip') });
     await writeFile(join(evidence, 'proof.json'), JSON.stringify({ ...result, webauthn, statuses,
+      attachment: { serverUrl: input.serverUrl, instanceId: input.instanceId, state: instances[input.instanceId] },
       ii: pins, versions, tools, node: process.versions.node, chromium: browser.version(),
       assurance: 'Chromium virtual WebAuthn integration; no physical authenticator assurance',
     }, null, 2), { flag: 'wx' });
@@ -145,4 +154,6 @@ const connection = await withFixtureSession({ command: driver,
 const stoppedGateway = new URL(connection.gateway); stoppedGateway.hostname = '127.0.0.1';
 await assert.rejects(fetch(stoppedGateway, { signal: AbortSignal.timeout(2_000) }),
   error => error.cause?.code === 'ECONNREFUSED', 'fixture teardown closes the gateway');
-await writeFile(join(evidence, 'cleanup.json'), JSON.stringify({ driverExit: 0, gatewayRefused: true }), { flag: 'wx' });
+await assert.rejects(fetch(new URL('instances', connection.serverUrl), { signal: AbortSignal.timeout(2_000) }),
+  error => error.cause?.code === 'ECONNREFUSED', 'fixture teardown stops the management server');
+await writeFile(join(evidence, 'cleanup.json'), JSON.stringify({ driverExit: 0, gatewayRefused: true, serverRefused: true }), { flag: 'wx' });

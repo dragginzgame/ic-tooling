@@ -245,6 +245,7 @@ async fn serve(
     let root_key = pic.root_key().await?.ok_or("missing local root key")?;
     let connection = json!({
         "schema": 1, "release": pins.release, "revision": pins.revision,
+        "serverUrl": pic.get_server_url().as_str(), "instanceId": pic.instance_id,
         "gateway": gateway.as_str(), "authorizeUrl": format!("{frontend_origin}/authorize"),
         "backendOrigin": backend_origin, "backendCanisterId": backend.to_text(),
         "frontendCanisterId": frontend.to_text(), "callerCanisterId": caller.to_text(),

@@ -71,7 +71,7 @@ mock provider protocol or validation override.
 
 `proof.json` retains public authenticator RP/sign-counter evidence, provider pins,
 matched JS/browser identities, the accepted caller and negative-control results.
-`cleanup.json` confirms zero driver exit and closed gateway after teardown.
+`cleanup.json` confirms zero driver exit and closed gateway/management server after teardown.
 `browser.zip` retains a Playwright trace; fixture readiness, exact interface copies
 and server output remain under `fixture/`. Linux qualification on 2026-11-06 used
 Chromium **156.0.8078.4**; this is virtual WebAuthn **browser integration** evidence,
@@ -86,6 +86,8 @@ keeps private verified schema/wasm bytes for initialization, and publishes
 
 - `authorizeUrl` for AuthClient's provider and `backendCanisterId` for its signer.
 - `backendOrigin`, `frontendCanisterId`, `gateway`, and the proof canister ID.
+- `serverUrl` and numeric `instanceId` for native PocketIC attachment to the same
+  running instance. `serverUrl` is the management API, distinct from `gateway`.
 - `rootKey` as DER bytes for the consumer's local agent; never use a local root
   override for a production provider.
 - Exact provider release/revision and installed module hashes.
@@ -96,6 +98,33 @@ Configure AuthClient with both `identityProvider.authorizeUrl` and
 Reuse the existing session helper with `readyPath: OUTPUT/connection.json`, a
 distinct retained log, `startupMs: 180000`, `stopMs: 10000`, `pollMs: 50`.
 The caller owns the body's deadlines, browser lifecycle and paths.
+
+### Native attachment and cleanup ownership
+
+Canic can create and install its issuer/receiver canisters in this instance using
+`ic_testkit::pocket_ic::PocketIc::new_from_existing_instance(server_url,
+instance_id, Some(request_timeout_ms))`, with `server_url` parsed from `serverUrl`
+and `instance_id` checked into `usize` from `instanceId`. The caller selects its
+request timeout and Tokio runtime. This constructor borrows the existing
+instance; it creates no new instance or managed server. Keep all native setup
+and browser acceptance inside the same `withFixtureSession` body. The existing
+`gateway` routes the new canisters too; II and the consumer share its root key.
+
+The fixture process retains exclusive instance, auto-progress, gateway and
+managed-server cleanup ownership. Attached clients must not delete the instance,
+stop progress/gateways, terminate the server or restore a snapshot that replaces
+the fixture state. Finish consumer requests and close consumer browsers/agents
+before returning from the body. An attached Rust handle can use
+`attached.drop().await?` to release its borrowed handle; it does not delete the
+fixture instance. Creating a separate gateway on that handle is outside this
+attachment contract. Canic owns application canister setup and may explicitly
+stop/delete its own canisters while the session is live; whole-instance teardown
+also removes them. Rust Drop performs no network cleanup.
+
+These endpoints and IDs are local test capabilities, valid only while the
+fixture session is alive; reading `connection.json` does not extend its lifetime.
+Do not expose the management API to the browser or reuse a record after teardown.
+Ownership is unchanged by this additive schema-1 record extension.
 
 Newline/EOF on stdin and SIGINT/SIGTERM/SIGHUP request explicit instance deletion
 before managed-server termination/reaping. The server has a 600-second hard TTL
