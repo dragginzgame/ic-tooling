@@ -52,7 +52,7 @@ admitted 16.1 server; native host and Wasm graph obligations remain separate.
 
 ### Async-only client contract
 
-The next Testkit minor keeps one async PocketIC implementation. The caller owns
+Testkit keeps one async PocketIC implementation. The caller owns
 its Tokio runtime. Network and lifecycle helpers must not recreate blocking
 wrappers or private runtimes. Explicit instance/baseline close and raw client
 async deletion retain server custody; Rust Drop performs no client network I/O.

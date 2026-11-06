@@ -31,7 +31,7 @@ Builders without a URL return `ClientError::MissingServerUrl`. Provision with
 `ic-testkit-server setup` or `pic::server_assets::setup`, admit installations
 with `check`, and start a selected binary through `PocketIcStartupConfig`.
 
-## Supported surface in the pending 0.88 hard cut
+## Supported surface in the 0.88 hard cut
 
 Benchmark marker emission, parsing, aggregation/comparison and the report example
 are removed. Testkit's portable library retains deterministic principals without

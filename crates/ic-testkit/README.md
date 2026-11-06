@@ -30,7 +30,7 @@ The builder supports NNS/II/system/application subnets, selected system canister
 time/progress, gateways and caller-owned persistent directories. Pass a path with
 `with_state_dir`; client teardown preserves it. Temporary state handles, custom
 creation DTOs and unused special-purpose configuration families are removed in
-the pending 0.88 [hard cut](../../docs/testkit/client-migration.md#instance-configuration).
+the 0.88 [hard cut](../../docs/testkit/client-migration.md#instance-configuration).
 
 External interfaces that require Candid remain caller-owned: use a direct
 Platform dependency for encoding/decoding, then send the bytes through the
