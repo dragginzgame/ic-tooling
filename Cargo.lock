@@ -1708,7 +1708,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.89.4"
+version = "0.90.0"
 dependencies = [
  "base64 0.23.1",
  "candid",
@@ -1736,7 +1736,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit-dev"
-version = "0.89.4"
+version = "0.90.0"
 dependencies = [
  "clap",
  "ic-build",
@@ -1764,7 +1764,7 @@ version = "0.80.0"
 
 [[package]]
 name = "ic-testkit-perf-probe"
-version = "0.89.4"
+version = "0.90.0"
 dependencies = [
  "ic-platform-runtime",
  "ic-wire",
