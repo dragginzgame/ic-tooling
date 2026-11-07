@@ -9,7 +9,7 @@ use crate::pocket_ic::common::rest::{
 };
 #[cfg(windows)]
 use crate::pocket_ic::wsl_path;
-use crate::pocket_ic::{ClientError, Operation, http::Exchange};
+use crate::pocket_ic::{ClientError, Operation, error::cbor_error, http::Exchange};
 use crate::pocket_ic::{
     CreateCanisterParams, CreateCanisterPlacement, PocketIcBuilder, RejectResponse, Time,
 };
@@ -1324,7 +1324,7 @@ impl PocketIc {
             sender_delegation: None,
         };
 
-        let serialized_bytes = encode_envelope(&envelope, usize::MAX)?;
+        let serialized_bytes = encode_envelope(&envelope, usize::MAX).map_err(cbor_error)?;
 
         let endpoint = format!("api/v2/subnet/{}/read_state", subnet_id.to_text());
         let url = self.instance_url().join(&endpoint).unwrap();
@@ -1342,17 +1342,18 @@ impl PocketIc {
             return Err(exchange.server_error(status, &bytes));
         }
         let read_state_response: ReadStateResponse =
-            decode_read_state_response(&bytes, bytes.len())?;
+            decode_read_state_response(&bytes, bytes.len()).map_err(cbor_error)?;
         let cert: Certificate = decode_certificate(
             &read_state_response.certificate,
             read_state_response.certificate.len(),
-        )?;
+        )
+        .map_err(cbor_error)?;
 
         let metrics = match cert.tree.lookup_path(path) {
             LookupResult::Found(value) => value,
             _ => return Ok(None),
         };
-        decode_subnet_metrics(metrics, metrics.len()).map_err(ClientError::from)
+        decode_subnet_metrics(metrics, metrics.len()).map_err(cbor_error)
     }
 
     /// This (asynchronous) drop function must be called to drop the PocketIc instance.

@@ -6,7 +6,26 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
-## [0.92.1] - Unreleased
+## [0.93.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Match `ClientError::Cbor { kind, source }` using Testkit's `CborErrorKind`
+  instead of the former Platform-error tuple variant. Input/output admission
+  and decoding/encoding remain distinct, and the original typed causal chain
+  is preserved. Unrelated Platform facade updates no longer change ordinary
+  error matching ([#340](https://github.com/dragginzgame/ic-tooling/issues/340)).
+  Platform 0.25 still owns the codecs; management DTOs remain exactly 0.11.0.
+  Server custody, deadlines and protocol behavior retain their existing contracts.
+
+### 🔧 Changed
+
+- Adopt Wire 0.17.12 in native calls and the Wasm control canister, retaining
+  the compatible Wire minimum and existing codecs and payload bytes.
+- Adopt Runtime 0.20 and its matching entrypoint macros and singleton guard for
+  the private Wasm control canister. Its existing direct Runtime imports remain
+  supported; the published Testkit API, native dependency graph and Wire
+  protocol are unchanged.
 
 ### 🧪 Testing
 

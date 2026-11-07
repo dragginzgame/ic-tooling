@@ -1,5 +1,5 @@
-use super::{DecodeError, decode_one};
-use ic_platform::candid::{self as codec, DecodeLimits};
+use super::{DecodeError, DecodeLimits, decode_one};
+use ic_platform::candid as codec;
 
 fn limits(bytes: usize) -> DecodeLimits {
     DecodeLimits {
@@ -128,7 +128,13 @@ fn incompatible_values_and_trailing_bytes_preserve_decoder_errors() {
                 .downcast_ref::<ic_platform::candid::contract::Error>()
                 .is_some()
         );
-        let selected = limits(bytes.len());
+        let selected = codec::DecodeLimits {
+            reply_bytes: bytes.len(),
+            decoding_quota: 4096,
+            skipping_quota: 4096,
+            type_entries: 64,
+            header_bytes: 1024,
+        };
         let codec::DecodeError::Candid(expected) =
             codec::decode_one::<u64>(&bytes, selected).unwrap_err()
         else {

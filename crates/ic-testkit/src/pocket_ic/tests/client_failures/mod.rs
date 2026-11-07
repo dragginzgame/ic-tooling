@@ -149,6 +149,45 @@ impl Server {
 }
 
 #[tokio::test]
+async fn malformed_read_state_preserves_codec_kind_and_source_without_replay() {
+    use crate::pocket_ic::CborErrorKind;
+    use std::error::Error;
+
+    let server = Server::new(vec![
+        Step::reply(
+            "/instances/7/read/get_time",
+            200,
+            r#"{"nanos_since_epoch":0}"#,
+        ),
+        Step::reply(
+            "/instances/7/api/v2/subnet/aaaaa-aa/read_state",
+            200,
+            "invalid cbor",
+        ),
+    ]);
+    let error = server
+        .client(Duration::from_secs(30))
+        .get_subnet_metrics(candid::Principal::management_canister())
+        .await
+        .unwrap_err();
+    assert!(matches!(
+        error,
+        ClientError::Cbor {
+            kind: CborErrorKind::Decode,
+            ..
+        }
+    ));
+    let cause = error.source().unwrap();
+    assert!(
+        cause
+            .downcast_ref::<ic_platform::certification::cbor::CborError>()
+            .is_some()
+    );
+    assert!(cause.source().is_some());
+    assert_eq!(server.finish().len(), 2);
+}
+
+#[tokio::test]
 async fn missing_server_is_refused_before_any_external_effect() {
     assert!(matches!(
         crate::pocket_ic::PocketIcBuilder::new(Duration::from_secs(300))

@@ -2,6 +2,19 @@
 
 use reqwest::StatusCode;
 
+/// Recovery-relevant CBOR refusal, independent of Platform's codec error type.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CborErrorKind {
+    /// Encoded input exceeded its allowance before decoding.
+    InputTooLarge,
+    /// CBOR or its required protocol shape was invalid, including trailing bytes.
+    Decode,
+    /// Encoded output would exceed its allowance; no partial output escaped.
+    OutputTooLarge,
+    /// Serialization failed for a reason other than the output allowance.
+    Encode,
+}
+
 /// A computation accepted by the PocketIC server.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Operation {
@@ -65,12 +78,33 @@ pub enum ClientError {
     Canister(crate::pocket_ic::RejectResponse),
     #[error("Candid failed: {0}")]
     Candid(#[from] candid::Error),
-    #[error("CBOR failed: {0}")]
-    Cbor(#[from] ic_platform::certification::cbor::CborError),
+    #[error("CBOR failed: {source}")]
+    Cbor {
+        /// Stable Testkit classification; no supplier downcast is required.
+        kind: CborErrorKind,
+        /// Original typed codec failure and its causal chain. Downcasting to a
+        /// supplier type is optional and couples that caller to its version.
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
     #[error("I/O failed: {0}")]
     Io(#[from] std::io::Error),
     #[error("invalid PocketIC response: {0}")]
     Protocol(String),
+}
+
+pub(super) fn cbor_error(source: ic_platform::certification::cbor::CborError) -> ClientError {
+    use ic_platform::certification::cbor::CborError;
+    let kind = match &source {
+        CborError::InputTooLarge => CborErrorKind::InputTooLarge,
+        CborError::Decode(_) => CborErrorKind::Decode,
+        CborError::OutputTooLarge => CborErrorKind::OutputTooLarge,
+        CborError::Encode(_) => CborErrorKind::Encode,
+    };
+    ClientError::Cbor {
+        kind,
+        source: Box::new(source),
+    }
 }
 
 impl ClientError {

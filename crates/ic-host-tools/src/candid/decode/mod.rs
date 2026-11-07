@@ -2,12 +2,30 @@
 //!
 //! This module does not authenticate replies or interpret application errors.
 
-use ic_platform::candid::{self as codec, DecodeLimits, contract::CandidType};
+use ic_platform::candid::{self as codec, contract::CandidType};
 use serde::de::DeserializeOwned;
 use thiserror::Error;
 
 #[cfg(test)]
 mod tests;
+
+/// Caller-selected bounds for one reply, independent of the codec supplier.
+///
+/// These limits bound encoded bytes and decoder work, not heap, stack or time.
+/// There are no defaults: the caller selects every resource allowance.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DecodeLimits {
+    /// Maximum complete encoded reply bytes, checked before aggregate charging.
+    pub reply_bytes: usize,
+    /// Maximum Candid decoding work.
+    pub decoding_quota: usize,
+    /// Maximum work spent skipping compatible extra fields and arguments.
+    pub skipping_quota: usize,
+    /// Maximum Candid type-table entries.
+    pub type_entries: usize,
+    /// Maximum encoded Candid header bytes.
+    pub header_bytes: usize,
+}
 
 /// Resource admission failures are distinct from malformed or incompatible Candid.
 #[derive(Debug, Error)]
@@ -28,7 +46,7 @@ pub enum DecodeError {
 /// Oversized replies do not consume aggregate allowance. Once admitted, a reply
 /// consumes its bytes before decoding, so malformed replies cannot evade accounting.
 /// Caller policy owns quotas; this helper never authenticates the decoded value.
-/// Import per-reply limits directly from [`ic_platform::candid::DecodeLimits`].
+/// Import per-reply limits from this module's [`DecodeLimits`].
 /// Extra wire arguments are skipped under the selected work quotas, like Candid's
 /// decoder; trailing undecodable bytes reject. These are byte and decoder-work
 /// limits, not a heap, stack or elapsed-time guarantee.
@@ -48,6 +66,13 @@ pub fn decode_one<T: CandidType + DeserializeOwned>(
     *remaining = remaining
         .checked_sub(bytes.len())
         .ok_or(DecodeError::AggregateBytes)?;
+    let limits = codec::DecodeLimits {
+        reply_bytes: limits.reply_bytes,
+        decoding_quota: limits.decoding_quota,
+        skipping_quota: limits.skipping_quota,
+        type_entries: limits.type_entries,
+        header_bytes: limits.header_bytes,
+    };
     codec::decode_one(bytes, limits).map_err(|error| match error {
         codec::DecodeError::ReplyTooLarge { .. } => DecodeError::ReplyBytes,
         codec::DecodeError::Candid(source) => DecodeError::Candid(source),

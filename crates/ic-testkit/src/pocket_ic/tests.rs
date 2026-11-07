@@ -1,6 +1,8 @@
 use super::{ErrorCode, RejectCode, RejectResponse};
 use strum::IntoEnumIterator as _;
 
+mod codec_errors;
+
 #[test]
 fn topology_keeps_application_selection_and_canister_ranges() {
     use super::common::rest::{

@@ -1,5 +1,17 @@
 # PocketIC client transfer
 
+## Public adapter boundaries
+
+Tooling #340 extends the latest `loc-surface-cut.patch` adaptation with the
+Testkit-owned CBOR failure classification and private supplier-error conversion.
+The original typed source and its nested cause remain intact; packet codecs,
+protocol bytes, budgets and no-replay behavior remain with their existing owners.
+The layer also records the previously delivered polling/cancellation fixture
+handshakes, restoring their exact reconstruction. Only this latest adaptation
+and its checksum are regenerated against its unchanged parent; donor, transfer
+and upstream fingerprints remain unchanged. The source guard reconstructs and
+checks that complete chain, including the new boundary tests.
+
 `loc-surface-cut.patch` records the authorized removal of unused Candid helper
 exports, default-effective-ID lookup, server-filesystem snapshot APIs/DTOs,
 no-tick polling, authenticated ingress-status APIs, custom blockmaker ticks,

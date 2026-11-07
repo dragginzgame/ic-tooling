@@ -1,5 +1,45 @@
 # Current handoff
 
+## Adapter boundaries and Platform adoption prepared — 2026-11-07
+
+The root now selects Platform 0.25.0 and Runtime 0.20.0. The lock selects Wire
+0.17.12 and matching Runtime/macros/guard 0.20.0, with Types 0.18.2 and management
+DTOs exactly 0.11.0 unchanged. The private Wasm canister already imports ordinary
+entrypoints through Runtime's `cdk`; removing Platform's facade macros requires
+no source migration here. Wire's compatible minimum stays 0.17.0, with no new
+field adapter, codec or payload format selected.
+
+[#340](https://github.com/dragginzgame/ic-tooling/issues/340) is implemented locally:
+Tools owns its five-field `candid::decode::DecodeLimits`, converted privately to
+Platform. Testkit owns `CborErrorKind`; match `ClientError::Cbor { kind, source }`
+instead of the former tuple variant. Original typed codec causes remain intact.
+These configuration/error APIs no longer require Platform type alignment.
+The [public identity inventory](../extraction.md#public-supplier-identities)
+records intentional external DTO, SDK, Wire and Foundation/Text boundaries.
+Platform's ICRC `Value` remains deliberately shared by the optional ledger
+adapter. Tools remains the sole passive `LedgerTip` owner; Query's verified
+result migration is [Query #118](https://github.com/dragginzgame/ic-query/issues/118).
+No sibling source was changed. Pending Tools 0.86.0 and Testkit 0.93.0 notes
+describe this one-time migration and retain the Runtime/deadline-fixture batch.
+Package versions remain Tools 0.85.0 and Testkit/Dev/probe 0.92.0. Changes are
+uncommitted; no release, publication or issue closure was performed.
+
+Focused #340 Linux evidence is under `target/public-boundaries-340/`: all 49
+selected cases, affected library/test Clippy and the source reconstruction and
+mutation guards passed. Cases cover supplier-independent consumer APIs, all
+five decoder allowances and aggregate charging, four codec failure kinds with
+typed causes, malformed read-state no replay, management identity and installed
+16.1 management/snapshots/certified metrics. The latest adaptation also binds
+the previous timing-fixture fix, repairing its missing provenance update without
+changing donor/upstream fingerprints. Earlier native/Wasm graph and installed
+Wire evidence remains under `target/platform-025-wire-01711-adoption-20261107/`
+and `target/runtime-020-adoption-20261107/`; the later graph inspection passed
+with Wire 0.17.12. No new native macOS proof is claimed.
+
+The #340 entry lock already contained Wire 0.17.12 and remains byte-identical.
+Earlier Runtime adoption, crypto-common 0.1.6, generic-array 0.14.9 and Windows
+selections remain intact; never overwrite newer user selections with old backups.
+
 ## Platform/Wire adoption deployed — 2026-11-07
 
 Adoption source `877900d5` selects Platform 0.24.0, Wire 0.17.8 and Shared

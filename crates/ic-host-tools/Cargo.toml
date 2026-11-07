@@ -47,5 +47,9 @@ tokio = { workspace = true, features = ["rt", "macros"] }
 
 leb128.workspace = true
 
+[[test]]
+name = "public_decode"
+required-features = ["candid"]
+
 [lints]
 workspace = true

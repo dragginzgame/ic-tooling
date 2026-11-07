@@ -35,6 +35,43 @@ adapters retain Platform without its PocketIC feature. The workspace manifest
 owns exact dependency versions; the [client migration](testkit/client-migration.md)
 describes the async-only client and explicit teardown contract.
 
+### Public supplier identities
+
+Tooling owns configuration and recovery classifications for its adapters.
+`ic_host_tools::candid::decode::DecodeLimits` expresses caller policy and is
+converted privately to Platform's limits. `ClientError::Cbor { kind, source }`
+uses Testkit's `CborErrorKind`; its boxed source retains the original typed
+codec error and causal chain. Neither configuration nor ordinary error matching
+requires a direct Platform dependency. Optional supplier-error downcasts retain
+their explicit supplier-version coupling. Platform continues to own every codec.
+
+The public-surface inventory for
+[#340](https://github.com/dragginzgame/ic-tooling/issues/340) retains these
+deliberate interoperability boundaries:
+
+| Surface | Canonical owner / release group | Why identity is retained |
+| --- | --- | --- |
+| Application Principal | `ic-platform-types` / Types | Shared application identity, independent of facade releases. |
+| Simulator Principal and management DTOs | Upstream `ic_principal` and exact `ic-management-canister-types` 0.11.0, selected through Platform/Types | Exact external management and Candid identity; Testkit's direct management pin and identity tests remain authoritative. |
+| Subnet metrics | Upstream `ic-transport-types`, exposed through Platform | The facade reexports this DTO rather than defining a new type. Its upstream generation, not unrelated facade code, owns identity. |
+| Candid trait bounds, `Nat` and decoder causes | Upstream `candid`, selected through Platform | Typed external Candid exchange; those identities survive facade-only minor changes. |
+| Agent builder, agent and SDK errors | Upstream `ic-agent`, exposed through Platform | Callers deliberately configure and use the SDK; no competing agent wrapper or lifecycle owner. |
+| ICRC ledger `Value` in `LedgerBlock` and chain results | Platform / Platform | Standard external ledger schema and hashing have one owner. This optional adapter intentionally shares its selected Platform generation; unrelated error/configuration adapters do not. |
+| Wasm facts consumed by `interface::exported_methods` | `ic-host-artifacts` / Foundation | Borrowed, already-inspected facts preserve one parser, export model and admission owner. |
+| Project YAML failure | `ic-host-text` / Text | Typed cause of the delegated YAML interpreter; no second parser contract. |
+| Wire call limits and codec failures | `ic-wire` / Core | The caller explicitly selects the owned RPC codec and its admission/error contract. |
+
+`LedgerTip` remains Tooling's passive index/hash anchor for chain verification,
+owned by Host Tools' Tools group. Constructing it proves no authentication.
+Query owns certificate verification and its authenticated-result API; its
+[boundary migration](https://github.com/dragginzgame/ic-query/issues/118) can
+project to this existing anchor when invoking Tooling. Do not create a second
+passive `LedgerTip` owner or move certificate codecs into either consumer.
+Shared DTO/SDK generation upgrades still need joint identity checks; they are
+distinct from an unrelated facade release changing adapter error/configuration
+identities. Foundation/Text public-value upgrades likewise retain their explicit
+group contracts rather than acquiring duplicate models here.
+
 Host Tools selects Platform for external Candid decoding and native parsing.
 Platform owns certificate/hash-tree CBOR and typed IC packet codecs; Tools retains
 service-to-Wasm projections and caller-owned aggregate-byte accounting.

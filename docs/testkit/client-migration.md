@@ -163,11 +163,18 @@ consumers using explicit timing getters must make this source migration.
 
 ## IC packet codecs
 
-Platform 0.24 owns read-state envelope encoding and certificate/subnet-metrics decoding.
+Platform owns read-state envelope encoding and certificate/subnet-metrics decoding.
 Testkit retains the HTTP exchange, status admission and certificate tree lookup.
-`ClientError::Cbor` now carries `ic_platform::certification::cbor::CborError`;
-code naming the former backend error type must adopt that owner. Testkit no
-longer declares the CBOR, certificate or transport DTO crates directly.
+Match `ClientError::Cbor { kind, source }` with Testkit's `CborErrorKind`:
+`InputTooLarge`, `OutputTooLarge`, `Decode` or `Encode`. Replace the former
+tuple-variant match and Platform error-kind imports once. The original typed
+codec failure and its nested cause remain in `source`; ordinary recovery uses
+the Testkit classification without a supplier downcast or direct Platform
+dependency. Choosing to downcast to a supplier error still couples that caller
+to its version. Limits, protocol bytes, request budgets and no-replay custody
+are unchanged. Testkit declares no direct CBOR, certificate or transport DTO
+dependency. See the [identity inventory](../extraction.md#public-supplier-identities)
+for deliberate management, Principal and subnet-metrics interoperability.
 
 `get_subnet_metrics` retains its optional result: a missing tree path or a present
 CBOR null leaf returns `None`; malformed data is an error. Decoding does not

@@ -118,12 +118,17 @@ Consumers select tools, source custody, output limits and optional normalization
 See the [0.24 migration](../docs/changelog/0.24.md) for the required Build release.
 
 `ic_host_tools::candid::decode::decode_one` decodes a reply with explicit
-`ic_platform::candid::DecodeLimits` and a mutable aggregate byte allowance. Oversized replies refuse
+`ic_host_tools::candid::decode::DecodeLimits` and a mutable aggregate byte allowance. Oversized replies refuse
 without charging; admitted malformed replies consume their bytes. Candid's
 compatibility rules and skipping quotas apply to extra arguments. Callers retain
 authentication, schemas, domain errors and all resource-policy choices.
 Platform owns the bounded codec and its compact diagnostics; Host retains the
 aggregate-accounting adapter and preserves original typed decoder causes.
+The limits value belongs to Tools and is converted privately to Platform's
+configuration. Import all five fields from Tools; their meaning and accounting
+are unchanged. Ordinary configuration and `DecodeError` matching do not require
+a Platform type identity. See the
+[retained interoperability boundaries](extraction.md#public-supplier-identities).
 Earlier feature/import changes remain in the
 [0.21 migration notes](../docs/changelog/0.21.md) and release history.
 Replica install thresholds and their reports belong to the consuming application.

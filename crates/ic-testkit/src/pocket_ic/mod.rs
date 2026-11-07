@@ -29,7 +29,7 @@ use std::{
 
 mod error;
 mod http;
-pub use error::{ClientError, Operation, RequestContext};
+pub use error::{CborErrorKind, ClientError, Operation, RequestContext};
 pub mod common;
 mod nonblocking;
 pub use nonblocking::PocketIc;

@@ -4,6 +4,17 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.86.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Import bounded Candid `DecodeLimits` from `ic_host_tools::candid::decode`.
+  Tools now owns its configuration and privately converts all five allowances
+  to Platform 0.25, so unrelated facade updates no longer change this API's type
+  identity. Existing admission, aggregate accounting and typed decoder causes
+  remain unchanged ([#340](https://github.com/dragginzgame/ic-tooling/issues/340)).
+  Deliberately shared external ledger values retain Platform's identity.
+
 ## [0.85.0] - 2026-11-07
 
 ### ⚠️ Breaking

@@ -141,10 +141,30 @@ index df06e616..400adaf8 100644
 -    pub snapshot_id: Vec<u8>,
 -}
 diff --git a/src/error.rs b/src/error.rs
-index 5ec9f881..ba96617a 100644
+index 5ec9f881..cc9d8641 100644
 --- a/src/error.rs
 +++ b/src/error.rs
-@@ -28,6 +28,8 @@ pub enum ClientError {
+@@ -2,6 +2,19 @@
+ 
+ use reqwest::StatusCode;
+ 
++/// Recovery-relevant CBOR refusal, independent of Platform's codec error type.
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++pub enum CborErrorKind {
++    /// Encoded input exceeded its allowance before decoding.
++    InputTooLarge,
++    /// CBOR or its required protocol shape was invalid, including trailing bytes.
++    Decode,
++    /// Encoded output would exceed its allowance; no partial output escaped.
++    OutputTooLarge,
++    /// Serialization failed for a reason other than the output allowance.
++    Encode,
++}
++
+ /// A computation accepted by the PocketIC server.
+ #[derive(Clone, Debug, PartialEq, Eq)]
+ pub struct Operation {
+@@ -28,6 +41,8 @@ pub enum ClientError {
          "PocketIC requires an explicit server URL; provision/start it through ic_testkit::pic or supply a running server"
      )]
      MissingServerUrl,
@@ -153,6 +173,44 @@ index 5ec9f881..ba96617a 100644
      #[error("PocketIC transport failed: {source}")]
      Transport {
          context: Box<RequestContext>,
+@@ -63,14 +78,35 @@ pub enum ClientError {
+     Canister(crate::pocket_ic::RejectResponse),
+     #[error("Candid failed: {0}")]
+     Candid(#[from] candid::Error),
+-    #[error("CBOR failed: {0}")]
+-    Cbor(#[from] ic_platform::certification::cbor::CborError),
++    #[error("CBOR failed: {source}")]
++    Cbor {
++        /// Stable Testkit classification; no supplier downcast is required.
++        kind: CborErrorKind,
++        /// Original typed codec failure and its causal chain. Downcasting to a
++        /// supplier type is optional and couples that caller to its version.
++        #[source]
++        source: Box<dyn std::error::Error + Send + Sync>,
++    },
+     #[error("I/O failed: {0}")]
+     Io(#[from] std::io::Error),
+     #[error("invalid PocketIC response: {0}")]
+     Protocol(String),
+ }
+ 
++pub(super) fn cbor_error(source: ic_platform::certification::cbor::CborError) -> ClientError {
++    use ic_platform::certification::cbor::CborError;
++    let kind = match &source {
++        CborError::InputTooLarge => CborErrorKind::InputTooLarge,
++        CborError::Decode(_) => CborErrorKind::Decode,
++        CborError::OutputTooLarge => CborErrorKind::OutputTooLarge,
++        CborError::Encode(_) => CborErrorKind::Encode,
++    };
++    ClientError::Cbor {
++        kind,
++        source: Box::new(source),
++    }
++}
++
+ impl ClientError {
+     pub(crate) fn with_ingress(
+         mut self,
 diff --git a/src/http.rs b/src/http.rs
 index 0c7733e7..9d300e9f 100644
 --- a/src/http.rs
@@ -226,7 +284,7 @@ index 0c7733e7..9d300e9f 100644
 +        .ok_or(ClientError::InvalidRequestBudget { timeout })
 +}
 diff --git a/src/lib.rs b/src/lib.rs
-index c5d18452..04f2c6d2 100644
+index c5d18452..6b2ee541 100644
 --- a/src/lib.rs
 +++ b/src/lib.rs
 @@ -13,9 +13,8 @@
@@ -240,8 +298,12 @@ index c5d18452..04f2c6d2 100644
  pub use ic_management_canister_types::{
      CanisterId, CanisterInstallMode, CanisterLogRecord, CanisterSettings, CanisterStatusResult,
      EnvironmentVariable, Snapshot,
-@@ -33,46 +32,38 @@ mod http;
- pub use error::{ClientError, Operation, RequestContext};
+@@ -30,49 +29,41 @@ use std::{
+ 
+ mod error;
+ mod http;
+-pub use error::{ClientError, Operation, RequestContext};
++pub use error::{CborErrorKind, ClientError, Operation, RequestContext};
  pub mod common;
  mod nonblocking;
 -pub use nonblocking::{
@@ -365,7 +427,7 @@ index c5d18452..04f2c6d2 100644
  /// to the path under which WSL mounts it (e.g. `/mnt/c/Users/x/y`).
  ///
 diff --git a/src/nonblocking.rs b/src/nonblocking.rs
-index 68040385..2e74633c 100644
+index 68040385..b179e01c 100644
 --- a/src/nonblocking.rs
 +++ b/src/nonblocking.rs
 @@ -3,19 +3,16 @@ use crate::pocket_ic::common::rest::{
@@ -382,7 +444,7 @@ index 68040385..2e74633c 100644
  #[cfg(windows)]
  use crate::pocket_ic::wsl_path;
 -use crate::pocket_ic::{ClientError, Operation, RequestContext, http::Exchange};
-+use crate::pocket_ic::{ClientError, Operation, http::Exchange};
++use crate::pocket_ic::{ClientError, Operation, error::cbor_error, http::Exchange};
  use crate::pocket_ic::{
 -    CreateCanisterParams, CreateCanisterPlacement, IngressStatusResult, PocketIcBuilder,
 -    RejectResponse, TickConfigs, Time,
@@ -652,7 +714,12 @@ index 68040385..2e74633c 100644
      /// Returns the subnet ID of the canister if the canister exists.
      #[instrument(ret, skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string()))]
      pub async fn get_subnet(
-@@ -1414,7 +1328,7 @@ impl PocketIc {
+@@ -1410,11 +1324,11 @@ impl PocketIc {
+             sender_delegation: None,
+         };
+ 
+-        let serialized_bytes = encode_envelope(&envelope, usize::MAX)?;
++        let serialized_bytes = encode_envelope(&envelope, usize::MAX).map_err(cbor_error)?;
  
          let endpoint = format!("api/v2/subnet/{}/read_state", subnet_id.to_text());
          let url = self.instance_url().join(&endpoint).unwrap();
@@ -661,7 +728,29 @@ index 68040385..2e74633c 100644
          let (status, bytes) = exchange
              .bytes(
                  &self.reqwest_client,
-@@ -1452,7 +1366,7 @@ impl PocketIc {
+@@ -1428,17 +1342,18 @@ impl PocketIc {
+             return Err(exchange.server_error(status, &bytes));
+         }
+         let read_state_response: ReadStateResponse =
+-            decode_read_state_response(&bytes, bytes.len())?;
++            decode_read_state_response(&bytes, bytes.len()).map_err(cbor_error)?;
+         let cert: Certificate = decode_certificate(
+             &read_state_response.certificate,
+             read_state_response.certificate.len(),
+-        )?;
++        )
++        .map_err(cbor_error)?;
+ 
+         let metrics = match cert.tree.lookup_path(path) {
+             LookupResult::Found(value) => value,
+             _ => return Ok(None),
+         };
+-        decode_subnet_metrics(metrics, metrics.len()).map_err(ClientError::from)
++        decode_subnet_metrics(metrics, metrics.len()).map_err(cbor_error)
+     }
+ 
+     /// This (asynchronous) drop function must be called to drop the PocketIc instance.
+@@ -1452,7 +1367,7 @@ impl PocketIc {
      pub(crate) async fn do_drop(&mut self) -> Result<(), ClientError> {
          if self.owns_instance {
              let url = self.instance_url();
@@ -670,7 +759,7 @@ index 68040385..2e74633c 100644
              let (status, bytes) = exchange
                  .bytes(
                      &self.reqwest_client,
-@@ -1498,7 +1412,7 @@ impl PocketIc {
+@@ -1498,7 +1413,7 @@ impl PocketIc {
          response_limit: Option<usize>,
      ) -> Result<T, ClientError> {
          let url = self.instance_url().join(endpoint).unwrap();
@@ -679,7 +768,7 @@ index 68040385..2e74633c 100644
          exchange.response_limit = response_limit;
          loop {
              let builder = if let Some(operation) = &exchange.context.operation {
-@@ -1530,8 +1444,9 @@ impl PocketIc {
+@@ -1530,8 +1445,9 @@ impl PocketIc {
                                  ))
                                  .unwrap(),
                          );
@@ -690,7 +779,7 @@ index 68040385..2e74633c 100644
                          });
                      }
                      return Ok(value);
-@@ -1592,67 +1507,12 @@ impl PocketIc {
+@@ -1592,67 +1508,12 @@ impl PocketIc {
              mock_canister_http_response.into();
          self.post(endpoint, raw_mock_canister_http_response).await
      }
@@ -759,7 +848,7 @@ index 68040385..2e74633c 100644
      env: &PocketIc,
      canister_id: CanisterId,
      effective_principal: RawEffectivePrincipal,
-@@ -1677,99 +1537,8 @@ where
+@@ -1677,99 +1538,8 @@ where
      .await
  }
  
@@ -861,7 +950,7 @@ index 68040385..2e74633c 100644
      input: Input,
      f: impl FnOnce(Vec<u8>) -> Fut,
  ) -> Result<Output, ClientError>
-@@ -1782,35 +1551,3 @@ where
+@@ -1782,35 +1552,3 @@ where
      let output = f(input).await?;
      Ok(decode_args(&output)?)
  }
@@ -897,14 +986,601 @@ index 68040385..2e74633c 100644
 -            .map_err(|e| ClientError::Protocol(e.to_string()));
 -    }
 -}
+diff --git a/src/tests/client_failures/mod.rs b/src/tests/client_failures/mod.rs
+index 8991d2ec..89617053 100644
+--- a/src/tests/client_failures/mod.rs
++++ b/src/tests/client_failures/mod.rs
+@@ -1,6 +1,6 @@
+ use crate::pocket_ic::{ClientError, PocketIc};
+ use std::{
+-    io::{Read, Write},
++    io::Write,
+     net::TcpListener,
+     sync::{Arc, Mutex},
+     thread,
+@@ -13,6 +13,11 @@ struct Step {
+     body: &'static str,
+     extra_length: usize,
+     stall: bool,
++    stall_body: bool,
++    hold: Option<(
++        tokio::sync::oneshot::Sender<()>,
++        std::sync::mpsc::Receiver<()>,
++    )>,
+ }
+ impl Step {
+     fn reply(path: &'static str, status: u16, body: &'static str) -> Self {
+@@ -22,6 +27,8 @@ impl Step {
+             body,
+             extra_length: 0,
+             stall: false,
++            stall_body: false,
++            hold: None,
+         }
+     }
+ }
+@@ -31,6 +38,11 @@ struct Server {
+     thread: thread::JoinHandle<()>,
+ }
+ impl Server {
++    fn client(&self, timeout: Duration) -> PocketIc {
++        PocketIc::new_from_existing_instance(self.url.clone(), 7, timeout)
++            .expect("valid fixture request budget")
++    }
++
+     fn new(steps: Vec<Step>) -> Self {
+         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+         listener.set_nonblocking(true).unwrap();
+@@ -42,39 +54,25 @@ impl Server {
+         let thread = thread::spawn(move || {
+             let deadline = Instant::now() + Duration::from_secs(5);
+             for step in steps {
+-                let mut socket = loop {
+-                    match listener.accept() {
+-                        Ok((socket, _)) => break socket,
+-                        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+-                            assert!(Instant::now() < deadline, "missing request {}", step.path);
+-                            thread::sleep(Duration::from_millis(1));
+-                        }
+-                        Err(error) => panic!("{error}"),
+-                    }
+-                };
+-                // Accepted sockets can inherit the listener's nonblocking mode
+-                // on macOS; the fixture reads each request with bounded blocking I/O.
+-                socket.set_nonblocking(false).unwrap();
+-                socket
+-                    .set_read_timeout(Some(Duration::from_secs(2)))
+-                    .unwrap();
+-                let mut bytes = Vec::new();
+-                let mut byte = [0];
+-                while !bytes.ends_with(b"\r\n\r\n") {
+-                    socket.read_exact(&mut byte).unwrap();
+-                    bytes.push(byte[0]);
+-                }
+-                let header = String::from_utf8(bytes).unwrap();
+-                let length = header
+-                    .lines()
+-                    .find_map(|line| {
+-                        let (name, value) = line.split_once(':')?;
+-                        name.eq_ignore_ascii_case("content-length")
+-                            .then(|| value.trim().parse::<usize>().unwrap())
+-                    })
+-                    .unwrap_or(0);
+-                let mut body = vec![0; length];
+-                socket.read_exact(&mut body).unwrap();
++                let (mut socket, _) =
++                    ic_host_process::testing::net::accept_tcp_until(&listener, deadline)
++                        .expect("accept fixture request");
++                let bytes = ic_host_process::testing::http::capture_http_request(
++                    &mut socket,
++                    deadline.saturating_duration_since(Instant::now()),
++                    16 * 1024,
++                    4 * 1024 * 1024,
++                    ic_host_process::testing::http::HttpContentLength::Optional,
++                )
++                .into_result()
++                .expect("read bounded fixture request");
++                let header_end = bytes
++                    .windows(4)
++                    .position(|part| part == b"\r\n\r\n")
++                    .unwrap()
++                    + 4;
++                let (header, body) = bytes.split_at(header_end);
++                let header = std::str::from_utf8(header).unwrap();
+                 assert_eq!(
+                     header
+                         .lines()
+@@ -88,8 +86,20 @@ impl Server {
+                 recorded.lock().unwrap().push(format!(
+                     "{}\n{}",
+                     header.lines().next().unwrap(),
+-                    String::from_utf8_lossy(&body)
++                    String::from_utf8_lossy(body)
+                 ));
++                if let Some((observed, release)) = step.hold {
++                    observed.send(()).expect("observe held fixture request");
++                    assert!(
++                        !matches!(
++                            release
++                                .recv_timeout(deadline.saturating_duration_since(Instant::now())),
++                            Err(std::sync::mpsc::RecvTimeoutError::Timeout)
++                        ),
++                        "held fixture response was never released"
++                    );
++                    continue;
++                }
+                 if step.stall {
+                     thread::sleep(Duration::from_millis(150));
+                     continue;
+@@ -103,7 +113,14 @@ impl Server {
+                     step.body.len() + step.extra_length,
+                     step.body
+                 );
+-                socket.write_all(response.as_bytes()).unwrap();
++                if step.stall_body {
++                    socket
++                        .write_all(&response.as_bytes()[..response.len() - step.body.len()])
++                        .unwrap();
++                    thread::sleep(Duration::from_millis(150));
++                } else {
++                    socket.write_all(response.as_bytes()).unwrap();
++                }
+             }
+             let quiet_until = Instant::now() + Duration::from_millis(100);
+             while Instant::now() < quiet_until {
+@@ -131,14 +148,95 @@ impl Server {
+     }
+ }
+ 
++#[tokio::test]
++async fn malformed_read_state_preserves_codec_kind_and_source_without_replay() {
++    use crate::pocket_ic::CborErrorKind;
++    use std::error::Error;
++
++    let server = Server::new(vec![
++        Step::reply(
++            "/instances/7/read/get_time",
++            200,
++            r#"{"nanos_since_epoch":0}"#,
++        ),
++        Step::reply(
++            "/instances/7/api/v2/subnet/aaaaa-aa/read_state",
++            200,
++            "invalid cbor",
++        ),
++    ]);
++    let error = server
++        .client(Duration::from_secs(30))
++        .get_subnet_metrics(candid::Principal::management_canister())
++        .await
++        .unwrap_err();
++    assert!(matches!(
++        error,
++        ClientError::Cbor {
++            kind: CborErrorKind::Decode,
++            ..
++        }
++    ));
++    let cause = error.source().unwrap();
++    assert!(
++        cause
++            .downcast_ref::<ic_platform::certification::cbor::CborError>()
++            .is_some()
++    );
++    assert!(cause.source().is_some());
++    assert_eq!(server.finish().len(), 2);
++}
++
+ #[tokio::test]
+ async fn missing_server_is_refused_before_any_external_effect() {
+     assert!(matches!(
+-        crate::pocket_ic::PocketIcBuilder::new().build().await,
++        crate::pocket_ic::PocketIcBuilder::new(Duration::from_secs(300))
++            .build()
++            .await,
+         Err(ClientError::MissingServerUrl)
+     ));
+ }
+ 
++#[tokio::test]
++async fn invalid_budgets_are_refused_before_any_request_or_attachment() {
++    let server = Server::new(vec![]);
++    for timeout in [Duration::ZERO, Duration::MAX] {
++        for result in [
++            PocketIc::new(server.url.clone(), timeout).await.map(|_| ()),
++            crate::pocket_ic::PocketIcBuilder::new(timeout)
++                .with_server_url(server.url.clone())
++                .build()
++                .await
++                .map(|_| ()),
++            PocketIc::new_from_existing_instance(server.url.clone(), 7, timeout).map(|_| ()),
++            PocketIc::list_instances(server.url.clone(), timeout)
++                .await
++                .map(|_| ()),
++        ] {
++            assert!(
++                matches!(result, Err(ClientError::InvalidRequestBudget { timeout: observed }) if observed == timeout)
++            );
++        }
++    }
++    assert!(server.finish().is_empty());
++}
++
++#[tokio::test]
++async fn instance_listing_budget_covers_body_reads_without_replay() {
++    let mut step = Step::reply("/instances", 200, r#"["Available"]"#);
++    step.stall_body = true;
++    let server = Server::new(vec![step]);
++    let error = PocketIc::list_instances(server.url.clone(), Duration::from_millis(50))
++        .await
++        .unwrap_err();
++    let ClientError::Timeout { context } = error else {
++        panic!("expected body deadline")
++    };
++    assert_eq!(context.status, Some(reqwest::StatusCode::OK));
++    assert!(context.may_have_executed);
++    assert_eq!(server.finish().len(), 1);
++}
++
+ #[tokio::test]
+ async fn instance_listing_uses_only_the_supplied_endpoint() {
+     {
+@@ -147,7 +245,9 @@ async fn instance_listing_uses_only_the_supplied_endpoint() {
+             200,
+             r#"["Available","Busy"]"#,
+         )]);
+-        let instances = PocketIc::list_instances(server.url.clone()).await.unwrap();
++        let instances = PocketIc::list_instances(server.url.clone(), Duration::from_secs(1))
++            .await
++            .unwrap();
+         assert_eq!(instances, ["Available", "Busy"]);
+         assert_eq!(server.finish().len(), 1);
+     }
+@@ -170,7 +270,7 @@ async fn client_preserves_failure_sources_and_never_resubmit_lost_requests() {
+                 _ => unreachable!(),
+             }
+             let server = Server::new(vec![step]);
+-            let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(50));
++            let client = server.client(Duration::from_millis(50));
+             let error = client.tick().await.unwrap_err();
+             match (&error, failure) {
+                 (ClientError::Transport { .. }, "reset")
+@@ -216,13 +316,17 @@ async fn accepted_operation_is_polled_without_replaying_the_update() {
+         Step::reply("/read_graph/state/ours", 200, "null"),
+         Step::reply("/prune_graph/state/ours", 200, "null"),
+     ]);
+-    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++    let client = server.client(Duration::from_secs(1));
+     client.tick().await.unwrap();
+     let requests = tokio::task::spawn_blocking(move || server.finish())
+         .await
+         .unwrap();
+     assert_eq!(requests.len(), 5);
+     assert_eq!(requests[0], requests[1]);
++    assert_eq!(
++        requests[0].split_once('\n').unwrap().1,
++        r#"{"blockmakers":null}"#
++    );
+     assert!(requests[2].starts_with("GET "));
+     assert!(requests[3].starts_with("GET "));
+     assert!(requests[4].starts_with("DELETE "));
+@@ -238,7 +342,7 @@ async fn lost_poll_retains_our_operation_identity() {
+         ),
+         Step::reply("/read_graph/state/ours", 0, ""),
+     ]);
+-    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++    let client = server.client(Duration::from_secs(1));
+     let error = client.tick().await.unwrap_err();
+     let operation = error.request_context().unwrap().operation.as_ref().unwrap();
+     assert_eq!(operation.state_label, "state");
+@@ -253,7 +357,7 @@ async fn rejection_remains_distinct_from_transport_failure() {
+         200,
+         r#"{"Err":{"reject_code":"CanisterReject","reject_message":"caller policy","error_code":"CanisterRejectedMessage","certified":false}}"#,
+     )]);
+-    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++    let client = server.client(Duration::from_secs(1));
+     let id = candid::Principal::anonymous();
+     let ClientError::Canister(rejection) = client
+         .query_call(id, id, "reject", vec![])
+@@ -278,7 +382,7 @@ async fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
+         Step::reply("/blobstore/", 200, "not hex"),
+         Step::reply("/instances/7/", 0, ""),
+     ]);
+-    let client = crate::pocket_ic::PocketIcBuilder::new()
++    let client = crate::pocket_ic::PocketIcBuilder::new(Duration::from_secs(300))
+         .with_server_url(server.url.clone())
+         .build()
+         .await
+@@ -312,7 +416,7 @@ async fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
+ #[tokio::test]
+ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
+     let server = Server::new(vec![Step::reply("/instances", 200, "{")]);
+-    let error = crate::pocket_ic::PocketIcBuilder::new()
++    let error = crate::pocket_ic::PocketIcBuilder::new(Duration::from_secs(300))
+         .with_server_url(server.url.clone())
+         .build()
+         .await
+@@ -321,8 +425,10 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
+     assert!(matches!(error, ClientError::Json { .. }));
+     assert!(error.request_context().unwrap().may_have_executed);
+     server.finish();
++    let (observed, request) = tokio::sync::oneshot::channel();
++    let (release, held) = std::sync::mpsc::channel();
+     let mut delayed = Step::reply("/read_graph/state/ours", 200, "null");
+-    delayed.stall = true;
++    delayed.hold = Some((observed, held));
+     let server = Server::new(vec![
+         Step::reply(
+             "/instances/7/update/tick",
+@@ -331,9 +437,33 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
+         ),
+         delayed,
+     ]);
+-    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(50));
+-    let error = client.tick().await.unwrap_err();
++    let budget = Duration::from_secs(30);
++    let client = server.client(budget);
++    let operation = client.tick();
++    tokio::pin!(operation);
++    tokio::select! {
++        result = &mut operation => panic!("operation ended before its poll was held: {result:?}"),
++        observed = request => observed.expect("observe polling request"),
++    }
++    // Real HTTP dispatch is complete. Expire the original budget without racing
++    // the host scheduler against the accepted-response/poll transition.
++    tokio::time::pause();
++    tokio::time::advance(budget).await;
++    let error = operation.await.unwrap_err();
++    tokio::time::resume();
++    release.send(()).expect("release held poll");
+     assert!(matches!(error, ClientError::Timeout { .. }));
++    assert!(error.request_context().unwrap().may_have_executed);
++    assert_eq!(
++        error
++            .request_context()
++            .unwrap()
++            .operation
++            .as_ref()
++            .unwrap()
++            .state_label,
++        "state"
++    );
+     assert_eq!(
+         error
+             .request_context()
+@@ -347,6 +477,67 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
+     assert_eq!(server.finish().len(), 2);
+ }
+ 
++#[tokio::test]
++async fn ingress_status_preserves_wire_outcomes_and_failure_custody() {
++    use crate::pocket_ic::common::rest::{RawEffectivePrincipal, RawMessageId};
++    let id = RawMessageId {
++        effective_principal: RawEffectivePrincipal::CanisterId(vec![4]),
++        message_id: vec![1, 2],
++    };
++    for (status, body) in [
++        (200, "null"),
++        (200, r#"{"Ok":"AP8="}"#),
++        (
++            200,
++            r#"{"Err":{"reject_code":"CanisterReject","reject_message":"caller policy","error_code":"CanisterRejectedMessage","certified":false}}"#,
++        ),
++        (403, r#"{"message":"wrong caller"}"#),
++        (503, r#"{"message":"unavailable"}"#),
++        (0, ""),
++    ] {
++        let server = Server::new(vec![Step::reply(
++            "/instances/7/read/ingress_status",
++            status,
++            body,
++        )]);
++        let client = server.client(Duration::from_secs(1));
++        let result = client.ingress_status(id.clone()).await;
++        match (status, body) {
++            (200, "null") => assert!(result.unwrap().is_none()),
++            (200, r#"{"Ok":"AP8="}"#) => assert_eq!(result.unwrap().unwrap().unwrap(), [0, 255]),
++            (200, _) => assert_eq!(
++                result.unwrap().unwrap().unwrap_err().reject_message,
++                "caller policy"
++            ),
++            (403, _) => assert!(
++                matches!(result, Err(ClientError::Protocol(message)) if message == "wrong caller")
++            ),
++            _ => {
++                let error = result.unwrap_err();
++                assert!(matches!(
++                    (&error, status),
++                    (ClientError::Server { .. }, 503) | (ClientError::Transport { .. }, 0)
++                ));
++                let context = error.request_context().unwrap();
++                assert_eq!(context.ingress.as_ref().unwrap().message_id, id.message_id);
++                assert_eq!(
++                    context.ingress.as_ref().unwrap().effective_principal,
++                    id.effective_principal
++                );
++                assert!(context.may_have_executed);
++            }
++        }
++        let requests = server.finish();
++        assert_eq!(requests.len(), 1);
++        let args: serde_json::Value =
++            serde_json::from_str(requests[0].split_once('\n').unwrap().1).unwrap();
++        assert_eq!(
++            args,
++            serde_json::json!({"raw_message_id": id, "raw_caller": null})
++        );
++    }
++}
++
+ #[tokio::test]
+ async fn ingress_id_survives_loss_after_successful_submission() {
+     let server = Server::new(vec![
+@@ -357,7 +548,7 @@ async fn ingress_id_survives_loss_after_successful_submission() {
+         ),
+         Step::reply("/instances/7/update/await_ingress_message", 0, ""),
+     ]);
+-    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++    let client = server.client(Duration::from_secs(1));
+     let id = candid::Principal::anonymous();
+     let error = client
+         .update_call(id, id, "once", vec![7])
+@@ -391,7 +582,7 @@ async fn routed_calls_preserve_payloads_and_await_only_the_accepted_ingress() {
+             r#"{"Ok":"AP8="}"#,
+         ),
+     ]);
+-    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++    let client = server.client(Duration::from_secs(1));
+     let canister = candid::Principal::from_slice(&[3]);
+     let sender = candid::Principal::from_slice(&[7]);
+     let route = RawEffectivePrincipal::SubnetId(vec![9]);
+@@ -448,7 +639,7 @@ async fn creation_preserves_supported_topology_state_gateway_features_and_time()
+     ]);
+     for auto_progress in [false, true] {
+         let enabled = Some(IcpFeaturesConfig::DefaultConfig);
+-        let builder = PocketIcBuilder::new()
++        let builder = PocketIcBuilder::new(Duration::from_secs(300))
+             .with_server_url(server.url.clone())
+             .with_state_dir("/caller-owned/state".into())
+             .with_nns_subnet()
+diff --git a/src/tests/client_failures/snapshot.rs b/src/tests/client_failures/snapshot.rs
+index 518ebdaf..ac3d30ec 100644
+--- a/src/tests/client_failures/snapshot.rs
++++ b/src/tests/client_failures/snapshot.rs
+@@ -91,7 +91,7 @@ async fn sync_copy_preserves_exact_dto_bytes_sparse_globals_and_sender() {
+     ));
+     steps.extend(call_steps(encode_args(()).unwrap()));
+     let server = Server::new(steps);
+-    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++    let client = server.client(Duration::from_secs(1));
+     let mut copy = transfer(metadata());
+     copy.advance(&client).await.unwrap();
+     assert_eq!(copy.uploaded_snapshot(), Some([2].as_slice()));
+@@ -155,7 +155,7 @@ async fn partial_and_oversized_regions_refuse_without_uploading_or_losing_custod
+             encode_args((ReadCanisterSnapshotDataResult { chunk },)).unwrap(),
+         ));
+         let server = Server::new(steps);
+-        let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++        let client = server.client(Duration::from_secs(1));
+         let mut copy = transfer(metadata());
+         copy.advance(&client).await.unwrap();
+         assert!(matches!(
+@@ -191,7 +191,7 @@ async fn chunk_hash_and_total_budget_are_checked_before_upload() {
+             encode_args((ReadCanisterSnapshotDataResult { chunk: data },)).unwrap(),
+         ));
+         let server = Server::new(steps);
+-        let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++        let client = server.client(Duration::from_secs(1));
+         copy.advance(&client).await.unwrap();
+         assert!(matches!(
+             copy.advance(&client).await,
+@@ -214,7 +214,7 @@ async fn interrupted_upload_retains_id_ingress_and_no_replay() {
+     lost[1].status = 0;
+     steps.extend(lost);
+     let server = Server::new(steps);
+-    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++    let client = server.client(Duration::from_secs(1));
+     let mut copy = transfer(metadata());
+     copy.advance(&client).await.unwrap();
+     let error = copy.advance(&client).await.unwrap_err();
+@@ -235,15 +235,23 @@ async fn interrupted_upload_retains_id_ingress_and_no_replay() {
+ #[tokio::test]
+ async fn cancelled_metadata_upload_preserves_accepted_ingress() {
+     let mut steps = uploaded_steps();
+-    steps[1].stall = true;
++    let (observed, request) = tokio::sync::oneshot::channel();
++    let (release, held) = std::sync::mpsc::channel();
++    steps[1].hold = Some((observed, held));
+     let server = Server::new(steps);
+-    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++    let client = server.client(Duration::from_secs(30));
+     let mut copy = transfer(metadata());
+-    assert!(
+-        tokio::time::timeout(Duration::from_millis(60), copy.advance(&client))
+-            .await
+-            .is_err()
+-    );
++    {
++        let upload = copy.advance(&client);
++        tokio::pin!(upload);
++        tokio::select! {
++            result = &mut upload => panic!("upload ended before cancellation: {result:?}"),
++            observed = request => observed.expect("observe accepted ingress wait"),
++        }
++        // Dropping this in-flight future cancels only after the accepted ingress
++        // receipt and its subsequent wait request are both observed.
++    }
++    release.send(()).expect("release cancelled upload wait");
+     assert!(matches!(copy.status(), TransferStatus::UploadingMetadata));
+     assert!(copy.ingress().is_some());
+     assert!(copy.uploaded_snapshot().is_none());
+@@ -260,7 +268,7 @@ async fn reply_limits_and_codec_errors_keep_accepted_ingress() {
+             encode_args((vec![0u8; 1000],)).unwrap()
+         };
+         let server = Server::new(call_steps(reply));
+-        let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++        let client = server.client(Duration::from_secs(1));
+         let mut budget = limits().call;
+         if mode == "http" {
+             budget.http_bytes = 100;
+@@ -351,7 +359,7 @@ async fn async_copy_bounds_each_region_and_preserves_valid_chunk_store() {
+         steps.extend(call_steps(encode_args(()).unwrap()));
+     }
+     let server = Server::new(steps);
+-    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
++    let client = server.client(Duration::from_secs(1));
+     let mut copy = transfer(meta);
+     while !matches!(copy.status(), TransferStatus::Complete) {
+         copy.advance(&client).await.unwrap();
+diff --git a/src/tests/codec_errors.rs b/src/tests/codec_errors.rs
+new file mode 100644
+index 00000000..faeccfe2
+--- /dev/null
++++ b/src/tests/codec_errors.rs
+@@ -0,0 +1,33 @@
++use super::super::{CborErrorKind, ClientError, error::cbor_error};
++use ic_platform::{certification::cbor::CborError, ic_protocol::decode_subnet_metrics};
++use std::error::Error;
++
++#[test]
++fn codec_failure_kinds_keep_the_original_typed_causal_chain() {
++    let decode = decode_subnet_metrics(&[0xff], 1).unwrap_err();
++    let CborError::Decode(encode_cause) = decode_subnet_metrics(&[0xff], 1).unwrap_err() else {
++        panic!("malformed input must retain its decoder cause");
++    };
++    for (source, kind, nested_cause) in [
++        (
++            CborError::InputTooLarge,
++            CborErrorKind::InputTooLarge,
++            false,
++        ),
++        (
++            CborError::OutputTooLarge,
++            CborErrorKind::OutputTooLarge,
++            false,
++        ),
++        (decode, CborErrorKind::Decode, true),
++        (CborError::Encode(encode_cause), CborErrorKind::Encode, true),
++    ] {
++        let expected_display = format!("CBOR failed: {source}");
++        let error = cbor_error(source);
++        assert!(matches!(&error, ClientError::Cbor { kind: actual, .. } if *actual == kind));
++        let cause = error.source().unwrap().downcast_ref::<CborError>().unwrap();
++        assert_eq!(cause.source().is_some(), nested_cause);
++        assert_eq!(error.to_string(), expected_display);
++        assert!(error.request_context().is_none());
++    }
++}
 diff --git a/src/tests.rs b/src/tests.rs
-index 328d00a0..60401882 100644
+index 328d00a0..f97c8622 100644
 --- a/src/tests.rs
 +++ b/src/tests.rs
-@@ -1,6 +1,81 @@
+@@ -1,6 +1,83 @@
  use super::{ErrorCode, RejectCode, RejectResponse};
  use strum::IntoEnumIterator as _;
  
++mod codec_errors;
++
 +#[test]
 +fn topology_keeps_application_selection_and_canister_ranges() {
 +    use super::common::rest::{
@@ -983,428 +1659,3 @@ index 328d00a0..60401882 100644
  #[test]
  fn base64_json_preserves_padding_binary_bytes_and_rejections() {
      #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-diff --git a/src/tests/client_failures/mod.rs b/src/tests/client_failures/mod.rs
-index 8991d2ec..a887fb35 100644
---- a/src/tests/client_failures/mod.rs
-+++ b/src/tests/client_failures/mod.rs
-@@ -1,6 +1,6 @@
- use crate::pocket_ic::{ClientError, PocketIc};
- use std::{
--    io::{Read, Write},
-+    io::Write,
-     net::TcpListener,
-     sync::{Arc, Mutex},
-     thread,
-@@ -13,6 +13,7 @@ struct Step {
-     body: &'static str,
-     extra_length: usize,
-     stall: bool,
-+    stall_body: bool,
- }
- impl Step {
-     fn reply(path: &'static str, status: u16, body: &'static str) -> Self {
-@@ -22,6 +23,7 @@ impl Step {
-             body,
-             extra_length: 0,
-             stall: false,
-+            stall_body: false,
-         }
-     }
- }
-@@ -31,6 +33,11 @@ struct Server {
-     thread: thread::JoinHandle<()>,
- }
- impl Server {
-+    fn client(&self, timeout: Duration) -> PocketIc {
-+        PocketIc::new_from_existing_instance(self.url.clone(), 7, timeout)
-+            .expect("valid fixture request budget")
-+    }
-+
-     fn new(steps: Vec<Step>) -> Self {
-         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-         listener.set_nonblocking(true).unwrap();
-@@ -42,39 +49,25 @@ impl Server {
-         let thread = thread::spawn(move || {
-             let deadline = Instant::now() + Duration::from_secs(5);
-             for step in steps {
--                let mut socket = loop {
--                    match listener.accept() {
--                        Ok((socket, _)) => break socket,
--                        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
--                            assert!(Instant::now() < deadline, "missing request {}", step.path);
--                            thread::sleep(Duration::from_millis(1));
--                        }
--                        Err(error) => panic!("{error}"),
--                    }
--                };
--                // Accepted sockets can inherit the listener's nonblocking mode
--                // on macOS; the fixture reads each request with bounded blocking I/O.
--                socket.set_nonblocking(false).unwrap();
--                socket
--                    .set_read_timeout(Some(Duration::from_secs(2)))
--                    .unwrap();
--                let mut bytes = Vec::new();
--                let mut byte = [0];
--                while !bytes.ends_with(b"\r\n\r\n") {
--                    socket.read_exact(&mut byte).unwrap();
--                    bytes.push(byte[0]);
--                }
--                let header = String::from_utf8(bytes).unwrap();
--                let length = header
--                    .lines()
--                    .find_map(|line| {
--                        let (name, value) = line.split_once(':')?;
--                        name.eq_ignore_ascii_case("content-length")
--                            .then(|| value.trim().parse::<usize>().unwrap())
--                    })
--                    .unwrap_or(0);
--                let mut body = vec![0; length];
--                socket.read_exact(&mut body).unwrap();
-+                let (mut socket, _) =
-+                    ic_host_process::testing::net::accept_tcp_until(&listener, deadline)
-+                        .expect("accept fixture request");
-+                let bytes = ic_host_process::testing::http::capture_http_request(
-+                    &mut socket,
-+                    deadline.saturating_duration_since(Instant::now()),
-+                    16 * 1024,
-+                    4 * 1024 * 1024,
-+                    ic_host_process::testing::http::HttpContentLength::Optional,
-+                )
-+                .into_result()
-+                .expect("read bounded fixture request");
-+                let header_end = bytes
-+                    .windows(4)
-+                    .position(|part| part == b"\r\n\r\n")
-+                    .unwrap()
-+                    + 4;
-+                let (header, body) = bytes.split_at(header_end);
-+                let header = std::str::from_utf8(header).unwrap();
-                 assert_eq!(
-                     header
-                         .lines()
-@@ -88,7 +81,7 @@ impl Server {
-                 recorded.lock().unwrap().push(format!(
-                     "{}\n{}",
-                     header.lines().next().unwrap(),
--                    String::from_utf8_lossy(&body)
-+                    String::from_utf8_lossy(body)
-                 ));
-                 if step.stall {
-                     thread::sleep(Duration::from_millis(150));
-@@ -103,7 +96,14 @@ impl Server {
-                     step.body.len() + step.extra_length,
-                     step.body
-                 );
--                socket.write_all(response.as_bytes()).unwrap();
-+                if step.stall_body {
-+                    socket
-+                        .write_all(&response.as_bytes()[..response.len() - step.body.len()])
-+                        .unwrap();
-+                    thread::sleep(Duration::from_millis(150));
-+                } else {
-+                    socket.write_all(response.as_bytes()).unwrap();
-+                }
-             }
-             let quiet_until = Instant::now() + Duration::from_millis(100);
-             while Instant::now() < quiet_until {
-@@ -134,11 +134,53 @@ impl Server {
- #[tokio::test]
- async fn missing_server_is_refused_before_any_external_effect() {
-     assert!(matches!(
--        crate::pocket_ic::PocketIcBuilder::new().build().await,
-+        crate::pocket_ic::PocketIcBuilder::new(Duration::from_secs(300))
-+            .build()
-+            .await,
-         Err(ClientError::MissingServerUrl)
-     ));
- }
- 
-+#[tokio::test]
-+async fn invalid_budgets_are_refused_before_any_request_or_attachment() {
-+    let server = Server::new(vec![]);
-+    for timeout in [Duration::ZERO, Duration::MAX] {
-+        for result in [
-+            PocketIc::new(server.url.clone(), timeout).await.map(|_| ()),
-+            crate::pocket_ic::PocketIcBuilder::new(timeout)
-+                .with_server_url(server.url.clone())
-+                .build()
-+                .await
-+                .map(|_| ()),
-+            PocketIc::new_from_existing_instance(server.url.clone(), 7, timeout).map(|_| ()),
-+            PocketIc::list_instances(server.url.clone(), timeout)
-+                .await
-+                .map(|_| ()),
-+        ] {
-+            assert!(
-+                matches!(result, Err(ClientError::InvalidRequestBudget { timeout: observed }) if observed == timeout)
-+            );
-+        }
-+    }
-+    assert!(server.finish().is_empty());
-+}
-+
-+#[tokio::test]
-+async fn instance_listing_budget_covers_body_reads_without_replay() {
-+    let mut step = Step::reply("/instances", 200, r#"["Available"]"#);
-+    step.stall_body = true;
-+    let server = Server::new(vec![step]);
-+    let error = PocketIc::list_instances(server.url.clone(), Duration::from_millis(50))
-+        .await
-+        .unwrap_err();
-+    let ClientError::Timeout { context } = error else {
-+        panic!("expected body deadline")
-+    };
-+    assert_eq!(context.status, Some(reqwest::StatusCode::OK));
-+    assert!(context.may_have_executed);
-+    assert_eq!(server.finish().len(), 1);
-+}
-+
- #[tokio::test]
- async fn instance_listing_uses_only_the_supplied_endpoint() {
-     {
-@@ -147,7 +189,9 @@ async fn instance_listing_uses_only_the_supplied_endpoint() {
-             200,
-             r#"["Available","Busy"]"#,
-         )]);
--        let instances = PocketIc::list_instances(server.url.clone()).await.unwrap();
-+        let instances = PocketIc::list_instances(server.url.clone(), Duration::from_secs(1))
-+            .await
-+            .unwrap();
-         assert_eq!(instances, ["Available", "Busy"]);
-         assert_eq!(server.finish().len(), 1);
-     }
-@@ -170,7 +214,7 @@ async fn client_preserves_failure_sources_and_never_resubmit_lost_requests() {
-                 _ => unreachable!(),
-             }
-             let server = Server::new(vec![step]);
--            let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(50));
-+            let client = server.client(Duration::from_millis(50));
-             let error = client.tick().await.unwrap_err();
-             match (&error, failure) {
-                 (ClientError::Transport { .. }, "reset")
-@@ -216,13 +260,17 @@ async fn accepted_operation_is_polled_without_replaying_the_update() {
-         Step::reply("/read_graph/state/ours", 200, "null"),
-         Step::reply("/prune_graph/state/ours", 200, "null"),
-     ]);
--    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+    let client = server.client(Duration::from_secs(1));
-     client.tick().await.unwrap();
-     let requests = tokio::task::spawn_blocking(move || server.finish())
-         .await
-         .unwrap();
-     assert_eq!(requests.len(), 5);
-     assert_eq!(requests[0], requests[1]);
-+    assert_eq!(
-+        requests[0].split_once('\n').unwrap().1,
-+        r#"{"blockmakers":null}"#
-+    );
-     assert!(requests[2].starts_with("GET "));
-     assert!(requests[3].starts_with("GET "));
-     assert!(requests[4].starts_with("DELETE "));
-@@ -238,7 +286,7 @@ async fn lost_poll_retains_our_operation_identity() {
-         ),
-         Step::reply("/read_graph/state/ours", 0, ""),
-     ]);
--    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+    let client = server.client(Duration::from_secs(1));
-     let error = client.tick().await.unwrap_err();
-     let operation = error.request_context().unwrap().operation.as_ref().unwrap();
-     assert_eq!(operation.state_label, "state");
-@@ -253,7 +301,7 @@ async fn rejection_remains_distinct_from_transport_failure() {
-         200,
-         r#"{"Err":{"reject_code":"CanisterReject","reject_message":"caller policy","error_code":"CanisterRejectedMessage","certified":false}}"#,
-     )]);
--    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+    let client = server.client(Duration::from_secs(1));
-     let id = candid::Principal::anonymous();
-     let ClientError::Canister(rejection) = client
-         .query_call(id, id, "reject", vec![])
-@@ -278,7 +326,7 @@ async fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
-         Step::reply("/blobstore/", 200, "not hex"),
-         Step::reply("/instances/7/", 0, ""),
-     ]);
--    let client = crate::pocket_ic::PocketIcBuilder::new()
-+    let client = crate::pocket_ic::PocketIcBuilder::new(Duration::from_secs(300))
-         .with_server_url(server.url.clone())
-         .build()
-         .await
-@@ -312,7 +360,7 @@ async fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
- #[tokio::test]
- async fn creation_decode_and_poll_deadline_keep_request_evidence() {
-     let server = Server::new(vec![Step::reply("/instances", 200, "{")]);
--    let error = crate::pocket_ic::PocketIcBuilder::new()
-+    let error = crate::pocket_ic::PocketIcBuilder::new(Duration::from_secs(300))
-         .with_server_url(server.url.clone())
-         .build()
-         .await
-@@ -331,7 +379,7 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
-         ),
-         delayed,
-     ]);
--    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(50));
-+    let client = server.client(Duration::from_millis(50));
-     let error = client.tick().await.unwrap_err();
-     assert!(matches!(error, ClientError::Timeout { .. }));
-     assert_eq!(
-@@ -347,6 +395,67 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
-     assert_eq!(server.finish().len(), 2);
- }
- 
-+#[tokio::test]
-+async fn ingress_status_preserves_wire_outcomes_and_failure_custody() {
-+    use crate::pocket_ic::common::rest::{RawEffectivePrincipal, RawMessageId};
-+    let id = RawMessageId {
-+        effective_principal: RawEffectivePrincipal::CanisterId(vec![4]),
-+        message_id: vec![1, 2],
-+    };
-+    for (status, body) in [
-+        (200, "null"),
-+        (200, r#"{"Ok":"AP8="}"#),
-+        (
-+            200,
-+            r#"{"Err":{"reject_code":"CanisterReject","reject_message":"caller policy","error_code":"CanisterRejectedMessage","certified":false}}"#,
-+        ),
-+        (403, r#"{"message":"wrong caller"}"#),
-+        (503, r#"{"message":"unavailable"}"#),
-+        (0, ""),
-+    ] {
-+        let server = Server::new(vec![Step::reply(
-+            "/instances/7/read/ingress_status",
-+            status,
-+            body,
-+        )]);
-+        let client = server.client(Duration::from_secs(1));
-+        let result = client.ingress_status(id.clone()).await;
-+        match (status, body) {
-+            (200, "null") => assert!(result.unwrap().is_none()),
-+            (200, r#"{"Ok":"AP8="}"#) => assert_eq!(result.unwrap().unwrap().unwrap(), [0, 255]),
-+            (200, _) => assert_eq!(
-+                result.unwrap().unwrap().unwrap_err().reject_message,
-+                "caller policy"
-+            ),
-+            (403, _) => assert!(
-+                matches!(result, Err(ClientError::Protocol(message)) if message == "wrong caller")
-+            ),
-+            _ => {
-+                let error = result.unwrap_err();
-+                assert!(matches!(
-+                    (&error, status),
-+                    (ClientError::Server { .. }, 503) | (ClientError::Transport { .. }, 0)
-+                ));
-+                let context = error.request_context().unwrap();
-+                assert_eq!(context.ingress.as_ref().unwrap().message_id, id.message_id);
-+                assert_eq!(
-+                    context.ingress.as_ref().unwrap().effective_principal,
-+                    id.effective_principal
-+                );
-+                assert!(context.may_have_executed);
-+            }
-+        }
-+        let requests = server.finish();
-+        assert_eq!(requests.len(), 1);
-+        let args: serde_json::Value =
-+            serde_json::from_str(requests[0].split_once('\n').unwrap().1).unwrap();
-+        assert_eq!(
-+            args,
-+            serde_json::json!({"raw_message_id": id, "raw_caller": null})
-+        );
-+    }
-+}
-+
- #[tokio::test]
- async fn ingress_id_survives_loss_after_successful_submission() {
-     let server = Server::new(vec![
-@@ -357,7 +466,7 @@ async fn ingress_id_survives_loss_after_successful_submission() {
-         ),
-         Step::reply("/instances/7/update/await_ingress_message", 0, ""),
-     ]);
--    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+    let client = server.client(Duration::from_secs(1));
-     let id = candid::Principal::anonymous();
-     let error = client
-         .update_call(id, id, "once", vec![7])
-@@ -391,7 +500,7 @@ async fn routed_calls_preserve_payloads_and_await_only_the_accepted_ingress() {
-             r#"{"Ok":"AP8="}"#,
-         ),
-     ]);
--    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+    let client = server.client(Duration::from_secs(1));
-     let canister = candid::Principal::from_slice(&[3]);
-     let sender = candid::Principal::from_slice(&[7]);
-     let route = RawEffectivePrincipal::SubnetId(vec![9]);
-@@ -448,7 +557,7 @@ async fn creation_preserves_supported_topology_state_gateway_features_and_time()
-     ]);
-     for auto_progress in [false, true] {
-         let enabled = Some(IcpFeaturesConfig::DefaultConfig);
--        let builder = PocketIcBuilder::new()
-+        let builder = PocketIcBuilder::new(Duration::from_secs(300))
-             .with_server_url(server.url.clone())
-             .with_state_dir("/caller-owned/state".into())
-             .with_nns_subnet()
-diff --git a/src/tests/client_failures/snapshot.rs b/src/tests/client_failures/snapshot.rs
-index 518ebdaf..4c605588 100644
---- a/src/tests/client_failures/snapshot.rs
-+++ b/src/tests/client_failures/snapshot.rs
-@@ -91,7 +91,7 @@ async fn sync_copy_preserves_exact_dto_bytes_sparse_globals_and_sender() {
-     ));
-     steps.extend(call_steps(encode_args(()).unwrap()));
-     let server = Server::new(steps);
--    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+    let client = server.client(Duration::from_secs(1));
-     let mut copy = transfer(metadata());
-     copy.advance(&client).await.unwrap();
-     assert_eq!(copy.uploaded_snapshot(), Some([2].as_slice()));
-@@ -155,7 +155,7 @@ async fn partial_and_oversized_regions_refuse_without_uploading_or_losing_custod
-             encode_args((ReadCanisterSnapshotDataResult { chunk },)).unwrap(),
-         ));
-         let server = Server::new(steps);
--        let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+        let client = server.client(Duration::from_secs(1));
-         let mut copy = transfer(metadata());
-         copy.advance(&client).await.unwrap();
-         assert!(matches!(
-@@ -191,7 +191,7 @@ async fn chunk_hash_and_total_budget_are_checked_before_upload() {
-             encode_args((ReadCanisterSnapshotDataResult { chunk: data },)).unwrap(),
-         ));
-         let server = Server::new(steps);
--        let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+        let client = server.client(Duration::from_secs(1));
-         copy.advance(&client).await.unwrap();
-         assert!(matches!(
-             copy.advance(&client).await,
-@@ -214,7 +214,7 @@ async fn interrupted_upload_retains_id_ingress_and_no_replay() {
-     lost[1].status = 0;
-     steps.extend(lost);
-     let server = Server::new(steps);
--    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+    let client = server.client(Duration::from_secs(1));
-     let mut copy = transfer(metadata());
-     copy.advance(&client).await.unwrap();
-     let error = copy.advance(&client).await.unwrap_err();
-@@ -237,7 +237,7 @@ async fn cancelled_metadata_upload_preserves_accepted_ingress() {
-     let mut steps = uploaded_steps();
-     steps[1].stall = true;
-     let server = Server::new(steps);
--    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+    let client = server.client(Duration::from_secs(1));
-     let mut copy = transfer(metadata());
-     assert!(
-         tokio::time::timeout(Duration::from_millis(60), copy.advance(&client))
-@@ -260,7 +260,7 @@ async fn reply_limits_and_codec_errors_keep_accepted_ingress() {
-             encode_args((vec![0u8; 1000],)).unwrap()
-         };
-         let server = Server::new(call_steps(reply));
--        let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+        let client = server.client(Duration::from_secs(1));
-         let mut budget = limits().call;
-         if mode == "http" {
-             budget.http_bytes = 100;
-@@ -351,7 +351,7 @@ async fn async_copy_bounds_each_region_and_preserves_valid_chunk_store() {
-         steps.extend(call_steps(encode_args(()).unwrap()));
-     }
-     let server = Server::new(steps);
--    let client = PocketIc::new_from_existing_instance(server.url.clone(), 7, Some(1000));
-+    let client = server.client(Duration::from_secs(1));
-     let mut copy = transfer(meta);
-     while !matches!(copy.status(), TransferStatus::Complete) {
-         copy.advance(&client).await.unwrap();
