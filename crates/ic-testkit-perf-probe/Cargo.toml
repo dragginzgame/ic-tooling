@@ -3,7 +3,7 @@ license.workspace = true
 name = "ic-testkit-perf-probe"
 edition.workspace = true
 rust-version.workspace = true
-version = "0.90.0"
+version = "0.91.0"
 publish = false
 repository.workspace = true
 
