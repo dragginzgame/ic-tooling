@@ -1,6 +1,8 @@
 # Artifact and Wasm build APIs
 
-## Pending Build 0.78 migration
+<a id="pending-build-078-migration"></a>
+
+## Build 0.78 migration
 
 Compiler-recipe wrappers and cross-call prepared input snapshots are retired.
 Keep compiler configuration in the caller's Cargo recipe. Build each independent
