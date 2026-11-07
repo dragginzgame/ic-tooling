@@ -6,6 +6,16 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.92.1] - Unreleased
+
+### 🧪 Testing
+
+- Observe accepted polling and ingress-wait requests before exercising deadline
+  expiry or cancellation. Use a controlled test clock and held replies instead
+  of racing multi-request fixtures against millisecond wall-clock budgets.
+  Preserve receipt, no-replay and cancellation assertions; production budgets
+  and native client behavior remain unchanged.
+
 ## [0.92.0] - 2026-11-07
 
 ### ⚠️ Breaking

@@ -235,15 +235,23 @@ async fn interrupted_upload_retains_id_ingress_and_no_replay() {
 #[tokio::test]
 async fn cancelled_metadata_upload_preserves_accepted_ingress() {
     let mut steps = uploaded_steps();
-    steps[1].stall = true;
+    let (observed, request) = tokio::sync::oneshot::channel();
+    let (release, held) = std::sync::mpsc::channel();
+    steps[1].hold = Some((observed, held));
     let server = Server::new(steps);
-    let client = server.client(Duration::from_secs(1));
+    let client = server.client(Duration::from_secs(30));
     let mut copy = transfer(metadata());
-    assert!(
-        tokio::time::timeout(Duration::from_millis(60), copy.advance(&client))
-            .await
-            .is_err()
-    );
+    {
+        let upload = copy.advance(&client);
+        tokio::pin!(upload);
+        tokio::select! {
+            result = &mut upload => panic!("upload ended before cancellation: {result:?}"),
+            observed = request => observed.expect("observe accepted ingress wait"),
+        }
+        // Dropping this in-flight future cancels only after the accepted ingress
+        // receipt and its subsequent wait request are both observed.
+    }
+    release.send(()).expect("release cancelled upload wait");
     assert!(matches!(copy.status(), TransferStatus::UploadingMetadata));
     assert!(copy.ingress().is_some());
     assert!(copy.uploaded_snapshot().is_none());

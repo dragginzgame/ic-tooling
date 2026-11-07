@@ -14,6 +14,10 @@ struct Step {
     extra_length: usize,
     stall: bool,
     stall_body: bool,
+    hold: Option<(
+        tokio::sync::oneshot::Sender<()>,
+        std::sync::mpsc::Receiver<()>,
+    )>,
 }
 impl Step {
     fn reply(path: &'static str, status: u16, body: &'static str) -> Self {
@@ -24,6 +28,7 @@ impl Step {
             extra_length: 0,
             stall: false,
             stall_body: false,
+            hold: None,
         }
     }
 }
@@ -83,6 +88,18 @@ impl Server {
                     header.lines().next().unwrap(),
                     String::from_utf8_lossy(body)
                 ));
+                if let Some((observed, release)) = step.hold {
+                    observed.send(()).expect("observe held fixture request");
+                    assert!(
+                        !matches!(
+                            release
+                                .recv_timeout(deadline.saturating_duration_since(Instant::now())),
+                            Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+                        ),
+                        "held fixture response was never released"
+                    );
+                    continue;
+                }
                 if step.stall {
                     thread::sleep(Duration::from_millis(150));
                     continue;
@@ -369,8 +386,10 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
     assert!(matches!(error, ClientError::Json { .. }));
     assert!(error.request_context().unwrap().may_have_executed);
     server.finish();
+    let (observed, request) = tokio::sync::oneshot::channel();
+    let (release, held) = std::sync::mpsc::channel();
     let mut delayed = Step::reply("/read_graph/state/ours", 200, "null");
-    delayed.stall = true;
+    delayed.hold = Some((observed, held));
     let server = Server::new(vec![
         Step::reply(
             "/instances/7/update/tick",
@@ -379,9 +398,33 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
         ),
         delayed,
     ]);
-    let client = server.client(Duration::from_millis(50));
-    let error = client.tick().await.unwrap_err();
+    let budget = Duration::from_secs(30);
+    let client = server.client(budget);
+    let operation = client.tick();
+    tokio::pin!(operation);
+    tokio::select! {
+        result = &mut operation => panic!("operation ended before its poll was held: {result:?}"),
+        observed = request => observed.expect("observe polling request"),
+    }
+    // Real HTTP dispatch is complete. Expire the original budget without racing
+    // the host scheduler against the accepted-response/poll transition.
+    tokio::time::pause();
+    tokio::time::advance(budget).await;
+    let error = operation.await.unwrap_err();
+    tokio::time::resume();
+    release.send(()).expect("release held poll");
     assert!(matches!(error, ClientError::Timeout { .. }));
+    assert!(error.request_context().unwrap().may_have_executed);
+    assert_eq!(
+        error
+            .request_context()
+            .unwrap()
+            .operation
+            .as_ref()
+            .unwrap()
+            .state_label,
+        "state"
+    );
     assert_eq!(
         error
             .request_context()
