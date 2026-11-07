@@ -182,11 +182,12 @@ compiled by the crate's normal all-target checks. The
 [transactional external-artifact example](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-build/examples/transactional_artifact_cache.rs)
 is compiled and maintained by IC Build.
 
-Baseline recipes construct `ResetRequirements { funding, policies }` with the
-fixed optional fields in `ResetPolicies`. Their resets independently report
-`ResetReceipt { policies }`; absence differs from an explicit irrelevant policy. The pool
-restores the captured snapshots with the selected funding; successful manual
-restoration returns unit. `ResetReceipt` covers non-snapshot guarantees. These are source API hard cuts.
+Baseline recipes select `snapshot_funding()` and validate their own non-snapshot
+reset evidence before returning `Ok(())` from `reset_non_snapshot_state`.
+The pool restores captured snapshots with that funding, then runs reset,
+readiness and final validation before exposing a lease. Consumer recipes own
+reset-policy schemas and mismatched/missing evidence failures. See the
+[0.90 migration](https://github.com/dragginzgame/ic-tooling/blob/main/docs/testkit/client-migration.md#testkit-090-surface-cut).
 
 Generic Cargo/Wasm builds, retained artifact caches and freshness APIs belong to
 [IC Build](https://github.com/dragginzgame/ic-build). Depend on it directly and use

@@ -189,36 +189,56 @@ pub struct WasmBuildRecord {
 /// Timings for cache coordination, input resolution, and Cargo execution.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct WasmBuildTimings {
-    lock_wait: Duration,
-    shared_incremental_lock_wait: Option<Duration>,
-    input_resolution: WasmInputResolutionTimings,
-    cargo_build: Option<Duration>,
-    cache_maintenance: Option<Duration>,
-    total: Duration,
+    /// Time spent waiting for the output-directory process lock.
+    pub lock_wait: Duration,
+    /// Time spent waiting for a shared incremental-target lock, when configured.
+    pub shared_incremental_lock_wait: Option<Duration>,
+    /// Detailed tool, metadata, discovery, and hashing timings.
+    pub input_resolution: WasmInputResolutionTimings,
+    /// Time spent in `cargo build`, or `None` for a cache hit.
+    pub cargo_build: Option<Duration>,
+    /// Time spent on configured best-effort cache maintenance.
+    pub cache_maintenance: Option<Duration>,
+    /// Total operation duration, including lock coordination.
+    pub total: Duration,
 }
 
 /// Detailed timings for exact Wasm build-input resolution.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct WasmInputResolutionTimings {
-    tool_identity: Duration,
-    cargo_metadata: Duration,
-    input_discovery: Duration,
-    content_hashing: Duration,
-    total: Duration,
+    /// Time spent reading Cargo and rustc identities.
+    pub tool_identity: Duration,
+    /// Time spent running and decoding `cargo metadata`.
+    pub cargo_metadata: Duration,
+    /// Time spent resolving packages, configuration, and watched paths.
+    pub input_discovery: Duration,
+    /// Time spent reading and hashing exact input contents.
+    pub content_hashing: Duration,
+    /// Complete input-resolution duration.
+    pub total: Duration,
 }
 
 /// Partial phase timings retained when a Wasm acquisition fails.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct WasmBuildFailureTimings {
-    exact_cache_coordination: Duration,
-    shared_target_coordination: Option<Duration>,
-    input_resolution: WasmInputResolutionTimings,
-    shared_target_maintenance: Option<Duration>,
-    cargo_build: Option<Duration>,
-    artifact_publication: Option<Duration>,
-    exact_cache_maintenance: Option<Duration>,
-    cleanup: Option<Duration>,
-    total: Duration,
+    /// Time spent coordinating the exact artifact cache before failure.
+    pub exact_cache_coordination: Duration,
+    /// Time spent coordinating a shared incremental target, when reached.
+    pub shared_target_coordination: Option<Duration>,
+    /// Partial Cargo/rustc identity, metadata, discovery, and hashing timings.
+    pub input_resolution: WasmInputResolutionTimings,
+    /// Time spent on shared-target maintenance, when reached.
+    pub shared_target_maintenance: Option<Duration>,
+    /// Time spent executing Cargo, including an unsuccessful execution.
+    pub cargo_build: Option<Duration>,
+    /// Time spent validating or publishing artifacts, when reached.
+    pub artifact_publication: Option<Duration>,
+    /// Time spent on exact-cache maintenance, when reached.
+    pub exact_cache_maintenance: Option<Duration>,
+    /// Explicit incomplete-entry cleanup time, when failure required it.
+    pub cleanup: Option<Duration>,
+    /// Complete failed acquisition wall time.
+    pub total: Duration,
 }
 
 /// Structured phase and partial timings for one failed Wasm entry.
@@ -1053,42 +1073,6 @@ impl WasmBuildRecord {
 }
 
 impl WasmBuildTimings {
-    /// Time spent waiting for the output-directory process lock.
-    #[must_use]
-    pub const fn lock_wait(self) -> Duration {
-        self.lock_wait
-    }
-
-    /// Time spent waiting for a shared incremental-target lock, when configured.
-    #[must_use]
-    pub const fn shared_incremental_lock_wait(self) -> Option<Duration> {
-        self.shared_incremental_lock_wait
-    }
-
-    /// Detailed tool, metadata, discovery, and hashing timings.
-    #[must_use]
-    pub const fn input_resolution(self) -> WasmInputResolutionTimings {
-        self.input_resolution
-    }
-
-    /// Time spent in `cargo build`, or `None` for a cache hit.
-    #[must_use]
-    pub const fn cargo_build(self) -> Option<Duration> {
-        self.cargo_build
-    }
-
-    /// Time spent on configured best-effort cache maintenance.
-    #[must_use]
-    pub const fn cache_maintenance(self) -> Option<Duration> {
-        self.cache_maintenance
-    }
-
-    /// Total operation duration, including lock coordination.
-    #[must_use]
-    pub const fn total(self) -> Duration {
-        self.total
-    }
-
     pub(super) fn saturating_add(self, other: Self) -> Self {
         let mut input_resolution = self.input_resolution;
         input_resolution.include(other.input_resolution);
@@ -1110,36 +1094,6 @@ impl WasmBuildTimings {
 }
 
 impl WasmInputResolutionTimings {
-    /// Time spent reading Cargo and rustc identities.
-    #[must_use]
-    pub const fn tool_identity(self) -> Duration {
-        self.tool_identity
-    }
-
-    /// Time spent running and decoding `cargo metadata`.
-    #[must_use]
-    pub const fn cargo_metadata(self) -> Duration {
-        self.cargo_metadata
-    }
-
-    /// Time spent resolving packages, configuration, and watched paths.
-    #[must_use]
-    pub const fn input_discovery(self) -> Duration {
-        self.input_discovery
-    }
-
-    /// Time spent reading and hashing exact input contents.
-    #[must_use]
-    pub const fn content_hashing(self) -> Duration {
-        self.content_hashing
-    }
-
-    /// Complete input-resolution duration.
-    #[must_use]
-    pub const fn total(self) -> Duration {
-        self.total
-    }
-
     const fn include(&mut self, other: Self) {
         self.tool_identity = self.tool_identity.saturating_add(other.tool_identity);
         self.cargo_metadata = self.cargo_metadata.saturating_add(other.cargo_metadata);
@@ -1170,62 +1124,6 @@ impl WasmBuildFailureDetails {
     #[must_use]
     pub const fn timings(self) -> WasmBuildFailureTimings {
         self.timings
-    }
-}
-
-impl WasmBuildFailureTimings {
-    /// Time spent coordinating the exact artifact cache before failure.
-    #[must_use]
-    pub const fn exact_cache_coordination(self) -> Duration {
-        self.exact_cache_coordination
-    }
-
-    /// Time spent coordinating a shared incremental target, when reached.
-    #[must_use]
-    pub const fn shared_target_coordination(self) -> Option<Duration> {
-        self.shared_target_coordination
-    }
-
-    /// Partial Cargo/rustc identity, metadata, discovery, and hashing timings.
-    #[must_use]
-    pub const fn input_resolution(self) -> WasmInputResolutionTimings {
-        self.input_resolution
-    }
-
-    /// Time spent on shared-target maintenance, when reached.
-    #[must_use]
-    pub const fn shared_target_maintenance(self) -> Option<Duration> {
-        self.shared_target_maintenance
-    }
-
-    /// Time spent executing Cargo, including an unsuccessful execution.
-    #[must_use]
-    pub const fn cargo_build(self) -> Option<Duration> {
-        self.cargo_build
-    }
-
-    /// Time spent validating or publishing artifacts, when reached.
-    #[must_use]
-    pub const fn artifact_publication(self) -> Option<Duration> {
-        self.artifact_publication
-    }
-
-    /// Time spent on exact-cache maintenance, when reached.
-    #[must_use]
-    pub const fn exact_cache_maintenance(self) -> Option<Duration> {
-        self.exact_cache_maintenance
-    }
-
-    /// Explicit incomplete-entry cleanup time, when failure required it.
-    #[must_use]
-    pub const fn cleanup(self) -> Option<Duration> {
-        self.cleanup
-    }
-
-    /// Complete failed acquisition wall time.
-    #[must_use]
-    pub const fn total(self) -> Duration {
-        self.total
     }
 }
 

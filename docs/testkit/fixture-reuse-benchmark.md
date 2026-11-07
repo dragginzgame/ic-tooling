@@ -299,6 +299,10 @@ alternated, including which path made the first query. Raw calls timed Candid
 encoding, the upstream call, and decoding separately. Every reply had to match
 the restored counter, length, and first byte.
 
+`query_candid` names the historical helper used for that measurement. Testkit
+0.90 removes it; current external-protocol probes compose their explicit codec
+with the raw client call. The recorded measurements retain their original scope.
+
 With 1 MiB per canister, the first post-restore query averaged 16.48 ms through
 the typed helper and 16.78 ms through the raw API. Subsequent queries averaged
 1.67 and 1.68 ms respectively. Raw-call encoding plus decoding averaged

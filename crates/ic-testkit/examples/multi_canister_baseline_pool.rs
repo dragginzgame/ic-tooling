@@ -14,16 +14,13 @@ use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePreparationStage, CachedPocketIcBaseline,
     CachedPocketIcBaselinePool, CanisterSnapshotTarget, ControllerSnapshotError,
     FailureDisposition, PocketIcBaselineRecipe, PocketIcStartupConfig, PocketIcStartupError,
-    PreparedBaseline, RebuildReason, ResetPolicies, ResetReceipt, ResetRequirements,
-    SnapshotRestoreFunding, is_dead_pocket_ic_transport_error,
+    PreparedBaseline, RebuildReason, SnapshotRestoreFunding, is_dead_pocket_ic_transport_error,
 };
 use ic_testkit::pocket_ic::PocketIcBuilder;
 
 const EMPTY_WASM: &[u8] = b"\0asm\x01\0\0\0";
 
-struct TwoCanisterRecipe {
-    requirements: ResetRequirements,
-}
+struct TwoCanisterRecipe;
 
 struct TopologyMetadata {
     canister_ids: [Principal; 2],
@@ -48,13 +45,8 @@ enum RecipeError {
 }
 
 impl TwoCanisterRecipe {
-    fn new() -> Self {
-        Self {
-            requirements: ResetRequirements {
-                funding: SnapshotRestoreFunding::Preserve,
-                policies: ResetPolicies::default(),
-            },
-        }
+    const fn new() -> Self {
+        Self
     }
 }
 
@@ -62,13 +54,15 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
     type Metadata = TopologyMetadata;
     type Error = RecipeError;
 
-    fn reset_requirements(&self) -> &ResetRequirements {
-        &self.requirements
+    fn snapshot_funding(&self) -> SnapshotRestoreFunding {
+        SnapshotRestoreFunding::Preserve
     }
 
     async fn build(&self) -> Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error> {
         let pocket_ic = PocketIcStartupConfig::from_env(Duration::from_secs(30))?
-            .build_instance(PocketIcBuilder::new().with_application_subnet())
+            .build_instance(
+                PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+            )
             .await?;
         let canister_ids = [
             pocket_ic.instance().create_canister().await.unwrap(),
@@ -110,10 +104,10 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
     fn reset_non_snapshot_state(
         &self,
         _baseline: &CachedPocketIcBaseline<Self::Metadata>,
-    ) -> impl std::future::Future<Output = Result<ResetReceipt, Self::Error>> + Send {
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
         // This recipe is suitable only for tests whose relevant mutations are
         // fully contained in the two captured canisters.
-        std::future::ready(Ok(ResetReceipt::default()))
+        std::future::ready(Ok(()))
     }
 
     async fn drive_to_readiness(

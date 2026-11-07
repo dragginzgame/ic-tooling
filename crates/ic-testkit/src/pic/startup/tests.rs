@@ -335,7 +335,7 @@ async fn owned_builder_failure_retains_server_output_and_reaps_child() {
     );
     let error = script
         .config(Duration::from_secs(2))
-        .build_instance(PocketIcBuilder::new())
+        .build_instance(PocketIcBuilder::new(std::time::Duration::from_secs(300)))
         .await
         .err()
         .unwrap();
@@ -743,7 +743,9 @@ async fn managed_startup_reports_an_exited_server_with_bounded_output() {
 
     let result = script
         .config(Duration::from_secs(2))
-        .build_instance(PocketIcBuilder::new().with_application_subnet())
+        .build_instance(
+            PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+        )
         .await;
 
     let error = result.err().unwrap();
@@ -794,7 +796,9 @@ async fn managed_startup_terminates_a_server_that_never_becomes_ready() {
 
     let result = script
         .config(timeout)
-        .build_instance(PocketIcBuilder::new().with_application_subnet())
+        .build_instance(
+            PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+        )
         .await;
 
     assert!(
@@ -932,7 +936,9 @@ async fn caller_provided_server_publishes_port_constructs_instance_and_cleans_up
         server_idle_ttl: None,
         server_output_files: None,
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .build_instance(
+        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+    )
     .await
     .expect("owned managed spawn must construct an instance");
     let record_file = wrapper.path().with_extension("record");
@@ -963,7 +969,9 @@ async fn caller_provided_server_publishes_port_constructs_instance_and_cleans_up
         server_url: (server.url()).into(),
         timeout: Duration::from_secs(30),
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .build_instance(
+        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+    )
     .await
     .expect("construct instance through caller-provided server");
 

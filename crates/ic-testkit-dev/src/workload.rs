@@ -22,8 +22,8 @@ use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolTimings, BaselinePreparationStage, CachedPocketIcBaseline,
     CachedPocketIcBaselinePool, CanisterSnapshotTarget, FailureDisposition, PocketIcBaselineRecipe,
-    PocketIcInstance, PocketIcStartupConfig, PreparedBaseline, ResetPolicies, ResetReceipt,
-    ResetRequirements, SnapshotRestoreFunding, query_wire, update_wire,
+    PocketIcInstance, PocketIcStartupConfig, PreparedBaseline, SnapshotRestoreFunding, query_wire,
+    update_wire,
 };
 use ic_testkit::pocket_ic::{PocketIc, PocketIcBuilder};
 use ic_testkit_perf_probe::protocol::{INSPECT_STATE, MUTATE_STATE, SEED_STATE, State};
@@ -63,7 +63,7 @@ fn check_shutdown() -> io::Result<()> {
 
 #[derive(Clone)]
 struct Recipe {
-    requirements: ResetRequirements,
+    funding: SnapshotRestoreFunding,
     server_url: String,
     wasm: Arc<[u8]>,
     state_bytes: u32,
@@ -93,9 +93,7 @@ impl Recipe {
             timeout: TIMEOUT,
         }
         .build_instance(
-            PocketIcBuilder::new()
-                .with_application_subnet()
-                .with_max_request_time_ms(Some(30_000)),
+            PocketIcBuilder::new(std::time::Duration::from_secs(30)).with_application_subnet(),
         )
         .await
         .map_err(recipe_error)?;
@@ -182,8 +180,8 @@ impl PocketIcBaselineRecipe for Recipe {
     type Metadata = [Principal; 2];
     type Error = RecipeError;
 
-    fn reset_requirements(&self) -> &ResetRequirements {
-        &self.requirements
+    fn snapshot_funding(&self) -> SnapshotRestoreFunding {
+        self.funding
     }
 
     async fn build(
@@ -220,11 +218,10 @@ impl PocketIcBaselineRecipe for Recipe {
     fn reset_non_snapshot_state(
         &self,
         _baseline: &CachedPocketIcBaseline<Self::Metadata>,
-    ) -> impl std::future::Future<Output = std::result::Result<ResetReceipt, Self::Error>> + Send
-    {
+    ) -> impl std::future::Future<Output = std::result::Result<(), Self::Error>> + Send {
         // This workload mutates only captured canister state. Time and cycle
         // balances are deliberately not asserted to rewind.
-        std::future::ready(Ok(ResetReceipt::default()))
+        std::future::ready(Ok(()))
     }
 
     async fn drive_to_readiness(
@@ -260,13 +257,13 @@ impl PocketIcBaselineRecipe for Recipe {
 impl From<BaselinePoolTimings> for Phases {
     fn from(timings: BaselinePoolTimings) -> Self {
         Self {
-            wait_ms: ms(timings.wait()),
-            build_ms: timings.build().map(ms),
-            restore_ms: timings.restore().map(ms),
-            reset_ms: timings.reset().map(ms),
-            readiness_ms: timings.readiness().map(ms),
-            validation_ms: timings.validation().map(ms),
-            acquisition_ms: ms(timings.total()),
+            wait_ms: ms(timings.wait),
+            build_ms: timings.build.map(ms),
+            restore_ms: timings.restore.map(ms),
+            reset_ms: timings.reset.map(ms),
+            readiness_ms: timings.readiness.map(ms),
+            validation_ms: timings.validation.map(ms),
+            acquisition_ms: ms(timings.total),
         }
     }
 }
@@ -433,10 +430,7 @@ pub async fn run(arguments: WorkerArguments) -> Result<()> {
     .start_managed_server()?;
     let server_startup_ms = ms(startup.elapsed());
     let recipe = Recipe {
-        requirements: ResetRequirements {
-            funding: SnapshotRestoreFunding::Preserve,
-            policies: ResetPolicies::default(),
-        },
+        funding: SnapshotRestoreFunding::Preserve,
         server_url: server.url().to_owned(),
         wasm: fs::read(&wasm)?.into(),
         state_bytes,

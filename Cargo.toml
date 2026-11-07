@@ -55,7 +55,6 @@ ic-testkit = { path = "crates/ic-testkit", version = "0.89.4", default-features 
 ic-testkit-native = { path = "crates/ic-testkit-native", version = "0.80.0" }
 
 # External production dependencies
-backon = { version = "1.6.0", default-features = false, features = ["std"] }
 base64 = "0.23.1"
 candid = { version = "0.10.38", default-features = false }
 cap-fs-ext = "4.0.2"

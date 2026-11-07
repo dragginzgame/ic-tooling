@@ -288,39 +288,6 @@ impl From<RawSubnetId> for Principal {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RawNodeId {
-    #[serde(deserialize_with = "base64::deserialize")]
-    #[serde(serialize_with = "base64::serialize")]
-    pub node_id: Vec<u8>,
-}
-
-impl From<RawNodeId> for Principal {
-    fn from(val: RawNodeId) -> Self {
-        Principal::from_slice(&val.node_id)
-    }
-}
-
-impl From<Principal> for RawNodeId {
-    fn from(principal: Principal) -> Self {
-        Self {
-            node_id: principal.as_slice().to_vec(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
-pub struct RawTickConfigs {
-    pub blockmakers: Option<Vec<RawSubnetBlockmakers>>,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct RawSubnetBlockmakers {
-    pub subnet: RawSubnetId,
-    pub blockmaker: RawNodeId,
-    pub failed_blockmakers: Vec<RawNodeId>,
-}
-
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct BlobId(
     #[serde(deserialize_with = "base64::deserialize")]
@@ -542,30 +509,11 @@ impl Topology {
     }
 
     pub fn get_app_subnets(&self) -> Vec<SubnetId> {
-        self.find_subnets(SubnetKind::Application, None)
-    }
-
-    pub fn get_cloud_engines(&self) -> Vec<SubnetId> {
-        self.find_subnets(SubnetKind::CloudEngine, None)
-    }
-
-    pub fn get_verified_app_subnets(&self) -> Vec<SubnetId> {
-        self.find_subnets(SubnetKind::VerifiedApplication, None)
-    }
-
-    pub fn get_benchmarking_app_subnets(&self) -> Vec<SubnetId> {
-        self.find_subnets(
-            SubnetKind::Application,
-            Some(SubnetInstructionConfig::Benchmarking),
-        )
-    }
-
-    pub fn get_bitcoin(&self) -> Option<SubnetId> {
-        self.find_subnet(SubnetKind::Bitcoin)
-    }
-
-    pub fn get_fiduciary(&self) -> Option<SubnetId> {
-        self.find_subnet(SubnetKind::Fiduciary)
+        self.subnet_configs
+            .iter()
+            .filter(|(_, config)| config.subnet_kind == SubnetKind::Application)
+            .map(|(id, _)| *id)
+            .collect()
     }
 
     pub fn get_ii(&self) -> Option<SubnetId> {
@@ -574,32 +522,6 @@ impl Topology {
 
     pub fn get_nns(&self) -> Option<SubnetId> {
         self.find_subnet(SubnetKind::NNS)
-    }
-
-    pub fn get_sns(&self) -> Option<SubnetId> {
-        self.find_subnet(SubnetKind::SNS)
-    }
-
-    pub fn get_system_subnets(&self) -> Vec<SubnetId> {
-        self.find_subnets(SubnetKind::System, None)
-    }
-
-    fn find_subnets(
-        &self,
-        kind: SubnetKind,
-        instruction_config: Option<SubnetInstructionConfig>,
-    ) -> Vec<SubnetId> {
-        self.subnet_configs
-            .iter()
-            .filter(|(_, config)| {
-                config.subnet_kind == kind
-                    && instruction_config
-                        .as_ref()
-                        .map(|instruction_config| config.instruction_config == *instruction_config)
-                        .unwrap_or(true)
-            })
-            .map(|(id, _)| *id)
-            .collect()
     }
 
     fn find_subnet(&self, kind: SubnetKind) -> Option<SubnetId> {
@@ -836,29 +758,4 @@ impl From<MockCanisterHttpResponse> for RawMockCanisterHttpResponse {
             additional_responses: mock_canister_http_response.additional_responses,
         }
     }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct RawCanisterSnapshotDownload {
-    pub sender: RawPrincipalId,
-    pub canister_id: RawCanisterId,
-    #[serde(deserialize_with = "base64::deserialize")]
-    #[serde(serialize_with = "base64::serialize")]
-    pub snapshot_id: Vec<u8>,
-    pub snapshot_dir: PathBuf,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct RawCanisterSnapshotUpload {
-    pub sender: RawPrincipalId,
-    pub canister_id: RawCanisterId,
-    pub replace_snapshot: Option<RawCanisterSnapshotId>,
-    pub snapshot_dir: PathBuf,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct RawCanisterSnapshotId {
-    #[serde(deserialize_with = "base64::deserialize")]
-    #[serde(serialize_with = "base64::serialize")]
-    pub snapshot_id: Vec<u8>,
 }

@@ -112,17 +112,28 @@ pub struct ArtifactCacheArtifact {
 /// Phase timings for one transactional artifact-cache acquisition.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct ArtifactCacheTimings {
-    coordination_lock_wait: Duration,
-    content_lock_wait: Duration,
-    namespace_lock_wait: Duration,
-    input_capture: Duration,
-    cache_lookup: Duration,
-    caller_build: Option<Duration>,
-    output_validation: Duration,
-    publication: Duration,
-    materialization: Duration,
-    maintenance: Option<Duration>,
-    total: Duration,
+    /// Time waiting for the caller-selected coordination scope.
+    pub coordination_lock_wait: Duration,
+    /// Time waiting for exact content-key ownership.
+    pub content_lock_wait: Duration,
+    /// Time waiting for short namespace mutations.
+    pub namespace_lock_wait: Duration,
+    /// Time spent hashing and verifying declared inputs.
+    pub input_capture: Duration,
+    /// Time spent validating or rejecting a committed cache entry.
+    pub cache_lookup: Duration,
+    /// Time the caller held a miss transaction before committing it.
+    pub caller_build: Option<Duration>,
+    /// Time spent validating staged output files.
+    pub output_validation: Duration,
+    /// Time spent publishing an immutable content entry.
+    pub publication: Duration,
+    /// Time spent materializing caller-facing output destinations.
+    pub materialization: Duration,
+    /// Time spent on configured best-effort retention.
+    pub maintenance: Option<Duration>,
+    /// Complete acquisition duration.
+    pub total: Duration,
 }
 
 /// Owned miss transaction holding the recipe and content-key process locks.
@@ -598,72 +609,6 @@ impl ArtifactCacheArtifact {
 }
 
 impl ArtifactCacheTimings {
-    /// Time waiting for the caller-selected coordination scope.
-    #[must_use]
-    pub const fn coordination_lock_wait(self) -> Duration {
-        self.coordination_lock_wait
-    }
-
-    /// Time waiting for exact content-key ownership.
-    #[must_use]
-    pub const fn content_lock_wait(self) -> Duration {
-        self.content_lock_wait
-    }
-
-    /// Time waiting for short namespace mutations.
-    #[must_use]
-    pub const fn namespace_lock_wait(self) -> Duration {
-        self.namespace_lock_wait
-    }
-
-    /// Time spent hashing and verifying declared inputs.
-    #[must_use]
-    pub const fn input_capture(self) -> Duration {
-        self.input_capture
-    }
-
-    /// Time spent validating or rejecting a committed cache entry.
-    #[must_use]
-    pub const fn cache_lookup(self) -> Duration {
-        self.cache_lookup
-    }
-
-    /// Time the caller held a miss transaction before committing it.
-    #[must_use]
-    pub const fn caller_build(self) -> Option<Duration> {
-        self.caller_build
-    }
-
-    /// Time spent validating staged output files.
-    #[must_use]
-    pub const fn output_validation(self) -> Duration {
-        self.output_validation
-    }
-
-    /// Time spent publishing an immutable content entry.
-    #[must_use]
-    pub const fn publication(self) -> Duration {
-        self.publication
-    }
-
-    /// Time spent materializing caller-facing output destinations.
-    #[must_use]
-    pub const fn materialization(self) -> Duration {
-        self.materialization
-    }
-
-    /// Time spent on configured best-effort retention.
-    #[must_use]
-    pub const fn maintenance(self) -> Option<Duration> {
-        self.maintenance
-    }
-
-    /// Complete acquisition duration.
-    #[must_use]
-    pub const fn total(self) -> Duration {
-        self.total
-    }
-
     pub(super) fn saturating_add(self, other: Self) -> Self {
         Self {
             coordination_lock_wait: self

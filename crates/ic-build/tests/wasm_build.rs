@@ -511,7 +511,7 @@ fn prepared_wasm_inputs_serve_concurrent_warm_readers() {
     assert_eq!(preparation.specifications(), 2);
     assert_eq!(preparation.input_resolution_runs(), 1);
     assert_eq!(preparation.input_resolution_reuses(), 1);
-    assert!(preparation.input_resolution_timings().total() > Duration::ZERO);
+    assert!(preparation.input_resolution_timings().total > Duration::ZERO);
     assert_eq!(preparation.reader_reuses(), 0);
     assert!(!preparation.is_invalidated());
 
@@ -640,8 +640,8 @@ fn assert_cold_batch_metrics(metrics: WasmBuildBatchMetrics) {
     assert_eq!(metrics.reused(), 0);
     assert_eq!(metrics.input_resolution_runs(), 1);
     assert_eq!(metrics.input_resolution_reuses(), 1);
-    assert!(metrics.successful_timings().input_resolution().total() > Duration::ZERO);
-    assert!(metrics.successful_timings().cargo_build().is_some());
+    assert!(metrics.successful_timings().input_resolution.total > Duration::ZERO);
+    assert!(metrics.successful_timings().cargo_build.is_some());
 }
 
 fn assert_prepared_batch_metrics(metrics: WasmBuildBatchMetrics) {
@@ -651,7 +651,7 @@ fn assert_prepared_batch_metrics(metrics: WasmBuildBatchMetrics) {
     assert_eq!(metrics.input_resolution_reuses(), 0);
     assert_eq!(metrics.input_resolution_prepared_reuses(), 1);
     assert_eq!(
-        metrics.successful_timings().input_resolution().total(),
+        metrics.successful_timings().input_resolution.total,
         Duration::ZERO
     );
 }
@@ -762,7 +762,7 @@ fn shared_incremental_wasm_cache_keeps_mutable_cargo_state_outside_exact_entries
         first
             .record()
             .timings()
-            .shared_incremental_lock_wait()
+            .shared_incremental_lock_wait
             .is_some()
     );
     assert!(shared_target.join("wasm32-unknown-unknown").is_dir());
@@ -782,7 +782,7 @@ fn shared_incremental_wasm_cache_keeps_mutable_cargo_state_outside_exact_entries
         reused
             .record()
             .timings()
-            .shared_incremental_lock_wait()
+            .shared_incremental_lock_wait
             .is_none(),
         "an immediate exact hit should not acquire the shared-target lock"
     );
@@ -801,7 +801,7 @@ fn shared_incremental_wasm_cache_keeps_mutable_cargo_state_outside_exact_entries
     let restored = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
         .expect("restore original exact output");
     assert!(matches!(restored, WasmBuildOutcome::Reused(_)));
-    assert!(restored.record().timings().cargo_build().is_none());
+    assert!(restored.record().timings().cargo_build.is_none());
 
     prune_wasm_build_cache(
         &target_dir,
@@ -882,7 +882,7 @@ fn scheduled_shared_target_maintenance_participates_in_wasm_acquisition() {
     .expect("reuse with integrated shared-target maintenance");
     assert!(matches!(reused, WasmBuildOutcome::Reused(_)));
     let reused_timings = reused.record().timings();
-    assert!(reused_timings.shared_incremental_lock_wait().is_some());
+    assert!(reused_timings.shared_incremental_lock_wait.is_some());
     assert!(matches!(
         reused.record().shared_incremental_maintenance(),
         Some(SharedIncrementalTargetMaintenanceOutcome::Skipped { .. })
@@ -1161,10 +1161,10 @@ fn source_changes_during_shared_incremental_build_reject_exact_publication() {
     let details = failure.failure_details().unwrap();
     assert_eq!(details.phase(), WasmBuildPhase::ContentHashing);
     let timings = details.timings();
-    assert!(timings.input_resolution().content_hashing() > Duration::ZERO);
-    assert!(timings.cargo_build().is_some());
-    assert!(timings.artifact_publication().is_some());
-    assert!(timings.cleanup().is_some());
+    assert!(timings.input_resolution.content_hashing > Duration::ZERO);
+    assert!(timings.cargo_build.is_some());
+    assert!(timings.artifact_publication.is_some());
+    assert!(timings.cleanup.is_some());
     assert!(invalidated);
     assert!(matches!(
         next,

@@ -4,8 +4,8 @@ use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 use super::{
     CachedPocketIcBaseline, CanisterSnapshotTarget, FailureDisposition, PocketIcBaselineRecipe,
-    PreparedBaseline, RebuildReason, ResetPolicies, ResetReceipt, ResetRequirements,
-    SnapshotRestoreFunding, StandaloneCanisterFixture, is_dead_pocket_ic_transport_error,
+    PreparedBaseline, RebuildReason, SnapshotRestoreFunding, StandaloneCanisterFixture,
+    is_dead_pocket_ic_transport_error,
 };
 
 /// Snapshot-only recipe for one caller-built, installed canister.
@@ -25,7 +25,7 @@ use super::{
 /// Non-transport restore failures are fatal: the pool discards the affected
 /// baseline before returning the error. Dead transport permits one recovery build.
 pub struct StandaloneCanisterRecipe<B> {
-    requirements: ResetRequirements,
+    funding: SnapshotRestoreFunding,
     build: B,
 }
 
@@ -34,14 +34,8 @@ impl<B> StandaloneCanisterRecipe<B> {
     ///
     /// Static suites can initialize the recipe and pool with [`std::sync::LazyLock`].
     #[must_use]
-    pub fn new(funding: SnapshotRestoreFunding, build: B) -> Self {
-        Self {
-            requirements: ResetRequirements {
-                funding,
-                policies: ResetPolicies::default(),
-            },
-            build,
-        }
+    pub const fn new(funding: SnapshotRestoreFunding, build: B) -> Self {
+        Self { funding, build }
     }
 }
 
@@ -54,8 +48,8 @@ where
     // Retain the typed snapshot/contract cause without another error vocabulary.
     type Error = io::Error;
 
-    fn reset_requirements(&self) -> &ResetRequirements {
-        &self.requirements
+    fn snapshot_funding(&self) -> SnapshotRestoreFunding {
+        self.funding
     }
 
     async fn build(&self) -> Result<CachedPocketIcBaseline<Principal>, io::Error> {
@@ -94,8 +88,8 @@ where
     fn reset_non_snapshot_state(
         &self,
         _baseline: &CachedPocketIcBaseline<Principal>,
-    ) -> impl std::future::Future<Output = Result<ResetReceipt, io::Error>> + Send {
-        std::future::ready(Ok(ResetReceipt::default()))
+    ) -> impl std::future::Future<Output = Result<(), io::Error>> + Send {
+        std::future::ready(Ok(()))
     }
 
     async fn prepare_restore(

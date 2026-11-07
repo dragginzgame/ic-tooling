@@ -1,9 +1,25 @@
 # PocketIC client transfer
 
+`loc-surface-cut.patch` records the authorized removal of unused Candid helper
+exports, default-effective-ID lookup, server-filesystem snapshot APIs/DTOs,
+no-tick polling, authenticated ingress-status APIs, custom blockmaker ticks,
+subnet deletion and unused topology shortcuts. Ordinary ticks and anonymous
+ingress status retain their request bytes, results and failure custody; topology
+keeps complete server DTOs and its used application/NNS/II/range projections.
+This layer also requires explicit finite request budgets at every construction,
+attachment and listing boundary. One checked deadline covers dispatch, body reads,
+accepted-operation polling, pauses and best-effort pruning; zero/overflowing
+durations fail before dispatch. Protocol bytes and no-replay custody are unchanged.
+The two Candid helpers needed by management calls are now private. Client failure
+tests reuse Host Process's bounded request reader while retaining custom stalled,
+truncated and replay responses. This layer is reversed before management routing;
+original protocol codecs, request custody, snapshot transfer and donor hashes stay
+unchanged. Public removals are a Testkit minor-version cut, without aliases.
+
 `management-routing.patch` centralizes the repeated canister-scoped management
 destination, effective-principal and optional-sender projection. Public method
 signatures, method strings, DTOs, protocol bytes and fallible/no-replay execution
-are unchanged. The source guard reverses this separately checksummed layer first,
+are unchanged. The source guard reverses this separately checksummed layer next,
 then reconstructs every existing donor/upstream layer without changing its hashes.
 
 The separately checksummed `logging-owner.patch` removes implicit client log

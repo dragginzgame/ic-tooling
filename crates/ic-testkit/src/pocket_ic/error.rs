@@ -28,6 +28,8 @@ pub enum ClientError {
         "PocketIC requires an explicit server URL; provision/start it through ic_testkit::pic or supply a running server"
     )]
     MissingServerUrl,
+    #[error("PocketIC request budget must be positive and fit the host clock: {timeout:?}")]
+    InvalidRequestBudget { timeout: std::time::Duration },
     #[error("PocketIC transport failed: {source}")]
     Transport {
         context: Box<RequestContext>,

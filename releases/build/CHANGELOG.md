@@ -6,6 +6,20 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.77.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Read cache acquisition, input-resolution and failure timing records through
+  documented public fields. Remove their forwarding getters without aliases;
+  records and reports still expose timings through their existing owners.
+
+### 🧹 Cleanup
+
+- Share the isolated/shared/scheduled cache fixture matrix across warm output,
+  retained-entry corruption and source-mutation tests. Keep each scenario's
+  assertions and every mode combination.
+
 ## [0.76.0] - 2026-11-06
 
 ### ⚠️ Breaking

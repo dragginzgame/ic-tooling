@@ -110,13 +110,18 @@ async fn logging_child() {
     if early {
         install();
     }
-    let first = PocketIc::new(url).await.unwrap();
+    let first = PocketIc::new(url, std::time::Duration::from_secs(60))
+        .await
+        .unwrap();
     let borrowed = PocketIc::new_from_existing_instance(
         first.get_server_url(),
         first.instance_id,
-        Some(5_000),
-    );
-    let second = PocketIc::new(first.get_server_url()).await.unwrap();
+        std::time::Duration::from_secs(5),
+    )
+    .expect("valid request budget");
+    let second = PocketIc::new(first.get_server_url(), std::time::Duration::from_secs(60))
+        .await
+        .unwrap();
     borrowed.drop().await.unwrap();
     first.topology().await.unwrap(); // borrowed close did not delete its owner.
     second.drop().await.unwrap();

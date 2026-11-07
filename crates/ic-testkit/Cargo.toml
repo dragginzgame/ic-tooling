@@ -33,7 +33,6 @@ thiserror = { workspace = true }
 libc = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-backon = { workspace = true }
 base64 = { workspace = true }
 candid = { workspace = true, features = ["bignum", "serde_bytes", "printer"] }
 clap = { workspace = true, features = ["string"], optional = true }
@@ -45,7 +44,7 @@ ic-management-canister-types = { workspace = true }
 # Held fixtures adapt the external management HTTP protocol on native targets only.
 ic-platform = { workspace = true, features = ["candid", "management-canister-types", "ic-protocol"] }
 ic-wire = { workspace = true, optional = true }
-reqwest = { workspace = true, features = ["blocking", "http2", "json", "multipart", "rustls", "socks", "stream"] }
+reqwest = { workspace = true, features = ["http2", "json", "rustls", "socks"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

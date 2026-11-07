@@ -17,9 +17,8 @@ use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolError, BaselinePoolOutcome, BaselinePoolPreparationError,
     BaselinePreparationStage, CachedPocketIcBaseline, CachedPocketIcBaselinePool,
     CachedPocketIcBaselinePoolGuard, CanisterSnapshotTarget, ControllerSnapshotError,
-    ExtraCanisterPolicy, FailureDisposition, PocketIcBaselineRecipe, PocketIcStartupConfig,
-    PocketIcStartupError, PreparedBaseline, RebuildReason, ResetPolicies, ResetReceipt,
-    ResetRequirements, SnapshotRestoreFunding, TimeResetPolicy, is_dead_pocket_ic_transport_error,
+    FailureDisposition, PocketIcBaselineRecipe, PocketIcStartupConfig, PocketIcStartupError,
+    PreparedBaseline, RebuildReason, SnapshotRestoreFunding, is_dead_pocket_ic_transport_error,
 };
 use ic_testkit::pocket_ic::PocketIcBuilder;
 
@@ -75,7 +74,7 @@ async fn pool_shutdown_accepts_static_leases_and_waits_before_deletion() {
     );
     for url in urls {
         assert!(
-            ic_testkit::pocket_ic::PocketIc::list_instances(url)
+            ic_testkit::pocket_ic::PocketIc::list_instances(url, Duration::from_secs(5))
                 .await
                 .is_err()
         );
@@ -150,12 +149,11 @@ struct RecipeControls {
 }
 
 struct TwoCanisterRecipe {
-    requirements: ResetRequirements,
     controls: RecipeControls,
     guarded_domain: Option<GuardedDomain>,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum GuardedDomain {
     Time,
     Cycles,
@@ -180,34 +178,20 @@ enum TestRecipeError {
     Snapshot(ControllerSnapshotError),
     Startup(PocketIcStartupError),
     DomainMutation(&'static str),
+    ResetEvidence { achieved: Option<GuardedDomain> },
     Synthetic(&'static str),
 }
 
 impl TwoCanisterRecipe {
-    fn new(controls: RecipeControls) -> Self {
+    const fn new(controls: RecipeControls) -> Self {
         Self {
-            requirements: ResetRequirements {
-                funding: SnapshotRestoreFunding::Preserve,
-                policies: ResetPolicies::default(),
-            },
             controls,
             guarded_domain: None,
         }
     }
 
-    fn guarding_domain(controls: RecipeControls, domain: GuardedDomain) -> Self {
-        let policies = ResetPolicies {
-            pocket_ic_time: (domain == GuardedDomain::Time)
-                .then_some(TimeResetPolicy::RebuildOnMutation),
-            extra_canisters: (domain == GuardedDomain::ExtraCanisters)
-                .then_some(ExtraCanisterPolicy::RebuildOnChange),
-            ..ResetPolicies::default()
-        };
+    const fn guarding_domain(controls: RecipeControls, domain: GuardedDomain) -> Self {
         Self {
-            requirements: ResetRequirements {
-                funding: SnapshotRestoreFunding::Preserve,
-                policies,
-            },
             controls,
             guarded_domain: Some(domain),
         }
@@ -218,8 +202,8 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
     type Error = TestRecipeError;
     type Metadata = TwoCanisterMetadata;
 
-    fn reset_requirements(&self) -> &ResetRequirements {
-        &self.requirements
+    fn snapshot_funding(&self) -> SnapshotRestoreFunding {
+        SnapshotRestoreFunding::Preserve
     }
 
     async fn build(&self) -> Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error> {
@@ -244,7 +228,9 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
                 server_url,
                 timeout: OPERATION_TIMEOUT,
             }
-            .build_instance(PocketIcBuilder::new().with_application_subnet())
+            .build_instance(
+                PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+            )
             .await
             .map_err(TestRecipeError::Startup)?
         } else {
@@ -337,12 +323,12 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
     async fn reset_non_snapshot_state(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
-    ) -> Result<ResetReceipt, Self::Error> {
+    ) -> Result<(), Self::Error> {
         if self.controls.fail_next_reset.swap(false, Ordering::SeqCst) {
             return Err(TestRecipeError::Synthetic("requested reset failure"));
         }
         match self.guarded_domain {
-            None | Some(GuardedDomain::Cycles) => Ok(ResetReceipt::default()),
+            None | Some(GuardedDomain::Cycles) => Ok(()),
             Some(GuardedDomain::Time) => {
                 if baseline
                     .pocket_ic()
@@ -354,12 +340,7 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
                 {
                     return Err(TestRecipeError::DomainMutation("pocket-ic-time"));
                 }
-                Ok(ResetReceipt {
-                    policies: ResetPolicies {
-                        pocket_ic_time: Some(TimeResetPolicy::RebuildOnMutation),
-                        ..ResetPolicies::default()
-                    },
-                })
+                Ok(())
             }
             Some(GuardedDomain::ExtraCanisters) => {
                 let extra_canister = *self
@@ -376,26 +357,25 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
                 {
                     return Err(TestRecipeError::DomainMutation("extra-canister"));
                 }
-                Ok(ResetReceipt {
-                    policies: ResetPolicies {
-                        extra_canisters: if self
-                            .controls
-                            .omit_next_coverage
-                            .swap(false, Ordering::SeqCst)
-                        {
-                            None
-                        } else if self
-                            .controls
-                            .mismatch_next_coverage
-                            .swap(false, Ordering::SeqCst)
-                        {
-                            Some(ExtraCanisterPolicy::RemoveTracked)
-                        } else {
-                            Some(ExtraCanisterPolicy::RebuildOnChange)
-                        },
-                        ..ResetPolicies::default()
-                    },
-                })
+                let achieved = if self
+                    .controls
+                    .omit_next_coverage
+                    .swap(false, Ordering::SeqCst)
+                {
+                    None
+                } else if self
+                    .controls
+                    .mismatch_next_coverage
+                    .swap(false, Ordering::SeqCst)
+                {
+                    Some(GuardedDomain::Time)
+                } else {
+                    Some(GuardedDomain::ExtraCanisters)
+                };
+                if achieved != self.guarded_domain {
+                    return Err(TestRecipeError::ResetEvidence { achieved });
+                }
+                Ok(())
             }
         }
     }
@@ -435,7 +415,7 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
                     .built_validations
                     .fetch_add(1, Ordering::SeqCst);
             }
-            PreparedBaseline::Restored { .. } => {
+            PreparedBaseline::Restored => {
                 self.controls
                     .restored_validations
                     .fetch_add(1, Ordering::SeqCst);
@@ -467,6 +447,13 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             FailureDisposition::Fatal
         } else if is_dead_pocket_ic_transport_error(error) {
             FailureDisposition::Rebuild(RebuildReason::DeadPocketIcTransport)
+        } else if error
+            .downcast_ref::<TestRecipeError>()
+            .is_some_and(|error| matches!(error, TestRecipeError::ResetEvidence { .. }))
+        {
+            FailureDisposition::Rebuild(RebuildReason::RecipeClassified {
+                code: "reset-evidence".into(),
+            })
         } else if let Some(TestRecipeError::DomainMutation(code)) =
             error.downcast_ref::<TestRecipeError>()
         {
@@ -493,6 +480,10 @@ impl std::fmt::Display for TestRecipeError {
             Self::Lifecycle(error) => error.fmt(formatter),
             Self::DomainMutation(domain) => write!(formatter, "{domain} mutated while leased"),
             Self::Synthetic(message) => formatter.write_str(message),
+            Self::ResetEvidence { achieved } => write!(
+                formatter,
+                "extra-canister reset evidence does not match: {achieved:?}"
+            ),
         }
     }
 }
@@ -503,7 +494,7 @@ impl std::error::Error for TestRecipeError {
             Self::Snapshot(error) => Some(error),
             Self::Startup(error) => Some(error),
             Self::Lifecycle(error) => Some(error),
-            Self::DomainMutation(_) | Self::Synthetic(_) => None,
+            Self::DomainMutation(_) | Self::Synthetic(_) | Self::ResetEvidence { .. } => None,
         }
     }
 }
@@ -519,9 +510,9 @@ async fn multi_canister_pool_restores_and_explicitly_rebuilds_one_slot() {
 
     let (baseline, outcome) = pool.acquire().await.expect("first baseline should build");
     let timings = outcome.timings;
-    assert!(timings.build().is_some());
-    assert!(timings.restore().is_none());
-    assert!(timings.validation().is_some());
+    assert!(timings.build.is_some());
+    assert!(timings.restore.is_none());
+    assert!(timings.validation.is_some());
     assert!(matches!(
         outcome.disposition,
         BaselinePoolDisposition::Built
@@ -537,11 +528,11 @@ async fn multi_canister_pool_restores_and_explicitly_rebuilds_one_slot() {
 
     let (mut baseline, outcome) = pool.acquire().await.expect("baseline should restore");
     let timings = outcome.timings;
-    assert!(timings.build().is_none());
-    assert!(timings.restore().is_some());
-    assert!(timings.reset().is_some());
-    assert!(timings.readiness().is_some());
-    assert!(timings.validation().is_some());
+    assert!(timings.build.is_none());
+    assert!(timings.restore.is_some());
+    assert!(timings.reset.is_some());
+    assert!(timings.readiness.is_some());
+    assert!(timings.validation.is_some());
     assert!(matches!(
         &outcome.disposition,
         BaselinePoolDisposition::Restored
@@ -603,10 +594,10 @@ async fn fatal_restore_discards_the_slot_and_finalizes_failure_timings() {
     };
     assert!(matches!(&error, BaselinePoolError::Preparation { .. }));
     let timings = error.timings();
-    assert!(timings.restore().is_some());
-    assert!(timings.stale_teardown().is_some());
-    assert!(timings.build().is_none());
-    assert!(timings.total() >= timings.restore().unwrap());
+    assert!(timings.restore.is_some());
+    assert!(timings.stale_teardown.is_some());
+    assert!(timings.build.is_none());
+    assert!(timings.total >= timings.restore.unwrap());
     assert_eq!(controls.builds.load(Ordering::SeqCst), 1);
 
     let (baseline, outcome) = pool
@@ -647,10 +638,10 @@ async fn reused_slot_failure_rebuilds_once_and_preserves_a_failed_recovery() {
         panic!("a failed restore plus failed rebuild must be returned");
     };
     let timings = error.timings();
-    assert!(timings.restore().is_some());
-    assert!(timings.stale_teardown().is_some());
-    assert!(timings.build().is_some());
-    assert!(timings.total() >= timings.restore().unwrap());
+    assert!(timings.restore.is_some());
+    assert!(timings.stale_teardown.is_some());
+    assert!(timings.build.is_some());
+    assert!(timings.total >= timings.restore.unwrap());
     assert!(matches!(
         &error,
         BaselinePoolError::RecoveryFailed {
@@ -711,9 +702,9 @@ async fn canonical_restore_failure_preserves_the_snapshot_cause_and_failed_rebui
             source: TestRecipeError::Synthetic(_),
         }
     ));
-    assert!(timings.restore().is_some());
-    assert!(timings.stale_teardown().is_some());
-    assert!(timings.build().is_some());
+    assert!(timings.restore.is_some());
+    assert!(timings.stale_teardown.is_some());
+    assert!(timings.build.is_some());
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -729,10 +720,10 @@ async fn failed_initial_build_reports_partial_timings() {
         panic!("the requested initial build failure must be returned");
     };
     let timings = error.timings();
-    assert!(timings.build().is_some());
-    assert!(timings.restore().is_none());
-    assert!(timings.validation().is_none());
-    assert!(timings.total() >= timings.build().unwrap());
+    assert!(timings.build.is_some());
+    assert!(timings.restore.is_none());
+    assert!(timings.validation.is_none());
+    assert!(timings.total >= timings.build.unwrap());
     assert!(matches!(
         error,
         BaselinePoolError::Preparation {
@@ -768,7 +759,9 @@ async fn incomplete_or_mismatched_reset_evidence_rebuilds_before_warm_validation
             .expect("invalid reset evidence should rebuild");
         assert_eq!(
             outcome.disposition,
-            BaselinePoolDisposition::Rebuilt(RebuildReason::ResetCoverageMismatch)
+            BaselinePoolDisposition::Rebuilt(RebuildReason::RecipeClassified {
+                code: "reset-evidence".into()
+            })
         );
         assert_eq!(
             controls.restored_validations.load(Ordering::SeqCst),
@@ -1097,7 +1090,7 @@ async fn capacity_one_reports_time_waiting_for_the_held_slot() {
         BaselinePoolDisposition::Restored
     ));
     assert!(
-        outcome.timings.wait() >= Duration::from_millis(50),
+        outcome.timings.wait >= Duration::from_millis(50),
         "reported queue wait should include the observed capacity block",
     );
     worker
@@ -1155,7 +1148,7 @@ fn assert_rebuilt_for_domain(outcome: &BaselinePoolOutcome, expected: &str) {
     );
 }
 
-fn guarded_pool(
+const fn guarded_pool(
     controls: RecipeControls,
     domain: GuardedDomain,
 ) -> CachedPocketIcBaselinePool<TwoCanisterRecipe> {

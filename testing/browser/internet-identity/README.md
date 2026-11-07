@@ -103,7 +103,7 @@ The caller owns the body's deadlines, browser lifecycle and paths.
 
 Canic can create and install its issuer/receiver canisters in this instance using
 `ic_testkit::pocket_ic::PocketIc::new_from_existing_instance(server_url,
-instance_id, Some(request_timeout_ms))`, with `server_url` parsed from `serverUrl`
+instance_id, Duration::from_millis(request_timeout_ms))?`, with `server_url` parsed from `serverUrl`
 and `instance_id` checked into `usize` from `instanceId`. The caller selects its
 request timeout and Tokio runtime. This constructor borrows the existing
 instance; it creates no new instance or managed server. Keep all native setup

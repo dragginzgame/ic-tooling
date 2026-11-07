@@ -103,7 +103,7 @@ fn labeled_transactions_build_then_reuse_in_order() {
     assert_eq!(built_metrics.failed(), 0);
     assert_eq!(built_metrics.built(), 2);
     assert_eq!(built_metrics.reused(), 0);
-    assert!(built_metrics.successful_timings().caller_build().is_some());
+    assert!(built_metrics.successful_timings().caller_build.is_some());
 
     let reused = build_artifact_caches_batch(&specs, |_label, _transaction| {
         Err::<(), _>("unexpected cache miss")
@@ -120,7 +120,7 @@ fn labeled_transactions_build_then_reuse_in_order() {
     assert_eq!(reused_metrics.failed(), 0);
     assert_eq!(reused_metrics.built(), 0);
     assert_eq!(reused_metrics.reused(), 2);
-    assert!(reused_metrics.successful_timings().caller_build().is_none());
+    assert!(reused_metrics.successful_timings().caller_build.is_none());
     fs::remove_dir_all(root).expect("remove artifact batch fixture");
 }
 
@@ -171,11 +171,11 @@ fn callback_failure_retains_label_timings_and_later_transaction() {
     assert_eq!(failure.label(), "second");
     assert_eq!(
         failure.entry_elapsed(),
-        failure.failure().unwrap().timings().total()
+        failure.failure().unwrap().timings().total
     );
-    assert!(failure.failure().unwrap().timings().callback().is_some());
-    assert!(failure.failure().unwrap().timings().cleanup().is_some());
-    assert!(failure.failure().unwrap().timings().commit().is_none());
+    assert!(failure.failure().unwrap().timings().callback.is_some());
+    assert!(failure.failure().unwrap().timings().cleanup.is_some());
+    assert!(failure.failure().unwrap().timings().commit.is_none());
     assert!(matches!(
         failure.failure().unwrap(),
         ArtifactCacheBatchFailure::Callback {
@@ -241,10 +241,10 @@ fn callback_and_abort_failures_retain_both_causes_and_continue() {
         panic!("abort must retain its original filesystem error");
     };
     assert_eq!(source.kind(), std::io::ErrorKind::NotADirectory);
-    assert_eq!(failed.entry_elapsed(), timings.total());
-    assert!(timings.callback().is_some());
-    assert!(timings.cleanup().is_some());
-    assert!(timings.commit().is_none());
+    assert_eq!(failed.entry_elapsed(), timings.total);
+    assert!(timings.callback.is_some());
+    assert!(timings.cleanup.is_some());
+    assert!(timings.commit.is_none());
     assert!(retained_stage.unwrap().exists());
     assert_eq!(fs::read(root.join("second.out")).unwrap(), b"later output");
     fs::remove_dir_all(root).unwrap();
@@ -284,11 +284,11 @@ fn preparation_failure_is_labeled_timed_and_does_not_stop_later_entries() {
     assert_eq!(failure.label(), "invalid");
     assert_eq!(
         failure.entry_elapsed(),
-        failure.failure().unwrap().timings().total()
+        failure.failure().unwrap().timings().total
     );
-    assert!(failure.failure().unwrap().timings().callback().is_none());
-    assert!(failure.failure().unwrap().timings().cleanup().is_none());
-    assert!(failure.failure().unwrap().timings().commit().is_none());
+    assert!(failure.failure().unwrap().timings().callback.is_none());
+    assert!(failure.failure().unwrap().timings().cleanup.is_none());
+    assert!(failure.failure().unwrap().timings().commit.is_none());
     assert!(matches!(
         failure.failure().unwrap(),
         ArtifactCacheBatchFailure::Preparation { .. }
@@ -327,11 +327,11 @@ fn commit_failure_is_labeled_timed_and_does_not_stop_later_entries() {
     assert_eq!(failure.label(), "second");
     assert_eq!(
         failure.entry_elapsed(),
-        failure.failure().unwrap().timings().total()
+        failure.failure().unwrap().timings().total
     );
-    assert!(failure.failure().unwrap().timings().callback().is_some());
-    assert!(failure.failure().unwrap().timings().cleanup().is_none());
-    assert!(failure.failure().unwrap().timings().commit().is_some());
+    assert!(failure.failure().unwrap().timings().callback.is_some());
+    assert!(failure.failure().unwrap().timings().cleanup.is_none());
+    assert!(failure.failure().unwrap().timings().commit.is_some());
     assert!(matches!(
         failure.failure().unwrap(),
         ArtifactCacheBatchFailure::Commit { .. }

@@ -41,11 +41,10 @@ mod wire;
 
 pub use baseline::CachedPocketIcBaseline;
 pub use baseline_pool::{
-    BaselinePoolContractError, BaselinePoolDisposition, BaselinePoolError, BaselinePoolOutcome,
-    BaselinePoolPreparationError, BaselinePoolTimings, BaselinePreparationStage,
-    CachedPocketIcBaselinePool, CachedPocketIcBaselinePoolGuard, ExtraCanisterPolicy,
-    FailureDisposition, PocketIcBaselineRecipe, PreparedBaseline, RebuildReason, ResetDomainKind,
-    ResetPolicies, ResetReceipt, ResetRequirements, StateResetPolicy, TimeResetPolicy,
+    BaselinePoolDisposition, BaselinePoolError, BaselinePoolOutcome, BaselinePoolPreparationError,
+    BaselinePoolTimings, BaselinePreparationStage, CachedPocketIcBaselinePool,
+    CachedPocketIcBaselinePoolGuard, FailureDisposition, PocketIcBaselineRecipe, PreparedBaseline,
+    RebuildReason,
 };
 pub use diagnostics::{
     CanisterDiagnosticLogRecord, CanisterDiagnosticLogs, CanisterDiagnosticsBatchEntry,

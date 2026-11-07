@@ -75,7 +75,7 @@ async fn async_configuration_failures_are_typed_without_server_effects() {
             server_url: url.into(),
             timeout,
         }
-        .build_instance(PocketIcBuilder::new())
+        .build_instance(PocketIcBuilder::new(std::time::Duration::from_secs(300)))
         .await
         .err()
         .unwrap();
@@ -108,7 +108,9 @@ async fn async_readiness_timeout_and_cancellation_reap_the_exact_server() {
             server_output_files: Some(((&stdout).into(), (&stderr).into())),
         };
         (async {
-            let mut construction = Box::pin(config.build_instance(PocketIcBuilder::new()));
+            let mut construction = Box::pin(
+                config.build_instance(PocketIcBuilder::new(std::time::Duration::from_secs(300))),
+            );
             if cancel {
                 // Poll once to spawn, then cancel while readiness is pending.
                 std::future::poll_fn(|cx| {
@@ -172,7 +174,7 @@ async fn async_instance_wait_timeout_exit_and_cancellation_keep_ownership() {
         (async {
             let mut construction = Box::pin(
                 PocketIcStartupConfig::Spawn { server_binary: script.path(), timeout: Duration::from_secs(2), server_hard_ttl: None, server_idle_ttl: None, server_output_files: Some(((&stdout).into(), (&stderr).into())) }
-                    .build_instance(PocketIcBuilder::new().with_application_subnet()));
+                    .build_instance(PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet()));
             if mode == "cancel" {
                 let deadline = Instant::now() + Duration::from_secs(2);
                 while !http.received.load(std::sync::atomic::Ordering::Acquire) {
@@ -219,7 +221,9 @@ async fn async_borrowed_failure_leaves_server_authority_with_the_caller() {
         server_url: format!("http://127.0.0.1:{}/", http.port),
         timeout: Duration::from_secs(2),
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .build_instance(
+        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+    )
     .await
     .err()
     .unwrap();
@@ -320,7 +324,7 @@ async fn owned_instance_drop_preserves_topology_and_stops_server() {
     };
     let owned = config
         .build_instance(
-            PocketIcBuilder::new()
+            PocketIcBuilder::new(std::time::Duration::from_secs(300))
                 .with_application_subnet()
                 .with_nns_subnet(),
         )
@@ -345,7 +349,9 @@ async fn owned_instance_drop_preserves_topology_and_stops_server() {
         server_url: (server.url()).into(),
         timeout: Duration::from_secs(30),
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .build_instance(
+        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+    )
     .await
     .unwrap();
     assert!(borrowed.server().is_none());
@@ -367,7 +373,9 @@ async fn explicit_transfer_preserves_the_external_server_and_client_identity() {
         server_idle_ttl: None,
         server_output_files: None,
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .build_instance(
+        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+    )
     .await
     .unwrap();
     let id = owned.instance().instance_id;
@@ -390,7 +398,9 @@ async fn explicit_transfer_preserves_the_external_server_and_client_identity() {
         server_url: server.as_ref().unwrap().url().to_owned(),
         timeout: Duration::from_secs(30),
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .build_instance(
+        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+    )
     .await
     .unwrap();
     let canister = other.instance().create_canister().await.unwrap();
@@ -413,7 +423,7 @@ async fn explicit_close_and_borrowed_connections_preserve_lifetimes() {
         server_output_files: None,
     }
     .build_instance(
-        PocketIcBuilder::new()
+        PocketIcBuilder::new(std::time::Duration::from_secs(300))
             .with_application_subnet()
             .with_nns_subnet(),
     )
@@ -437,7 +447,9 @@ async fn explicit_close_and_borrowed_connections_preserve_lifetimes() {
         server_url: (server.url()).into(),
         timeout: Duration::from_secs(30),
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .build_instance(
+        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+    )
     .await
     .unwrap();
     assert!(borrowed.server().is_none());
@@ -472,7 +484,9 @@ async fn install_errors_fixtures_and_baselines_retain_the_owned_server() {
         server_idle_ttl: None,
         server_output_files: None,
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .build_instance(
+        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+    )
     .await
     .unwrap();
     let pid = owned.server().unwrap().process_id();
@@ -585,7 +599,9 @@ async fn failed_baseline_capture_reaps_the_owned_server() {
         server_idle_ttl: None,
         server_output_files: None,
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .build_instance(
+        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+    )
     .await
     .unwrap();
     let pid = owned.server().unwrap().process_id();

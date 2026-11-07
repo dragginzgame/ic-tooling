@@ -55,9 +55,9 @@ The simulator/server is external. Application tests own topology, funding, RPC
 schemas, readiness, reset coverage and assertions. Build and Host own the lower
 layers described in [scope boundaries](#scope-boundaries).
 
-The async-only API below is pending the next minor release. Published Testkit
-0.86 retains its blocking client. See the [migration guide](client-migration.md)
-for the complete cutover and cancellation contract.
+The client and lifecycle API are async-only. The pending 0.90 minor narrows
+request-budget and recipe reset contracts. See the [migration guide](client-migration.md)
+for the current construction, reset and cancellation contract.
 
 ### A concrete example
 
@@ -75,7 +75,7 @@ async fn example(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
         server_hard_ttl: None,
         server_idle_ttl: None,
         server_output_files: None,
-    }.build_instance(PocketIcBuilder::new().with_application_subnet()).await?;
+    }.build_instance(PocketIcBuilder::new(Duration::from_secs(60)).with_application_subnet()).await?;
     let canister = owned.instance().create_canister().await?;
     assert!(owned.instance().canister_exists(canister).await?);
     owned.close().await?;
@@ -241,9 +241,10 @@ then reach readiness only after the full restore and non-snapshot reset succeed.
 Automatic progression must stay disabled while those invariants matter.
 
 A `PocketIcBaselineRecipe` implements async build, pre-restore, non-snapshot reset,
-readiness and validation. It supplies `ResetRequirements`; reset independently
-returns `ResetReceipt`. Missing coverage differs from an explicitly irrelevant
-domain. Recipe futures are Send and metadata is Send + Sync. The
+readiness and validation. It selects `snapshot_funding()` and validates its own
+required/achieved reset evidence before returning `Ok(())` from reset. Missing
+or mismatched coverage is a typed recipe failure. Recipe futures are Send and
+metadata is Send + Sync. The
 [compiled multi-canister example](../../crates/ic-testkit/examples/multi_canister_baseline_pool.rs)
 shows the lifecycle and typed failure classification.
 

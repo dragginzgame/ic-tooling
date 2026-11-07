@@ -221,7 +221,8 @@ async fn assert_time_requests(advance: Duration, ticks: u32, run: impl AsyncFnOn
         }
         requests
     });
-    let pic = PocketIc::new_from_existing_instance(url, 0, Some(1_000));
+    let pic = PocketIc::new_from_existing_instance(url, 0, std::time::Duration::from_secs(1))
+        .expect("valid request budget");
     run(&pic).await;
     assert_eq!(worker.join().unwrap(), expected);
 }

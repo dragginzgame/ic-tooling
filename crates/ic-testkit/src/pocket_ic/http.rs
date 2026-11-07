@@ -6,13 +6,13 @@ use tokio::time::Instant;
 /// One budget covers dispatch, response body and all polling.
 pub(crate) struct Exchange {
     pub(crate) context: RequestContext,
-    deadline: Option<Instant>,
+    deadline: Instant,
     pub(crate) response_limit: Option<usize>,
 }
 
 impl Exchange {
-    pub(crate) fn new(url: &reqwest::Url, budget_ms: Option<u64>) -> Self {
-        Self {
+    pub(crate) fn new(url: &reqwest::Url, timeout: Duration) -> Result<Self, ClientError> {
+        Ok(Self {
             context: RequestContext {
                 url: url.to_string(),
                 operation: None,
@@ -20,20 +20,17 @@ impl Exchange {
                 may_have_executed: false,
                 status: None,
             },
-            deadline: budget_ms.map(|ms| Instant::now() + Duration::from_millis(ms)),
+            deadline: request_deadline(timeout)?,
             response_limit: None,
-        }
+        })
     }
 
     async fn bounded<T>(&self, future: impl Future<Output = T>) -> Result<T, ClientError> {
-        match self.deadline {
-            Some(deadline) => tokio::time::timeout_at(deadline, future)
-                .await
-                .map_err(|_| ClientError::Timeout {
-                    context: Box::new(self.context.clone()),
-                }),
-            None => Ok(future.await),
-        }
+        tokio::time::timeout_at(self.deadline, future)
+            .await
+            .map_err(|_| ClientError::Timeout {
+                context: Box::new(self.context.clone()),
+            })
     }
 
     pub(crate) async fn pause(&self) -> Result<(), ClientError> {
@@ -50,10 +47,7 @@ impl Exchange {
             context: Box::new(self.context.clone()),
             source,
         })?;
-        if self
-            .deadline
-            .is_some_and(|deadline| Instant::now() >= deadline)
-        {
+        if Instant::now() >= self.deadline {
             return Err(ClientError::Timeout {
                 context: Box::new(self.context.clone()),
             });
@@ -127,4 +121,11 @@ impl Exchange {
     pub(crate) fn started(&mut self, operation: Operation) {
         self.context.operation = Some(operation);
     }
+}
+
+pub(crate) fn request_deadline(timeout: Duration) -> Result<Instant, ClientError> {
+    Instant::now()
+        .checked_add(timeout)
+        .filter(|_| !timeout.is_zero())
+        .ok_or(ClientError::InvalidRequestBudget { timeout })
 }

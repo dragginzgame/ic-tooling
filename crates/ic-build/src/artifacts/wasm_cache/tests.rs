@@ -61,6 +61,31 @@ fn canonical_fixture(path: &Path) -> PathBuf {
 }
 
 #[cfg(unix)]
+fn cache_mode_fixtures(
+    label: &str,
+) -> impl Iterator<Item = (&'static str, PathBuf, WasmBuildSpec)> + '_ {
+    ["isolated", "shared", "scheduled"]
+        .into_iter()
+        .map(move |mode| {
+            let (root, spec) = fake_wasm_build_spec(label);
+            let spec = if mode == "isolated" {
+                spec
+            } else {
+                spec.with_shared_incremental_target(root.join("incremental"))
+            };
+            let spec = if mode == "scheduled" {
+                spec.with_shared_incremental_target_maintenance_at_most_every(
+                    CacheRetentionLimits::new(),
+                    Duration::from_secs(60),
+                )
+            } else {
+                spec
+            };
+            (mode, root, spec)
+        })
+}
+
+#[cfg(unix)]
 #[test]
 fn outcome_facts_are_retained_without_additional_identity_probes() {
     let (root, spec) = fake_wasm_build_spec("outcome-facts");
@@ -199,7 +224,7 @@ fn default_builds_share_cargo_state_across_fingerprints() {
         first
             .record()
             .timings()
-            .shared_incremental_lock_wait()
+            .shared_incremental_lock_wait
             .is_some()
     );
     let target = root.join("target/ic-testkit-incremental");
@@ -217,7 +242,7 @@ fn default_builds_share_cargo_state_across_fingerprints() {
         second
             .record()
             .timings()
-            .shared_incremental_lock_wait()
+            .shared_incremental_lock_wait
             .is_some()
     );
     assert_eq!(
@@ -1472,7 +1497,7 @@ fn batch_input_snapshot_reuses_compatible_toolchain_and_metadata_resolution() {
     assert_eq!(resolver.metrics().runs, 2);
     assert_eq!(resolver.metrics().reuses, 2);
     for (index, inputs) in snapshots.iter().enumerate() {
-        assert_eq!(inputs.timings().total() > Duration::ZERO, index < 2);
+        assert_eq!(inputs.timings().total > Duration::ZERO, index < 2);
         assert_eq!(inputs.facts().selection, specs[index].cargo_selection);
         assert_eq!(
             inputs.facts().cargo_identity,
@@ -2817,7 +2842,7 @@ fn failed_build_removes_its_incomplete_fingerprint_directory() {
         progress
             .failure_details(Duration::ZERO)
             .timings()
-            .cleanup()
+            .cleanup
             .is_some()
     );
     assert!(!fingerprint_dir.exists());
@@ -2849,7 +2874,7 @@ fn oversized_wasm_cache_stamp_requires_a_rebuild() {
     let recovered = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
         .expect("rebuild invalid exact entry");
     assert!(!recovered.is_reused());
-    assert!(recovered.record().timings().cargo_build().is_some());
+    assert!(recovered.record().timings().cargo_build.is_some());
     assert_eq!(
         fs::read(&recovered.record().artifacts()[0]).unwrap(),
         original
@@ -2865,17 +2890,7 @@ fn oversized_wasm_cache_stamp_requires_a_rebuild() {
 #[test]
 #[cfg(unix)]
 fn warm_wasm_outputs_follow_retained_entry_and_preserve_matching_files() {
-    for mode in ["isolated", "shared", "scheduled"] {
-        let (root, mut spec) = fake_wasm_build_spec("warm-wasm-publication");
-        if mode != "isolated" {
-            spec = spec.with_shared_incremental_target(root.join("incremental"));
-        }
-        if mode == "scheduled" {
-            spec = spec.with_shared_incremental_target_maintenance_at_most_every(
-                CacheRetentionLimits::new(),
-                Duration::from_secs(60),
-            );
-        }
+    for (mode, root, spec) in cache_mode_fixtures("warm-wasm-publication") {
         let public = expected_artifacts(&spec, &spec.target_dir);
         fs::create_dir_all(public[0].parent().unwrap()).unwrap();
         let original = b"\0asm\x01\0\0\0";
@@ -2890,7 +2905,7 @@ fn warm_wasm_outputs_follow_retained_entry_and_preserve_matching_files() {
         publish_artifact_stamps(artifact_pairs(&public), cold.record().fingerprint()).unwrap();
         let reused = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
         assert!(reused.is_reused());
-        assert!(reused.record().timings().cargo_build().is_none());
+        assert!(reused.record().timings().cargo_build.is_none());
         assert_eq!(fs::read(&public[0]).unwrap(), original, "{mode}");
         assert_eq!(fs::read(&reused.record().artifacts()[0]).unwrap(), original);
 
@@ -3078,17 +3093,7 @@ fn failed_wasm_materialization_does_not_stamp_a_partial_public_set() {
 #[test]
 #[cfg(unix)]
 fn warm_caller_artifacts_do_not_replace_missing_or_retained_invalid_exact_entries() {
-    for mode in ["isolated", "shared", "scheduled"] {
-        let (root, mut spec) = fake_wasm_build_spec("missing-exact-entry");
-        if mode != "isolated" {
-            spec = spec.with_shared_incremental_target(root.join("incremental"));
-        }
-        if mode == "scheduled" {
-            spec = spec.with_shared_incremental_target_maintenance_at_most_every(
-                CacheRetentionLimits::new(),
-                Duration::from_secs(60),
-            );
-        }
+    for (_, root, spec) in cache_mode_fixtures("missing-exact-entry") {
         let built = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
             .expect("build initial exact entry");
         let entry = built.record().exact_cache_path().to_owned();
@@ -3103,7 +3108,7 @@ fn warm_caller_artifacts_do_not_replace_missing_or_retained_invalid_exact_entrie
         let rebuilt = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
             .expect("rebuild missing exact entry");
         assert!(!rebuilt.is_reused());
-        assert!(rebuilt.record().timings().cargo_build().is_some());
+        assert!(rebuilt.record().timings().cargo_build.is_some());
         assert_eq!(rebuilt.record().exact_cache_path(), entry);
         assert_eq!(
             fs::read(&rebuilt.record().artifacts()[0]).unwrap(),
@@ -3124,7 +3129,7 @@ fn warm_caller_artifacts_do_not_replace_missing_or_retained_invalid_exact_entrie
         let recovered = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
             .expect("rebuild the invalid entry once its consumer releases it");
         assert!(!recovered.is_reused());
-        assert!(recovered.record().timings().cargo_build().is_some());
+        assert!(recovered.record().timings().cargo_build.is_some());
         assert_eq!(
             fs::read(&recovered.record().artifacts()[0]).unwrap(),
             expected
@@ -3498,18 +3503,8 @@ fn create_cache_entry(
 #[cfg(unix)]
 #[test]
 fn warm_hits_reject_source_mutation_for_active_and_materialized_artifacts() {
-    for mode in ["isolated", "shared", "scheduled"] {
-        for active_artifact in [true, false] {
-            let (root, mut spec) = fake_wasm_build_spec("warm-hit-source-race");
-            if mode != "isolated" {
-                spec = spec.with_shared_incremental_target(root.join("incremental"));
-            }
-            if mode == "scheduled" {
-                spec = spec.with_shared_incremental_target_maintenance_at_most_every(
-                    CacheRetentionLimits::new(),
-                    Duration::from_secs(60),
-                );
-            }
+    for active_artifact in [true, false] {
+        for (mode, root, spec) in cache_mode_fixtures("warm-hit-source-race") {
             let cold = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
                 .expect("build initial artifacts");
             assert!(
@@ -3645,9 +3640,9 @@ fn optional_duration_addition_preserves_absence_and_saturates() {
         let total = left.saturating_add(right);
         assert_eq!(
             [
-                total.shared_incremental_lock_wait(),
-                total.cargo_build(),
-                total.cache_maintenance()
+                total.shared_incremental_lock_wait,
+                total.cargo_build,
+                total.cache_maintenance
             ],
             [expected; 3]
         );
@@ -3776,16 +3771,16 @@ fn separate_tool_phases_keep_aggregate_identity_timings() {
         progress
             .failure_details(Duration::ZERO)
             .timings()
-            .input_resolution()
-            .tool_identity(),
+            .input_resolution
+            .tool_identity,
         Duration::from_secs(5)
     );
     assert_eq!(
         progress
             .failure_details(Duration::ZERO)
             .timings()
-            .input_resolution()
-            .total(),
+            .input_resolution
+            .total,
         Duration::from_secs(5)
     );
     assert_eq!(

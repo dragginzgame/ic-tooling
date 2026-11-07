@@ -159,11 +159,10 @@ async fn run(args: Arguments) -> Result<()> {
             args.output.join("server.stderr"),
         )),
     };
-    let builder = PocketIcBuilder::new()
+    let builder = PocketIcBuilder::new(std::time::Duration::from_secs(60))
         .with_nns_subnet()
         .with_ii_subnet()
         .with_application_subnet()
-        .with_max_request_time_ms(Some(60_000))
         .with_auto_progress()
         .with_http_gateway(InstanceHttpGatewayConfig {
             ip_addr: Some("127.0.0.1".into()),

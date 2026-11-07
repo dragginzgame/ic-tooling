@@ -28,11 +28,16 @@ pub struct ArtifactCacheBatchReport<E> {
 /// Partial phase timings retained for one failed artifact batch entry.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct ArtifactCacheBatchFailureTimings {
-    preparation: Duration,
-    callback: Option<Duration>,
-    cleanup: Option<Duration>,
-    commit: Option<Duration>,
-    total: Duration,
+    /// Time spent in cache preparation before the failure path continued.
+    pub preparation: Duration,
+    /// Time spent in the population callback, when it ran.
+    pub callback: Option<Duration>,
+    /// Time spent explicitly aborting after a callback failure, when attempted.
+    pub cleanup: Option<Duration>,
+    /// Time spent committing, including commit-owned failure cleanup, when attempted.
+    pub commit: Option<Duration>,
+    /// Complete wall-clock time retained for the failed entry.
+    pub total: Duration,
 }
 
 /// Failure from one entry in a collect-all artifact transaction batch.
@@ -182,38 +187,6 @@ impl<E> ArtifactCacheBatchFailure<E> {
             Self::Callback { cleanup_error, .. } => cleanup_error.as_deref(),
             Self::Preparation { .. } | Self::Commit { .. } => None,
         }
-    }
-}
-
-impl ArtifactCacheBatchFailureTimings {
-    /// Time spent in cache preparation before the failure path continued.
-    #[must_use]
-    pub const fn preparation(self) -> Duration {
-        self.preparation
-    }
-
-    /// Time spent in the population callback, when it ran.
-    #[must_use]
-    pub const fn callback(self) -> Option<Duration> {
-        self.callback
-    }
-
-    /// Time spent explicitly aborting after a callback failure, when attempted.
-    #[must_use]
-    pub const fn cleanup(self) -> Option<Duration> {
-        self.cleanup
-    }
-
-    /// Time spent committing, including commit-owned failure cleanup, when attempted.
-    #[must_use]
-    pub const fn commit(self) -> Option<Duration> {
-        self.commit
-    }
-
-    /// Complete wall-clock time retained for the failed entry.
-    #[must_use]
-    pub const fn total(self) -> Duration {
-        self.total
     }
 }
 

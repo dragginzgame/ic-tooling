@@ -3,19 +3,16 @@ use crate::pocket_ic::common::rest::{
     AutoProgressConfig, BlobCompression, BlobId, CanisterHttpRequest, CreateHttpGatewayResponse,
     CreateInstanceResponse, HttpGatewayBackend, HttpGatewayConfig, HttpGatewayInfo, HttpsConfig,
     InstanceConfig, InstanceId, MockCanisterHttpResponse, RawAddCycles, RawCanisterCall,
-    RawCanisterHttpRequest, RawCanisterId, RawCanisterResult, RawCanisterSnapshotDownload,
-    RawCanisterSnapshotId, RawCanisterSnapshotUpload, RawCycles, RawEffectivePrincipal,
+    RawCanisterHttpRequest, RawCanisterId, RawCanisterResult, RawCycles, RawEffectivePrincipal,
     RawIngressStatusArgs, RawMessageId, RawMockCanisterHttpResponse, RawPrincipalId,
-    RawSetStableMemory, RawStableMemory, RawSubnetId, RawTickConfigs, RawTime, SubnetId, Topology,
+    RawSetStableMemory, RawStableMemory, RawSubnetId, RawTime, SubnetId, Topology,
 };
 #[cfg(windows)]
 use crate::pocket_ic::wsl_path;
-use crate::pocket_ic::{ClientError, Operation, RequestContext, http::Exchange};
+use crate::pocket_ic::{ClientError, Operation, http::Exchange};
 use crate::pocket_ic::{
-    CreateCanisterParams, CreateCanisterPlacement, IngressStatusResult, PocketIcBuilder,
-    RejectResponse, TickConfigs, Time,
+    CreateCanisterParams, CreateCanisterPlacement, PocketIcBuilder, RejectResponse, Time,
 };
-use backon::{BackoffBuilder, ExponentialBuilder};
 use candid::{
     Principal, decode_args, encode_args,
     utils::{ArgumentDecoder, ArgumentEncoder},
@@ -40,7 +37,6 @@ use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
 use std::future::Future;
 use std::net::IpAddr;
-use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{debug, instrument};
 
@@ -77,7 +73,7 @@ pub struct PocketIc {
     /// The unique ID of this PocketIC instance.
     pub instance_id: InstanceId,
     // how long a get/post request may retry or poll
-    max_request_time_ms: Option<u64>,
+    request_timeout: Duration,
     http_gateway: Option<HttpGatewayInfo>,
     server_url: Url,
     reqwest_client: reqwest::Client,
@@ -88,8 +84,8 @@ pub struct PocketIc {
 impl PocketIc {
     /// Creates a new PocketIC instance with a single application subnet on the server.
     /// The caller supplies an already admitted server endpoint.
-    pub async fn new(server_url: Url) -> Result<Self, ClientError> {
-        PocketIcBuilder::new()
+    pub async fn new(server_url: Url, request_timeout: Duration) -> Result<Self, ClientError> {
+        PocketIcBuilder::new(request_timeout)
             .with_server_url(server_url)
             .with_application_subnet()
             .build()
@@ -98,29 +94,30 @@ impl PocketIc {
 
     /// Creates a PocketIC handle to an existing instance on a running server.
     /// Note that this handle does not extend the lifetime of the existing instance,
-    /// i.e., the existing instance is deleted and this handle stops working
-    /// when the PocketIC handle that created the existing instance is dropped.
+    /// The owner must explicitly delete the instance; Rust Drop performs no I/O.
+    /// Invalid request budgets fail before attaching or sending any request.
     pub fn new_from_existing_instance(
         server_url: Url,
         instance_id: InstanceId,
-        max_request_time_ms: Option<u64>,
-    ) -> Self {
+        request_timeout: Duration,
+    ) -> Result<Self, ClientError> {
+        super::http::request_deadline(request_timeout)?;
         let reqwest_client = reqwest::Client::new();
         debug!("instance_id={} Reusing existing instance.", instance_id);
 
-        Self {
+        Ok(Self {
             instance_id,
-            max_request_time_ms,
+            request_timeout,
             http_gateway: None,
             server_url,
             reqwest_client,
             owns_instance: false,
-        }
+        })
     }
 
     pub(crate) async fn from_config(
         server_url: Url,
-        max_request_time_ms: Option<u64>,
+        request_timeout: Duration,
         instance_config: InstanceConfig,
     ) -> Result<Self, ClientError> {
         #[cfg(windows)]
@@ -133,7 +130,7 @@ impl PocketIc {
 
         let reqwest_client = reqwest::Client::new();
         let url = server_url.join("instances").unwrap();
-        let mut exchange = Exchange::new(&url, max_request_time_ms);
+        let mut exchange = Exchange::new(&url, request_timeout)?;
         let response: CreateInstanceResponse = exchange
             .json(
                 &reqwest_client,
@@ -158,7 +155,7 @@ impl PocketIc {
 
         Ok(Self {
             instance_id,
-            max_request_time_ms,
+            request_timeout,
             http_gateway: http_gateway_info,
             server_url,
             reqwest_client,
@@ -189,7 +186,7 @@ impl PocketIc {
         if let BlobCompression::Gzip = compression {
             request = request.header(reqwest::header::CONTENT_ENCODING, "gzip");
         }
-        let mut exchange = Exchange::new(&url, self.max_request_time_ms);
+        let mut exchange = Exchange::new(&url, self.request_timeout)?;
         let (status, bytes) = exchange.bytes(&self.reqwest_client, request).await?;
         if !status.is_success() {
             return Err(exchange.server_error(status, &bytes));
@@ -238,10 +235,13 @@ impl PocketIc {
 
     /// List all instances and their status.
     #[instrument(ret)]
-    pub async fn list_instances(server_url: Url) -> Result<Vec<String>, ClientError> {
+    pub async fn list_instances(
+        server_url: Url,
+        request_timeout: Duration,
+    ) -> Result<Vec<String>, ClientError> {
         let url = server_url.join("instances").unwrap();
         let client = reqwest::Client::new();
-        Exchange::new(&url, None)
+        Exchange::new(&url, request_timeout)?
             .json(&client, client.get(url.clone()))
             .await
     }
@@ -252,20 +252,8 @@ impl PocketIc {
     /// inter-canister calls or heartbeats.
     #[instrument(skip(self), fields(instance_id=self.instance_id))]
     pub async fn tick(&self) -> Result<(), ClientError> {
-        self.tick_with_configs(TickConfigs::default()).await?;
-
-        Ok(())
-    }
-
-    /// Make the IC produce and progress by one block with custom
-    /// configs for the round.
-    #[instrument(skip(self), fields(instance_id=self.instance_id))]
-    pub async fn tick_with_configs(&self, configs: TickConfigs) -> Result<(), ClientError> {
-        let endpoint = "update/tick";
-        self.post::<(), RawTickConfigs>(endpoint, configs.into())
-            .await?;
-
-        Ok(())
+        self.post("update/tick", serde_json::json!({"blockmakers": null}))
+            .await
     }
 
     /// Configures the IC to make progress automatically,
@@ -384,7 +372,7 @@ impl PocketIc {
             https_config: https_config.clone(),
             domain_custom_provider_local_file: None,
         };
-        let mut exchange = Exchange::new(&endpoint, self.max_request_time_ms);
+        let mut exchange = Exchange::new(&endpoint, self.request_timeout)?;
         let res: CreateHttpGatewayResponse = exchange
             .json(
                 &self.reqwest_client,
@@ -430,7 +418,7 @@ impl PocketIc {
                 .server_url
                 .join(&format!("http_gateway/{}/stop", info.instance_id))
                 .unwrap();
-            Exchange::new(&url, self.max_request_time_ms)
+            Exchange::new(&url, self.request_timeout)?
                 .json::<()>(&self.reqwest_client, self.reqwest_client.post(url.clone()))
                 .await?;
             self.http_gateway = None;
@@ -619,81 +607,22 @@ impl PocketIc {
         &self,
         raw_message_id: RawMessageId,
     ) -> Result<Option<Result<Vec<u8>, RejectResponse>>, ClientError> {
-        let status = self.ingress_status_as_caller(raw_message_id, None).await?;
-        Ok(match status {
-            IngressStatusResult::NotAvailable => None,
-            IngressStatusResult::Success(status) => Some(status),
-            IngressStatusResult::Forbidden(err) => return Err(ClientError::Protocol(err)),
-        })
-    }
-
-    /// Fetch the status of an update call submitted previously by `submit_call` or `submit_call_with_effective_principal`.
-    /// Note that the status of the update call can only change if the PocketIC instance is in live mode
-    /// or a round has been executed due to a separate PocketIC library call, e.g., `PocketIc::tick()`.
-    /// If the status of the update call is known, but the update call was submitted by a different caller, then an error is returned.
-    pub async fn ingress_status_as(
-        &self,
-        raw_message_id: RawMessageId,
-        caller: Principal,
-    ) -> Result<IngressStatusResult, ClientError> {
-        self.ingress_status_as_caller(raw_message_id, Some(caller))
-            .await
-    }
-
-    async fn ingress_status_as_caller(
-        &self,
-        raw_message_id: RawMessageId,
-        caller: Option<Principal>,
-    ) -> Result<IngressStatusResult, ClientError> {
         let args = RawIngressStatusArgs {
             raw_message_id: raw_message_id.clone(),
-            raw_caller: caller.map(Into::into),
+            raw_caller: None,
         };
         match self
             .post::<Option<RawCanisterResult>, _>("read/ingress_status", args)
             .await
         {
-            Ok(None) => Ok(IngressStatusResult::NotAvailable),
-            Ok(Some(result)) => Ok(IngressStatusResult::Success(result.into())),
+            Ok(result) => Ok(result.map(Into::into)),
             Err(ClientError::Server {
                 status: StatusCode::FORBIDDEN,
                 message,
                 ..
-            }) => Ok(IngressStatusResult::Forbidden(message)),
+            }) => Err(ClientError::Protocol(message)),
             Err(error) => Err(error.with_ingress(raw_message_id)),
         }
-    }
-
-    /// Await an update call submitted previously by `submit_call` or `submit_call_with_effective_principal`.
-    /// Note that the status of the update call can only change if the PocketIC instance is in live mode
-    /// or a round has been executed due to a separate PocketIC library call.
-    pub async fn await_call_no_ticks(
-        &self,
-        message_id: RawMessageId,
-    ) -> Result<Vec<u8>, ClientError> {
-        let mut retry_policy = ExponentialBuilder::new()
-            .with_min_delay(Duration::from_millis(10))
-            .with_max_delay(Duration::from_secs(1))
-            .with_factor(2.0)
-            .with_jitter()
-            .with_total_delay(Some(Duration::from_secs(15 * 60)))
-            .without_max_times()
-            .build();
-        Ok(loop {
-            if let Some(ingress_status) = self.ingress_status(message_id.clone()).await? {
-                break ingress_status.map_err(ClientError::from)?;
-            }
-            let delay = retry_policy.next().ok_or_else(|| ClientError::Timeout {
-                context: Box::new(RequestContext {
-                    url: self.instance_url().to_string(),
-                    operation: None,
-                    ingress: Some(message_id.clone()),
-                    may_have_executed: true,
-                    status: None,
-                }),
-            })?;
-            tokio::time::sleep(delay).await;
-        })
     }
 
     /// Execute an update call on a canister.
@@ -1353,21 +1282,6 @@ impl PocketIc {
         Ok(self.get_subnet(canister_id).await?.is_some())
     }
 
-    /// Deletes a subnet. Returns a server error if the subnet does not exist or is a named subnet.
-    #[instrument(ret, skip(self), fields(instance_id=self.instance_id, subnet_id = %subnet_id.to_string()))]
-    pub async fn delete_subnet(&self, subnet_id: SubnetId) -> Result<(), ClientError> {
-        let endpoint = "update/delete_subnet";
-        self.post::<(), RawSubnetId>(
-            endpoint,
-            RawSubnetId {
-                subnet_id: subnet_id.as_slice().to_vec(),
-            },
-        )
-        .await?;
-
-        Ok(())
-    }
-
     /// Returns the subnet ID of the canister if the canister exists.
     #[instrument(ret, skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string()))]
     pub async fn get_subnet(
@@ -1414,7 +1328,7 @@ impl PocketIc {
 
         let endpoint = format!("api/v2/subnet/{}/read_state", subnet_id.to_text());
         let url = self.instance_url().join(&endpoint).unwrap();
-        let mut exchange = Exchange::new(&url, self.max_request_time_ms);
+        let mut exchange = Exchange::new(&url, self.request_timeout)?;
         let (status, bytes) = exchange
             .bytes(
                 &self.reqwest_client,
@@ -1452,7 +1366,7 @@ impl PocketIc {
     pub(crate) async fn do_drop(&mut self) -> Result<(), ClientError> {
         if self.owns_instance {
             let url = self.instance_url();
-            let mut exchange = Exchange::new(&url, self.max_request_time_ms);
+            let mut exchange = Exchange::new(&url, self.request_timeout)?;
             let (status, bytes) = exchange
                 .bytes(
                     &self.reqwest_client,
@@ -1498,7 +1412,7 @@ impl PocketIc {
         response_limit: Option<usize>,
     ) -> Result<T, ClientError> {
         let url = self.instance_url().join(endpoint).unwrap();
-        let mut exchange = Exchange::new(&url, self.max_request_time_ms);
+        let mut exchange = Exchange::new(&url, self.request_timeout)?;
         exchange.response_limit = response_limit;
         loop {
             let builder = if let Some(operation) = &exchange.context.operation {
@@ -1530,8 +1444,9 @@ impl PocketIc {
                                 ))
                                 .unwrap(),
                         );
+                        let client = self.reqwest_client.clone();
                         tokio::spawn(async move {
-                            let _ = request.send().await;
+                            let _ = exchange.bytes(&client, request).await;
                         });
                     }
                     return Ok(value);
@@ -1592,67 +1507,12 @@ impl PocketIc {
             mock_canister_http_response.into();
         self.post(endpoint, raw_mock_canister_http_response).await
     }
-
-    /// Download a canister snapshot to a given snapshot directory.
-    /// The sender must be a controller of the canister.
-    /// The snapshot directory must be empty if it exists.
-    #[instrument(ret, skip(self), fields(instance_id=self.instance_id))]
-    pub async fn canister_snapshot_download(
-        &self,
-        canister_id: CanisterId,
-        sender: Principal,
-        snapshot_id: Vec<u8>,
-        snapshot_dir: PathBuf,
-    ) -> Result<(), ClientError> {
-        let endpoint = "update/canister_snapshot_download";
-        #[cfg(not(windows))]
-        let snapshot_dir = snapshot_dir;
-        #[cfg(windows)]
-        let snapshot_dir = wsl_path(&snapshot_dir, "snapshot directory").into();
-        let raw_canister_snapshot_download = RawCanisterSnapshotDownload {
-            sender: sender.into(),
-            canister_id: canister_id.into(),
-            snapshot_id,
-            snapshot_dir,
-        };
-        self.post(endpoint, raw_canister_snapshot_download).await
-    }
-
-    /// Upload a canister snapshot from a given snapshot directory.
-    /// The sender must be a controller of the canister.
-    /// Returns the snapshot ID of the uploaded snapshot.
-    #[instrument(ret, skip(self), fields(instance_id=self.instance_id))]
-    pub async fn canister_snapshot_upload(
-        &self,
-        canister_id: CanisterId,
-        sender: Principal,
-        replace_snapshot: Option<Vec<u8>>,
-        snapshot_dir: PathBuf,
-    ) -> Result<Vec<u8>, ClientError> {
-        let endpoint = "update/canister_snapshot_upload";
-        let replace_snapshot =
-            replace_snapshot.map(|snapshot_id| RawCanisterSnapshotId { snapshot_id });
-        #[cfg(not(windows))]
-        let snapshot_dir = snapshot_dir;
-        #[cfg(windows)]
-        let snapshot_dir = wsl_path(&snapshot_dir, "snapshot directory").into();
-        let raw_canister_snapshot_upload = RawCanisterSnapshotUpload {
-            sender: sender.into(),
-            canister_id: canister_id.into(),
-            replace_snapshot,
-            snapshot_dir,
-        };
-        Ok(self
-            .post::<RawCanisterSnapshotId, _>(endpoint, raw_canister_snapshot_upload)
-            .await?
-            .snapshot_id)
-    }
 }
 
 /// Call a canister candid method, authenticated. The sender can be impersonated (i.e., the
 /// signature is not verified).
 /// PocketIC executes update calls synchronously, so there is no need to poll for the result.
-pub async fn call_candid_as<Input, Output>(
+async fn call_candid_as<Input, Output>(
     env: &PocketIc,
     canister_id: CanisterId,
     effective_principal: RawEffectivePrincipal,
@@ -1677,99 +1537,8 @@ where
     .await
 }
 
-/// Call a canister candid method, anonymous.
-/// PocketIC executes update calls synchronously, so there is no need to poll for the result.
-pub async fn call_candid<Input, Output>(
-    env: &PocketIc,
-    canister_id: CanisterId,
-    effective_principal: RawEffectivePrincipal,
-    method: &str,
-    input: Input,
-) -> Result<Output, ClientError>
-where
-    Input: ArgumentEncoder,
-    Output: for<'a> ArgumentDecoder<'a>,
-{
-    call_candid_as(
-        env,
-        canister_id,
-        effective_principal,
-        Principal::anonymous(),
-        method,
-        input,
-    )
-    .await
-}
-
-/// Call a canister candid query method, anonymous.
-pub async fn query_candid<Input, Output>(
-    env: &PocketIc,
-    canister_id: CanisterId,
-    method: &str,
-    input: Input,
-) -> Result<Output, ClientError>
-where
-    Input: ArgumentEncoder,
-    Output: for<'a> ArgumentDecoder<'a>,
-{
-    query_candid_as(env, canister_id, Principal::anonymous(), method, input).await
-}
-
-/// Call a canister candid query method, authenticated. The sender can be impersonated (i.e., the
-/// signature is not verified).
-pub async fn query_candid_as<Input, Output>(
-    env: &PocketIc,
-    canister_id: CanisterId,
-    sender: Principal,
-    method: &str,
-    input: Input,
-) -> Result<Output, ClientError>
-where
-    Input: ArgumentEncoder,
-    Output: for<'a> ArgumentDecoder<'a>,
-{
-    with_candid(input, |bytes| async {
-        env.query_call(canister_id, sender, method, bytes).await
-    })
-    .await
-}
-
-/// Call a canister candid update method, anonymous.
-pub async fn update_candid<Input, Output>(
-    env: &PocketIc,
-    canister_id: CanisterId,
-    method: &str,
-    input: Input,
-) -> Result<Output, ClientError>
-where
-    Input: ArgumentEncoder,
-    Output: for<'a> ArgumentDecoder<'a>,
-{
-    update_candid_as(env, canister_id, Principal::anonymous(), method, input).await
-}
-
-/// Call a canister candid update method, authenticated. The sender can be impersonated (i.e., the
-/// signature is not verified).
-pub async fn update_candid_as<Input, Output>(
-    env: &PocketIc,
-    canister_id: CanisterId,
-    sender: Principal,
-    method: &str,
-    input: Input,
-) -> Result<Output, ClientError>
-where
-    Input: ArgumentEncoder,
-    Output: for<'a> ArgumentDecoder<'a>,
-{
-    with_candid(input, |bytes| async {
-        env.update_call(canister_id, sender, method, bytes).await
-    })
-    .await
-}
-
-/// A helper function that we use to implement both [`call_candid`] and
-/// [`query_candid`].
-pub async fn with_candid<Input, Output, Fut>(
+/// Encode and decode the external management Candid boundary.
+async fn with_candid<Input, Output, Fut>(
     input: Input,
     f: impl FnOnce(Vec<u8>) -> Fut,
 ) -> Result<Output, ClientError>
@@ -1781,36 +1550,4 @@ where
     let input = encode_args(input)?;
     let output = f(input).await?;
     Ok(decode_args(&output)?)
-}
-
-/// Retrieves a default effective canister id for canister creation on a PocketIC instance
-/// characterized by:
-///  - a PocketIC instance URL of the form `http://<ip>:<port>/instances/<instance_id>`;
-///  - a PocketIC HTTP gateway URL of the form `http://<ip>:port` for a PocketIC instance.
-///
-/// Returns an error if the PocketIC instance topology could not be fetched or parsed, e.g.,
-/// because the given URL points to a replica (i.e., does not meet any of the above two properties).
-pub async fn get_default_effective_canister_id(
-    pocket_ic_url: String,
-) -> Result<Principal, ClientError> {
-    let url = Url::parse(&format!(
-        "{}/_/topology",
-        pocket_ic_url.trim_end_matches('/')
-    ))
-    .map_err(|e| ClientError::Protocol(e.to_string()))?;
-    let client = reqwest::Client::new();
-    let mut exchange = Exchange::new(&url, Some(crate::pocket_ic::DEFAULT_MAX_REQUEST_TIME_MS));
-    loop {
-        let (status, bytes) = exchange.bytes(&client, client.get(url.clone())).await?;
-        if status == StatusCode::CONFLICT {
-            exchange.pause().await?;
-            continue;
-        }
-        if !status.is_success() {
-            return Err(exchange.server_error(status, &bytes));
-        }
-        let topology: Topology = exchange.decode(&bytes)?;
-        return Principal::try_from_slice(&topology.default_effective_canister_id.canister_id)
-            .map_err(|e| ClientError::Protocol(e.to_string()));
-    }
 }

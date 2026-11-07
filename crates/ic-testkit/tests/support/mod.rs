@@ -32,7 +32,10 @@ pub fn startup_config() -> ic_testkit::pic::PocketIcStartupConfig {
 
 pub async fn pocket_ic() -> ic_testkit::pic::PocketIcInstance<ic_testkit::pocket_ic::PocketIc> {
     startup_config()
-        .build_instance(ic_testkit::pocket_ic::PocketIcBuilder::new().with_application_subnet())
+        .build_instance(
+            ic_testkit::pocket_ic::PocketIcBuilder::new(std::time::Duration::from_secs(300))
+                .with_application_subnet(),
+        )
         .await
         .expect("construct explicitly configured test instance")
 }

@@ -11,9 +11,8 @@ use std::time::Duration;
 #[ignore = "requires an explicitly admitted PocketIC 16.1 server"]
 async fn installed_client_preserves_management_and_snapshot_state() {
     let (server, url) = start_server();
-    let pic = PocketIcBuilder::new()
+    let pic = PocketIcBuilder::new(std::time::Duration::from_secs(60))
         .with_server_url(url.parse().unwrap())
-        .with_max_request_time_ms(Some(60_000))
         .with_application_subnet()
         .build()
         .await
@@ -105,9 +104,8 @@ async fn installed_builder_preserves_features_gateway_and_caller_owned_state() {
     let state = evidence.join("instance");
     let (server, url) = start_server();
     let enabled = Some(IcpFeaturesConfig::DefaultConfig);
-    let pic = PocketIcBuilder::new()
+    let pic = PocketIcBuilder::new(std::time::Duration::from_secs(60))
         .with_server_url(url.parse().unwrap())
-        .with_max_request_time_ms(Some(60_000))
         .with_application_subnet()
         .with_state_dir(state.clone())
         .with_icp_features(IcpFeatures {
@@ -139,9 +137,8 @@ async fn installed_builder_preserves_features_gateway_and_caller_owned_state() {
     assert!(state.join("topology.json").is_file());
 
     // A new instance resumes the caller's directory without a client state handle.
-    let resumed = PocketIcBuilder::new()
+    let resumed = PocketIcBuilder::new(std::time::Duration::from_secs(60))
         .with_server_url(url.parse().unwrap())
-        .with_max_request_time_ms(Some(60_000))
         .with_state_dir(state.clone())
         .build()
         .await

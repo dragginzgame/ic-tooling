@@ -51,7 +51,7 @@ static STANDALONE_PANIC_POOL: LazyLock<SingleCanisterPool> = LazyLock::new(|| {
     )
 });
 
-fn single_canister_pool<B, Fut>(
+const fn single_canister_pool<B, Fut>(
     capacity: NonZeroUsize,
     build: B,
 ) -> CachedPocketIcBaselinePool<StandaloneCanisterRecipe<B>>
@@ -96,7 +96,10 @@ enum Event {
 async fn upstream_supports_two_overlapping_instances() {
     assert_two_instances_overlap(async move || {
         support::startup_config()
-            .build_instance(ic_testkit::pocket_ic::PocketIcBuilder::new().with_application_subnet())
+            .build_instance(
+                ic_testkit::pocket_ic::PocketIcBuilder::new(std::time::Duration::from_secs(300))
+                    .with_application_subnet(),
+            )
             .await
             .expect("build explicitly configured upstream instance")
     });
@@ -115,7 +118,9 @@ async fn startup_configuration_returns_a_typed_startup_error() {
         server_idle_ttl: None,
         server_output_files: None,
     }
-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .build_instance(
+        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+    )
     .await;
 
     let error = result.err().unwrap();
@@ -128,7 +133,7 @@ async fn startup_configuration_returns_a_typed_startup_error() {
 async fn standalone_accepts_a_caller_built_instance_and_preserves_it_in_parts() {
     let caller_built = support::startup_config()
         .build_instance(
-            PocketIcBuilder::new()
+            PocketIcBuilder::new(std::time::Duration::from_secs(300))
                 .with_application_subnet()
                 .with_ii_subnet(),
         )
@@ -158,8 +163,8 @@ async fn bounded_standalone_pool_restores_and_reuses_one_slot() {
         BaselinePoolDisposition::Built
     ));
     let timings = outcome.timings;
-    assert!(timings.build().is_some());
-    assert!(timings.restore().is_none());
+    assert!(timings.build.is_some());
+    assert!(timings.restore.is_none());
     let first_instance = fixture.pocket_ic().instance_id;
     let canister_id = *fixture.metadata();
     fixture
@@ -192,8 +197,8 @@ async fn bounded_standalone_pool_restores_and_reuses_one_slot() {
         BaselinePoolDisposition::Restored
     ));
     let timings = outcome.timings;
-    assert!(timings.build().is_none());
-    assert!(timings.restore().is_some());
+    assert!(timings.build.is_none());
+    assert!(timings.restore.is_some());
     assert_eq!(fixture.pocket_ic().instance_id, first_instance);
     assert!(
         fixture
@@ -322,7 +327,7 @@ async fn bounded_standalone_pool_waits_when_capacity_is_exhausted() {
         BaselinePoolDisposition::Restored
     ));
     assert!(
-        outcome.timings.wait() >= Duration::from_millis(50),
+        outcome.timings.wait >= Duration::from_millis(50),
         "structured timings should include capacity wait: {:?}",
         outcome.timings,
     );
@@ -364,8 +369,8 @@ async fn bounded_standalone_pool_rebuilds_after_a_leased_test_panics() {
         BaselinePoolDisposition::Rebuilt(RebuildReason::UnwindWhileLeased)
     ));
     let timings = outcome.timings;
-    assert!(timings.stale_teardown().is_some());
-    assert!(timings.build().is_some());
+    assert!(timings.stale_teardown.is_some());
+    assert!(timings.build.is_some());
     assert_eq!(STANDALONE_PANIC_BUILDS.load(Ordering::SeqCst), 2);
     drop(fixture);
 }
@@ -381,9 +386,9 @@ async fn structured_standalone_acquisition_error_retains_build_timings() {
     };
 
     let timings = error.timings();
-    assert!(timings.build().is_some());
-    assert!(timings.restore().is_none());
-    assert!(timings.total() >= timings.build().unwrap());
+    assert!(timings.build.is_some());
+    assert!(timings.restore.is_none());
+    assert!(timings.total >= timings.build.unwrap());
     assert!(matches!(
         error,
         BaselinePoolError::Preparation {
@@ -439,9 +444,9 @@ async fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition(
         panic!("restoring a deleted fixture canister must fail");
     };
     let timings = error.timings();
-    assert!(timings.restore().is_some());
-    assert!(timings.build().is_none());
-    assert!(timings.stale_teardown().is_some());
+    assert!(timings.restore.is_some());
+    assert!(timings.build.is_none());
+    assert!(timings.stale_teardown.is_some());
     assert!(matches!(
         error,
         BaselinePoolError::Preparation {
@@ -463,8 +468,8 @@ async fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition(
         BaselinePoolDisposition::Built
     ));
     let timings = outcome.timings;
-    assert!(timings.stale_teardown().is_none());
-    assert!(timings.build().is_some());
+    assert!(timings.stale_teardown.is_none());
+    assert!(timings.build.is_some());
     assert_eq!(builds.load(Ordering::SeqCst), 2);
     drop(fixture);
 }
@@ -545,7 +550,10 @@ async fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again
                         server_url: (&url).into(),
                         timeout: READY_TIMEOUT,
                     }
-                    .build_instance(PocketIcBuilder::new().with_application_subnet())
+                    .build_instance(
+                        PocketIcBuilder::new(std::time::Duration::from_secs(300))
+                            .with_application_subnet(),
+                    )
                     .await
                     .unwrap(),
                     support::empty_install_spec(),
@@ -577,9 +585,9 @@ async fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again
             if matches!(source.get_ref().and_then(|error| error.downcast_ref::<ControllerSnapshotError>()),
                 Some(ControllerSnapshotError::CaptureFailed { .. }))
     ));
-    assert!(timings.restore().is_some());
-    assert!(timings.build().is_some());
-    assert!(timings.stale_teardown().is_some());
+    assert!(timings.restore.is_some());
+    assert!(timings.build.is_some());
+    assert!(timings.stale_teardown.is_some());
     assert_eq!(builds.load(Ordering::SeqCst), 2);
 
     let (fixture, outcome) = pool.acquire().await.unwrap();
@@ -587,8 +595,8 @@ async fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again
         outcome.disposition,
         BaselinePoolDisposition::Built
     ));
-    assert!(outcome.timings.restore().is_none());
-    assert!(outcome.timings.stale_teardown().is_none());
+    assert!(outcome.timings.restore.is_none());
+    assert!(outcome.timings.stale_teardown.is_none());
     assert_eq!(builds.load(Ordering::SeqCst), 3);
     drop(fixture);
 }

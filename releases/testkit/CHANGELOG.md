@@ -6,6 +6,44 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.90.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Require a caller-selected positive finite `Duration` for PocketIC construction,
+  attachment and instance listing. Remove default/unbounded request budgets;
+  invalid values fail before network effects, and polling/body reads share one
+  deadline. See [#339 — Require explicit finite PocketIC request budgets](https://github.com/dragginzgame/ic-tooling/issues/339).
+- Move reset-policy schemas and evidence matching into consumer recipes. Recipes
+  select snapshot funding and validate their reset before returning success;
+  the pool retains restore ordering, cancellation invalidation and recovery.
+  See [#338 — Move baseline reset-policy schemas into consumer recipes](https://github.com/dragginzgame/ic-tooling/issues/338)
+  and the [migration](../../docs/testkit/client-migration.md#testkit-090-surface-cut).
+- Remove unused anonymous/authenticated Candid convenience exports and default
+  effective-canister-ID lookup. Keep the management codec helpers private;
+  callers use raw query/update methods with their explicit external codec, or
+  the existing Wire adapters for owned RPC.
+- Remove server-filesystem snapshot download/upload methods and their endpoint
+  DTOs. Retain the bounded snapshot transfer API and caller-owned recovery.
+- Remove `await_call_no_ticks`, authenticated `ingress_status_as` and
+  `IngressStatusResult`. Use anonymous `ingress_status` with caller-owned polling
+  cadence and deadlines, or the existing `await_call` when ticking is intended.
+- Remove custom blockmaker ticks, subnet deletion and unused topology shortcuts.
+  Ordinary `tick` keeps its protocol bytes; application/NNS/II discovery and
+  canister-range lookups remain supported, with complete topology DTOs retained.
+- Read `BaselinePoolTimings` through its documented public fields; remove the
+  forwarding getters without compatibility aliases.
+
+### 🧹 Cleanup
+
+- Reuse Host Process's bounded socket acceptance and HTTP request reader in
+  client failure tests. Keep stalled/truncated responses and no-replay assertions.
+- Preserve original PocketIC donor hashes through a checksummed surface-cut layer
+  and its tamper-refusal check.
+- Remove Testkit's direct backoff dependency and unused Reqwest blocking,
+  multipart and stream features. Preserve anonymous status bytes, rejection/error
+  behavior and accepted-ingress custody without retries or replay.
+
 ## [0.89.4] - 2026-11-06
 
 ### 🧹 Cleanup

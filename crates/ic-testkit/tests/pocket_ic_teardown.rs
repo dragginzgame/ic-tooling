@@ -316,9 +316,7 @@ async fn synthetic_instance() -> PocketIcInstance<PocketIc> {
         timeout: DEADLOCK_ESCAPE,
     }
     .build_instance(
-        PocketIcBuilder::new()
-            .with_application_subnet()
-            .with_max_request_time_ms(Some(1_000)),
+        PocketIcBuilder::new(std::time::Duration::from_secs(1)).with_application_subnet(),
     )
     .await
     .expect("construct synthetic instance through bounded startup")

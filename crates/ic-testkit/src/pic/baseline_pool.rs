@@ -9,153 +9,14 @@ use super::{
     bounded_pool::{BoundedSlotLease, BoundedSlotPool, Slot},
 };
 
-/// Reset domain whose handling is declared by a pooled baseline recipe.
-#[non_exhaustive]
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum ResetDomainKind {
-    /// `PocketIC` simulated time.
-    PocketIcTime,
-    /// Canisters outside the captured baseline set.
-    ExtraCanisters,
-    /// Pending ingress, timers, or cross-canister messages.
-    PendingMessages,
-    /// Subnet metrics, routing, allocation, or other subnet-global state.
-    SubnetState,
-    /// Files, processes, services, or other caller-owned resources.
-    ExternalResources,
-}
-
-/// `PocketIC` time handling required or achieved by one reset.
-#[non_exhaustive]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TimeResetPolicy {
-    /// Preserve the current simulator time rather than claiming it was reset.
-    PreserveCurrent,
-    /// Restore the exact time recorded by the recipe baseline.
-    RestoreBaseline,
-    /// Treat any relevant time mutation as requiring slot reconstruction.
-    RebuildOnMutation,
-}
-
-/// Extra-canister handling required or achieved by one reset.
-#[non_exhaustive]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ExtraCanisterPolicy {
-    /// Validate that the baseline canister set is unchanged.
-    RequireBaselineSet,
-    /// Remove canisters explicitly tracked by the recipe.
-    RemoveTracked,
-    /// Treat any extra-canister change as requiring slot reconstruction.
-    RebuildOnChange,
-}
-
-/// Generic handling for reset domains without a more specific policy.
-#[non_exhaustive]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum StateResetPolicy {
-    /// Reset the domain through caller-owned recipe logic.
-    ResetByRecipe,
-    /// Validate that the domain remained unchanged.
-    ValidateUnchanged,
-    /// Explicitly declare the domain irrelevant to this recipe's guarantees.
-    IrrelevantByRecipeContract,
-    /// Treat any relevant change as requiring slot reconstruction.
-    RebuildOnChange,
-}
-
-/// Fixed non-snapshot reset policies, supplied independently by a recipe and its reset.
-///
-/// A missing field makes no claim for that domain. In particular, absence differs
-/// from explicitly reporting [`StateResetPolicy::IrrelevantByRecipeContract`].
-/// Each domain has one typed field, so duplicate declarations cannot be formed.
-///
-/// ```
-/// use ic_testkit::pic::{
-///     ResetPolicies, ResetReceipt, ResetRequirements, SnapshotRestoreFunding, TimeResetPolicy,
-/// };
-///
-/// let requirements = ResetRequirements {
-///     funding: SnapshotRestoreFunding::Preserve,
-///     policies: ResetPolicies {
-///         pocket_ic_time: Some(TimeResetPolicy::PreserveCurrent),
-///         ..ResetPolicies::default()
-///     },
-/// };
-/// // The reset independently reports that it preserved simulated time.
-/// let receipt = ResetReceipt {
-///     policies: ResetPolicies {
-///         pocket_ic_time: Some(TimeResetPolicy::PreserveCurrent),
-///         ..ResetPolicies::default()
-///     },
-/// };
-/// assert_eq!(requirements.policies.pocket_ic_time, receipt.policies.pocket_ic_time);
-/// ```
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct ResetPolicies {
-    /// `PocketIC` simulated time.
-    pub pocket_ic_time: Option<TimeResetPolicy>,
-    /// Canisters outside the captured baseline set.
-    pub extra_canisters: Option<ExtraCanisterPolicy>,
-    /// Pending ingress, timers, or cross-canister messages.
-    pub pending_messages: Option<StateResetPolicy>,
-    /// Subnet-global state outside canister snapshots.
-    pub subnet_state: Option<StateResetPolicy>,
-    /// Caller-owned files, processes, services or other external state.
-    pub external_resources: Option<StateResetPolicy>,
-}
-
-/// Typed reset guarantees required by one fixture recipe.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ResetRequirements {
-    /// Funding selected once for the pool's canonical snapshot restore.
-    pub funding: SnapshotRestoreFunding,
-    /// Required non-snapshot policies, independently checked against each reset.
-    pub policies: ResetPolicies,
-}
-
-/// Typed reset guarantees actually achieved by one preparation pass.
-///
-/// Default reports no achievements. Recipes must derive these fields from their
-/// reset work, rather than copying the requirements into an assumed receipt.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct ResetReceipt {
-    /// Non-snapshot policies achieved by the reset operation.
-    pub policies: ResetPolicies,
-}
-
-/// Contract failure while verifying recipe reset evidence.
-#[non_exhaustive]
-#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
-pub enum BaselinePoolContractError {
-    /// A required reset domain had no matching achievement.
-    #[error("required reset domain {domain:?} was not achieved")]
-    MissingResetDomain {
-        /// Reset domain that did not satisfy the contract.
-        domain: ResetDomainKind,
-    },
-    /// The first mismatched domain, with both complete policy sets for inspection.
-    #[error("reset achievement {achievement:?} does not satisfy {requirement:?} for {domain:?}")]
-    ResetPolicyMismatch {
-        /// Reset domain that did not satisfy the contract.
-        domain: ResetDomainKind,
-        /// Policies required by the recipe.
-        requirement: ResetPolicies,
-        /// Policies reported by the reset.
-        achievement: ResetPolicies,
-    },
-}
-
 /// Whether validation is observing a newly built or restored baseline.
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PreparedBaseline {
     /// The recipe just built this baseline.
     Built,
-    /// The pool restored an existing baseline and the recipe reset its other state.
-    Restored {
-        /// Typed non-snapshot reset receipt.
-        reset: ResetReceipt,
-    },
+    /// The pool restored an existing baseline and the recipe validated its reset.
+    Restored,
 }
 
 /// Recipe stage associated with a structured preparation failure.
@@ -188,8 +49,6 @@ pub enum RebuildReason {
     ResetFailure,
     /// Readiness or quiescence could not be established.
     ReadinessFailure,
-    /// Required and achieved reset domains did not match.
-    ResetCoverageMismatch,
     /// Final invariant validation failed.
     InvariantValidationFailure,
     /// A caller explicitly invalidated its lease.
@@ -218,14 +77,22 @@ pub enum FailureDisposition {
 /// Timings for one baseline-pool acquisition.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct BaselinePoolTimings {
-    wait: Duration,
-    build: Option<Duration>,
-    restore: Option<Duration>,
-    reset: Option<Duration>,
-    readiness: Option<Duration>,
-    validation: Option<Duration>,
-    stale_teardown: Option<Duration>,
-    total: Duration,
+    /// Time spent waiting for a capacity slot.
+    pub wait: Duration,
+    /// Time spent constructing a new baseline.
+    pub build: Option<Duration>,
+    /// Time spent restoring captured canisters.
+    pub restore: Option<Duration>,
+    /// Time spent resetting non-snapshot state.
+    pub reset: Option<Duration>,
+    /// Time spent driving the topology to readiness.
+    pub readiness: Option<Duration>,
+    /// Time spent validating final baseline invariants.
+    pub validation: Option<Duration>,
+    /// Time spent dropping an invalid baseline before rebuilding.
+    pub stale_teardown: Option<Duration>,
+    /// Complete acquisition duration.
+    pub total: Duration,
 }
 
 /// One successful acquisition's slot, timings and preparation disposition.
@@ -266,9 +133,6 @@ pub enum BaselinePoolPreparationError<E> {
     /// Canonical restoration of the captured snapshot set failed.
     #[error("baseline canister restore failed: {0}")]
     Restore(#[source] ControllerSnapshotError),
-    /// Typed non-snapshot reset evidence violated the pool contract.
-    #[error("baseline pool contract failed: {0}")]
-    Contract(#[source] BaselinePoolContractError),
 }
 
 /// Failure to acquire a validated baseline-pool lease.
@@ -328,8 +192,8 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
     /// Structured caller error shared by recipe lifecycle stages.
     type Error: std::error::Error + Send + Sync + 'static;
 
-    /// Reset guarantees required before an existing slot may be reused.
-    fn reset_requirements(&self) -> &ResetRequirements;
+    /// Caller-selected funding applied immediately before canonical snapshot restore.
+    fn snapshot_funding(&self) -> SnapshotRestoreFunding;
 
     /// Construct and capture one complete baseline.
     /// Stop/drain the complete snapshot set before capture, then start it after
@@ -360,13 +224,16 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
     }
 
     /// Reset state not covered by canister snapshots.
+    /// The recipe owns its reset schema, evidence and required/achieved checks.
+    /// Return success only after those checks pass; a failure never exposes the
+    /// partially reset baseline. Readiness and final validation run afterward.
     ///
     /// # Errors
     /// Returns the recipe error if the required non-snapshot reset fails.
     fn reset_non_snapshot_state(
         &self,
         baseline: &CachedPocketIcBaseline<Self::Metadata>,
-    ) -> impl std::future::Future<Output = Result<ResetReceipt, Self::Error>> + Send;
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
 
     /// Drive the topology to the recipe's readiness boundary.
     /// Successful completion permits final invariant validation.
@@ -405,8 +272,8 @@ pub trait PocketIcBaselineRecipe: Send + Sync + 'static {
 ///
 /// One pool structurally owns one [`PocketIcBaselineRecipe`]. A warm
 /// acquisition restores the complete captured canister set, applies the
-/// recipe's non-snapshot reset, reaches its readiness boundary, checks typed
-/// reset coverage, and validates final invariants before exposing a lease.
+/// recipe's validated non-snapshot reset, reaches its readiness boundary and
+/// validates final invariants before exposing a lease.
 /// Each capacity slot owns an independent `PocketIC` instance.
 ///
 /// Snapshot reuse is not a complete `PocketIC` rollback. The recipe must account
@@ -428,64 +295,6 @@ where
     slot: BoundedSlotLease<'a, CachedPocketIcBaseline<R::Metadata>, RebuildReason>,
 }
 
-impl ResetRequirements {
-    fn verify(&self, receipt: ResetReceipt) -> Result<(), BaselinePoolContractError> {
-        self.verify_policy(
-            receipt,
-            ResetDomainKind::PocketIcTime,
-            self.policies.pocket_ic_time,
-            receipt.policies.pocket_ic_time,
-        )?;
-        self.verify_policy(
-            receipt,
-            ResetDomainKind::ExtraCanisters,
-            self.policies.extra_canisters,
-            receipt.policies.extra_canisters,
-        )?;
-        self.verify_policy(
-            receipt,
-            ResetDomainKind::PendingMessages,
-            self.policies.pending_messages,
-            receipt.policies.pending_messages,
-        )?;
-        self.verify_policy(
-            receipt,
-            ResetDomainKind::SubnetState,
-            self.policies.subnet_state,
-            receipt.policies.subnet_state,
-        )?;
-        self.verify_policy(
-            receipt,
-            ResetDomainKind::ExternalResources,
-            self.policies.external_resources,
-            receipt.policies.external_resources,
-        )
-    }
-
-    fn verify_policy<P: PartialEq>(
-        &self,
-        receipt: ResetReceipt,
-        domain: ResetDomainKind,
-        requirement: Option<P>,
-        achievement: Option<P>,
-    ) -> Result<(), BaselinePoolContractError> {
-        let Some(requirement) = requirement else {
-            return Ok(());
-        };
-        let Some(achievement) = achievement else {
-            return Err(BaselinePoolContractError::MissingResetDomain { domain });
-        };
-        if requirement != achievement {
-            return Err(BaselinePoolContractError::ResetPolicyMismatch {
-                domain,
-                requirement: self.policies,
-                achievement: receipt.policies,
-            });
-        }
-        Ok(())
-    }
-}
-
 impl BaselinePreparationStage {
     /// Default rebuild reason used by [`PocketIcBaselineRecipe::classify_failure`].
     ///
@@ -504,56 +313,6 @@ impl BaselinePreparationStage {
                 code: "build".to_owned(),
             },
         }
-    }
-}
-
-impl BaselinePoolTimings {
-    /// Time spent waiting for a capacity slot.
-    #[must_use]
-    pub const fn wait(self) -> Duration {
-        self.wait
-    }
-
-    /// Time spent constructing a new baseline.
-    #[must_use]
-    pub const fn build(self) -> Option<Duration> {
-        self.build
-    }
-
-    /// Time spent restoring captured canisters.
-    #[must_use]
-    pub const fn restore(self) -> Option<Duration> {
-        self.restore
-    }
-
-    /// Time spent resetting non-snapshot state.
-    #[must_use]
-    pub const fn reset(self) -> Option<Duration> {
-        self.reset
-    }
-
-    /// Time spent driving the topology to readiness.
-    #[must_use]
-    pub const fn readiness(self) -> Option<Duration> {
-        self.readiness
-    }
-
-    /// Time spent validating final baseline invariants.
-    #[must_use]
-    pub const fn validation(self) -> Option<Duration> {
-        self.validation
-    }
-
-    /// Time spent dropping an invalid baseline before rebuilding.
-    #[must_use]
-    pub const fn stale_teardown(self) -> Option<Duration> {
-        self.stale_teardown
-    }
-
-    /// Complete acquisition duration.
-    #[must_use]
-    pub const fn total(self) -> Duration {
-        self.total
     }
 }
 
@@ -773,7 +532,7 @@ where
                     source,
                 })?;
             baseline
-                .restore(self.recipe.reset_requirements().funding)
+                .restore(self.recipe.snapshot_funding())
                 .await
                 .map_err(BaselinePoolPreparationError::Restore)
         }
@@ -781,7 +540,7 @@ where
         add_timing(&mut timings.restore, started.elapsed());
         restore?;
 
-        let reset = timed_recipe_stage(
+        timed_recipe_stage(
             &mut timings.reset,
             BaselinePreparationStage::ResetNonSnapshotState,
             self.recipe.reset_non_snapshot_state(baseline),
@@ -793,12 +552,8 @@ where
             self.recipe.drive_to_readiness(baseline),
         )
         .await?;
-        self.recipe
-            .reset_requirements()
-            .verify(reset)
-            .map_err(BaselinePoolPreparationError::Contract)?;
 
-        let preparation = PreparedBaseline::Restored { reset };
+        let preparation = PreparedBaseline::Restored;
         self.validate_baseline(baseline, &preparation, timings)
             .await?;
         Ok(())
@@ -836,7 +591,7 @@ where
     ) -> Result<(), BaselinePoolPreparationError<R::Error>> {
         let stage = match preparation {
             PreparedBaseline::Built => BaselinePreparationStage::ValidateBuilt,
-            PreparedBaseline::Restored { .. } => BaselinePreparationStage::ValidateRestored,
+            PreparedBaseline::Restored => BaselinePreparationStage::ValidateRestored,
         };
         timed_recipe_stage(
             &mut timings.validation,
@@ -857,9 +612,6 @@ where
             BaselinePoolPreparationError::Restore(source) => self
                 .recipe
                 .classify_failure(BaselinePreparationStage::RestoreCanisters, source),
-            BaselinePoolPreparationError::Contract(_) => {
-                FailureDisposition::Rebuild(RebuildReason::ResetCoverageMismatch)
-            }
         }
     }
 

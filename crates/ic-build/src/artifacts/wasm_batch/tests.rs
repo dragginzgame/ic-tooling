@@ -90,7 +90,7 @@ fn library_output_validation_survives_batch_and_prepared_resolution() {
             WasmBuildPhase::InputDiscovery
         );
         assert_eq!(
-            failure.failure_details().unwrap().timings().cargo_build(),
+            failure.failure_details().unwrap().timings().cargo_build,
             None
         );
     };
@@ -172,7 +172,7 @@ fn batch_retains_every_indexed_failure() {
     );
     assert!(report.failures().all(|failure| {
         failure.failure_details().unwrap().phase() == WasmBuildPhase::Specification
-            && failure.failure_details().unwrap().timings().total() <= failure.entry_elapsed()
+            && failure.failure_details().unwrap().timings().total <= failure.entry_elapsed()
     }));
     assert_eq!(report.outcomes().count(), 0);
     let metrics = report.metrics();
@@ -221,8 +221,8 @@ fn batch_failure_retains_partial_metadata_timing() {
             .failure_details()
             .unwrap()
             .timings()
-            .input_resolution()
-            .tool_identity()
+            .input_resolution
+            .tool_identity
             > Duration::ZERO
     );
     assert!(
@@ -230,15 +230,15 @@ fn batch_failure_retains_partial_metadata_timing() {
             .failure_details()
             .unwrap()
             .timings()
-            .input_resolution()
-            .cargo_metadata()
+            .input_resolution
+            .cargo_metadata
             > Duration::ZERO
     );
     assert_eq!(
-        failure.failure_details().unwrap().timings().cargo_build(),
+        failure.failure_details().unwrap().timings().cargo_build,
         None
     );
-    assert!(failure.failure_details().unwrap().timings().total() <= failure.entry_elapsed());
+    assert!(failure.failure_details().unwrap().timings().total <= failure.entry_elapsed());
 
     std::fs::remove_dir_all(root).expect("remove failure timing fixture");
 }
@@ -280,7 +280,7 @@ fn malformed_shared_metadata_is_reported_for_every_entry() {
             WasmBuildError::InvalidMetadata { .. }
         ));
         assert_eq!(
-            failure.failure_details().unwrap().timings().cargo_build(),
+            failure.failure_details().unwrap().timings().cargo_build,
             None
         );
     }
@@ -551,11 +551,7 @@ fn unsafe_shared_target_does_not_fail_other_compatible_batch_entries() {
         WasmBuildError::InvalidSpec { .. }
     ));
     assert_eq!(
-        failures[0]
-            .failure_details()
-            .unwrap()
-            .timings()
-            .cargo_build(),
+        failures[0].failure_details().unwrap().timings().cargo_build,
         None
     );
     assert_eq!(

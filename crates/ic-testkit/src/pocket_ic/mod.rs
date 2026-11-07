@@ -13,9 +13,8 @@
 //! `PocketIc::drop` before releasing a borrowed server; Rust Drop performs no I/O.
 use self::common::rest::{
     AutoProgressConfig, IcpFeatures, InitialTime, InstanceConfig, InstanceHttpGatewayConfig,
-    RawSubnetBlockmakers, RawTickConfigs, RawTime, SubnetId,
+    RawTime, SubnetId,
 };
-use candid::Principal;
 pub use ic_management_canister_types::{
     CanisterId, CanisterInstallMode, CanisterLogRecord, CanisterSettings, CanisterStatusResult,
     EnvironmentVariable, Snapshot,
@@ -33,46 +32,38 @@ mod http;
 pub use error::{ClientError, Operation, RequestContext};
 pub mod common;
 mod nonblocking;
-pub use nonblocking::{
-    PocketIc, call_candid, call_candid_as, get_default_effective_canister_id, query_candid,
-    query_candid_as, update_candid, update_candid_as, with_candid,
-};
+pub use nonblocking::PocketIc;
 pub mod snapshot;
 
 /// Server version associated with the imported PocketIC 16.1 client.
 pub const LATEST_SERVER_VERSION: &str = "16.1.0";
-
-// the default timeout of a PocketIC operation
-const DEFAULT_MAX_REQUEST_TIME_MS: u64 = 300_000;
 
 /// Select the supported instance configuration and an admitted server endpoint.
 /// Persistent state paths remain caller-owned; this builder creates no directories.
 pub struct PocketIcBuilder {
     config: InstanceConfig,
     server_url: Option<Url>,
-    max_request_time_ms: Option<u64>,
+    request_timeout: Duration,
 }
 
-#[expect(
-    clippy::new_without_default,
-    reason = "preserve the imported PocketIC contract without an unrelated API change"
-)]
 impl PocketIcBuilder {
-    pub fn new() -> Self {
+    /// Select a positive finite budget for each HTTP exchange, including polling.
+    /// Build rejects zero or clock-overflowing budgets before sending requests.
+    pub fn new(request_timeout: Duration) -> Self {
         Self {
             config: InstanceConfig {
                 icp_features: Some(IcpFeatures::default()),
                 ..InstanceConfig::default()
             },
             server_url: None,
-            max_request_time_ms: Some(DEFAULT_MAX_REQUEST_TIME_MS),
+            request_timeout,
         }
     }
 
     pub async fn build(self) -> Result<PocketIc, ClientError> {
         PocketIc::from_config(
             self.server_url.ok_or(ClientError::MissingServerUrl)?,
-            self.max_request_time_ms,
+            self.request_timeout,
             self.config,
         )
         .await
@@ -81,11 +72,6 @@ impl PocketIcBuilder {
     /// Use an already running PocketIC server.
     pub fn with_server_url(mut self, server_url: Url) -> Self {
         self.server_url = Some(server_url);
-        self
-    }
-
-    pub fn with_max_request_time_ms(mut self, max_request_time_ms: Option<u64>) -> Self {
-        self.max_request_time_ms = max_request_time_ms;
         self
     }
 
@@ -447,57 +433,6 @@ impl std::fmt::Display for RejectResponse {
             "PocketIC returned a rejection error: reject code {:?}, reject message {}, error code {:?}",
             self.reject_code, self.reject_message, self.error_code
         )
-    }
-}
-
-/// This enum describes the result of retrieving ingress status.
-/// The `IngressStatusResult::Forbidden` variant is produced
-/// if an optional caller is provided and a corresponding read state request
-/// for the status of the same update call signed by that specified caller
-/// was rejected because the update call was submitted by a different caller.
-#[derive(Debug, Serialize, Deserialize)]
-pub enum IngressStatusResult {
-    NotAvailable,
-    Forbidden(String),
-    Success(Result<Vec<u8>, RejectResponse>),
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct TickConfigs {
-    pub blockmakers: Option<Vec<SubnetBlockmakers>>,
-}
-
-impl From<TickConfigs> for RawTickConfigs {
-    fn from(tick_configs: TickConfigs) -> Self {
-        Self {
-            blockmakers: tick_configs.blockmakers.map(|blockmakers| {
-                blockmakers
-                    .into_iter()
-                    .map(|blockmaker| blockmaker.into())
-                    .collect()
-            }),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct SubnetBlockmakers {
-    pub subnet: Principal,
-    pub blockmaker: Principal,
-    pub failed_blockmakers: Vec<Principal>,
-}
-
-impl From<SubnetBlockmakers> for RawSubnetBlockmakers {
-    fn from(blockmaker: SubnetBlockmakers) -> Self {
-        Self {
-            subnet: blockmaker.subnet.into(),
-            blockmaker: blockmaker.blockmaker.into(),
-            failed_blockmakers: blockmaker
-                .failed_blockmakers
-                .into_iter()
-                .map(|p| p.into())
-                .collect(),
-        }
     }
 }
 

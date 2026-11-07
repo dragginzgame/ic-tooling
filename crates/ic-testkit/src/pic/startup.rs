@@ -379,7 +379,7 @@ impl PocketIcStartupConfig {
                 timeout,
             };
             config.validate()?;
-            let _ = configured_builder(PocketIcBuilder::new(), &server_url)?;
+            parse_server_url(&server_url)?;
             return Ok(config);
         }
         let value = variable("POCKET_IC_BIN")
@@ -461,7 +461,7 @@ impl PocketIcStartupConfig {
     /// use std::{path::Path, time::Duration};
     /// # async fn run(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
     /// let owned = PocketIcStartupConfig::Spawn { server_binary: binary.into(), timeout: Duration::from_secs(60), server_hard_ttl: None, server_idle_ttl: None, server_output_files: None }
-    ///     .build_instance(PocketIcBuilder::new().with_application_subnet()).await?;
+    ///     .build_instance(PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet()).await?;
     /// let canister = owned.instance().create_canister().await?;
     /// assert!(owned.instance().canister_exists(canister).await?);
     /// let (instance, server) = owned.into_parts();
@@ -814,7 +814,9 @@ impl InstanceStartup<'_> {
         &mut self,
         builder: PocketIcBuilder,
     ) -> Result<PocketIcBuilder, PocketIcStartupError> {
-        configured_builder(builder, self.server_url).map_err(|error| self.fail(error))
+        parse_server_url(self.server_url)
+            .map(|url| builder.with_server_url(url))
+            .map_err(|error| self.fail(error))
     }
 
     fn check_deadline(&mut self) -> Result<Instant, PocketIcStartupError> {
@@ -839,19 +841,13 @@ impl InstanceStartup<'_> {
     }
 }
 
-fn configured_builder(
-    builder: PocketIcBuilder,
-    server_url: &str,
-) -> Result<PocketIcBuilder, PocketIcStartupError> {
-    server_url
-        .parse()
-        .map(|url| builder.with_server_url(url))
-        .map_err(|error| {
-            PocketIcStartupError::new(PocketIcStartupFailure::InvalidServerUrl {
-                server_url: server_url.to_owned(),
-                message: error.to_string(),
-            })
+fn parse_server_url(server_url: &str) -> Result<reqwest::Url, PocketIcStartupError> {
+    server_url.parse::<reqwest::Url>().map_err(|error| {
+        PocketIcStartupError::new(PocketIcStartupFailure::InvalidServerUrl {
+            server_url: server_url.to_owned(),
+            message: error.to_string(),
         })
+    })
 }
 
 fn check_server(server: &mut Option<ManagedServer>) -> Result<(), PocketIcStartupError> {

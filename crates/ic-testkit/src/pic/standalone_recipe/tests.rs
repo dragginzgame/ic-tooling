@@ -42,8 +42,8 @@ async fn builder_errors_preserve_the_cause_and_release_the_slot_for_another_atte
         };
         assert_eq!(source.kind(), io::ErrorKind::PermissionDenied);
         assert!(source.get_ref().unwrap().is::<std::fmt::Error>());
-        assert!(timings.build().is_some());
-        assert!(timings.restore().is_none());
-        assert!(timings.total() >= timings.build().unwrap());
+        assert!(timings.build.is_some());
+        assert!(timings.restore.is_none());
+        assert!(timings.total >= timings.build.unwrap());
     }
 }

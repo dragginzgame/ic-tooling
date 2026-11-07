@@ -38,6 +38,14 @@ the complete pair through `result()`/`failure()`. No compatibility aliases remai
 Test-support callers also pass the package name explicitly as the fixture
 writer's second argument: `write_fixture_package(directory, name, tail, source)`.
 
+Build 0.77 removes getters on the data-only `WasmBuildTimings`,
+`WasmInputResolutionTimings`, `WasmBuildFailureTimings`, `ArtifactCacheTimings`
+and `ArtifactCacheBatchFailureTimings` records. Read their documented fields:
+`record.timings().total`, `record.timings().input_resolution.content_hashing`,
+or `failure.timings().callback`. The containing records/reports retain their
+existing `timings()` and `successful_timings()` accessors. Optional phases retain
+`Option<Duration>` and aggregate/saturating timing calculations are unchanged.
+
 Native `target_kind` takes
 `cargo::native::NativeTargetKind::Binary` or `NativeTargetKind::Example`, replacing
 string selectors without an adapter. Replace raw Cargo recipe arguments with
@@ -663,7 +671,7 @@ let outcome = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)?;
 eprintln!("immutable cache: {}", outcome.record().exact_cache_path().display());
 match &outcome {
     WasmBuildOutcome::Built(record) => {
-        eprintln!("built {} in {:?}", record.fingerprint(), record.timings().total());
+        eprintln!("built {} in {:?}", record.fingerprint(), record.timings().total);
     }
     WasmBuildOutcome::Reused(record) => {
         eprintln!("reused {}", record.fingerprint());

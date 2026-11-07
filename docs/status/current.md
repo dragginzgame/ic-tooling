@@ -1,5 +1,56 @@
 # Current handoff
 
+## LOC hard cut — local, 2026-11-07
+
+The approved cleanup removes unused PocketIC Candid convenience exports,
+default-ID lookup, server-filesystem snapshot APIs/DTOs, no-tick/authenticated-status
+helpers, blockmaker ticks, subnet deletion and seven topology shortcuts. Full
+topology DTOs, used lookups, private management codecs, protocol bytes and custody
+remain. Six timing records expose documented fields in place of 44 getters;
+workspace callers/guides are migrated. Cache fixtures share setup and client fault
+fixtures reuse bounded Host readers while retaining binary bodies and replay checks.
+Testkit drops direct backoff and three unused Reqwest features. No aliases are added.
+
+The approved #338/#339 implementation requires explicit positive finite `Duration`
+budgets for client creation, attachment and listing. Zero/clock-overflowing values
+refuse before requests; one deadline includes bodies, polling and pruning. Recipes
+now select `snapshot_funding()` and validate their own reset before returning unit.
+Generic reset schemas/receipts are removed; lifecycle, funding order, invalidation,
+typed recovery and collect-all shared shutdown remain. Workspace callers and
+current guides are migrated without compatibility aliases.
+
+Authorized delivery selects Build 0.77.0 then Testkit 0.90.0 in one captured
+`build,testkit` minor batch. Source integration precedes capture; the runner owns
+version preparation from the current 0.76.0 / 0.89.4 manifests. Unrelated lock
+updates are preserved separately from the release graph.
+Canonical Rust LOC falls from 81,778 to 81,164: production 31,475 to 30,798 and
+tests 47,511 to 47,586. The latest #338/#339 slice removes 196 Rust lines overall.
+Earlier evidence remains under `target/{loc-cut,polling-cut,topology-cut}-20261107/`;
+current evidence is `target/hard-cut-338-339/`.
+Strict Testkit/Dev all-target/all-feature Clippy passes. Focused Linux checks pass:
+27 client cases, reset mismatch/domain/recovery/shutdown cases, cancellation,
+funding order, startup URL admission/doctest, management identity and installed
+management/snapshot state on admitted PocketIC 16.1. Native/Wasm graph and donor
+reconstruction/tamper guards pass. Earlier Build lint/cache/timing evidence is
+unchanged. Native macOS and full release qualification were not rerun.
+The new checksummed `loc-surface-cut.patch` preserves original donor fingerprints.
+The fixture's first test attempt exposed binary blob bodies; corrected handling
+and passing reruns retain that diagnostic. The follow-on default-library check,
+native/Wasm dependency profiles and client contracts pass with narrower Reqwest
+features. Cargo.lock preserves every pre-existing external selection; the only
+new changes remove Testkit's backoff edge and unused MIME dependencies. The entry
+backup and selection comparison are in `target/polling-cut-20261107/`; the current
+lock SHA-256 is `46b8c95e13d20f536c71212430a93fe8e18d29aea2dfa2a04915431c07b770df`.
+The maintainer chose consumer issues instead of concurrent sibling migrations.
+Eleven owning issues are linked from
+[#339 — Explicit finite request budgets](https://github.com/dragginzgame/ic-tooling/issues/339);
+[Canic #738 — Reset ownership and finite budgets](https://github.com/dragginzgame/canic/issues/738)
+also owns #338 adoption. Prepared sibling edits were withdrawn with concurrent
+source repairs and lock changes preserved; no Cargo overrides or consumer checks
+ran. Restoration evidence and original diffs remain under `target/hard-cut-338-339/`.
+Both Tooling issues remain open for integration; consumer qualification stays with
+their owners. Toko/Toko Miner and independent native Profiler were excluded.
+
 ## Shared 0.31, Build 0.76.0 and Testkit 0.89.4 delivered — 2026-11-06
 
 Source integration `57520808` adopts Shared Tooling 0.31.0 revision

@@ -329,7 +329,7 @@ fn one_output_is_built_materialized_repaired_and_reused() {
     assert_eq!(record.key(), built.record().key());
     assert_eq!(record.artifacts()[0].name(), "optimized.wasm");
     assert_eq!(fs::read(&destination).unwrap(), b"optimized-wasm");
-    assert!(record.timings().caller_build().is_none());
+    assert!(record.timings().caller_build.is_none());
     fs::remove_dir_all(root).expect("remove one-output test directory");
 }
 
@@ -1015,7 +1015,7 @@ fn scheduled_pruning_skips_an_immediate_second_acquisition() {
         .reused_record()
         .expect("scheduled artifact should hit");
     assert!(record.maintenance().is_none());
-    assert!(record.timings().maintenance().is_some());
+    assert!(record.timings().maintenance.is_some());
 
     let changed_policy = spec.clone().with_prune_policy_at_most_every(
         CacheRetentionLimits::new().with_max_size_bytes(0),
@@ -1746,7 +1746,7 @@ fn cache_timing_accumulation_preserves_optional_presence_and_saturates() {
             ..Default::default()
         };
         let total = left.saturating_add(right);
-        assert_eq!([total.caller_build(), total.maintenance()], [expected; 2]);
+        assert_eq!([total.caller_build, total.maintenance], [expected; 2]);
     }
 }
 

@@ -2,6 +2,81 @@ use super::{ErrorCode, RejectCode, RejectResponse};
 use strum::IntoEnumIterator as _;
 
 #[test]
+fn topology_keeps_application_selection_and_canister_ranges() {
+    use super::common::rest::{
+        CanisterCyclesCostSchedule, CanisterIdRange, RawCanisterId, SubnetConfig,
+        SubnetInstructionConfig, SubnetKind, Topology,
+    };
+    use candid::Principal;
+    let id = |byte| Principal::from_slice(&[byte]);
+    let topology = Topology {
+        subnet_configs: [
+            (
+                1,
+                SubnetKind::Application,
+                SubnetInstructionConfig::Production,
+            ),
+            (
+                2,
+                SubnetKind::Application,
+                SubnetInstructionConfig::Benchmarking,
+            ),
+            (3, SubnetKind::NNS, SubnetInstructionConfig::Production),
+            (4, SubnetKind::II, SubnetInstructionConfig::Production),
+            (
+                5,
+                SubnetKind::CloudEngine,
+                SubnetInstructionConfig::Production,
+            ),
+        ]
+        .into_iter()
+        .map(|(byte, subnet_kind, instruction_config)| {
+            (
+                id(byte),
+                SubnetConfig {
+                    subnet_kind,
+                    subnet_admins: None,
+                    cost_schedule: CanisterCyclesCostSchedule::Normal,
+                    subnet_seed: [byte; 32],
+                    instruction_config,
+                    canister_ranges: vec![CanisterIdRange {
+                        start: RawCanisterId {
+                            canister_id: vec![byte * 10],
+                        },
+                        end: RawCanisterId {
+                            canister_id: vec![byte * 10 + 2],
+                        },
+                    }],
+                },
+            )
+        })
+        .collect(),
+        default_effective_canister_id: RawCanisterId {
+            canister_id: vec![10],
+        },
+    };
+    assert_eq!(topology.get_app_subnets(), [id(1), id(2)]);
+    assert_eq!(topology.get_nns(), Some(id(3)));
+    assert_eq!(topology.get_ii(), Some(id(4)));
+    for byte in 1..=5 {
+        for canister in byte * 10..=byte * 10 + 2 {
+            assert_eq!(topology.get_subnet(id(canister)), Some(id(byte)));
+        }
+        assert_eq!(topology.get_subnet(id(byte * 10 + 3)), None);
+    }
+    let wire = serde_json::to_vec(&topology).unwrap();
+    assert_eq!(serde_json::from_slice::<Topology>(&wire).unwrap(), topology);
+    let empty = Topology {
+        subnet_configs: Default::default(),
+        ..topology
+    };
+    assert!(empty.get_app_subnets().is_empty());
+    assert_eq!(empty.get_nns(), None);
+    assert_eq!(empty.get_ii(), None);
+    assert_eq!(empty.get_subnet(id(10)), None);
+}
+
+#[test]
 fn base64_json_preserves_padding_binary_bytes_and_rejections() {
     #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     struct Payload {

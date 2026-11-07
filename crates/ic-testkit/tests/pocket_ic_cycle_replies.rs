@@ -25,7 +25,9 @@ async fn installed_zero_partial_full_acceptance_preserves_bytes_refunds_and_bala
     // System subnet fees are zero: exact balance deltas isolate actual transfers,
     // while callbacks still execute real inter-canister calls and IC refund APIs.
     let owned = support::startup_config()
-        .build_instance(PocketIcBuilder::new().with_system_subnet())
+        .build_instance(
+            PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_system_subnet(),
+        )
         .await
         .unwrap();
     let pic = owned.instance();
@@ -96,7 +98,9 @@ async fn installed_zero_partial_full_acceptance_preserves_bytes_refunds_and_bala
 #[tokio::test]
 async fn barrier_setup_trap_rolls_back_acceptance_and_slot_consumption() {
     let owned = support::startup_config()
-        .build_instance(PocketIcBuilder::new().with_system_subnet())
+        .build_instance(
+            PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_system_subnet(),
+        )
         .await
         .unwrap();
     let pic = owned.instance();
@@ -172,7 +176,9 @@ async fn barrier_setup_trap_rolls_back_acceptance_and_slot_consumption() {
 #[tokio::test]
 async fn held_acceptance_commits_before_release_and_survives_timeout() {
     let owned = support::startup_config()
-        .build_instance(PocketIcBuilder::new().with_system_subnet())
+        .build_instance(
+            PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_system_subnet(),
+        )
         .await
         .unwrap();
     let pic = owned.instance();

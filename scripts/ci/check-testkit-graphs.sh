@@ -21,6 +21,8 @@ native_policy=("${policy[@]}" --require ic-platform=1 --forbid ic-platform-pocke
     --forbid slog --forbid tempfile --forbid schemars
     --forbid strum --forbid strum_macros)
 native_policy+=(--forbid tracing-appender --forbid tracing-subscriber --forbid ic-logging)
+native_policy+=(--forbid-feature reqwest/blocking --forbid-feature reqwest/multipart
+    --forbid-feature reqwest/stream)
 
 perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --package ic-testkit-native --target "$host" --all-features \

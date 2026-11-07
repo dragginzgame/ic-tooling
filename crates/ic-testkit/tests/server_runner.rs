@@ -372,7 +372,9 @@ async fn runner_environment_worker() {
     assert!(std::env::var_os("IC_TESTKIT_POCKET_IC_URL").is_some());
     let pic = PocketIcStartupConfig::from_env(Duration::from_secs(30))
         .unwrap()
-        .build_instance(PocketIcBuilder::new().with_application_subnet())
+        .build_instance(
+            PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+        )
         .await
         .unwrap();
     assert_eq!(

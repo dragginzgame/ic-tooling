@@ -42,8 +42,9 @@ through every client/pool operation and explicit close. Reused HTTP connections
 belong to that runtime; do not create a runtime per pooled lease. Blocking test
 coordinators need a live multithread runtime so network drivers keep progressing.
 
-`PocketIc::new(server_url).await` and
-`PocketIc::list_instances(server_url).await` require explicit endpoints.
+`PocketIc::new(server_url, request_timeout).await` and
+`PocketIc::list_instances(server_url, request_timeout).await` require explicit
+endpoints and positive finite `Duration` budgets.
 Builders without a URL return `ClientError::MissingServerUrl`. Provision with
 `ic-testkit-server setup` or `pic::server_assets::setup`, admit installations
 with `check`, and start a selected binary through `PocketIcStartupConfig`.
@@ -95,6 +96,70 @@ Use `with_state_dir(path)` for a caller-owned persistent directory. Temporary
 `drop_and_take_state` are removed. Retain the path yourself and await `drop()` or
 the managed instance's `close()`; deletion never removes that caller-owned
 directory. These changes neither rewrite nor remove existing instance state.
+
+## Testkit 0.90 surface cut
+
+All client constructors require a caller-selected `Duration`:
+`PocketIcBuilder::new(request_timeout)`, `PocketIc::new(server_url, request_timeout)`
+and `PocketIc::new_from_existing_instance(server_url, instance_id, request_timeout)`.
+Attachment now returns `Result<PocketIc, ClientError>`; propagate or handle it.
+Remove `with_max_request_time_ms` and supply the duration at construction.
+Instance listing takes the same explicit budget. Zero and host-clock-overflowing
+durations return `ClientError::InvalidRequestBudget` before network activity;
+there is no default or unbounded branch. One deadline covers each exchange's
+dispatch, response body, accepted-operation polling, pauses and best-effort prune.
+Startup's total deadline and snapshot-transfer byte budgets remain separate.
+
+Baseline recipes implement `snapshot_funding() -> SnapshotRestoreFunding` and
+`reset_non_snapshot_state(...) -> Result<(), Self::Error>`. The recipe owns any
+required/achieved reset schema and must reject missing or mismatched evidence
+before returning success. Testkit removes its reset-policy enums,
+`ResetPolicies`, `ResetRequirements`, `ResetReceipt` and `BaselinePoolContractError`.
+`PreparedBaseline::Restored` is now a unit variant. Reset errors retain their
+typed source in `BaselinePoolPreparationError::Recipe`; classification defaults
+to `RebuildReason::ResetFailure` or a recipe-selected reason. The removed
+`ResetCoverageMismatch` reason can be represented by the consumer's
+`RecipeClassified` code when that distinction matters. Snapshot restore/funding
+still precedes reset, readiness and final validation. Cancellation invalidation,
+one recovery build, explicit close and collect-all shared shutdown remain intact.
+
+The client exports `PocketIc` once and no longer exports `call_candid`,
+`call_candid_as`, `query_candid`, `query_candid_as`, `update_candid`,
+`update_candid_as`, `with_candid` or `get_default_effective_canister_id`.
+Management calls keep their private Candid boundary. For explicit external
+protocols, compose the selected codec with the raw client's `query_call`,
+`update_call` or effective-principal variant. Owned RPC keeps the existing
+`pic::query_wire`/`update_wire` adapters. There are no replacement aliases.
+
+`await_call_no_ticks`, authenticated `ingress_status_as` and its
+`IngressStatusResult` wrapper are removed. Use `ingress_status` for anonymous
+status reads with caller-owned polling cadence and wall-clock deadlines;
+use the existing `await_call` when simulator ticking is intended. Anonymous
+status keeps its optional result, canister rejection, forbidden-response error
+and accepted-ingress custody. Testkit no longer selects a backoff policy for
+no-tick polling.
+
+`tick_with_configs`, `TickConfigs`, `SubnetBlockmakers`, `RawTickConfigs`,
+`RawSubnetBlockmakers`, `RawNodeId` and `delete_subnet` are removed. Ordinary
+`tick` still sends `{"blockmakers":null}` and preserves accepted-operation
+polling and no-replay failures. Topology no longer offers `get_cloud_engines`,
+`get_verified_app_subnets`, `get_benchmarking_app_subnets`, `get_bitcoin`,
+`get_fiduciary`, `get_sns` or `get_system_subnets`. Keep using `get_app_subnets`,
+`get_nns`, `get_ii` and canister-range `get_subnet`; the full `subnet_configs`
+map and its server DTOs remain available for explicit inspection.
+
+Server-filesystem `canister_snapshot_download`/`canister_snapshot_upload` and
+their `RawCanisterSnapshotDownload`, `RawCanisterSnapshotUpload` and
+`RawCanisterSnapshotId` DTOs are removed. Use the retained bounded
+`pocket_ic::snapshot::SnapshotTransfer` and explicit metadata/data operations;
+filesystem layout, pending snapshot custody and uncertain-effect recovery remain
+caller-owned. The existing `pic` snapshot adapter continues to use this owner.
+
+`BaselinePoolTimings` now has documented public fields. Replace `timings.build()`
+with `timings.build`, and likewise for `wait`, `restore`, `reset`, `readiness`,
+`validation`, `stale_teardown` and `total`. `BaselinePoolError::timings()` and
+the pool outcome's `timings` field keep their existing roles. Canic and other
+consumers using explicit timing getters must make this source migration.
 
 ## IC packet codecs
 
