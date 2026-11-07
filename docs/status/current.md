@@ -1,114 +1,85 @@
 # Current handoff
 
-## Upstream adoption — local, 2026-11-07
+## Platform/Wire adoption deployed — 2026-11-07
 
-Platform 0.24.0, Wire 0.17.8 and Shared Tooling 0.31.5 are adopted locally.
-Shared's exact revision is `b2026a118e38de4af1555c527af327cb604eacdf`; the
-canonical exporter verified all 175 selected payloads, unchanged from 0.31.4.
-Only its snapshot revision/version changed; no generic Shared fixtures replayed.
+Adoption source `877900d5` selects Platform 0.24.0, Wire 0.17.8 and Shared
+Tooling 0.31.5. Frozen batch `batch-__7k7VD8` completed both minor releases:
 
-The root Platform range is now 0.24.0. Wire's compatible minimum stays 0.17.0;
-the entry lock already selected 0.17.8. Only Platform changed from that entry
-lock; all unrelated selections and the exact management 0.11.0 pin are preserved.
-Runtime 0.19.5 and Types 0.18.2 retain their identities. Removed unconfigured
-decoder/key-derivation APIs had no callers here. Tools' exposed `DecodeLimits`
-and Testkit's native `CborError` now belong to Platform 0.24; pending ledgers
-therefore select Tools 0.85.0 and Testkit 0.92.0 without changing package versions.
-
-Focused Linux evidence is under `target/upstream-adoption-20261107/`: declaration
-and native/Wasm graph checks, affected-package native/Wasm Clippy, eleven Candid
-and four ledger cases, management DTO/public identity checks, four installed
-PocketIC 16.1 client cases and installed Wire acceptance pass. Formatting,
-snapshot integrity and doc links pass. No new native macOS or complete release
-gate is claimed. Changes remain uncommitted/unpublished; no artifacts removed.
-
-## Cleanup deployed — 2026-11-07
-
-Shared Tooling 0.31.4 and the four approved LOC cuts are integrated in `5d5c63df`.
-The empty-script-root preflight correction is `cf872e74`. One supplier-first
-frozen batch, `batch-vTGm2p2z`, qualified, tagged, pushed and published:
-
-| Group | Version | Release commit / annotated tag |
+| Group | Published version | Release commit / annotated tag |
 | --- | --- | --- |
-| Foundation (five public packages) | 0.75.0 | `81de54ec4b176a21418f996f229353c20a48f69a` / `foundation-v0.75.0` |
-| Build | 0.78.0 | `5bdfc9f697cd778f4b9639b4e36c2c0f92defd46` / `build-v0.78.0` |
-| Host Tools | 0.84.0 | `fbd155bf17628a81d7bf1302e1474de485bfec3c` / `tools-v0.84.0` |
-| Testkit | 0.91.0 | `5a2fe419cb0a0cea1198937b4de4bbd3e423d5eb` / `testkit-v0.91.0` |
+| Host Tools | 0.85.0 | `07ef09c8723ab79fc9e764fa77d7f1ccfc0482b6` / `tools-v0.85.0` |
+| Testkit | 0.92.0 | `ceb99e1c682a92026a80d743bfccada350319c08` / `testkit-v0.92.0` |
 
-All eight archives are published to crates.io. Their official sparse-index
-checksums and downloaded clean Git provenance match the respective release
-commits. Private Dev/probe follow Testkit 0.91.0 and remain unpublished.
-Text stays 0.74.2; Native stays 0.80.0. No unrelated group was released.
+Both commits/tags reached `dragginzgame/ic-tooling:main`; both crates are
+published to crates.io. Official sparse-index checksums and downloaded clean
+Git provenance match their respective release commits. Private Dev/probe follow
+Testkit 0.92.0 and remain unpublished. Foundation stays 0.75.0, Build 0.78.0,
+Text 0.74.2 and Native 0.80.0.
 
-Build removes compiler-recipe wrappers, cross-call prepared snapshots and rich
-output/lifecycle progress events. Independent batches retain shared resolution
-within each call, warm-hit/post-build source checks, exact publication and target
-lock ordering. Observers receive phase-aware heartbeats; completion and bounded
-diagnostics remain in results. Configuration-admission callback machinery stays
-intact; automatic approval review rejected its additional removal.
+Tools' bounded Candid adapter exposes Platform 0.24's `DecodeLimits`; Testkit's
+native client exposes its `CborError`. Consumers naming those types must align
+direct Platform dependencies. The removed unconfigured decoder/key-derivation
+APIs had no callers here. Management DTO identity remains exactly 0.11.0;
+Runtime 0.19.5 and Types 0.18.2 retain their identities. Protocol bytes, quotas,
+server custody and no-replay behavior remain unchanged. Wire's compatible
+minimum stays 0.17.0; 0.17.8 is the qualified released lock selection.
 
-The optional fixture benchmark driver, worker and reporting framework are gone,
-with their unused Process Git-provenance/RSS helpers. Installed Wire acceptance,
-the private control canister, archive qualification and the II fixture remain.
-Probe/Types dependencies are dev-only; normal private binaries also compile
-without test-feature unification. Tools/Testkit adopt Foundation 0.75's exposed
-type identities and therefore receive minor releases.
+Shared's exact revision is `b2026a118e38de4af1555c527af327cb604eacdf`. The
+canonical exporter verified all 175 selected payloads, unchanged from 0.31.4;
+only the snapshot's display version and source revision changed.
 
-[IcyDB #630 — Adopt Build 0.78 heartbeat-only progress configuration](https://github.com/dragginzgame/icydb/issues/630)
-owns its output-toggle removal and alignment of direct Host/Tools dependencies.
-No sibling source or lockfile was edited. See the [Build migration](../build/artifacts.md#build-078-migration).
+## Qualification and publication evidence
 
-## Qualification and custody
-
-Each group passed the complete 34-stage Linux gate on Rust 1.99.1, including
-workspace Clippy, native/Wasm graphs, isolated features, installed PocketIC 16.1,
-clean archive rebuilding/tests/doctests and workspace installed tests. The two
-unchanged fixture stages reused admitted source-bound receipts after Foundation;
+Both groups passed the complete 34-stage Linux gate on Rust 1.99.1, with zero
+failed stages: workspace Clippy, native/Wasm graphs, isolated features, installed
+PocketIC 16.1, packaged rebuilds/tests/doctests and workspace installed tests.
+The two unchanged fixture stages reused admitted receipts in the second group;
 group-specific adapter checks ran fresh. Native macOS qualification remains
 separate and asynchronous; no final macOS pass is claimed here.
 
-The captured checkout is `target/release-frozen/batch-vTGm2p2z/`. Its sealed
-proofs and all gate logs remain under `target/release-validation/` there:
+Captured checkout: `target/release-frozen/batch-__7k7VD8/`. Sealed proofs and
+logs are beneath its `target/release-validation/`:
 
-| Group | Gate directory |
+| Group | Gate / log directory |
 | --- | --- |
-| Foundation | `foundation-gate.EswMHl` |
-| Build | `build-gate.zBfOcO` |
-| Tools | `tools-gate.JbbF9P` |
-| Testkit | `testkit-gate.o5RGpe` |
+| Tools | `tools-gate.nE3hb9/logs/validation.e4aawE/` |
+| Testkit | `testkit-gate.x9l2qM/logs/validation.F12NBU/` |
 
-Durable Git, plans, publication receipts and completed schema-2 intent remain
-under `.git/release-state/frozen/batch-vTGm2p2z/`. Outer logs, reconciliation,
-registry readback and entry/current external-lock comparisons are under
-`target/deployment-loc-cut-20261107/`. All external package records are identical
-to the deployment entry lock; only owned release versions changed. Shared's
-reconcile helper fast-forwarded the ordinary checkout through `5a2fe419`.
-No deferred source edits or artifact retirement were needed.
+Durable Git, plans, publication receipts and the completed schema-2 intent remain
+under `.git/release-state/frozen/batch-__7k7VD8/`. Outer logs, registry readback,
+reconciliation and lock comparisons remain in
+`target/deployment-platform024-wire0178-20261107/`. The released external package
+records match the deployment entry lock exactly. Earlier focused adoption checks
+remain under `target/upstream-adoption-20261107/`.
 
-The first attempt, `batch-KNkEBs_1`, stopped in preflight before preparation,
-tags or uploads because retiring the compiler fixture emptied the scripts Rust
-root. The local caller now admits that empty root while still checking new Rust
-fixtures and symlinks; its focused regression passes. That failed attempt is
-retained and must not be resumed as a new deployment.
+## Ordinary checkout and deferred lock selections
 
-## Delivered inputs and earlier evidence
+The ordinary checkout was reconciled through `ceb99e1c` with Shared's helper.
+During frozen qualification another updater selected Wire 0.17.9, crypto-common
+0.1.6 and generic-array 0.14.9 in its lockfile. Those changes never entered the
+active release. Their exact original lock is durably preserved on local branch
+`preservation/tools-0.85-testkit-0.92-lock-11ad7694`, commit
+`6e6aa8ed159eba5492caca2385e6fe74e126f475` (parent `877900d5`).
 
-The deployed Shared revision was `dad6d15750db66726850710f5fb423921b652c8d`; all 175
-snapshot payloads match. Actual caller qualification, including fresh/contaminated
-release contexts and LOC scratch behavior, remains in `target/shared-tooling-0.31.4/`.
-The released lock preserves Platform 0.23.6, Runtime 0.19.5, Types 0.18.2,
-Wire 0.17.6 and the maintainer's other selected patches. Management DTO identity
-remains exactly 0.11.0. Earlier focused adoption evidence is under
-`target/platform-adoption-0.23.6/`.
+After checking no active ordinary-target build and proving the lock still matched
+that preservation commit, reconciliation fast-forwarded the release metadata.
+A clean three-way merge reapplied the deferred external selections while keeping
+Tools 0.85.0 and Testkit/Dev/probe 0.92.0. Structured comparisons prove that the
+restored external records equal the deferred lock and its owned records equal
+the delivered lock. Cargo.lock remains dirty for the next candidate; Wire
+0.17.9 has no qualification or publication claim in this deployment.
+Never restore an older lock backup over later user edits. No artifacts were retired.
 
-Focused cleanup evidence is under `target/loc-cut-20261107-2/`: production LOC
-fell from 30,798 to 29,438 and all classified Rust from 81,164 to 75,242, with
-zero unclassified LOC. Those counts exclude later metadata-only release changes.
-Earlier batch `batch-Q3Zp6GO6`, preservation refs and historical custody remain
-in the [prior handoff](https://github.com/dragginzgame/ic-tooling/blob/cf872e745e48c58d43e5a7cd25378e49bbdd184e/docs/status/current.md).
-Never restore old backups over newer edits or reinterpret old batch receipts.
+## Earlier delivery and recovery
 
-Normal releases already qualify, commit/tag/push and publish; do not repeat
-publication. Resume by the saved batch ID, preserve deferred edits before
+The prior cleanup batch `batch-vTGm2p2z` delivered Foundation 0.75.0, Build
+0.78.0, Tools 0.84.0 and Testkit 0.91.0. Its four LOC cuts, consumer migration
+links, sealed proofs, first preflight-only failure `batch-KNkEBs_1`, earlier
+preservation refs and historical custody remain in the
+[prior handoff](https://github.com/dragginzgame/ic-tooling/blob/877900d5d45776af3c2632e75bc899e89d59ae6c/docs/status/current.md).
+Do not resume failed old attempts as new deployments or reinterpret old receipts.
+
+Normal release commands already qualify, commit/tag/push and publish; do not
+repeat publication. Resume by saved batch ID, preserve deferred edits before
 reconciling and request explicit retirement scope. See [publishing](../publishing.md),
 [batch custody](../release-batches.md) and [validation scope](../design/release-validation.md).
