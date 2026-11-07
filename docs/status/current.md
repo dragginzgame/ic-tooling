@@ -1,147 +1,97 @@
 # Current handoff
 
-## Adapter boundaries and Platform adoption prepared — 2026-11-07
+## Tools 0.86.0 and Testkit 0.93.0 deployed — 2026-11-07
 
-The root now selects Platform 0.25.0 and Runtime 0.20.0. The lock selects Wire
-0.17.12 and matching Runtime/macros/guard 0.20.0, with Types 0.18.2 and management
-DTOs exactly 0.11.0 unchanged. The private Wasm canister already imports ordinary
-entrypoints through Runtime's `cdk`; removing Platform's facade macros requires
-no source migration here. Wire's compatible minimum stays 0.17.0, with no new
-field adapter, codec or payload format selected.
-
-[#340](https://github.com/dragginzgame/ic-tooling/issues/340) is implemented locally:
-Tools owns its five-field `candid::decode::DecodeLimits`, converted privately to
-Platform. Testkit owns `CborErrorKind`; match `ClientError::Cbor { kind, source }`
-instead of the former tuple variant. Original typed codec causes remain intact.
-These configuration/error APIs no longer require Platform type alignment.
-The [public identity inventory](../extraction.md#public-supplier-identities)
-records intentional external DTO, SDK, Wire and Foundation/Text boundaries.
-Platform's ICRC `Value` remains deliberately shared by the optional ledger
-adapter. Tools remains the sole passive `LedgerTip` owner; Query's verified
-result migration is [Query #118](https://github.com/dragginzgame/ic-query/issues/118).
-No sibling source was changed. Pending Tools 0.86.0 and Testkit 0.93.0 notes
-describe this one-time migration and retain the Runtime/deadline-fixture batch.
-Package versions remain Tools 0.85.0 and Testkit/Dev/probe 0.92.0. Changes are
-uncommitted; no release, publication or issue closure was performed.
-
-Focused #340 Linux evidence is under `target/public-boundaries-340/`: all 49
-selected cases, affected library/test Clippy and the source reconstruction and
-mutation guards passed. Cases cover supplier-independent consumer APIs, all
-five decoder allowances and aggregate charging, four codec failure kinds with
-typed causes, malformed read-state no replay, management identity and installed
-16.1 management/snapshots/certified metrics. The latest adaptation also binds
-the previous timing-fixture fix, repairing its missing provenance update without
-changing donor/upstream fingerprints. Earlier native/Wasm graph and installed
-Wire evidence remains under `target/platform-025-wire-01711-adoption-20261107/`
-and `target/runtime-020-adoption-20261107/`; the later graph inspection passed
-with Wire 0.17.12. No new native macOS proof is claimed.
-
-The #340 entry lock already contained Wire 0.17.12 and remains byte-identical.
-Earlier Runtime adoption, crypto-common 0.1.6, generic-array 0.14.9 and Windows
-selections remain intact; never overwrite newer user selections with old backups.
-
-## Platform/Wire adoption deployed — 2026-11-07
-
-Adoption source `877900d5` selects Platform 0.24.0, Wire 0.17.8 and Shared
-Tooling 0.31.5. Frozen batch `batch-__7k7VD8` completed both minor releases:
+The user selected both minor releases. Frozen batch `batch-GpvCzBKt` completed
+Git delivery and crates.io publication from implementation source `c86b9a27`:
 
 | Group | Published version | Release commit / annotated tag |
 | --- | --- | --- |
-| Host Tools | 0.85.0 | `07ef09c8723ab79fc9e764fa77d7f1ccfc0482b6` / `tools-v0.85.0` |
-| Testkit | 0.92.0 | `ceb99e1c682a92026a80d743bfccada350319c08` / `testkit-v0.92.0` |
+| Host Tools | 0.86.0 | `b5543ed3c4021d5a12435322e736d1e76f8a177a` / `tools-v0.86.0` |
+| Testkit | 0.93.0 | `91bc66f4285f85d8584a21b27abbb783f4162901` / `testkit-v0.93.0` |
 
-Both commits/tags reached `dragginzgame/ic-tooling:main`; both crates are
-published to crates.io. Official sparse-index checksums and downloaded clean
-Git provenance match their respective release commits. Private Dev/probe follow
-Testkit 0.92.0 and remain unpublished. Foundation stays 0.75.0, Build 0.78.0,
-Text 0.74.2 and Native 0.80.0.
+Both commits/tags reached `dragginzgame/ic-tooling:main`. Downloaded registry
+archives match official sparse-index checksums and their exact clean release
+commits. Private Dev/probe follow Testkit 0.93.0 and remain unpublished.
+Foundation stays 0.75.0, Build 0.78.0, Text 0.74.2 and Native 0.80.0.
 
-Tools' bounded Candid adapter exposes Platform 0.24's `DecodeLimits`; Testkit's
-native client exposes its `CborError`. Consumers naming those types must align
-direct Platform dependencies. The removed unconfigured decoder/key-derivation
-APIs had no callers here. Management DTO identity remains exactly 0.11.0;
-Runtime 0.19.5 and Types 0.18.2 retain their identities. Protocol bytes, quotas,
-server custody and no-replay behavior remain unchanged. Wire's compatible
-minimum stays 0.17.0; 0.17.8 is the qualified released lock selection.
+The released lock selects Platform 0.25.0, Runtime/macros/guard 0.20.0, Types
+0.18.2 and Wire 0.17.12. Management DTOs remain exactly 0.11.0. Shared Tooling
+remains 0.31.5, revision `b2026a118e38de4af1555c527af327cb604eacdf`.
 
-Shared's exact revision is `b2026a118e38de4af1555c527af327cb604eacdf`. The
-canonical exporter verified all 175 selected payloads, unchanged from 0.31.4;
-only the snapshot's display version and source revision changed.
+## Consumer migration and ownership
 
-## Qualification and publication evidence
+For [#340](https://github.com/dragginzgame/ic-tooling/issues/340), import all five
+Candid decoding allowances from `ic_host_tools::candid::decode::DecodeLimits`.
+Tools converts its configuration privately to Platform. Match Testkit failures
+with `ClientError::Cbor { kind, source }` and its `CborErrorKind`, replacing the
+former supplier-error tuple variant. Original typed causes remain intact.
+Ordinary configuration and error matching no longer require Platform identity
+alignment; optional supplier downcasts retain their explicit coupling.
 
-Both groups passed the complete 34-stage Linux gate on Rust 1.99.1, with zero
-failed stages: workspace Clippy, native/Wasm graphs, isolated features, installed
-PocketIC 16.1, packaged rebuilds/tests/doctests and workspace installed tests.
-The two unchanged fixture stages reused admitted receipts in the second group;
-group-specific adapter checks ran fresh. The subsequent native matrix on source
-`283bd149` passed Linux and macOS 15 Apple Silicon. macOS 15 Intel failed a
-deadline fixture: its 50 ms budget could expire after acceptance but before the
-expected polling request reached the scripted server. See the
-[hosted run](https://github.com/dragginzgame/ic-tooling/actions/runs/42372609530).
-The dependent MSRV summary failed with that native job; it was not a separate
-compiler failure. Intel qualification remains outstanding.
+The [identity inventory](../extraction.md#public-supplier-identities) records
+intentional shared boundaries. The optional ICRC ledger adapter still uses
+Platform's `Value`. Tools remains the sole passive `LedgerTip` owner; Query's
+verified-result migration stays in
+[Query #118](https://github.com/dragginzgame/ic-query/issues/118).
+No sibling source was edited. Codecs, protocol bytes, quotas, server custody,
+deadlines and no-replay behavior retain their owners and contracts.
 
-The follow-up fixture repair observes the poll before advancing Tokio's test
-clock. The snapshot cancellation case similarly waits for its accepted ingress
-request before dropping the future. Production deadlines and client behavior
-are unchanged. All 22 scripted failure-handling tests, focused Testkit Clippy,
-Rustfmt and normal/build dependency checks passed locally. Tokio's test clock
-feature remains dev-only, and the Wasm graph remains free of native dependencies.
-Evidence is under `target/intel-deadline-fixture-20261107/`; fresh native CI runs
-asynchronously after delivery. Testkit 0.92.1 has pending test notes only; no
-additional release or publication was performed for this repair.
+## Qualification
 
-Captured checkout: `target/release-frozen/batch-__7k7VD8/`. Sealed proofs and
-logs are beneath its `target/release-validation/`:
+Both complete 34-stage Linux gates passed on Rust 1.99.1 with zero failures:
+workspace Clippy, native/Wasm graphs, isolated features, installed PocketIC 16.1,
+packaged rebuilds/tests/doctests and workspace installed tests. Testkit's gate
+reused the two admitted unchanged evidence/retention fixtures. All other selected
+stages ran through their normal qualification. Final ordinary-tree formatting
+and locked metadata also passed after reconciliation.
+
+The native matrix was explicitly dispatched at published commit `91bc66f4`:
+[CI run 42392802957](https://github.com/dragginzgame/ic-tooling/actions/runs/42392802957).
+It runs asynchronously and is not cancelled by subsequent routine pushes.
+Linux, macOS 15 Intel and Apple Silicon hosted results are pending; no current
+native macOS pass is claimed. #340 remains open for required native acceptance.
+Do not poll solely to hold delivery open; revisit on an authorized maintenance pass.
+
+The latest PocketIC adaptation also binds the earlier timing-fixture handshakes,
+repairing their missing provenance update. The reconstruction and mutation guards
+passed without changing donor/upstream fingerprints. Focused #340 evidence (49
+cases, consumer contracts and typed causal chains) remains under
+`target/public-boundaries-340/`.
+
+## Frozen delivery evidence and custody
+
+Captured checkout: `target/release-frozen/batch-GpvCzBKt/`. Sealed qualification
+records and logs are beneath its `target/release-validation/`:
 
 | Group | Gate / log directory |
 | --- | --- |
-| Tools | `tools-gate.nE3hb9/logs/validation.e4aawE/` |
-| Testkit | `testkit-gate.x9l2qM/logs/validation.F12NBU/` |
+| Tools | `tools-gate.9pGM30/logs/validation.DDNGL8/` |
+| Testkit | `testkit-gate.4LUu75/logs/validation.AxRNv1/` |
 
 Durable Git, plans, publication receipts and the completed schema-2 intent remain
-under `.git/release-state/frozen/batch-__7k7VD8/`. Outer logs, registry readback,
-reconciliation and lock comparisons remain in
-`target/deployment-platform024-wire0178-20261107/`. The released external package
-records match the deployment entry lock exactly. Earlier focused adoption checks
-remain under `target/upstream-adoption-20261107/`.
+under `.git/release-state/frozen/batch-GpvCzBKt/`. Outer logs, registry/VCS
+readback, CI identity and reconciliation comparisons remain under
+`target/deployment-tools086-testkit093-20261107/`.
 
-## Ordinary checkout and deferred lock selections
+## Ordinary checkout and deferred selections
 
-The ordinary checkout was reconciled through `ceb99e1c` with Shared's helper.
-During frozen qualification another updater selected Wire 0.17.9, crypto-common
-0.1.6 and generic-array 0.14.9 in its lockfile. Those changes never entered the
-active release. Their exact original lock is durably preserved on local branch
-`preservation/tools-0.85-testkit-0.92-lock-11ad7694`, commit
-`6e6aa8ed159eba5492caca2385e6fe74e126f475` (parent `877900d5`).
+Shared's reconcile helper fast-forwarded ordinary main through `91bc66f4`.
+A clean three-way merge reapplied the user's crypto-common 0.1.6 and generic-array
+0.14.9 selections, which were excluded from the release. Cargo.lock remains
+dirty. Structured comparisons prove its external records equal the deferred
+entry and its owned records equal the delivered Tools/Testkit versions.
 
-After checking no active ordinary-target build and proving the lock still matched
-that preservation commit, reconciliation fast-forwarded the release metadata.
-A clean three-way merge reapplied the deferred external selections while keeping
-Tools 0.85.0 and Testkit/Dev/probe 0.92.0. Structured comparisons prove that the
-restored external records equal the deferred lock and its owned records equal
-the delivered lock. Cargo.lock remains dirty for the next candidate; Wire
-0.17.9 has no qualification or publication claim in this deployment.
+The exact pre-release lock is durably preserved on local branch
+`preservation/tools-0.86-testkit-0.93-lock-fa737230`, commit
+`12e7a4ae515b607ede137a4603a940dba3fddd87` (parent `fa737230`).
+Never restore an older backup over newer user edits. No artifacts were retired.
 
-Before the CI fixture follow-up, another updater advanced the live deferred Wire
-selection to 0.17.10, retaining crypto-common 0.1.6 and generic-array 0.14.9.
-That newer lock is byte-preserved against
-`target/intel-deadline-fixture-20261107/entry-Cargo.lock` and excluded from the
-fixture commit. It is newer than the preservation branch above; it has no release
-qualification claim. Never restore an older lock backup over later user edits.
-No artifacts were retired.
-
-## Earlier delivery and recovery
-
-The prior cleanup batch `batch-vTGm2p2z` delivered Foundation 0.75.0, Build
-0.78.0, Tools 0.84.0 and Testkit 0.91.0. Its four LOC cuts, consumer migration
-links, sealed proofs, first preflight-only failure `batch-KNkEBs_1`, earlier
-preservation refs and historical custody remain in the
-[prior handoff](https://github.com/dragginzgame/ic-tooling/blob/877900d5d45776af3c2632e75bc899e89d59ae6c/docs/status/current.md).
-Do not resume failed old attempts as new deployments or reinterpret old receipts.
-
-Normal release commands already qualify, commit/tag/push and publish; do not
-repeat publication. Resume by saved batch ID, preserve deferred edits before
-reconciling and request explicit retirement scope. See [publishing](../publishing.md),
-[batch custody](../release-batches.md) and [validation scope](../design/release-validation.md).
+Earlier completed batches `batch-__7k7VD8` and `batch-vTGm2p2z`, old preservation
+refs and prior recovery custody remain in the
+[preceding handoff](https://github.com/dragginzgame/ic-tooling/blob/c86b9a27685b7bf81ad4580e951d3e312735b762/docs/status/current.md).
+Do not resume failed historical attempts as new releases or reinterpret receipts.
+Normal releases already publish; do not run a second `make publish`. Resume a
+specific batch by ID, preserve deferred edits before reconciliation and obtain
+explicit scope before retirement. See [publishing](../publishing.md),
+[batch custody](../release-batches.md) and [validation](../design/release-validation.md).
