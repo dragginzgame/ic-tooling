@@ -163,7 +163,7 @@ consumers using explicit timing getters must make this source migration.
 
 ## IC packet codecs
 
-Platform 0.23 owns read-state envelope encoding and certificate/subnet-metrics decoding.
+Platform 0.24 owns read-state envelope encoding and certificate/subnet-metrics decoding.
 Testkit retains the HTTP exchange, status admission and certificate tree lookup.
 `ClientError::Cbor` now carries `ic_platform::certification::cbor::CborError`;
 code naming the former backend error type must adopt that owner. Testkit no

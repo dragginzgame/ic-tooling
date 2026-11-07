@@ -1637,9 +1637,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform"
-version = "0.23.6"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09d519af82b2eadafc4b56ecd6a72b829f0ed13f38b4fcc853a8f79ec7f68a6e"
+checksum = "6f2bafc5da7b457cb0efdb622151e74c3367740d26eb8892f72be2c9b4683c53"
 dependencies = [
  "candid",
  "candid_parser",
@@ -1803,9 +1803,9 @@ dependencies = [
 
 [[package]]
 name = "ic-wire"
-version = "0.17.6"
+version = "0.17.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2703592b213ea4d1c2f89aa25f92b8f532a4d698915ae5ad6fb61a51052db40"
+checksum = "a9991e41a13c852e7c5a426f9c06b7b4f515d16d238e445d85d37c11986caed0"
 dependencies = [
  "bytemuck",
  "postcard",

@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.31.4
+# version	0.31.5
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	dad6d15750db66726850710f5fb423921b652c8d
+revision	b2026a118e38de4af1555c527af327cb604eacdf
 # entrypoint	.githooks/pre-commit
 # entrypoint	.github/actions/prepare-common-tools/action.yml
 # entrypoint	.github/actions/retain-failure-evidence/action.yml

@@ -6,6 +6,20 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.92.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.24's `CborError` identity in native client failures. Align
+  direct Platform dependencies when inspecting those errors. Management DTOs
+  remain exactly 0.11.0; server custody, deadlines and protocol behavior retain
+  their existing contracts.
+
+### 🔧 Changed
+
+- Qualify Wire 0.17.8 for native calls and the Wasm control canister without
+  raising the compatible Wire minimum or changing owned payload bytes.
+
 ## [0.91.0] - 2026-11-07
 
 ### ⚠️ Breaking

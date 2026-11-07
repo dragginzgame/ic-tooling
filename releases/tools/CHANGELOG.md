@@ -4,6 +4,14 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.85.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.24. The bounded Candid adapter now accepts that version's
+  `DecodeLimits`; align direct Platform dependencies when supplying limits.
+  Existing quotas, admission and typed decoder failures retain their behavior.
+
 ## [0.84.0] - 2026-11-07
 
 ### ⚠️ Breaking

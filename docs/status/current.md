@@ -1,5 +1,27 @@
 # Current handoff
 
+## Upstream adoption — local, 2026-11-07
+
+Platform 0.24.0, Wire 0.17.8 and Shared Tooling 0.31.5 are adopted locally.
+Shared's exact revision is `b2026a118e38de4af1555c527af327cb604eacdf`; the
+canonical exporter verified all 175 selected payloads, unchanged from 0.31.4.
+Only its snapshot revision/version changed; no generic Shared fixtures replayed.
+
+The root Platform range is now 0.24.0. Wire's compatible minimum stays 0.17.0;
+the entry lock already selected 0.17.8. Only Platform changed from that entry
+lock; all unrelated selections and the exact management 0.11.0 pin are preserved.
+Runtime 0.19.5 and Types 0.18.2 retain their identities. Removed unconfigured
+decoder/key-derivation APIs had no callers here. Tools' exposed `DecodeLimits`
+and Testkit's native `CborError` now belong to Platform 0.24; pending ledgers
+therefore select Tools 0.85.0 and Testkit 0.92.0 without changing package versions.
+
+Focused Linux evidence is under `target/upstream-adoption-20261107/`: declaration
+and native/Wasm graph checks, affected-package native/Wasm Clippy, eleven Candid
+and four ledger cases, management DTO/public identity checks, four installed
+PocketIC 16.1 client cases and installed Wire acceptance pass. Formatting,
+snapshot integrity and doc links pass. No new native macOS or complete release
+gate is claimed. Changes remain uncommitted/unpublished; no artifacts removed.
+
 ## Cleanup deployed — 2026-11-07
 
 Shared Tooling 0.31.4 and the four approved LOC cuts are integrated in `5d5c63df`.
@@ -69,9 +91,9 @@ root. The local caller now admits that empty root while still checking new Rust
 fixtures and symlinks; its focused regression passes. That failed attempt is
 retained and must not be resumed as a new deployment.
 
-## Adopted inputs and earlier evidence
+## Delivered inputs and earlier evidence
 
-Shared's exact revision is `dad6d15750db66726850710f5fb423921b652c8d`; all 175
+The deployed Shared revision was `dad6d15750db66726850710f5fb423921b652c8d`; all 175
 snapshot payloads match. Actual caller qualification, including fresh/contaminated
 release contexts and LOC scratch behavior, remains in `target/shared-tooling-0.31.4/`.
 The released lock preserves Platform 0.23.6, Runtime 0.19.5, Types 0.18.2,
