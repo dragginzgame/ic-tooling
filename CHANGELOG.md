@@ -1,5 +1,13 @@
 # IC Tooling release notes
 
+## Shared Tooling 0.31.2 repair — 2026-11-07
+
+### 🩹 Fixed
+
+- Adopt Shared's committed checksum-parser fix for macOS system Bash 3.2.
+  Preserve strict backend failure and malformed-output rejection; crate APIs
+  and the completed Build 0.77.0 / Testkit 0.90.0 publication remain unchanged.
+
 ## Shared Tooling 0.31 deployment — 2026-11-06
 
 ### 🔧 Changed
