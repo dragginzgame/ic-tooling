@@ -39,6 +39,12 @@ The maintainer authorized frozen deployment of this batch. Source integration,
 complete Linux gates and registry delivery are now in progress. No artifacts
 were retired.
 
+The first captured attempt, `batch-KNkEBs_1`, stopped in preflight before any
+version preparation, tags or uploads: the retired standalone compiler fixture
+left an empty scripts source root. The local caller now handles that empty root
+while checking new script Rust and symlinks. Actual source admission and focused
+caller regression pass; the failed batch is retained and will not be reused.
+
 ## Shared Tooling 0.31.4 adoption — local, 2026-11-07
 
 The snapshot now selects `dad6d15750db66726850710f5fb423921b652c8d` through the

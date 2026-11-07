@@ -23,6 +23,11 @@ reset, release, tag or upload is implied by establishing this group.
   See the [migration guide](../../docs/build/artifacts.md#pending-build-078-migration)
   and [IcyDB #630 — Adopt Build 0.78 heartbeat-only progress configuration](https://github.com/dragginzgame/icydb/issues/630).
 
+### 🧪 Testing
+
+- Admit the empty standalone-script source root after retiring the compiler
+  fixture, while retaining Candid admission for new script fixtures and symlinks.
+
 ## [0.77.0] - 2026-11-07
 
 ### ⚠️ Breaking

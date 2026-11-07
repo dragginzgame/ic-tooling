@@ -19,7 +19,7 @@ while IFS= read -r path; do
     cp "$root/$path" "$fixture/$path"
 done <<< "$paths"
 mkdir -p "$fixture/apps" "$fixture/docs" "$fixture/scripts/fixtures/native-consumer"
-for path in apps/inventory.rs docs/inventory.rs scripts/fixtures/native-consumer/main.rs; do
+for path in apps/inventory.rs docs/inventory.rs; do
     printf '// Source-mask fixture data, never compiled.\n' > "$fixture/$path"
 done
 cat > "$fixture/scripts/ci/check-dependency-pins.sh" <<'STUB'
@@ -34,14 +34,14 @@ make --no-print-directory -C "$fixture" dependency-pins-check candid-boundary-ch
 rm "$fixture/metadata-called"
 
 refuse() {
-    local label=$1 path=$2 status=0
+    local label=$1 diagnostic=${3:-$2:} status=0
     make --no-print-directory -C "$fixture" dependency-pins-check RELEASE_GROUP=native > "$fixture/$label.log" 2>&1 || status=$?
     if [[ $status == 0 || -e "$fixture/metadata-called" ]]; then
         cat "$fixture/$label.log" >&2
         echo 'Candid source admission did not stop metadata validation' >&2
         exit 1
     fi
-    grep -F "$path:" "$fixture/$label.log" >/dev/null
+    grep -F "$diagnostic" "$fixture/$label.log" >/dev/null
 }
 # These are scanner input data, not executable Rust injection. Existing ledger
 # allowance must not admit another declaration through Platform's re-export.
@@ -57,5 +57,8 @@ use ic_platform::candid::contract::CandidType as ExternalCodec;
 pub struct FixtureReport;
 RUST
 refuse independent-fixture scripts/fixtures/native-consumer/main.rs
+rm "$fixture/scripts/fixtures/native-consumer/main.rs"
+ln -s "$fixture/docs" "$fixture/scripts/fixtures/source-alias"
+refuse script-symlink scripts/fixtures/source-alias 'symlink in selected sources:'
 fixture_complete=true
-echo 'Consumer Candid admission, single Make execution and owned/fixture rejection passed'
+echo 'Consumer Candid admission, empty script root, single Make execution and owned/fixture/symlink rejection passed'

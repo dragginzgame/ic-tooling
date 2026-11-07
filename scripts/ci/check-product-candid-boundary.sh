@@ -7,4 +7,10 @@ root="${BASH_SOURCE[0]}"
 root="$(cd -P "${root%/*}/../.." && pwd -P)"
 # One complete policy/inventory, including tests and independent fixture drivers.
 # Never filter this selection by RELEASE_GROUP while retaining the full policy.
-exec perl "$root/scripts/ci/check-candid-boundary.pl" "$root" ci/candid-boundary.json crates apps scripts docs
+# The retired compiler fixture left no authored Rust under scripts. Keep that
+# optional root covered whenever a source or a forbidden symlink is present.
+sources=(crates apps docs)
+script_input=$(find "$root/scripts" -type d \( -name target -o -name .git -o -name .tools -o -name node_modules \) -prune \
+    -o \( -name '*.rs' -o -type l \) -print -quit)
+[[ -z "$script_input" ]] || sources+=(scripts)
+exec perl "$root/scripts/ci/check-candid-boundary.pl" "$root" ci/candid-boundary.json "${sources[@]}"
