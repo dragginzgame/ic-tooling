@@ -1,3 +1,8 @@
+> **Historical: retired by the current workspace cleanup.**
+> Compiler-recipe qualification is no longer an active workflow. The following record applies only
+> to its [original source](https://github.com/dragginzgame/ic-tooling/tree/efb49a5981d4082bfa5e780b4c4323621871d754).
+> Current contracts are in the [Build guide](artifacts.md) and the [Testkit host guide](../testkit/hosts.md).
+
 # Effective Wasm recipes
 
 Build's opt-in `cargo::rustc_recipe::RustcRecipe` carries caller-qualified target
@@ -95,7 +100,7 @@ input and transaction output, and execute the same ordered flags. Keep both
 records alive while consuming results. There is no optimizer dependency or
 application optimization profile in Build.
 
-The [qualification driver](../../scripts/fixtures/wasm-recipe/main.rs) demonstrates
+The [qualification driver](https://github.com/dragginzgame/ic-tooling/blob/efb49a5981d4082bfa5e780b4c4323621871d754/scripts/fixtures/wasm-recipe/main.rs) demonstrates
 this using `wasm-opt` 132 with `-Oz`, debug stripping and explicit admitted Wasm
 feature switches. Those are fixture choices, not deployment defaults. The
 existing post-link cache tests cover ordered-argument and tool-byte invalidation.

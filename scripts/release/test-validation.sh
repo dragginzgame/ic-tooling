@@ -25,14 +25,13 @@ bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$root" "$fixture/checkout"
 rm "$fixture/checkout/source-metadata.json"
 bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$fixture/checkout"
 # Preserve the known runtime caller surfaces for Text's reverse-consumer mapping.
-for path in crates/ic-host-tools/src/icp_project/mod.rs crates/ic-testkit-dev/src/fixture_reuse_driver/mod.rs; do
+for path in crates/ic-host-tools/src/icp_project/mod.rs crates/ic-testkit-dev/src/bin/check_packages.rs; do
     mkdir -p "$fixture/checkout/${path%/*}"
     cp "$root/$path" "$fixture/checkout/$path"
 done
 # Keep the actual, explicitly qualified reverse-call surfaces for Tools/Build.
-for path in crates/ic-testkit-dev/tests/public_contracts.rs crates/ic-testkit-dev/tests/canister_benchmark.rs \
-    crates/ic-testkit-dev/src/bin/check_packages.rs crates/ic-testkit-dev/src/bin/tests/mod.rs \
-    crates/ic-testkit-dev/src/fixture_reuse_driver/preparation/mod.rs; do
+for path in crates/ic-testkit-dev/tests/public_contracts.rs crates/ic-testkit-dev/tests/canister_wire.rs \
+    crates/ic-testkit-dev/src/bin/check_packages.rs crates/ic-testkit-dev/src/bin/tests/mod.rs; do
     mkdir -p "$fixture/checkout/${path%/*}"
     cp "$root/$path" "$fixture/checkout/$path"
 done
@@ -150,7 +149,7 @@ STUB
         if [[ $selected == tools ]]; then
             grep -F -- '--package ic-host-tools' "$ROUTING_EVENTS" >/dev/null
             grep -F 'test-tools-ledger-evidence' "$ROUTING_EVENTS" >/dev/null
-            absent grep -F -- '--test canister_benchmark' "$ROUTING_EVENTS"
+            absent grep -F -- '--test canister_wire' "$ROUTING_EVENTS"
             : > "$ROUTING_EVENTS"
             refuse env PATH="$fixture/routing-bin:$PATH" RELEASE_GROUP=tools ROUTING_FAIL=profiles \
                 "$real_bash" "$root/scripts/release/validation-focus.sh" tests
@@ -158,7 +157,7 @@ STUB
         else
             grep -Fx 'make --no-print-directory tools-check' "$ROUTING_EVENTS" >/dev/null
             grep -F -- '--package ic-build' "$ROUTING_EVENTS" >/dev/null
-            grep -F -- '--test canister_benchmark' "$ROUTING_EVENTS" >/dev/null
+            grep -F -- '--test canister_wire' "$ROUTING_EVENTS" >/dev/null
             absent grep -F 'test-tools-ledger-evidence' "$ROUTING_EVENTS"
         fi
     done

@@ -1,5 +1,5 @@
 # Engineering contracts by task
-<!-- Shared companions: docs/candid-boundary.md docs/principles/rust-code-hygiene.md docs/tool-store-maintenance.md rules/agent-maintenance.md rules/change-reporting.md rules/contributions.md rules/rust-workspaces.md tasks/README.md tasks/cargo-tool-versions.md -->
+<!-- Shared companions: docs/candid-boundary.md docs/release-batches.md docs/principles/rust-code-hygiene.md docs/tool-store-maintenance.md rules/agent-maintenance.md rules/change-reporting.md rules/contributions.md rules/rust-workspaces.md tasks/README.md tasks/cargo-tool-versions.md -->
 
 These contracts supplement the [engineering baseline](../DRAGGINZGAME.md).
 Read the applicable sections when the task touches their subject. This file is
@@ -710,6 +710,12 @@ contracts; ordinary development does not require rereading these mechanics.
   trees and intermediate downloads. Create unique per-run directories there so
   explicit workspace cleanup reclaims them along with compiler outputs. Do not
   default to repository `.tmp/`, `tmp/` or system `/tmp` merely for convenience.
+- Every command owning outputs beneath `target/` must create its required parent
+  directories before allocating scratch or writing outputs, including after
+  `cargo clean`. Never require a previous build or manual `mkdir`. Apply the same
+  rule to caller-selected scratch roots. If cleanup removes active captured
+  inputs, fail clearly and require a fresh run; do not recreate missing inputs
+  as empty files or report partial results as complete.
 - Scratch is not source custody. Lasting implementation, unique patches and
   contribution checkouts follow the [durable work contract](contributions.md#durable-work-and-checkout-location)
   and must survive routine deletion of `/tmp`, caches and `target/`. Keep actual

@@ -1,5 +1,15 @@
 # IC Tooling release notes
 
+## Shared Tooling 0.31.4 adoption
+
+### 🩹 Fixed
+
+- Adopt the release-command checker repair for the
+  [three-host CI failure](https://github.com/dragginzgame/ic-tooling/actions/runs/42357031568).
+  The fixture substitutes both runners and checks fresh outer dispatch and
+  captured inner dispatch without inheriting a parent release's settings.
+- Refresh shared LOC scratch diagnostics and release-guide companion links.
+
 ## Shared Tooling 0.31.2 repair — 2026-11-07
 
 ### 🩹 Fixed

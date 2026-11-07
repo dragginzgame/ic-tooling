@@ -279,13 +279,13 @@ network time. Zero budgets still permit the initial check; failures stop immedia
 
 Depend on `ic-build` directly for Cargo/Wasm recipes, exact inputs, retained caches
 and artifact transactions. Testkit owns simulator integration. The private probe
-and benchmark drivers demonstrate this dependency direction without a re-export.
+and installed Wire test demonstrate this dependency direction without a re-export.
 
-## Fixture reuse measurement
+## Installed Wire qualification
 
-The [fixture reuse workload](fixture-reuse-benchmark.md) compares fresh and pooled
-paths with explicit close and separate server teardown measurements. Collection
-and reporting belong to the private development driver, not the public library.
+The private development package retains an installed Wire control-canister test.
+The optional fixture-reuse benchmark driver and reporting workflow are retired;
+[historical measurements](fixture-reuse-benchmark.md) retain their original scope.
 
 ## Deterministic principals
 

@@ -6,6 +6,28 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.91.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Foundation 0.75's public execution and cleanup error identities. Align
+  direct Host dependencies when inspecting Testkit's startup and teardown errors;
+  server custody and protocol behavior retain their existing contracts.
+
+### 🔧 Changed
+
+- Qualify locked Platform 0.23.6, Runtime 0.19.5 and Types 0.18.2 across the
+  native client and Wasm probe. Preserve PocketIC 16.1's exact management DTO
+  identity and existing compatible dependency ranges.
+
+### 🧹 Cleanup
+
+- Retire the private fixture benchmark driver, worker and report framework.
+  Keep the installed Wire acceptance test and private control canister; archive
+  qualification and the explicit Internet Identity fixture remain supported.
+  Probe/Types dependencies are test-only, and unused native development
+  dependencies and file-capture features are removed.
+
 ## [0.90.0] - 2026-11-07
 
 ### ⚠️ Breaking

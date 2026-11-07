@@ -1,4 +1,4 @@
-//! Prepared source leases and shared input resolution for independent build batches.
+//! Shared input resolution within one independent build batch.
 //! Cache acquisition, publication and target maintenance stay with the parent.
 use super::{
     DiscoveredBuildInputs, LabeledPathDigestCache, ParsedCargoMetadata, ProgressReporter,
@@ -10,17 +10,12 @@ use std::{
     collections::{BTreeMap, HashMap},
     ffi::{OsStr, OsString},
     path::Path,
-    sync::{
-        Arc, RwLock,
-        atomic::{AtomicUsize, Ordering},
-    },
     time::{Duration, Instant},
 };
 
-pub(in crate::artifacts) struct WasmBuildBatchInputResolver<'a, 'session> {
+pub(in crate::artifacts) struct WasmBuildBatchInputResolver<'a> {
     entries: Vec<BatchResolutionEntry<'a>>,
     groups: Vec<BatchResolutionGroup>,
-    reuse: Option<&'session WasmBuildInputSnapshotState>,
     metrics: WasmBuildBatchInputMetrics,
 }
 
@@ -28,14 +23,6 @@ struct BatchResolutionEntry<'a> {
     spec: &'a WasmBuildSpec,
     group: usize,
     resolved: Option<Result<ResolvedCargoBuildInputs, (WasmBuildPhase, WasmBuildError)>>,
-}
-
-pub(in crate::artifacts) struct WasmBuildInputSnapshotState {
-    snapshots: Vec<(WasmBuildSpec, ResolvedCargoBuildInputs)>,
-    preparation_metrics: WasmBuildBatchInputMetrics,
-    preparation_timings: WasmInputResolutionTimings,
-    reader_reuses: AtomicUsize,
-    invalidation: Arc<RwLock<bool>>,
 }
 
 struct BatchResolutionGroup {
@@ -51,7 +38,6 @@ struct DiscoveredBatchInputs {
 pub(in crate::artifacts) struct WasmBuildBatchInputMetrics {
     pub(in crate::artifacts) runs: usize,
     pub(in crate::artifacts) reuses: usize,
-    pub(in crate::artifacts) prepared_reuses: usize,
 }
 
 #[derive(Eq, Hash, PartialEq)]
@@ -63,104 +49,11 @@ struct BatchResolutionKey<'a> {
     environment: &'a BTreeMap<OsString, OsString>,
 }
 
-impl WasmBuildInputSnapshotState {
-    pub(in crate::artifacts) fn prepare(specs: &[WasmBuildSpec]) -> Result<Self, WasmBuildError> {
-        for spec in specs {
-            validate_spec(spec)?;
-        }
-        let mut resolver = WasmBuildBatchInputResolver::new(specs, None)
-            .map_err(|_| WasmBuildError::PreparedInputSnapshotInvalidated)?;
-        let mut snapshots = Vec::with_capacity(specs.len());
-        let mut preparation_timings = WasmInputResolutionTimings::default();
-        let mut progress = ProgressReporter::silent();
-        for (index, spec) in specs.iter().enumerate() {
-            let mut prepared_input = resolver.resolve(index, &mut progress)?;
-            preparation_timings.include(prepared_input.timings);
-            prepared_input.timings = WasmInputResolutionTimings::default();
-            snapshots.push((spec.clone(), prepared_input));
-        }
-        Ok(Self {
-            snapshots,
-            preparation_metrics: resolver.metrics(),
-            preparation_timings,
-            reader_reuses: AtomicUsize::new(0),
-            invalidation: Arc::new(RwLock::new(false)),
-        })
-    }
-
-    fn admit(&self, specs: &[&WasmBuildSpec]) -> Result<Vec<ResolvedCargoBuildInputs>, usize> {
-        let matched = specs
-            .iter()
-            .enumerate()
-            .map(|(index, spec)| {
-                self.snapshots
-                    .iter()
-                    .find(|(candidate, _)| candidate == *spec)
-                    .map(|(_, snapshot)| snapshot.clone())
-                    .ok_or(index)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let _ = self
-            .reader_reuses
-            .try_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
-                Some(current.saturating_add(matched.len()))
-            });
-        Ok(matched)
-    }
-
-    pub(in crate::artifacts) const fn specification_count(&self) -> usize {
-        self.snapshots.len()
-    }
-
-    pub(in crate::artifacts) const fn preparation_metrics(&self) -> WasmBuildBatchInputMetrics {
-        self.preparation_metrics
-    }
-
-    pub(in crate::artifacts) const fn preparation_timings(&self) -> WasmInputResolutionTimings {
-        self.preparation_timings
-    }
-
-    pub(in crate::artifacts) fn reader_reuses(&self) -> usize {
-        self.reader_reuses.load(Ordering::Relaxed)
-    }
-
-    pub(in crate::artifacts) fn is_invalidated(&self) -> bool {
-        *self
-            .invalidation
-            .read()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-    }
-
-    fn invalidate(&self) {
-        *self
-            .invalidation
-            .write()
-            .unwrap_or_else(std::sync::PoisonError::into_inner) = true;
-    }
-
-    fn invalidation(&self) -> Arc<RwLock<bool>> {
-        Arc::clone(&self.invalidation)
-    }
-}
-
-impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
-    pub(in crate::artifacts) fn new(
-        specs: impl IntoIterator<Item = &'a WasmBuildSpec>,
-        reuse: Option<&'session WasmBuildInputSnapshotState>,
-    ) -> Result<Self, usize> {
-        let specs = specs.into_iter().collect::<Vec<_>>();
-        let prepared = match reuse.as_ref() {
-            Some(snapshot) => Some(snapshot.admit(&specs)?),
-            _ => None,
-        };
+impl<'a> WasmBuildBatchInputResolver<'a> {
+    pub(in crate::artifacts) fn new(specs: impl IntoIterator<Item = &'a WasmBuildSpec>) -> Self {
         let mut groups_by_key = HashMap::new();
         let mut groups = Vec::<BatchResolutionGroup>::new();
-        let mut entries = Vec::with_capacity(specs.len());
-        let mut metrics = WasmBuildBatchInputMetrics::default();
-        let mut prepared = prepared.map(|prepared| {
-            metrics.prepared_reuses = prepared.len();
-            prepared.into_iter()
-        });
+        let mut entries = Vec::new();
         for (index, spec) in specs.into_iter().enumerate() {
             let group = *groups_by_key
                 .entry(BatchResolutionKey::for_spec(spec))
@@ -174,33 +67,18 @@ impl<'a, 'session> WasmBuildBatchInputResolver<'a, 'session> {
             entries.push(BatchResolutionEntry {
                 spec,
                 group,
-                resolved: prepared.as_mut().map(|snapshots| {
-                    Ok(snapshots
-                        .next()
-                        .expect("admitted snapshot must cover every specification"))
-                }),
+                resolved: None,
             });
         }
-        Ok(Self {
+        Self {
             entries,
             groups,
-            reuse,
-            metrics,
-        })
+            metrics: WasmBuildBatchInputMetrics::default(),
+        }
     }
 
     pub(in crate::artifacts) const fn metrics(&self) -> WasmBuildBatchInputMetrics {
         self.metrics
-    }
-
-    pub(in crate::artifacts) fn invalidate_source_lease(&self) {
-        if let Some(snapshot) = self.reuse {
-            snapshot.invalidate();
-        }
-    }
-
-    pub(in crate::artifacts) fn prepared_invalidation(&self) -> Option<Arc<RwLock<bool>>> {
-        self.reuse.map(WasmBuildInputSnapshotState::invalidation)
     }
 
     pub(super) fn resolve(
@@ -350,6 +228,3 @@ impl<'a> BatchResolutionKey<'a> {
         }
     }
 }
-
-#[cfg(all(test, unix))]
-mod tests;

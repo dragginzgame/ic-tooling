@@ -20,8 +20,8 @@ retaining their guards, explicit codecs and existing exported method names.
 ## Current Fixtures
 
 - `ic-testkit-perf-probe`: exercises bounded Wire calls, deterministic work,
-  caller identity, snapshot-contained state and a deliberate trap. The private
-  fixture-reuse driver also uses this workload to compare fresh and pooled runs.
+  caller identity, snapshot-contained state and a deliberate trap. The installed
+  Wire acceptance test qualifies this workload directly.
 
 Install the Wasm target for the repository toolchain first:
 
@@ -41,7 +41,7 @@ This builds `ic_testkit_perf_probe.wasm` under
 Run only the installed Wire fixture test with:
 
 ```sh
-cargo test -p ic-testkit-dev --locked --test canister_benchmark \
+cargo test -p ic-testkit-dev --locked --test canister_wire \
   perf_probe_wire_calls_preserve_state_and_typed_failures -- --exact --nocapture
 ```
 

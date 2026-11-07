@@ -6,6 +6,23 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.78.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Remove the compiler-recipe wrapper and its executable. Consumers own their
+  Cargo compiler configuration; generic Build no longer records wrapper recipes.
+- Remove cross-call prepared input snapshots and source leases. Resolve each
+  independent batch through the ordinary batch entrypoint; compatible entries
+  still share resolution within that call. Warm-cache and post-build source
+  revalidation, exact publication and shared-target lock ordering remain.
+- Emit phase-aware heartbeats only. Remove output/lifecycle progress variants,
+  output toggles and disabled-heartbeat settings; the interval getter returns
+  `Duration`. Use silent entrypoints or batch `None` to disable observation,
+  and returned results for completion, cache status and bounded diagnostics.
+  See the [migration guide](../../docs/build/artifacts.md#pending-build-078-migration)
+  and [IcyDB #630 — Adopt Build 0.78 heartbeat-only progress configuration](https://github.com/dragginzgame/icydb/issues/630).
+
 ## [0.77.0] - 2026-11-07
 
 ### ⚠️ Breaking

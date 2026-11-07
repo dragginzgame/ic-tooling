@@ -385,50 +385,34 @@ fn external_command_keeps_caller_failure_deadline_and_cancellation_policy() {
 }
 
 #[test]
-fn prepared_metadata_sharing_preserves_distinct_example_selections() {
-    use ic_build::artifacts::{LabeledWasmBuildSpec, WasmBuildBatchConfig, WasmBuildInputSnapshot};
+fn batch_metadata_sharing_preserves_distinct_example_selections() {
+    use ic_build::artifacts::{
+        LabeledWasmBuildSpec, WasmBuildBatchConfig, build_wasm_canisters_cached_batch,
+    };
     let root = workspace();
     let first = recipe(&root).with_isolated_builds();
     let second = first.clone().with_example("other-probe");
-    let guard = std::sync::Mutex::new(());
-    let guard = guard.lock().unwrap();
-    let snapshot = WasmBuildInputSnapshot::prepare_assuming_sources_immutable(
-        &guard,
-        &[first.clone(), second.clone()],
-    )
-    .unwrap();
-    assert_eq!(snapshot.metrics().input_resolution_runs(), 1);
     let recipes = [
         LabeledWasmBuildSpec::new("probe", first),
         LabeledWasmBuildSpec::new("other", second),
     ];
-    let cold = snapshot
-        .build_batch(&recipes, WasmBuildBatchConfig::new(), None, spawn_cargo)
-        .unwrap();
+    let cold =
+        build_wasm_canisters_cached_batch(&recipes, WasmBuildBatchConfig::new(), None, spawn_cargo)
+            .unwrap();
     assert!(cold.is_success());
     let identities: Vec<_> = cold
         .outcomes()
         .map(|entry| entry.outcome().unwrap().record().fingerprint())
         .collect();
     assert_ne!(identities[0], identities[1]);
-    let warm = snapshot
-        .build_batch(&recipes, WasmBuildBatchConfig::new(), None, spawn_cargo)
-        .unwrap();
+    let warm =
+        build_wasm_canisters_cached_batch(&recipes, WasmBuildBatchConfig::new(), None, spawn_cargo)
+            .unwrap();
     assert!(
         warm.outcomes()
             .all(|entry| entry.outcome().unwrap().is_reused())
     );
-    let unprepared = [LabeledWasmBuildSpec::new(
-        "unprepared",
-        recipes[0].spec().clone().with_example("missing"),
-    )];
-    assert!(
-        snapshot
-            .build_batch(&unprepared, WasmBuildBatchConfig::new(), None, spawn_cargo,)
-            .is_err()
-    );
-    drop((cold, warm, snapshot));
-    drop(guard);
+    drop((cold, warm));
     fs::remove_dir_all(root).unwrap();
 }
 

@@ -2,9 +2,7 @@
 //!
 //! These functions keep integration-test artifacts in caller-selected target
 //! directories and contain no application-specific package or profile policy.
-//! Independent Wasm batches remain sequential; [`WasmBuildInputSnapshot`]
-//! prepares a fixed specification set for concurrent readers under a caller-held
-//! source lease. Independent batches resolve current inputs on each call.
+//! Wasm batches remain sequential and resolve current inputs on each call.
 //!
 //! Successful Wasm and generic artifact records retain their read-only exact
 //! paths against cache replacement and pruning. Retain the record (or a clone)
@@ -132,15 +130,15 @@ pub use transaction_batch::{
 pub use wasm_batch::{
     LabeledWasmBuildSpec, WasmBuildBatchConfig, WasmBuildBatchContractError, WasmBuildBatchFailure,
     WasmBuildBatchMetrics, WasmBuildBatchProgressEvent, WasmBuildBatchReport,
-    WasmBuildInputSnapshot, WasmBuildInputSnapshotMetrics, build_wasm_canisters_cached_batch,
+    build_wasm_canisters_cached_batch,
 };
 pub use wasm_cache::{
     CargoBuildInput, CargoInputProbePolicy, ResolvedCargoBuildInputs,
     SharedIncrementalTargetMaintenance, SharedIncrementalTargetMaintenanceConfig,
     SharedIncrementalTargetMaintenanceFailureMode, SharedIncrementalTargetMaintenanceOutcome,
     WasmBuildError, WasmBuildFailureDetails, WasmBuildFailureTimings, WasmBuildOutcome,
-    WasmBuildProgressConfig, WasmBuildProgressEvent, WasmBuildProgressOutcome, WasmBuildRecord,
-    WasmBuildSpec, WasmBuildTimings, WasmInputResolutionTimings, build_wasm_canisters_cached,
+    WasmBuildProgressConfig, WasmBuildProgressEvent, WasmBuildRecord, WasmBuildSpec,
+    WasmBuildTimings, WasmInputResolutionTimings, build_wasm_canisters_cached,
     build_wasm_canisters_cached_with_progress, maintain_shared_incremental_target,
     maintain_shared_incremental_target_at_most_every, prune_wasm_build_cache,
     resolve_cargo_build_inputs, resolve_cargo_build_inputs_with_probe_policy,

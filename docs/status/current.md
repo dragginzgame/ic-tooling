@@ -1,102 +1,103 @@
 # Current handoff
 
-## Build 0.77.0 and Testkit 0.90.0 delivered — 2026-11-07
+## Four LOC cuts — local, 2026-11-07
 
-The approved LOC hard cut is integrated in `7b4f5985`. One supplier-first frozen
-`build,testkit` minor batch, `batch-Q3Zp6GO6`, qualified and published both groups.
+Build removes the compiler-recipe wrapper/executable, cross-call prepared input
+snapshots and output/lifecycle progress events. Independent batches still share
+compatible input resolution within each call. Observers receive phase-aware
+heartbeats; completion, cache status and bounded diagnostics remain in results.
+Warm-hit and post-build source revalidation, exact publication and shared-target
+lock ordering remain enforced. Configuration-admission callback machinery is
+untouched; its additional removal was rejected by automatic approval review.
 
-| Group | Published version | Release commit / annotated tag |
-| --- | --- | --- |
-| Build | 0.77.0 | `9d87394919b812cb6de55a9abd6dd2fd026c9070` / `build-v0.77.0` |
-| Testkit | 0.90.0 | `c03161b9f1395c343756fda6b8721e957798c3df` / `testkit-v0.90.0` |
+The private fixture benchmark driver, worker and report framework are retired,
+along with Process Git provenance and RSS sampling used only by that workflow.
+The installed Wire test is now `canister_wire`; its actual control canister,
+archive qualification and explicit II fixture remain. Probe/Types dependencies
+are dev-only; unused Dev dependencies and FS temporary-file selection are gone.
 
-Both commits/tags reached `dragginzgame/ic-tooling:main`; both crates are published
-to crates.io. Private Dev/probe follow Testkit and remain unpublished. Other groups
-remain Foundation 0.74.4, Text 0.74.2, Host Tools 0.83.0 and Native 0.80.0.
+The authorized release roster is Foundation 0.75.0, Build 0.78.0, Tools 0.84.0
+and Testkit 0.91.0. Tools/Testkit minor notes include their exposed Foundation
+type-identity change. Text and Native remain unchanged. Package versions have
+not yet been prepared; the frozen runner owns preparation and publication.
+[IcyDB #630 — Adopt Build 0.78 heartbeat-only progress configuration](https://github.com/dragginzgame/icydb/issues/630)
+owns removing its output toggle after supplier delivery. No sibling source changed.
 
-Six timing records now expose documented fields instead of 44 forwarding getters;
-cache fixtures share three-mode setup. Testkit removes unused Candid convenience,
-default-ID, server-filesystem snapshot, no-tick/authenticated-status, blockmaker,
-subnet-deletion and topology shortcut surfaces. Used topology/management DTOs,
-protocol bytes, bounded snapshot transfer and caller custody remain. Direct
-backoff and three unused Reqwest features are removed. A checksummed surface-cut
-patch retains original donor fingerprints, licenses and reconstruction guards.
+Evidence is under `target/loc-cut-20261107-2/`: strict all-target/all-feature Clippy
+for Build/Process/Dev; 106 cache, batch, Wasm-build and example cases; installed
+PocketIC 16.1 Wire acceptance; archive failure projection; warning-denied
+Build/Process Rustdoc and Build doctest; native/Wasm graphs, Candid boundary and
+selected release-routing fixtures all pass on Linux. The first live test was
+blocked by sandbox socket binding; its native rerun passed. Formatting and
+sourced ShellCheck pass. No full release gate or new native macOS proof.
 
-Testkit requires explicit positive finite `Duration` budgets for creation,
-attachment and listing. Invalid values refuse before requests; one deadline
-covers bodies, polling and pruning. Recipes select `snapshot_funding()` and
-validate their own reset before returning unit. Generic reset schemas/receipts
-are removed; restore/funding order, readiness, cancellation invalidation, typed
-recovery and collect-all shared shutdown remain. Workspace callers and guides
-are migrated without aliases. See the [0.90 migration](../testkit/client-migration.md#testkit-090-surface-cut).
+Canonical LOC falls from 30,798 to 29,438 production and 81,164 to 75,242 across
+all classified Rust sources, with zero unclassified LOC. The entry patch and
+lock are retained beside the logs. Every external lock selection is preserved;
+only Dev's removed Rustix/Thiserror edges differ from the entry lock.
+The maintainer authorized frozen deployment of this batch. Source integration,
+complete Linux gates and registry delivery are now in progress. No artifacts
+were retired.
 
-[Tooling #338](https://github.com/dragginzgame/ic-tooling/issues/338) and
-[#339](https://github.com/dragginzgame/ic-tooling/issues/339) are closed for producer
-delivery. The maintainer chose consumer issues instead of concurrent sibling edits.
-All eleven owning issues linked from #339 now record the published supplier;
-[Canic #738](https://github.com/dragginzgame/canic/issues/738) also owns reset-policy
-adoption. Those migrations and consumer qualification remain open. Prepared sibling
-edits were withdrawn while preserving concurrent work; no Cargo overrides or
-consumer checks/releases occurred. Toko/Toko Miner and independent native Profiler
-remain excluded. Earlier focused evidence is under `target/hard-cut-338-339/`.
+## Shared Tooling 0.31.4 adoption — local, 2026-11-07
 
-## Qualification and registry evidence
+The snapshot now selects `dad6d15750db66726850710f5fb423921b652c8d` through the
+canonical exporter; all 175 payloads match the committed supplier. The repaired
+release-command checker substitutes both runners, isolates inherited release
+settings and exercises grouped outer and captured inner dispatch.
+Tooling's actual Make adapter passes both fresh-CI and deliberately contaminated
+parent-batch contexts, with release effects substituted. The actual LOC caller
+also passes with absent scratch parents and zero unclassified Rust lines.
+Evidence is under `target/shared-tooling-0.31.4/`; the entry lock is unchanged.
+The refresh also carries scratch-loss diagnostics and release-guide companions.
+No commits, releases or new hosted/native macOS qualification are included.
 
-Both groups passed all 34 complete Linux release stages on Rust 1.99.1, including
-strict workspace lint, provenance, fresh packaged targets/docs, native/Wasm graphs,
-isolated features and installed PocketIC 16.1 contracts. Unchanged fixture stages
-were reused only through admitted source-bound receipts.
+## Platform patch adoption — local, 2026-11-07
 
-Captured checkout: `target/release-frozen/batch-Q3Zp6GO6/`. Gate logs beneath it:
+Platform 0.23.6 is published. The ordinary lock already selected it, Runtime
+0.19.5 (including macros/guard) and Types 0.18.2 when this adoption began.
+Existing compatible catalog ranges and the exact management 0.11.0 pin remain.
+No Rust source migration is needed for this patch adoption. Its compatible notes
+are included in the subsequent Tools 0.84.0 and Testkit 0.91.0 cleanup releases.
 
-| Group | Complete gate logs |
-| --- | --- |
-| Build | `target/release-validation/build-gate.mxozID/logs/validation.etN3A9/` |
-| Testkit | `target/release-validation/testkit-gate.nCqrYa/logs/validation.RFW5Fh/` |
+Locked metadata, declaration boundaries, native/Wasm graph policy and strict
+affected-package native/Wasm Clippy pass. Eleven Candid adapter cases, four ledger
+cases, management DTO identity and four installed PocketIC 16.1 cases pass on Linux.
+Evidence and the unchanged entry lock are under `target/platform-adoption-0.23.6/`.
+All pre-existing external lock selections are preserved. This new graph has no
+fresh native macOS or complete release qualification; earlier delivery proof below
+retains its original locked inputs.
 
-Durable Git, plans, publication receipts and the completed schema-2 intent remain
-under `.git/release-state/frozen/batch-Q3Zp6GO6/`. Outer logs and official sparse
-registry/archive readback are in `target/deployment-build-0.77.0-testkit-0.90.0/`.
-The downloaded archives match clean release Git identities and registry SHA-256:
-Build `41883c4420ed9c70d4a0be08718141675001315f1f1964e13169b253bbb3ee01`;
-Testkit `aeeb9dd0920b5a4343aed61f2cb7c0266488823dab5f7b19e0b632b54b7d8f5a`.
+## Delivered baseline and recovery
 
-The frozen batch used Shared 0.31.0. Follow-up `efa094d8` adopts the committed
-Shared 0.31.2 checksum-parser fix from `e11ed1c9b7377c673bca44a21cd819694c5c37a7`,
-through the canonical exporter. All 175 payloads match that commit; only the
-checksum helper changes. Snapshot integrity, Linux shell syntax and actual archive
-checksum acceptance/rejection pass. No crate source or published identity changes.
+Build 0.77.0 and Testkit 0.90.0 were qualified and published through frozen batch
+`batch-Q3Zp6GO6`. Release commits are `9d87394919b812cb6de55a9abd6dd2fd026c9070`
+and `c03161b9f1395c343756fda6b8721e957798c3df`, with annotated tags
+`build-v0.77.0` and `testkit-v0.90.0`. Both commits/tags reached main; private
+Dev/probe remain unpublished. All 34 Linux release stages passed on their
+original locked inputs; newer local adoption/cleanup has no complete gate.
 
-The previous native matrix failed in macOS checksum parsing and a Linux release
-command fixture. The current local gates pass that fixture; the parser fix is now
-pushed. The [retained native matrix](https://github.com/dragginzgame/ic-tooling/actions/runs/42357031568)
-runs asynchronously at `efa094d887582f81160bf5c5e704cda54747ed0a`, independently of
-later documentation pushes. It covers Linux x86-64 and macOS 15 Intel/Apple Silicon.
-Native macOS qualification remains pending; no new macOS pass is claimed here.
+Captured checkout: `target/release-frozen/batch-Q3Zp6GO6/`. Durable plans, Git,
+publication receipts and intent: `.git/release-state/frozen/batch-Q3Zp6GO6/`.
+Registry/archive readback and outer logs remain under
+`target/deployment-build-0.77.0-testkit-0.90.0/`. Deferred lock state is preserved
+on `preservation/build-0.77.0-testkit-0.90.0-lock-46b8c95e`, commit
+`5dba6b89122e03e06f7509f004c8a90860bc505c`; later maintainer selections remain
+dirty. Reconciliation records remain under
+`.git/release-state/deployment-build-0.77.0-testkit-0.90.0/`.
 
-## Ordinary checkout and retained recovery
+The native matrix at [run 42357031568](https://github.com/dragginzgame/ic-tooling/actions/runs/42357031568)
+failed on all three hosts in the old release-command fixture. Shared 0.31.4
+repairs that fixture locally; no new complete native macOS pass is claimed.
+Tooling #338/#339 producer delivery is closed; owning consumer migrations
+remain separate. Full release receipts, consumer links, archive checksums,
+earlier custody refs and historical journals remain in the
+[prior handoff](https://github.com/dragginzgame/ic-tooling/blob/efb49a5981d4082bfa5e780b4c4323621871d754/docs/status/current.md).
+Never restore older backups over live edits or reinterpret old batch receipts.
 
-Shared reconciliation fast-forwarded the ordinary checkout through both releases.
-Deferred lock selections were preserved on
-`preservation/build-0.77.0-testkit-0.90.0-lock-46b8c95e`
-(commit `5dba6b89122e03e06f7509f004c8a90860bc505c`), then deliberately reapplied by
-three-way merge. Only four owned package versions change from the saved lock.
-Its restored SHA-256 is
-`c66fc6d830d1006e3e5804cf2f0bc8ed1c5f639ce5d68af0ece5b83cf4e5d6ad`.
-External patch selections remain dirty/deferred and were not included in either
-release. Durable snapshots, narrow diffs and the reconciliation transcript remain
-under `.git/release-state/deployment-build-0.77.0-testkit-0.90.0/`.
-Never restore older backups over later live edits. No artifacts/batches were retired.
-
-Historical schema-1 batches `batch-UqiVuh8F` and `batch-c3bPF1yB` remain complete
-under their original tooling contract. Earlier preservation refs, .89.x release
-records and activation-stash custody remain in the [previous handoff](https://github.com/dragginzgame/ic-tooling/blob/7b4f5985/docs/status/current.md).
-Do not rewrite old journals or reinterpret their receipts as current adapters.
-
-Normal releases already qualify, commit/tag/push and publish; do not repeat
-`make publish` after successful default delivery. Select a supplier-first roster,
-resume by batch ID and reconcile only after preserving deferred changes.
-Retirement requires separate authority. See [publishing](../publishing.md),
-[batch custody](../release-batches.md) and [validation scope](../design/release-validation.md).
-Tools/Build narrowing still needs its matched three-host comparison; unknown or
-shared inputs retain the full gate. GitHub issues are the sole follow-up tracker.
+Normal releases already qualify, commit/tag/push and publish. Select a
+supplier-first roster, resume by batch ID and reconcile only after preserving
+deferred changes; do not repeat publication or retire artifacts implicitly.
+See [publishing](../publishing.md), [batch custody](../release-batches.md) and
+[validation scope](../design/release-validation.md). Tools/Build narrowing still
+needs a matched three-host comparison; changed shared inputs retain full checks.

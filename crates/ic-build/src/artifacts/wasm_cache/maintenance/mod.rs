@@ -4,7 +4,7 @@ use super::{
     CacheRetentionLimits, ProgressReporter, SharedIncrementalTargetMaintenance,
     SharedIncrementalTargetMaintenanceConfig, SharedIncrementalTargetMaintenanceFailureMode,
     SharedIncrementalTargetMaintenanceOutcome, WasmBuildError, WasmBuildPhase,
-    WasmBuildProgressEvent, record_cache_entry_use, wasm_cache_fs_error,
+    record_cache_entry_use, wasm_cache_fs_error,
 };
 use crate::artifacts::cache_fs::{
     cache_entry_last_used, cache_maintenance_due, record_cache_maintenance,
@@ -167,9 +167,6 @@ pub(super) fn perform_configured_shared_incremental_target_maintenance(
     lock_wait: Duration,
     progress: &mut ProgressReporter<'_>,
 ) -> Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError> {
-    progress.emit(WasmBuildProgressEvent::SharedTargetMaintenanceStarted {
-        target_dir: shared_target.to_owned(),
-    });
     let result = progress.run_phase(WasmBuildPhase::SharedTargetMaintenance, || {
         let schedule = schedule_shared_incremental_target_maintenance(
             shared_target,
@@ -190,9 +187,6 @@ pub(super) fn perform_configured_shared_incremental_target_maintenance(
         }
     });
     let outcome = integrated_shared_maintenance_result(config, shared_target, lock_wait, result)?;
-    progress.emit(WasmBuildProgressEvent::SharedTargetMaintenanceFinished {
-        outcome: outcome.clone(),
-    });
     Ok(outcome)
 }
 

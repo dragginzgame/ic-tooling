@@ -1,5 +1,18 @@
 # Artifact and Wasm build APIs
 
+## Pending Build 0.78 migration
+
+Compiler-recipe wrappers and cross-call prepared input snapshots are retired.
+Keep compiler configuration in the caller's Cargo recipe. Build each independent
+batch through `build_wasm_canisters_cached_batch`; it resolves current sources
+and shares compatible resolution only within that invocation. Mutation admission,
+exact-cache retention and shared-target lock ordering remain enforced.
+
+Progress now reports phase-aware heartbeats only. Remove `with_cargo_output` and
+`without_heartbeats`; use the silent entrypoint or `None` for an unobserved batch.
+`heartbeat_interval()` returns a positive `Duration`. Failures still carry bounded
+diagnostics; acquire final status and timings from the returned record/report.
+
 Examples target the current source API. Standalone Wasm acquisition provides two
 entrypoints: `build_wasm_canisters_cached(&spec, spawn)` for silent execution,
 and `build_wasm_canisters_cached_with_progress(&spec, config, observer, spawn)`
@@ -69,9 +82,7 @@ Metadata and builds receive the same feature and network selection. There is no
 arbitrary CLI argument escape hatch. Align direct Host dependencies with the
 0.32 family for pending Build 0.24 (0.31 for published Build 0.23) when passing
 Host values through Build's execution/artifact APIs. Command/byte observations
-do not exchange Host values. Cargo progress
-events carry `ic_host_process::tool::OutputStream` directly; remove imports of
-`WasmBuildOutputStream`.
+do not exchange Host values. Progress carries heartbeat phase and elapsed time.
 
 Progress heartbeats, command errors and `WasmBuildFailureDetails::phase()` use
 one `artifacts::WasmBuildPhase`. Replace `WasmBuildProgressPhase` and
@@ -86,8 +97,7 @@ directly; replace imports from the removed `ic_build::batch` module. The earlier
 `ArtifactCacheBatchContractError` is also removed. Match `Empty { index }` or
 `Duplicate { label, first_index, duplicate_index }`. Wasm batch contract errors
 wrap those values in `WasmBuildBatchContractError::Labels`; its error source
-exposes the same typed label failure. Source-lease invalidation and unprepared
-specification failures remain distinct. Label rejection still precedes callbacks,
+exposes the same typed label failure. Label rejection still precedes callbacks,
 progress events, source validation and command effects. Cargo grouping returns
 the same downcastable label error; its diagnostic wording now uses shared label
 terms. Individual build, cleanup and publication failures remain in their entries.
@@ -140,7 +150,7 @@ post-build input revalidation; they do not add redundant before/after probes.
 `select_cdylib_wasm` selects only reported outputs for the admitted manifest;
 capture or retain those bytes before another build can replace them.
 
-Wasm builds, batches and prepared readers take a final Host spawner
+Wasm builds and batches take a final Host spawner
 argument. Pass `ic_host_process::child::OwnedChild::spawn_direct` for direct-child
 ownership, or a closure calling `OwnedChild::spawn(command, cleanup)` for an owned
 process group and explicit cleanup. Progress never chooses custody or cleanup.
@@ -296,14 +306,14 @@ framework or public configuration type is needed for this initial qualification.
 the Cargo input fingerprint: typed selection, target, complete selected environment
 before Build adds its target directory, and successful Cargo/compiler identity
 probe bytes (stdout followed by stderr). It performs no new probes or ambient
-reads. Clones and prepared snapshots retain these immutable observations after
+reads. Clones retain these immutable observations after
 sources or tools change. They describe admitted inputs, not successful compilation;
 consumers must bind them to the execution and retain source/target custody.
 Debug omits environment values and probe bytes. Explicit access still exposes
 potentially sensitive data; provenance publication and redaction belong to callers.
 
 `WasmBuildRecord::facts()` carries those same fingerprint-bound observations through
-built and reused outcomes, clones, batches and prepared readers. Reading facts
+built and reused outcomes, clones and batches. Reading facts
 does not rerun tools or inspect ambient inputs. A reused record reports admitted
 input observations, not a new compiler execution. Keep product provenance schemas
 and redaction local, and retain the record through downstream artifact consumption.
@@ -551,10 +561,8 @@ that broader transformation is deliberately refused by this strict contract.
 
 ## Inherited Cargo Rust flags
 
-For target requirements that must survive configuration/environment precedence,
-use the opt-in [effective recipe](effective-recipes.md) boundary. It observes
-actual compiler arguments and keeps post-link optimization separate. The helper
-below composes only the environment values explicitly supplied to it.
+Cargo owns target/configuration precedence and effective compiler arguments.
+The helper below composes only the environment values supplied to it.
 
 Release 0.16 uses `cargo::flags::combined_encoded_rustflags(encoded, ordinary, &extra_flags)`.
 Pass each additional argument as a separate `String`; when it returns `Some`,
@@ -921,7 +929,7 @@ source-race detection, and artifact publication remain strict. Configuration
 getters support policy assertions without performing work.
 
 Long input resolution, lock waits, maintenance, Cargo builds, and artifact
-publication can expose synchronous structured progress without changing the
+publication can expose synchronous phase-aware heartbeats without changing the
 existing silent API:
 
 ```rust,no_run
@@ -942,8 +950,7 @@ let spec = WasmBuildSpec::new(
 let outcome = ic_build::artifacts::build_wasm_canisters_cached_with_progress(
     &spec,
         WasmBuildProgressConfig::new()
-            .with_heartbeat_interval(Duration::from_secs(15))
-            .with_cargo_output(false),
+            .with_heartbeat_interval(Duration::from_secs(15)),
         &mut |event| {
             if let WasmBuildProgressEvent::Heartbeat { phase, elapsed } = event {
                 eprintln!("{phase} is still active after {elapsed:?}");
@@ -955,13 +962,11 @@ eprintln!("{outcome}");
 ```
 
 Observers run synchronously on the build thread and should return promptly.
-Raw output events preserve non-UTF-8 bytes; output is still captured in
-`WasmBuildError` when forwarding is disabled. An observer panic joins active
+Bounded diagnostics remain captured in `WasmBuildError` independently of heartbeats. An observer panic joins active
 phase work, terminates and waits for a running Cargo build, and then performs
 normal lock and incomplete-entry cleanup.
 
-Independent batches and prepared snapshots each expose one batch
-entrypoint. Pass batch configuration explicitly and `None` for silent execution,
+Independent batches expose one batch entrypoint. Pass batch configuration explicitly and `None` for silent execution,
 or `Some((progress_config, &mut observer))` for progress reporting. The former
 `_with_config`, `_with_progress` and combined variants have no aliases.
 
@@ -1040,78 +1045,11 @@ feature semantics remain intact.
 counts; input-resolution runs and compatible-snapshot reuses; and summed
 successful acquisition timings. The structured input-resolution total makes
 distinct feature-resolution costs visible while reused snapshots remain
-counted explicitly, including reuse from a prepared concurrent snapshot. `entry_elapsed` retains wall time for every ordered entry,
+counted explicitly within the batch. `entry_elapsed` retains wall time for every ordered entry,
 including failures; `failures` returns structured entries that bundle the
 label, index, error, primary failed phase, partial phase timings, and elapsed
 time. Successful entries continue to expose detailed phase timings through
 their build records.
-
-### Prepared source immutability
-
-Mutable `WasmBuildSession` reuse is removed in 0.17. Prepare the complete recipe
-set through `WasmBuildInputSnapshot` under a genuine source write-exclusion lease.
-The lease covers tools, manifests, configuration, sources and selected environment;
-the guard's provenance remains the caller's responsibility. Ordinary batches
-resolve current inputs each time and retain within-batch sharing.
-
-When independent callers need the same resolution concurrently, prepare their
-complete exact specification set before starting readers:
-
-```rust,no_run
-use ic_host_process::child::{CleanupPolicy, OwnedChild};
-use ic_build::artifacts::{
-    LabeledWasmBuildSpec, WasmBuildBatchConfig, WasmBuildInputSnapshot,
-    WasmBuildSpec,
-};
-use std::sync::Mutex;
-
-# let local_test: Vec<LabeledWasmBuildSpec> = Vec::new();
-# let production: Vec<LabeledWasmBuildSpec> = Vec::new();
-let prepared_specs = local_test
-    .iter()
-    .chain(&production)
-    .map(|entry| entry.spec().clone())
-    .collect::<Vec<WasmBuildSpec>>();
-// Every source/config/tool/environment writer must coordinate on this lock.
-let source_write_exclusion = Mutex::new(());
-let source_guard = source_write_exclusion.lock().expect("acquire source lease");
-let snapshot = WasmBuildInputSnapshot::prepare_assuming_sources_immutable(
-    &source_guard,
-    &prepared_specs,
-)?;
-let (local_report, production_report) = std::thread::scope(|scope| {
-    let local = scope.spawn(|| {
-        snapshot.build_batch(&local_test, WasmBuildBatchConfig::new(), None, |command: &mut std::process::Command| OwnedChild::spawn(command, CleanupPolicy::KillAndWait))
-    });
-    let production = scope.spawn(|| {
-        snapshot.build_batch(&production, WasmBuildBatchConfig::new(), None, |command: &mut std::process::Command| OwnedChild::spawn(command, CleanupPolicy::KillAndWait))
-    });
-    (
-        local.join().expect("join LocalTest reader"),
-        production.join().expect("join Production reader"),
-    )
-});
-local_report?;
-production_report?;
-# Ok::<(), Box<dyn std::error::Error>>(())
-```
-
-Preparation is closed: a reader requesting an exact spec absent from
-`prepared_specs` receives `SpecificationNotPrepared` before progress or build
-work; it never extends the snapshot or hashes a new path. A detected post-build
-source race invalidates the snapshot for every later reader. Publication takes
-a shared read boundary against invalidation, so a publication already at that
-boundary completes before invalidation while every later publication is
-rejected. `WasmBuildInputSnapshot::metrics` exposes preparation work,
-cumulative reader reuse, and invalidation; batch metrics count
-`input_resolution_prepared_reuses` separately.
-
-Each batch remains sequential. Separate snapshot readers may overlap, but
-shared incremental Cargo targets still participate in their existing locks;
-use isolated targets to retain useful Cargo parallelism. There is no built-in
-parallel scheduler, ambient cache, or mutation-owning workspace abstraction.
-Callers without a genuine source write-exclusion guard must keep ordinary
-per-call resolution.
 
 When independent specs share incremental targets, batch-owned maintenance
 removes the caller convention of modifying the first spec:
@@ -1195,7 +1133,7 @@ enabling Host Artifacts' `wasm` feature in the inspecting consumer. Build does n
 enable that parser feature; producing and caching Wasm does not require it.
 Stream identities, archives and Wasm inspection belong to `ic_host_artifacts`;
 pathname reads and durable publication belong to `ic_host_fs`; executable
-resolution, execution and Git provenance belong to `ic_host_process`; Candid
+resolution and execution belong to `ic_host_process`; Candid
 service interpretation and response decoding belong to `ic_host_tools`.
 Bounded line normalization belongs to `ic_host_text`. Build 0.12 owns
 native extraction through Unix-only `artifacts::candid::extract`: supply an
@@ -1387,8 +1325,7 @@ grant no admission through these APIs. ICP readiness policy belongs to consumers
 
 The cache intentionally contains no Binaryen, `icp build`, package-name, or
 PocketIC policy. This guide and [IC Build's public cache documentation](../../crates/ic-build/src/artifacts/transaction.rs)
-describe the supported transactional contract. Shared-target maintenance and
-prepared reuse likewise remain IC Build contracts with caller-owned policy.
+describe the supported transactional contract. Shared-target maintenance remains an IC Build contract with caller-owned policy.
 
 ## Historical extraction references
 

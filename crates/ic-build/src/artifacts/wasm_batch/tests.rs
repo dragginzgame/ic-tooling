@@ -17,12 +17,11 @@ use std::{path::Path, time::Duration};
 
 #[cfg(unix)]
 use crate::artifacts::{
-    SharedIncrementalTargetMaintenanceOutcome, WasmBuildInputSnapshot,
-    support_tests::fake_wasm_build_spec,
+    SharedIncrementalTargetMaintenanceOutcome, support_tests::fake_wasm_build_spec,
 };
 use crate::testing::fs::unique_temp_directory;
 #[cfg(unix)]
-use std::{fs, os::unix::fs::symlink, sync::Mutex};
+use std::{fs, os::unix::fs::symlink};
 
 #[test]
 fn empty_independent_batch_succeeds_without_work() {
@@ -41,7 +40,7 @@ fn empty_independent_batch_succeeds_without_work() {
 
 #[cfg(unix)]
 #[test]
-fn library_output_validation_survives_batch_and_prepared_resolution() {
+fn library_output_validation_survives_batch_resolution() {
     let (root, valid) = fake_wasm_build_spec("batch-library-output-validation");
     fs::create_dir_all(root.join("ordinary/src")).unwrap();
     fs::write(
@@ -64,8 +63,8 @@ fn library_output_validation_survives_batch_and_prepared_resolution() {
     )
     .with_cargo_program(root.join("cargo.sh"));
     let specs = [
-        LabeledWasmBuildSpec::new("ordinary", invalid.clone()),
-        LabeledWasmBuildSpec::new("canister", valid.clone()),
+        LabeledWasmBuildSpec::new("ordinary", invalid),
+        LabeledWasmBuildSpec::new("canister", valid),
     ];
     let check = |report: super::WasmBuildBatchReport| {
         assert_eq!(report.outcomes().count(), 1);
@@ -99,20 +98,6 @@ fn library_output_validation_survives_batch_and_prepared_resolution() {
             .unwrap(),
     );
 
-    let source_lock = Mutex::new(());
-    let source_guard = source_lock.lock().unwrap();
-    let snapshot = WasmBuildInputSnapshot::prepare_assuming_sources_immutable(
-        &source_guard,
-        &[invalid, valid],
-    )
-    .unwrap();
-    check(
-        snapshot
-            .build_batch(&specs, WasmBuildBatchConfig::new(), None, spawn_cargo)
-            .unwrap(),
-    );
-    drop(snapshot);
-    drop(source_guard);
     fs::remove_dir_all(root).unwrap();
 }
 
@@ -339,35 +324,38 @@ fn batch_rejects_invalid_labels_before_progress_or_build_work() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn batch_progress_retains_the_caller_label() {
-    let specs = [LabeledWasmBuildSpec::new(
-        "root",
-        WasmBuildSpec::new(
-            Path::new("."),
-            Path::new("target"),
-            &[],
-            crate::testing::cargo::environment(),
-            CONFIGURATION_LIMITS,
-        ),
-    )];
+    let (root, spec) = fake_wasm_build_spec("batch-heartbeat-label");
+    crate::artifacts::support_tests::write_fake_wasm_cargo(
+        &root,
+        &root,
+        crate::artifacts::support_tests::FakeWasmCargo {
+            before_build: "sleep 0.05",
+            ..Default::default()
+        },
+    );
+    let specs = [LabeledWasmBuildSpec::new("root", spec)];
     let mut labels = Vec::new();
-
     let report = build_wasm_canisters_cached_batch(
         &specs,
         WasmBuildBatchConfig::new(),
-        Some((WasmBuildProgressConfig::new(), &mut |event| match event {
-            WasmBuildBatchProgressEvent::BuildStarted { label, .. }
-            | WasmBuildBatchProgressEvent::BuildProgress { label, .. }
-            | WasmBuildBatchProgressEvent::BuildFinished { label, .. }
-            | WasmBuildBatchProgressEvent::BuildFailed { label, .. } => labels.push(label),
-        })),
+        Some((
+            WasmBuildProgressConfig::new().with_heartbeat_interval(Duration::from_millis(5)),
+            &mut |event| {
+                let WasmBuildBatchProgressEvent::BuildProgress { label, .. } = event;
+                labels.push(label);
+            },
+        )),
         spawn_cargo,
     )
-    .expect("valid progress batch");
-
-    assert!(!report.is_success());
-    assert_eq!(labels, ["root", "root"]);
+    .unwrap();
+    assert!(report.is_success());
+    assert_ne!(labels, [] as [String; 0]);
+    assert!(labels.iter().all(|label| label == "root"));
+    drop(report);
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
@@ -639,7 +627,7 @@ fn missing_tools_keep_their_phase_in_silent_and_observed_batches() {
             let mut events = Vec::new();
             let mut observe = |event| events.push(event);
             let progress = observed.then_some((
-                WasmBuildProgressConfig::new().without_heartbeats(),
+                WasmBuildProgressConfig::new(),
                 &mut observe as &mut dyn FnMut(_),
             ));
             let report = build_wasm_canisters_cached_batch(
@@ -654,7 +642,9 @@ fn missing_tools_keep_their_phase_in_silent_and_observed_batches() {
             assert!(
                 matches!(entry.error(), Some(WasmBuildError::CommandSpawn { phase, .. }) if *phase == expected)
             );
-            assert_eq!(events.is_empty(), !observed);
+            if !observed {
+                assert_eq!(events, [] as [WasmBuildBatchProgressEvent; 0]);
+            }
             assert_eq!(report.outcomes().count(), 0);
         }
     }

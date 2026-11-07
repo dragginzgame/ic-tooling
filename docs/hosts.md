@@ -484,5 +484,5 @@ Read-only admission waits are explicit at the shared installer interface; see
 
 The optional artifact profile targets run their own Wasm inspection, encoding or
 text tests with defaults disabled. Minimal core tests run once; the complete
-workspace suite separately covers all-feature composition. Native and Wasm Testkit graphs exclude Metrics; fixture-reuse measurements
-and reports belong to the private development driver.
+workspace suite separately covers all-feature composition. Native and Wasm Testkit graphs exclude Metrics. The installed Wire
+control-canister check remains in the private development package.

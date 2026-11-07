@@ -14,16 +14,14 @@ use ic_host_fs::read::read_file;
 use ic_build::artifacts::{
     ArtifactCacheError, ArtifactCachePreparation, ArtifactCacheSpec, CacheBatchEntry,
     CacheRetentionLimits, LabeledWasmBuildSpec, SharedIncrementalTargetMaintenanceOutcome,
-    WasmBuildBatchConfig, WasmBuildBatchContractError, WasmBuildBatchMetrics,
-    WasmBuildBatchProgressEvent, WasmBuildBatchReport, WasmBuildError, WasmBuildInputSnapshot,
-    WasmBuildOutcome, WasmBuildPhase, WasmBuildProgressConfig, WasmBuildProgressEvent,
-    build_wasm_canisters_cached, prepare_artifact_cache, prune_wasm_build_cache,
-    resolve_cargo_build_inputs,
+    WasmBuildBatchConfig, WasmBuildBatchMetrics, WasmBuildBatchReport, WasmBuildError,
+    WasmBuildOutcome, WasmBuildPhase, WasmBuildProgressConfig, build_wasm_canisters_cached,
+    prepare_artifact_cache, prune_wasm_build_cache, resolve_cargo_build_inputs,
 };
 use std::{
     fs,
     path::Path,
-    sync::{Arc, Barrier, Mutex},
+    sync::{Arc, Barrier},
     thread,
     time::Duration,
 };
@@ -453,142 +451,19 @@ fn independent_wasm_batch_preserves_standalone_feature_resolution() {
         LabeledWasmBuildSpec::new("invalid", support::wasm::spec(&workspace, &target, &[])),
         specs[1].clone(),
     ];
-    let mut completed = Vec::new();
     let with_failure = ic_build::artifacts::build_wasm_canisters_cached_batch(
         &with_invalid_middle,
         ic_build::artifacts::WasmBuildBatchConfig::new(),
-        Some((WasmBuildProgressConfig::new(), &mut |event| match event {
-            WasmBuildBatchProgressEvent::BuildFinished { index, label } => {
-                completed.push((index, label, true));
-            }
-            WasmBuildBatchProgressEvent::BuildFailed { index, label } => {
-                completed.push((index, label, false));
-            }
-            _ => {}
-        })),
+        None,
         spawn_cargo,
     )
     .expect("valid leased failure batch");
-    assert_mixed_batch_with_failure(&with_failure, &completed);
+    assert_mixed_batch_with_failure(&with_failure);
     assert!(
         first_exact_cache.is_dir(),
         "a cache miss must rebuild its immutable cache directory"
     );
     fs::remove_dir_all(root).expect("remove independent feature fixture");
-}
-
-#[test]
-fn prepared_wasm_input_snapshots_are_send_and_sync() {
-    fn assert_send_sync<T: Send + Sync>() {}
-    assert_send_sync::<WasmBuildInputSnapshot<'static>>();
-}
-
-#[test]
-fn prepared_wasm_inputs_serve_concurrent_warm_readers() {
-    let root = unique_temp_dir("ic-testkit-prepared-wasm-inputs");
-    let workspace = root.join("workspace");
-    write_independent_feature_workspace(&workspace);
-    let first_spec = support::wasm::spec(&workspace, &root.join("exact-a"), &["feature_a"])
-        .with_shared_incremental_target(root.join("shared-a"));
-    let second_spec = support::wasm::spec(&workspace, &root.join("exact-b"), &["feature_b"])
-        .with_shared_incremental_target(root.join("shared-b"));
-    for spec in [&first_spec, &second_spec] {
-        let built = build_wasm_canisters_cached(spec, OwnedChild::spawn_direct)
-            .expect("warm exact Wasm entry");
-        assert!(!built.is_reused());
-    }
-
-    let source_write_exclusion = Mutex::new(());
-    let source_guard = source_write_exclusion
-        .lock()
-        .expect("lock immutable prepared-source fixture");
-    let snapshot = WasmBuildInputSnapshot::prepare_assuming_sources_immutable(
-        &source_guard,
-        &[first_spec.clone(), second_spec.clone()],
-    )
-    .expect("prepare exact Wasm inputs");
-    let preparation = snapshot.metrics();
-    assert_eq!(preparation.specifications(), 2);
-    assert_eq!(preparation.input_resolution_runs(), 1);
-    assert_eq!(preparation.input_resolution_reuses(), 1);
-    assert!(preparation.input_resolution_timings().total > Duration::ZERO);
-    assert_eq!(preparation.reader_reuses(), 0);
-    assert!(!preparation.is_invalidated());
-
-    let first = [LabeledWasmBuildSpec::new("local-test", first_spec)];
-    let second = [LabeledWasmBuildSpec::new("production", second_spec)];
-    let barrier = Arc::new(Barrier::new(3));
-    let (first_report, second_report) = thread::scope(|scope| {
-        let snapshot = &snapshot;
-        let first_barrier = Arc::clone(&barrier);
-        let first_reader = scope.spawn(move || {
-            first_barrier.wait();
-            let mut finished = Vec::new();
-            let report = snapshot
-                .build_batch(
-                    &first,
-                    WasmBuildBatchConfig::new(),
-                    Some((WasmBuildProgressConfig::new(), &mut |event| {
-                        if let WasmBuildBatchProgressEvent::BuildFinished { index, label } = event {
-                            finished.push((index, label));
-                        }
-                    })),
-                    spawn_cargo,
-                )
-                .expect("read first prepared input");
-            assert_eq!(finished, [(0, "local-test".to_owned())]);
-            report
-        });
-        let second_barrier = Arc::clone(&barrier);
-        let second_reader = scope.spawn(move || {
-            second_barrier.wait();
-            snapshot
-                .build_batch(&second, WasmBuildBatchConfig::new(), None, spawn_cargo)
-                .expect("read second prepared input")
-        });
-        barrier.wait();
-        (
-            first_reader.join().expect("join first prepared reader"),
-            second_reader.join().expect("join second prepared reader"),
-        )
-    });
-    for report in [&first_report, &second_report] {
-        assert!(
-            report
-                .outcomes()
-                .all(|entry| entry.outcome().unwrap().is_reused())
-        );
-        assert_prepared_batch_metrics(report.metrics());
-    }
-    assert_eq!(snapshot.metrics().reader_reuses(), 2);
-
-    let undeclared = [LabeledWasmBuildSpec::new(
-        "undeclared",
-        support::wasm::spec(&workspace, &root.join("exact-undeclared"), &["feature_a"]),
-    )];
-    let mut progress_events = 0;
-    let error = snapshot
-        .build_batch(
-            &undeclared,
-            WasmBuildBatchConfig::new(),
-            Some((WasmBuildProgressConfig::new(), &mut |_| {
-                progress_events += 1;
-            })),
-            spawn_cargo,
-        )
-        .expect_err("undeclared prepared reader must fail preflight");
-    assert!(matches!(
-        error,
-        WasmBuildBatchContractError::SpecificationNotPrepared {
-            index: 0,
-            label,
-        } if label == "undeclared"
-    ));
-    assert_eq!(progress_events, 0);
-
-    drop(snapshot);
-    drop(source_guard);
-    fs::remove_dir_all(root).expect("remove prepared-input fixture");
 }
 
 fn write_independent_feature_workspace(workspace: &Path) {
@@ -644,34 +519,8 @@ fn assert_cold_batch_metrics(metrics: WasmBuildBatchMetrics) {
     assert!(metrics.successful_timings().cargo_build.is_some());
 }
 
-fn assert_prepared_batch_metrics(metrics: WasmBuildBatchMetrics) {
-    assert_eq!(metrics.succeeded(), 1);
-    assert_eq!(metrics.failed(), 0);
-    assert_eq!(metrics.input_resolution_runs(), 0);
-    assert_eq!(metrics.input_resolution_reuses(), 0);
-    assert_eq!(metrics.input_resolution_prepared_reuses(), 1);
-    assert_eq!(
-        metrics.successful_timings().input_resolution.total,
-        Duration::ZERO
-    );
-}
-
-fn assert_mixed_batch_with_failure(
-    report: &WasmBuildBatchReport,
-    completed: &[(usize, String, bool)],
-) {
+fn assert_mixed_batch_with_failure(report: &WasmBuildBatchReport) {
     assert!(!report.is_success());
-    assert_eq!(
-        completed
-            .iter()
-            .map(|(index, label, success)| (*index, label.as_str(), *success))
-            .collect::<Vec<_>>(),
-        [
-            (0, "feature-a", true),
-            (1, "invalid", false),
-            (2, "feature-b", true)
-        ],
-    );
     assert_eq!(report.outcomes().count(), 2);
     assert_eq!(
         report
@@ -828,11 +677,10 @@ fn scheduled_shared_target_maintenance_participates_in_wasm_acquisition() {
             Duration::from_hours(1),
         );
 
-    let mut first_events = Vec::new();
     let first = ic_build::artifacts::build_wasm_canisters_cached_with_progress(
         &spec,
-        WasmBuildProgressConfig::new().without_heartbeats(),
-        &mut |event| first_events.push(event),
+        WasmBuildProgressConfig::new(),
+        &mut |_| {},
         spawn_cargo,
     )
     .expect("build with integrated shared-target maintenance");
@@ -843,40 +691,10 @@ fn scheduled_shared_target_maintenance_participates_in_wasm_acquisition() {
         Some(SharedIncrementalTargetMaintenanceOutcome::Performed { .. })
     ));
     assert!(first.to_string().contains("shared_maintenance=("));
-    let maintenance_started = first_events
-        .iter()
-        .position(|event| {
-            matches!(
-                event,
-                WasmBuildProgressEvent::SharedTargetMaintenanceStarted { .. }
-            )
-        })
-        .expect("integrated maintenance start event");
-    let cargo_started = first_events
-        .iter()
-        .position(|event| matches!(event, WasmBuildProgressEvent::CargoStarted { .. }))
-        .expect("integrated Cargo start event");
-    assert!(maintenance_started < cargo_started);
-    assert_eq!(
-        first_events[..cargo_started]
-            .iter()
-            .filter(|event| matches!(event, WasmBuildProgressEvent::InputsResolved { .. }))
-            .count(),
-        1,
-        "due maintenance must reuse the acquisition's pre-build resolution",
-    );
-    assert!(first_events.iter().any(|event| matches!(
-        event,
-        WasmBuildProgressEvent::SharedTargetMaintenanceFinished {
-            outcome: SharedIncrementalTargetMaintenanceOutcome::Performed { .. }
-        }
-    )));
-
-    let mut reused_events = Vec::new();
     let reused = ic_build::artifacts::build_wasm_canisters_cached_with_progress(
         &spec,
-        WasmBuildProgressConfig::new().without_heartbeats(),
-        &mut |event| reused_events.push(event),
+        WasmBuildProgressConfig::new(),
+        &mut |_| {},
         spawn_cargo,
     )
     .expect("reuse with integrated shared-target maintenance");
@@ -887,7 +705,6 @@ fn scheduled_shared_target_maintenance_participates_in_wasm_acquisition() {
         reused.record().shared_incremental_maintenance(),
         Some(SharedIncrementalTargetMaintenanceOutcome::Skipped { .. })
     ));
-    assert_warm_shared_maintenance_progress(&reused_events);
 
     fs::remove_dir_all(&shared_target).expect("remove shared target before exact hit");
     let recreated = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
@@ -900,39 +717,6 @@ fn scheduled_shared_target_maintenance_participates_in_wasm_acquisition() {
     ));
 
     fs::remove_dir_all(root).expect("clean integrated shared maintenance fixture");
-}
-
-fn assert_warm_shared_maintenance_progress(events: &[WasmBuildProgressEvent]) {
-    let warm_acquisition_phases = events
-        .iter()
-        .filter_map(|event| match event {
-            WasmBuildProgressEvent::SharedTargetLockStarted { .. } => Some("shared lock started"),
-            WasmBuildProgressEvent::SharedTargetLockAcquired { .. } => Some("shared lock acquired"),
-            WasmBuildProgressEvent::InputsResolved { .. } => Some("inputs resolved"),
-            WasmBuildProgressEvent::SharedTargetMaintenanceStarted { .. } => {
-                Some("maintenance started")
-            }
-            WasmBuildProgressEvent::SharedTargetMaintenanceFinished {
-                outcome: SharedIncrementalTargetMaintenanceOutcome::Skipped { .. },
-            } => Some("maintenance skipped"),
-            WasmBuildProgressEvent::CargoStarted { .. } => Some("Cargo build"),
-            WasmBuildProgressEvent::CacheHit { .. } => Some("cache hit"),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
-    assert_eq!(
-        warm_acquisition_phases,
-        [
-            "shared lock started",
-            "shared lock acquired",
-            "inputs resolved",
-            "maintenance started",
-            "maintenance skipped",
-            "inputs resolved",
-            "cache hit",
-        ],
-        "maintenance reuses initial resolution; warm validation precedes the cache hit without building",
-    );
 }
 
 #[test]
@@ -1121,22 +905,14 @@ fn source_changes_during_shared_incremental_build_reject_exact_publication() {
         .expect("resolve original race fingerprint")
         .fingerprint();
     let worker = thread::spawn(move || {
-        let source_write_exclusion = Mutex::new(());
-        let source_guard = source_write_exclusion.lock().unwrap();
-        let snapshot = WasmBuildInputSnapshot::prepare_assuming_sources_immutable(
-            &source_guard,
-            std::slice::from_ref(&spec),
-        )
-        .unwrap();
         let specs = [LabeledWasmBuildSpec::new("race", spec)];
-        let report = snapshot
-            .build_batch(&specs, WasmBuildBatchConfig::new(), None, spawn_cargo)
-            .expect("valid race-test batch");
-        let invalidated = snapshot.metrics().is_invalidated();
-        let next = snapshot.build_batch(&specs, WasmBuildBatchConfig::new(), None, spawn_cargo);
-        drop(snapshot);
-        drop(source_guard);
-        (report, invalidated, next)
+        ic_build::artifacts::build_wasm_canisters_cached_batch(
+            &specs,
+            WasmBuildBatchConfig::new(),
+            None,
+            spawn_cargo,
+        )
+        .expect("valid race-test batch")
     });
     wait_for_path(&started, "build start", Duration::from_secs(10)).expect("build start");
     fs::write(
@@ -1146,7 +922,7 @@ fn source_changes_during_shared_incremental_build_reject_exact_publication() {
     .expect("change source during blocked Cargo build");
     fs::write(&release, b"go").expect("release blocked Cargo build");
 
-    let (report, invalidated, next) = worker
+    let report = worker
         .join()
         .expect("shared input-race worker must not panic");
     let failure = report
@@ -1165,11 +941,6 @@ fn source_changes_during_shared_incremental_build_reject_exact_publication() {
     assert!(timings.cargo_build.is_some());
     assert!(timings.artifact_publication.is_some());
     assert!(timings.cleanup.is_some());
-    assert!(invalidated);
-    assert!(matches!(
-        next,
-        Err(WasmBuildBatchContractError::SourceLeaseInvalidated)
-    ));
     assert!(root.join("shared-target").is_dir());
     assert!(
         !root
@@ -1178,112 +949,6 @@ fn source_changes_during_shared_incremental_build_reject_exact_publication() {
             .exists()
     );
     fs::remove_dir_all(root).expect("clean shared input-race fixture");
-}
-
-#[test]
-#[cfg(unix)]
-fn source_race_invalidates_every_prepared_snapshot_reader() {
-    let root = unique_temp_dir("ic-testkit-prepared-input-race");
-    let workspace = root.join("workspace");
-    let package = workspace.join("race_probe");
-    fs::create_dir_all(package.join("src")).expect("create prepared-race source directory");
-    fs::write(
-        workspace.join("Cargo.toml"),
-        "[workspace]\nmembers = [\"race_probe\"]\nresolver = \"2\"\n",
-    )
-    .expect("write prepared-race workspace manifest");
-    fs::write(
-        package.join("Cargo.toml"),
-        "[package]\nname = \"race_probe\"\nversion = \"0.0.0\"\nedition = \"2024\"\n\
-         [lib]\ncrate-type = [\"cdylib\"]\n",
-    )
-    .expect("write prepared-race package manifest");
-    let source = package.join("src/lib.rs");
-    fs::write(
-        &source,
-        "#[unsafe(no_mangle)]\npub extern \"C\" fn probe() -> u32 { 1 }\n",
-    )
-    .expect("write original prepared-race source");
-    let wrapper = root.join("cargo-wrapper.sh");
-    let started = root.join("build-started");
-    let release = root.join("release-build");
-    write_blocking_cargo_wrapper(&wrapper);
-    let real_cargo = std::env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"));
-    let spec = support::wasm::spec(&workspace, &root.join("exact-cache"), &["race_probe"])
-        .with_shared_incremental_target(root.join("shared-target"))
-        .with_cargo_program(&wrapper)
-        .with_environment(ic_build::testing::cargo::environment_with([
-            (OsString::from("REAL_CARGO"), real_cargo),
-            (
-                OsString::from("IC_TESTKIT_BUILD_STARTED"),
-                started.clone().into_os_string(),
-            ),
-            (
-                OsString::from("IC_TESTKIT_RELEASE_BUILD"),
-                release.clone().into_os_string(),
-            ),
-        ]));
-    let fingerprint = resolve_cargo_build_inputs(&spec)
-        .expect("resolve original prepared-race fingerprint")
-        .fingerprint();
-    let source_write_exclusion = Mutex::new(());
-    let source_guard = source_write_exclusion
-        .lock()
-        .expect("lock prepared-race source lease");
-    let snapshot = WasmBuildInputSnapshot::prepare_assuming_sources_immutable(
-        &source_guard,
-        std::slice::from_ref(&spec),
-    )
-    .expect("prepare race input snapshot");
-    let specs = [LabeledWasmBuildSpec::new("race", spec)];
-
-    let report = thread::scope(|scope| {
-        let worker = scope.spawn(|| {
-            snapshot
-                .build_batch(
-                    &specs,
-                    WasmBuildBatchConfig::new(),
-                    Some((WasmBuildProgressConfig::new(), &mut |_| {})),
-                    spawn_cargo,
-                )
-                .expect("valid prepared race-test batch")
-        });
-        wait_for_path(&started, "build start", Duration::from_secs(10)).expect("build start");
-        fs::write(
-            &source,
-            "#[unsafe(no_mangle)]\npub extern \"C\" fn probe() -> u32 { 2 }\n",
-        )
-        .expect("change source during prepared Cargo build");
-        fs::write(&release, b"go").expect("release prepared Cargo build");
-        worker.join().expect("prepared input-race worker")
-    });
-    let failure = report
-        .failures()
-        .next()
-        .expect("changed source must fail the prepared reader");
-    assert!(matches!(
-        failure.error().unwrap(),
-        WasmBuildError::InputsChangedDuringAcquisition { .. }
-    ));
-    assert_eq!(
-        failure.failure_details().unwrap().phase(),
-        WasmBuildPhase::ContentHashing
-    );
-    assert!(snapshot.metrics().is_invalidated());
-    assert!(matches!(
-        snapshot.build_batch(&specs, WasmBuildBatchConfig::new(), None, spawn_cargo,),
-        Err(WasmBuildBatchContractError::SourceLeaseInvalidated)
-    ));
-    assert!(
-        !root
-            .join("exact-cache/.ic-testkit/wasm-targets")
-            .join(fingerprint.to_hex())
-            .exists()
-    );
-
-    drop(snapshot);
-    drop(source_guard);
-    fs::remove_dir_all(root).expect("clean prepared input-race fixture");
 }
 
 #[cfg(unix)]

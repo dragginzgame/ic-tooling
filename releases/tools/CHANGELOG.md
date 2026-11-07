@@ -4,6 +4,19 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.84.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Foundation 0.75. The optional IC interface adapter now accepts that
+  Artifacts version's Wasm facts; align direct Artifacts dependencies when
+  passing inspected modules to Host Tools.
+
+### 🔧 Changed
+
+- Qualify locked Platform 0.23.6 and Types 0.18.2 in the Candid and ledger
+  adapters, retaining the existing compatible dependency ranges.
+
 ## [0.83.0] - 2026-11-05
 
 ### ⚠️ Breaking

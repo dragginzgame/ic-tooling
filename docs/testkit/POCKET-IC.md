@@ -160,13 +160,13 @@ artifact caches and application deployment recovery.
 Testkit owns the `ICTK` marker format, span pairing and counter interpretation.
 Canister-side `performance::counters` reads the system API through `ic0`; the private probe
 uses CDK entrypoint macros to qualify actual marker emission and trap handling.
-Testkit owns checked benchmark averages. The native report example and
-private benchmark programs own output schemas, files and workload policy.
+Testkit owns checked benchmark averages. The native report example demonstrates
+consumer-owned output schemas, files and workload policy.
 
 Callers that need runtime provenance should retain the exact selected path,
 admission evidence and observed version. A borrowed URL does not establish those
-facts. The private benchmark driver records its explicit server selection and
-consumes IC Build's retained Wasm rather than reconstructing mutable build paths.
+facts. The installed Wire test selects its server explicitly and consumes
+IC Build's retained Wasm rather than reconstructing mutable build paths.
 
 ## Qualification and future retirement
 

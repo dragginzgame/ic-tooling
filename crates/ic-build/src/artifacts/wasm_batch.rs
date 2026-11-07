@@ -4,7 +4,6 @@ use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
 
 use std::{
     collections::HashSet,
-    marker::PhantomData,
     path::PathBuf,
     time::{Duration, Instant},
 };
@@ -12,9 +11,9 @@ use std::{
 use super::wasm_cache::{
     SharedIncrementalTargetMaintenanceConfig, SharedIncrementalTargetMaintenanceOutcome,
     WasmBuildBatchInputMetrics, WasmBuildBatchInputResolver, WasmBuildError,
-    WasmBuildFailureDetails, WasmBuildInputSnapshotState, WasmBuildOutcome,
-    WasmBuildProgressConfig, WasmBuildProgressEvent, WasmBuildSpec, WasmBuildTimings,
-    WasmInputResolutionTimings, build_wasm_canisters_cached_in_batch, shared_incremental_target,
+    WasmBuildFailureDetails, WasmBuildOutcome, WasmBuildProgressConfig, WasmBuildProgressEvent,
+    WasmBuildSpec, WasmBuildTimings, build_wasm_canisters_cached_in_batch,
+    shared_incremental_target,
 };
 
 /// Orchestration shared by every entry in one independent Wasm build batch.
@@ -41,28 +40,6 @@ pub struct WasmBuildBatchReport {
     total: Duration,
 }
 
-/// Immutable prepared Cargo input resolution shared by concurrent readers.
-///
-/// Preparation resolves the complete declared specification set while the
-/// caller holds a genuine source write-exclusion guard. Reader batches may run
-/// concurrently through `&self`, but cannot introduce specifications that
-/// were not declared during preparation.
-pub struct WasmBuildInputSnapshot<'guard> {
-    state: WasmBuildInputSnapshotState,
-    _source_guard: PhantomData<&'guard ()>,
-}
-
-/// Preparation and reader-reuse counters for one immutable input snapshot.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct WasmBuildInputSnapshotMetrics {
-    specifications: usize,
-    input_resolution_runs: usize,
-    input_resolution_reuses: usize,
-    input_resolution_timings: WasmInputResolutionTimings,
-    reader_reuses: usize,
-    invalidated: bool,
-}
-
 /// Structural error that prevents a labeled Wasm batch from starting.
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
@@ -70,19 +47,6 @@ pub enum WasmBuildBatchContractError {
     /// Invalid input labels, rejected before source validation or command effects.
     #[error("Wasm batch {0}")]
     Labels(#[source] BatchLabelError),
-    /// A source mutation invalidated the caller's immutable-source lease.
-    #[error("Wasm build source lease was invalidated by a detected input mutation")]
-    SourceLeaseInvalidated,
-    /// A prepared snapshot reader requested a specification absent at preparation.
-    #[error(
-        "Wasm batch entry {label:?} at index {index} was not declared when the input snapshot was prepared"
-    )]
-    SpecificationNotPrepared {
-        /// Zero-based position of the undeclared entry.
-        index: usize,
-        /// Caller-owned label of the undeclared entry.
-        label: String,
-    },
 }
 
 impl LabeledWasmBuildSpec {
@@ -114,103 +78,6 @@ impl LabeledWasmBuildSpec {
     }
 }
 
-impl<'guard> WasmBuildInputSnapshot<'guard> {
-    /// Resolve and freeze the complete specification set under a source lease.
-    ///
-    /// The guard must prevent mutation of every Cargo/rustc executable,
-    /// manifest, configuration file, discovered source, declared additional
-    /// input, and relevant environment value used by the supplied
-    /// specifications. The type system cannot verify guard provenance.
-    ///
-    /// # Errors
-    /// Returns specification, tool/metadata, filesystem or input-resolution errors.
-    pub fn prepare_assuming_sources_immutable<Guard: ?Sized>(
-        _source_write_guard: &'guard Guard,
-        specs: &[WasmBuildSpec],
-    ) -> Result<Self, WasmBuildError> {
-        Ok(Self {
-            state: WasmBuildInputSnapshotState::prepare(specs)?,
-            _source_guard: PhantomData,
-        })
-    }
-
-    /// Build a collect-all batch with explicit orchestration and optional progress.
-    ///
-    /// Source lease, feature isolation and retention match independent batches.
-    /// `spawn` selects Cargo child/group custody and cleanup, independently of progress.
-    /// Prepared snapshots reject specifications absent during preparation.
-    ///
-    /// # Errors
-    /// Returns invalid labels, an invalidated lease or an unprepared specification
-    /// error before work. Individual build failures remain in the report.
-    pub fn build_batch(
-        &self,
-        specs: &[LabeledWasmBuildSpec],
-        config: WasmBuildBatchConfig,
-        progress: Option<(
-            WasmBuildProgressConfig,
-            &mut dyn FnMut(WasmBuildBatchProgressEvent),
-        )>,
-        mut spawn: impl FnMut(
-            &mut std::process::Command,
-        ) -> std::io::Result<ic_host_process::child::OwnedChild>,
-    ) -> Result<WasmBuildBatchReport, WasmBuildBatchContractError> {
-        run_wasm_batch(specs, config, Some(&self.state), progress, &mut spawn)
-    }
-
-    /// Current preparation, reader-reuse, and invalidation metrics.
-    #[must_use]
-    pub fn metrics(&self) -> WasmBuildInputSnapshotMetrics {
-        let preparation = self.state.preparation_metrics();
-        WasmBuildInputSnapshotMetrics {
-            specifications: self.state.specification_count(),
-            input_resolution_runs: preparation.runs,
-            input_resolution_reuses: preparation.reuses,
-            input_resolution_timings: self.state.preparation_timings(),
-            reader_reuses: self.state.reader_reuses(),
-            invalidated: self.state.is_invalidated(),
-        }
-    }
-}
-
-impl WasmBuildInputSnapshotMetrics {
-    /// Number of exact specifications captured during preparation.
-    #[must_use]
-    pub const fn specifications(self) -> usize {
-        self.specifications
-    }
-
-    /// Number of workspace/toolchain resolution snapshots prepared.
-    #[must_use]
-    pub const fn input_resolution_runs(self) -> usize {
-        self.input_resolution_runs
-    }
-
-    /// Number of prepared specifications sharing another resolution run.
-    #[must_use]
-    pub const fn input_resolution_reuses(self) -> usize {
-        self.input_resolution_reuses
-    }
-
-    /// Complete tool, metadata, discovery, and hashing preparation timings.
-    #[must_use]
-    pub const fn input_resolution_timings(self) -> WasmInputResolutionTimings {
-        self.input_resolution_timings
-    }
-
-    /// Cumulative exact specification resolutions served to readers.
-    #[must_use]
-    pub const fn reader_reuses(self) -> usize {
-        self.reader_reuses
-    }
-
-    /// Whether any reader detected a violation of the source lease.
-    #[must_use]
-    pub const fn is_invalidated(self) -> bool {
-        self.invalidated
-    }
-}
-
 /// Build error together with the phase and partial timings at the failure.
 pub type WasmBuildBatchFailure = (WasmBuildError, WasmBuildFailureDetails);
 
@@ -235,7 +102,6 @@ pub struct WasmBuildBatchMetrics {
     counts: CacheOutcomeCounts,
     input_resolution_runs: usize,
     input_resolution_reuses: usize,
-    input_resolution_prepared_reuses: usize,
     successful_timings: WasmBuildTimings,
     total: Duration,
 }
@@ -244,15 +110,6 @@ pub struct WasmBuildBatchMetrics {
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WasmBuildBatchProgressEvent {
-    /// One independently resolved build specification is about to start.
-    BuildStarted {
-        /// Zero-based position in the supplied specification slice.
-        index: usize,
-        /// Caller-owned stable label.
-        label: String,
-        /// Total number of supplied specifications.
-        total: usize,
-    },
     /// Progress forwarded from one independent build.
     BuildProgress {
         /// Zero-based position in the supplied specification slice.
@@ -261,20 +118,6 @@ pub enum WasmBuildBatchProgressEvent {
         label: String,
         /// Event emitted by that build.
         event: WasmBuildProgressEvent,
-    },
-    /// One independent build completed successfully.
-    BuildFinished {
-        /// Zero-based position in the supplied specification slice.
-        index: usize,
-        /// Caller-owned stable label.
-        label: String,
-    },
-    /// One independent build failed.
-    BuildFailed {
-        /// Zero-based position in the supplied specification slice.
-        index: usize,
-        /// Caller-owned stable label.
-        label: String,
     },
 }
 
@@ -345,7 +188,6 @@ impl WasmBuildBatchReport {
             specifications: self.entries.len(),
             input_resolution_runs: self.input_resolution.runs,
             input_resolution_reuses: self.input_resolution.reuses,
-            input_resolution_prepared_reuses: self.input_resolution.prepared_reuses,
             total: self.total,
             ..WasmBuildBatchMetrics::default()
         };
@@ -400,12 +242,6 @@ impl WasmBuildBatchMetrics {
     #[must_use]
     pub const fn input_resolution_reuses(self) -> usize {
         self.input_resolution_reuses
-    }
-
-    /// Number of specifications resolved from a prepared concurrent snapshot.
-    #[must_use]
-    pub const fn input_resolution_prepared_reuses(self) -> usize {
-        self.input_resolution_prepared_reuses
     }
 
     /// Sum of timings from successful acquisitions.
@@ -466,7 +302,7 @@ impl std::fmt::Display for WasmBuildBatchReport {
         let metrics = self.metrics();
         write!(
             formatter,
-            "builds={} succeeded={} failed={} built={} reused={} input_resolution_runs={} input_resolution_reuses={} input_resolution_prepared_reuses={} successful_timings=({}) total={:?}",
+            "builds={} succeeded={} failed={} built={} reused={} input_resolution_runs={} input_resolution_reuses={} successful_timings=({}) total={:?}",
             metrics.specifications(),
             metrics.succeeded(),
             metrics.failed(),
@@ -474,7 +310,6 @@ impl std::fmt::Display for WasmBuildBatchReport {
             metrics.reused(),
             metrics.input_resolution_runs(),
             metrics.input_resolution_reuses(),
-            metrics.input_resolution_prepared_reuses(),
             metrics.successful_timings(),
             metrics.total(),
         )
@@ -494,29 +329,14 @@ impl std::fmt::Display for WasmBuildBatchReport {
 /// # Errors
 /// Returns a contract error for an empty or duplicate label before any work.
 /// Individual build failures are retained in the returned report.
+#[expect(
+    clippy::result_large_err,
+    reason = "Batch entries retain complete failure details inline without per-failure allocation."
+)]
 pub fn build_wasm_canisters_cached_batch(
     specs: &[LabeledWasmBuildSpec],
     config: WasmBuildBatchConfig,
-    progress: Option<(
-        WasmBuildProgressConfig,
-        &mut dyn FnMut(WasmBuildBatchProgressEvent),
-    )>,
-    mut spawn: impl FnMut(
-        &mut std::process::Command,
-    ) -> std::io::Result<ic_host_process::child::OwnedChild>,
-) -> Result<WasmBuildBatchReport, WasmBuildBatchContractError> {
-    run_wasm_batch(specs, config, None, progress, &mut spawn)
-}
-
-#[expect(
-    clippy::result_large_err,
-    reason = "Clippy versions differ on size reporting; batch entries retain complete failure details inline without per-failure allocation."
-)]
-fn run_wasm_batch(
-    specs: &[LabeledWasmBuildSpec],
-    batch_config: WasmBuildBatchConfig,
-    reuse: Option<&WasmBuildInputSnapshotState>,
-    mut observation: Option<(
+    mut progress: Option<(
         WasmBuildProgressConfig,
         &mut dyn FnMut(WasmBuildBatchProgressEvent),
     )>,
@@ -526,56 +346,27 @@ fn run_wasm_batch(
 ) -> Result<WasmBuildBatchReport, WasmBuildBatchContractError> {
     validate_labels(specs.iter().map(LabeledWasmBuildSpec::label))
         .map_err(WasmBuildBatchContractError::Labels)?;
-    validate_input_reuse(reuse)?;
-    let count = specs.len();
     let mut resolver =
-        WasmBuildBatchInputResolver::new(specs.iter().map(LabeledWasmBuildSpec::spec), reuse)
-            .map_err(
-                |index| WasmBuildBatchContractError::SpecificationNotPrepared {
-                    index,
-                    label: specs[index].label.clone(),
-                },
-            )?;
-    let mut report = build_wasm_batch(specs, batch_config, |spec, index, maintenance| {
-        let label = &specs[index].label;
-        if let Some((_, observer)) = observation.as_mut() {
-            observer(WasmBuildBatchProgressEvent::BuildStarted {
-                index,
-                label: label.clone(),
-                total: count,
-            });
-        }
-        let progress_config = observation.as_ref().map(|(config, _)| *config);
+        WasmBuildBatchInputResolver::new(specs.iter().map(LabeledWasmBuildSpec::spec));
+    let mut report = build_wasm_batch(specs, config, |spec, index, maintenance| {
+        let progress_config = progress.as_ref().map(|(config, _)| *config);
         let mut forward = |event| {
-            if let Some((_, observer)) = observation.as_mut() {
+            if let Some((_, observer)) = progress.as_mut() {
                 observer(WasmBuildBatchProgressEvent::BuildProgress {
                     index,
-                    label: label.clone(),
+                    label: specs[index].label.clone(),
                     event,
                 });
             }
         };
-        let attempt = build_wasm_canisters_cached_in_batch(
+        build_wasm_canisters_cached_in_batch(
             spec,
             maintenance,
             index,
             &mut resolver,
             progress_config.map(|config| (config, &mut forward as &mut dyn FnMut(_))),
             &mut spawn,
-        );
-        if let Some((_, observer)) = observation.as_mut() {
-            observer(match &attempt {
-                Ok(_) => WasmBuildBatchProgressEvent::BuildFinished {
-                    index,
-                    label: label.clone(),
-                },
-                Err(_) => WasmBuildBatchProgressEvent::BuildFailed {
-                    index,
-                    label: label.clone(),
-                },
-            });
-        }
-        attempt
+        )
     });
     report.input_resolution = resolver.metrics();
     Ok(report)
@@ -617,16 +408,6 @@ where
         entries,
         input_resolution: WasmBuildBatchInputMetrics::default(),
         total: started.elapsed(),
-    }
-}
-
-fn validate_input_reuse(
-    reuse: Option<&WasmBuildInputSnapshotState>,
-) -> Result<(), WasmBuildBatchContractError> {
-    if reuse.is_some_and(WasmBuildInputSnapshotState::is_invalidated) {
-        Err(WasmBuildBatchContractError::SourceLeaseInvalidated)
-    } else {
-        Ok(())
     }
 }
 

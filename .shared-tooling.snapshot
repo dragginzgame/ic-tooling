@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.31.2
+# version	0.31.4
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	e11ed1c9b7377c673bca44a21cd819694c5c37a7
+revision	dad6d15750db66726850710f5fb423921b652c8d
 # entrypoint	.githooks/pre-commit
 # entrypoint	.github/actions/prepare-common-tools/action.yml
 # entrypoint	.github/actions/retain-failure-evidence/action.yml
@@ -149,7 +149,7 @@ file	0e95bbdb5bdaabf587297b20324b034979a7e0ff81be5cee9ac440f6fdcdb0d3	-	docs/pri
 file	68b4c6d68b807a6c491404654b68203cff29e8a6af4dd48a6fd0e2906ef0d313	-	docs/principles/rust-code-hygiene.md
 file	457fd38e0073c91ba470b918d4facd9faac3c5200ebd38c97e9d6b76acdaea55	-	docs/principles/simplicity-and-maintainability.md
 file	68f257ad3efd1081d46d3ba9bbf633869fa8ce08116b2b8108261baf3c16dddd	-	docs/provenance.md
-file	b626b6677eae904c563c0e11f91aade9f5f3bad8de7cdef4b4a65510b1e31b80	-	docs/releases.md
+file	91f0d16b747b3e8a1a3a85c840819ebbc40791e1a67b1bf0b7ba9563478077f1	-	docs/releases.md
 file	162617ce20162932ec03c925eebc88d699c147d63d4602bdb957e3df38692d59	-	docs/supported-hosts.md
 file	1063002468575e2f821cfec71524bde06a64634bf30455d64d2d9fed872969d6	-	docs/tag-maintenance.md
 file	b19096b9a5cbf7b27df3438bfde431c5053e9e6c64dda7dd35e9d24083349c16	-	docs/tool-catalog-bindings.md
@@ -163,7 +163,7 @@ file	3b5ba8695cf4a29e1f89c6b902806a1d02021d031fbe1dfbf9320424545a370e	-	rules/ag
 file	3c0ef02e3246db5af864071b3ab57a3fe8f4740329a0fed96a5cc06db5eac122	-	rules/cargo-dependencies.md
 file	6c25fe09f631d92a88d8ebb62cc20279f57f43a753d3a19dc254bb6ff0433b76	-	rules/change-reporting.md
 file	536f38d9707575badfd983c4b1168f62035a2276d8c440c3954ca98b1beab701	-	rules/changelogs.md
-file	28838fd8a231b2527ea50d54fca67c385d8afdec3b803b0dc24e89a5f650bf85	-	rules/contributions.md
+file	f176c35d2292d86bee5f856d476cbea5033143640bac44bb4236e8094e4cfd42	-	rules/contributions.md
 file	21f0393d5d331a27526f74f65f4f641e13c082ebe54a50200d290271dcae3176	-	rules/dependency-pinning.md
 file	9a714cacf3768485b142beffa519c5035aae9d52fc168d67b8252dc398affdb0	-	rules/git-hooks.md
 file	0ae2ade60be55406a8efe21c0f17af45cf9dc725c9a867dcf3b34830f83f55c0	-	rules/rust-workspaces.md
@@ -183,7 +183,7 @@ file	9e32385247296ce95d2b15b1290c64e6b6dff15716c1c139f21ab5e5128f4be3	x	scripts/
 file	a022de645d391ca6fd85949d5f4f8c48eb2f5320bc41a161d92887b24f66638d	x	scripts/ci/check-native-host.sh
 file	f921bbea3cebef8362b57c888e7624b4d2c82a64c00318df02c873e6df84cfd7	x	scripts/ci/check-no-symlinks.pl
 file	d866bd1ae0bf5c5d22120c3427857968eba86cbc2affa310951f76742e339116	x	scripts/ci/check-pipe-jobserver.pl
-file	dcf4585f8794b2158259054f550dbabea64fadd7d4f07161388ea49a0dfa3d80	x	scripts/ci/check-release-commands.sh
+file	0978c7927bf4688873cf6fc89a0d720b912380ebc4ed4a08747d19b623508c47	x	scripts/ci/check-release-commands.sh
 file	a3af7084956384262842be33100f91a22fdd82b0f91b6091a00e90f8726f67fe	x	scripts/ci/check-release-source.sh
 file	18240ae231c3056bab5c535f25534dcd5ec0ac65d8d431e88fc3b174c66f2fce	x	scripts/ci/check-release-tag.sh
 file	172ab2415f4816bdad7955720ef45445b4bd81283c928d7ef2ee3de9064b69b5	x	scripts/ci/collect-tool-evidence.sh
@@ -245,12 +245,13 @@ file	7247a2eff290695bf1791e3080a0234148f27e413a23b47b514ee4942f64ce1f	-	docs/sta
 file	27586526bd973eef808e2b30b1309deef7288837f7134af7601efe1d2316bfb2	-	tasks/systemd/shared-tooling-stack-graph.service
 file	250b0996e0c5b3ccba3c6f6943a22dcf12e7904a5ad510308841f08ae4b5f79a	-	tasks/systemd/shared-tooling-stack-graph.timer
 file	d0ee87bebd55af6c3dfc2a062b5abdf951b07afc419e7cf52c085ce65bddba15	-	scripts/ci/check-candid-boundary.pl
-file	c19319d552bab2fc3bde4efa10a313e47f01dbef1494137c6a8820142d93e34b	-	rules/engineering-details.md
+file	1e5fed3432dcd1762179cecfad3c8018780cdbe3bef2e4463151a3bf73612659	-	rules/engineering-details.md
 file	e3aed908dd9b08bf93255328bb056bed57298dab39944e3726aad2726548e653	-	rules/rpc-budgets.md
 file	a916ce4194ae2bd5591d86219109e4527455ce7b6358de0023da6bbe00b8397f	-	docs/rust-toolchains.md
 file	9aa52699f4f7f8069cddd6b6ec295afc7a781e48b09bf104d2fff8f262a4720d	-	scripts/distribution/maintenance-files.txt
 file	3bec4d54fb154a532aa210a18d5e4f7d3ccedd408a7de18ede6401baf8a942de	x	scripts/ci/report-tool-versions.sh
 file	e4c348ca67764c57a46b6de27be2d534ad855e32be1143490261c4db599510d7	-	docs/tool-store-maintenance.md
+file	1b1925534ac01ba60042c8ba96445dacdf0b63b6fb5c8c906d215672d42d1a2a	-	docs/release-batches.md
 file	a8dcf0bfa4f93b0cff1f891823b8ce20e039fca5f8ebb0996c83c8409a35eed0	-	docs/release-group-validation.md
 file	2ffaf2b8b67faee706f9d3648033ca4ecae263a5a2bb3beb3257f6374ddfc7d9	-	docs/release-validation-reuse.md
 file	3eccf509c260f7471d138b79f8edbe6ff86616a471e7d09caea029e92d408b55	-	docs/ci-change-selection.md
@@ -283,7 +284,7 @@ file	40c83cfc937b5115c3e7eb10db0194c455cc5179e465cdd7d62cb56d305c3e27	-	scripts/
 file	c8693a4bc058f31c1592c86e7037f0ed02a9719a8a0269038e0a45e16ca93c0b	-	scripts/ci/validation-input-checkpoint.pl
 file	1fd11f64f7698c1b5b17049d2b1551daba3af33bbdaba92228d7fc1f743e9055	-	scripts/ci/release-validation-plan.pl
 file	eeeca9e6e7b92b888fd6547733d6136f0e7e9859d37c983f8048e60551a15c39	-	scripts/ci/StableVersion.pm
-file	0e656238706f9a423f1b3c1e22d625e249365b3974a0eb4cffbff7e1b0d2136a	-	scripts/dev/cloc-classify.pl
+file	07506742c2878f3f8c93a78bbbb6292259a8aaaa01c6bbf15d254884206a1431	-	scripts/dev/cloc-classify.pl
 file	4cfa90a020aefc5115fe5f7103eb5857f837acb9e0cf91f6362947a4abea211c	x	scripts/ci/describe-tool-selection.pl
 file	ebf236f1db579744a13bc995ec1c58c2ee87e34caed23088a6d9b75e638dd27f	x	scripts/ci/verify-evidence-checksums.sh
 file	f06fab74d51ec386133feeda6cd26509e8a9797ae14d93afdf5fb7369b0141a0	-	scripts/dev/tool-store-maintenance.pl
@@ -293,7 +294,6 @@ file	ea7c542d93c4e94638a0a409c65360625072e56d1ea7ca8ff4d693e26650c43b	-	docs/can
 file	7f39ed6acc821c20680e0e4cba85cf10fa894af81eb92dbf3c152bb198410b8e	-	scripts/dev/compiler-cache-maintenance.pl
 file	ee66bfd391f41740de2533cae6490f8658d662ca64391db09ee3ecc7b1dc1482	-	docs/group-validation-adoption.md
 file	d7db019a2c4576e4af02b50009418ecf819f1091dc29b6f72dcc236ef34db097	-	scripts/ci/cargo-publication-adapter.sh
-file	1b1925534ac01ba60042c8ba96445dacdf0b63b6fb5c8c906d215672d42d1a2a	-	docs/release-batches.md
 file	6d99677e86759273a88fb4149cbd4c14f2aacc99e1838a0db343d76c776f1aba	-	scripts/ci/ic-tool-pins.awk
 file	ee9ec8f9f45ff2e61ed0287fcac6b2b3c151e802565cacd29c6eeacf32c3b97f	-	scripts/dev/native-package-inputs.pl
 file	6c094eb6af59e9071c7fa5e87c917202f866b220a94e59f1b4fffe154ed5f92e	-	scripts/ci/ValidationPlan.pm

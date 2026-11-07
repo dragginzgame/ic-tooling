@@ -12,13 +12,6 @@ category = "build_tooling"
 
 [package.metadata.shared-tooling.loc.paths]
 "src/bin/tests/mod.rs" = "tests"
-"src/fixture_reuse_driver/arguments/tests.rs" = "tests"
-"src/fixture_reuse_driver/report/tests.rs" = "tests"
-"src/fixture_reuse_driver/tests.rs" = "tests"
-"src/fixture_reuse_protocol/tests.rs" = "tests"
-"src/statistics/tests.rs" = "tests"
-"src/workload/tests.rs" = "tests"
-"src/workload.rs" = "benchmarks"
 "tests" = "tests"
 
 [[bin]]
@@ -29,25 +22,22 @@ path = "tests/support/internet_identity_fixture.rs"
 clap = { workspace = true, features = ["derive", "string"] }
 ic-build = { workspace = true }
 ic-host-artifacts = { workspace = true, features = ["wasm-text"] }
-ic-host-fs = { workspace = true, features = ["temporary-file"] }
+ic-host-fs = { workspace = true }
 ic-host-process = { workspace = true }
 ic-host-text = { workspace = true }
-ic-platform-types = { workspace = true, features = ["principal-external"] }
-ic-testkit = { workspace = true, features = ["wire"] }
-ic-testkit-perf-probe = { workspace = true }
+ic-testkit = { workspace = true }
 libc = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "time"] }
-
-[target.'cfg(unix)'.dependencies]
-rustix = { workspace = true, features = ["process"] }
 
 [dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }
 ic-host-tools = { workspace = true, features = ["registry"] }
 ic-platform = { workspace = true, features = ["principal", "ic-protocol"] }
+ic-platform-types = { workspace = true, features = ["principal-external"] }
+ic-testkit = { workspace = true, features = ["wire"] }
+ic-testkit-perf-probe.workspace = true
 ic-wire.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 

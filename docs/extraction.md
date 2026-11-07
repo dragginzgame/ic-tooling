@@ -174,18 +174,6 @@ certification, full range ordering, completeness, replay and report policy.
 The projections preserve Query 0.57.0's tags/discriminants and are not a complete
 upstream Registry schema; unknown fields retain normal Prost behavior.
 
-`sampling::snapshot(record_bytes, command_limits)` keeps native RSS observation
-in the Process owner. Linux selects the per-record procfs allowance; macOS uses
-caller-selected `OutputLimits` through the existing direct-child capture engine.
-An optional deadline remains explicit, with no default elapsed-time bound.
-Incomplete tables refuse before parsing; command failures retain typed capture,
-diagnostic and cleanup evidence instead of printing stderr. Workload lifetime,
-sampling cadence, process visibility interpretation and aggregate table memory
-remain consumer-owned. See the [0.19 hard cut](changelog/0.19.md).
-Linux requires each stat record to fit completely within its allowance before
-parsing; bounded artifact-reader refusals retain their typed cause through
-`SamplingError::Io`, while native disappearance/access skip rules stay intact.
-
 The optional native Tools `agent` feature shares response-bounded SDK construction
 and lazy exact endpoint/ceiling binding using Platform's supported Agent API.
 The caller retains endpoint admission, trust roots, identity, historical policy,

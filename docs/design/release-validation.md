@@ -82,13 +82,13 @@ contracts, compiler, public dependency identities or other package source select
 the full gate. Unknown Cargo configuration/overrides also retain the full gate.
 Native must have no dependencies or workspace reverse consumers. Text's reverse
 owners must remain Tools and Dev, with runtime callsites confined to the checked
-`icp-project`, benchmark driver and archive diagnostics. New consumers require a
+`icp-project` and archive diagnostics. New consumers require a
 reviewed mapping. This is explicit contract admission, not automatic dependency
 inference or an operator-controlled skip switch.
 
 Tools has only Dev's development edge, with Rust callers confined to
-`tests/public_contracts.rs`. Build has only Dev's normal edge; its driver,
-archive-qualification binary/tests, public contract and canister benchmark are
+`tests/public_contracts.rs`. Build has only Dev's normal edge; its
+archive-qualification binary/tests, public contract and installed Wire test are
 the admitted call surfaces. A new consumer, dependency kind or Rust call surface
 selects the full gate. Per-group exclusion annotations explain every omitted
 full stage; Tools/Build do not inherit Native/Text's unrelated exclusion claims.

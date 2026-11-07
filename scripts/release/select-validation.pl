@@ -149,7 +149,6 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
                 for my $path (grep { length } split /\n/, $references) {
                     $path =~ s/^\Q$source\E://;
                     $safe &&= $path =~ m{\Acrates/ic-host-tools/src/icp_project/} ||
-                        $path =~ m{\Acrates/ic-testkit-dev/src/fixture_reuse_driver/} ||
                         $path eq 'crates/ic-testkit-dev/src/bin/check_packages.rs';
                 }
             }
@@ -159,7 +158,7 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
                 for my $path (grep { length } split /\n/, $references) {
                     $path =~ s/^\Q$source\E://;
                     my $public = $path eq 'crates/ic-testkit-dev/tests/public_contracts.rs';
-                    my $build = $path =~ m{\Acrates/ic-testkit-dev/(?:src/(?:fixture_reuse_driver/|bin/(?:tests/|check_packages\.rs\z))|tests/canister_benchmark\.rs\z)};
+                    my $build = $path =~ m{\Acrates/ic-testkit-dev/(?:src/(?:bin/(?:tests/|check_packages\.rs\z))|tests/canister_wire\.rs\z)};
                     $safe &&= $public || ($group eq 'build' && $build);
                 }
             }

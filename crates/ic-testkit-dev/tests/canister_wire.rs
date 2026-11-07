@@ -1,4 +1,4 @@
-//! Native benchmark checks for the private Wasm probe.
+//! Installed Wire calls, state, caller identity and typed failure qualification.
 use ic_build::{
     artifacts::{WasmBuildSpec, build_wasm_canisters_cached},
     cargo::{
@@ -16,7 +16,6 @@ use ic_testkit::pic::{
     InstallSpec, StandaloneCanisterFixture, WireCallError, query_wire, update_wire,
 };
 use ic_testkit::pocket_ic::ClientError;
-use ic_testkit_dev::probe_wire_spec;
 use ic_testkit_perf_probe::protocol::{
     self, BENCHMARK_ONCE, BENCHMARK_TRAP, INSPECT_STATE, MUTATE_STATE, PING, QUERY_CALLER,
     SEED_STATE, State, UPDATE_CALLER,
@@ -47,7 +46,7 @@ async fn install_probe() -> StandaloneCanisterFixture {
         workspace
             .join("crates/ic-testkit-perf-probe/Cargo.toml")
             .is_file(),
-        "benchmark qualification requires the workspace perf probe"
+        "Wire qualification requires the workspace control canister"
     );
     let target_dir = ic_host_fs::owned_directory::OwnedDirectory::new(
         ic_host_fs::directory::create_unique_directory(
@@ -301,3 +300,15 @@ const CONFIGURATION_LIMITS: ic_build::cargo::environment::ConfigurationLimits =
         files: 128,
         depth: 32,
     };
+
+// The fixture owns the native control frame for this installed Wire contract.
+const fn probe_wire_spec(
+    method: ic_testkit_perf_probe::protocol::Method,
+) -> ic_testkit::pic::WireCallSpec {
+    ic_testkit::pic::WireCallSpec {
+        method: method.name,
+        method_id: method.id,
+        request_limits: method.request_limits,
+        response_limits: method.response_limits,
+    }
+}

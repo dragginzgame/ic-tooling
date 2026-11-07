@@ -6,6 +6,15 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.75.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Remove Host Process's unused Git-provenance and process-tree RSS sampling
+  modules with the retired optional fixture benchmark workflow. Consumers retain
+  their own provenance policy; general process execution, signals and child
+  custody remain supported.
+
 ## [0.74.4] - 2026-11-05
 
 ### 🧪 Testing

@@ -1,3 +1,8 @@
+> **Historical: retired by the current workspace cleanup.**
+> Fixture-reuse benchmark is no longer an active workflow. The following record applies only
+> to its [original source](https://github.com/dragginzgame/ic-tooling/tree/efb49a5981d4082bfa5e780b4c4323621871d754).
+> Current contracts are in the [Build guide](../build/artifacts.md) and the [Testkit host guide](hosts.md).
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-testkit/ic-testkit-readme-header.svg" alt="IC Testkit — Internet Computer helper library" width="100%">
 </p>

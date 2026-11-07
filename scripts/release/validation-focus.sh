@@ -37,7 +37,6 @@ case "$1" in
         if [[ $RELEASE_GROUP == text ]]; then
             cargo test -p "$package" --no-default-features --lib --locked --offline
             make --no-print-directory test-text-yaml test-tools-icp-project
-            cargo test -p ic-testkit-dev --lib --locked --offline
             cargo test -p ic-testkit-dev --bin check_packages --locked --offline
         fi
         if [[ $RELEASE_GROUP == tools ]]; then
@@ -47,11 +46,10 @@ case "$1" in
             cargo test -p ic-testkit-dev --test public_contracts --locked --offline
         fi
         if [[ $RELEASE_GROUP == build ]]; then
-            cargo test -p ic-testkit-dev --lib --locked --offline
             cargo test -p ic-testkit-dev --bin check_packages --locked --offline
             cargo test -p ic-testkit-dev --test public_contracts --locked --offline
             server=$(target/debug/ic-testkit-server check)
-            POCKET_IC_BIN="$server" cargo test -p ic-testkit-dev --test canister_benchmark --locked --offline
+            POCKET_IC_BIN="$server" cargo test -p ic-testkit-dev --test canister_wire --locked --offline
         fi ;;
     docs) RUSTDOCFLAGS='-D warnings' cargo doc -p "$package" --all-features --locked --offline --no-deps ;;
     archives) cargo run -p ic-testkit-dev --bin check_packages --locked --offline -- --package "$package" ;;

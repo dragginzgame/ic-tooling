@@ -4,7 +4,6 @@ use super::{
     WasmBuildError, WasmBuildFailureDetails, WasmBuildFailureTimings, WasmBuildPhase,
     WasmBuildProgressConfig, WasmBuildProgressEvent,
 };
-use ic_host_process::tool::OutputStream;
 use std::{
     sync::mpsc::{self, RecvTimeoutError},
     thread,
@@ -27,7 +26,7 @@ impl<'a> ProgressReporter<'a> {
     pub(super) fn heartbeat_interval(&self) -> Option<Duration> {
         self.observation
             .as_ref()
-            .and_then(|observation| observation.config.heartbeat_interval())
+            .map(|observation| observation.config.heartbeat_interval())
     }
 
     pub(super) fn silent() -> Self {
@@ -47,7 +46,7 @@ impl<'a> ProgressReporter<'a> {
         let Some((config, observer)) = observation else {
             return Ok(Self::silent());
         };
-        if config.heartbeat_interval == Some(Duration::ZERO) {
+        if config.heartbeat_interval == Duration::ZERO {
             return Err(WasmBuildError::InvalidSpec {
                 message: "Wasm build progress heartbeat interval must be greater than zero"
                     .to_owned(),
@@ -63,19 +62,6 @@ impl<'a> ProgressReporter<'a> {
         })
     }
 
-    pub(super) fn emit_cargo_output(&mut self, stream: OutputStream, bytes: &[u8]) {
-        if self
-            .observation
-            .as_ref()
-            .is_some_and(|observation| observation.config.emit_cargo_output)
-        {
-            self.emit(WasmBuildProgressEvent::CargoOutput {
-                stream,
-                bytes: bytes.to_vec(),
-            });
-        }
-    }
-
     pub(super) fn emit(&mut self, event: WasmBuildProgressEvent) {
         if let Some(observation) = &mut self.observation {
             (observation.observer)(event);
@@ -84,11 +70,11 @@ impl<'a> ProgressReporter<'a> {
     }
 
     pub(super) fn heartbeat_due_in(&self) -> Option<Duration> {
-        self.observation.as_ref().and_then(|observation| {
+        self.observation.as_ref().map(|observation| {
             observation
                 .config
                 .heartbeat_interval
-                .map(|interval| interval.saturating_sub(observation.last_event.elapsed()))
+                .saturating_sub(observation.last_event.elapsed())
         })
     }
 

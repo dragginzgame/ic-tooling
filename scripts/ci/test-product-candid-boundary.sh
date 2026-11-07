@@ -18,8 +18,8 @@ while IFS= read -r path; do
     mkdir -p "$fixture/${path%/*}"
     cp "$root/$path" "$fixture/$path"
 done <<< "$paths"
-mkdir -p "$fixture/apps" "$fixture/docs" "$fixture/scripts/fixtures/wasm-recipe"
-for path in apps/inventory.rs docs/inventory.rs scripts/fixtures/wasm-recipe/main.rs; do
+mkdir -p "$fixture/apps" "$fixture/docs" "$fixture/scripts/fixtures/native-consumer"
+for path in apps/inventory.rs docs/inventory.rs scripts/fixtures/native-consumer/main.rs; do
     printf '// Source-mask fixture data, never compiled.\n' > "$fixture/$path"
 done
 cat > "$fixture/scripts/ci/check-dependency-pins.sh" <<'STUB'
@@ -51,11 +51,11 @@ pub struct InternalReport;
 RUST
 refuse owned-report crates/ic-host-tools/src/ledger_evidence/mod.rs
 cp "$root/crates/ic-host-tools/src/ledger_evidence/mod.rs" "$fixture/crates/ic-host-tools/src/ledger_evidence/mod.rs"
-cat > "$fixture/scripts/fixtures/wasm-recipe/main.rs" <<'RUST'
+cat > "$fixture/scripts/fixtures/native-consumer/main.rs" <<'RUST'
 use ic_platform::candid::contract::CandidType as ExternalCodec;
 #[cfg_attr(any(), derive(ExternalCodec))]
 pub struct FixtureReport;
 RUST
-refuse independent-fixture scripts/fixtures/wasm-recipe/main.rs
+refuse independent-fixture scripts/fixtures/native-consumer/main.rs
 fixture_complete=true
 echo 'Consumer Candid admission, single Make execution and owned/fixture rejection passed'

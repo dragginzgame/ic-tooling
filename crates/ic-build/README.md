@@ -26,7 +26,7 @@ The public entry points are:
 
 - `ic_build::artifacts`: exact Cargo input resolution, Wasm acquisition,
   transactional artifact publication, retained records, staging/capture,
-  prepared snapshots, batches, explicit maintenance and native Candid extraction.
+  independent batches, explicit maintenance and native Candid extraction.
 - `ic_build::cargo`: typed selections, configuration/metadata observations,
   feature-safe package grouping, Cargo communication and exact artifact selection,
   native executable builds, package qualification and lock projection.

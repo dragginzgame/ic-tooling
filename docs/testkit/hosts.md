@@ -15,12 +15,9 @@ The private test-canister package is `ic-testkit-perf-probe` under
 `crates/ic-testkit-perf-probe`. Cargo package selections use hyphens; Rust imports
 and Cargo's generated `ic_testkit_perf_probe.wasm` retain underscores.
 
-The private fixture reporter owns complete-sample floating-point statistics.
-Focused reporter qualification runs the `statistics::tests` and
-`fixture_reuse_driver::report::tests` selections with
-`cargo test -p ic-testkit-dev --lib --locked --offline`.
-A live fixture-driver smoke qualifies collection and report wiring separately
-from those numerical tests.
+The private development package owns archive qualification, the II fixture and
+installed Wire control-canister acceptance. The optional benchmark driver,
+worker, cohort reporting and private library test surface are retired.
 
 ### Dependency roles and deployment boundary
 
@@ -95,7 +92,7 @@ alongside its single Build and Platform identities. The selected release editor 
 entry. This requirement does not add Build to the published library or Wasm.
 
 Build renders the workspace-discovery command and decodes its complete response.
-The benchmark driver captures it through Host with the existing 64 KiB per-stream
+The installed Wire test captures it through Host with the existing 64 KiB per-stream
 limits and no elapsed-time deadline. Failed invocations retain their original
 typed Host cause and I/O error classification; incomplete output is never decoded.
 
@@ -247,11 +244,9 @@ Host FS owns unique directory allocation and `OwnedDirectory` cleanup. Startup
 and test directories keep mode 0700 subject to umask and cleanup on drop,
 including unwind; caller-selected external startup logs survive teardown.
 Qualification evidence uses unguarded allocated paths for intentional retention.
-Worker capture uses Host's scoped `TemporaryFile`, cloning its descriptor and
-closing/unlinking its name before spawning the worker. The private development
-package explicitly selects FS's `temporary-file` feature. The published
-library needs neither that feature nor `capability`; these empty-default
-backends are selected only by actual callers. Testkit declares none of
+The retired benchmark worker no longer selects FS's `temporary-file` feature.
+The published library needs neither that feature nor `capability`; these
+empty-default backends are selected only by actual callers. Testkit declares none of
 `tempfile`, `wasm-encoder` or `wasmparser` directly; these remain transitive Host
 implementation dependencies.
 
@@ -262,22 +257,15 @@ and cleanup behavior are unchanged. Qualification uses the selected registry
 lock; source compilation and cross-target graphs do not establish native macOS
 or deployed consumer acceptance.
 
-The private driver now consumes registry Build 0.22.1 with the same Host 0.31
-child and output-limit identities. Its actual Cargo selections, renamed probe
-build and installed Wire test qualify this caller without a compatibility
-layer or unpublished source override. Other consumers retain their acceptance
-under [Build #9 — Qualify consumers against the current exposed Host boundary](https://github.com/dragginzgame/ic-build/issues/9).
-
 ### Local PocketIC operation boundary
 
-The server CLI and benchmark driver use Host's `SignalActions` for scoped Unix
-registration and restoration. Each standalone process owns its dispositions and
-supplies a static atomic-only callback: the CLI selects INT/TERM/HUP, while the
-driver selects INT. Testkit retains cancellation, child teardown and interruption
+The server CLI uses Host's `SignalActions` for scoped Unix registration and
+restoration. It owns its dispositions and supplies a static atomic-only callback
+for INT/TERM/HUP. Testkit retains cancellation, child teardown and interruption
 exit policy. CLI child statuses use Host's numeric projection with Testkit's
 129 unavailable-status and 1 unrepresentable-status fallbacks. Qualify real
-interruption and descendant cleanup with `server_runner` and the isolated
-benchmark driver interruption case; signal actions are process-global.
+interruption and descendant cleanup with `server_runner`; signal actions are
+process-global.
 
 `pic::try_pocket_ic_operation` runs one synchronous operation and returns only
 recognized transport panics as the existing `PocketIcOperationError`. Candid
@@ -309,8 +297,8 @@ change. Use this workspace's `target/`.
 | Operation errors and call decoding | `cargo test -p ic-testkit --lib --locked pic::transport::tests`; `cargo test -p ic-testkit --lib --locked pic::calls::tests` |
 | Platform Candid integration | `cargo test -p ic-testkit --lib --locked pic::calls::tests`; `cargo test -p ic-testkit --lib --locked pic::transport::tests` |
 | Canister library | `cargo check -p ic-testkit --lib --target wasm32-unknown-unknown --locked` |
-| Development build/report adapter | `cargo check -p ic-testkit-dev --all-targets --locked`; `cargo test -p ic-testkit-dev --lib --locked` |
-| Operator and private CLI parsing | `cargo test -p ic-testkit --features cli --bin ic-testkit-server --locked`; `cargo test -p ic-testkit --features cli --test server_runner --locked`; `cargo test -p ic-testkit-dev --lib --locked arguments`; `cargo test -p ic-testkit-dev --lib --locked fixture_reuse_protocol` |
+| Development build/report adapter | `cargo check -p ic-testkit-dev --all-targets --locked`; `cargo test -p ic-testkit-dev --bin check_packages --locked` |
+| Operator and private CLI parsing | `cargo test -p ic-testkit --features cli --bin ic-testkit-server --locked`; `cargo test -p ic-testkit --features cli --test server_runner --locked` |
 | Shared snapshot and real tooling callers | `make shared-tooling-check`; `make tools-check dependency-pins-check`; select the affected hook/release-adapter checks from the Makefile |
 | Formatting and API documentation | `make fmt-check`; `RUSTDOCFLAGS="-D warnings" cargo doc -p ic-testkit --no-deps --locked`; `cargo test -p ic-testkit --doc --locked` |
 
@@ -319,13 +307,13 @@ For live tests, build the owner CLI and admit the already prepared bundle:
 ```bash
 make build-server-cli
 server="$(target/debug/ic-testkit-server check)" || exit
-POCKET_IC_BIN="$server" cargo test -p ic-testkit-dev --test canister_benchmark --locked
+POCKET_IC_BIN="$server" cargo test -p ic-testkit-dev --test canister_wire --locked
 ```
 
 Select a relevant `pocket_ic_*` integration target for runtime contract changes.
 The installed Wire test consumes IC Build's retained artifact and validates actual
 Wire request/reply admission and trap handling; generic artifact-cache regression tests belong to
-IC Build. The optional full fixture-reuse workload remains outside ordinary CI.
+IC Build. The former optional benchmark workload is retired.
 Shared Tooling's exported fixtures remain reviewed snapshot payloads for focused
 changed-contract qualification. Routine CI uses the consumer checks below.
 

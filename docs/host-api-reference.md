@@ -293,7 +293,6 @@ IO, spawns and releases the returned newline gate after its own readiness check.
 completeness. Procfs operations accept an explicitly selected mount; no workload,
 read allowance, cadence, aggregation or report policy is selected. These richer
 observations preserve opaque creation identities and optional Linux I/O/PSS.
-They are distinct from the existing bounded RSS-only `sampling` table contract.
 
 Unix `custody::CommandCustody` instead retains a caller-selected sidecar lock
 through one command's inherited descriptor and cooperating descendants. Persist
@@ -347,13 +346,13 @@ All capture, communication and admission functions accept one `OutputLimits`
 type with `stdout`, `stderr` and `timeout: Option<Duration>`. Select `None` for
 long builds without an elapsed-time deadline, or `Some(duration)` for a positive
 deadline. Retention and cleanup still apply; communication also polls cancellation.
-Version, Git and Candid admission reject truncated captures. Other consumers can
+Version and Candid admission reject truncated captures. Other consumers can
 use `CompletedExecution::require_complete` before parsing retained output.
 
 Examples live with their owners: `ic-host-artifacts` has `hash_serialized_json`;
 `ic-host-fs` has `inspect_regular_file` and
 the artifact/file composition `inspect_gzip`;
-`ic-host-process` has `inspect_git` and `resolve_tool`. `ic-host-tools` retains
+`ic-host-process` has `resolve_tool`. `ic-host-tools` retains
 `inspect_response`; the response
 example runs with `--no-default-features`. Example-only dependencies do not widen
 the tools crate's production feature graph.

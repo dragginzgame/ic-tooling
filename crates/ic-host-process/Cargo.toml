@@ -6,14 +6,14 @@ version = "0.74.4"
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Native process observations, admitted execution and Git provenance"
+description = "Native process observations and admitted execution"
 readme = "../../README.md"
 publish = ["crates-io"]
 
 [target.'cfg(unix)'.dependencies]
 command-fds.workspace = true
 libc.workspace = true
-rustix = { workspace = true, features = ["param", "pipe", "process", "time"] }
+rustix = { workspace = true, features = ["pipe", "process", "time"] }
 
 [features]
 test-support = []

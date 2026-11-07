@@ -8,7 +8,6 @@ use ic_host_fs::read::directory_logical_size;
 use ic_host_process::child::OwnedChild;
 #[cfg(unix)]
 use ic_host_process::testing::write_executable_script;
-use ic_host_process::tool::OutputStream;
 
 use super::{
     ProgressReporter, SharedIncrementalTargetMaintenanceConfig,
@@ -24,7 +23,7 @@ use super::{
     run_cargo_build, validate_spec, validated_artifact_set,
 };
 use crate::artifacts::cache_fs::{CacheRetentionLimits, write_last_used};
-use crate::artifacts::{WasmBuildInputSnapshot, digest::digest_bytes};
+use crate::artifacts::digest::digest_bytes;
 use crate::testing::fs::unique_temp_directory;
 use std::{
     collections::BTreeSet,
@@ -374,11 +373,7 @@ fn package_selection_agrees_across_identity_artifacts_and_cargo_invocation() {
     for observed in [false, true] {
         let mut observer = |_| {};
         let mut progress = if observed {
-            ProgressReporter::new(Some((
-                WasmBuildProgressConfig::new().without_heartbeats(),
-                &mut observer,
-            )))
-            .unwrap()
+            ProgressReporter::new(Some((WasmBuildProgressConfig::new(), &mut observer))).unwrap()
         } else {
             ProgressReporter::silent()
         };
@@ -518,19 +513,12 @@ fn typed_features_watch_enabled_optional_dependencies() {
                 .is_content_current()
                 .expect("check unchanged inputs")
         );
-        {
-            let source_exclusion = std::sync::Mutex::new(());
-            let guard = source_exclusion.lock().expect("lock source fixture");
-            let prepared = WasmBuildInputSnapshot::prepare_assuming_sources_immutable(
-                &guard,
-                &[base.clone(), spec],
-            )
-            .expect("prepare distinct feature graphs");
-            assert_eq!(prepared.metrics().input_resolution_runs(), 2);
-            assert_eq!(prepared.metrics().input_resolution_reuses(), 0);
-            drop(prepared);
-            drop(guard);
-        }
+        let mut resolver = WasmBuildBatchInputResolver::new([&base, &spec]);
+        let mut progress = ProgressReporter::silent();
+        resolver.resolve(0, &mut progress).unwrap();
+        resolver.resolve(1, &mut progress).unwrap();
+        assert_eq!(resolver.metrics().runs, 2);
+        assert_eq!(resolver.metrics().reuses, 0);
         fs::write(&dependency_source, "pub fn optional_dep() -> u8 { 2 }\n")
             .expect("change optional dependency source");
         assert!(
@@ -1488,7 +1476,7 @@ fn batch_input_snapshot_reuses_compatible_toolchain_and_metadata_resolution() {
         recipe("fixture_b"),
         recipe("fixture_a").with_cargo_selection(alpha),
     ];
-    let mut resolver = WasmBuildBatchInputResolver::new(&specs, None).unwrap();
+    let mut resolver = WasmBuildBatchInputResolver::new(&specs);
     let mut progress = ProgressReporter::silent();
 
     let snapshots = (0..specs.len())
@@ -2175,7 +2163,7 @@ fn exact_cache_lock_wait_emits_phase_aware_heartbeats() {
 
 #[test]
 #[cfg(unix)]
-fn observed_cargo_build_forwards_raw_output_and_quiet_heartbeats() {
+fn observed_cargo_build_emits_quiet_heartbeats() {
     let root = unique_temp_directory("observed-cargo-progress");
     // Cargo's first argument is `build`; let an existing shell read that fixture
     // instead of executing a freshly written file, which can fail with ETXTBSY.
@@ -2242,18 +2230,6 @@ done
         .expect("run observed Cargo fixture");
     }
 
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
-    for event in &events {
-        if let WasmBuildProgressEvent::CargoOutput { stream, bytes } = event {
-            match stream {
-                OutputStream::Stdout => stdout.extend_from_slice(bytes),
-                OutputStream::Stderr => stderr.extend_from_slice(bytes),
-            }
-        }
-    }
-    assert_eq!(stdout, b"observed-stdout");
-    assert_eq!(stderr, b"observed-stderr");
     assert!(events.iter().any(|event| matches!(
         event,
         WasmBuildProgressEvent::Heartbeat {
@@ -2261,70 +2237,12 @@ done
             ..
         }
     )));
-    assert!(events.iter().any(|event| matches!(
-        event,
-        WasmBuildProgressEvent::CargoFinished { success: true, .. }
-    )));
     fs::remove_dir_all(root).expect("remove observed Cargo fixture");
 }
 
 #[test]
 #[cfg(unix)]
-fn observed_cargo_parallel_streams_preserve_raw_bytes() {
-    let root = unique_temp_directory("cargo-parallel-streams");
-    let stdout = (0_u8..=255)
-        .cycle()
-        .take(super::CARGO_DIAGNOSTIC_BYTES + 37)
-        .collect::<Vec<_>>();
-    let stderr = b"diagnostic\0\xff\n".repeat(128 * 1024);
-    fs::write(root.join("stdout"), &stdout).unwrap();
-    fs::write(root.join("stderr"), &stderr).unwrap();
-    fs::write(
-        root.join("build"),
-        "set -eu\ncat stdout &\ncat stderr >&2 &\nwait\n",
-    )
-    .unwrap();
-    let spec = WasmBuildSpec::new(
-        &root,
-        &root.join("exact"),
-        &["fixture"],
-        crate::testing::cargo::environment(),
-        CONFIGURATION_LIMITS,
-    )
-    .with_cargo_program("/bin/sh");
-    let mut forwarded_stdout = Vec::new();
-    let mut forwarded_stderr = Vec::new();
-    let mut observer = |event| {
-        if let WasmBuildProgressEvent::CargoOutput { stream, bytes } = event {
-            match stream {
-                OutputStream::Stdout => forwarded_stdout.extend(bytes),
-                OutputStream::Stderr => forwarded_stderr.extend(bytes),
-            }
-        }
-    };
-    let mut progress = ProgressReporter::new(Some((
-        WasmBuildProgressConfig::new()
-            .without_heartbeats()
-            .with_cargo_output(true),
-        &mut observer,
-    )))
-    .unwrap();
-    run_cargo_build(
-        &spec,
-        &root.join("cargo-target"),
-        &[],
-        &mut progress,
-        &mut (spawn_cargo),
-    )
-    .unwrap();
-    assert_eq!(forwarded_stdout, stdout);
-    assert_eq!(forwarded_stderr, stderr);
-    fs::remove_dir_all(root).unwrap();
-}
-
-#[test]
-#[cfg(unix)]
-fn observed_cargo_leader_exit_cleans_descendant_held_pipes_without_eof() {
+fn cargo_leader_exit_cleans_descendant_held_pipes_without_eof() {
     let root = unique_temp_directory("cargo-descendant-pipes");
     let release = root.join("release");
     fs::write(root.join("build"),
@@ -2340,23 +2258,7 @@ fn observed_cargo_leader_exit_cleans_descendant_held_pipes_without_eof() {
     let (done, completion) = mpsc::channel();
     thread::scope(|scope| {
         scope.spawn(|| {
-            let mut output = Vec::new();
-            let mut observer = |event| {
-                if let WasmBuildProgressEvent::CargoOutput {
-                    stream: OutputStream::Stdout,
-                    bytes,
-                } = event
-                {
-                    output.extend(bytes);
-                }
-            };
-            let mut progress = ProgressReporter::new(Some((
-                WasmBuildProgressConfig::new()
-                    .without_heartbeats()
-                    .with_cargo_output(true),
-                &mut observer,
-            )))
-            .unwrap();
+            let mut progress = ProgressReporter::silent();
             run_cargo_build(
                 &spec,
                 &root.join("cargo-target"),
@@ -2365,7 +2267,6 @@ fn observed_cargo_leader_exit_cleans_descendant_held_pipes_without_eof() {
                 &mut (spawn_cargo),
             )
             .unwrap();
-            assert_eq!(output, b"leader-exited");
             done.send(()).unwrap();
         });
         let completed = completion.recv_timeout(Duration::from_secs(5));
@@ -2379,7 +2280,7 @@ fn observed_cargo_leader_exit_cleans_descendant_held_pipes_without_eof() {
 
 #[test]
 #[cfg(unix)]
-fn observed_cargo_failure_retains_captured_diagnostics_and_exit_event() {
+fn cargo_failure_retains_diagnostics_with_or_without_heartbeats() {
     let root = unique_temp_directory("observed-cargo-failure");
     // Each stream exceeds the pipe buffer and Host communication chunks.
     let expected_stdout = "failure-stdout".repeat(16 * 1024);
@@ -2400,19 +2301,15 @@ fn observed_cargo_failure_retains_captured_diagnostics_and_exit_event() {
         CONFIGURATION_LIMITS,
     )
     .with_cargo_program("/bin/sh");
-    for emit in [Some(true), Some(false), None] {
-        let mut events = Vec::new();
+    for observed in [false, true] {
         let error = {
-            let mut observer = |event| events.push(event);
-            let mut progress = emit.map_or_else(ProgressReporter::silent, |emit| {
-                ProgressReporter::new(Some((
-                    WasmBuildProgressConfig::new()
-                        .without_heartbeats()
-                        .with_cargo_output(emit),
-                    &mut observer,
-                )))
-                .unwrap()
-            });
+            let mut observer = |_| {};
+            let mut progress = if observed {
+                ProgressReporter::new(Some((WasmBuildProgressConfig::new(), &mut observer)))
+                    .unwrap()
+            } else {
+                ProgressReporter::silent()
+            };
 
             run_cargo_build(
                 &spec,
@@ -2438,30 +2335,13 @@ fn observed_cargo_failure_retains_captured_diagnostics_and_exit_event() {
             ),
             "unexpected Cargo fixture failure: {error:?}"
         );
-        assert_eq!(
-            events.iter().any(|event| matches!(
-                event,
-                WasmBuildProgressEvent::CargoFinished {
-                    success: false,
-                    code: Some(23),
-                    ..
-                }
-            )),
-            emit.is_some()
-        );
-        assert_eq!(
-            events
-                .iter()
-                .any(|event| matches!(event, WasmBuildProgressEvent::CargoOutput { .. })),
-            emit == Some(true),
-        );
     }
     fs::remove_dir_all(root).expect("remove failing observed Cargo fixture");
 }
 
 #[test]
 #[cfg(unix)]
-fn overflowing_cargo_diagnostics_are_bounded_without_losing_forwarded_output() {
+fn overflowing_cargo_diagnostics_are_bounded_with_or_without_heartbeats() {
     let root = unique_temp_directory("cargo-truncated-failure");
     let bytes = vec![b'x'; super::CARGO_DIAGNOSTIC_BYTES + 37];
     fs::write(root.join("payload"), &bytes).unwrap();
@@ -2479,24 +2359,9 @@ fn overflowing_cargo_diagnostics_are_bounded_without_losing_forwarded_output() {
     )
     .with_cargo_program("/bin/sh");
     for observed in [false, true] {
-        let mut stdout = Vec::new();
-        let mut stderr = Vec::new();
-        let mut observer = |event| {
-            if let WasmBuildProgressEvent::CargoOutput { stream, bytes } = event {
-                match stream {
-                    OutputStream::Stdout => stdout.extend(bytes),
-                    OutputStream::Stderr => stderr.extend(bytes),
-                }
-            }
-        };
+        let mut observer = |_| {};
         let mut progress = if observed {
-            ProgressReporter::new(Some((
-                WasmBuildProgressConfig::new()
-                    .without_heartbeats()
-                    .with_cargo_output(true),
-                &mut observer,
-            )))
-            .unwrap()
+            ProgressReporter::new(Some((WasmBuildProgressConfig::new(), &mut observer))).unwrap()
         } else {
             ProgressReporter::silent()
         };
@@ -2525,12 +2390,6 @@ fn overflowing_cargo_diagnostics_are_bounded_without_losing_forwarded_output() {
             );
             assert!(text[super::CARGO_DIAGNOSTIC_BYTES..].contains("diagnostic truncated"));
             assert!(text.len() < super::CARGO_DIAGNOSTIC_BYTES + 128);
-        }
-        if observed {
-            assert_eq!(stdout, bytes);
-            assert_eq!(stderr, bytes);
-        } else {
-            assert!(stdout.is_empty() && stderr.is_empty());
         }
     }
     fs::remove_dir_all(root).unwrap();
@@ -3516,23 +3375,23 @@ fn warm_hits_reject_source_mutation_for_active_and_materialized_artifacts() {
                 fs::remove_file(&expected_artifacts(&spec, &spec.target_dir)[0])
                     .expect("remove caller artifact");
             }
-            let mut mutated = false;
-            let result = crate::artifacts::build_wasm_canisters_cached_with_progress(
+            let (_cache_lock, _) = super::lock_wasm_build_cache(&spec.target_dir).unwrap();
+            let resolved = resolve_cargo_build_inputs(&spec).unwrap();
+            fs::write(
+                root.join("fixture/src/lib.rs"),
+                "pub fn value() -> u8 { 2 }\n",
+            )
+            .unwrap();
+            let entry = super::cache_entry_directory(&spec, resolved.fingerprint());
+            let acquisition = super::WasmAcquisitionContext::isolated(&entry);
+            let result = super::try_reuse_wasm_artifacts(
                 &spec,
-                WasmBuildProgressConfig::new(),
-                &mut |event| {
-                    if !mutated && matches!(event, WasmBuildProgressEvent::InputsResolved { .. }) {
-                        fs::write(
-                            root.join("fixture/src/lib.rs"),
-                            "pub fn value() -> u8 { 2 }\n",
-                        )
-                        .expect("mutate source during acquisition");
-                        mutated = true;
-                    }
-                },
-                spawn_cargo,
+                &resolved,
+                Duration::ZERO,
+                &acquisition,
+                std::time::Instant::now(),
+                &mut ProgressReporter::silent(),
             );
-            assert!(mutated);
             assert!(
                 matches!(
                     result,
@@ -3566,12 +3425,19 @@ fn observed_cargo_panic_stops_compiler_descendants() {
     .with_cargo_program("/bin/sh");
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let mut observer = |event| {
-            if matches!(event, WasmBuildProgressEvent::CargoOutput { .. }) {
+            if matches!(
+                event,
+                WasmBuildProgressEvent::Heartbeat {
+                    phase: WasmBuildPhase::CargoBuild,
+                    ..
+                }
+            ) && pids.is_file()
+            {
                 panic!("synthetic Cargo observer panic");
             }
         };
         let mut progress = ProgressReporter::new(Some((
-            WasmBuildProgressConfig::new().with_cargo_output(true),
+            WasmBuildProgressConfig::new().with_heartbeat_interval(Duration::from_millis(10)),
             &mut observer,
         )))
         .unwrap();
@@ -3814,11 +3680,8 @@ fn cargo_spawn_custody_and_stdin_do_not_depend_on_progress() {
             .with_cargo_program("/bin/sh");
             let mut observer = |_| {};
             let mut progress = if observed {
-                ProgressReporter::new(Some((
-                    WasmBuildProgressConfig::new().without_heartbeats(),
-                    &mut observer,
-                )))
-                .unwrap()
+                ProgressReporter::new(Some((WasmBuildProgressConfig::new(), &mut observer)))
+                    .unwrap()
             } else {
                 ProgressReporter::silent()
             };
