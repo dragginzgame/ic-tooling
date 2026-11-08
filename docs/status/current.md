@@ -1,5 +1,100 @@
 # Current handoff
 
+## Build, Text and Testkit cleanup deployed — 2026-11-08
+
+The authorized cleanup is committed, pushed to main and published to crates.io.
+Implementation source is `e192870a0ef0959dbf2d0280af4cb0d0c95075d6`, including
+Text `441900ba`, consolidation `fe01d255` and the server-setup repair `e192870a`.
+
+| Group | Published version | Release commit / annotated tag |
+| --- | --- | --- |
+| Build | 0.79.0 | `e3e514f09bc45b3ebf6c2d1cb8e2d4e8973554f4` / `build-v0.79.0` |
+| Text | 0.74.3 | `439ead576bfac6b2d235d5e22de2993c47e290ee` / `text-v0.74.3` |
+| Testkit | 0.93.1 | `f494ea2d08e14959ed0e067742839385d05a3f62` / `testkit-v0.93.1` |
+
+Frozen Build batch `batch-b1n6Stqb` completed first, followed by the supplier-first
+Text/Testkit patch batch `batch-XbEtnv9Z`. Both journals report complete Git and
+registry delivery. Official sparse-index checksums match all three downloaded
+archives; embedded clean VCS identities match their exact release commits.
+Private Dev/probe follow Testkit 0.93.1 and remain unpublished. Foundation stays
+0.75.0, Host Tools 0.86.0 and Native 0.80.0. The released lock retains Platform
+0.25.0, Runtime/macros/guard 0.20.0, Types 0.18.2 and Wire 0.17.12. Shared remains
+0.31.5 at `b2026a118e38de4af1555c527af327cb604eacdf`.
+
+### Delivered behavior
+
+Build removes `WasmBuildBatchConfig` and its batch argument. Each
+`WasmBuildSpec` owns maintenance configuration: matching policies run once per
+canonical target, and conflicting entries fail before building. Artifact/Wasm
+outcome names specialize `CacheOutcome<Record>`; labeled-spec domain names
+specialize `LabeledSpec<S>`. Domain engines, records and retention remain distinct.
+The [migration](../build/artifacts.md#pending-build-079-migration) and
+[Canic #742](https://github.com/dragginzgame/canic/issues/742) record the consumer
+API change; no Canic source was edited here.
+
+Text publishes both compatible additions from
+[#341](https://github.com/dragginzgame/ic-tooling/issues/341) and
+[#342](https://github.com/dragginzgame/ic-tooling/issues/342):
+`quantity::scaled_decimal_quantity_text` renders arbitrary-size exact decimal
+quantities with rounding/promotion and escaped suffixes;
+`percent::ratio_percent_text` renders exact `u64` ratios without floating point.
+Query can adopt 0.74.3 while retaining its unit tables and fallback policy.
+No Query source was changed.
+
+Testkit shares ordinary/snapshot ingress transport mechanics and private native
+HTTP fixture-worker custody. Public APIs, protocol bytes, limits, caller runtime,
+cancellation/no-replay behavior and fixture-specific responses remain unchanged.
+Donor/upstream reconstruction and mutation guards passed. PocketIC setup now
+uses the official GitHub asset API with fixed asset IDs and the unchanged digest,
+size, HTTPS and executable checks. The browser-download endpoint returned HTTP
+504 twice; the official API returned the identical pinned Linux archive.
+
+Release fixtures derive group identities from the catalog. Four unchanged
+workflow/scratch/evidence/retention fixtures use the existing admitted-stage cache;
+Testkit actually reused all four from Text in this deployment. Metadata-dependent
+fixtures remain fresh. Publication obtains context from Tooling's preflight
+selection and keeps fresh lint fallback, archive and provenance checks. The real
+publisher refused lint reuse on saved-context mismatch and successfully ran fresh
+workspace Clippy for each upload. [#345](https://github.com/dragginzgame/ic-tooling/issues/345)
+retains that efficiency defect; substituted fixtures did not expose it.
+
+### Qualification and custody
+
+All three complete 34-stage Linux x86-64 release gates passed on Rust 1.99.1:
+workspace Clippy, formatting/docs, source/release fixtures, isolated feature and
+native/Wasm graphs, installed PocketIC 16.1 contracts, archived rebuilds/tests/
+doctests and installed workspace tests. Publication separately passed its source,
+lint, package verification and upload checks.
+
+Native macOS Intel and Apple Silicon qualification is **pending**, not inferred
+from Linux. Four workflows were dispatched asynchronously at the exact published
+source `f494ea2d08e14959ed0e067742839385d05a3f62`; all read back in progress:
+[CI](https://github.com/dragginzgame/ic-tooling/actions/runs/42469752240),
+[Build optimizer](https://github.com/dragginzgame/ic-tooling/actions/runs/42469755112),
+[Testkit runtime](https://github.com/dragginzgame/ic-tooling/actions/runs/42469758176)
+and [Browser fixture session](https://github.com/dragginzgame/ic-tooling/actions/runs/42469761028).
+Delivery did not wait for their completion. Issues requiring native evidence
+remain subject to their own acceptance criteria.
+
+The ordinary main checkout was reconciled through Shared's batch helper after
+each delivery. Its unrelated Cargo.lock selections were reapplied by three-way
+merge; all deferred registry package records compare exactly with the latest
+saved draft, while workspace records carry the published versions. The latest
+deferred selections include Platform 0.25.1, Runtime/macros/guard 0.20.1 and Wire
+0.17.13; they are **not** the captured release lock. Current deferred lock SHA-256
+is `607b4ce0e9f387559b9a2098a8e2fd91c367e54d4b85f38304e5b75bc5a1c95c`.
+
+Durable preservation refs are `preservation/cleanup-release-lock-20261108`
+(`7021230f`) and `preservation/cleanup-release-lock-20261108-updated`
+(`7fee0a54`). Batch Git, plans and receipts remain under
+`.git/release-state/frozen/`; candidate outputs and sealed proofs remain under
+`target/release-frozen/`. Readbacks, locks, reconciliation logs and registry
+verification remain in `target/deployment-cleanup-20261108/`; earlier focused
+logs remain under `target/complexity-four-20261108/` and
+`target/complexity-five-20261108/`. Superseded `batch-SeyigorP` retains both failed
+preflight downloads, without tag/upload effects. No batch, tool, artifact or
+sibling checkout was retired.
+
 ## Tools 0.86.0 and Testkit 0.93.0 deployed — 2026-11-07
 
 The user selected both minor releases. Frozen batch `batch-GpvCzBKt` completed

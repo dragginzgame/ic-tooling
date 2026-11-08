@@ -1,7 +1,6 @@
 use crate::pocket_ic::{ClientError, PocketIc};
 use std::{
     io::Write,
-    net::TcpListener,
     sync::{Arc, Mutex},
     thread,
     time::{Duration, Instant},
@@ -35,7 +34,7 @@ impl Step {
 struct Server {
     url: reqwest::Url,
     requests: Arc<Mutex<Vec<String>>>,
-    thread: thread::JoinHandle<()>,
+    peer: crate::test_support::http::Peer,
 }
 impl Server {
     fn client(&self, timeout: Duration) -> PocketIc {
@@ -44,28 +43,21 @@ impl Server {
     }
 
     fn new(steps: Vec<Step>) -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        listener.set_nonblocking(true).unwrap();
-        let url = format!("http://{}/", listener.local_addr().unwrap())
-            .parse()
-            .unwrap();
+        let count = steps.len();
+        let mut steps = steps.into_iter();
         let requests = Arc::new(Mutex::new(Vec::new()));
-        let recorded = requests.clone();
-        let thread = thread::spawn(move || {
-            let deadline = Instant::now() + Duration::from_secs(5);
-            for step in steps {
-                let (mut socket, _) =
-                    ic_host_process::testing::net::accept_tcp_until(&listener, deadline)
-                        .expect("accept fixture request");
-                let bytes = ic_host_process::testing::http::capture_http_request(
-                    &mut socket,
-                    deadline.saturating_duration_since(Instant::now()),
-                    16 * 1024,
-                    4 * 1024 * 1024,
-                    ic_host_process::testing::http::HttpContentLength::Optional,
-                )
-                .into_result()
-                .expect("read bounded fixture request");
+        let recorded = Arc::clone(&requests);
+        let peer = crate::test_support::http::Peer::spawn(
+            Some(count),
+            Duration::from_millis(100),
+            ic_host_process::testing::http::HttpFixtureLimits {
+                timeout: Duration::from_secs(5),
+                max_header_bytes: 16 * 1024,
+                max_body_bytes: 4 * 1024 * 1024,
+            },
+            move |socket, bytes, deadline, _stop| {
+                let bytes = bytes.into_result().expect("read bounded fixture request");
+                let step = steps.next().expect("expected fixture step");
                 let header_end = bytes
                     .windows(4)
                     .position(|part| part == b"\r\n\r\n")
@@ -98,14 +90,14 @@ impl Server {
                         ),
                         "held fixture response was never released"
                     );
-                    continue;
+                    return;
                 }
                 if step.stall {
                     thread::sleep(Duration::from_millis(150));
-                    continue;
+                    return;
                 }
                 if step.status == 0 {
-                    continue;
+                    return;
                 }
                 let response = format!(
                     "HTTP/1.1 {} Test\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -121,26 +113,16 @@ impl Server {
                 } else {
                     socket.write_all(response.as_bytes()).unwrap();
                 }
-            }
-            let quiet_until = Instant::now() + Duration::from_millis(100);
-            while Instant::now() < quiet_until {
-                match listener.accept() {
-                    Ok(_) => panic!("unexpected extra request or replay"),
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                        thread::sleep(Duration::from_millis(1));
-                    }
-                    Err(error) => panic!("{error}"),
-                }
-            }
-        });
+            },
+        );
         Self {
-            url,
+            url: peer.url().clone(),
             requests,
-            thread,
+            peer,
         }
     }
     fn finish(self) -> Vec<String> {
-        self.thread.join().unwrap();
+        self.peer.finish();
         Arc::try_unwrap(self.requests)
             .unwrap()
             .into_inner()

@@ -2,6 +2,14 @@
 
 ## Public adapter boundaries
 
+The pending internal cleanup extends the same latest adaptation with shared
+submit/await ingress helpers for ordinary and snapshot calls. Snapshot HTTP and
+Candid limits, accepted ingress custody, method/routing bytes and no-replay
+behavior remain explicit. Its failure fixtures delegate native worker custody
+to Testkit's private test support while retaining scenario-specific responses
+and quiet-period replay assertions. Only `loc-surface-cut.patch` and its checksum
+are regenerated against the unchanged parent; donor and upstream hashes remain.
+
 Tooling #340 extends the latest `loc-surface-cut.patch` adaptation with the
 Testkit-owned CBOR failure classification and private supplier-error conversion.
 The original typed source and its nested cause remain intact; packet codecs,

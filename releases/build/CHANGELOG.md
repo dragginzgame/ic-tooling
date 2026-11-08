@@ -6,14 +6,45 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
-## [0.78.1] — Unreleased
+## [0.79.1] - Unreleased
 
 ### ➕ Added
 
 - Extract Canic tool staging/publication, exact Cargo producer exports, private
   environment comparisons, Git observations and compiler sysroot input discovery.
   Callers retain acquisition/retry policy, pins, private key custody, selected
-  targets, recipe identities and evidence publication. No new crate is introduced.
+  targets, recipe identities and evidence publication. No new crate is introduced
+  ([#344 — Extract reusable Canic build machinery](https://github.com/dragginzgame/ic-tooling/pull/344)).
+
+## [0.79.0] - 2026-11-08
+
+### ⚠️ Breaking
+
+- Remove `WasmBuildBatchConfig` and its batch argument. Configure maintenance on
+  each `WasmBuildSpec`; batch execution applies matching policies once per
+  canonical target and reports conflicting policies before that entry builds.
+  Standalone and batch builds now share one policy owner. See the
+  [migration guide](../../docs/build/artifacts.md#pending-build-079-migration)
+  and [Canic #742](https://github.com/dragginzgame/canic/issues/742).
+- Share built/reused outcome projection through `CacheOutcome<Record>` while
+  retaining distinct artifact/Wasm records and domain type names. Import enum
+  variants from `CacheOutcome` rather than through the domain aliases.
+
+### 🧹 Cleanup
+
+- Share caller-labeled specifications through `LabeledSpec<S>`, retaining the
+  artifact and Wasm domain names and their constructors/accessors.
+- Derive release-group admission and fixture iteration from the existing group
+  catalog; qualification coverage remains explicit. Publication reads Tooling's
+  preflight release context and re-admits it through the sealed receipt, removing
+  the second parser for Shared's private release journal.
+- Reuse unchanged workflow-selection and scratch-routing fixture evidence across
+  release groups, alongside evidence/retention fixtures. Group metadata admission
+  and metadata-dependent release/publication tests retain fresh execution.
+- Publication reuses a committed release's sealed full workspace lint when its
+  payload, source, environment, tools, host and evidence still match. Missing,
+  stale, corrupt or focused-only proof falls back to fresh lint; archive, license
+  and provenance admission remain fresh.
 
 ## [0.78.0] - 2026-11-07
 

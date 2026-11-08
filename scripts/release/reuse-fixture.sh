@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Shared companions: scripts/ci/run-validation-stage.pl scripts/release/observe-fixture-retention.pl scripts/ci/select-tooling-checks.sh ci/tooling-checks.tsv
 set -euo pipefail
-[[ $# -ge 1 && $# -le 2 && $1 =~ ^(foundation|build|text|tools|testkit|native)$ ]] || exit 2
+[[ $# -ge 1 && $# -le 2 ]] || exit 2
 group=$1
+bash scripts/release/group.sh ci/cargo-release-groups.json "$group" members >/dev/null
 stage=${2:-fixture-retention}
 check=$(bash scripts/ci/select-tooling-checks.sh reusable | awk -F '\t' -v stage="$stage" '$1 == stage {print $2}')
 [[ -n $check && $check != *$'\n'* ]] || exit 2
@@ -26,7 +27,8 @@ mkdir -p "$state/tmp" "$destination"
 environment=$(mktemp "$state/environment.XXXXXX")
 capture=$(mktemp "$state/execution.XXXXXX")
 jq -cnS --arg path "$PATH" --arg tmp "$root/$state/tmp" --arg stage "$stage" \
-    '{PATH:$path,TMPDIR:$tmp,LC_ALL:"C",TOOLING_FIXTURE_STAGE:$stage}' > "$environment"
+    --arg yq "${YQ:-$root/.tools/host/bin/yq}" \
+    '{PATH:$path,TMPDIR:$tmp,LC_ALL:"C",TOOLING_FIXTURE_STAGE:$stage,YQ:$yq}' > "$environment"
 perl scripts/ci/run-validation-stage.pl --state "$state" --stage "$stage" \
     --contract "tooling-$stage/1" --source "$source" --group "$group" \
     --observe scripts/release/observe-fixture-retention.pl --environment "$environment" \

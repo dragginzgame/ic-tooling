@@ -4,11 +4,20 @@ set -euo pipefail
 # Early selection and read-only version discovery. Shared owns complete
 # Cargo/graph admission during release preflight and metadata preparation.
 [[ $# == 2 || ( $# == 3 && ( "$3" == members || "$3" == version || "$3" == batch ) ) ]] || {
-    echo 'usage: group.sh POLICY GROUP [members|version|batch]' >&2; exit 2;
+    echo 'usage: group.sh POLICY --list | POLICY GROUP [members|version|batch]' >&2; exit 2;
 }
 policy="$1" selected="$2"
 fail() { printf 'select explicit RELEASE_GROUP from %s\n' "$policy" >&2; exit 1; }
 [[ -f "$policy" && ! -L "$policy" ]] || fail
+if [[ $# == 2 && $selected == --list ]]; then
+    jq -er 'if .schema == 1 and (.groups | type == "array") then
+        [.groups[].name] as $names |
+        if ($names | length > 0) and ($names | unique | length) == ($names | length)
+            and all($names[]; type == "string" and test("^[A-Za-z0-9][A-Za-z0-9_-]*$"))
+        then $names[] else error("invalid group names") end
+        else error("invalid release policy") end' "$policy"
+    exit
+fi
 if [[ ${3:-} == batch ]]; then
     jq -e --arg selected "$selected" '
         . as $policy | ($selected | split(",")) as $groups |

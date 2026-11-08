@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/cargo-publication-selection.pl scripts/release/group.sh
+# Shared companions: scripts/ci/cargo-publication-selection.pl scripts/release/group.sh scripts/release/publication-lint.sh
 set -euo pipefail
 
 # Cargo workspace publication admission. Requires prepared Cargo 1.99, Git,
@@ -128,9 +128,18 @@ for package in "${packages[@]}"; do
     package_directories+=("$directory")
 done
 repository="$(jq -r '.packages[0].repository' "$attempt/metadata.json")"
-# Source admission precedes the existing full lint gate. Refusal must stop
-# packaging and registry effects; this path never prepares missing tools.
-make --no-print-directory clippy-workspace
+qualified_version=$(jq -er --arg package "${packages[0]}" \
+    '.packages[] | select(.name == $package) | .version' "$attempt/metadata.json")
+# Source admission precedes lint and registry effects. A committed release may
+# reuse its exact full lint receipt; standalone, stale and focused-only attempts
+# retain fresh workspace lint. Archive/source admission always stays fresh.
+if [[ "$purpose" != qualify ]] &&
+    bash "$tooling_root/scripts/release/publication-lint.sh" "$selected_group" "$qualified_version" "$source" \
+        > "$attempt/lint-evidence.log" 2>&1; then
+    cat "$attempt/lint-evidence.log"
+else
+    make --no-print-directory clippy-workspace
+fi
 # Persist Host's admitted package/provenance selection before package preparation.
 # Shared Tooling records the exact Cargo command in its separate fresh attempt.
 printf '%s\n' publication-2 "$mode" "$source" crates-io \

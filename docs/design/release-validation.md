@@ -161,16 +161,23 @@ with `--group` for the selected release group. Ordinary CI and CI/publication
 continue to exercise all six groups, even when a release selection is inherited.
 The remaining tooling roster and its first-failure behavior are unchanged.
 
-The fixture-retention and product-evidence stages use Shared's
+The fixture-retention, product-evidence, workflow-selection and scratch-routing
+stages use Shared's
 [stage runner](../release-validation-reuse.md). It observes every shell source
 under `scripts/`, the tooling roster, its observer, interpreter modules and the
-resolved fixture tools. Execution has an explicit environment containing PATH,
-a fixed workspace temporary root, stage identity and the C locale. Retention
+resolved fixture tools. The workflow/scratch matrices additionally observe their
+Make, CI, workflow, rule and companion-document trees, root toolchain/snapshot,
+and the prepared workflow parser. Execution has an explicit environment containing PATH,
+a fixed workspace temporary root, stage identity, parser selection and the C locale. Retention
 renders only initialization/EXIT prefixes; it stops before Cargo, Git and product
 bodies. Evidence qualification archives and checks its synthetic inputs, including
-compiler-cache exclusions. The tooling roster owns the two stage selections.
-Manifests, lockfiles and release ledgers are outside this stage's input closure.
-Consequently version-only changes can reuse this stage across release groups.
+compiler-cache exclusions. Workflow/scratch matrices exercise their real routing
+with synthetic product effects. The tooling roster owns all four stage selections.
+Manifests, lockfiles and release ledgers are outside these invariant stages' input
+closures. Consequently version-only changes can reuse them across release groups.
+The adapter's group-specific metadata checks and the metadata-dependent release
+and publication fixtures continue to run freshly; no version projection or
+canonicalized manifest substitutes for current source admission.
 Changes to an observed source, tool, environment, runner or host invalidate reuse.
 
 Each gate records a new source/group admission with mode `executed` or `reused`.
@@ -178,8 +185,10 @@ Reuse retains the original execution source, group, proof and stdout/stderr;
 Tooling seals those original bytes into its recovery receipt. Evidence lives
 under `target/release-stage-cache`; deleting it invalidates dependent receipts.
 Changed or missing proof/log bytes cannot be sealed or recovered as a pass.
-All Rust, dependency, runtime and archive obligations retain fresh execution;
-there is no whole-gate reuse or reinterpretation of earlier release receipts.
+Fixture replay grants no Rust, dependency, runtime or archive qualification.
+Publication separately re-admits an existing full workspace lint through the
+[committed release receipt](../publishing.md#registry-publication), with fresh
+lint fallback. There is no whole-gate reuse or reinterpretation of older receipts.
 
 ## Qualification and limits
 

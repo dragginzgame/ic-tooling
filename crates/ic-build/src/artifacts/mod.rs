@@ -108,7 +108,7 @@ pub(crate) mod support_tests;
 mod host_tests;
 
 pub use crate::cargo::observation::facts::CargoBuildFacts;
-pub use batch::CacheBatchEntry;
+pub use batch::{CacheBatchEntry, CacheOutcome, LabeledSpec};
 pub use cache_fs::{ArtifactCacheMaintenance, ArtifactCachePruneReport, CacheRetentionLimits};
 pub use digest::InputDigest;
 pub use evidence::{WasmArtifactReceipt, WasmBuildEvidence};
@@ -128,7 +128,7 @@ pub use transaction_batch::{
     ArtifactCacheBatchReport, LabeledArtifactCacheSpec, build_artifact_caches_batch,
 };
 pub use wasm_batch::{
-    LabeledWasmBuildSpec, WasmBuildBatchConfig, WasmBuildBatchContractError, WasmBuildBatchFailure,
+    LabeledWasmBuildSpec, WasmBuildBatchContractError, WasmBuildBatchFailure,
     WasmBuildBatchMetrics, WasmBuildBatchProgressEvent, WasmBuildBatchReport,
     build_wasm_canisters_cached_batch,
 };

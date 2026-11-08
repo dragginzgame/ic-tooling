@@ -158,13 +158,7 @@ enum WasmBuildCacheMode {
 }
 
 /// Whether a cacheable Wasm build ran Cargo or reused exact matching artifacts.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum WasmBuildOutcome {
-    /// Cargo ran and a new successful stamp was published.
-    Built(WasmBuildRecord),
-    /// Existing artifacts and their content-addressed stamp matched exactly.
-    Reused(WasmBuildRecord),
-}
+pub type WasmBuildOutcome = super::batch::CacheOutcome<WasmBuildRecord>;
 
 /// Details shared by built and reused Wasm outcomes.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -830,22 +824,6 @@ impl WasmBuildSpec {
         &self,
     ) -> Option<SharedIncrementalTargetMaintenanceConfig> {
         self.shared_incremental_maintenance_config
-    }
-}
-
-impl WasmBuildOutcome {
-    /// Read the common build record.
-    #[must_use]
-    pub const fn record(&self) -> &WasmBuildRecord {
-        match self {
-            Self::Built(record) | Self::Reused(record) => record,
-        }
-    }
-
-    /// Report whether exact matching artifacts were reused.
-    #[must_use]
-    pub const fn is_reused(&self) -> bool {
-        matches!(self, Self::Reused(_))
     }
 }
 
@@ -1645,7 +1623,7 @@ pub fn build_wasm_canisters_cached(
 ) -> Result<WasmBuildOutcome, WasmBuildError> {
     build_wasm_canisters_cached_internal(
         spec,
-        None,
+        spec.shared_incremental_target_maintenance(),
         &mut ProgressReporter::silent(),
         None,
         &mut spawn,
@@ -1671,7 +1649,7 @@ where
 {
     build_wasm_canisters_cached_internal(
         spec,
-        None,
+        spec.shared_incremental_target_maintenance(),
         &mut ProgressReporter::new(Some((config, &mut observer)))?,
         None,
         &mut spawn,
@@ -1735,18 +1713,18 @@ enum SharedAcquisition<'a> {
 
 fn build_wasm_canisters_cached_internal(
     spec: &WasmBuildSpec,
-    batch_maintenance: Option<SharedIncrementalTargetMaintenanceConfig>,
+    scheduled_maintenance: Option<SharedIncrementalTargetMaintenanceConfig>,
     progress: &mut ProgressReporter<'_>,
     mut batch_resolution: Option<(&mut WasmBuildBatchInputResolver<'_>, usize)>,
     mut spawn: &mut dyn FnMut(&mut Command) -> io::Result<OwnedChild>,
 ) -> Result<WasmBuildOutcome, WasmBuildError> {
     let total_started = Instant::now();
-    // The batch tracker supplies maintenance only for the first specification
-    // of a distinct shared target, after refusing per-spec ownership conflicts.
+    // Standalone callers pass the spec policy; the batch tracker schedules it
+    // only for the first specification of a distinct shared target.
     // Keep ordinary spec admission and its failure order before this projection.
     let mut plan = validate_spec(spec)?;
-    if let (CachePlan::Shared { maintenance, .. }, Some(config)) = (&mut plan, batch_maintenance) {
-        *maintenance = Some(config);
+    if let CachePlan::Shared { maintenance, .. } = &mut plan {
+        *maintenance = scheduled_maintenance;
     }
     if let CachePlan::Shared {
         target_dir,

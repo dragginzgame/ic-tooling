@@ -12,11 +12,7 @@ use super::transaction::{
 ///
 /// The label is report and callback identity, not artifact-cache identity. The
 /// caller must keep it stable anywhere reports are composed across stages.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct LabeledArtifactCacheSpec {
-    label: String,
-    spec: ArtifactCacheSpec,
-}
+pub type LabeledArtifactCacheSpec = super::batch::LabeledSpec<ArtifactCacheSpec>;
 
 /// Ordered labeled entries from a collect-all artifact transaction batch.
 #[derive(Debug)]
@@ -75,35 +71,6 @@ pub struct ArtifactCacheBatchMetrics {
     counts: CacheOutcomeCounts,
     successful_timings: ArtifactCacheTimings,
     total: Duration,
-}
-
-impl LabeledArtifactCacheSpec {
-    /// Attach a caller-owned stable label to one artifact specification.
-    #[must_use]
-    pub fn new(label: impl Into<String>, spec: ArtifactCacheSpec) -> Self {
-        Self {
-            label: label.into(),
-            spec,
-        }
-    }
-
-    /// Caller-owned report and callback label.
-    #[must_use]
-    pub fn label(&self) -> &str {
-        &self.label
-    }
-
-    /// Underlying exact artifact specification.
-    #[must_use]
-    pub const fn spec(&self) -> &ArtifactCacheSpec {
-        &self.spec
-    }
-
-    /// Consume the entry into its label and artifact specification.
-    #[must_use]
-    pub fn into_parts(self) -> (String, ArtifactCacheSpec) {
-        (self.label, self.spec)
-    }
 }
 
 impl<E> ArtifactCacheBatchReport<E> {
