@@ -115,6 +115,11 @@ for helper in scripts/dev/install-git-hooks.sh scripts/dev/shared-tooling.sh; do
 printf '%s %s\n' "${0##*/}" "$*" >> "$HOST_MAKE_EVENTS"
 STUB
 done
+cat > "$fixture/local/scripts/dev/clean-empty-source-dirs.pl" <<'STUB'
+#!/usr/bin/env perl
+# Producer owns cleanup semantics; this fixture observes consumer dispatch.
+exit 0;
+STUB
 chmod +x "$fixture/local/cargo"
 mkdir -p "$fixture/local/.tools/host/bin"
 ln -s "$root/.tools/host/bin/yq" "$fixture/local/.tools/host/bin/yq"
@@ -245,6 +250,11 @@ for selection in ordinary environment command nested recursive; do
             install-hooks) printf 'install-git-hooks.sh --consumer %s\n' "$PWD" > "$fixture/expected" ;;
             shared-tooling-*) printf 'shared-tooling.sh %s --consumer %s --manifest .shared-tooling.snapshot\n' "${target#shared-tooling-}" "$PWD" > "$fixture/expected" ;;
         esac
+        case "$target" in
+            release-patch|release-minor|release-major|release-resume)
+                { printf 'shared-tooling.sh check --consumer %s --manifest .shared-tooling.snapshot\n' "$PWD"; cat "$fixture/expected"; } > "$fixture/guarded-expected"
+                mv "$fixture/guarded-expected" "$fixture/expected" ;;
+        esac
         cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
         if [[ "$target" == fmt-check ]]; then
             grep -E '^Manifest sorting \[\.\]\.\.\. ok \([0-9.]+s\)$' "$fixture/$selection-$target.log" >/dev/null
@@ -296,7 +306,7 @@ STUB
         : > "$HOST_MAKE_EVENTS"
         make --no-print-directory "release-$kind" RELEASE_GROUP=testkit RELEASE_BATCH_ACTIVE=1 \
             RELEASE_REMOTE=review RELEASE_BRANCH=release-review > "$fixture/captured-$kind.log" 2>&1
-        printf '%s review release-review\n' "$kind" > "$fixture/expected"
+        { printf 'shared-tooling.sh check --consumer %s --manifest .shared-tooling.snapshot\n' "$PWD"; printf '%s review release-review\n' "$kind"; } > "$fixture/expected"
         cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
     done
     for mode in prepare check; do
