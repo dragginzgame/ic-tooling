@@ -7,6 +7,8 @@
 
 pub mod artifacts;
 pub mod cargo;
+pub mod provenance;
+pub mod tools;
 
 #[cfg(any(test, feature = "test-support"))]
 pub mod testing;

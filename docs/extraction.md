@@ -655,3 +655,26 @@ The algorithm retains iterative traversal, metadata lengths, saturating sums
 and original I/O failures. Host owns this pathname observation; callers retain
 namespace custody, resource admission, cache policy and cleanup. Build caller
 replacement requires published APIs and its own qualification.
+
+## Canic machinery extraction
+
+The additive APIs below originate in Canic's `bd75bdecc` source snapshot and
+extend existing workspace members. Consumer adoption and supplier publication
+are separate from this extraction.
+
+| Existing owner | API | Consumer responsibilities |
+| --- | --- | --- |
+| Build | `ic_build::tools::install` | Archive acquisition, retry, exact hash pins, extraction and executable admission |
+| Build | `ic_build::tools::toolchain` | Compiler command/environment, target selection, output and inventory bounds, subsequent hashing |
+| Build | `ic_build::provenance::git` | Git command/environment, output bounds, redaction and evidence persistence |
+| Build | `ic_build::cargo::exports` | Selected keys, Cargo message capture, current recipe and producer identity, persistence |
+| Build | `ic_build::artifacts::environment_comparison` | Private key generation/custody, input filtering, bounds and private storage |
+
+Environment comparison uses HMAC-SHA256 with distinct key-ID/value domains and
+length-prefixed fields. It provides private equality diagnostics, not cache or
+release authority. It reuses the workspace lockfile's HMAC 0.12.1 and SHA-256
+implementation; tags and key identifiers must not be published. Git observations
+retain raw NUL-separated porcelain status, which may contain sensitive paths.
+Tool publication preserves filesystem publication errors and their custody
+information. Runtime-library bundles use Unix symlink selectors; other platforms
+refuse that bundle operation explicitly.

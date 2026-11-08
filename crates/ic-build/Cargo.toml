@@ -28,10 +28,11 @@ rustix = { workspace = true, features = ["process"] }
 # Production dependencies
 cargo_metadata.workspace = true
 clap = { workspace = true, optional = true }
+hmac.workspace = true
 ic-host-artifacts.workspace = true
 ic-host-fs.workspace = true
 ic-host-process.workspace = true
-serde = { workspace = true, features = ["std"] }
+serde = { workspace = true, features = ["std", "derive"] }
 serde_json.workspace = true
 sha2.workspace = true
 thiserror.workspace = true

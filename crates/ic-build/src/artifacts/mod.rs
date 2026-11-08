@@ -143,3 +143,6 @@ pub use wasm_cache::{
     maintain_shared_incremental_target_at_most_every, prune_wasm_build_cache,
     resolve_cargo_build_inputs, resolve_cargo_build_inputs_with_probe_policy,
 };
+
+/// Private keyed environment comparison evidence.
+pub mod environment_comparison;

@@ -6,6 +6,15 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.78.1] — Unreleased
+
+### ➕ Added
+
+- Extract Canic tool staging/publication, exact Cargo producer exports, private
+  environment comparisons, Git observations and compiler sysroot input discovery.
+  Callers retain acquisition/retry policy, pins, private key custody, selected
+  targets, recipe identities and evidence publication. No new crate is introduced.
+
 ## [0.78.0] - 2026-11-07
 
 ### ⚠️ Breaking

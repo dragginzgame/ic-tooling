@@ -1488,6 +1488,7 @@ version = "0.78.0"
 dependencies = [
  "cargo_metadata",
  "clap",
+ "hmac",
  "ic-host-artifacts",
  "ic-host-fs",
  "ic-host-process",
