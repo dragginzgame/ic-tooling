@@ -86,7 +86,7 @@ fn stat_parts(stat: &str) -> Option<(&str, &str)> {
     Some((stat.get(begin + 1..end)?, stat.get(end + 1..)?))
 }
 
-fn parse_stat(stat: &str) -> Option<(&str, [&str; 22])> {
+pub(super) fn parse_stat(stat: &str) -> Option<(&str, [&str; 22])> {
     let (name, fields) = stat_parts(stat)?;
     let mut fields = fields.split_whitespace();
     // Only the first 22 fields are used. Keep them borrowed and on the stack;
