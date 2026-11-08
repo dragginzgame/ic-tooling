@@ -404,11 +404,12 @@ fn independent_wasm_batch_preserves_standalone_feature_resolution() {
     let batch =
         ic_build::artifacts::build_wasm_canisters_cached_batch(&specs, None, spawn_cargo).unwrap();
 
-    assert!(batch.is_success());
+    assert!(batch.batch.is_success());
     assert_cold_batch_metrics(batch.metrics());
-    assert_eq!(batch.outcomes().count(), 2);
+    assert_eq!(batch.batch.outcomes().count(), 2);
     assert_eq!(
         batch
+            .batch
             .outcomes()
             .map(CacheBatchEntry::label)
             .collect::<Vec<_>>(),
@@ -416,12 +417,13 @@ fn independent_wasm_batch_preserves_standalone_feature_resolution() {
     );
     assert!(
         batch
+            .batch
             .outcomes()
             .all(|entry| matches!(entry.outcome().unwrap(), WasmBuildOutcome::Built(_)))
     );
     assert!(wasm_path(&target, "feature_a", "debug").is_file());
     assert!(wasm_path(&target, "feature_b", "debug").is_file());
-    assert!(batch.outcomes().all(|entry| {
+    assert!(batch.batch.outcomes().all(|entry| {
         entry
             .outcome()
             .unwrap()
@@ -430,6 +432,7 @@ fn independent_wasm_batch_preserves_standalone_feature_resolution() {
             .is_dir()
     }));
     let first_exact_cache = batch
+        .batch
         .outcomes()
         .next()
         .expect("first batch outcome")
@@ -516,10 +519,11 @@ fn assert_cold_batch_metrics(metrics: WasmBuildBatchMetrics) {
 }
 
 fn assert_mixed_batch_with_failure(report: &WasmBuildBatchReport) {
-    assert!(!report.is_success());
-    assert_eq!(report.outcomes().count(), 2);
+    assert!(!report.batch.is_success());
+    assert_eq!(report.batch.outcomes().count(), 2);
     assert_eq!(
         report
+            .batch
             .outcomes()
             .map(|entry| entry.outcome().unwrap().is_reused())
             .collect::<Vec<_>>(),
@@ -527,6 +531,7 @@ fn assert_mixed_batch_with_failure(report: &WasmBuildBatchReport) {
     );
     assert_eq!(
         report
+            .batch
             .failures()
             .map(|failure| (failure.index(), failure.label()))
             .collect::<Vec<_>>(),
@@ -917,6 +922,7 @@ fn source_changes_during_shared_incremental_build_reject_exact_publication() {
         .join()
         .expect("shared input-race worker must not panic");
     let failure = report
+        .batch
         .failures()
         .next()
         .expect("changed source must fail the leased entry");
