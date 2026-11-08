@@ -58,6 +58,33 @@ fn tree_limits_and_missing_task_evidence_are_explicit() {
     fs::write(f.path().join("10/task/10/children"), "11").unwrap();
     assert!(!process_tree(f.path(), 10, limits).1);
 }
+#[test]
+fn child_budget_applies_independently_to_each_thread() {
+    let f = Fixture::new();
+    for pid in [10, 11, 12] {
+        fs::create_dir_all(f.path().join(format!("{pid}/task/{pid}"))).unwrap();
+        fs::write(f.path().join(format!("{pid}/stat")), stat(pid, 42)).unwrap();
+        fs::write(f.path().join(format!("{pid}/task/{pid}/children")), "").unwrap();
+    }
+    fs::create_dir_all(f.path().join("10/task/13")).unwrap();
+    fs::write(f.path().join("10/task/10/children"), "11").unwrap();
+    fs::write(f.path().join("10/task/13/children"), "12").unwrap();
+    let limits = TreeLimits {
+        processes: 3,
+        threads: 4,
+        children_per_thread: 1,
+    };
+    let (samples, complete) = process_tree(f.path(), 10, limits);
+    assert!(complete);
+    assert_eq!(
+        samples.iter().map(|sample| sample.pid).collect::<Vec<_>>(),
+        [10, 11, 12]
+    );
+
+    fs::write(f.path().join("10/task/10/children"), "11 12").unwrap();
+    assert!(!process_tree(f.path(), 10, limits).1);
+}
+
 #[cfg(target_os = "linux")]
 #[test]
 fn lock_observation_matches_exact_inode_and_ignores_waiters() {

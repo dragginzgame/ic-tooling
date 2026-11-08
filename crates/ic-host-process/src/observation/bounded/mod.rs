@@ -159,8 +159,8 @@ pub fn process_tree(
                 complete = false;
                 continue;
             };
-            for child in text.split_ascii_whitespace() {
-                if children.len() >= limits.children_per_thread {
+            for (index, child) in text.split_ascii_whitespace().enumerate() {
+                if index >= limits.children_per_thread {
                     complete = false;
                     break;
                 }
