@@ -1582,7 +1582,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-text"
-version = "0.74.2"
+version = "0.74.3"
 dependencies = [
  "serde",
  "unicode-width 0.2.3",

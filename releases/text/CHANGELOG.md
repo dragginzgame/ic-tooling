@@ -6,7 +6,7 @@ optional YAML. Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
-## [0.74.3] - Unreleased
+## [0.74.3] - 2026-11-08
 
 ### ➕ Added
 
