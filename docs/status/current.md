@@ -1,119 +1,108 @@
 # Current handoff
 
-## Shared 0.31.11 and Platform 0.26 adoption — 2026-11-08
+## Published deployment — 2026-11-08
 
-Implemented locally on main at `54ed82d2`; nothing staged, committed or published
-by this adoption. Shared was refreshed through its canonical exporter to
-`6c529e6940a97226cca826726491e03173b08cd2` (0.31.11), with independent snapshot
-verification. Platform's root requirement and lock now select published 0.26.0.
-The Platform update preserved unrelated lock records; the later Native cut
-pruned only its own entry. All retained records remain identical, including
-Runtime/macros/guard 0.20.1, Wire 0.17.13 and the user's unrelated patch selections.
-Management DTOs remain exactly 0.11.0; Rust remains 1.99.1 / edition 2024.
+The requested deployment is complete through frozen release batches. Normal main
+was reconciled to `bdb4ac62`; the handoff update follows that release commit.
 
-Authenticated download caching now surrounds direct tool setup in CI's Linux
-lint/security job, optimizer jobs and runtime jobs. Native CI inherits caching
-through Shared's common-tools action. Cache saves precede tests and retain the
-Shared default-branch-push guard. Tool pins are unchanged. Gitleaks retains one
-repository CI owner, including documentation changes, outside release gates.
-New member-scoped formatting, hashing admission and crate/module LOC selectors
-are imported; no Shared payload was hand-edited and no source owner was moved.
+| Group | Published version | Release commit | Completed batch |
+| --- | --- | --- | --- |
+| Foundation | 0.75.1, all five packages | `42fad7e2` | `batch-Ddc4uVSy` |
+| Build | 0.79.1 | `f0a42ee5` | `batch-Ddc4uVSy` |
+| Host Tools | 0.87.0 | `1e485306` | `batch-gh19Zrhj` |
+| Testkit | 0.93.2 | `bdb4ac62` | `batch-wp1Vct7C` |
 
-The subsequent 0.31.11 refresh adopts Shared's
-[issue closure policy](../../rules/agent-maintenance.md#issue-review-and-repair).
-Snapshot integrity and documentation checks cover this governance-only update;
-the earlier code qualification remains applicable. Refresh logs remain under
-`target/adoption-shared03111/`.
+All four group tags and main were pushed normally. Official registry checksums
+and clean archive VCS identities matched all eight package releases. Text remains
+at its already-published 0.74.3. Dev and the Wasm probe remain private. Normal
+frozen commands already published; do not run a second `make publish`.
 
-## Native allocator retirement — 2026-11-08
+## Delivered changes
 
-Removed `ic-testkit-native`, its tests, workspace/catalog membership, active
-Native release selector and qualification/publication branches. Release-fixture
-proof controls now use existing Text/Build packages. Five active groups publish
-nine packages; two private qualification crates remain. No API moved into
-PocketIC Testkit. The historical Native ledger, published versions, tags and
-Git/release artifacts remain intact. Shared's immutable stack inventory update
-is tracked in [Shared #365 — Retire Native from the active stack inventory](https://github.com/dragginzgame/shared-tooling/issues/365);
-its snapshot-owned files were not hand-edited.
+Shared Tooling 0.31.11 is pinned at
+`6c529e6940a97226cca826726491e03173b08cd2` through the canonical exporter and
+independent snapshot verification. Its authenticated download caches surround
+direct CI setup; member-scoped formatting, hashing admission, scoped LOC reports
+and focused-check issue closure are adopted. Gitleaks retains one CI owner,
+outside release/publication gates. No Shared payload was hand-edited.
 
-Metadata, retained graphs, both archive-selector tests, formatting, docs and shell
-lint passed. The publication and Make fixtures passed; the latter now supplies
-real owned-member metadata for Shared's explicit formatter selection. The
-validation fixture passed all five full fallbacks, focused Text/Tools/Build,
-failed stages, source drift and proof/receipt custody using substituted product
-effects. Frozen-hook qualification also passed five group queries, interruption/
-uncertain-publication recovery, exact Text/Testkit archive identities and stale-
-remote refusal, with real Cargo dry runs and substituted product gates. No real
-registry upload or repository delivery occurred. Logs and entry backups remain
-in `target/retire-native-20261108/`.
+Platform's minimum requirement is 0.26.0, confirmed in the published Tools and
+Testkit manifests. Tools consumers exchanging ledger `Value` objects must align
+their direct Platform selection to 0.26. Testkit's upstream Candid, management
+and subnet DTO identities remain compatible; management stays exactly 0.11.0.
+Protocol bytes, caller custody and Wasm exclusions are unchanged. Rust remains
+1.99.1 / edition 2024.
 
-## Pending impact and publication
+Foundation includes the merged bounded process/lock observations from
+[PR #343](https://github.com/dragginzgame/ic-tooling/pull/343). Its non-Linux
+kernel-holder stub is now const, correcting the observed macOS Clippy failure.
+Build includes the reusable Canic machinery from
+[PR #344](https://github.com/dragginzgame/ic-tooling/pull/344). Consumer adoption
+remains with Canic, including its
+[#742](https://github.com/dragginzgame/canic/issues/742) migration.
 
-| Group | Pending version | Reason |
-| --- | --- | --- |
-| Foundation | 0.75.1 | Merged #343 bounded process/lock observations; Shared maintenance notes. |
-| Build | 0.79.1 | Merged #344 Canic machinery extraction. |
-| Host Tools | 0.87.0 | Platform 0.26 changes the owned ledger `Value` generation exposed by ledger evidence. |
-| Testkit | 0.93.2 | Compatible native Platform adoption; upstream Candid/management/subnet DTOs retain identity. |
+`ic-testkit-native`, its tests, workspace membership and active release/CI/
+publication wiring are removed. Five active groups publish nine packages, with
+two private qualification crates. No API moved into PocketIC Testkit. The
+[Native ledger](../../releases/native/CHANGELOG.md), final published 0.80.0, tags
+and original recovery records remain. Shared's immutable central inventory
+update remains owned by
+[Shared #365](https://github.com/dragginzgame/shared-tooling/issues/365).
 
-All package versions remain at their existing released values. These are pending
-notes, not release execution. Tools consumers exchanging ledger values must adopt
-Platform 0.26 together. The new private public-contract case verifies that exact
-exchange. Testkit's Candid contract error is an upstream re-export; boxed codec
-causes retain their documented optional supplier-downcast coupling. No compatibility
-bridge, error/API cleanup or new package was added.
+## Qualification
 
-[PR #343](https://github.com/dragginzgame/ic-tooling/pull/343) merged normally at
-`f5901b38`, including the per-thread child-budget correction and its regression.
-[PR #344](https://github.com/dragginzgame/ic-tooling/pull/344) merged normally at
-`54ed82d2`, with pending Build notes corrected after published 0.79.0. The
-Canic worktree remains clean at its original `d61f9b9b`; no sibling source was
-changed. Those supplier additions are not published yet. Consumer adoption stays
-with Canic, including its existing
-[#742](https://github.com/dragginzgame/canic/issues/742) Build migration.
+All four complete 34-stage Linux x86-64 release gates passed with Rust 1.99.1.
+Coverage includes workspace Clippy, formatting/hooks, docs, release/recovery
+fixtures, native/Wasm graphs, package archives, installed PocketIC 16.1 management/
+snapshot/gateway contracts and the complete workspace tests. Publication retained
+fresh archive/provenance admission; registry readbacks verified the final payloads.
 
-## Focused qualification
+GitHub's official PocketIC asset API repeatedly returned HTTP 504 locally.
+The user explicitly approved copying only the existing pinned 16.1 Linux bundle
+into this deployment's frozen candidates. Each copy passed archive, executable
+and version admission before the unchanged full gates ran. No source, lockfiles
+or build outputs were copied. Independent fresh server downloads were not
+qualified locally by that exception.
 
-Linux x86-64 / Rust 1.99.1 passed: complete locked all-feature metadata, declared
-IC/hash boundaries, native/Wasm feature graph policies, affected-package Clippy
-for Tools/Testkit/Dev, formatting, formatter/hook preservation, workflow lint and
-103 CI-routing/refusal assertions. The public ledger-value, Principal/Wire,
-subnet-metrics and exact management DTO contracts passed. Runtime coverage totals
-21 focused cases: ten Candid/ledger, two codec/no-replay, one management identity,
-four public contracts and four explicitly admitted PocketIC 16.1 installed cases.
-The latter exercise management/snapshot state, builder/gateway custody and logging.
+Native macOS qualification is separate and asynchronous. These explicit runs all
+select the final published commit
+`bdb4ac625b7dc443559184a8c50ce1570b1d9f07`:
 
-Native macOS Intel/Apple Silicon and a full release/workspace gate were not run
-for this local adoption. Previous release qualification does not establish this
-new source. Logs and the entry lock remain under
-`target/adoption-shared03110-platform026/`. The prior PR-focused 18-case/lint
-proof remains in `target/pr343-pr344-merge-20261108/`.
+- [CI](https://github.com/dragginzgame/ic-tooling/actions/runs/42480613652).
+- [Build optimizer](https://github.com/dragginzgame/ic-tooling/actions/runs/42480616062).
+- [Testkit runtime](https://github.com/dragginzgame/ic-tooling/actions/runs/42480618543).
+- [Browser fixtures](https://github.com/dragginzgame/ic-tooling/actions/runs/42480621231).
 
-## Last published versions and retained evidence
+At dispatch readback, CI was running and the other three were queued. No new
+native macOS Intel or Apple Silicon pass is claimed. Explicit qualification runs
+retain their independent concurrency identities; routine later pushes do not
+cancel them. Do not poll solely to keep a delivery turn open.
 
-Build 0.79.0 (`e3e514f0`), Text 0.74.3 (`439ead57`) and Testkit 0.93.1
-(`f494ea2d`) were delivered through completed frozen batches `batch-b1n6Stqb`
-and `batch-XbEtnv9Z`. All three complete 34-stage Linux gates passed, and official
-registry checksums/clean VCS identities matched. Foundation remains 0.75.0,
-Host Tools 0.86.0 and Native 0.80.0; Dev/probe are private. Query can adopt Text's
-published exact decimal-quantity and ratio-percentage helpers separately.
+## Preserved work and recovery
 
-Batch Git, plans and publication receipts remain under `.git/release-state/frozen/`;
-candidate outputs and sealed proofs remain under `target/release-frozen/`.
-Registry readbacks/reconciliation logs remain in
-`target/deployment-cleanup-20261108/`. Superseded `batch-SeyigorP` retains two
-HTTP-504 preflight failures without tag/upload effects; do not resume it as a new
-release. No artifacts, tools, batches or sibling directories were retired.
+The ordinary checkout includes every delivered crate/version and the Native cut.
+Unrelated lock selections remain uncommitted and outside the released source:
+Wire 0.17.14, Runtime/macros/guard 0.20.1, arc-swap 1.9.4, crypto-common 0.1.6 and
+generic-array 0.14.9. Reconciliation merged these onto the new workspace versions
+rather than restoring an old whole lockfile. The reconciled lock is preserved on
+`preservation/shared03111-platform026-lock-deployed-20261108`; its commit is
+recorded in the deployment evidence. Original selections also remain on
+`preservation/shared03111-platform026-lock-retry-20261108` (`0d248820`), alongside
+older preservation refs. Never overwrite newer work with an older backup.
 
-Deferred lock custody includes `preservation/pr343-pr344-lock-20261108`
-(`658375dd`), `preservation/cleanup-release-lock-20261108` (`7021230f`) and
-`preservation/cleanup-release-lock-20261108-updated` (`7fee0a54`). Never overwrite
-newer user changes with older backups. Other preserved refs, completed batches,
-native CI run links and original recovery facts remain in the
-[handoff before this adoption](https://github.com/dragginzgame/ic-tooling/blob/54ed82d2f3dfdcb8e82472aedd6d4f5e39dc1fb6/docs/status/current.md).
-Normal frozen releases already publish; do not run a second `make publish`.
+Deployment logs, lock snapshots, bundle admission and official registry archives/
+readbacks remain in `target/deployment-shared03111-platform026/`. Durable journals
+and Git remain under `.git/release-state/frozen/`; captured source, tools and
+builds remain under `target/release-frozen/`. No artifact cleanup or batch
+retirement was run.
+The superseded `batch-93c6DTSU` retains its preflight download failures and had no
+version/tag/upload effects. Do not resume it against the now-published versions.
 
-[#345 — Admit unchanged release lint](https://github.com/dragginzgame/ic-tooling/issues/345)
-retains the observed saved-context mismatch: the publisher safely ran fresh
-Clippy. This adoption does not claim to fix it. Publication and artifact retirement remain separate authorized tasks; see
-[publishing](../publishing.md).
+Earlier completed batches, superseded attempts, preservation refs and historical
+recovery evidence remain described in the
+[handoff before this deployment](https://github.com/dragginzgame/ic-tooling/blob/8fbf3a9428a7432c49eaabd626aca40eda167c7a/docs/status/current.md).
+Recover historical batches only through their recorded source and adapter.
+
+The safe fresh-Clippy fallback observed during publication is still tracked in
+[#345](https://github.com/dragginzgame/ic-tooling/issues/345); this deployment
+makes no claim to fix its environment/context mismatch.
