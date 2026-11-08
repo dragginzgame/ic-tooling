@@ -32,6 +32,8 @@ jobs:
         run: rustup toolchain install --profile minimal --no-self-update
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
+      - name: Restore authenticated host-tool downloads
+        uses: ./.github/actions/cache-tool-downloads
       - name: Prepare and admit PocketIC
         shell: bash
         run: |
@@ -39,6 +41,10 @@ jobs:
           make install-server 2>&1 | tee -a "$RUNNER_TEMP/portable-regression.log"
           server="$(target/debug/ic-testkit-server check)"
           echo "POCKET_IC_BIN=$server" >> "$GITHUB_ENV"
+      - name: Save authenticated host-tool downloads
+        uses: ./.github/actions/cache-tool-downloads
+        with:
+          mode: save
       - name: Qualify real owned sync and async instance lifetimes
         run: cargo test -p ic-testkit --locked --offline --lib pic::startup::tests -- --ignored 2>&1 | tee -a "$RUNNER_TEMP/portable-regression.log"
       - name: Qualify standalone pool failed recovery

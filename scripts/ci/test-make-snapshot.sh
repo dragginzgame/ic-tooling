@@ -20,8 +20,7 @@ unset SHARED_TOOLING_ROOT
 unset TOOLING_STAGE_ADMISSIONS IC_TOOLING_RELEASE_GROUP TOOLING_RELEASE_GROUP
 unset RELEASE_GROUPS RELEASE_PUBLISH_TARGET RELEASE_SETUP_TARGET RELEASE_BATCH_ACTIVE
 unset RELEASE_SETUP_MODE PUBLICATION_RESULT
-# Substitute Cargo has no source metadata; exercise every formatter pass while
-# Shared's producer fixtures own exact-input reuse and invalidation coverage.
+# Exercise every formatter pass while Shared owns input-cache qualification.
 export FORMAT_RUST_ARGS=--no-cache
 # shellcheck source=scripts/ci/product-fixture.sh
 source "$root/scripts/ci/product-fixture.sh"
@@ -41,6 +40,21 @@ for input in Makefile make/testkit.mk ci/tool-versions.env ci/release-delivery.t
     mkdir -p "$fixture/local/$parent"
     cp "$root/$input" "$fixture/local/$input"
 done
+cargo metadata --manifest-path "$root/Cargo.toml" --locked --offline --no-deps \
+    --format-version 1 > "$fixture/source-metadata.json"
+while IFS= read -r manifest; do
+    case "$manifest" in "$root"/*) relative="${manifest#"$root"/}" ;; *) exit 1 ;; esac
+    mkdir -p "$fixture/local/${relative%/*}"
+    cp "$manifest" "$fixture/local/$relative"
+done < <(jq -r '.packages[].manifest_path' "$fixture/source-metadata.json")
+export HOST_MAKE_METADATA="$fixture/formatting-metadata.json"
+jq --arg source "$root" --arg destination "$fixture/local" '
+    .workspace_root = $destination |
+    .packages[].manifest_path |= ($destination + .[($source | length):])
+' "$fixture/source-metadata.json" > "$HOST_MAKE_METADATA"
+format_packages=()
+while IFS= read -r package; do format_packages+=(--package "$package"); done \
+    < <(jq -r '.packages[].name' "$HOST_MAKE_METADATA")
 export HOST_MAKE_EVENTS="$fixture/events" HOST_MAKE_EXTERNAL="$fixture/external-events"
 export HOST_MAKE_JOBSERVER_PROBE="$fixture/local/scripts/ci/check-pipe-jobserver.pl"
 mkdir -p "$fixture/external/scripts/ci"
@@ -64,6 +78,7 @@ case "$*" in
     '--version') printf 'cargo 1.99.1 (fixture)\n' ;;
     'sort --version') printf 'cargo-sort %s\n' "$HOST_MAKE_SORT_VERSION" ;;
     'fmt --version') echo rustfmt ;;
+    'metadata --locked --offline --no-deps --format-version 1') cat "$HOST_MAKE_METADATA" ;;
     *)
         printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
         if [[ "$1" == fixture ]]; then exit "${HOST_MAKE_FIXTURE_STATUS:-0}"; fi
@@ -221,7 +236,7 @@ for selection in ordinary environment command nested recursive; do
             > "$fixture/$selection-$target.log" 2>&1
         case "$target" in
             help) : > "$fixture/expected" ;;
-            fmt-check) printf 'sort --workspace --grouped --check\nfmt --all -- --check\n' > "$fixture/expected" ;;
+            fmt-check) printf 'sort --workspace --grouped --check\nfmt %s -- --check\n' "${format_packages[*]}" > "$fixture/expected" ;;
             release-resume) printf 'resume 0.9.5 %s release-review\n' "$remote" > "$fixture/expected" ;;
             release-patch|release-minor|release-major) printf 'frozen --root %s --groups testkit --kind %s --remote %s --branch release-review --delivery direct --publish-target publish --setup-target release-candidate-setup\n' "$PWD" "${target#release-}" "$remote" > "$fixture/expected" ;;
             release-batch-*) printf 'frozen --root %s --%s batch-_fixture --delivery direct\n' "$PWD" "${target#release-batch-}" > "$fixture/expected" ;;
@@ -249,7 +264,7 @@ make --no-print-directory help RELEASE_DELIVERY=pr > "$fixture/unrelated-deliver
 if [[ $selected_case == release-routing ]]; then
     # A retired roster must refuse, rather than silently selecting one group.
     : > "$HOST_MAKE_EVENTS"
-    if make --no-print-directory release-patch RELEASE_GROUP=testkit RELEASE_FROZEN_GROUPS=native,testkit \
+    if make --no-print-directory release-patch RELEASE_GROUP=testkit RELEASE_FROZEN_GROUPS=text,testkit \
         > "$fixture/retired-roster.log" 2>&1; then exit 1; fi
     grep -F 'Retired release settings: RELEASE_FROZEN_GROUPS' "$fixture/retired-roster.log" > /dev/null
     [[ ! -s $HOST_MAKE_EVENTS ]]
@@ -513,7 +528,7 @@ PATH="$fixture/local:$PATH" make --no-print-directory compiler-check > "$fixture
 : > "$HOST_MAKE_EVENTS"
 PATH="$fixture/local:$PATH" make --no-print-directory "MAKE=$(command -v make)" testkit-wasm-check check-fs-non-unix isolated-features-check > "$fixture/compiler-profiles.log" 2>&1
 cat > "$fixture/expected" <<'EVENTS'
-check -p ic-testkit -p ic-testkit-native --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
+check -p ic-testkit --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
 check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 check -p ic-host-fs --lib --bins --test unsupported_lock --all-features --target wasm32-unknown-unknown --locked --offline
 test -p ic-host-tools --no-default-features --features icp-project --all-targets --locked --offline icp_project::

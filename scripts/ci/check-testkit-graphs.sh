@@ -24,9 +24,6 @@ native_policy+=(--forbid tracing-appender --forbid tracing-subscriber --forbid i
 native_policy+=(--forbid-feature reqwest/blocking --forbid-feature reqwest/multipart
     --forbid-feature reqwest/stream)
 
-perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
-    --package ic-testkit-native --target "$host" --all-features \
-    --require ic-testkit-native=1 --forbid-pattern '^(?!ic-testkit-native$)'
 perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --forbid clap --forbid ic-wire \
     --forbid wat --forbid wast --forbid wasm-encoder
@@ -46,9 +43,6 @@ perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
     --forbid pocket-ic --forbid ic-metrics --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
     --require ic-host-artifacts=1 --require ic-host-fs=1 \
     --require ic-host-process=1 --require ic-host-text=1
-perl scripts/ci/check-cargo-graph.pl --consumer "$consumer" \
-    --package ic-testkit-native --target wasm32-unknown-unknown --all-features \
-    --require ic-testkit-native=1 --forbid-pattern '^(?!ic-testkit-native$)'
 perl scripts/ci/check-cargo-graph.pl "${policy[@]}" --package ic-testkit \
     --target wasm32-unknown-unknown --all-features --forbid-pattern '^ic-host-' \
     --forbid reqwest --forbid tokio --forbid tempfile --forbid flate2 --forbid ic-certification --forbid ic-transport-types \

@@ -28,14 +28,14 @@ set -euo pipefail
 [[ "$*" == --cargo-inheritance ]]
 : > metadata-called
 STUB
-make --no-print-directory -C "$fixture" dependency-pins-check candid-boundary-check RELEASE_GROUP=native > "$fixture/clean.log" 2>&1
+make --no-print-directory -C "$fixture" dependency-pins-check candid-boundary-check RELEASE_GROUP=text > "$fixture/clean.log" 2>&1
 [[ -f "$fixture/metadata-called" ]]
 [[ $(grep -c '^Candid source boundary passed (' "$fixture/clean.log") == 1 ]]
 rm "$fixture/metadata-called"
 
 refuse() {
     local label=$1 diagnostic=${3:-$2:} status=0
-    make --no-print-directory -C "$fixture" dependency-pins-check RELEASE_GROUP=native > "$fixture/$label.log" 2>&1 || status=$?
+    make --no-print-directory -C "$fixture" dependency-pins-check RELEASE_GROUP=text > "$fixture/$label.log" 2>&1 || status=$?
     if [[ $status == 0 || -e "$fixture/metadata-called" ]]; then
         cat "$fixture/$label.log" >&2
         echo 'Candid source admission did not stop metadata validation' >&2

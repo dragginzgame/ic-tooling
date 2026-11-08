@@ -1,6 +1,6 @@
 # Release ownership
 
-One workspace, dependency catalog and lockfile retain six independent release
+One workspace, dependency catalog and lockfile retain five independent release
 groups. Build and Text leave the original Foundation group without changing
 crate names, package versions, APIs, feature boundaries or dependency requirements.
 
@@ -11,7 +11,6 @@ crate names, package versions, APIs, feature boundaries or dependency requiremen
 | text | ic-host-text | none | ic-host-text | [Text](../../releases/text/CHANGELOG.md) |
 | tools | ic-host-tools | none | ic-host-tools | [Host Tools](../../releases/tools/CHANGELOG.md) |
 | testkit | ic-testkit | ic-testkit-dev, ic-testkit-perf-probe | ic-testkit | [Testkit](../../releases/testkit/CHANGELOG.md) |
-| native | ic-testkit-native | none | ic-testkit-native | [Native](../../releases/native/CHANGELOG.md) |
 
 ## Dependency and type ownership
 
@@ -33,16 +32,12 @@ the maintained PocketIC client and selects Runtime directly for Wasm IC0. Its pr
 also consumes Build and Text; those testing edges do not become public Testkit
 production dependencies. The Wasm probe remains in Testkit's existing family.
 
-Native owns std-only allocation measurement and has no production dependencies.
-Its independent baseline is the already-published 0.79.0; creating this group does
-not change package versions or tags. IC Storage owns memory IO metering under
-its `test-support` feature. Native's next minor removes the old memory module and
-feature, so neither Storage trait changes nor simulator changes advance this group.
-Historical Testkit plans and receipts retain their original roster, including Native;
-never replay them with the new ownership policy. Repository CI and publication
-qualification retain their whole-workspace gates. The separately reviewed
-[release-validation mapping](release-validation.md) governs any narrower release
-gate; the group split alone does not establish one.
+The unused native allocation package and its release group are retired. Its
+[frozen ledger](../../releases/native/CHANGELOG.md), published versions, tags and
+original recovery records remain available. It was not merged into Testkit.
+IC Storage retains memory IO metering under its `test-support` feature. Historical
+Native and Testkit journals must use their recorded source and original adapters;
+never replay them under today's roster.
 
 Real supplier changes can still require independently classified consumer changes.
 Publicly exposed supplier types and minimum requirements retain their actual
@@ -53,7 +48,7 @@ Do not release unchanged groups merely because workspace qualification ran.
 
 ## Selection, history and recovery
 
-Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools`, `testkit` or `native` explicitly
+Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools` or `testkit` explicitly
 for release, resume, publication and publication dry-run commands. For example:
 
 ```sh
@@ -67,7 +62,7 @@ These commands retain separate effect authorization and complete release gates.
 The standard runner, editor and one repository-wide lock serve every group.
 Tags and journals use the selected group prefix. Publication selects that group's
 public members; `PACKAGE` can narrow it, never infer or cross the group. Read-only
-archive qualification still covers all ten public packages. Cargo owns registry
+archive qualification still covers all nine public packages. Cargo owns registry
 publication dependency order.
 
 Build and Text start at their existing published 0.73.6 version. Foundation stays
@@ -80,7 +75,7 @@ Published [Foundation history through 0.73.6](../../releases/foundation/CHANGELO
 retains its original seven-package scope once. New Build/Text ledgers link it.
 The [joint integration ledger](../../releases/integration/CHANGELOG.md),
 [earlier coordinated history](../../releases/history.md), imported Git histories
-and old tags remain untouched. Root CHANGELOG.md indexes the six current ledgers.
+and old tags remain untouched. Root CHANGELOG.md indexes the five active ledgers and retired Native history.
 
 Old `foundation-*` attempts may describe the original seven members. Never
 reinterpret or migrate their saved plans, receipts, partial uploads or tags under
@@ -103,14 +98,14 @@ Make fixtures check exact selection and cross-group refusals.
 
 `bash scripts/release/test-validation.sh` compares every group's full fallback
 against the existing CI roster on matched fixture inputs. It exercises focused
-Native/Text selection, baseline discovery, exclusions, required failures, source
+Text/Tools/Build selection, baseline discovery, exclusions, required failures, source
 drift and receipt custody using substituted Make effects. Real package, archive
 and native-host execution remain distinct proofs; see the
 [mapping and evidence contract](release-validation.md).
 
 The private Dev `public_contracts` test requires shared public error, principal,
 subnet-metrics DTO and core Wire identities during ordinary qualification.
-The standard package check independently qualifies normalized archives of all ten
+The standard package check independently qualifies normalized archives of all nine
 public packages. After both integration groups are published, opt in to
 `CARGO_NET_OFFLINE=false bash scripts/release/test-integration-cohort.sh` for the
 same public caller tests against exact current registry versions, without source

@@ -75,18 +75,6 @@
         "ic-testkit-dev",
         "ic-testkit-perf-probe"
       ]
-    },
-    {
-      "name": "native",
-      "primary": "ic-testkit-native",
-      "version": "package",
-      "members": [
-        "ic-testkit-native"
-      ],
-      "changelog": "releases/native/CHANGELOG.md",
-      "dependencies": [
-        "ic-testkit-native"
-      ]
     }
   ]
 }

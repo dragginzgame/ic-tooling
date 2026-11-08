@@ -7,7 +7,7 @@ Host profiles below remain independent. Build and Testkit share the root
 workspace and release matrix, with separate optimizer, browser-session and
 PocketIC lifecycle workflow jobs. `make testkit-check` runs aggregate Testkit
 qualification using the prepared server; `make testkit-wasm-check` qualifies deployed profiles. `make testkit-package-check`
-qualifies all ten public archives through Build. Private packages remain
+qualifies all nine public archives through Build. Private packages remain
 excluded from publication. Native macOS results must come from native runners.
 The driver's retained attempt holds selection diagnostics beside Build's
 `archives/` qualification directory. Its separate `target/archive-build-cache`
@@ -95,7 +95,7 @@ publication-dry-run evidence, with product gate bodies substituted. Complete
 installed release and registry proof remain separate.
 For receipt/prepared-version changes shared by all groups, select a representative
 owner with `bash scripts/release/test-adapter.sh --group testkit`; the default
-entrypoint retains all six groups for complete release qualification.
+entrypoint retains all five groups for complete release qualification.
 For full-CI roster and lint/publication ordering, use
 `bash scripts/ci/test-workspace-validation.sh`; it runs the actual Make routing
 with substituted check/build/publication effects and no Cargo compilation.
@@ -127,7 +127,7 @@ warning-denied lint gate. CI/release validation runs it before expensive tests
 and builds after prerequisite admission. Publication and its dry run use that
 same gate before packaging or registry dispatch; ordinary package checks keep
 their selected scope. These entrypoint rules do not authorize a full local gate.
-Native, Text, Tools and Build release plans can select package/consumer lint and the
+Text, Tools and Build release plans can select package/consumer lint and the
 [focused contracts](design/release-validation.md) after baseline admission;
 Foundation, Testkit and uncertain/shared changes retain the full gate. Tools/Build
 need a new matched three-host comparison before they can narrow. CI and

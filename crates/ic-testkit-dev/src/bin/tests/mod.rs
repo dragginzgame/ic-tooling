@@ -3,11 +3,11 @@ use ic_host_process::tool::{ExecutionError, ExecutionEvidence, ExecutionFailure,
 
 #[test]
 fn explicit_archive_selection_preserves_default_and_refuses_private_or_duplicate_names() {
-    let roster = "ic-host-text\nic-testkit-native\n";
+    let roster = "ic-host-text\nic-host-tools\n";
     assert_eq!(selected_roster(roster, std::iter::empty()).unwrap(), roster);
     assert_eq!(
-        selected_roster(roster, ["ic-testkit-native"].into_iter()).unwrap(),
-        "ic-testkit-native"
+        selected_roster(roster, ["ic-host-tools"].into_iter()).unwrap(),
+        "ic-host-tools"
     );
     assert!(selected_roster(roster, ["ic-testkit-dev"].into_iter()).is_err());
     assert!(selected_roster(roster, ["unknown"].into_iter()).is_err());

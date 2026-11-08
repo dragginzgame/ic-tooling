@@ -62,7 +62,7 @@ case $last in
         printf '%s\n' "$last" >> "$VALIDATION_TEST_EVENTS"
         [[ $last != "${VALIDATION_TEST_FAIL:-}" ]] || exit 29
         if [[ $last == "${VALIDATION_TEST_DRIFT:-}" ]]; then
-            printf '\nchanged during stage\n' >> crates/ic-testkit-native/src/lib.rs
+            printf '\nchanged during stage\n' >> crates/ic-host-text/src/lib.rs
         fi
         if [[ $last == tooling-command-check && -n ${TOOLING_STAGE_ADMISSIONS:-} ]]; then
             while IFS=$'\t' read -r stage _check; do
@@ -174,7 +174,7 @@ check_new_scopes() {
         make_plan "$selected-only"
         jq -e '.selection == "focused"' "$directory/context.json" >/dev/null
         # Keep each omission explained for this owner, rather than reusing
-        # Native/Text exclusions that would omit the selected owner's contracts.
+        # Text's exclusions that would omit the selected owner's contracts.
         jq -e 'all(.stages[]; .required or (.reason | type == "string" and length > 0))' "$directory/plan.json" >/dev/null
         : > "$VALIDATION_TEST_EVENTS"
         bash scripts/release/validation.sh run "$pointer" > "$fixture/$selected.run.log" 2>&1
@@ -298,18 +298,18 @@ for mode in valid dispatch push pr dispatch-branch dispatch-workflow dispatch-re
     else jq -e '. == null' "$fixture/discovery-$mode.json" >/dev/null; fi
 done
 git remote set-url origin https://example.invalid/fixture.git
-# Native-only changes select real Native obligations and exclude unrelated gates.
-printf 'pub const FIXTURE: u8 = 1;\n' >> crates/ic-testkit-native/src/lib.rs
-git add crates/ic-testkit-native/src/lib.rs
-git commit -qm native
-RELEASE_SOURCE=$(git rev-parse HEAD) RELEASE_GROUP=native
-make_plan native-success
+# Text-only changes exercise focused proof custody and exclude unrelated gates.
+printf 'pub const FIXTURE: u8 = 1;\n' >> crates/ic-host-text/src/lib.rs
+git add crates/ic-host-text/src/lib.rs
+git commit -qm focused
+RELEASE_SOURCE=$(git rev-parse HEAD) RELEASE_GROUP=text
+make_plan focused-success
 jq -e '.selection == "focused"' "$directory/context.json" >/dev/null
 : > "$VALIDATION_TEST_EVENTS"
-VALIDATION_TEST_FAIL=testkit-installed-check bash scripts/release/validation.sh run "$pointer" > "$fixture/native.run.log" 2>&1
-bash scripts/release/validation.sh receipt "$pointer" > "$fixture/native.receipt"
+VALIDATION_TEST_FAIL=testkit-installed-check bash scripts/release/validation.sh run "$pointer" > "$fixture/focused.run.log" 2>&1
+bash scripts/release/validation.sh receipt "$pointer" > "$fixture/focused.receipt"
 jq -e --arg source "$RELEASE_SOURCE" '.kind == "group-validation-evidence" and
-    .source == $source and .group == "native"' "$directory/shared-proof.json" >/dev/null
+    .source == $source and .group == "text"' "$directory/shared-proof.json" >/dev/null
 absent grep -E 'testkit-|^tools-check$|^clippy-workspace$|^tooling-command-check$' "$VALIDATION_TEST_EVENTS"
 grep -Fx release-scope-archives "$VALIDATION_TEST_EVENTS" >/dev/null
 # Every omitted target still has explicit not-applicable evidence.
@@ -319,38 +319,38 @@ cp "$run_directory/0.log" "$fixture/original.log"
 printf 'tampered\n' >> "$run_directory/0.log"
 refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/tampered.receipt" 2>&1
 cp "$fixture/original.log" "$run_directory/0.log"
-cp "$directory/shared-proof.json" "$fixture/native.shared-proof"
+cp "$directory/shared-proof.json" "$fixture/focused.shared-proof"
 jq -cS '.source = "0000000000000000000000000000000000000000"' \
-    "$fixture/native.shared-proof" > "$directory/shared-proof.json"
+    "$fixture/focused.shared-proof" > "$directory/shared-proof.json"
 refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/wrong-proof.log" 2>&1
-mv "$fixture/native.shared-proof" "$directory/shared-proof.json"
+mv "$fixture/focused.shared-proof" "$directory/shared-proof.json"
 # Missing/failed/blocked execution cannot produce a successful receipt.
 cp "$run_directory/timings.tsv" "$fixture/timings"
 : > "$run_directory/timings.tsv"
 refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/missing.log" 2>&1
 cp "$fixture/timings" "$run_directory/timings.tsv"
-make_plan native-failure
+make_plan focused-failure
 : > "$VALIDATION_TEST_EVENTS"
 refuse env VALIDATION_TEST_FAIL=release-scope-lint bash scripts/release/validation.sh run "$pointer" > "$fixture/failure.log" 2>&1
 [[ ! -e "$directory/shared-proof.json" ]]
 absent grep -Fx release-scope-tests "$VALIDATION_TEST_EVENTS"
 refuse bash scripts/release/validation.sh receipt "$pointer" > "$fixture/failure-receipt.log" 2>&1
-make_plan native-drift
+make_plan focused-drift
 refuse env VALIDATION_TEST_DRIFT=release-scope-lint bash scripts/release/validation.sh run "$pointer" > "$fixture/drift.log" 2>&1
-git restore -- crates/ic-testkit-native/src/lib.rs
+git restore -- crates/ic-host-text/src/lib.rs
 # Source/policy/group changes cannot re-admit a saved plan.
-make_plan native-stale
-refuse env RELEASE_GROUP=text bash scripts/release/validation.sh run "$pointer" > "$fixture/group.log" 2>&1
+make_plan focused-stale
+refuse env RELEASE_GROUP=build bash scripts/release/validation.sh run "$pointer" > "$fixture/group.log" 2>&1
 jq '.stages |= .[1:]' "$directory/plan.json" > "$fixture/truncated-plan"
 cp "$fixture/truncated-plan" "$directory/plan.json"
 refuse bash scripts/release/validation.sh run "$pointer" > "$fixture/omission.log" 2>&1
 # Recovery uses the same baseline admission rule as discovery, including hosts,
 # retained qualification, source identities and the compiler lane.
-make_plan native-baseline
+make_plan focused-baseline
 jq '.jobs.jobs[0].steps = []' "$directory/baseline.json" > "$fixture/incomplete-baseline"
 cp "$fixture/incomplete-baseline" "$directory/baseline.json"
 refuse bash scripts/release/validation.sh run "$pointer" > "$fixture/baseline-recovery.log" 2>&1
-# Shared changes and mixed-group edits broaden all six groups to the original roster.
+# Shared changes and mixed-group edits broaden all five groups to the original roster.
 printf '\n# shared input\n' >> Makefile
 git add Makefile
 git commit -qm shared
@@ -390,12 +390,12 @@ cmp "$fixture/full.receipt" "$fixture/full-restored.receipt"
 # New/omitted obligations refuse until their product coverage is explicit.
 jq -cS '.stages += ["release-stage-new-obligation"]' ci/release-validation.json > "$fixture/new-stage"
 cp "$fixture/new-stage" ci/release-validation.json
-refuse perl scripts/release/select-validation.pl "$RELEASE_SOURCE" native \
+refuse perl scripts/release/select-validation.pl "$RELEASE_SOURCE" text \
     "$fixture/baseline.json" "$fixture/never-plan" "$fixture/never-context" > "$fixture/roster.log" 2>&1
 git restore -- ci/release-validation.json
 jq '.exclusions[0].targets = []' ci/release-validation-coverage.json > "$fixture/missing-coverage"
 cp "$fixture/missing-coverage" ci/release-validation-coverage.json
-refuse perl scripts/release/select-validation.pl "$RELEASE_SOURCE" native \
+refuse perl scripts/release/select-validation.pl "$RELEASE_SOURCE" text \
     "$fixture/baseline.json" "$fixture/never-plan" "$fixture/never-context" > "$fixture/missing-coverage.log" 2>&1
 git restore -- ci/release-validation-coverage.json
 # Unknown groups, absent full evidence and compiler/config overrides fail closed.
@@ -431,8 +431,8 @@ make_plan text-version
 jq -e '.selection == "focused"' "$directory/context.json" >/dev/null
 perl scripts/release/select-validation.pl "$RELEASE_SOURCE" "$RELEASE_GROUP" \
     "$directory/baseline.json" "$directory/plan.json" "$directory/context.json" --check > "$fixture/version-readmission.log"
-printf '\n# other owner source\n' >> crates/ic-testkit-native/src/lib.rs
-git add crates/ic-testkit-native/src/lib.rs
+printf '\n# other owner source\n' >> crates/ic-build/src/lib.rs
+git add crates/ic-build/src/lib.rs
 git commit -qm mixed
 RELEASE_SOURCE=$(git rev-parse HEAD)
 make_plan mixed-owners

@@ -10,6 +10,18 @@ fn build_keeps_its_public_foundation_error_identities() {
 }
 
 #[test]
+fn ledger_blocks_keep_the_platform_value_identity() {
+    let block = ic_host_tools::ledger_evidence::LedgerBlock {
+        id: 0_u8.into(),
+        block: ic_platform::icrc_ledger_types::Value::Nat(7_u8.into()),
+    };
+    assert_eq!(
+        block.block,
+        ic_platform::icrc_ledger_types::Value::Nat(7_u8.into())
+    );
+}
+
+#[test]
 fn testkit_metrics_keep_the_platform_protocol_identity() {
     let _: fn(ic_platform::ic_protocol::SubnetMetrics) -> ic_testkit::pocket_ic::SubnetMetrics =
         |metrics| metrics;

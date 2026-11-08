@@ -7,4 +7,3 @@ ic-host-text
 ic-host-tools
 ic-host-wasm-inspect
 ic-testkit
-ic-testkit-native

@@ -141,7 +141,7 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
             my @expected = sort @{$coverage->{consumers}{$group}};
             $safe &&= join(',', @parents) eq join(',', @expected);
             my ($owner) = grep { $_->{name} eq $package } @{$metadata->{packages}};
-            $safe &&= defined($owner) && ($group ne 'native' || !@{$owner->{dependencies}});
+            $safe &&= defined($owner);
             # Text's runtime callers are bounded to these tested owners. A new
             # call surface needs an explicit mapping before it can be omitted.
             if ($group eq 'text') {

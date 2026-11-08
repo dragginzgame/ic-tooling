@@ -15,6 +15,20 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
   observations grant no process or lock custody
   ([#343 — Extract bounded process and lock observations](https://github.com/dragginzgame/ic-tooling/pull/343)).
 
+### 🗑️ Removed
+
+- Retire the unused `ic-testkit-native` allocation package and its active release,
+  publication and qualification machinery. No API moved into PocketIC Testkit.
+  Published versions and historical release/recovery records remain available.
+
+### 🔧 Tooling
+
+- Adopt Shared Tooling 0.31.11, including authenticated hosted download caching,
+  workspace-member formatting, hashing admission and scoped LOC reports. Cache
+  direct CI-tool setup before tests; secret scanning retains one repository CI
+  owner and stays outside release/publication gates. Adopt focused-check issue
+  closure with explicit delivery status and issue-specific acceptance preserved.
+
 ## [0.75.0] - 2026-11-07
 
 ### ⚠️ Breaking

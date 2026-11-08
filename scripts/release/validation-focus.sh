@@ -17,21 +17,9 @@ case "$1" in
     lint)
         packages=(-p "$package")
         if [[ $RELEASE_GROUP == text ]]; then packages+=(-p ic-host-tools); fi
-        if [[ $RELEASE_GROUP != native ]]; then packages+=(-p ic-testkit-dev); fi
+        packages+=(-p ic-testkit-dev)
         cargo clippy "${packages[@]}" --all-targets --all-features --locked --offline -- -D warnings ;;
-    graphs)
-        if [[ $RELEASE_GROUP == native ]]; then
-            host=$(rustc -vV | sed -n 's/^host: //p')
-            [[ -n $host ]]
-            for target in "$host" wasm32-unknown-unknown; do
-                perl scripts/ci/check-cargo-graph.pl --consumer "$PWD/" \
-                    --package "$package" --target "$target" --all-features \
-                    --require ic-testkit-native=1 --forbid-pattern '^(?!ic-testkit-native$)'
-            done
-            cargo check -p "$package" --all-features --locked --offline --target wasm32-unknown-unknown
-        else
-            bash scripts/ci/check-tools-features.sh
-        fi ;;
+    graphs) bash scripts/ci/check-tools-features.sh ;;
     tests)
         cargo test -p "$package" --all-targets --all-features --locked --offline
         if [[ $RELEASE_GROUP == text ]]; then

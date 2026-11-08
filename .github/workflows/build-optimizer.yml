@@ -31,11 +31,17 @@ jobs:
           echo "TMPDIR=$RUNNER_TEMP/wasm-qualification" >> "$GITHUB_ENV"
       - name: Prepare declared compiler
         run: rustup toolchain install --profile minimal --no-self-update
+      - name: Restore authenticated optimizer-tool downloads
+        uses: ./.github/actions/cache-tool-downloads
       - name: Prepare and admit native optimizer tools
         run: |
           make install-host-tools 2>&1 | tee "$TMPDIR/host-tools-install.log"
           make install-ic-tools 2>&1 | tee "$TMPDIR/ic-tools-install.log"
           make host-tools-check ic-tools-check compiler-check
+      - name: Save authenticated optimizer-tool downloads
+        uses: ./.github/actions/cache-tool-downloads
+        with:
+          mode: save
       - name: Prepare pinned Wasm execution runtime
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:

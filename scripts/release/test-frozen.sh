@@ -33,8 +33,8 @@ while IFS=$'\t' read -r kind _digest _mode path; do
     cp -p "$root/$path" "$normal/$path"
 done < "$fixture/snapshot-records"
 cp "$root/.shared-tooling.snapshot" "$normal/.shared-tooling.snapshot"
-# Include pending consumer changes too, while keeping its unrelated live lock
-# out of the captured graph. Lasting work stays in the normal checkout.
+# Include current consumer inputs in this disposable fixture. Its own commit
+# selects the captured graph; deferred normal-tree edits are injected below.
 git -C "$root" diff HEAD --name-only --diff-filter=d -z > "$fixture/consumer-changes"
 git -C "$root" ls-files --others --exclude-standard -z >> "$fixture/consumer-changes"
 while IFS= read -r -d '' path; do
@@ -43,6 +43,7 @@ while IFS= read -r -d '' path; do
     mkdir -p "$normal/$(dirname "$path")"
     cp -p "$root/$path" "$normal/$path"
 done < "$fixture/consumer-changes"
+cp "$root/Cargo.lock" "$normal/Cargo.lock"
 bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$normal" --compact
 cp "$root/Cargo.lock" "$fixture/deferred-Cargo.lock"
 export FROZEN_TEST_NORMAL="$normal" FROZEN_TEST_RECORD="$fixture"
@@ -54,7 +55,7 @@ set -euo pipefail
 platform=$("$YQ" -p toml -o json -r '.package[] | select(.name == "ic-platform") | .version' Cargo.lock)
 [[ $platform == "$FROZEN_TEST_PLATFORM" ]]
 printf '%s %s %s\n' "$RELEASE_GROUP" "$1" "$platform" >> "$FROZEN_TEST_RECORD/stages"
-if [[ $RELEASE_GROUP == native && $1 == shared-tooling-check && -f "$FROZEN_TEST_RECORD/fail-once" ]]; then
+if [[ $RELEASE_GROUP == text && $1 == shared-tooling-check && -f "$FROZEN_TEST_RECORD/fail-once" ]]; then
     cp "$FROZEN_TEST_RECORD/deferred-Cargo.lock" "$FROZEN_TEST_NORMAL/Cargo.lock"
     printf '\n# frozen qualification deferred edit\n' >> "$FROZEN_TEST_NORMAL/Cargo.lock"
     rm "$FROZEN_TEST_RECORD/fail-once"
@@ -72,12 +73,15 @@ cat >> "$normal/Makefile" <<'MAKE'
 # installed release qualifies product gates and server setup without substitutes.
 LOCAL_TOOL_INSTALL_TARGETS := install-release-editor
 LOCAL_TOOL_CHECK_TARGETS := release-editor-check
+# Workspace lint is a substituted product gate; archive/provenance hooks stay real.
+clippy-workspace:
+	+@printf '%s\n' '$(RELEASE_GROUP) publication-lint' >> "$$FROZEN_TEST_RECORD/stages"
 publish:
 	+CARGO_NET_OFFLINE=false bash scripts/publish/workspace.sh check
 	+@printf '%s\n' '$(RELEASE_GROUP)' >> "$$FROZEN_TEST_RECORD/publications"
-	+@if [ '$(RELEASE_GROUP)' = native ] && [ -f "$$FROZEN_TEST_RECORD/publication-stop-once" ]; then rm "$$FROZEN_TEST_RECORD/publication-stop-once"; exit 143; fi
+	+@if [ '$(RELEASE_GROUP)' = text ] && [ -f "$$FROZEN_TEST_RECORD/publication-stop-once" ]; then rm "$$FROZEN_TEST_RECORD/publication-stop-once"; exit 143; fi
 MAKE
-for group in native testkit; do
+for group in text testkit; do
     ledger="$normal/releases/$group/CHANGELOG.md"
     version=$(cd "$normal" && bash scripts/release/group.sh ci/cargo-release-groups.json "$group" version)
     next=$(perl "$root/scripts/ci/validate-release-inputs.pl" next-version "$version" patch)
@@ -103,7 +107,7 @@ done
 if (cd "$normal" && bash scripts/release/group.sh ci/cargo-release-groups.json build,foundation batch) > "$fixture/order-refusal.log" 2>&1; then exit 1; fi
 : > "$fixture/fail-once"
 : > "$fixture/publication-stop-once"
-if make --no-print-directory -C "$normal" release-patch RELEASE_GROUPS=native,testkit > "$fixture/interrupted.log" 2>&1; then exit 1; fi
+if make --no-print-directory -C "$normal" release-patch RELEASE_GROUPS=text,testkit > "$fixture/interrupted.log" 2>&1; then exit 1; fi
 intents=("$normal"/.git/release-state/frozen/batch-*/intent.json)
 [[ ${#intents[@]} == 1 && -f ${intents[0]} ]]
 jq -e '.phase == "releasing" and .index == 0' "${intents[0]}" > /dev/null
@@ -114,7 +118,7 @@ cp "$normal/Cargo.lock" "$fixture/expected-deferred-Cargo.lock"
 if make --no-print-directory -C "$normal" release-batch-resume "BATCH=$batch" > "$fixture/resumed.log" 2>&1; then exit 1; fi
 jq -e '.schema == 2 and .phase == "publishing" and .index == 0 and
     (.release_commit | test("^[0-9a-f]{40}$"))' "${intents[0]}" > /dev/null
-printf 'native\n' > "$fixture/expected-publications"
+printf 'text\n' > "$fixture/expected-publications"
 cmp "$fixture/expected-publications" "$fixture/publications"
 if make --no-print-directory -C "$normal" release-batch-resume "BATCH=$batch" > "$fixture/uncertain-publication.log" 2>&1; then exit 1; fi
 cmp "$fixture/expected-publications" "$fixture/publications"
@@ -124,13 +128,13 @@ work="$normal/target/release-frozen/$batch"
 gitdir="$normal/.git/release-state/frozen/$batch/repository.git"
 [[ $(git -C "$normal" rev-parse HEAD) == "$source" ]]
 cmp "$normal/Cargo.lock" "$fixture/expected-deferred-Cargo.lock"
-printf 'native\ntestkit\n' > "$fixture/expected-publications"
+printf 'text\ntestkit\n' > "$fixture/expected-publications"
 cmp "$fixture/expected-publications" "$fixture/publications"
 grep -q '^testkit ' "$fixture/stages"
 [[ $(git --git-dir "$fixture/remote.git" rev-parse main) == "$(git --git-dir "$gitdir" rev-parse HEAD)" ]]
-for group in native testkit; do
+for group in text testkit; do
     package=ic-testkit
-    [[ $group != native ]] || package=ic-testkit-native
+    [[ $group != text ]] || package=ic-host-text
     version=$(make --no-print-directory -s -C "$work" release-version "RELEASE_GROUP=$group")
     # Cargo 1.99 retains publication dry-run archives in tmp-crate.
     archive="$work/target/package/tmp-crate/$package-$version.crate"
@@ -143,7 +147,7 @@ cmp "$fixture/expected-publications" "$fixture/publications"
 # A stale normal source must not overwrite tags delivered by the earlier batch.
 git -C "$normal" restore --source=HEAD -- Cargo.lock
 before=$(git --git-dir "$fixture/remote.git" rev-parse main)
-if make --no-print-directory -C "$normal" release-patch RELEASE_GROUP=native > "$fixture/remote-conflict.log" 2>&1; then exit 1; fi
+if make --no-print-directory -C "$normal" release-patch RELEASE_GROUP=text > "$fixture/remote-conflict.log" 2>&1; then exit 1; fi
 [[ $(git --git-dir "$fixture/remote.git" rev-parse main) == "$before" ]]
 cmp "$fixture/expected-publications" "$fixture/publications"
-echo 'Frozen Tooling hooks passed: six group queries, order refusal, deferred lock, interrupted/uncertain recovery, two archive identities, completed resume and remote conflict'
+echo 'Frozen Tooling hooks passed: five group queries, order refusal, deferred lock, interrupted/uncertain recovery, two archive identities, completed resume and remote conflict'

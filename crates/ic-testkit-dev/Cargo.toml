@@ -33,8 +33,8 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "tim
 
 [dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }
-ic-host-tools = { workspace = true, features = ["registry"] }
-ic-platform = { workspace = true, features = ["principal", "ic-protocol"] }
+ic-host-tools = { workspace = true, features = ["registry", "ledger-evidence"] }
+ic-platform = { workspace = true, features = ["principal", "ic-protocol", "icrc-ledger-types"] }
 ic-platform-types = { workspace = true, features = ["principal-external"] }
 ic-testkit = { workspace = true, features = ["wire"] }
 ic-testkit-perf-probe.workspace = true

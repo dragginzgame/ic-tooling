@@ -1,10 +1,20 @@
 # Testkit family changelog
 
-This ledger owns Testkit and the private development/probe packages. Native's
-[separate ledger](../native/CHANGELOG.md) owns subsequent releases; its history
+This ledger owns Testkit and the private development/probe packages. The retired
+Native package's [frozen ledger](../native/CHANGELOG.md) retains its releases; its history
 through 0.79.0 retains its original scope below. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
+
+## [0.93.2] - Unreleased
+
+### 🔧 Changed
+
+- Adopt Platform 0.26 for native Candid, certificate and protocol adapters.
+  Management DTOs remain exactly 0.11.0; upstream Candid/subnet-metrics identities,
+  Testkit's public configuration/errors, protocol bytes and Wasm exclusions remain
+  unchanged. Optional supplier-specific error downcasts retain their documented
+  Platform-generation coupling.
 
 ## [0.93.1] - 2026-11-08
 

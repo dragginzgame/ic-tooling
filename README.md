@@ -1,7 +1,7 @@
 # IC Tooling
 
 This workspace owns Host primitives (`ic-host-*`), build orchestration
-(`ic-build`) and test support (`ic-testkit`, `ic-testkit-native`).
+(`ic-build`) and simulator test support (`ic-testkit`).
 Build and Testkit use Host through explicit crate dependencies.
 Private test drivers and the Wasm probe remain unpublished.
 

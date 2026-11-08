@@ -493,7 +493,7 @@ PUBLISH_DIRTY=1 refuse publish --packages ic-host-artifacts
 foundation_version="$(jq -er '.packages[] | select(.name == "ic-host-artifacts") | .version' original-metadata.json)"
 build_version="$(jq -er '.packages[] | select(.name == "ic-build") | .version' original-metadata.json)"
 integration_version="$(bash "$root/scripts/ci/next-release-version.sh" "$foundation_version" minor)"
-jq --arg version "$integration_version" '(.packages[] | select(.name == "ic-testkit" or .name == "ic-host-tools" or .name == "ic-testkit-native").version) = $version' \
+jq --arg version "$integration_version" '(.packages[] | select(.name == "ic-testkit" or .name == "ic-host-tools").version) = $version' \
     original-metadata.json > metadata.json
 for mode in check publish; do
     RELEASE_GROUP=build invoke "$mode" --packages ic-build > "mixed-build-$mode.log" 2>&1
@@ -514,8 +514,8 @@ tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' > tools-packages
 printf '%s\n' ic-host-tools > expected-tools-packages
 cmp expected-tools-packages tools-packages
 # Build and Text select only their own package despite sharing the old baseline.
-for group in build text native; do
-    case "$group" in build) expected_package=ic-build ;; text) expected_package=ic-host-text ;; native) expected_package=ic-testkit-native ;; esac
+for group in build text; do
+    case "$group" in build) expected_package=ic-build ;; text) expected_package=ic-host-text ;; esac
     RELEASE_GROUP="$group" invoke check > "$group-group.log" 2>&1
     tr '\0' '\n' < arguments | sed -n 's/^\(ic-[^@]*\)@.*/\1/p' > "$group-packages"
     printf '%s\n' "$expected_package" > "expected-$group-packages"
@@ -526,8 +526,6 @@ RELEASE_GROUP=foundation refuse publish --packages ic-host-text
 RELEASE_GROUP=build refuse publish --packages ic-host-artifacts
 RELEASE_GROUP=build refuse publish --packages ic-host-text
 RELEASE_GROUP=text refuse publish --packages ic-build
-RELEASE_GROUP=testkit refuse publish --packages ic-testkit-native
-RELEASE_GROUP=native refuse publish --packages ic-testkit
 RELEASE_GROUP=testkit refuse publish --packages ic-host-tools
 RELEASE_GROUP=tools refuse publish --packages ic-testkit
 RELEASE_GROUP=integration refuse check

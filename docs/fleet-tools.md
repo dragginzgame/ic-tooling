@@ -16,14 +16,15 @@ For one row per sibling root workspace:
 ```bash
 make cloc
 make cloc CLOC_PARENT=/path/to/projects
-make cloc CLOC_ROOT=/path/to/repository CLOC_SUBCRATES=1
+make cloc CLOC_ROOT=/path/to/repository CLOC_DEPTH=0
 ```
 
 For a single checkout or an independent workspace:
 
 ```bash
 bash scripts/dev/cloc.sh /path/to/repository
-bash scripts/dev/cloc.sh --subcrates /path/to/projects
+bash scripts/dev/cloc.sh -d 0 /path/to/projects
+bash scripts/dev/cloc.sh -d 2 /path/to/projects
 bash scripts/dev/cloc.sh --manifest testing/Cargo.toml /path/to/repository
 bash scripts/dev/cloc.sh --json /path/to/repository
 bash scripts/dev/cloc.sh --check-tools
@@ -36,7 +37,24 @@ output directory are excluded from their containing package's counts. Each
 admitted Rust source path counts once, including copies with identical bytes.
 
 The unified [cloc.sh](../scripts/dev/cloc.sh) reports workspace summaries by
-default; `--subcrates` adds individual crate rows without changing totals.
+default; `-d 0` adds individual crate rows without changing totals.
+Use `-d N` to include crates and N source-layout levels beneath each one:
+`-d 0` shows crates only, `-d 1` shows top-level modules, and larger values
+expand their children. `src/` is implicit; `foo.rs` and `foo/mod.rs` map to
+`foo`, including files beneath `foo/`. Inline modules stay in their containing
+file. File extensions and directory slashes are omitted; matching names from
+`src/tests.rs`, `src/tests/` and `tests/` merge into one `tests` branch.
+Each row includes its own source and descendants. Root source stays in the crate
+total; no synthetic root/self rows are printed, so visible children need not
+sum to their parent. These are
+breakdowns of the existing category counts, not additional LOC. JSON retains
+the complete file report and crate roots regardless of display depth.
+A crate name selects that Cargo workspace member: `cloc.sh -d 1 ic-platform-macros`.
+Use `crate::module::child` to select a branch of the displayed source tree; `-d`
+then expands levels below that selection. Matching source files and directories
+remain merged. Selected totals and JSON include only that crate/branch; inline
+modules still belong to their containing file. Existing directory paths take
+precedence over crate names. Unknown names fail explicitly.
 The target defaults to the current directory. A parent directory selects its
 immediate repositories; a checkout selects its root workspace. `--json` selects
 one workspace and always includes its crate rows.

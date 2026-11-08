@@ -53,8 +53,14 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Restore authenticated validation-tool downloads
+        uses: ./.github/actions/cache-tool-downloads
       - name: Prepare pinned validation tools
         run: make install-validation-tools
+      - name: Save authenticated validation-tool downloads
+        uses: ./.github/actions/cache-tool-downloads
+        with:
+          mode: save
       - name: Check shell and workflow sources and scan history
         run: make lint check-secrets
 

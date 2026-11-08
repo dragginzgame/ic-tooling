@@ -1,7 +1,10 @@
-# Native allocation measurement changelog
+# Native allocation measurement history
 
-This ledger owns `ic-testkit-native`, independently of Testkit. Its published
-baseline is 0.79.0; [history through that release](../testkit/CHANGELOG.md#0790---2026-11-02)
+This ledger is frozen: `ic-testkit-native` and its release group are retired from
+active maintenance because no current workload consumes the remaining allocation
+API. Nothing moved into PocketIC Testkit. Published versions, tags and original
+receipts remain available; the final published version is 0.80.0. Its original
+independent baseline is 0.79.0; [history through that release](../testkit/CHANGELOG.md#0790---2026-11-02)
 remains in the original Testkit ledger with its original package scope.
 
 ## [0.80.0] - 2026-11-02

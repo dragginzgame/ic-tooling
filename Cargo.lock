@@ -1638,9 +1638,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform"
-version = "0.25.0"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f446080bf2af9617bb49a18b6b1ec872b59867a51e82911029a2f9ad6780c3e1"
+checksum = "008e21b7572af29aea9eaadff638ac13c3becff5286cc3376250350b0dd36ac3"
 dependencies = [
  "candid",
  "candid_parser",
@@ -1756,10 +1756,6 @@ dependencies = [
  "serde_json",
  "tokio",
 ]
-
-[[package]]
-name = "ic-testkit-native"
-version = "0.80.0"
 
 [[package]]
 name = "ic-testkit-perf-probe"

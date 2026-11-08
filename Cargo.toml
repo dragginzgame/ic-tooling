@@ -10,7 +10,6 @@ members = [
     "crates/ic-host-tools",
     "crates/ic-testkit",
     "crates/ic-testkit-dev",
-    "crates/ic-testkit-native",
     "crates/ic-testkit-perf-probe",
 ]
 resolver = "3"
@@ -50,10 +49,6 @@ ic-host-tools = { path = "crates/ic-host-tools", version = "0.86.0", default-fea
 # Changelog : releases/testkit/CHANGELOG.md
 ic-testkit = { path = "crates/ic-testkit", version = "0.93.1", default-features = false }
 
-# Native allocation measurement
-# Changelog : releases/native/CHANGELOG.md
-ic-testkit-native = { path = "crates/ic-testkit-native", version = "0.80.0" }
-
 # External production dependencies
 base64 = "0.23.1"
 candid = { version = "0.10.38", default-features = false }
@@ -65,7 +60,7 @@ flate2 = { version = "1.1.10", default-features = false, features = ["rust_backe
 hex = "0.4.3"
 hmac = "0.12.1"
 ic-management-canister-types = "=0.11.0"
-ic-platform = { version = "0.25.0", default-features = false }
+ic-platform = { version = "0.26.0", default-features = false }
 ic-platform-runtime = { version = "0.20.0", default-features = false }
 ic-platform-types = { version = "0.18.0", default-features = false }
 libc = "0.2.190"

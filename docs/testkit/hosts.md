@@ -36,8 +36,6 @@ not leak into the published Wasm library. The maintained feature contracts are:
 
 | Package and target | Feature selection | Required boundary |
 | --- | --- | --- |
-| Native `ic-testkit-native` | All features | Only its own package identity; no normal/build dependencies |
-| Wasm `ic-testkit-native` | All features | No exported APIs or normal/build dependencies |
 | Native `ic-testkit` | Default | Direct PocketIC client; separate Platform Candid/management adapters without its `pocket-ic` feature; no Wire, executor, Build, Host Text, Agent, parser or full CDK |
 | Native `ic-testkit` | All features (`cli,wire,held-reply-fixtures`) | One Wire identity; otherwise the same native exclusions |
 | Native `ic-testkit-dev` | All features | One Build, Platform, direct PocketIC client and each Host package identity; no Platform `pocket-ic` feature; tooling is intentional |
@@ -54,8 +52,6 @@ cargo tree --locked --offline -p ic-testkit --edges normal,build
 cargo tree --locked --offline -p ic-testkit --all-features --edges normal,build
 cargo tree --locked --offline -p ic-testkit --all-features --target wasm32-unknown-unknown --edges normal,build
 cargo tree --locked --offline -p ic-testkit-perf-probe --target wasm32-unknown-unknown --edges normal,build
-cargo tree --locked --offline -p ic-testkit-native --all-features --edges normal,build
-cargo tree --locked --offline -p ic-testkit-native --all-features --target wasm32-unknown-unknown --edges normal,build
 ```
 
 `make dependency-pins-check` now runs the direct declaration checks followed by

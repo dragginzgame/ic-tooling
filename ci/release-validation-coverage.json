@@ -9,16 +9,21 @@
     "check-doc-links"
   ],
   "focused": [
-    "native",
     "text",
     "tools",
     "build"
   ],
   "consumers": {
-    "native": [],
-    "text": ["ic-host-tools:normal", "ic-testkit-dev:normal"],
-    "tools": ["ic-testkit-dev:dev"],
-    "build": ["ic-testkit-dev:normal"]
+    "text": [
+      "ic-host-tools:normal",
+      "ic-testkit-dev:normal"
+    ],
+    "tools": [
+      "ic-testkit-dev:dev"
+    ],
+    "build": [
+      "ic-testkit-dev:normal"
+    ]
   },
   "fallback": {
     "foundation": "Foundation primitives have Build, Tools and Testkit reverse consumers, including installed and Wasm contracts.",
@@ -31,7 +36,6 @@
       ],
       "reason": "Focused admission retains host parsers, Cargo tools and the release editor. Build additionally admits its existing simulator and optimizer inputs; the other selected contracts require neither.",
       "groups": [
-        "native",
         "text",
         "tools",
         "build"
@@ -45,7 +49,6 @@
       ],
       "reason": "Owner-specific lint, documentation, tests and declared reverse-consumer checks replace workspace aggregates. Build retains the real private Wasm-probe consumer; unrelated simulator lifecycle tests remain outside the selected contract.",
       "groups": [
-        "native",
         "text",
         "tools",
         "build"
@@ -58,7 +61,6 @@
       ],
       "reason": "Shared scripts, hooks, recipes and fixtures are unchanged from the complete three-host baseline; source/configuration changes select the full gate.",
       "groups": [
-        "native",
         "text",
         "tools",
         "build"
@@ -75,9 +77,8 @@
         "test-artifacts-text",
         "check-fs-non-unix"
       ],
-      "reason": "Foundation and Build implementations, dependencies and feature contracts are unchanged and have no production edge to Native or Text.",
+      "reason": "Foundation and Build implementations, dependencies and feature contracts are unchanged and have no production edge to Text.",
       "groups": [
-        "native",
         "text"
       ]
     },
@@ -103,9 +104,8 @@
         "tools-features-check",
         "isolated-features-check"
       ],
-      "reason": "Native has no dependency or reverse consumer. Text retains its feature/graph checks, YAML profile and actual Tools icp-project consumer in the focused graph/test stages.",
+      "reason": "Text retains its feature/graph checks, YAML profile and actual Tools icp-project consumer in the focused graph/test stages.",
       "groups": [
-        "native",
         "text"
       ]
     },
@@ -126,9 +126,8 @@
         "testkit-wasm-check",
         "testkit-installed-check"
       ],
-      "reason": "Public Testkit, simulator/server lifecycle and Wasm probe contracts do not consume Native or Text. The private driver’s Text rendering is exercised in focused tests.",
+      "reason": "Public Testkit, simulator/server lifecycle and Wasm probe contracts do not consume Text. The private driver’s Text rendering is exercised in focused tests.",
       "groups": [
-        "native",
         "text"
       ]
     },
@@ -150,7 +149,6 @@
       ],
       "reason": "Focused archive qualification uses the same IC Build engine, exact selected public package, normalized source/lock admission and installed archive tests.",
       "groups": [
-        "native",
         "text",
         "tools",
         "build"
@@ -166,9 +164,8 @@
         "test-tools-encoding",
         "test-tools-registry"
       ],
-      "reason": "Native has no Tools consumer. Text’s runtime caller is confined to icp-project, exercised separately; the remaining IC adapters do not use Text and are unchanged.",
+      "reason": "Text’s runtime caller is confined to icp-project, exercised separately; the remaining IC adapters do not use Text and are unchanged.",
       "groups": [
-        "native",
         "text"
       ]
     },
@@ -192,9 +189,8 @@
       "targets": [
         "test-wasm-inspection"
       ],
-      "reason": "Wasm inspection does not depend on Native or Text; its source, graph and public identities are unchanged.",
+      "reason": "Wasm inspection does not depend on Text; its source, graph and public identities are unchanged.",
       "groups": [
-        "native",
         "text"
       ]
     },

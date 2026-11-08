@@ -2,10 +2,8 @@
   <img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-testkit/ic-testkit-readme-header.svg" alt="IC Testkit — Internet Computer helper library" width="100%">
 </p>
 
-Native allocator workloads can use the separate std-only
-[`ic-testkit-native`](../../crates/ic-testkit-native/README.md) package without
-acquiring PocketIC or canister dependencies. It releases independently under
-`RELEASE_GROUP=native`; memory IO metering belongs to IC Storage's `test-support` API.
+Memory IO metering belongs to IC Storage's `test-support` API. The unused native
+heap allocator package is retired; Testkit owns simulator support.
 
 <!-- helper-navigation:start -->
 <p align="center">
@@ -121,7 +119,6 @@ policy in the consuming test suite.
 | Completely independent state/topology | Fresh instance |
 | Repeated tests over a resettable topology | Caller-owned baseline recipe/pool |
 | Several Cargo/test processes sharing infrastructure | Externally retained server or CLI `run -- COMMAND` |
-| Allocation-only native measurement | Independent `ic-testkit-native` package |
 
 Snapshots cover captured canister state. They do not automatically reset simulator
 time, extra canisters, pending work, subnet state or external resources. Declare
