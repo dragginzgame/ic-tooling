@@ -1,17 +1,25 @@
 # Current handoff
 
-## Authorized deployment — 2026-11-08
+## Published deployment — 2026-11-08
 
-The maintainer requested deployment of the reviewed local batch. Selected releases
-are Foundation 0.76.1 (patch), then Build 0.81.0 and Testkit 0.95.0 (minor).
-Tools 0.88.0 and Text 0.74.3 have no product changes selected for publication.
-Use the standard frozen workflow against `origin/main` and crates.io; separate
-batches are required for the different increments. Managed execution remains
-under `target/release-frozen/`, with durable `.git/release-state/frozen/` custody.
-No sibling deployment or artifact cleanup is authorized. Later normal-checkout
-edits are deferred and must survive reconciliation.
+The reviewed batch is committed, pushed to `origin/main` and published to
+crates.io through the standard frozen workflow. All seven official archives
+match their registry checksums and clean release-commit identities.
 
-## Reviewed source
+| Group | Published version | Release commit |
+| --- | --- | --- |
+| Foundation, all five packages | 0.76.1 | `58a1e041` |
+| Build | 0.81.0 | `9a8c3a32` |
+| Testkit | 0.95.0 | `9e66ba0f` |
+
+Tools remains 0.88.0 and Text 0.74.3. The two private Testkit packages are 0.95.0
+and were not uploaded. Source integration is `3cfa53c5`; all three group tags
+were pushed normally. Both frozen batches report complete:
+`batch-jNmWYunP` (Foundation patch) and `batch-4F91gJ1U` (Build/Testkit minor).
+The ordinary checkout was reconciled through the shared command after each batch
+and contains the released versions. No second `make publish` is needed.
+
+## Delivered changes
 
 Toko Tooling 0.36.0 is selected once as an exact root workspace dependency.
 All 11 real packages inherit its dev-dependency with a cargo-machete exemption.
@@ -38,44 +46,51 @@ The cumulative provenance patch reconstructs the unchanged donor/upstream source
 licenses, algorithm choices, protocol bytes, async/no-replay and caller custody
 remain unchanged. Management DTOs retain the exact 0.11.0 identity.
 
-Wire now selects published 0.18.0, once in the resolved graph. Archive SHA-256 is
+Wire selects published 0.18.0, once in the resolved graph. Archive SHA-256 is
 `16760e525bca7fa5c4042176551bd551a6235e39cec08564d1ecfffd20e2b130`.
-Native helpers and the private Wasm probe retain Serde contracts and explicit
-budgets. Direct consumer Wire selections must align for `Limits` and error types.
-No workspace caller uses the removed definition-level bulk-lint API.
+Direct consumer Wire selections must align for `Limits` and typed codec errors.
+No workspace caller uses the removed definition-level bulk-lint API. The captured
+lock also includes Platform 0.27.1, Runtime/macros/guard 0.20.3, Types 0.18.3,
+Logging 0.24.12 and the previously preserved compatible patch selections.
+No deferred ordinary-checkout edits remained at final reconciliation.
 
-The normal lock also contains preserved external patch selections. Concurrent
-updates selected Logging 0.24.12, Types 0.18.3 and Runtime/macros/guard 0.20.3;
-review and qualify the captured lock, never replace later edits with old backups.
-Earlier preserved selections include arc-swap 1.9.4, crypto-common 0.1.6 and
-generic-array 0.14.9. No unrelated source changes were found in the reviewed batch.
+## Qualification and native CI
 
-## Evidence and consumer adoption
+All three complete Linux x86-64 release gates passed: workspace Clippy,
+formatting/hooks, docs, release/recovery and routing fixtures, native/Wasm graph
+policies and Wasm compilation, package archives/doctests, installed PocketIC 16.1
+management/snapshot/gateway contracts and the complete workspace tests. Publication
+admitted qualified lint reuse while retaining fresh archive/license/provenance
+checks. Independent official registry readbacks verified all seven uploads.
+Final tooling admission and documentation links passed after reconciliation.
 
-Focused Linux checks passed for Build artifact/cache/batch behavior and all
-three affected Cargo/Wasm integration targets, native Testkit transport and
-ownership, installed PocketIC 16.1 management/snapshot/gateway contracts,
-management DTO identity, Clippy and doctests. Wire's nine adapter tests, private
-probe budget test and installed native/Wasm typed-call test passed, alongside
-native/Wasm graph policies and Wasm compilation. Tooling fixtures, source
-reconstruction, dependency admission, formatting and 862 documentation links
-passed. These are focused results, not the new batch's complete release gate.
-Evidence remains under `target/tooling036-migration/`, `target/complexity-cleanup/`,
-`target/complexity-next-two/` and `target/wire018-adoption/`.
-Native macOS 15 Intel/Apple Silicon qualification remains separate/asynchronous.
+Native macOS 15 Intel and Apple Silicon evidence remains separate. Four explicit
+qualification runs select published tag `testkit-v0.95.0`, commit
+`9e66ba0f24d05e15a5aca307f67dc85b6ef309cd`:
+
+- [CI](https://github.com/dragginzgame/ic-tooling/actions/runs/42526447889).
+- [Build optimizer](https://github.com/dragginzgame/ic-tooling/actions/runs/42526450429).
+- [Testkit runtime](https://github.com/dragginzgame/ic-tooling/actions/runs/42526453148).
+- [Browser fixtures](https://github.com/dragginzgame/ic-tooling/actions/runs/42526455647).
+
+All four were in progress at dispatch readback. No new native macOS pass is
+claimed. Explicit dispatch identities survive subsequent routine pushes; do not
+wait solely for this hosted matrix during delivery.
+
+## Consumer adoption and retained custody
 
 Known external source adoption sites are Canic's
 `crates/canic-tests/src/pic/artifacts/mod.rs` (handle the fallible maintenance
 builder) and Auth's `apps/qualification/runner/tests/signatures/main.rs` (remove
 the instance owner type argument). Sibling sources were not changed or qualified.
+Consumers must select the new minor versions for these public API hard cuts.
 
-## Previous delivered baseline and retained custody
-
-The preceding deployment published Foundation 0.76.0, Build 0.80.0, Tools 0.88.0
-and Testkit 0.94.0 through completed frozen batch `batch-0sSkZugM`; Text stayed
-0.74.3. Its complete Linux gates, registry checksum/VCS verification, native CI
-links and earlier preservation refs are recorded in the
-[previous handoff](https://github.com/dragginzgame/ic-tooling/blob/eeee3e68/docs/status/current.md).
-Logs remain under `target/deployment-audit-toko034/`. Retain all frozen batches,
-source pins, deferred work and recovery records. Failed older attempts must not
-be resumed against already-published versions. No cleanup or retirement was run.
+Logs, registry archives/readbacks, reconciliation and dispatch evidence remain
+under `target/deployment-wire018/`, with full gate output in
+`target/deployment-wire018-foundation.log` and
+`target/deployment-wire018-integration.log`. Managed checkouts and their builds
+remain under `target/release-frozen/`; durable Git, plans, receipts and batch
+intents remain under `.git/release-state/frozen/`. No cleanup or retirement ran.
+The [pre-deployment handoff](https://github.com/dragginzgame/ic-tooling/blob/3cfa53c5/docs/status/current.md)
+retains focused development evidence and earlier preservation references.
+Preserve all unfinished older batches; never replay them against published versions.
