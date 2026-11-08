@@ -15,6 +15,9 @@ command-fds.workspace = true
 libc.workspace = true
 rustix = { workspace = true, features = ["pipe", "process", "time"] }
 
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
 [features]
 test-support = []
 
@@ -28,6 +31,7 @@ ic-host-fs.workspace = true
 [dev-dependencies]
 clap = { workspace = true, features = ["derive"] }
 ic-host-fs = { workspace = true, features = ["test-support"] }
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

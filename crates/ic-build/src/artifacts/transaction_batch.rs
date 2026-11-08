@@ -77,23 +77,17 @@ impl<E> ArtifactCacheBatchReport<E> {
     /// Aggregate outcome counters and successful-acquisition timings.
     #[must_use]
     pub fn metrics(&self) -> ArtifactCacheBatchMetrics {
-        let mut metrics = ArtifactCacheBatchMetrics {
+        let (counts, successful_timings) =
+            self.batch
+                .summarize(|sum: &mut ArtifactCacheTimings, record| {
+                    *sum = sum.saturating_add(record.timings());
+                });
+        ArtifactCacheBatchMetrics {
             entries: self.batch.entries.len(),
             total: self.batch.total,
-            ..ArtifactCacheBatchMetrics::default()
-        };
-        for outcome in self
-            .batch
-            .entries
-            .iter()
-            .filter_map(CacheBatchEntry::outcome)
-        {
-            metrics.counts.record(outcome.is_reused());
-            metrics.successful_timings = metrics
-                .successful_timings
-                .saturating_add(outcome.record().timings());
+            counts,
+            successful_timings,
         }
-        metrics
     }
 }
 

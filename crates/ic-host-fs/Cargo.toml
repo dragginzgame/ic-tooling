@@ -10,6 +10,9 @@ description = "Local host filesystem reads, durable publication, file locking an
 readme = "../../README.md"
 publish = ["crates-io"]
 
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
 [[bin]]
 name = "ic-host-file"
 path = "src/bin/ic-host-file/main.rs"
@@ -38,6 +41,7 @@ clap = { workspace = true, features = ["derive"] }
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
 serde = { workspace = true, features = ["std"] }
 serde_json.workspace = true
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

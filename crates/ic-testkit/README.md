@@ -44,10 +44,10 @@ published support crate solely for target-specific feature isolation. The
 intentional; native Testkit is not a Candid-free profile.
 
 The optional native `wire` feature adds `pic::query_wire` and `pic::update_wire`.
-Enable it on your Testkit dependency and declare `ic-wire = "0.17.0"` for your native
+Enable it on your Testkit dependency and declare `ic-wire = "0.18.0"` for your native
 Serde contracts. Await each helper. Each helper takes an explicit target/caller, a `WireCallSpec`
 with the exported name, method ID and request/response limits, and a borrowed
-request. Align your direct Wire dependency to 0.17 when supplying limits or matching
+request. Align your direct Wire dependency to 0.18 when supplying limits or matching
 typed codec errors. It executes one PocketIC operation without update retries; a refused reply
 does not prove absence of effects. It preserves
 application-level results. `WireCallError` retains typed codec causes, complete
@@ -90,7 +90,7 @@ Rust fixtures call `server_assets::check(&directory)` and pass the returned
 absolute executable path to `PocketIcStartupConfig::Spawn`, without invoking the CLI.
 Explicit `server_assets::setup` takes a caller-owned cancellation predicate.
 Tests normally retain one
-`PocketIcInstance<PocketIc>` and use `owned.instance()` for simulator operations;
+`PocketIcInstance` and use `owned.instance()` for simulator operations;
 focused extension traits provide reusable harness behavior. Import all upstream
 client and DTO identities directly from `ic_testkit::pocket_ic`; Testkit owns no
 parallel client owner. See the [client migration](../../docs/testkit/client-migration.md).

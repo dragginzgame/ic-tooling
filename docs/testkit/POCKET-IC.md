@@ -62,7 +62,7 @@ would still need an explicit owner.
 ## Bounded startup and process lifetime
 
 Testkit's async `build_instance` uses the explicit configuration, preserve a typed
-`PocketIcStartupFailure`, and return `PocketIcInstance<T>` with the upstream
+`PocketIcStartupFailure`, and return `PocketIcInstance` with the concrete client
 instance and its server lifetime. Startup cancellation/failure cleans up the
 owned child; borrowed-server failure leaves ownership with its caller.
 

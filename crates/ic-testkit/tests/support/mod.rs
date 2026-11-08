@@ -4,8 +4,6 @@
     reason = "integration targets use different subsets of the shared server/wait helpers"
 )]
 
-pub mod wait;
-
 pub fn empty_install_spec() -> ic_testkit::pic::InstallSpec {
     ic_testkit::pic::InstallSpec {
         wasm: b"\0asm\x01\0\0\0".to_vec(),
@@ -29,7 +27,7 @@ pub fn startup_config() -> ic_testkit::pic::PocketIcStartupConfig {
         .expect("prepare POCKET_IC_BIN or configure IC_TESTKIT_POCKET_IC_URL for live tests")
 }
 
-pub async fn pocket_ic() -> ic_testkit::pic::PocketIcInstance<ic_testkit::pocket_ic::PocketIc> {
+pub async fn pocket_ic() -> ic_testkit::pic::PocketIcInstance {
     startup_config()
         .build_instance(
             ic_testkit::pocket_ic::PocketIcBuilder::new(std::time::Duration::from_secs(300))

@@ -55,6 +55,12 @@ pub enum ClientError {
         #[source]
         source: reqwest::Error,
     },
+    #[error("PocketIC response body allocation failed: {source}")]
+    BodyAllocation {
+        context: Box<RequestContext>,
+        #[source]
+        source: std::collections::TryReserveError,
+    },
     #[error("PocketIC response JSON failed: {source}")]
     Json {
         context: Box<RequestContext>,
@@ -115,6 +121,7 @@ impl ClientError {
         match &mut self {
             Self::Transport { context, .. }
             | Self::Body { context, .. }
+            | Self::BodyAllocation { context, .. }
             | Self::Json { context, .. }
             | Self::Server { context, .. }
             | Self::ResponseTooLarge { context, .. }
@@ -128,6 +135,7 @@ impl ClientError {
         match self {
             Self::Transport { context, .. }
             | Self::Body { context, .. }
+            | Self::BodyAllocation { context, .. }
             | Self::Json { context, .. }
             | Self::Server { context, .. }
             | Self::ResponseTooLarge { context, .. }

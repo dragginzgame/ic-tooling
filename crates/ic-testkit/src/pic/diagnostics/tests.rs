@@ -263,13 +263,9 @@ fn reporting_peer(requests: Vec<CanisterDiagnosticsRequest>) -> (PocketIc, Peer)
         },
         move |stream, request, _, _| {
             let bytes = request.into_result().unwrap();
-            let split = bytes
-                .windows(4)
-                .position(|part| part == b"\r\n\r\n")
-                .unwrap()
-                + 4;
+            let request = crate::test_support::http::Request::new(&bytes);
             let call: crate::pocket_ic::common::rest::RawCanisterCall =
-                serde_json::from_slice(&bytes[split..]).unwrap();
+                serde_json::from_slice(request.body).unwrap();
             let (method, sender, message) = expected.next().expect("no replay");
             assert_eq!(call.method, method);
             assert_eq!(call.sender, sender.as_slice());

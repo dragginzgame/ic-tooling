@@ -186,17 +186,16 @@ async fn assert_time_requests(advance: Duration, ticks: u32, run: impl AsyncFnOn
         },
         move |stream, request, _deadline, _stop| {
             let request = request.into_result().unwrap();
-            let text = std::str::from_utf8(&request).unwrap();
-            let path = text.split_whitespace().nth(1).unwrap().to_owned();
+            let request = crate::test_support::http::Request::new(&request);
+            let path = request.path.to_owned();
             let reply = if path.ends_with("/read/get_time") {
                 "{\"nanos_since_epoch\":100}"
             } else {
                 "null"
             };
             if path.ends_with("/update/set_time") {
-                let body = text.split_once("\r\n\r\n").unwrap().1;
                 assert_eq!(
-                    serde_json::from_str::<serde_json::Value>(body).unwrap()["nanos_since_epoch"],
+                    serde_json::from_slice::<serde_json::Value>(request.body).unwrap()["nanos_since_epoch"],
                     100 + u64::from(advance.subsec_nanos())
                 );
             }

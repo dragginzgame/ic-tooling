@@ -75,29 +75,30 @@ pub struct PocketIcManagedServer {
 /// Field projection cannot silently detach the client from its server:
 /// ```compile_fail
 /// use ic_testkit::pic::PocketIcInstance;
-/// fn detach<T>(owned: PocketIcInstance<T>) -> T {
+/// fn detach(owned: PocketIcInstance) -> ic_testkit::pocket_ic::PocketIc {
 ///     owned.instance
 /// }
 /// ```
 /// Nor can a client borrow outlive a temporary owner:
 /// ```compile_fail
 /// use ic_testkit::pic::PocketIcInstance;
-/// let client = PocketIcInstance::from_borrowed_server(String::new()).instance();
-/// assert!(client.is_empty());
+/// fn escape(owner: PocketIcInstance) -> &'static ic_testkit::pocket_ic::PocketIc {
+///     owner.instance()
+/// }
 /// ```
 #[must_use]
-pub struct PocketIcInstance<T> {
-    instance: T,
+pub struct PocketIcInstance {
+    instance: PocketIc,
     server: Option<PocketIcManagedServer>,
 }
 
-impl<T> PocketIcInstance<T> {
+impl PocketIcInstance {
     /// Retain an existing client whose server lifetime is owned elsewhere.
     ///
     /// This creates no server or instance and claims no server process authority.
     /// The client retains its upstream deletion behavior; its external server
     /// must outlive it. Use a startup configuration for a managed server owner.
-    pub const fn from_borrowed_server(instance: T) -> Self {
+    pub const fn from_borrowed_server(instance: PocketIc) -> Self {
         Self {
             instance,
             server: None,
@@ -106,7 +107,7 @@ impl<T> PocketIcInstance<T> {
 
     /// Borrow the client while retaining this record's managed-server ownership.
     #[must_use]
-    pub const fn instance(&self) -> &T {
+    pub const fn instance(&self) -> &PocketIc {
         &self.instance
     }
 
@@ -118,10 +119,11 @@ impl<T> PocketIcInstance<T> {
     /// The borrow cannot outlive the owner:
     /// ```compile_fail
     /// use ic_testkit::pic::PocketIcInstance;
-    /// let client = PocketIcInstance::from_borrowed_server(String::new()).instance_mut();
-    /// client.push_str("gateway");
+    /// fn escape(mut owner: PocketIcInstance) -> &'static mut ic_testkit::pocket_ic::PocketIc {
+    ///     owner.instance_mut()
+    /// }
     /// ```
-    pub const fn instance_mut(&mut self) -> &mut T {
+    pub const fn instance_mut(&mut self) -> &mut PocketIc {
         &mut self.instance
     }
 
@@ -137,12 +139,9 @@ impl<T> PocketIcInstance<T> {
     /// a nonblocking client, explicitly await `instance.drop()` before dropping
     /// the returned server. No implicit asynchronous or blocking cleanup is added.
     #[must_use]
-    pub fn into_parts(self) -> (T, Option<PocketIcManagedServer>) {
+    pub fn into_parts(self) -> (PocketIc, Option<PocketIcManagedServer>) {
         (self.instance, self.server)
     }
-}
-
-impl PocketIcInstance<PocketIc> {
     /// Delete this instance while retaining its managed server until the request finishes.
     /// Dropping the future stops an owned server; borrowed servers require caller reconciliation.
     /// # Errors
@@ -476,7 +475,7 @@ impl PocketIcStartupConfig {
     pub async fn build_instance(
         self,
         builder: PocketIcBuilder,
-    ) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
+    ) -> Result<PocketIcInstance, PocketIcStartupError> {
         let startup = StartupDeadline::new(&self)?;
         let (server, server_url) = match self {
             Self::Connect { server_url, .. } => (None, server_url),
@@ -790,7 +789,7 @@ impl InstanceStartup<'_> {
         Ok(now)
     }
 
-    fn admit<T>(&mut self, instance: T) -> Result<PocketIcInstance<T>, PocketIcStartupError> {
+    fn admit(&mut self, instance: PocketIc) -> Result<PocketIcInstance, PocketIcStartupError> {
         self.check_deadline()?;
         check_server(&mut self.server)?;
         Ok(PocketIcInstance {
@@ -830,7 +829,7 @@ async fn build_bounded(
     server_url: &str,
     startup: &StartupDeadline,
     server: Option<ManagedServer>,
-) -> Result<PocketIcInstance<PocketIc>, PocketIcStartupError> {
+) -> Result<PocketIcInstance, PocketIcStartupError> {
     let mut startup = InstanceStartup {
         deadline: startup,
         server_url,

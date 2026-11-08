@@ -1,4 +1,5 @@
 use crate::pocket_ic::{ClientError, Operation, RequestContext};
+use ic_host_http::{ReadFailure, ReadOptions, read_body};
 use serde::de::DeserializeOwned;
 use std::{future::Future, time::Duration};
 use tokio::time::Instant;
@@ -55,7 +56,7 @@ impl Exchange {
         // Conservative once dispatched: never infer non-execution from a lost reply.
         self.context.may_have_executed = true;
         self.context.status = None;
-        let mut response = self
+        let response = self
             .bounded(client.execute(request))
             .await?
             .map_err(|source| ClientError::Transport {
@@ -64,27 +65,29 @@ impl Exchange {
             })?;
         let status = response.status();
         self.context.status = Some(status);
-        let mut bytes = Vec::new();
-        while let Some(chunk) =
-            self.bounded(response.chunk())
-                .await?
-                .map_err(|source| ClientError::Body {
-                    context: Box::new(self.context.clone()),
-                    source,
-                })?
-        {
-            if self
-                .response_limit
-                .is_some_and(|limit| chunk.len() > limit.saturating_sub(bytes.len()))
-            {
-                return Err(ClientError::ResponseTooLarge {
-                    context: Box::new(self.context.clone()),
-                    limit: self.response_limit.unwrap(),
-                });
-            }
-            bytes.extend_from_slice(&chunk);
-        }
-        Ok((status, bytes))
+        let body = self
+            .bounded(read_body(
+                response,
+                ReadOptions {
+                    max_bytes: self.response_limit.unwrap_or(usize::MAX),
+                    reject_declared_oversize: false,
+                    retain_partial_on_error: false,
+                },
+            ))
+            .await?
+            .map_err(|error| {
+                let context = Box::new(self.context.clone());
+                match error.failure {
+                    ReadFailure::Transport(source) => ClientError::Body { context, source },
+                    ReadFailure::Allocation(source) => {
+                        ClientError::BodyAllocation { context, source }
+                    }
+                    ReadFailure::DeclaredLength { limit, .. } | ReadFailure::Limit { limit } => {
+                        ClientError::ResponseTooLarge { context, limit }
+                    }
+                }
+            })?;
+        Ok((status, body.bytes))
     }
 
     pub(crate) fn decode<T: DeserializeOwned>(&self, bytes: &[u8]) -> Result<T, ClientError> {

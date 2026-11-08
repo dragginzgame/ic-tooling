@@ -45,15 +45,7 @@ fn hyphenated_packages_use_the_default_library_artifact_in_every_cache_mode() {
             .unwrap()
             .replace("name = \"fixture\"", "name = \"fixture-canister\"");
         fs::write(&manifest, &original).unwrap();
-        let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-        assert!(
-            std::process::Command::new(cargo)
-                .current_dir(&root)
-                .args(["generate-lockfile", "--offline"])
-                .status()
-                .unwrap()
-                .success()
-        );
+        ic_build::testing::cargo::generate_fixture_lockfile(&root);
         let target = root.join("exact");
         let mut spec =
             support::wasm::spec(&root, &target, &["fixture-canister"]).with_isolated_builds();
@@ -133,20 +125,15 @@ fn packages_with_colliding_default_library_names_cannot_publish_one_artifact() {
     )
     .unwrap();
     for (directory, name) in [("a", "same-name"), ("b", "same_name")] {
-        fs::create_dir_all(root.join(directory).join("src")).unwrap();
-        fs::write(root.join(directory).join("Cargo.toml"),
-            format!("[package]\nname=\"{name}\"\nversion=\"0.0.0\"\nedition=\"2024\"\n[lib]\ncrate-type=[\"cdylib\"]\n")).unwrap();
-        fs::write(root.join(directory).join("src/lib.rs"), "").unwrap();
+        ic_build::testing::cargo::write_fixture_package(
+            &root.join(directory),
+            name,
+            "[lib]\ncrate-type=[\"cdylib\"]\n",
+            "",
+        )
+        .unwrap();
     }
-    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-    assert!(
-        std::process::Command::new(cargo)
-            .current_dir(&root)
-            .args(["generate-lockfile", "--offline"])
-            .status()
-            .unwrap()
-            .success()
-    );
+    ic_build::testing::cargo::generate_fixture_lockfile(&root);
     let spec = support::wasm::spec(&root, &root.join("exact"), &["same-name", "same_name"]);
     resolve_cargo_build_inputs(&spec).unwrap();
     assert!(matches!(
@@ -174,12 +161,15 @@ fn shared_wasm_target_rejects_library_that_no_longer_produces_wasm() {
         fs::write(&manifest, changed).expect("change the declared library output");
         // Cargo input snapshots remain useful for generic transactional builds.
         resolve_cargo_build_inputs(&spec).expect("resolve changed library inputs");
-        let scheduled = spec.clone().with_shared_incremental_target_maintenance(
-            ic_build::artifacts::SharedIncrementalTargetMaintenanceConfig::new(
-                CacheRetentionLimits::new().with_max_size_bytes(0),
-                Duration::ZERO,
-            ),
-        );
+        let scheduled = spec
+            .clone()
+            .with_shared_incremental_target_maintenance(
+                ic_build::artifacts::SharedIncrementalTargetMaintenanceConfig::new(
+                    CacheRetentionLimits::new().with_max_size_bytes(0),
+                    Duration::ZERO,
+                ),
+            )
+            .unwrap();
         for candidate in [&spec, &scheduled] {
             let result = build_wasm_canisters_cached(candidate, OwnedChild::spawn_direct);
             assert!(
@@ -676,7 +666,8 @@ fn scheduled_shared_target_maintenance_participates_in_wasm_acquisition() {
         .with_shared_incremental_target_maintenance_at_most_every(
             CacheRetentionLimits::new().with_max_size_bytes(u64::MAX),
             Duration::from_hours(1),
-        );
+        )
+        .unwrap();
 
     let first = ic_build::artifacts::build_wasm_canisters_cached_with_progress(
         &spec,
@@ -977,11 +968,11 @@ fn custom_library_names_do_not_overwrite_another_packages_outputs() {
             [("left", "alpha", "beta", 7), ("right", "beta", "alpha", 9)]
         {
             let path = root.join(directory);
-            fs::create_dir_all(path.join("src")).unwrap();
-            fs::write(path.join("Cargo.toml"), format!("[package]\nname=\"{package}\"\nversion=\"0.0.0\"\nedition=\"2024\"\n[lib]\nname=\"{library}\"\ncrate-type=[\"cdylib\"]\n")).unwrap();
-            fs::write(
-                path.join("src/lib.rs"),
-                format!("#[unsafe(no_mangle)] pub extern \"C\" fn value() -> u32 {{ {value} }}\n"),
+            ic_build::testing::cargo::write_fixture_package(
+                &path,
+                package,
+                &format!("[lib]\nname=\"{library}\"\ncrate-type=[\"cdylib\"]\n"),
+                &format!("#[unsafe(no_mangle)] pub extern \"C\" fn value() -> u32 {{ {value} }}\n"),
             )
             .unwrap();
         }

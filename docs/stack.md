@@ -25,11 +25,19 @@ private fixtures outside the diagram's package selection. Repositories without a
 policy retain workspace boxes without an invented release-group assignment.
 
 The current local Platform split is `platform`, `types` and `runtime`; Tooling
-uses `foundation`, `build`, `text`, `tools`, `testkit` and `native`. Wire's endpoint
+uses `foundation`, `build`, `text`, `tools`, and `testkit`. Wire's endpoint
 group includes `ic-wire-endpoint-macros`; its schema derive stays in core.
 These are source-declared groups, not
 proof of published releases. Proposed issue-only boundaries are not substituted
 for the policies. Refresh after their implementation to reflect the actual graph.
+
+Tooling has nine public packages and two private qualification packages across
+five active groups. Native was retired in
+[the integrated source change](https://github.com/dragginzgame/ic-tooling/commit/8fbf3a94);
+its final published 0.80.0 release and
+[historical ledger](https://github.com/dragginzgame/ic-tooling/blob/main/releases/native/CHANGELOG.md)
+remain history, outside the active inventory. The catalog already discovers
+active workspace members; no retired package override is needed.
 
 ## README overview
 
@@ -266,28 +274,24 @@ flowchart TD
         end
     end
     subgraph p_repo_3aic_2dtooling["ic-tooling"]
-        subgraph p_group_3aic_2dtooling_7cbuild["build · 0.75.0"]
+        subgraph p_group_3aic_2dtooling_7cbuild["build · 0.79.1"]
             p_ic_2dtooling_7ccargo_3aic_2dbuild["ic-build"]
         end
-        subgraph p_group_3aic_2dtooling_7cfoundation["foundation · 0.74.4"]
+        subgraph p_group_3aic_2dtooling_7cfoundation["foundation · 0.75.1"]
             p_ic_2dtooling_7ccargo_3aic_2dhost_2dartifacts["ic-host-artifacts"]
             p_ic_2dtooling_7ccargo_3aic_2dhost_2dfs["ic-host-fs"]
             p_ic_2dtooling_7ccargo_3aic_2dhost_2dhttp["ic-host-http"]
             p_ic_2dtooling_7ccargo_3aic_2dhost_2dprocess["ic-host-process"]
             p_ic_2dtooling_7ccargo_3aic_2dhost_2dwasm_2dinspect["ic-host-wasm-inspect"]
         end
-        subgraph p_group_3aic_2dtooling_7cnative["native · 0.80.0"]
-            p_ic_2dtooling_7ccargo_3aic_2dtestkit_2dnative["ic-testkit-native"]
-        end
-        subgraph p_group_3aic_2dtooling_7ctestkit["testkit · 0.88.0"]
+        subgraph p_group_3aic_2dtooling_7ctestkit["testkit · 0.93.2"]
             p_ic_2dtooling_7ccargo_3aic_2dtestkit["ic-testkit"]
             p_ic_2dtooling_7ccargo_3aic_2dtestkit_2ddev["ic-testkit-dev"]
-            p_ic_2dtooling_7ccargo_3aic_2dtestkit_2dperf_2dprobe["ic-testkit-perf-probe"]
         end
-        subgraph p_group_3aic_2dtooling_7ctext["text · 0.74.2"]
+        subgraph p_group_3aic_2dtooling_7ctext["text · 0.74.3"]
             p_ic_2dtooling_7ccargo_3aic_2dhost_2dtext["ic-host-text"]
         end
-        subgraph p_group_3aic_2dtooling_7ctools["tools · 0.83.0"]
+        subgraph p_group_3aic_2dtooling_7ctools["tools · 0.87.0"]
             p_ic_2dtooling_7ccargo_3aic_2dhost_2dtools["ic-host-tools"]
         end
     end
@@ -473,7 +477,6 @@ flowchart TD
     p_ic_2dtooling_7ccargo_3aic_2dtestkit_2ddev -.-> p_ic_2dtooling_7ccargo_3aic_2dhost_2dprocess
     p_ic_2dtooling_7ccargo_3aic_2dtestkit_2ddev -.-> p_ic_2dtooling_7ccargo_3aic_2dhost_2dtext
     p_ic_2dtooling_7ccargo_3aic_2dtestkit_2ddev -.-> p_ic_2dtooling_7ccargo_3aic_2dtestkit
-    p_ic_2dtooling_7ccargo_3aic_2dtestkit_2ddev -.-> p_ic_2dtooling_7ccargo_3aic_2dtestkit_2dperf_2dprobe
     p_ic_2dwire_7ccargo_3aic_2dwire --> p_ic_2dplatform_7ccargo_3aic_2dplatform_2dtypes
     p_ic_2dwire_7ccargo_3aic_2dwire --> p_ic_2dwire_7ccargo_3aic_2dwire_2dderive
     p_ic_2dwire_7ccargo_3aic_2dwire_2dendpoint --> p_ic_2dplatform_7ccargo_3aic_2dplatform_2druntime
@@ -593,12 +596,11 @@ Workspace / group | Version | Members | Changelog
 [ic-storage / logging-storage](https://github.com/dragginzgame/ic-storage/blob/main/ci/cargo-release-groups.json) | 0.66.0 | `ic-logging-storage` | [Changelog](https://github.com/dragginzgame/ic-storage/blob/main/releases/logging-storage/CHANGELOG.md)
 [ic-storage / metrics-storage](https://github.com/dragginzgame/ic-storage/blob/main/ci/cargo-release-groups.json) | 0.70.0 | `ic-metrics-storage` | [Changelog](https://github.com/dragginzgame/ic-storage/blob/main/releases/metrics-storage/CHANGELOG.md)
 [ic-storage / storage](https://github.com/dragginzgame/ic-storage/blob/main/ci/cargo-release-groups.json) | 0.68.0 | `ic-storage` | [Changelog](https://github.com/dragginzgame/ic-storage/blob/main/releases/storage/CHANGELOG.md)
-[ic-tooling / build](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.75.0 | `ic-build` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/build/CHANGELOG.md)
-[ic-tooling / foundation](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.74.4 | `ic-host-artifacts`, `ic-host-fs`, `ic-host-http`, `ic-host-process`, `ic-host-wasm-inspect` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/foundation/CHANGELOG.md)
-[ic-tooling / native](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.80.0 | `ic-testkit-native` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/native/CHANGELOG.md)
-[ic-tooling / testkit](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.88.0 | `ic-testkit`, `ic-testkit-dev`, `ic-testkit-perf-probe` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/testkit/CHANGELOG.md)
-[ic-tooling / text](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.74.2 | `ic-host-text` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/text/CHANGELOG.md)
-[ic-tooling / tools](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.83.0 | `ic-host-tools` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/tools/CHANGELOG.md)
+[ic-tooling / build](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.79.1 | `ic-build` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/build/CHANGELOG.md)
+[ic-tooling / foundation](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.75.1 | `ic-host-artifacts`, `ic-host-fs`, `ic-host-http`, `ic-host-process`, `ic-host-wasm-inspect` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/foundation/CHANGELOG.md)
+[ic-tooling / testkit](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.93.2 | `ic-testkit`, `ic-testkit-dev`, `ic-testkit-perf-probe` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/testkit/CHANGELOG.md)
+[ic-tooling / text](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.74.3 | `ic-host-text` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/text/CHANGELOG.md)
+[ic-tooling / tools](https://github.com/dragginzgame/ic-tooling/blob/main/ci/cargo-release-groups.json) | 0.87.0 | `ic-host-tools` | [Changelog](https://github.com/dragginzgame/ic-tooling/blob/main/releases/tools/CHANGELOG.md)
 [ic-wire / core](https://github.com/dragginzgame/ic-wire/blob/main/ci/cargo-release-groups.json) | 0.17.3 | `ic-wire`, `ic-wire-benchmarks`, `ic-wire-derive`, `ic-wire-endpoint-fixture`, `ic-wire-qualification` | [Changelog](https://github.com/dragginzgame/ic-wire/blob/main/releases/core/CHANGELOG.md)
 [ic-wire / endpoint](https://github.com/dragginzgame/ic-wire/blob/main/ci/cargo-release-groups.json) | 0.7.1 | `ic-wire-endpoint`, `ic-wire-endpoint-macros` | [Changelog](https://github.com/dragginzgame/ic-wire/blob/main/releases/endpoint/CHANGELOG.md)
 [icydb / cli](https://github.com/dragginzgame/icydb/blob/main/ci/cargo-release-groups.json) | 0.296.0 | `icydb-cli` | [Changelog](https://github.com/dragginzgame/icydb/blob/main/releases/cli/CHANGELOG.md)
@@ -621,7 +623,7 @@ Repository | Selected packages and manifests
 [ic-relay](https://github.com/dragginzgame/ic-relay) | [ic-relay](https://github.com/dragginzgame/ic-relay/blob/main/crates/ic-relay/Cargo.toml)
 [ic-scheduling](https://github.com/dragginzgame/ic-scheduling) | [ic-jobs](https://github.com/dragginzgame/ic-scheduling/blob/main/crates/ic-jobs/Cargo.toml)<br>[ic-timers](https://github.com/dragginzgame/ic-scheduling/blob/main/crates/ic-timers/Cargo.toml)
 [ic-storage](https://github.com/dragginzgame/ic-storage) | [ic-logging-storage](https://github.com/dragginzgame/ic-storage/blob/main/crates/ic-logging-storage/Cargo.toml)<br>[ic-metrics-storage](https://github.com/dragginzgame/ic-storage/blob/main/crates/ic-metrics-storage/Cargo.toml)<br>[ic-storage](https://github.com/dragginzgame/ic-storage/blob/main/crates/ic-storage/Cargo.toml)
-[ic-tooling](https://github.com/dragginzgame/ic-tooling) | [ic-build](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-build/Cargo.toml)<br>[ic-host-artifacts](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-artifacts/Cargo.toml)<br>[ic-host-fs](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-fs/Cargo.toml)<br>[ic-host-http](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-http/Cargo.toml)<br>[ic-host-process](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-process/Cargo.toml)<br>[ic-host-text](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-text/Cargo.toml)<br>[ic-host-tools](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-tools/Cargo.toml)<br>[ic-host-wasm-inspect](https://github.com/dragginzgame/ic-tooling/blob/main/apps/ic-host-wasm-inspect/Cargo.toml)<br>[ic-testkit](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-testkit/Cargo.toml)<br>[ic-testkit-dev](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-testkit-dev/Cargo.toml)<br>[ic-testkit-native](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-testkit-native/Cargo.toml)
+[ic-tooling](https://github.com/dragginzgame/ic-tooling) | [ic-build](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-build/Cargo.toml)<br>[ic-host-artifacts](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-artifacts/Cargo.toml)<br>[ic-host-fs](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-fs/Cargo.toml)<br>[ic-host-http](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-http/Cargo.toml)<br>[ic-host-process](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-process/Cargo.toml)<br>[ic-host-text](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-text/Cargo.toml)<br>[ic-host-tools](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-host-tools/Cargo.toml)<br>[ic-host-wasm-inspect](https://github.com/dragginzgame/ic-tooling/blob/main/apps/ic-host-wasm-inspect/Cargo.toml)<br>[ic-testkit](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-testkit/Cargo.toml)<br>[ic-testkit-dev](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-testkit-dev/Cargo.toml)
 [ic-wire](https://github.com/dragginzgame/ic-wire) | [ic-wire](https://github.com/dragginzgame/ic-wire/blob/main/crates/ic-wire/Cargo.toml)<br>[ic-wire-derive](https://github.com/dragginzgame/ic-wire/blob/main/crates/ic-wire-derive/Cargo.toml)<br>[ic-wire-endpoint](https://github.com/dragginzgame/ic-wire/blob/main/crates/ic-wire-endpoint/Cargo.toml)<br>[ic-wire-endpoint-macros](https://github.com/dragginzgame/ic-wire/blob/main/crates/ic-wire-endpoint-macros/Cargo.toml)
 [icydb](https://github.com/dragginzgame/icydb) | [icydb](https://github.com/dragginzgame/icydb/blob/main/crates/icydb/Cargo.toml)<br>[icydb-cli](https://github.com/dragginzgame/icydb/blob/main/crates/icydb-cli/Cargo.toml)<br>[icydb-core](https://github.com/dragginzgame/icydb/blob/main/crates/icydb-core/Cargo.toml)<br>[icydb-diagnostic-code](https://github.com/dragginzgame/icydb/blob/main/crates/icydb-diagnostic-code/Cargo.toml)<br>[icydb-model](https://github.com/dragginzgame/icydb/blob/main/crates/icydb-model/Cargo.toml)<br>[icydb-model-macros](https://github.com/dragginzgame/icydb/blob/main/crates/icydb-model-macros/Cargo.toml)<br>[icydb-schema](https://github.com/dragginzgame/icydb/blob/main/crates/icydb-schema/Cargo.toml)
 [toko](https://github.com/dragginzgame/toko) | [canister_discovery_hub](https://github.com/dragginzgame/toko/blob/development/fleets/toko/discovery/hub/Cargo.toml)<br>[canister_discovery_shard](https://github.com/dragginzgame/toko/blob/development/fleets/toko/discovery/shard/Cargo.toml)<br>[canister_http_hub](https://github.com/dragginzgame/toko/blob/development/fleets/toko/http/hub/Cargo.toml)<br>[canister_http_worker](https://github.com/dragginzgame/toko/blob/development/fleets/toko/http/worker/Cargo.toml)<br>[canister_market](https://github.com/dragginzgame/toko/blob/development/fleets/toko/market/Cargo.toml)<br>[canister_notification](https://github.com/dragginzgame/toko/blob/development/fleets/toko/notification/Cargo.toml)<br>[canister_oracle_pokemon](https://github.com/dragginzgame/toko/blob/development/fleets/toko/oracle/pokemon/Cargo.toml)<br>[canister_oracle_registry](https://github.com/dragginzgame/toko/blob/development/fleets/toko/oracle/registry/Cargo.toml)<br>[canister_project_generator](https://github.com/dragginzgame/toko/blob/development/fleets/toko/project/generator/Cargo.toml)<br>[canister_project_hub](https://github.com/dragginzgame/toko/blob/development/fleets/toko/project/hub/Cargo.toml)<br>[canister_project_instance](https://github.com/dragginzgame/toko/blob/development/fleets/toko/project/instance/Cargo.toml)<br>[canister_project_ledger](https://github.com/dragginzgame/toko/blob/development/fleets/toko/project/ledger/Cargo.toml)<br>[canister_project_registry](https://github.com/dragginzgame/toko/blob/development/fleets/toko/project/registry/Cargo.toml)<br>[canister_project_user](https://github.com/dragginzgame/toko/blob/development/fleets/toko/project/user/Cargo.toml)<br>[canister_user_hub](https://github.com/dragginzgame/toko/blob/development/fleets/toko/user/hub/Cargo.toml)<br>[canister_user_shard](https://github.com/dragginzgame/toko/blob/development/fleets/toko/user/shard/Cargo.toml)<br>[design](https://github.com/dragginzgame/toko/blob/development/backend/src/design/Cargo.toml)<br>[design_macros](https://github.com/dragginzgame/toko/blob/development/backend/src/design_macros/Cargo.toml)<br>[frontend](https://github.com/dragginzgame/toko/blob/development/frontend/package.json)<br>[oracle](https://github.com/dragginzgame/toko/blob/development/backend/src/oracle/Cargo.toml)<br>[schemagen](https://github.com/dragginzgame/toko/blob/development/backend/src/bin/schemagen/Cargo.toml)<br>[toko](https://github.com/dragginzgame/toko/blob/development/backend/src/toko/Cargo.toml)
@@ -985,5 +987,5 @@ toko → icydb | [toko](https://github.com/dragginzgame/toko/blob/development/ba
 toko → icydb-model | [toko](https://github.com/dragginzgame/toko/blob/development/backend/src/toko/Cargo.toml) → `icydb-model` (cargo normal)
 toko → design | [toko](https://github.com/dragginzgame/toko/blob/development/backend/src/toko/Cargo.toml) → `design` (cargo normal)
 
-Selected packages without a normal-dependency path from the application roots: `canic-cli`, `canic-host`, `ic-auth-tooling`, `ic-backup`, `ic-backup-agent`, `ic-blob-storage-canister`, `ic-blob-storage-cli`, `ic-blob-storage-client`, `ic-system-profiler`, `ic-query`, `ic-query-cli`, `ic-query-text`, `ic-relay`, `ic-jobs`, `ic-logging-storage`, `ic-build`, `ic-host-http`, `ic-host-text`, `ic-host-tools`, `ic-host-wasm-inspect`, `ic-testkit-dev`, `ic-testkit-native`, `ic-wire-endpoint`, `ic-wire-endpoint-macros`, `icydb-cli`.
+Selected packages without a normal-dependency path from the application roots: `canic-cli`, `canic-host`, `ic-auth-tooling`, `ic-backup`, `ic-backup-agent`, `ic-blob-storage-canister`, `ic-blob-storage-cli`, `ic-blob-storage-client`, `ic-system-profiler`, `ic-query`, `ic-query-cli`, `ic-query-text`, `ic-relay`, `ic-jobs`, `ic-logging-storage`, `ic-build`, `ic-host-http`, `ic-host-text`, `ic-host-tools`, `ic-host-wasm-inspect`, `ic-testkit-dev`, `ic-wire-endpoint`, `ic-wire-endpoint-macros`, `icydb-cli`.
 <!-- stack-graph:end -->

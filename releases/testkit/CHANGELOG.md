@@ -6,6 +6,28 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.95.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt IC Wire 0.18 for native calls and the private Wasm probe. Align direct
+  Wire dependencies when supplying `Limits` or matching typed codec errors.
+  Codec bytes, method identities and runtime budgets retain their contracts;
+  this workspace does not select Wire's removed bulk-lint API.
+- Make `PocketIcInstance` concrete; remove the `<PocketIc>` type argument from
+  annotations. Client borrowing, awaited deletion and managed-server custody
+  retain their existing behavior.
+- Delegate native HTTP body admission to Host HTTP under the original request
+  deadline. Allocation failures now retain typed `ClientError::BodyAllocation`
+  evidence and request/ingress context. Existing transport and size refusals
+  retain their classifications; no request is replayed.
+
+### 🧹 Cleanup
+
+- Share admitted HTTP request views across client, diagnostics and time fixtures;
+  remove the unused path waiter and replace synthetic generic-owner tests with
+  concrete client custody checks.
+
 ## [0.94.0] - 2026-11-08
 
 ### 🔧 Changed

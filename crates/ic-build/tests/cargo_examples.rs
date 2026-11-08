@@ -402,11 +402,4 @@ fn batch_metadata_sharing_preserves_distinct_example_selections() {
     fs::remove_dir_all(root).unwrap();
 }
 
-// This caller admits small configuration trees; libraries do not select this policy.
-const CONFIGURATION_LIMITS: ic_build::cargo::environment::ConfigurationLimits =
-    ic_build::cargo::environment::ConfigurationLimits {
-        file_bytes: 1024 * 1024,
-        total_bytes: 16 * 1024 * 1024,
-        files: 128,
-        depth: 32,
-    };
+use support::wasm::CONFIGURATION_LIMITS;

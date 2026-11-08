@@ -14,10 +14,16 @@ publish = ["crates-io"]
 ic-host-artifacts.workspace = true
 reqwest.workspace = true
 
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
 reqwest = { workspace = true, features = ["gzip"] }
 tokio = { workspace = true, features = ["macros", "net", "rt", "time"] }
+
+[dev-dependencies]
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

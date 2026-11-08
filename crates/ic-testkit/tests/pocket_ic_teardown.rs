@@ -11,8 +11,8 @@ use ic_testkit::pic::{
     PocketIcInstance, PocketIcStartupConfig, StandaloneCanisterFixture,
     is_dead_pocket_ic_transport_error,
 };
+use ic_testkit::pocket_ic::PocketIcBuilder;
 use ic_testkit::pocket_ic::common::rest::{CreateInstanceResponse, RawCanisterId, Topology};
-use ic_testkit::pocket_ic::{PocketIc, PocketIcBuilder};
 #[cfg(unix)]
 use std::os::fd::AsRawFd as _;
 use std::{
@@ -309,7 +309,7 @@ async fn refused_creation_probe() {
     drop(pic);
 }
 
-async fn synthetic_instance() -> PocketIcInstance<PocketIc> {
+async fn synthetic_instance() -> PocketIcInstance {
     let url = std::env::var(PROBE_URL_ENV).expect("parent supplies synthetic peer URL");
     PocketIcStartupConfig::Connect {
         server_url: url,

@@ -95,7 +95,6 @@ pub struct WasmBuildSpec {
     cargo_message_bytes: usize,
     cache_mode: WasmBuildCacheMode,
     pruning: Option<(CacheRetentionLimits, Duration)>,
-    shared_incremental_maintenance_config: Option<SharedIncrementalTargetMaintenanceConfig>,
 }
 
 impl std::fmt::Debug for WasmBuildSpec {
@@ -119,10 +118,6 @@ impl std::fmt::Debug for WasmBuildSpec {
             .field("cargo_message_bytes", &self.cargo_message_bytes)
             .field("cache_mode", &self.cache_mode)
             .field("pruning", &self.pruning)
-            .field(
-                "shared_incremental_maintenance_config",
-                &self.shared_incremental_maintenance_config,
-            )
             .finish()
     }
 }
@@ -154,6 +149,7 @@ enum WasmBuildCacheMode {
     SharedIncremental {
         /// Mutable Cargo target directory shared across source fingerprints.
         target_dir: PathBuf,
+        maintenance: Option<SharedIncrementalTargetMaintenanceConfig>,
     },
 }
 
@@ -598,9 +594,9 @@ impl WasmBuildSpec {
             cargo_message_bytes: CARGO_METADATA_BYTES,
             cache_mode: WasmBuildCacheMode::SharedIncremental {
                 target_dir: PathBuf::from("target/ic-testkit-incremental"),
+                maintenance: None,
             },
             pruning: None,
-            shared_incremental_maintenance_config: None,
         }
     }
 
@@ -723,6 +719,7 @@ impl WasmBuildSpec {
     pub fn with_shared_incremental_target(mut self, target_dir: impl Into<PathBuf>) -> Self {
         self.cache_mode = WasmBuildCacheMode::SharedIncremental {
             target_dir: target_dir.into(),
+            maintenance: self.shared_incremental_target_maintenance(),
         };
         self
     }
@@ -747,16 +744,16 @@ impl WasmBuildSpec {
     /// evaluating retention. The structured result is attached to the build
     /// record and emitted through observed progress. Maintenance failures fail
     /// the acquisition and do not record a successful schedule marker.
-    #[must_use]
-    pub const fn with_shared_incremental_target_maintenance_at_most_every(
-        mut self,
+    /// # Errors
+    /// Rejects isolated mode before any acquisition or filesystem effects.
+    pub fn with_shared_incremental_target_maintenance_at_most_every(
+        self,
         policy: CacheRetentionLimits,
         minimum_interval: Duration,
-    ) -> Self {
-        self.shared_incremental_maintenance_config = Some(
+    ) -> Result<Self, WasmBuildError> {
+        self.with_shared_incremental_target_maintenance(
             SharedIncrementalTargetMaintenanceConfig::new(policy, minimum_interval),
-        );
-        self
+        )
     }
 
     /// Attach an explicit shared-target maintenance configuration.
@@ -764,13 +761,21 @@ impl WasmBuildSpec {
     /// This is the configurable counterpart to
     /// [`Self::with_shared_incremental_target_maintenance_at_most_every`] and
     /// supports strict or best-effort failure handling.
-    #[must_use]
-    pub const fn with_shared_incremental_target_maintenance(
+    /// # Errors
+    /// Rejects isolated mode before any acquisition or filesystem effects.
+    pub fn with_shared_incremental_target_maintenance(
         mut self,
         config: SharedIncrementalTargetMaintenanceConfig,
-    ) -> Self {
-        self.shared_incremental_maintenance_config = Some(config);
-        self
+    ) -> Result<Self, WasmBuildError> {
+        let WasmBuildCacheMode::SharedIncremental { maintenance, .. } = &mut self.cache_mode else {
+            return Err(WasmBuildError::InvalidSpec {
+                message:
+                    "scheduled shared-target maintenance requires a shared incremental Cargo target"
+                        .to_owned(),
+            });
+        };
+        *maintenance = Some(config);
+        Ok(self)
     }
 
     /// Apply cache retention under the build operation's existing process lock.
@@ -823,7 +828,10 @@ impl WasmBuildSpec {
     pub const fn shared_incremental_target_maintenance(
         &self,
     ) -> Option<SharedIncrementalTargetMaintenanceConfig> {
-        self.shared_incremental_maintenance_config
+        match self.cache_mode {
+            WasmBuildCacheMode::Isolated => None,
+            WasmBuildCacheMode::SharedIncremental { maintenance, .. } => maintenance,
+        }
     }
 }
 
@@ -1689,15 +1697,6 @@ pub(super) fn build_wasm_canisters_cached_in_batch(
     result.map_err(|error| (error, progress.failure_details(total)))
 }
 
-#[derive(Clone, Debug)]
-enum CachePlan {
-    Isolated,
-    Shared {
-        target_dir: PathBuf,
-        maintenance: Option<SharedIncrementalTargetMaintenanceConfig>,
-    },
-}
-
 #[derive(Clone, Copy)]
 enum SharedAcquisition<'a> {
     Scheduled {
@@ -1722,21 +1721,11 @@ fn build_wasm_canisters_cached_internal(
     // Standalone callers pass the spec policy; the batch tracker schedules it
     // only for the first specification of a distinct shared target.
     // Keep ordinary spec admission and its failure order before this projection.
-    let mut plan = validate_spec(spec)?;
-    if let CachePlan::Shared { maintenance, .. } = &mut plan {
-        *maintenance = scheduled_maintenance;
-    }
-    if let CachePlan::Shared {
-        target_dir,
-        maintenance: Some(config),
-    } = &plan
-    {
+    let target = validate_spec(spec)?;
+    if let (Some(target_dir), Some(config)) = (&target, scheduled_maintenance) {
         return build_wasm_with_shared_incremental(
             spec,
-            SharedAcquisition::Scheduled {
-                target_dir,
-                config: *config,
-            },
+            SharedAcquisition::Scheduled { target_dir, config },
             total_started,
             progress,
             batch_resolution.take(),
@@ -1749,7 +1738,7 @@ fn build_wasm_canisters_cached_internal(
 
     let resolved = resolve_initial_inputs(spec, batch_resolution.take(), progress)?;
     let cache_entry = cache_entry_directory(spec, resolved.fingerprint);
-    let isolated_acquisition = WasmAcquisitionContext::isolated(&cache_entry);
+    let isolated_acquisition = AcquiredCargoTarget::Exact(&cache_entry);
     if let Some(outcome) = try_reuse_wasm_artifacts(
         spec,
         &resolved,
@@ -1760,8 +1749,8 @@ fn build_wasm_canisters_cached_internal(
     )? {
         return Ok(outcome);
     }
-    match plan {
-        CachePlan::Shared { target_dir, .. } => {
+    match target {
+        Some(target_dir) => {
             drop(cache_lock);
             build_wasm_with_shared_incremental(
                 spec,
@@ -1776,7 +1765,7 @@ fn build_wasm_canisters_cached_internal(
                 &mut spawn,
             )
         }
-        CachePlan::Isolated => build_wasm_cache_miss(
+        None => build_wasm_cache_miss(
             spec,
             &resolved,
             first_lock_wait,
@@ -1835,8 +1824,11 @@ fn build_wasm_with_shared_incremental(
             )
         })
         .transpose()?;
-    let shared_incremental =
-        WasmAcquisitionContext::shared(&shared_target, shared_lock_wait, maintenance);
+    let shared_incremental = AcquiredCargoTarget::Shared {
+        target: &shared_target,
+        lock_wait: shared_lock_wait,
+        maintenance,
+    };
     if let Some(outcome) = try_reuse_wasm_artifacts(
         spec,
         current,
@@ -1877,41 +1869,16 @@ fn resolve_initial_inputs(
     Ok(resolved)
 }
 
-#[derive(Debug)]
-struct WasmAcquisitionContext<'a> {
-    cargo_target: AcquiredCargoTarget<'a>,
-}
-
-impl<'a> WasmAcquisitionContext<'a> {
-    const fn isolated(target: &'a Path) -> Self {
-        Self {
-            cargo_target: AcquiredCargoTarget::Exact(target),
-        }
-    }
-
-    const fn shared(
-        target: &'a Path,
-        lock_wait: Duration,
-        maintenance: Option<SharedIncrementalTargetMaintenanceOutcome>,
-    ) -> Self {
-        Self {
-            cargo_target: AcquiredCargoTarget::Shared {
-                target,
-                lock_wait,
-                maintenance,
-            },
-        }
-    }
-
+impl AcquiredCargoTarget<'_> {
     const fn lock_wait(&self) -> Option<Duration> {
-        match &self.cargo_target {
+        match self {
             AcquiredCargoTarget::Exact(_) => None,
             AcquiredCargoTarget::Shared { lock_wait, .. } => Some(*lock_wait),
         }
     }
 
     fn maintenance(&self) -> Option<SharedIncrementalTargetMaintenanceOutcome> {
-        match &self.cargo_target {
+        match self {
             AcquiredCargoTarget::Exact(_) => None,
             AcquiredCargoTarget::Shared { maintenance, .. } => maintenance.clone(),
         }
@@ -1922,7 +1889,7 @@ fn try_reuse_wasm_artifacts(
     spec: &WasmBuildSpec,
     resolved: &ResolvedCargoBuildInputs,
     lock_wait: Duration,
-    shared_incremental: &WasmAcquisitionContext<'_>,
+    shared_incremental: &AcquiredCargoTarget<'_>,
     total_started: Instant,
     progress: &mut ProgressReporter<'_>,
 ) -> Result<Option<WasmBuildOutcome>, WasmBuildError> {
@@ -1995,7 +1962,7 @@ fn build_wasm_cache_miss(
     spec: &WasmBuildSpec,
     resolved: &ResolvedCargoBuildInputs,
     lock_wait: Duration,
-    shared_incremental: &WasmAcquisitionContext<'_>,
+    shared_incremental: &AcquiredCargoTarget<'_>,
     total_started: Instant,
     progress: &mut ProgressReporter<'_>,
     mut spawn: &mut dyn FnMut(&mut Command) -> io::Result<OwnedChild>,
@@ -2013,7 +1980,7 @@ fn build_wasm_cache_miss(
         Ok::<_, WasmBuildError>(OwnedDirectory::new(cache_entry.clone()))
     })?;
     let build_result = (|| {
-        let cargo_target_dir = match &shared_incremental.cargo_target {
+        let cargo_target_dir = match shared_incremental {
             AcquiredCargoTarget::Exact(path) => path,
             AcquiredCargoTarget::Shared { target, .. } => {
                 record_cache_entry_use(target)?;
@@ -2197,18 +2164,10 @@ fn lock_wasm_build_cache_with_progress(
 fn lock_shared_incremental_target(
     target_dir: &Path,
 ) -> Result<(File, Duration, PathBuf), WasmBuildError> {
-    lock_shared_incremental_target_internal(target_dir, &mut ProgressReporter::silent())
+    lock_shared_incremental_target_with_progress(target_dir, &mut ProgressReporter::silent())
 }
 
 fn lock_shared_incremental_target_with_progress(
-    target_dir: &Path,
-    progress: &mut ProgressReporter<'_>,
-) -> Result<(File, Duration, PathBuf), WasmBuildError> {
-    let (lock, wait, canonical) = lock_shared_incremental_target_internal(target_dir, progress)?;
-    Ok((lock, wait, canonical))
-}
-
-fn lock_shared_incremental_target_internal(
     target_dir: &Path,
     progress: &mut ProgressReporter<'_>,
 ) -> Result<(File, Duration, PathBuf), WasmBuildError> {
@@ -2266,7 +2225,7 @@ fn wasm_cache_fs_error(error: CacheFsError) -> WasmBuildError {
     WasmBuildError::io(error.operation, error.path, error.source)
 }
 
-fn validate_spec(spec: &WasmBuildSpec) -> Result<CachePlan, WasmBuildError> {
+fn validate_spec(spec: &WasmBuildSpec) -> Result<Option<PathBuf>, WasmBuildError> {
     for (key, value) in &spec.environment {
         let key = key.as_encoded_bytes();
         if key.is_empty()
@@ -2309,27 +2268,13 @@ fn validate_spec(spec: &WasmBuildSpec) -> Result<CachePlan, WasmBuildError> {
         })?;
     if matches!(
         &spec.cache_mode,
-        WasmBuildCacheMode::SharedIncremental { target_dir } if target_dir.as_os_str().is_empty()
+        WasmBuildCacheMode::SharedIncremental { target_dir, .. } if target_dir.as_os_str().is_empty()
     ) {
         return Err(WasmBuildError::InvalidSpec {
             message: "shared incremental Cargo target directory must not be empty".to_owned(),
         });
     }
-    match (
-        shared_incremental_target(spec),
-        spec.shared_incremental_maintenance_config,
-    ) {
-        (None, None) => Ok(CachePlan::Isolated),
-        (Some(target_dir), maintenance) => Ok(CachePlan::Shared {
-            target_dir,
-            maintenance,
-        }),
-        (None, Some(_)) => Err(WasmBuildError::InvalidSpec {
-            message:
-                "scheduled shared-target maintenance requires a shared incremental Cargo target"
-                    .to_owned(),
-        }),
-    }
+    Ok(shared_incremental_target(spec))
 }
 
 fn validate_cargo_target_selection(spec: &WasmBuildSpec) -> Result<(), WasmBuildError> {
@@ -2534,7 +2479,7 @@ fn capture_probe_output_with_policy(
 }
 
 pub(super) fn shared_incremental_target(spec: &WasmBuildSpec) -> Option<PathBuf> {
-    let WasmBuildCacheMode::SharedIncremental { target_dir } = &spec.cache_mode else {
+    let WasmBuildCacheMode::SharedIncremental { target_dir, .. } = &spec.cache_mode else {
         return None;
     };
     Some(if target_dir.is_absolute() {

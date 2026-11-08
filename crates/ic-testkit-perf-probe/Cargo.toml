@@ -13,6 +13,9 @@ category = "benchmarks"
 [package.metadata.shared-tooling.loc.paths]
 "src/protocol/tests.rs" = "tests"
 
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -22,6 +25,9 @@ serde = { workspace = true, features = ["derive"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 ic-platform-runtime = { workspace = true, features = ["cdk"] }
+
+[dev-dependencies]
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

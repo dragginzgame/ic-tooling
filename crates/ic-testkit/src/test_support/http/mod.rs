@@ -21,6 +21,33 @@ pub struct Peer {
     worker: Option<JoinHandle<()>>,
 }
 
+/// Borrow the already-admitted request without repeating framing reads.
+pub struct Request<'a> {
+    pub line: &'a str,
+    pub path: &'a str,
+    pub body: &'a [u8],
+}
+
+impl<'a> Request<'a> {
+    pub fn new(bytes: &'a [u8]) -> Self {
+        let end = bytes
+            .windows(4)
+            .position(|part| part == b"\r\n\r\n")
+            .unwrap()
+            + 4;
+        let line = std::str::from_utf8(&bytes[..end])
+            .unwrap()
+            .lines()
+            .next()
+            .unwrap();
+        Self {
+            line,
+            path: line.split_whitespace().nth(1).unwrap(),
+            body: &bytes[end..],
+        }
+    }
+}
+
 impl Peer {
     pub(crate) fn spawn(
         request_count: Option<usize>,

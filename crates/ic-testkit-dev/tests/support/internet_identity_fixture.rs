@@ -22,7 +22,7 @@ use ic_host_process::tool::{OutputLimit, OutputLimits, capture_command};
 use ic_testkit::pocket_ic::common::rest::InstanceHttpGatewayConfig;
 use ic_testkit::{
     pic::{PocketIcInstance, PocketIcStartupConfig},
-    pocket_ic::{PocketIc, PocketIcBuilder},
+    pocket_ic::PocketIcBuilder,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -200,7 +200,7 @@ async fn serve(
     didc: &Path,
     pins: &Pins,
     wasm: &[Vec<u8>],
-    instance: &PocketIcInstance<PocketIc>,
+    instance: &PocketIcInstance,
 ) -> Result<()> {
     let pic = instance.instance();
     let backend = pic.create_canister().await?;

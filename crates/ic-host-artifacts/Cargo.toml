@@ -10,6 +10,9 @@ description = "Bounded host artifact streams, identities, gzip and Wasm tooling"
 readme = "../../README.md"
 publish = ["crates-io"]
 
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
 [features]
 default = []
 gzip = ["dep:flate2"]
@@ -28,6 +31,7 @@ wat = { workspace = true, optional = true }
 clap = { workspace = true, features = ["derive"] }
 serde = { workspace = true, features = ["std"] }
 serde_json.workspace = true
+toko-tooling.workspace = true
 wasmparser.workspace = true
 
 [lints]

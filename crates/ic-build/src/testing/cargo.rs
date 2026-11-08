@@ -222,6 +222,7 @@ pub fn generate_fixture_lockfile(root: &Path) -> std::ffi::OsString {
     assert!(
         std::process::Command::new(&cargo)
             .current_dir(root)
+            .env("RUSTUP_AUTO_INSTALL", "0")
             .args(["generate-lockfile", "--offline"])
             .status()
             .unwrap()

@@ -30,15 +30,6 @@ pub struct WasmBuildBatchReport {
     input_resolution: WasmBuildBatchInputMetrics,
 }
 
-/// Structural error that prevents a labeled Wasm batch from starting.
-#[non_exhaustive]
-#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
-pub enum WasmBuildBatchContractError {
-    /// Invalid input labels, rejected before source validation or command effects.
-    #[error("Wasm batch {0}")]
-    Labels(#[source] BatchLabelError),
-}
-
 /// Build error together with the phase and partial timings at the failure.
 pub type WasmBuildBatchFailure = (WasmBuildError, WasmBuildFailureDetails);
 
@@ -107,25 +98,18 @@ impl WasmBuildBatchReport {
     /// Aggregate outcome, input-resolution reuse, and timing counters.
     #[must_use]
     pub fn metrics(&self) -> WasmBuildBatchMetrics {
-        let mut metrics = WasmBuildBatchMetrics {
+        let (counts, successful_timings) =
+            self.batch.summarize(|sum: &mut WasmBuildTimings, record| {
+                *sum = sum.saturating_add(record.timings());
+            });
+        WasmBuildBatchMetrics {
             specifications: self.batch.entries.len(),
             input_resolution_runs: self.input_resolution.runs,
             input_resolution_reuses: self.input_resolution.reuses,
             total: self.batch.total,
-            ..WasmBuildBatchMetrics::default()
-        };
-        for outcome in self
-            .batch
-            .entries
-            .iter()
-            .filter_map(CacheBatchEntry::outcome)
-        {
-            metrics.counts.record(outcome.is_reused());
-            metrics.successful_timings = metrics
-                .successful_timings
-                .saturating_add(outcome.record().timings());
+            counts,
+            successful_timings,
         }
-        metrics
     }
 }
 
@@ -232,9 +216,8 @@ pub fn build_wasm_canisters_cached_batch(
     mut spawn: impl FnMut(
         &mut std::process::Command,
     ) -> std::io::Result<ic_host_process::child::OwnedChild>,
-) -> Result<WasmBuildBatchReport, WasmBuildBatchContractError> {
-    validate_labels(specs.iter().map(LabeledWasmBuildSpec::label))
-        .map_err(WasmBuildBatchContractError::Labels)?;
+) -> Result<WasmBuildBatchReport, BatchLabelError> {
+    validate_labels(specs.iter().map(LabeledWasmBuildSpec::label))?;
     let mut resolver =
         WasmBuildBatchInputResolver::new(specs.iter().map(LabeledWasmBuildSpec::spec));
     let mut report = build_wasm_batch(specs, |spec, index, maintenance| {

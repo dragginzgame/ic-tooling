@@ -1,8 +1,7 @@
-diff --git a/src/common/rest.rs b/src/common/rest.rs
-index df06e616..400adaf8 100644
---- a/src/common/rest.rs
-+++ b/src/common/rest.rs
-@@ -288,39 +288,6 @@ impl From<RawSubnetId> for Principal {
+diff -ruN before/src/common/rest.rs after/src/common/rest.rs
+--- before/src/common/rest.rs	2026-11-08 19:46:46.226569466 +0100
++++ after/src/common/rest.rs	2026-11-08 19:46:46.251857839 +0100
+@@ -288,39 +288,6 @@
      }
  }
  
@@ -42,7 +41,7 @@ index df06e616..400adaf8 100644
  #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
  pub struct BlobId(
      #[serde(deserialize_with = "base64::deserialize")]
-@@ -542,30 +509,11 @@ impl Topology {
+@@ -542,30 +509,11 @@
      }
  
      pub fn get_app_subnets(&self) -> Vec<SubnetId> {
@@ -78,7 +77,7 @@ index df06e616..400adaf8 100644
      }
  
      pub fn get_ii(&self) -> Option<SubnetId> {
-@@ -576,32 +524,6 @@ impl Topology {
+@@ -576,32 +524,6 @@
          self.find_subnet(SubnetKind::NNS)
      }
  
@@ -111,7 +110,7 @@ index df06e616..400adaf8 100644
      fn find_subnet(&self, kind: SubnetKind) -> Option<SubnetId> {
          self.subnet_configs
              .iter()
-@@ -837,28 +759,3 @@ impl From<MockCanisterHttpResponse> for RawMockCanisterHttpResponse {
+@@ -837,28 +759,3 @@
          }
      }
  }
@@ -140,10 +139,9 @@ index df06e616..400adaf8 100644
 -    #[serde(serialize_with = "base64::serialize")]
 -    pub snapshot_id: Vec<u8>,
 -}
-diff --git a/src/error.rs b/src/error.rs
-index 5ec9f881..cc9d8641 100644
---- a/src/error.rs
-+++ b/src/error.rs
+diff -ruN before/src/error.rs after/src/error.rs
+--- before/src/error.rs	2026-11-08 19:46:46.226698430 +0100
++++ after/src/error.rs	2026-11-08 19:46:46.251910388 +0100
 @@ -2,6 +2,19 @@
  
  use reqwest::StatusCode;
@@ -164,7 +162,7 @@ index 5ec9f881..cc9d8641 100644
  /// A computation accepted by the PocketIC server.
  #[derive(Clone, Debug, PartialEq, Eq)]
  pub struct Operation {
-@@ -28,6 +41,8 @@ pub enum ClientError {
+@@ -28,6 +41,8 @@
          "PocketIC requires an explicit server URL; provision/start it through ic_testkit::pic or supply a running server"
      )]
      MissingServerUrl,
@@ -173,7 +171,20 @@ index 5ec9f881..cc9d8641 100644
      #[error("PocketIC transport failed: {source}")]
      Transport {
          context: Box<RequestContext>,
-@@ -63,14 +78,35 @@ pub enum ClientError {
+@@ -40,6 +55,12 @@
+         #[source]
+         source: reqwest::Error,
+     },
++    #[error("PocketIC response body allocation failed: {source}")]
++    BodyAllocation {
++        context: Box<RequestContext>,
++        #[source]
++        source: std::collections::TryReserveError,
++    },
+     #[error("PocketIC response JSON failed: {source}")]
+     Json {
+         context: Box<RequestContext>,
+@@ -63,14 +84,35 @@
      Canister(crate::pocket_ic::RejectResponse),
      #[error("Candid failed: {0}")]
      Candid(#[from] candid::Error),
@@ -211,11 +222,32 @@ index 5ec9f881..cc9d8641 100644
  impl ClientError {
      pub(crate) fn with_ingress(
          mut self,
-diff --git a/src/http.rs b/src/http.rs
-index 0c7733e7..9d300e9f 100644
---- a/src/http.rs
-+++ b/src/http.rs
-@@ -6,13 +6,13 @@ use tokio::time::Instant;
+@@ -79,6 +121,7 @@
+         match &mut self {
+             Self::Transport { context, .. }
+             | Self::Body { context, .. }
++            | Self::BodyAllocation { context, .. }
+             | Self::Json { context, .. }
+             | Self::Server { context, .. }
+             | Self::ResponseTooLarge { context, .. }
+@@ -92,6 +135,7 @@
+         match self {
+             Self::Transport { context, .. }
+             | Self::Body { context, .. }
++            | Self::BodyAllocation { context, .. }
+             | Self::Json { context, .. }
+             | Self::Server { context, .. }
+             | Self::ResponseTooLarge { context, .. }
+diff -ruN before/src/http.rs after/src/http.rs
+--- before/src/http.rs	2026-11-08 19:46:46.226772902 +0100
++++ after/src/http.rs	2026-11-08 19:46:46.251941054 +0100
+@@ -1,4 +1,5 @@
+ use crate::pocket_ic::{ClientError, Operation, RequestContext};
++use ic_host_http::{ReadFailure, ReadOptions, read_body};
+ use serde::de::DeserializeOwned;
+ use std::{future::Future, time::Duration};
+ use tokio::time::Instant;
+@@ -6,13 +7,13 @@
  /// One budget covers dispatch, response body and all polling.
  pub(crate) struct Exchange {
      pub(crate) context: RequestContext,
@@ -232,7 +264,7 @@ index 0c7733e7..9d300e9f 100644
              context: RequestContext {
                  url: url.to_string(),
                  operation: None,
-@@ -20,20 +20,17 @@ impl Exchange {
+@@ -20,20 +21,17 @@
                  may_have_executed: false,
                  status: None,
              },
@@ -260,7 +292,7 @@ index 0c7733e7..9d300e9f 100644
      }
  
      pub(crate) async fn pause(&self) -> Result<(), ClientError> {
-@@ -50,10 +47,7 @@ impl Exchange {
+@@ -50,10 +48,7 @@
              context: Box::new(self.context.clone()),
              source,
          })?;
@@ -272,7 +304,67 @@ index 0c7733e7..9d300e9f 100644
              return Err(ClientError::Timeout {
                  context: Box::new(self.context.clone()),
              });
-@@ -128,3 +122,10 @@ impl Exchange {
+@@ -61,7 +56,7 @@
+         // Conservative once dispatched: never infer non-execution from a lost reply.
+         self.context.may_have_executed = true;
+         self.context.status = None;
+-        let mut response = self
++        let response = self
+             .bounded(client.execute(request))
+             .await?
+             .map_err(|source| ClientError::Transport {
+@@ -70,27 +65,29 @@
+             })?;
+         let status = response.status();
+         self.context.status = Some(status);
+-        let mut bytes = Vec::new();
+-        while let Some(chunk) =
+-            self.bounded(response.chunk())
+-                .await?
+-                .map_err(|source| ClientError::Body {
+-                    context: Box::new(self.context.clone()),
+-                    source,
+-                })?
+-        {
+-            if self
+-                .response_limit
+-                .is_some_and(|limit| chunk.len() > limit.saturating_sub(bytes.len()))
+-            {
+-                return Err(ClientError::ResponseTooLarge {
+-                    context: Box::new(self.context.clone()),
+-                    limit: self.response_limit.unwrap(),
+-                });
+-            }
+-            bytes.extend_from_slice(&chunk);
+-        }
+-        Ok((status, bytes))
++        let body = self
++            .bounded(read_body(
++                response,
++                ReadOptions {
++                    max_bytes: self.response_limit.unwrap_or(usize::MAX),
++                    reject_declared_oversize: false,
++                    retain_partial_on_error: false,
++                },
++            ))
++            .await?
++            .map_err(|error| {
++                let context = Box::new(self.context.clone());
++                match error.failure {
++                    ReadFailure::Transport(source) => ClientError::Body { context, source },
++                    ReadFailure::Allocation(source) => {
++                        ClientError::BodyAllocation { context, source }
++                    }
++                    ReadFailure::DeclaredLength { limit, .. } | ReadFailure::Limit { limit } => {
++                        ClientError::ResponseTooLarge { context, limit }
++                    }
++                }
++            })?;
++        Ok((status, body.bytes))
+     }
+ 
+     pub(crate) fn decode<T: DeserializeOwned>(&self, bytes: &[u8]) -> Result<T, ClientError> {
+@@ -128,3 +125,10 @@
          self.context.operation = Some(operation);
      }
  }
@@ -283,10 +375,9 @@ index 0c7733e7..9d300e9f 100644
 +        .filter(|_| !timeout.is_zero())
 +        .ok_or(ClientError::InvalidRequestBudget { timeout })
 +}
-diff --git a/src/lib.rs b/src/lib.rs
-index c5d18452..6b2ee541 100644
---- a/src/lib.rs
-+++ b/src/lib.rs
+diff -ruN before/src/lib.rs after/src/lib.rs
+--- before/src/lib.rs	2026-11-08 19:46:46.226853904 +0100
++++ after/src/lib.rs	2026-11-08 19:46:46.251972421 +0100
 @@ -13,9 +13,8 @@
  //! `PocketIc::drop` before releasing a borrowed server; Rust Drop performs no I/O.
  use self::common::rest::{
@@ -298,7 +389,7 @@ index c5d18452..6b2ee541 100644
  pub use ic_management_canister_types::{
      CanisterId, CanisterInstallMode, CanisterLogRecord, CanisterSettings, CanisterStatusResult,
      EnvironmentVariable, Snapshot,
-@@ -30,49 +29,41 @@ use std::{
+@@ -30,49 +29,41 @@
  
  mod error;
  mod http;
@@ -356,7 +447,7 @@ index c5d18452..6b2ee541 100644
              self.config,
          )
          .await
-@@ -84,11 +75,6 @@ impl PocketIcBuilder {
+@@ -84,11 +75,6 @@
          self
      }
  
@@ -368,7 +459,7 @@ index c5d18452..6b2ee541 100644
      /// Select a caller-owned persistent instance directory accessible to the server.
      /// Instance deletion and client Drop never remove this directory.
      pub fn with_state_dir(mut self, state_dir: PathBuf) -> Self {
-@@ -450,57 +436,6 @@ impl std::fmt::Display for RejectResponse {
+@@ -450,57 +436,6 @@
      }
  }
  
@@ -426,11 +517,10 @@ index c5d18452..6b2ee541 100644
  /// Converts an absolute Windows path with a drive prefix (e.g. `C:\Users\x\y`)
  /// to the path under which WSL mounts it (e.g. `/mnt/c/Users/x/y`).
  ///
-diff --git a/src/nonblocking/snapshot.rs b/src/nonblocking/snapshot.rs
-index 7defcee6..cc984a32 100644
---- a/src/nonblocking/snapshot.rs
-+++ b/src/nonblocking/snapshot.rs
-@@ -19,10 +19,8 @@ impl PocketIc {
+diff -ruN before/src/nonblocking/snapshot.rs after/src/nonblocking/snapshot.rs
+--- before/src/nonblocking/snapshot.rs	2026-11-08 19:46:46.226951030 +0100
++++ after/src/nonblocking/snapshot.rs	2026-11-08 19:46:46.252035286 +0100
+@@ -19,10 +19,8 @@
                      "snapshot request exceeds Candid byte budget".into(),
                  ));
              }
@@ -443,7 +533,7 @@ index 7defcee6..cc984a32 100644
                      RawCanisterCall {
                          canister_id: Principal::management_canister().as_slice().to_vec(),
                          effective_principal: RawEffectivePrincipal::CanisterId(
-@@ -36,19 +34,8 @@ impl PocketIc {
+@@ -36,19 +34,8 @@
                      Some(limits.http_bytes),
                  )
                  .await?;
@@ -464,11 +554,10 @@ index 7defcee6..cc984a32 100644
              if reply.len() > limits.candid_bytes {
                  return Err(ClientError::Protocol(
                      "snapshot reply exceeds Candid byte budget".into(),
-diff --git a/src/nonblocking.rs b/src/nonblocking.rs
-index 68040385..f6a9269b 100644
---- a/src/nonblocking.rs
-+++ b/src/nonblocking.rs
-@@ -3,19 +3,16 @@ use crate::pocket_ic::common::rest::{
+diff -ruN before/src/nonblocking.rs after/src/nonblocking.rs
+--- before/src/nonblocking.rs	2026-11-08 19:46:46.227097451 +0100
++++ after/src/nonblocking.rs	2026-11-08 19:46:46.251692450 +0100
+@@ -3,19 +3,16 @@
      AutoProgressConfig, BlobCompression, BlobId, CanisterHttpRequest, CreateHttpGatewayResponse,
      CreateInstanceResponse, HttpGatewayBackend, HttpGatewayConfig, HttpGatewayInfo, HttpsConfig,
      InstanceConfig, InstanceId, MockCanisterHttpResponse, RawAddCycles, RawCanisterCall,
@@ -492,7 +581,7 @@ index 68040385..f6a9269b 100644
  use candid::{
      Principal, decode_args, encode_args,
      utils::{ArgumentDecoder, ArgumentEncoder},
-@@ -40,7 +37,6 @@ use serde::{Serialize, de::DeserializeOwned};
+@@ -40,7 +37,6 @@
  use sha2::{Digest, Sha256};
  use std::future::Future;
  use std::net::IpAddr;
@@ -500,7 +589,7 @@ index 68040385..f6a9269b 100644
  use std::time::Duration;
  use tracing::{debug, instrument};
  
-@@ -77,7 +73,7 @@ pub struct PocketIc {
+@@ -77,7 +73,7 @@
      /// The unique ID of this PocketIC instance.
      pub instance_id: InstanceId,
      // how long a get/post request may retry or poll
@@ -509,7 +598,7 @@ index 68040385..f6a9269b 100644
      http_gateway: Option<HttpGatewayInfo>,
      server_url: Url,
      reqwest_client: reqwest::Client,
-@@ -88,8 +84,8 @@ pub struct PocketIc {
+@@ -88,8 +84,8 @@
  impl PocketIc {
      /// Creates a new PocketIC instance with a single application subnet on the server.
      /// The caller supplies an already admitted server endpoint.
@@ -520,7 +609,7 @@ index 68040385..f6a9269b 100644
              .with_server_url(server_url)
              .with_application_subnet()
              .build()
-@@ -98,29 +94,30 @@ impl PocketIc {
+@@ -98,29 +94,30 @@
  
      /// Creates a PocketIC handle to an existing instance on a running server.
      /// Note that this handle does not extend the lifetime of the existing instance,
@@ -559,7 +648,7 @@ index 68040385..f6a9269b 100644
          instance_config: InstanceConfig,
      ) -> Result<Self, ClientError> {
          #[cfg(windows)]
-@@ -133,7 +130,7 @@ impl PocketIc {
+@@ -133,7 +130,7 @@
  
          let reqwest_client = reqwest::Client::new();
          let url = server_url.join("instances").unwrap();
@@ -568,7 +657,7 @@ index 68040385..f6a9269b 100644
          let response: CreateInstanceResponse = exchange
              .json(
                  &reqwest_client,
-@@ -158,7 +155,7 @@ impl PocketIc {
+@@ -158,7 +155,7 @@
  
          Ok(Self {
              instance_id,
@@ -577,7 +666,7 @@ index 68040385..f6a9269b 100644
              http_gateway: http_gateway_info,
              server_url,
              reqwest_client,
-@@ -189,7 +186,7 @@ impl PocketIc {
+@@ -189,7 +186,7 @@
          if let BlobCompression::Gzip = compression {
              request = request.header(reqwest::header::CONTENT_ENCODING, "gzip");
          }
@@ -586,7 +675,7 @@ index 68040385..f6a9269b 100644
          let (status, bytes) = exchange.bytes(&self.reqwest_client, request).await?;
          if !status.is_success() {
              return Err(exchange.server_error(status, &bytes));
-@@ -238,10 +235,13 @@ impl PocketIc {
+@@ -238,10 +235,13 @@
  
      /// List all instances and their status.
      #[instrument(ret)]
@@ -602,7 +691,7 @@ index 68040385..f6a9269b 100644
              .json(&client, client.get(url.clone()))
              .await
      }
-@@ -252,20 +252,8 @@ impl PocketIc {
+@@ -252,20 +252,8 @@
      /// inter-canister calls or heartbeats.
      #[instrument(skip(self), fields(instance_id=self.instance_id))]
      pub async fn tick(&self) -> Result<(), ClientError> {
@@ -625,7 +714,7 @@ index 68040385..f6a9269b 100644
      }
  
      /// Configures the IC to make progress automatically,
-@@ -384,7 +372,7 @@ impl PocketIc {
+@@ -384,7 +372,7 @@
              https_config: https_config.clone(),
              domain_custom_provider_local_file: None,
          };
@@ -634,7 +723,7 @@ index 68040385..f6a9269b 100644
          let res: CreateHttpGatewayResponse = exchange
              .json(
                  &self.reqwest_client,
-@@ -430,7 +418,7 @@ impl PocketIc {
+@@ -430,7 +418,7 @@
                  .server_url
                  .join(&format!("http_gateway/{}/stop", info.instance_id))
                  .unwrap();
@@ -643,7 +732,7 @@ index 68040385..f6a9269b 100644
                  .json::<()>(&self.reqwest_client, self.reqwest_client.post(url.clone()))
                  .await?;
              self.http_gateway = None;
-@@ -588,7 +576,6 @@ impl PocketIc {
+@@ -588,7 +576,6 @@
          method: &str,
          payload: Vec<u8>,
      ) -> Result<RawMessageId, ClientError> {
@@ -651,7 +740,7 @@ index 68040385..f6a9269b 100644
          let raw_canister_call = RawCanisterCall {
              sender: sender.as_slice().to_vec(),
              canister_id: canister_id.as_slice().to_vec(),
-@@ -597,16 +584,41 @@ impl PocketIc {
+@@ -597,16 +584,41 @@
              effective_principal,
              sender_info: None,
          };
@@ -698,7 +787,7 @@ index 68040385..f6a9269b 100644
              .await
              .map_err(|error| error.with_ingress(message_id))?;
          Result::<Vec<u8>, RejectResponse>::from(result).map_err(ClientError::from)
-@@ -619,83 +631,24 @@ impl PocketIc {
+@@ -619,83 +631,24 @@
          &self,
          raw_message_id: RawMessageId,
      ) -> Result<Option<Result<Vec<u8>, RejectResponse>>, ClientError> {
@@ -785,7 +874,7 @@ index 68040385..f6a9269b 100644
      /// Execute an update call on a canister.
      #[instrument(skip(self, payload), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.to_string(), method = %method, payload_len = %payload.len()))]
      pub async fn update_call(
-@@ -1353,21 +1306,6 @@ impl PocketIc {
+@@ -1353,21 +1306,6 @@
          Ok(self.get_subnet(canister_id).await?.is_some())
      }
  
@@ -807,7 +896,7 @@ index 68040385..f6a9269b 100644
      /// Returns the subnet ID of the canister if the canister exists.
      #[instrument(ret, skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string()))]
      pub async fn get_subnet(
-@@ -1410,11 +1348,11 @@ impl PocketIc {
+@@ -1410,11 +1348,11 @@
              sender_delegation: None,
          };
  
@@ -821,7 +910,7 @@ index 68040385..f6a9269b 100644
          let (status, bytes) = exchange
              .bytes(
                  &self.reqwest_client,
-@@ -1428,17 +1366,18 @@ impl PocketIc {
+@@ -1428,17 +1366,18 @@
              return Err(exchange.server_error(status, &bytes));
          }
          let read_state_response: ReadStateResponse =
@@ -843,7 +932,7 @@ index 68040385..f6a9269b 100644
      }
  
      /// This (asynchronous) drop function must be called to drop the PocketIc instance.
-@@ -1452,7 +1391,7 @@ impl PocketIc {
+@@ -1452,7 +1391,7 @@
      pub(crate) async fn do_drop(&mut self) -> Result<(), ClientError> {
          if self.owns_instance {
              let url = self.instance_url();
@@ -852,7 +941,7 @@ index 68040385..f6a9269b 100644
              let (status, bytes) = exchange
                  .bytes(
                      &self.reqwest_client,
-@@ -1498,7 +1437,7 @@ impl PocketIc {
+@@ -1498,7 +1437,7 @@
          response_limit: Option<usize>,
      ) -> Result<T, ClientError> {
          let url = self.instance_url().join(endpoint).unwrap();
@@ -861,7 +950,7 @@ index 68040385..f6a9269b 100644
          exchange.response_limit = response_limit;
          loop {
              let builder = if let Some(operation) = &exchange.context.operation {
-@@ -1530,8 +1469,9 @@ impl PocketIc {
+@@ -1530,8 +1469,9 @@
                                  ))
                                  .unwrap(),
                          );
@@ -872,7 +961,7 @@ index 68040385..f6a9269b 100644
                          });
                      }
                      return Ok(value);
-@@ -1592,67 +1532,12 @@ impl PocketIc {
+@@ -1592,67 +1532,12 @@
              mock_canister_http_response.into();
          self.post(endpoint, raw_mock_canister_http_response).await
      }
@@ -941,7 +1030,7 @@ index 68040385..f6a9269b 100644
      env: &PocketIc,
      canister_id: CanisterId,
      effective_principal: RawEffectivePrincipal,
-@@ -1677,99 +1562,8 @@ where
+@@ -1677,99 +1562,8 @@
      .await
  }
  
@@ -1043,7 +1132,7 @@ index 68040385..f6a9269b 100644
      input: Input,
      f: impl FnOnce(Vec<u8>) -> Fut,
  ) -> Result<Output, ClientError>
-@@ -1782,35 +1576,3 @@ where
+@@ -1782,35 +1576,3 @@
      let output = f(input).await?;
      Ok(decode_args(&output)?)
  }
@@ -1079,10 +1168,9 @@ index 68040385..f6a9269b 100644
 -            .map_err(|e| ClientError::Protocol(e.to_string()));
 -    }
 -}
-diff --git a/src/tests/client_failures/mod.rs b/src/tests/client_failures/mod.rs
-index 8991d2ec..2f93c962 100644
---- a/src/tests/client_failures/mod.rs
-+++ b/src/tests/client_failures/mod.rs
+diff -ruN before/src/tests/client_failures/mod.rs after/src/tests/client_failures/mod.rs
+--- before/src/tests/client_failures/mod.rs	2026-11-08 19:46:46.227385895 +0100
++++ after/src/tests/client_failures/mod.rs	2026-11-08 19:46:46.252216528 +0100
 @@ -1,7 +1,6 @@
  use crate::pocket_ic::{ClientError, PocketIc};
  use std::{
@@ -1092,7 +1180,7 @@ index 8991d2ec..2f93c962 100644
      sync::{Arc, Mutex},
      thread,
      time::{Duration, Instant},
-@@ -13,6 +12,11 @@ struct Step {
+@@ -13,6 +12,11 @@
      body: &'static str,
      extra_length: usize,
      stall: bool,
@@ -1104,7 +1192,7 @@ index 8991d2ec..2f93c962 100644
  }
  impl Step {
      fn reply(path: &'static str, status: u16, body: &'static str) -> Self {
-@@ -22,59 +26,45 @@ impl Step {
+@@ -22,80 +26,63 @@
              body,
              extra_length: 0,
              stall: false,
@@ -1171,6 +1259,16 @@ index 8991d2ec..2f93c962 100644
 -                    .unwrap_or(0);
 -                let mut body = vec![0; length];
 -                socket.read_exact(&mut body).unwrap();
+-                assert_eq!(
+-                    header
+-                        .lines()
+-                        .next()
+-                        .unwrap()
+-                        .split_whitespace()
+-                        .nth(1)
+-                        .unwrap(),
+-                    step.path
+-                );
 +        let recorded = Arc::clone(&requests);
 +        let peer = crate::test_support::http::Peer::spawn(
 +            Some(count),
@@ -1183,22 +1281,14 @@ index 8991d2ec..2f93c962 100644
 +            move |socket, bytes, deadline, _stop| {
 +                let bytes = bytes.into_result().expect("read bounded fixture request");
 +                let step = steps.next().expect("expected fixture step");
-+                let header_end = bytes
-+                    .windows(4)
-+                    .position(|part| part == b"\r\n\r\n")
-+                    .unwrap()
-+                    + 4;
-+                let (header, body) = bytes.split_at(header_end);
-+                let header = std::str::from_utf8(header).unwrap();
-                 assert_eq!(
-                     header
-                         .lines()
-@@ -88,14 +78,26 @@ impl Server {
++                let request = crate::test_support::http::Request::new(&bytes);
++                assert_eq!(request.path, step.path);
                  recorded.lock().unwrap().push(format!(
                      "{}\n{}",
-                     header.lines().next().unwrap(),
+-                    header.lines().next().unwrap(),
 -                    String::from_utf8_lossy(&body)
-+                    String::from_utf8_lossy(body)
++                    request.line,
++                    String::from_utf8_lossy(request.body)
                  ));
 +                if let Some((observed, release)) = step.hold {
 +                    observed.send(()).expect("observe held fixture request");
@@ -1223,7 +1313,7 @@ index 8991d2ec..2f93c962 100644
                  }
                  let response = format!(
                      "HTTP/1.1 {} Test\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-@@ -103,27 +105,24 @@ impl Server {
+@@ -103,27 +90,24 @@
                      step.body.len() + step.extra_length,
                      step.body
                  );
@@ -1263,11 +1353,10 @@ index 8991d2ec..2f93c962 100644
          Arc::try_unwrap(self.requests)
              .unwrap()
              .into_inner()
-@@ -131,14 +130,95 @@ impl Server {
-     }
+@@ -132,14 +116,95 @@
  }
  
-+#[tokio::test]
+ #[tokio::test]
 +async fn malformed_read_state_preserves_codec_kind_and_source_without_replay() {
 +    use crate::pocket_ic::CborErrorKind;
 +    use std::error::Error;
@@ -1306,7 +1395,7 @@ index 8991d2ec..2f93c962 100644
 +    assert_eq!(server.finish().len(), 2);
 +}
 +
- #[tokio::test]
++#[tokio::test]
  async fn missing_server_is_refused_before_any_external_effect() {
      assert!(matches!(
 -        crate::pocket_ic::PocketIcBuilder::new().build().await,
@@ -1317,7 +1406,7 @@ index 8991d2ec..2f93c962 100644
      ));
  }
  
-+#[tokio::test]
+ #[tokio::test]
 +async fn invalid_budgets_are_refused_before_any_request_or_attachment() {
 +    let server = Server::new(vec![]);
 +    for timeout in [Duration::ZERO, Duration::MAX] {
@@ -1357,10 +1446,11 @@ index 8991d2ec..2f93c962 100644
 +    assert_eq!(server.finish().len(), 1);
 +}
 +
- #[tokio::test]
++#[tokio::test]
  async fn instance_listing_uses_only_the_supplied_endpoint() {
      {
-@@ -147,7 +227,9 @@ async fn instance_listing_uses_only_the_supplied_endpoint() {
+         let server = Server::new(vec![Step::reply(
+@@ -147,7 +212,9 @@
              200,
              r#"["Available","Busy"]"#,
          )]);
@@ -1371,7 +1461,7 @@ index 8991d2ec..2f93c962 100644
          assert_eq!(instances, ["Available", "Busy"]);
          assert_eq!(server.finish().len(), 1);
      }
-@@ -170,7 +252,7 @@ async fn client_preserves_failure_sources_and_never_resubmit_lost_requests() {
+@@ -170,7 +237,7 @@
                  _ => unreachable!(),
              }
              let server = Server::new(vec![step]);
@@ -1380,7 +1470,7 @@ index 8991d2ec..2f93c962 100644
              let error = client.tick().await.unwrap_err();
              match (&error, failure) {
                  (ClientError::Transport { .. }, "reset")
-@@ -216,13 +298,17 @@ async fn accepted_operation_is_polled_without_replaying_the_update() {
+@@ -216,13 +283,17 @@
          Step::reply("/read_graph/state/ours", 200, "null"),
          Step::reply("/prune_graph/state/ours", 200, "null"),
      ]);
@@ -1399,7 +1489,7 @@ index 8991d2ec..2f93c962 100644
      assert!(requests[2].starts_with("GET "));
      assert!(requests[3].starts_with("GET "));
      assert!(requests[4].starts_with("DELETE "));
-@@ -238,7 +324,7 @@ async fn lost_poll_retains_our_operation_identity() {
+@@ -238,7 +309,7 @@
          ),
          Step::reply("/read_graph/state/ours", 0, ""),
      ]);
@@ -1408,7 +1498,7 @@ index 8991d2ec..2f93c962 100644
      let error = client.tick().await.unwrap_err();
      let operation = error.request_context().unwrap().operation.as_ref().unwrap();
      assert_eq!(operation.state_label, "state");
-@@ -253,7 +339,7 @@ async fn rejection_remains_distinct_from_transport_failure() {
+@@ -253,7 +324,7 @@
          200,
          r#"{"Err":{"reject_code":"CanisterReject","reject_message":"caller policy","error_code":"CanisterRejectedMessage","certified":false}}"#,
      )]);
@@ -1417,7 +1507,7 @@ index 8991d2ec..2f93c962 100644
      let id = candid::Principal::anonymous();
      let ClientError::Canister(rejection) = client
          .query_call(id, id, "reject", vec![])
-@@ -278,7 +364,7 @@ async fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
+@@ -278,7 +349,7 @@
          Step::reply("/blobstore/", 200, "not hex"),
          Step::reply("/instances/7/", 0, ""),
      ]);
@@ -1426,7 +1516,7 @@ index 8991d2ec..2f93c962 100644
          .with_server_url(server.url.clone())
          .build()
          .await
-@@ -312,7 +398,7 @@ async fn direct_routes_and_failed_deletion_are_fallible_without_drop_replay() {
+@@ -312,7 +383,7 @@
  #[tokio::test]
  async fn creation_decode_and_poll_deadline_keep_request_evidence() {
      let server = Server::new(vec![Step::reply("/instances", 200, "{")]);
@@ -1435,7 +1525,7 @@ index 8991d2ec..2f93c962 100644
          .with_server_url(server.url.clone())
          .build()
          .await
-@@ -321,8 +407,10 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
+@@ -321,8 +392,10 @@
      assert!(matches!(error, ClientError::Json { .. }));
      assert!(error.request_context().unwrap().may_have_executed);
      server.finish();
@@ -1447,7 +1537,7 @@ index 8991d2ec..2f93c962 100644
      let server = Server::new(vec![
          Step::reply(
              "/instances/7/update/tick",
-@@ -331,9 +419,33 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
+@@ -331,9 +404,33 @@
          ),
          delayed,
      ]);
@@ -1483,11 +1573,10 @@ index 8991d2ec..2f93c962 100644
      assert_eq!(
          error
              .request_context()
-@@ -347,6 +459,67 @@ async fn creation_decode_and_poll_deadline_keep_request_evidence() {
-     assert_eq!(server.finish().len(), 2);
+@@ -348,6 +445,67 @@
  }
  
-+#[tokio::test]
+ #[tokio::test]
 +async fn ingress_status_preserves_wire_outcomes_and_failure_custody() {
 +    use crate::pocket_ic::common::rest::{RawEffectivePrincipal, RawMessageId};
 +    let id = RawMessageId {
@@ -1548,10 +1637,11 @@ index 8991d2ec..2f93c962 100644
 +    }
 +}
 +
- #[tokio::test]
++#[tokio::test]
  async fn ingress_id_survives_loss_after_successful_submission() {
      let server = Server::new(vec![
-@@ -357,7 +530,7 @@ async fn ingress_id_survives_loss_after_successful_submission() {
+         Step::reply(
+@@ -357,7 +515,7 @@
          ),
          Step::reply("/instances/7/update/await_ingress_message", 0, ""),
      ]);
@@ -1560,7 +1650,7 @@ index 8991d2ec..2f93c962 100644
      let id = candid::Principal::anonymous();
      let error = client
          .update_call(id, id, "once", vec![7])
-@@ -391,7 +564,7 @@ async fn routed_calls_preserve_payloads_and_await_only_the_accepted_ingress() {
+@@ -391,7 +549,7 @@
              r#"{"Ok":"AP8="}"#,
          ),
      ]);
@@ -1569,7 +1659,7 @@ index 8991d2ec..2f93c962 100644
      let canister = candid::Principal::from_slice(&[3]);
      let sender = candid::Principal::from_slice(&[7]);
      let route = RawEffectivePrincipal::SubnetId(vec![9]);
-@@ -448,7 +621,7 @@ async fn creation_preserves_supported_topology_state_gateway_features_and_time()
+@@ -448,7 +606,7 @@
      ]);
      for auto_progress in [false, true] {
          let enabled = Some(IcpFeaturesConfig::DefaultConfig);
@@ -1578,11 +1668,10 @@ index 8991d2ec..2f93c962 100644
              .with_server_url(server.url.clone())
              .with_state_dir("/caller-owned/state".into())
              .with_nns_subnet()
-diff --git a/src/tests/client_failures/snapshot.rs b/src/tests/client_failures/snapshot.rs
-index 518ebdaf..ac3d30ec 100644
---- a/src/tests/client_failures/snapshot.rs
-+++ b/src/tests/client_failures/snapshot.rs
-@@ -91,7 +91,7 @@ async fn sync_copy_preserves_exact_dto_bytes_sparse_globals_and_sender() {
+diff -ruN before/src/tests/client_failures/snapshot.rs after/src/tests/client_failures/snapshot.rs
+--- before/src/tests/client_failures/snapshot.rs	2026-11-08 19:46:46.227563472 +0100
++++ after/src/tests/client_failures/snapshot.rs	2026-11-08 19:46:46.252254215 +0100
+@@ -91,7 +91,7 @@
      ));
      steps.extend(call_steps(encode_args(()).unwrap()));
      let server = Server::new(steps);
@@ -1591,7 +1680,7 @@ index 518ebdaf..ac3d30ec 100644
      let mut copy = transfer(metadata());
      copy.advance(&client).await.unwrap();
      assert_eq!(copy.uploaded_snapshot(), Some([2].as_slice()));
-@@ -155,7 +155,7 @@ async fn partial_and_oversized_regions_refuse_without_uploading_or_losing_custod
+@@ -155,7 +155,7 @@
              encode_args((ReadCanisterSnapshotDataResult { chunk },)).unwrap(),
          ));
          let server = Server::new(steps);
@@ -1600,7 +1689,7 @@ index 518ebdaf..ac3d30ec 100644
          let mut copy = transfer(metadata());
          copy.advance(&client).await.unwrap();
          assert!(matches!(
-@@ -191,7 +191,7 @@ async fn chunk_hash_and_total_budget_are_checked_before_upload() {
+@@ -191,7 +191,7 @@
              encode_args((ReadCanisterSnapshotDataResult { chunk: data },)).unwrap(),
          ));
          let server = Server::new(steps);
@@ -1609,7 +1698,7 @@ index 518ebdaf..ac3d30ec 100644
          copy.advance(&client).await.unwrap();
          assert!(matches!(
              copy.advance(&client).await,
-@@ -214,7 +214,7 @@ async fn interrupted_upload_retains_id_ingress_and_no_replay() {
+@@ -214,7 +214,7 @@
      lost[1].status = 0;
      steps.extend(lost);
      let server = Server::new(steps);
@@ -1618,7 +1707,7 @@ index 518ebdaf..ac3d30ec 100644
      let mut copy = transfer(metadata());
      copy.advance(&client).await.unwrap();
      let error = copy.advance(&client).await.unwrap_err();
-@@ -235,15 +235,23 @@ async fn interrupted_upload_retains_id_ingress_and_no_replay() {
+@@ -235,15 +235,23 @@
  #[tokio::test]
  async fn cancelled_metadata_upload_preserves_accepted_ingress() {
      let mut steps = uploaded_steps();
@@ -1649,7 +1738,7 @@ index 518ebdaf..ac3d30ec 100644
      assert!(matches!(copy.status(), TransferStatus::UploadingMetadata));
      assert!(copy.ingress().is_some());
      assert!(copy.uploaded_snapshot().is_none());
-@@ -260,7 +268,7 @@ async fn reply_limits_and_codec_errors_keep_accepted_ingress() {
+@@ -260,7 +268,7 @@
              encode_args((vec![0u8; 1000],)).unwrap()
          };
          let server = Server::new(call_steps(reply));
@@ -1658,7 +1747,7 @@ index 518ebdaf..ac3d30ec 100644
          let mut budget = limits().call;
          if mode == "http" {
              budget.http_bytes = 100;
-@@ -351,7 +359,7 @@ async fn async_copy_bounds_each_region_and_preserves_valid_chunk_store() {
+@@ -351,7 +359,7 @@
          steps.extend(call_steps(encode_args(()).unwrap()));
      }
      let server = Server::new(steps);
@@ -1667,11 +1756,9 @@ index 518ebdaf..ac3d30ec 100644
      let mut copy = transfer(meta);
      while !matches!(copy.status(), TransferStatus::Complete) {
          copy.advance(&client).await.unwrap();
-diff --git a/current/src/tests/codec_errors.rs b/src/tests/codec_errors.rs
-new file mode 100644
-index 00000000..faeccfe2
---- /dev/null
-+++ b/src/tests/codec_errors.rs
+diff -ruN before/src/tests/codec_errors.rs after/src/tests/codec_errors.rs
+--- before/src/tests/codec_errors.rs	1970-01-01 01:00:00.000000000 +0100
++++ after/src/tests/codec_errors.rs	2026-11-08 19:46:46.252294946 +0100
 @@ -0,0 +1,33 @@
 +use super::super::{CborErrorKind, ClientError, error::cbor_error};
 +use ic_platform::{certification::cbor::CborError, ic_protocol::decode_subnet_metrics};
@@ -1706,10 +1793,9 @@ index 00000000..faeccfe2
 +        assert!(error.request_context().is_none());
 +    }
 +}
-diff --git a/src/tests.rs b/src/tests.rs
-index 328d00a0..f97c8622 100644
---- a/src/tests.rs
-+++ b/src/tests.rs
+diff -ruN before/src/tests.rs after/src/tests.rs
+--- before/src/tests.rs	2026-11-08 19:46:46.227723403 +0100
++++ after/src/tests.rs	2026-11-08 19:46:46.252119613 +0100
 @@ -1,6 +1,83 @@
  use super::{ErrorCode, RejectCode, RejectResponse};
  use strum::IntoEnumIterator as _;

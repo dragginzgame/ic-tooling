@@ -70,9 +70,9 @@ checksum = "3bc62ac97cc33321f50863d514c3bc38a453947a8f9e781137e47c7401020aed"
 
 [[package]]
 name = "arc-swap"
-version = "1.9.3"
+version = "1.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "380962b3d93b99642e50b9febf72c071e97e8b32d86eae9cf4ef582bb960ae6e"
+checksum = "db4c94f57a570fce5d381be3289b3f79aef6332d72948fe82ab5772e423ccf92"
 dependencies = [
  "rustversion",
 ]
@@ -715,9 +715,9 @@ dependencies = [
 
 [[package]]
 name = "crypto-common"
-version = "0.1.7"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
+checksum = "1bfb12502f3fc46cca1bb51ac28df9d618d813cdc3d2f25b9fe775a34af26bb3"
 dependencies = [
  "generic-array",
  "typenum",
@@ -889,7 +889,7 @@ checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer 0.10.4",
  "const-oid",
- "crypto-common 0.1.7",
+ "crypto-common 0.1.6",
  "subtle",
 ]
 
@@ -1233,9 +1233,9 @@ dependencies = [
 
 [[package]]
 name = "generic-array"
-version = "0.14.7"
+version = "0.14.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
+checksum = "4bb6743198531e02858aeaea5398fcc883e71851fcbcb5a2f773e2fb6cb1edf2"
 dependencies = [
  "typenum",
  "version_check",
@@ -1560,6 +1560,7 @@ dependencies = [
  "sha2 0.10.9",
  "sha2 0.11.1",
  "thiserror 2.0.21",
+ "toko-tooling",
  "toml 1.2.1+spec-1.1.0",
  "toml_edit 0.25.19+spec-1.1.0",
 ]
@@ -1603,6 +1604,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "toko-tooling",
  "wasmparser",
  "wat",
 ]
@@ -1620,6 +1622,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 2.0.21",
+ "toko-tooling",
 ]
 
 [[package]]
@@ -1629,6 +1632,7 @@ dependencies = [
  "ic-host-artifacts",
  "reqwest",
  "tokio",
+ "toko-tooling",
 ]
 
 [[package]]
@@ -1641,6 +1645,7 @@ dependencies = [
  "ic-host-fs",
  "libc",
  "rustix",
+ "toko-tooling",
 ]
 
 [[package]]
@@ -1648,6 +1653,7 @@ name = "ic-host-text"
 version = "0.74.3"
 dependencies = [
  "serde",
+ "toko-tooling",
  "unicode-width 0.2.3",
  "yaml_serde",
 ]
@@ -1669,6 +1675,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.21",
  "tokio",
+ "toko-tooling",
  "url",
 ]
 
@@ -1679,13 +1686,14 @@ dependencies = [
  "clap",
  "ic-host-artifacts",
  "ic-host-fs",
+ "toko-tooling",
 ]
 
 [[package]]
 name = "ic-logging"
-version = "0.24.11"
+version = "0.24.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd4b62fa52e1d9625e05dc7992b5327bf3e2f3dcccd23abd833223c84b35d450"
+checksum = "27ff9c82c40dc2b947966e3a5188a4087cae736f4052bbc4e8b2d59dcecf8afd"
 
 [[package]]
 name = "ic-management-canister-types"
@@ -1700,9 +1708,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33e040a299213e54bc4a37142a9d164a7daaf74181fd5520bba57fd7acb3a2cd"
+checksum = "64ddcdbd80514c7d7fbfa18cebaff47783031a2dad4876e68c25d3cf4158d4a1"
 dependencies = [
  "candid",
  "candid_parser",
@@ -1725,9 +1733,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-macros"
-version = "0.20.0"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3762781b46b2ee0786b90cf66287bd7da8d5359d50df5d4407bbf5ff76f0d2b"
+checksum = "bdabd383167fac4eea44b43991848c1a5d83f363fcb87ded4284d71f50a309fc"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1736,9 +1744,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-runtime"
-version = "0.20.0"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edd7cdf5798dc7830346a971d33a9790073d769d676d8902af3f5928a3a434f7"
+checksum = "76a317f1b3d57e816a23c9111bc11b4c4f0ad742bd42d562f4d632d911542dc3"
 dependencies = [
  "ic-platform-macros",
  "ic-platform-runtime-guard",
@@ -1751,15 +1759,15 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-runtime-guard"
-version = "0.20.0"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bebca505403a4bea17b9f6d58f3e5f0eecca184c059cd90063481dbc1f015625"
+checksum = "29a7c6fff95f8feccef0f5b0a4c22ab8ef7072b11bd91127e19aa9677a77ae6c"
 
 [[package]]
 name = "ic-platform-types"
-version = "0.18.2"
+version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c1c64ed510e73c864ed8384c3d24047a966a2cf367ab3bd096e60f6541fc7d1"
+checksum = "92af644eb1521b659274d3888e561bacca4abb92fd615403405a7a91baf0ed1e"
 dependencies = [
  "crc32fast",
  "data-encoding",
@@ -1779,6 +1787,7 @@ dependencies = [
  "hex",
  "ic-host-artifacts",
  "ic-host-fs",
+ "ic-host-http",
  "ic-host-process",
  "ic-logging",
  "ic-management-canister-types",
@@ -1793,6 +1802,7 @@ dependencies = [
  "strum",
  "thiserror 2.0.21",
  "tokio",
+ "toko-tooling",
  "tracing",
  "tracing-subscriber",
  "wasm-encoder",
@@ -1818,6 +1828,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "toko-tooling",
 ]
 
 [[package]]
@@ -1827,6 +1838,7 @@ dependencies = [
  "ic-platform-runtime",
  "ic-wire",
  "serde",
+ "toko-tooling",
 ]
 
 [[package]]
@@ -1863,9 +1875,9 @@ dependencies = [
 
 [[package]]
 name = "ic-wire"
-version = "0.17.12"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f153b6cf7ab5239b1887db98c873b930abc76d85c08e51e3b259131ba775039d"
+checksum = "16760e525bca7fa5c4042176551bd551a6235e39cec08564d1ecfffd20e2b130"
 dependencies = [
  "bytemuck",
  "postcard",
@@ -3693,6 +3705,12 @@ dependencies = [
  "pin-project-lite",
  "tokio",
 ]
+
+[[package]]
+name = "toko-tooling"
+version = "0.36.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de0dd05b6437061622a76942baa25d40d2181497e7ba66d9fd809132a3082936"
 
 [[package]]
 name = "toml"

@@ -1,102 +1,81 @@
 # Current handoff
 
-## Published deployment — 2026-11-08
+## Authorized deployment — 2026-11-08
 
-Frozen batch `batch-0sSkZugM`, captured from `4c3bb1f4`, delivered and published
-all four affected groups. Normal main was fast-forwarded to `66c718ad`; this
-documentation update follows that release commit.
+The maintainer requested deployment of the reviewed local batch. Selected releases
+are Foundation 0.76.1 (patch), then Build 0.81.0 and Testkit 0.95.0 (minor).
+Tools 0.88.0 and Text 0.74.3 have no product changes selected for publication.
+Use the standard frozen workflow against `origin/main` and crates.io; separate
+batches are required for the different increments. Managed execution remains
+under `target/release-frozen/`, with durable `.git/release-state/frozen/` custody.
+No sibling deployment or artifact cleanup is authorized. Later normal-checkout
+edits are deferred and must survive reconciliation.
 
-| Group | Published version | Release commit |
-| --- | --- | --- |
-| Foundation | 0.76.0, all five packages | `68e975d9` |
-| Build | 0.80.0 | `eaef2491` |
-| Host Tools | 0.88.0 | `d2db2799` |
-| Testkit | 0.94.0 | `66c718ad` |
+## Reviewed source
 
-All four group tags and main were pushed normally. Official registry checksums
-and clean archive VCS identities matched all eight package releases. Text remains
-at 0.74.3; Dev and the Wasm probe remain private. Five active groups publish nine
-packages. The frozen command already published; do not run a second `make publish`.
+Toko Tooling 0.36.0 is selected once as an exact root workspace dependency.
+All 11 real packages inherit its dev-dependency with a cargo-machete exemption.
+The virtual root and real qualification packages remain; the former metadata
+selection and separate `toko-tooling.lock` are removed. Cargo.lock, all members
+and the authenticated 185-file snapshot agree. Producer archive SHA-256 is
+`de0dd05b6437061622a76942baa25d40d2181497e7ba66d9fd809132a3082936`.
+Update through Cargo and `make shared-tooling-update`; installing an existing
+lock selection uses `make shared-tooling-install`.
 
-## Delivered changes
+Build has one target-mode configuration/acquisition plan, shared batch accounting,
+reused Cargo fixtures and one release gate constructor. Maintenance builders now
+return `Result`, reject isolated mode before effects and clear when isolated
+mode is selected. Wasm batches return Host's `BatchLabelError` directly; the
+single-variant wrapper and forwarding acquisition/lock helpers are removed.
+Distinct cache formats, fingerprints, lock order, retention and failure timings
+remain unchanged; the proposed format/timing merges were rejected.
 
-Toko Tooling 0.34.0 is selected through root workspace metadata and
-`toko-tooling.lock`, with archive SHA-256
-`5ca8ad09ad9359bc4945a4afdaafce301dd5a4b4955cd5c9f5058d7a54ffcf10`.
-The authenticated installer preserved recorded entrypoints and local edits;
-all Cargo dependency declarations for Toko are removed. The two private members
-contain real qualification code and remain. Use `make shared-tooling-update` for
-updates and `make shared-tooling-install` to reinstall the locked selection.
-Release and direct-publication adapters check tooling before effects.
+Testkit's HTTP reader delegates to Host HTTP under the original absolute deadline,
+retaining typed allocation failures and accepted-operation context. It keeps one
+concrete `PocketIcInstance`; workspace callers, tests and docs are migrated.
+HTTP fixtures share borrowed request views and the orphan path waiter is removed.
+The cumulative provenance patch reconstructs the unchanged donor/upstream source;
+licenses, algorithm choices, protocol bytes, async/no-replay and caller custody
+remain unchanged. Management DTOs retain the exact 0.11.0 identity.
 
-The architectural reduction removes the generic Artifacts Wasm-encoding surface,
-orphan scripts and duplicate fixtures. Testkit encodes its raw-reply fixture
-directly, retaining an independent exact-byte contract. Installation, snapshots
-and diagnostics are inherent async PocketIC methods; the three extension traits
-and `pic::prelude` are removed. Build's domain reports expose shared outcomes
-through `report.batch`. Startup keeps instance admission and failure custody on
-one owner. See the group ledgers for caller changes.
+Wire now selects published 0.18.0, once in the resolved graph. Archive SHA-256 is
+`16760e525bca7fa5c4042176551bd551a6235e39cec08564d1ecfffd20e2b130`.
+Native helpers and the private Wasm probe retain Serde contracts and explicit
+budgets. Direct consumer Wire selections must align for `Limits` and error types.
+No workspace caller uses the removed definition-level bulk-lint API.
 
-Host Tools splits binary `candid` decoding from the optional textual
-`candid-service` parser. DID/Wasm comparisons select `candid-service,ic-interface`.
-Platform's minimum is 0.27.0. Build's HMAC implementation adopts HMAC 0.13 and its
-matching SHA2 0.11 dependency with exact-byte regression coverage; other SHA2
-consumers retain their existing identity. Management DTOs remain exactly 0.11.0.
-Imported client protocol bytes, async/no-replay semantics and caller custody are
-unchanged. Rust remains 1.99.1 / edition 2024.
+The normal lock also contains preserved external patch selections. Concurrent
+updates selected Logging 0.24.12, Types 0.18.3 and Runtime/macros/guard 0.20.3;
+review and qualify the captured lock, never replace later edits with old backups.
+Earlier preserved selections include arc-swap 1.9.4, crypto-common 0.1.6 and
+generic-array 0.14.9. No unrelated source changes were found in the reviewed batch.
 
-Publication now reuses equivalent qualified lint evidence through the nested
-Make entrypoints ([#345](https://github.com/dragginzgame/ic-tooling/issues/345)).
-Only repeated adjacent leading checkout tool-directory pairs are normalized;
-source, flags and effective precedence changes still invalidate reuse.
-All four actual publications reported qualified-lint reuse.
+## Evidence and consumer adoption
 
-## Qualification
+Focused Linux checks passed for Build artifact/cache/batch behavior and all
+three affected Cargo/Wasm integration targets, native Testkit transport and
+ownership, installed PocketIC 16.1 management/snapshot/gateway contracts,
+management DTO identity, Clippy and doctests. Wire's nine adapter tests, private
+probe budget test and installed native/Wasm typed-call test passed, alongside
+native/Wasm graph policies and Wasm compilation. Tooling fixtures, source
+reconstruction, dependency admission, formatting and 862 documentation links
+passed. These are focused results, not the new batch's complete release gate.
+Evidence remains under `target/tooling036-migration/`, `target/complexity-cleanup/`,
+`target/complexity-next-two/` and `target/wire018-adoption/`.
+Native macOS 15 Intel/Apple Silicon qualification remains separate/asynchronous.
 
-All four complete Linux x86-64 release gates passed. Coverage includes workspace
-Clippy, formatting/hooks, docs, release/recovery and routing fixtures, native/Wasm
-dependency graphs, package archives and doctests, installed PocketIC 16.1
-management/snapshot/gateway contracts, and the complete workspace tests.
-Publication retained fresh archive/provenance admission, followed by independent
-official registry checksum and VCS readbacks for all eight packages.
+Known external source adoption sites are Canic's
+`crates/canic-tests/src/pic/artifacts/mod.rs` (handle the fallible maintenance
+builder) and Auth's `apps/qualification/runner/tests/signatures/main.rs` (remove
+the instance owner type argument). Sibling sources were not changed or qualified.
 
-Native macOS qualification remains separate and asynchronous. These explicit
-runs select final published commit `66c718adb5abe65d09d0c29cbf8235d93aeee620`:
+## Previous delivered baseline and retained custody
 
-- [CI](https://github.com/dragginzgame/ic-tooling/actions/runs/42509005472).
-- [Build optimizer](https://github.com/dragginzgame/ic-tooling/actions/runs/42509007987).
-- [Testkit runtime](https://github.com/dragginzgame/ic-tooling/actions/runs/42509010662).
-- [Browser fixtures](https://github.com/dragginzgame/ic-tooling/actions/runs/42509013392).
-
-All four were running at dispatch readback. No new native macOS 15 Intel or
-Apple Silicon pass is claimed. Their explicit concurrency identities survive
-later routine pushes; do not wait solely for hosted qualification during delivery.
-
-## Preserved work and recovery
-
-The ordinary checkout contains all delivered versions. Unrelated lock selections
-remain uncommitted and outside the released source: Wire 0.17.14,
-Runtime/macros/guard 0.20.2, arc-swap 1.9.4, crypto-common 0.1.6 and generic-array
-0.14.9. Only their external-selection patch was reapplied after reconciliation,
-preserving the new workspace versions. Locked offline metadata confirms all
-11 members. The reconciled lock is preserved on
-`preservation/audit-toko034-lock-deployed-20261108` (`2138838f`); original selections
-remain on `preservation/audit-toko034-lock-20261108` and older preservation refs.
-Never overwrite newer work with an older backup.
-
-Logs, deferred locks, registry archives/readbacks and dispatch evidence remain in
-`target/deployment-audit-toko034/`. Durable Git, plans, receipts and batch intents
-remain under `.git/release-state/frozen/`; captured checkouts, tools and builds
-remain under `target/release-frozen/`. No cleanup or batch retirement was run.
-Failed batches `batch-98dqLbbV` and `batch-H2b76S8n` stopped before tag/push/upload;
-their test-caller and routing-fixture defects were fixed before the successful
-capture. Do not resume them against already-published versions.
-
-Earlier deployment identities and retained recovery evidence remain in the
-[preceding handoff](https://github.com/dragginzgame/ic-tooling/blob/4c3bb1f44a63ed7425e916fd569a12b49a7f85df/docs/status/current.md).
-The Native crate remains retired, with its historical ledger and refs preserved.
-
-Consumer adoption remains owned by
-[Canic #744](https://github.com/dragginzgame/canic/issues/744) and
-[Query #119](https://github.com/dragginzgame/ic-query/issues/119).
-The supplier versions are now published; consumer qualification is separate.
+The preceding deployment published Foundation 0.76.0, Build 0.80.0, Tools 0.88.0
+and Testkit 0.94.0 through completed frozen batch `batch-0sSkZugM`; Text stayed
+0.74.3. Its complete Linux gates, registry checksum/VCS verification, native CI
+links and earlier preservation refs are recorded in the
+[previous handoff](https://github.com/dragginzgame/ic-tooling/blob/eeee3e68/docs/status/current.md).
+Logs remain under `target/deployment-audit-toko034/`. Retain all frozen batches,
+source pins, deferred work and recovery records. Failed older attempts must not
+be resumed against already-published versions. No cleanup or retirement was run.

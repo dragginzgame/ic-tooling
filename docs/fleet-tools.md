@@ -32,9 +32,19 @@ bash scripts/dev/cloc.sh --check-tools
 
 The workspace report discovers members through locked, offline Cargo metadata.
 It shows Library/app, Tests, Examples, Benchmarks, Build/tooling, Unclassified
-and Total columns. Nested members, `target/`, Git internals and Cargo's configured
-output directory are excluded from their containing package's counts. Each
-admitted Rust source path counts once, including copies with identical bytes.
+and Total columns. Nested members, Git internals, `.tools/`, `.tmp/`, `.cache/`
+and `node_modules/` are excluded. Workspace/package-root `target/`, `build/`,
+`dist/`, `coverage/`, `vendor/`, `recovery-evidence/`, Cargo's configured output
+and the active reporting scratch directory are also excluded. Source modules
+such as `src/target/` still count.
+
+For a workspace whose manifest is tracked or nonignored in Git, discovery admits
+tracked files and nonignored untracked files, excluding custom ignored scratch
+and build output. The same admission applies to Cargo targets and module edges.
+Source archives and ignored fixture workspaces use filesystem discovery with
+the exclusions above. Each admitted Rust source path counts once, including
+copies with identical bytes. Retained source fixtures and unreachable source
+still belong to this maintenance footprint; this is not a compiled-code count.
 
 The unified [cloc.sh](../scripts/dev/cloc.sh) reports workspace summaries by
 default; `-d 0` adds individual crate rows without changing totals. Terminal names

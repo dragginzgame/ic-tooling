@@ -36,8 +36,16 @@ fn completed_instances_must_still_meet_the_startup_deadline() {
         server_url: "http://localhost/",
         server: None,
     };
-    let instance = pending.admit(7_u8).unwrap();
-    assert_eq!(*instance.instance(), 7);
+    let client = || {
+        crate::pocket_ic::PocketIc::new_from_existing_instance(
+            "http://localhost/".parse().unwrap(),
+            7,
+            Duration::from_secs(1),
+        )
+        .unwrap()
+    };
+    let instance = pending.admit(client()).unwrap();
+    assert_eq!(instance.instance().instance_id, 7);
     assert!(pending.server.is_none());
     let expired = super::StartupDeadline {
         deadline: started,
@@ -49,7 +57,7 @@ fn completed_instances_must_still_meet_the_startup_deadline() {
         server: None,
     };
     let error = pending
-        .admit(7_u8)
+        .admit(client())
         .err()
         .expect("completed instance after the deadline must refuse admission");
     assert!(

@@ -19,25 +19,7 @@ use std::io::Write as _;
 
 #[cfg(unix)]
 #[test]
-fn client_drops_before_its_managed_server() {
-    use std::cell::Cell;
-
-    struct ClientDrop<'a> {
-        pid: u32,
-        observed: &'a Cell<bool>,
-        mutated: bool,
-    }
-    impl Drop for ClientDrop<'_> {
-        fn drop(&mut self) {
-            assert!(self.mutated, "mutation must affect the retained client");
-            assert!(
-                process_state(self.pid).is_some(),
-                "server stopped before client drop"
-            );
-            self.observed.set(true);
-        }
-    }
-
+fn client_owner_retains_server_through_borrow_and_transfer() {
     let script = TestServerScript::new(
         "owner-drop-order",
         "#!/bin/sh\nprintf '34567\\n' > \"$2\"\nexec sleep 30\n",
@@ -47,21 +29,23 @@ fn client_drops_before_its_managed_server() {
         .start_managed_server()
         .unwrap();
     let pid = server.process_id();
-    let observed = Cell::new(false);
     let mut owned = PocketIcInstance {
-        instance: ClientDrop {
-            pid,
-            observed: &observed,
-            mutated: false,
-        },
+        instance: crate::pocket_ic::PocketIc::new_from_existing_instance(
+            server.url().parse().unwrap(),
+            7,
+            Duration::from_secs(1),
+        )
+        .unwrap(),
         server: Some(server),
     };
-    owned.instance_mut().mutated = true;
-    assert_eq!(owned.instance().pid, pid);
+    owned.instance_mut().instance_id = 8;
+    assert_eq!(owned.instance().instance_id, 8);
     assert_eq!(owned.server().unwrap().process_id(), pid);
-    assert!(!observed.get());
-    drop(owned);
-    assert!(observed.get());
+    let (client, server) = owned.into_parts();
+    assert!(process_state(pid).is_some());
+    drop(client);
+    assert!(process_state(pid).is_some());
+    drop(server);
     assert_eq!(process_state(pid), None);
 }
 

@@ -10,6 +10,9 @@ description = "Bounded structural Wasm inspection CLI"
 readme = "README.md"
 publish = ["crates-io"]
 
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
 [dependencies]
 clap = { workspace = true, features = ["derive"] }
 ic-host-artifacts = { workspace = true, features = ["wasm"] }
@@ -17,6 +20,7 @@ ic-host-fs.workspace = true
 
 [dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

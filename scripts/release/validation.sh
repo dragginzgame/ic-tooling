@@ -19,39 +19,38 @@ gate_directory() {
     mkdir -p "$state"
     mktemp -d "$state/$group-gate.XXXXXX"
 }
+read_gate() {
+    jq -er --arg source "$source_sha" --arg group "$group" \
+        'select(.schema == 1 and .source == $source and .group == $group) | .directory' "$pointer"
+}
+create_gate() {
+    perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
+        "$directory/baseline.json" "$directory/plan.json" "$directory/context.json"
+    rustc -vV > "$directory/rustc.txt"
+    cargo -V > "$directory/cargo.txt"
+    uname -srm > "$directory/host.txt"
+    jq -cnS --arg source "$source_sha" --arg group "$group" --arg directory "$directory" \
+        '{schema:1,source:$source,group:$group,directory:$directory}' > "$1"
+}
 case $operation in
     plan)
         [[ ! -e $pointer && ! -L $pointer ]]
         directory=$(gate_directory)
         bash "$root/scripts/release/validation-baseline.sh" "$source_sha" "$directory/baseline.json"
-        perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
-            "$directory/baseline.json" "$directory/plan.json" "$directory/context.json"
-        rustc -vV > "$directory/rustc.txt"
-        cargo -V > "$directory/cargo.txt"
-        uname -srm > "$directory/host.txt"
-        jq -cnS --arg source "$source_sha" --arg group "$group" --arg directory "$directory" \
-            '{schema:1,source:$source,group:$group,directory:$directory}' > "$pointer"
+        create_gate "$pointer"
         ;;
     fork)
         destination=$3
         [[ ! -e $destination && ! -L $destination ]]
-        previous=$(jq -er --arg source "$source_sha" --arg group "$group" \
-            'select(.schema == 1 and .source == $source and .group == $group) | .directory' "$pointer")
+        previous=$(read_gate)
         perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
             "$previous/baseline.json" "$previous/plan.json" "$previous/context.json" --check
         directory=$(gate_directory)
         cp -p "$previous/baseline.json" "$directory/baseline.json"
-        perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
-            "$directory/baseline.json" "$directory/plan.json" "$directory/context.json"
-        rustc -vV > "$directory/rustc.txt"
-        cargo -V > "$directory/cargo.txt"
-        uname -srm > "$directory/host.txt"
-        jq -cnS --arg source "$source_sha" --arg group "$group" --arg directory "$directory" \
-            '{schema:1,source:$source,group:$group,directory:$directory}' > "$destination"
+        create_gate "$destination"
         ;;
     run)
-        directory=$(jq -er --arg source "$source_sha" --arg group "$group" \
-            'select(.schema == 1 and .source == $source and .group == $group) | .directory' "$pointer")
+        directory=$(read_gate)
         perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
             "$directory/baseline.json" "$directory/plan.json" "$directory/context.json" --check
         CARGO_NET_OFFLINE=true VALIDATION_REPOSITORY_ROOT="$PWD" VALIDATION_LOG_DIR="$directory/logs" \
@@ -64,7 +63,7 @@ case $operation in
         if [[ "$operation" == receipt ]]; then
             perl "$root/scripts/release/validation-proof.pl" check "$source_sha" "$group" "$pointer" > /dev/null
         fi
-        directory=$(jq -er .directory "$pointer")
+        directory=$(read_gate)
         perl "$root/scripts/release/select-validation.pl" "$source_sha" "$group" \
             "$directory/baseline.json" "$directory/plan.json" "$directory/context.json" --check > /dev/null
         [[ $(rustc -vV) == "$(cat "$directory/rustc.txt")" && $(cargo -V) == "$(cat "$directory/cargo.txt")" &&

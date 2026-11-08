@@ -10,7 +10,7 @@ use ic_platform_types::principal::ExternalPrincipal as Principal;
 /// The value contains no synchronization. A [`super::PocketIcBaselineRecipe`]
 /// can own it as its fixture in a [`super::CachedPocketIcBaselinePool`].
 pub struct CachedPocketIcBaseline<T> {
-    instance: PocketIcInstance<PocketIc>,
+    instance: PocketIcInstance,
     snapshots: ControllerSnapshots,
     metadata: T,
 }
@@ -26,7 +26,7 @@ impl<T> CachedPocketIcBaseline<T> {
     /// # Errors
     /// Returns a controller snapshot error if target admission or snapshot capture fails.
     pub async fn capture<I>(
-        instance: PocketIcInstance<PocketIc>,
+        instance: PocketIcInstance,
         targets: I,
         metadata: T,
     ) -> Result<Self, ControllerSnapshotError>

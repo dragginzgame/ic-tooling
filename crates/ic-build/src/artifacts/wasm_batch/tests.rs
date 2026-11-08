@@ -5,8 +5,8 @@ use ic_host_artifacts::batch::BatchLabelError;
 use ic_host_process::testing::write_executable_script;
 
 use super::{
-    BatchMaintenanceTracker, LabeledWasmBuildSpec, WasmBuildBatchContractError,
-    WasmBuildBatchProgressEvent, build_wasm_canisters_cached_batch,
+    BatchMaintenanceTracker, LabeledWasmBuildSpec, WasmBuildBatchProgressEvent,
+    build_wasm_canisters_cached_batch,
 };
 use crate::artifacts::{
     CacheBatchEntry, CacheRetentionLimits, SharedIncrementalTargetMaintenanceConfig,
@@ -286,17 +286,8 @@ fn batch_rejects_invalid_labels_before_progress_or_build_work() {
         spawn_cargo,
     )
     .expect_err("empty label must reject the batch");
-    assert_eq!(
-        empty_error,
-        WasmBuildBatchContractError::Labels(BatchLabelError::Empty { index: 0 })
-    );
+    assert_eq!(empty_error, BatchLabelError::Empty { index: 0 });
     assert_eq!(progress_events, 0);
-    assert_eq!(
-        std::error::Error::source(&empty_error)
-            .unwrap()
-            .downcast_ref::<BatchLabelError>(),
-        Some(&BatchLabelError::Empty { index: 0 })
-    );
 
     let duplicate = [
         LabeledWasmBuildSpec::new("same", invalid.clone()),
@@ -305,11 +296,11 @@ fn batch_rejects_invalid_labels_before_progress_or_build_work() {
     assert_eq!(
         build_wasm_canisters_cached_batch(&duplicate, None, spawn_cargo,)
             .expect_err("duplicate labels must reject the batch"),
-        WasmBuildBatchContractError::Labels(BatchLabelError::Duplicate {
+        BatchLabelError::Duplicate {
             label: "same".to_owned(),
             first_index: 0,
             duplicate_index: 1,
-        })
+        }
     );
 }
 
@@ -362,7 +353,8 @@ fn batch_maintenance_configures_each_shared_target_once() {
         CONFIGURATION_LIMITS,
     )
     .with_shared_incremental_target("shared-a")
-    .with_shared_incremental_target_maintenance(maintenance);
+    .with_shared_incremental_target_maintenance(maintenance)
+    .unwrap();
     let second = WasmBuildSpec::new(
         Path::new("."),
         Path::new("exact-b"),
@@ -371,7 +363,8 @@ fn batch_maintenance_configures_each_shared_target_once() {
         CONFIGURATION_LIMITS,
     )
     .with_shared_incremental_target("shared-a")
-    .with_shared_incremental_target_maintenance(maintenance);
+    .with_shared_incremental_target_maintenance(maintenance)
+    .unwrap();
     let other = WasmBuildSpec::new(
         Path::new("."),
         Path::new("exact-c"),
@@ -380,7 +373,8 @@ fn batch_maintenance_configures_each_shared_target_once() {
         CONFIGURATION_LIMITS,
     )
     .with_shared_incremental_target("shared-b")
-    .with_shared_incremental_target_maintenance(maintenance);
+    .with_shared_incremental_target_maintenance(maintenance)
+    .unwrap();
     let isolated = WasmBuildSpec::new(
         Path::new("."),
         Path::new("exact-d"),
@@ -415,10 +409,12 @@ fn batch_maintenance_distinguishes_workspaces_and_deduplicates_aliases() {
         SharedIncrementalTargetMaintenanceConfig::new(CacheRetentionLimits::new(), Duration::ZERO);
     let first = first
         .with_shared_incremental_target("shared")
-        .with_shared_incremental_target_maintenance(maintenance);
+        .with_shared_incremental_target_maintenance(maintenance)
+        .unwrap();
     let second = second
         .with_shared_incremental_target("shared")
-        .with_shared_incremental_target_maintenance(maintenance);
+        .with_shared_incremental_target_maintenance(maintenance)
+        .unwrap();
     let alias = first
         .clone()
         .with_shared_incremental_target(alias_root.join("alias/shared"));
@@ -471,7 +467,8 @@ fn batch_maintenance_rejects_conflicting_target_policies() {
     let first = LabeledWasmBuildSpec::new(
         "fixture",
         spec.with_shared_incremental_target("shared")
-            .with_shared_incremental_target_maintenance(maintenance),
+            .with_shared_incremental_target_maintenance(maintenance)
+            .unwrap(),
     );
     let second = LabeledWasmBuildSpec::new(
         "conflict",
@@ -481,7 +478,8 @@ fn batch_maintenance_rejects_conflicting_target_policies() {
             .with_shared_incremental_target_maintenance(
                 maintenance
                     .with_failure_mode(SharedIncrementalTargetMaintenanceFailureMode::BestEffort),
-            ),
+            )
+            .unwrap(),
     );
     let mut calls = 0;
     let report = build_wasm_canisters_cached_batch(&[first, second], None, |command| {
@@ -528,7 +526,8 @@ fn unsafe_shared_target_does_not_fail_other_compatible_batch_entries() {
             "unsafe",
             spec.clone()
                 .with_shared_incremental_target(&unsafe_target)
-                .with_shared_incremental_target_maintenance(maintenance),
+                .with_shared_incremental_target_maintenance(maintenance)
+                .unwrap(),
         ),
         LabeledWasmBuildSpec::new("safe", spec),
     ];

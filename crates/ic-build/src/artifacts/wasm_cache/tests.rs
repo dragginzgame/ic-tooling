@@ -42,6 +42,7 @@ use std::{
 
 #[cfg(unix)]
 use crate::artifacts::support_tests::{FakeWasmCargo, fake_wasm_build_spec, write_fake_wasm_cargo};
+
 #[cfg(unix)]
 use std::{
     fs::FileTimes,
@@ -77,6 +78,7 @@ fn cache_mode_fixtures(
                     CacheRetentionLimits::new(),
                     Duration::from_secs(60),
                 )
+                .unwrap()
             } else {
                 spec
             };
@@ -1712,7 +1714,7 @@ fn build_spec_requires_at_least_one_package() {
         Duration::from_secs(60),
     );
     assert!(matches!(
-        validate_spec(&isolated_maintenance),
+        isolated_maintenance,
         Err(WasmBuildError::InvalidSpec { message }) if message.contains("requires a shared")
     ));
 }
@@ -3383,7 +3385,7 @@ fn warm_hits_reject_source_mutation_for_active_and_materialized_artifacts() {
             )
             .unwrap();
             let entry = super::cache_entry_directory(&spec, resolved.fingerprint());
-            let acquisition = super::WasmAcquisitionContext::isolated(&entry);
+            let acquisition = super::AcquiredCargoTarget::Exact(&entry);
             let result = super::try_reuse_wasm_artifacts(
                 &spec,
                 &resolved,

@@ -8,7 +8,7 @@ use super::{InstallSpec, PocketIcInstance, StandaloneCanisterInstallError};
 /// This fixture retains the instance and its optional managed server together.
 /// It does not impose process-wide synchronization or hide `PocketIC` methods.
 pub struct StandaloneCanisterFixture {
-    instance: PocketIcInstance<PocketIc>,
+    instance: PocketIcInstance,
     canister_id: Principal,
 }
 
@@ -21,7 +21,7 @@ impl StandaloneCanisterFixture {
     /// # Errors
     /// Returns the installation failure with the owned instance for caller recovery.
     pub async fn try_install(
-        instance: PocketIcInstance<PocketIc>,
+        instance: PocketIcInstance,
         spec: InstallSpec,
     ) -> Result<Self, StandaloneCanisterInstallError> {
         let canister_id = match instance.instance().try_create_and_install(spec).await {
@@ -48,7 +48,7 @@ impl StandaloneCanisterFixture {
     }
 
     /// Consume the fixture and return the instance/server ownership record and canister id.
-    pub fn into_parts(self) -> (PocketIcInstance<PocketIc>, Principal) {
+    pub fn into_parts(self) -> (PocketIcInstance, Principal) {
         (self.instance, self.canister_id)
     }
 }

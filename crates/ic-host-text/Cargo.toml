@@ -10,6 +10,9 @@ description = "Pure bounded text decoding, normalization and terminal-safe Unico
 readme = "../../README.md"
 publish = ["crates-io"]
 
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
 [features]
 default = []
 yaml = ["dep:serde", "dep:yaml_serde"]
@@ -21,6 +24,7 @@ yaml_serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde = { workspace = true, features = ["derive", "std"] }
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

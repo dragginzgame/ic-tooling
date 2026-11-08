@@ -14,6 +14,9 @@ category = "build_tooling"
 "src/bin/tests/mod.rs" = "tests"
 "tests" = "tests"
 
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
 [[bin]]
 name = "internet_identity_fixture"
 path = "tests/support/internet_identity_fixture.rs"
@@ -40,6 +43,7 @@ ic-testkit = { workspace = true, features = ["wire"] }
 ic-testkit-perf-probe.workspace = true
 ic-wire.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

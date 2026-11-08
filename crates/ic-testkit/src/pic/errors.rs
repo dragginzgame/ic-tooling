@@ -39,7 +39,7 @@ pub enum CanisterInstallError {
 #[derive(thiserror::Error)]
 #[error("{install_error}")]
 pub struct StandaloneCanisterInstallError {
-    instance: Box<PocketIcInstance<PocketIc>>,
+    instance: Box<PocketIcInstance>,
     #[source]
     install_error: CanisterInstallError,
 }
@@ -80,10 +80,7 @@ impl std::error::Error for CanisterInstallError {
 }
 
 impl StandaloneCanisterInstallError {
-    pub(super) fn new(
-        instance: PocketIcInstance<PocketIc>,
-        install_error: CanisterInstallError,
-    ) -> Self {
+    pub(super) fn new(instance: PocketIcInstance, install_error: CanisterInstallError) -> Self {
         Self {
             instance: Box::new(instance),
             install_error,
@@ -103,7 +100,7 @@ impl StandaloneCanisterInstallError {
     }
 
     /// Recover the instance/server ownership record and install failure.
-    pub fn into_parts(self) -> (PocketIcInstance<PocketIc>, CanisterInstallError) {
+    pub fn into_parts(self) -> (PocketIcInstance, CanisterInstallError) {
         (*self.instance, self.install_error)
     }
 }

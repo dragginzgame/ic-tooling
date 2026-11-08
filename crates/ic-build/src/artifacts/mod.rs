@@ -128,9 +128,8 @@ pub use transaction_batch::{
     ArtifactCacheBatchReport, LabeledArtifactCacheSpec, build_artifact_caches_batch,
 };
 pub use wasm_batch::{
-    LabeledWasmBuildSpec, WasmBuildBatchContractError, WasmBuildBatchFailure,
-    WasmBuildBatchMetrics, WasmBuildBatchProgressEvent, WasmBuildBatchReport,
-    build_wasm_canisters_cached_batch,
+    LabeledWasmBuildSpec, WasmBuildBatchFailure, WasmBuildBatchMetrics,
+    WasmBuildBatchProgressEvent, WasmBuildBatchReport, build_wasm_canisters_cached_batch,
 };
 pub use wasm_cache::{
     CargoBuildInput, CargoInputProbePolicy, ResolvedCargoBuildInputs,

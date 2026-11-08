@@ -5,6 +5,20 @@ earlier retain the old API. The maintained implementation remains in this
 package; PocketIC server 16.1, external DTO identities, protocol bytes,
 no-replay behavior and snapshot transfer budgets are unchanged.
 
+## Pending Testkit 0.95 migration
+
+Use `PocketIcInstance` without a type parameter. Its concrete client is
+`ic_testkit::pocket_ic::PocketIc`; borrowing, explicit `close().await` and
+managed-server custody retain their existing contracts. No generic client
+adapter or compatibility alias remains.
+
+Native response bodies use Host HTTP's bounded reader under PocketIC's original
+absolute deadline. `ClientError::BodyAllocation` reports fallible buffer
+allocation with the original request/accepted-ingress context. Include that
+variant in exhaustive matches. Ordinary unbounded calls gain no application
+byte ceiling, and snapshot calls keep their caller-selected HTTP bounds.
+Transport errors, replay refusal and protocol bytes retain their contracts.
+
 ## Application-owned logging in 0.89
 
 Clients no longer inspect `POCKET_IC_LOG_DIR` or `POCKET_IC_LOG_DIR_LEVELS`,
@@ -199,7 +213,7 @@ authenticate certificates or add retries, replay or application verification.
 
 ## Explicit teardown and cancellation
 
-Await `owned.close().await` on a `PocketIcInstance<PocketIc>` to delete its
+Await `owned.close().await` on a `PocketIcInstance` to delete its
 instance while retaining the managed server. For a raw client, await
 `client.drop().await` while its server remains available. Rust Drop performs
 no client network calls. Dropping an owned server still terminates/reaps its

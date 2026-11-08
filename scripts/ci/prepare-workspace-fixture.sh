@@ -10,7 +10,6 @@ set -euo pipefail
 source_root="$1" destination="$2"
 cp "$source_root/Cargo.toml" "$source_root/Cargo.lock" "$source_root/CHANGELOG.md" \
     "$source_root/README.md" "$source_root/LICENSE" "$destination/"
-cp "$source_root/toko-tooling.lock" "$destination/"
 if [[ -f "$source_root/ci/cargo-release-groups.json" ]]; then
     mkdir -p "$destination/ci"
     cp "$source_root/ci/cargo-release-groups.json" "$destination/ci/"

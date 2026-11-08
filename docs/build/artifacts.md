@@ -1,6 +1,22 @@
 # Artifact and Wasm build APIs
 
-## Pending Build 0.79 migration
+## Pending Build 0.81 migration
+
+The shared-target maintenance builders return `Result<WasmBuildSpec,
+WasmBuildError>`. Propagate their error or explicitly admit the configuration
+before building. An isolated specification rejects shared-target maintenance
+at construction. Selecting isolated mode clears existing shared maintenance.
+
+Wasm batches return `ic_host_artifacts::batch::BatchLabelError` directly, matching
+artifact batches. Remove `WasmBuildBatchContractError` imports and match `Empty`
+or `Duplicate` directly; label validation still precedes resolution, progress
+and command effects.
+
+Cache formats, fingerprints, locks and retained paths are unchanged. Keep using
+retained records rather than reconstructing paths. Success timings continue to
+report lock wait, while failure timings retain broader partial coordination work.
+
+## Build 0.79 migration
 
 Remove `WasmBuildBatchConfig` and the configuration argument from
 `build_wasm_canisters_cached_batch`. Configure shared incremental-target
@@ -117,9 +133,8 @@ Specification and cleanup retain their own phases.
 In 0.18, artifact batch functions return `ic_host_artifacts::batch::BatchLabelError`
 directly; replace imports from the removed `ic_build::batch` module. The earlier
 `ArtifactCacheBatchContractError` is also removed. Match `Empty { index }` or
-`Duplicate { label, first_index, duplicate_index }`. Wasm batch contract errors
-wrap those values in `WasmBuildBatchContractError::Labels`; its error source
-exposes the same typed label failure. Label rejection still precedes callbacks,
+`Duplicate { label, first_index, duplicate_index }`. Build 0.81 also returns this
+error directly from Wasm batches. Label rejection still precedes callbacks,
 progress events, source validation and command effects. Cargo grouping returns
 the same downcastable label error; its diagnostic wording now uses shared label
 terms. Individual build, cleanup and publication failures remain in their entries.
@@ -878,7 +893,7 @@ let spec = WasmBuildSpec::new(
         .with_max_age(std::time::Duration::from_secs(7 * 24 * 60 * 60))
         .with_max_size_bytes(4 * 1024 * 1024 * 1024),
     std::time::Duration::from_secs(24 * 60 * 60),
-);
+).unwrap();
 let outcome = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)?;
 let maintenance = outcome
     .record()
@@ -940,7 +955,7 @@ let spec = WasmBuildSpec::new(
     &target,
     &["counter_canister"], environment.clone(), configuration_limits)
 .with_shared_incremental_target(target.join("shared"))
-.with_shared_incremental_target_maintenance(maintenance);
+.with_shared_incremental_target_maintenance(maintenance).unwrap();
 # let _ = spec;
 ```
 
@@ -1049,8 +1064,8 @@ The batch is sequential and collect-all: every independent failure is returned
 in one report, but entries are not run simultaneously. Every
 `LabeledWasmBuildSpec` label
 must be nonempty and unique; invalid structure returns
-`WasmBuildBatchContractError` before resolution, progress, or build work. Its
-`WasmBuildBatchReport` retains canonical ordered entries and provides
+`ic_host_artifacts::batch::BatchLabelError` before resolution, progress, or build
+work. The `WasmBuildBatchReport` retains canonical ordered entries and provides
 structured labeled `outcomes` and `failures` iterators. Labels are reporting
 identity only and never affect exact cache keys. Progress and integrated
 maintenance entries carry the same label. Every entry uses the ordinary
@@ -1101,7 +1116,7 @@ let maintenance = SharedIncrementalTargetMaintenanceConfig::new(
 .with_failure_mode(SharedIncrementalTargetMaintenanceFailureMode::BestEffort);
 let specs: Vec<_> = specs.into_iter().map(|(label, spec)|
     LabeledWasmBuildSpec::new(label,
-        spec.with_shared_incremental_target_maintenance(maintenance))
+        spec.with_shared_incremental_target_maintenance(maintenance).unwrap())
 ).collect();
 let batch = build_wasm_canisters_cached_batch(
     &specs,

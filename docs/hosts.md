@@ -1,13 +1,17 @@
 # IC Tooling qualification
 
-Shared Tooling is selected by exact version in root
-`[workspace.metadata.toko-tooling]`. Commit `toko-tooling.lock` and
-`.shared-tooling.snapshot` with that declaration. Tooling is independent of
-application Cargo dependencies and Cargo.lock. Edit the declared version and run
-`make shared-tooling-update` to resolve/install it; use
-`make shared-tooling-install` to reinstall the locked release and
-`make shared-tooling-check` for offline drift admission. Direct publication and
-release adapters check tooling before effects. See the
+Shared Tooling is selected once as `toko-tooling = "=0.36.0"` in root
+`[workspace.dependencies]`. Every real package inherits it unconditionally in
+`[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
+the virtual root is not a package. Commit the declarations, normal `Cargo.lock`
+and `.shared-tooling.snapshot` together. To adopt another release, edit the root
+pin and its documented exact-pin exception in
+`ci/dependency-pinning-exceptions.json`, run `cargo update -p toko-tooling`, then
+`make shared-tooling-update`.
+Use `make shared-tooling-install` to install the existing Cargo.lock selection
+and `make shared-tooling-check` for offline package/pin/lock/snapshot admission.
+Installation remains explicit; Rust imports are unnecessary. Direct publication
+and release adapters check tooling before effects. See the
 [root selection guide](consuming-snapshots.md#cargo-selection-and-installation).
 
 Local shell/browser fixture defaults and explicit outside-target selections are

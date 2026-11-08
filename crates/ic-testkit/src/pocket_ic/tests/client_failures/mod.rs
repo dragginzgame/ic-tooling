@@ -58,27 +58,12 @@ impl Server {
             move |socket, bytes, deadline, _stop| {
                 let bytes = bytes.into_result().expect("read bounded fixture request");
                 let step = steps.next().expect("expected fixture step");
-                let header_end = bytes
-                    .windows(4)
-                    .position(|part| part == b"\r\n\r\n")
-                    .unwrap()
-                    + 4;
-                let (header, body) = bytes.split_at(header_end);
-                let header = std::str::from_utf8(header).unwrap();
-                assert_eq!(
-                    header
-                        .lines()
-                        .next()
-                        .unwrap()
-                        .split_whitespace()
-                        .nth(1)
-                        .unwrap(),
-                    step.path
-                );
+                let request = crate::test_support::http::Request::new(&bytes);
+                assert_eq!(request.path, step.path);
                 recorded.lock().unwrap().push(format!(
                     "{}\n{}",
-                    header.lines().next().unwrap(),
-                    String::from_utf8_lossy(body)
+                    request.line,
+                    String::from_utf8_lossy(request.body)
                 ));
                 if let Some((observed, release)) = step.hold {
                     observed.send(()).expect("observe held fixture request");

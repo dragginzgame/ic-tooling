@@ -161,3 +161,18 @@ impl<T, E> CacheBatchReport<T, E> {
         self.entries.iter().all(CacheBatchEntry::is_success)
     }
 }
+
+impl<R, E> CacheBatchReport<CacheOutcome<R>, E> {
+    pub(super) fn summarize<T: Default>(
+        &self,
+        mut accumulate: impl FnMut(&mut T, &R),
+    ) -> (super::CacheOutcomeCounts, T) {
+        let mut counts = super::CacheOutcomeCounts::default();
+        let mut totals = T::default();
+        for outcome in self.entries.iter().filter_map(CacheBatchEntry::outcome) {
+            counts.record(outcome.is_reused());
+            accumulate(&mut totals, outcome.record());
+        }
+        (counts, totals)
+    }
+}

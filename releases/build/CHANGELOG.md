@@ -6,6 +6,27 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.81.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Shared-target maintenance builders now return `Result`, refusing isolated
+  mode during construction. Maintenance belongs to the selected shared target;
+  selecting isolated mode clears its maintenance configuration.
+- Wasm batches return Host's `BatchLabelError` directly, matching artifact
+  batches. Remove `WasmBuildBatchContractError` imports and match `Empty` or
+  `Duplicate` on the returned error without the former `Labels` wrapper.
+
+### 🧹 Cleanup
+
+- Derive one target acquisition plan and share successful batch accounting.
+  Retain distinct cache formats, lock-order, mutation, failure-timing and retention
+  contracts; existing cache entries remain usable.
+- Keep acquired target facts on their existing enum and remove forwarding
+  acquisition/lock wrappers.
+- Reuse Cargo fixture writers and release gate construction instead of repeating
+  package scaffolding, lock preparation and gate-context capture.
+
 ## [0.80.0] - 2026-11-08
 
 ### 🔧 Changed

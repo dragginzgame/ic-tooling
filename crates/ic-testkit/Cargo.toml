@@ -13,6 +13,9 @@ repository.workspace = true
 keywords = ["internet-computer", "canister", "dfinity", "icp", "testing"]
 categories = ["development-tools::testing", "wasm"]
 
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
 [[bin]]
 name = "ic-testkit-server"
 path = "src/bin/ic-testkit-server.rs"
@@ -39,6 +42,7 @@ clap = { workspace = true, features = ["string"], optional = true }
 hex = { workspace = true, features = ["serde"] }
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
 ic-host-fs = { workspace = true }
+ic-host-http.workspace = true
 ic-host-process = { workspace = true }
 ic-management-canister-types = { workspace = true }
 # Held fixtures adapt the external management HTTP protocol on native targets only.
@@ -64,6 +68,9 @@ serde_json = { workspace = true }
 strum = { workspace = true }
 tokio = { workspace = true, features = ["macros", "net", "rt-multi-thread", "test-util"] }
 tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+toko-tooling.workspace = true
 
 [[test]]
 name = "server_runner"

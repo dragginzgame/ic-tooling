@@ -21,7 +21,7 @@ use ic_testkit::pic::{
     PocketIcInstance, PocketIcStartupConfig, PocketIcStartupFailure, RebuildReason,
     SnapshotRestoreFunding, StandaloneCanisterFixture, StandaloneCanisterRecipe,
 };
-use ic_testkit::pocket_ic::{PocketIc, PocketIcBuilder};
+use ic_testkit::pocket_ic::PocketIcBuilder;
 
 const READY_TIMEOUT: Duration = Duration::from_secs(60);
 const OPERATION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -638,7 +638,7 @@ fn build_deleted_standalone_fixture() -> FixtureFuture {
 
 fn assert_two_instances_overlap<F>(build: F)
 where
-    F: AsyncFn() -> PocketIcInstance<PocketIc> + Send + Sync + 'static,
+    F: AsyncFn() -> PocketIcInstance + Send + Sync + 'static,
 {
     let build = Arc::new(build);
     let (event_tx, event_rx) = mpsc::channel();
@@ -776,7 +776,7 @@ async fn run_worker<F>(
     commands: Receiver<Command>,
     events: Sender<Event>,
 ) where
-    F: AsyncFn() -> PocketIcInstance<PocketIc>,
+    F: AsyncFn() -> PocketIcInstance,
 {
     if start.recv().is_err() {
         return;

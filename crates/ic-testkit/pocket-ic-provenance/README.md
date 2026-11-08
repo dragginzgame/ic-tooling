@@ -141,3 +141,9 @@ The pending patch also removes unused JSON-schema derivations and production
 enum iteration. The rejection-code catalog retains test-only iteration, so its
 exhaustive protocol-value checks do not require a production macro/trait surface.
 Serde derives, field attributes, external identities and codec bodies are unchanged.
+
+The cumulative Tooling surface patch also delegates owned HTTP body reads to
+Host HTTP. Request deadlines, accepted-ingress context, typed transport causes
+and no-replay behavior remain with the PocketIC exchange; allocation failures
+retain their typed cause and request context. The donor and upstream hashes
+are unchanged, and reverse reconstruction includes this reviewed adaptation.
