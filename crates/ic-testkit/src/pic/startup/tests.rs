@@ -31,24 +31,31 @@ fn completed_instances_must_still_meet_the_startup_deadline() {
         timeout: Duration::from_secs(60),
         deadline: started + Duration::from_secs(60),
     };
-    let mut server = None;
-    let instance = startup
-        .admit_instance(7_u8, "http://localhost/", &mut server)
-        .unwrap();
+    let mut pending = super::InstanceStartup {
+        deadline: &startup,
+        server_url: "http://localhost/",
+        server: None,
+    };
+    let instance = pending.admit(7_u8).unwrap();
     assert_eq!(*instance.instance(), 7);
-    assert!(server.is_none());
+    assert!(pending.server.is_none());
     let expired = super::StartupDeadline {
         deadline: started,
         ..startup
     };
-    let error = expired
-        .admit_instance(7_u8, "http://localhost/", &mut server)
+    let mut pending = super::InstanceStartup {
+        deadline: &expired,
+        server_url: "http://localhost/",
+        server: None,
+    };
+    let error = pending
+        .admit(7_u8)
         .err()
         .expect("completed instance after the deadline must refuse admission");
     assert!(
         matches!(error.failure(), PocketIcStartupFailure::InstanceCreationTimeout { timeout } if *timeout == Duration::from_secs(60))
     );
-    assert!(server.is_none());
+    assert!(pending.server.is_none());
 }
 
 #[test]

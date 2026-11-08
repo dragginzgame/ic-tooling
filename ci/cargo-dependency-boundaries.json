@@ -12,7 +12,7 @@
   {"dependency": "cap-fs-ext", "allowed_packages": ["ic-host-fs"]},
   {"dependency": "cap-std", "allowed_packages": ["ic-host-fs"]},
   {"dependency": "tempfile", "allowed_packages": ["ic-host-fs"]},
-  {"dependency": "wasm-encoder", "allowed_packages": ["ic-host-artifacts"]},
+  {"dependency": "wasm-encoder", "allowed_packages": ["ic-testkit"]},
   {"dependency": "wasmparser", "allowed_packages": ["ic-host-artifacts"]},
   {"dependency": "wat", "allowed_packages": ["ic-host-artifacts"]},
   {"dependency": "wast", "allowed_packages": ["ic-host-artifacts"]},

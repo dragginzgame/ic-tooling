@@ -216,6 +216,11 @@ Whole-workspace `qualify` always runs fresh lint. Archive, license, provenance
 and source-drift checks stay fresh in every publication. The wrapper never
 installs tools or fetches missing lint dependencies.
 
+Environment admission treats adjacent repetitions of the checkout's two leading
+tool directories as equivalent: recursive Make adds that same pair again without
+changing executable lookup order. The pair must already lead both contexts;
+other PATH changes and compiler/build flags still invalidate reuse.
+
 `make publish` uploads each selected package at its own current committed
 version to crates.io.
 It requires a clean working tree, eligible selected publishable packages and

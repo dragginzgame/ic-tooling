@@ -13,7 +13,7 @@ mkdir "$fixture/checkout"
 bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/checkout" \
     Makefile make/consumer.mk make/testkit.mk scripts/ci/check-pipe-jobserver.pl
 cd "$fixture/checkout"
-# Independent observation of the 34-stage gate after certificate owner extraction.
+# Independent observation of the 33-stage gate after fixture encoder retirement.
 # Production dispatch has one owner: ci/release-validation.json.
 cat > "$fixture/expected" <<'STAGES'
 shared-tooling-check
@@ -31,7 +31,6 @@ test-fs-minimal
 test-fs-capability
 test-fs-temporary-file
 test-artifacts-wasm
-test-artifacts-encoding
 test-artifacts-text
 tools-features-check
 isolated-features-check
@@ -117,4 +116,4 @@ for mutation in focus multiple-documents; do
     [[ ! -s $WORKSPACE_TEST_EVENTS ]]
 done
 fixture_complete=true
-echo 'Both CI entrypoints preserve 34-stage coverage, one lint, fail-fast order and pipe jobserver access'
+echo 'Both CI entrypoints preserve 33-stage coverage, one lint, fail-fast order and pipe jobserver access'

@@ -228,6 +228,8 @@ fn wasm_acquisition_builds_library_when_binary_has_the_same_output_name() {
             let mut spec = support::wasm::spec(&workspace, &root.join("exact"), &["feature_a"]);
             if shared_target {
                 spec = spec.with_shared_incremental_target(root.join("shared"));
+            } else {
+                spec = spec.with_isolated_builds();
             }
             let baseline_spec =
                 support::wasm::spec(&workspace, &root.join("baseline"), &["feature_a"])

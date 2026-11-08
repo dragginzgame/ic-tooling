@@ -24,6 +24,23 @@ accepted-ingress custody are unchanged.
 
 ## Imports and calls
 
+### Inherent harness methods in 0.94
+
+Remove imports and re-exports of `CanisterInstallExt`, `PocketIcSnapshotExt`,
+`PocketIcDiagnosticsExt` and `pic::prelude`.
+`try_create_and_install`, `wait_out_install_code_rate_limit`, `retry_install_code`,
+`capture_snapshots` and `restore_snapshots` are inherent `PocketIc` methods;
+ordinary method calls and their arguments remain unchanged. Fully qualified
+trait calls become `PocketIc::method(...)`. Generic bounds on either retired
+trait must instead use the concrete client. No compatibility traits remain.
+The three diagnostic collection/writing helpers are also inherent methods.
+
+Known sibling migrations are Canic's testing exports and installation/snapshot/diagnostics
+callers, and Query's governance test imports. Their source is outside this local
+change; consumers must make these import changes when adopting 0.94.
+
+### Async client construction
+
 Import `ic_testkit::pocket_ic::{PocketIc, PocketIcBuilder, ClientError}`.
 The public `nonblocking` module is removed. All network operations are async.
 Replace `builder.build_async().await` with `builder.build().await`, and

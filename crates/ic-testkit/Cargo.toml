@@ -21,7 +21,7 @@ required-features = ["cli"]
 [features]
 default = []
 cli = ["dep:clap", "clap/derive"]
-reply-fixtures = ["ic-host-artifacts/wasm-encoding"]
+reply-fixtures = ["dep:wasm-encoder"]
 held-reply-fixtures = ["reply-fixtures", "ic-host-artifacts/wasm-text"]
 wire = ["dep:ic-wire"]
 
@@ -50,6 +50,7 @@ serde_json = { workspace = true }
 sha2 = { workspace = true }
 tokio = { workspace = true, features = ["rt", "sync", "time", "net"] }
 tracing = { workspace = true }
+wasm-encoder = { workspace = true, optional = true }
 
 [target.'cfg(all(unix, not(target_family = "wasm")))'.dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }

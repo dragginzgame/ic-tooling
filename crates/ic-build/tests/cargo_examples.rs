@@ -19,14 +19,23 @@ use ic_host_process::tool::{OutputLimit, OutputLimits, capture_command};
 use std::{
     fs,
     path::Path,
-    process::Command,
     time::{Duration, Instant},
 };
 
 fn workspace() -> std::path::PathBuf {
     let root = ic_build::testing::fs::unique_temp_directory("cargo-example");
     let workspace = root.join("workspace");
-    fs::create_dir_all(workspace.join("src")).unwrap();
+    ic_build::testing::cargo::write_fixture_package(
+        &workspace,
+        "example-fixture",
+        concat!(
+            "[workspace]\n[lib]\ncrate-type=[\"cdylib\"]\n[features]\nprobe=[]\n",
+            "[[example]]\nname=\"probe\"\ncrate-type=[\"cdylib\"]\nrequired-features=[\"probe\"]\n",
+            "[[example]]\nname=\"other-probe\"\ncrate-type=[\"cdylib\"]\n",
+        ),
+        "#[unsafe(no_mangle)] pub extern \"C\" fn library() {}\n",
+    )
+    .unwrap();
     fs::create_dir(workspace.join(".cargo")).unwrap();
     fs::write(
         workspace.join(".cargo/config.toml"),
@@ -34,17 +43,6 @@ fn workspace() -> std::path::PathBuf {
     )
     .unwrap();
     fs::create_dir_all(workspace.join("examples")).unwrap();
-    fs::write(workspace.join("Cargo.toml"), concat!(
-        "[package]\nname=\"example-fixture\"\nversion=\"0.0.0\"\nedition=\"2024\"\n[workspace]\n",
-        "[lib]\ncrate-type=[\"cdylib\"]\n[features]\nprobe=[]\n",
-        "[[example]]\nname=\"probe\"\ncrate-type=[\"cdylib\"]\nrequired-features=[\"probe\"]\n",
-        "[[example]]\nname=\"other-probe\"\ncrate-type=[\"cdylib\"]\n",
-    )).unwrap();
-    fs::write(
-        workspace.join("src/lib.rs"),
-        "#[unsafe(no_mangle)] pub extern \"C\" fn library() {}\n",
-    )
-    .unwrap();
     fs::write(
         workspace.join("examples/probe.rs"),
         "#[unsafe(no_mangle)] pub extern \"C\" fn probe() {}\n",
@@ -55,15 +53,7 @@ fn workspace() -> std::path::PathBuf {
         "#[unsafe(no_mangle)] pub extern \"C\" fn other() {}\n",
     )
     .unwrap();
-    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-    assert!(
-        Command::new(cargo)
-            .current_dir(&workspace)
-            .args(["generate-lockfile", "--offline"])
-            .status()
-            .unwrap()
-            .success()
-    );
+    ic_build::testing::cargo::generate_fixture_lockfile(&workspace);
     root
 }
 
@@ -395,15 +385,17 @@ fn batch_metadata_sharing_preserves_distinct_example_selections() {
         LabeledWasmBuildSpec::new("other", second),
     ];
     let cold = build_wasm_canisters_cached_batch(&recipes, None, spawn_cargo).unwrap();
-    assert!(cold.is_success());
+    assert!(cold.batch.is_success());
     let identities: Vec<_> = cold
+        .batch
         .outcomes()
         .map(|entry| entry.outcome().unwrap().record().fingerprint())
         .collect();
     assert_ne!(identities[0], identities[1]);
     let warm = build_wasm_canisters_cached_batch(&recipes, None, spawn_cargo).unwrap();
     assert!(
-        warm.outcomes()
+        warm.batch
+            .outcomes()
             .all(|entry| entry.outcome().unwrap().is_reused())
     );
     drop((cold, warm));

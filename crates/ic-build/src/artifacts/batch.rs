@@ -123,3 +123,41 @@ impl<T, E> CacheBatchEntry<T, E> {
         (self.index, self.label, self.result, self.entry_elapsed)
     }
 }
+
+/// Ordered results and wall-clock duration shared by collect-all cache batches.
+#[derive(Debug)]
+pub struct CacheBatchReport<T, E> {
+    pub(super) entries: Vec<CacheBatchEntry<T, E>>,
+    pub(super) total: Duration,
+}
+
+impl<T, E> CacheBatchReport<T, E> {
+    /// Ordered labeled results, including partial failures.
+    #[must_use]
+    pub fn entries(&self) -> &[CacheBatchEntry<T, E>] {
+        &self.entries
+    }
+    /// Consume the report into its ordered results.
+    #[must_use]
+    pub fn into_entries(self) -> Vec<CacheBatchEntry<T, E>> {
+        self.entries
+    }
+    /// Successful entries, preserving their original positions and timings.
+    pub fn outcomes(&self) -> impl Iterator<Item = &CacheBatchEntry<T, E>> {
+        self.entries.iter().filter(|entry| entry.is_success())
+    }
+    /// Failed entries, retaining domain-specific causes and cleanup evidence.
+    pub fn failures(&self) -> impl Iterator<Item = &CacheBatchEntry<T, E>> {
+        self.entries.iter().filter(|entry| !entry.is_success())
+    }
+    /// Complete elapsed time, distinct from the sum of phase timings.
+    #[must_use]
+    pub const fn total(&self) -> Duration {
+        self.total
+    }
+    /// Whether every supplied entry succeeded; true for an empty batch.
+    #[must_use]
+    pub fn is_success(&self) -> bool {
+        self.entries.iter().all(CacheBatchEntry::is_success)
+    }
+}

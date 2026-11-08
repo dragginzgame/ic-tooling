@@ -1,5 +1,24 @@
 # Current handoff
 
+## Local root-owned tooling migration — 2026-11-08
+
+Uncommitted work selects published toko-tooling 0.34.0 through root workspace
+metadata and `toko-tooling.lock`, archive SHA-256
+`5ca8ad09ad9359bc4945a4afdaafce301dd5a4b4955cd5c9f5058d7a54ffcf10`.
+The new installer authenticated current/previous registry archives and preserved
+recorded entrypoints and local edits. Cargo dependency declarations and the
+obsolete 0.33 application-lock record are removed without unrelated upgrades.
+Real private tooling/test members remain. Edit root metadata and use
+`make shared-tooling-update`; `make shared-tooling-install` reinstalls the lock.
+Direct publication/release adapters check tooling before effects. Product release
+gates and required hosts remain. The published deployment record below describes
+the preceding Git snapshot.
+
+Registry integrity, tool admission, unchanged membership/release-group coverage,
+formatting, dependency boundaries and focused direct-publication/release receipt
+checks pass. Product qualification/delivery were substituted in fixtures; no
+release, publication or native macOS qualification was run.
+
 ## Published deployment — 2026-11-08
 
 The requested deployment is complete through frozen release batches. Normal main

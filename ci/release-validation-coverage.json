@@ -73,7 +73,6 @@
         "test-fs-capability",
         "test-fs-temporary-file",
         "test-artifacts-wasm",
-        "test-artifacts-encoding",
         "test-artifacts-text",
         "check-fs-non-unix"
       ],
@@ -93,7 +92,6 @@
         "test-fs-capability",
         "test-fs-temporary-file",
         "test-artifacts-wasm",
-        "test-artifacts-encoding",
         "test-artifacts-text",
         "check-fs-non-unix"
       ],

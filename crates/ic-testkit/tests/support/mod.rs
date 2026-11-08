@@ -19,7 +19,6 @@ pub fn empty_install_spec() -> ic_testkit::pic::InstallSpec {
 pub async fn install_empty_canister(
     pic: &ic_testkit::pocket_ic::PocketIc,
 ) -> ic_platform_types::principal::ExternalPrincipal {
-    use ic_testkit::pic::CanisterInstallExt as _;
     pic.try_create_and_install(empty_install_spec())
         .await
         .expect("install empty fixture canister")

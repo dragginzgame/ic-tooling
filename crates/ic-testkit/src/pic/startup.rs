@@ -750,23 +750,6 @@ impl StartupDeadline {
         })
     }
 
-    fn check_instance_deadline(
-        &self,
-        server: &mut Option<ManagedServer>,
-    ) -> Result<Instant, PocketIcStartupError> {
-        let now = Instant::now();
-        if now >= self.deadline {
-            return Err(finalize_failure(
-                PocketIcStartupError::new(PocketIcStartupFailure::InstanceCreationTimeout {
-                    timeout: self.timeout,
-                }),
-                None,
-                server.take(),
-            ));
-        }
-        Ok(now)
-    }
-
     fn wait_interval(&self, now: Instant, monitor_server: bool) -> Duration {
         let remaining = self.deadline.saturating_duration_since(now);
         if monitor_server {
@@ -774,23 +757,6 @@ impl StartupDeadline {
         } else {
             remaining
         }
-    }
-
-    fn admit_instance<T>(
-        &self,
-        instance: T,
-        server_url: &str,
-        server: &mut Option<ManagedServer>,
-    ) -> Result<PocketIcInstance<T>, PocketIcStartupError> {
-        self.check_instance_deadline(server)?;
-        check_server(server)?;
-        Ok(PocketIcInstance {
-            instance,
-            server: server.take().map(|server| PocketIcManagedServer {
-                server,
-                url: server_url.to_owned(),
-            }),
-        })
     }
 }
 
@@ -810,30 +776,30 @@ struct InstanceStartup<'a> {
 }
 
 impl InstanceStartup<'_> {
-    fn configure_builder(
-        &mut self,
-        builder: PocketIcBuilder,
-    ) -> Result<PocketIcBuilder, PocketIcStartupError> {
-        parse_server_url(self.server_url)
-            .map(|url| builder.with_server_url(url))
-            .map_err(|error| self.fail(error))
-    }
-
     fn check_deadline(&mut self) -> Result<Instant, PocketIcStartupError> {
-        self.deadline.check_instance_deadline(&mut self.server)
-    }
-
-    fn wait_interval(&self, now: Instant) -> Duration {
-        self.deadline.wait_interval(now, self.server.is_some())
-    }
-
-    fn check_server(&mut self) -> Result<(), PocketIcStartupError> {
-        check_server(&mut self.server)
+        let now = Instant::now();
+        if now >= self.deadline.deadline {
+            return Err(finalize_failure(
+                PocketIcStartupError::new(PocketIcStartupFailure::InstanceCreationTimeout {
+                    timeout: self.deadline.timeout,
+                }),
+                None,
+                self.server.take(),
+            ));
+        }
+        Ok(now)
     }
 
     fn admit<T>(&mut self, instance: T) -> Result<PocketIcInstance<T>, PocketIcStartupError> {
-        self.deadline
-            .admit_instance(instance, self.server_url, &mut self.server)
+        self.check_deadline()?;
+        check_server(&mut self.server)?;
+        Ok(PocketIcInstance {
+            instance,
+            server: self.server.take().map(|server| PocketIcManagedServer {
+                server,
+                url: self.server_url.to_owned(),
+            }),
+        })
     }
 
     fn fail(&mut self, error: PocketIcStartupError) -> PocketIcStartupError {
@@ -870,14 +836,19 @@ async fn build_bounded(
         server_url,
         server,
     };
-    let builder = startup.configure_builder(builder)?;
+    let builder = parse_server_url(server_url)
+        .map(|url| builder.with_server_url(url))
+        .map_err(|error| startup.fail(error))?;
     let mut construction = std::pin::pin!(builder.build());
     // Drop this local before the pending upstream future on cancellation.
     let mut startup = startup;
     loop {
         let now = startup.check_deadline()?;
-        startup.check_server()?;
-        let next_check = now + startup.wait_interval(now);
+        check_server(&mut startup.server)?;
+        let next_check = now
+            + startup
+                .deadline
+                .wait_interval(now, startup.server.is_some());
         match tokio::time::timeout_at(next_check.into(), construction.as_mut()).await {
             Ok(Ok(instance)) => {
                 return startup.admit(instance);

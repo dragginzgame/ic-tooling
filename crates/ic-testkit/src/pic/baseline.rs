@@ -1,6 +1,6 @@
 use super::{
     CanisterSnapshotTarget, ControllerSnapshotError, ControllerSnapshots, PocketIcInstance,
-    PocketIcSnapshotExt, SnapshotRestoreFunding,
+    SnapshotRestoreFunding,
 };
 use crate::pocket_ic::PocketIc;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
@@ -19,7 +19,7 @@ impl<T> CachedPocketIcBaseline<T> {
     /// Capture a cached baseline with an explicit sender for every canister.
     ///
     /// Empty inputs are rejected before capture. Capture is ordered and transactional as documented by
-    /// [`PocketIcSnapshotExt::capture_snapshots`]. No sender fallback is performed.
+    /// [`crate::pocket_ic::PocketIc::capture_snapshots`]. No sender fallback is performed.
     /// The caller stops/drains every target before capture and restarts only
     /// after the entire capture succeeds. Automatic progress must be disabled.
     ///

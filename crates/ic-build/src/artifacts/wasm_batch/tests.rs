@@ -27,8 +27,8 @@ use std::{fs, os::unix::fs::symlink};
 fn empty_independent_batch_succeeds_without_work() {
     let report =
         build_wasm_canisters_cached_batch(&[], None, spawn_cargo).expect("empty labeled batch");
-    assert!(report.is_success());
-    assert_eq!(report.outcomes().count(), 0);
+    assert!(report.batch.is_success());
+    assert_eq!(report.batch.outcomes().count(), 0);
     let metrics = report.metrics();
     assert_eq!(metrics.specifications(), 0);
     assert_eq!(metrics.succeeded(), 0);
@@ -66,17 +66,17 @@ fn library_output_validation_survives_batch_resolution() {
         LabeledWasmBuildSpec::new("canister", valid),
     ];
     let check = |report: super::WasmBuildBatchReport| {
-        assert_eq!(report.outcomes().count(), 1);
-        assert_eq!(report.failures().count(), 1);
-        let failure = report.failures().next().unwrap();
+        assert_eq!(report.batch.outcomes().count(), 1);
+        assert_eq!(report.batch.failures().count(), 1);
+        let failure = report.batch.failures().next().unwrap();
         assert!(std::ptr::eq(
             failure,
-            &raw const report.entries()[failure.index()]
+            &raw const report.batch.entries()[failure.index()]
         ));
-        let success = report.outcomes().next().unwrap();
+        let success = report.batch.outcomes().next().unwrap();
         assert!(std::ptr::eq(
             success,
-            &raw const report.entries()[success.index()]
+            &raw const report.batch.entries()[success.index()]
         ));
         assert_eq!(failure.label(), "ordinary");
         assert!(matches!(
@@ -134,12 +134,13 @@ fn batch_retains_every_indexed_failure() {
     let report =
         build_wasm_canisters_cached_batch(&specs, None, spawn_cargo).expect("valid labeled batch");
 
-    assert!(!report.is_success());
-    assert_eq!(report.entries().len(), 2);
-    assert_eq!(report.entries()[0].label(), "root");
-    assert_eq!(report.entries()[1].label(), "worker");
+    assert!(!report.batch.is_success());
+    assert_eq!(report.batch.entries().len(), 2);
+    assert_eq!(report.batch.entries()[0].label(), "root");
+    assert_eq!(report.batch.entries()[1].label(), "worker");
     assert_eq!(
         report
+            .batch
             .failures()
             .map(CacheBatchEntry::label)
             .collect::<Vec<_>>(),
@@ -147,14 +148,15 @@ fn batch_retains_every_indexed_failure() {
     );
     assert!(
         report
+            .batch
             .failures()
-            .all(|failure| failure.entry_elapsed() <= report.total())
+            .all(|failure| failure.entry_elapsed() <= report.batch.total())
     );
-    assert!(report.failures().all(|failure| {
+    assert!(report.batch.failures().all(|failure| {
         failure.failure_details().unwrap().phase() == WasmBuildPhase::Specification
             && failure.failure_details().unwrap().timings().total <= failure.entry_elapsed()
     }));
-    assert_eq!(report.outcomes().count(), 0);
+    assert_eq!(report.batch.outcomes().count(), 0);
     let metrics = report.metrics();
     assert_eq!(metrics.specifications(), 2);
     assert_eq!(metrics.succeeded(), 0);
@@ -189,7 +191,7 @@ fn batch_failure_retains_partial_metadata_timing() {
 
     let report =
         build_wasm_canisters_cached_batch(&specs, None, spawn_cargo).expect("valid labeled batch");
-    let failure = report.failures().next().expect("metadata failure");
+    let failure = report.batch.failures().next().expect("metadata failure");
 
     assert_eq!(
         failure.failure_details().unwrap().phase(),
@@ -243,8 +245,8 @@ fn malformed_shared_metadata_is_reported_for_every_entry() {
     )
     .expect("valid labeled batch");
 
-    assert_eq!(report.outcomes().count(), 0);
-    let failures = report.failures().collect::<Vec<_>>();
+    assert_eq!(report.batch.outcomes().count(), 0);
+    let failures = report.batch.failures().collect::<Vec<_>>();
     assert_eq!(failures.len(), 2);
     for (index, failure) in failures.iter().enumerate() {
         assert_eq!(failure.index(), index);
@@ -337,7 +339,7 @@ fn batch_progress_retains_the_caller_label() {
         spawn_cargo,
     )
     .unwrap();
-    assert!(report.is_success());
+    assert!(report.batch.is_success());
     assert_ne!(labels, [] as [String; 0]);
     assert!(labels.iter().all(|label| label == "root"));
     drop(report);
@@ -427,7 +429,7 @@ fn batch_maintenance_distinguishes_workspaces_and_deduplicates_aliases() {
     ];
     let report = super::build_wasm_canisters_cached_batch(&specs, None, spawn_cargo)
         .expect("valid maintenance batch");
-    assert!(report.is_success(), "{report:?}");
+    assert!(report.batch.is_success(), "{report:?}");
     assert_eq!(report.shared_incremental_maintenance_outcomes().count(), 2);
     assert!(
         report
@@ -447,6 +449,7 @@ fn batch_maintenance_distinguishes_workspaces_and_deduplicates_aliases() {
     }
     assert!(
         report
+            .batch
             .outcomes()
             .last()
             .is_some_and(|entry| entry.outcome().unwrap().is_reused())
@@ -486,14 +489,17 @@ fn batch_maintenance_rejects_conflicting_target_policies() {
         spawn_cargo(command)
     })
     .expect("valid labeled batch");
-    let failures = report.failures().collect::<Vec<_>>();
+    let failures = report.batch.failures().collect::<Vec<_>>();
     assert_eq!(calls, 1, "conflicting entry must fail before its build");
-    assert_eq!(report.entries().len(), 2);
+    assert_eq!(report.batch.entries().len(), 2);
     assert_eq!(failures.len(), 1);
     let failure = failures[0];
     assert_eq!(failure.index(), 1);
     assert_eq!(failure.label(), "conflict");
-    assert_eq!(failure.entry_elapsed(), report.entries()[1].entry_elapsed());
+    assert_eq!(
+        failure.entry_elapsed(),
+        report.batch.entries()[1].entry_elapsed()
+    );
     assert_eq!(
         failure.failure_details().unwrap().phase(),
         WasmBuildPhase::Specification
@@ -528,8 +534,8 @@ fn unsafe_shared_target_does_not_fail_other_compatible_batch_entries() {
     ];
     let report =
         build_wasm_canisters_cached_batch(&specs, None, spawn_cargo).expect("valid labeled batch");
-    assert_eq!(report.outcomes().count(), 1);
-    let failures = report.failures().collect::<Vec<_>>();
+    assert_eq!(report.batch.outcomes().count(), 1);
+    let failures = report.batch.failures().collect::<Vec<_>>();
     assert_eq!(failures.len(), 1);
     assert_eq!(failures[0].label(), "unsafe");
     assert_eq!(
@@ -576,15 +582,15 @@ fn a_missing_input_does_not_fail_other_compatible_batch_entries() {
                 build_wasm_canisters_cached_batch(&specs, None, spawn_cargo)
             }
             .expect("valid batch labels");
-            assert_eq!(report.outcomes().count(), 1);
-            let failures = report.failures().collect::<Vec<_>>();
+            assert_eq!(report.batch.outcomes().count(), 1);
+            let failures = report.batch.failures().collect::<Vec<_>>();
             assert_eq!(failures.len(), 1);
             assert_eq!(failures[0].label(), "bad");
             assert_eq!(
                 failures[0].failure_details().unwrap().phase(),
                 WasmBuildPhase::ContentHashing
             );
-            for entry in report.into_entries() {
+            for entry in report.batch.into_entries() {
                 let failed = entry.label() == "bad";
                 assert_eq!(entry.result().is_err(), failed);
                 assert_eq!(entry.failure_details().is_some(), failed);
@@ -627,7 +633,7 @@ fn missing_tools_keep_their_phase_in_silent_and_observed_batches() {
                 &mut observe as &mut dyn FnMut(_),
             ));
             let report = build_wasm_canisters_cached_batch(&specs, progress, spawn_cargo).unwrap();
-            let entry = &report.entries()[0];
+            let entry = &report.batch.entries()[0];
             assert_eq!(entry.failure_details().unwrap().phase(), expected);
             assert!(
                 matches!(entry.error(), Some(WasmBuildError::CommandSpawn { phase, .. }) if *phase == expected)
@@ -635,7 +641,7 @@ fn missing_tools_keep_their_phase_in_silent_and_observed_batches() {
             if !observed {
                 assert_eq!(events, [] as [WasmBuildBatchProgressEvent; 0]);
             }
-            assert_eq!(report.outcomes().count(), 0);
+            assert_eq!(report.batch.outcomes().count(), 0);
         }
     }
     fs::remove_dir_all(root).unwrap();

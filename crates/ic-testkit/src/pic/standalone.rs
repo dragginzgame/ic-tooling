@@ -1,7 +1,7 @@
 use crate::pocket_ic::PocketIc;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 
-use super::{CanisterInstallExt, InstallSpec, PocketIcInstance, StandaloneCanisterInstallError};
+use super::{InstallSpec, PocketIcInstance, StandaloneCanisterInstallError};
 
 /// One caller-built `PocketIC` instance/server owner and one installed canister.
 ///

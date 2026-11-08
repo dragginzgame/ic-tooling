@@ -82,9 +82,12 @@ check_graph ic-host-wasm-inspect --forbid-pattern "$parser_free" \
     --forbid-pattern "^(ic-host-process|ic-platform|candid_parser|${serialization}|wasm-encoder|cap-std|cap-fs-ext|tempfile)$" \
     --require ic-host-artifacts=1 --require ic-host-fs=1
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features candid \
+    --forbid-pattern "^(ic-host-(artifacts|fs|process|text)|wasmparser|candid_parser|ic-certification|ic-agent|reqwest|${serialization})$" \
+    --require ic-platform=1 --require candid=1
+check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features candid-service \
     --forbid-pattern "^(ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$" \
     --require ic-platform=1 --require candid=1 --require candid_parser=1
-check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features candid,ic-interface \
+check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features candid-service,ic-interface \
     --forbid-pattern "^(ic-host-(fs|process|text)|ic-certification|ic-agent|reqwest|${serialization})$" \
     --require ic-platform=1 --require candid_parser=1 --require ic-host-artifacts=1 --require wasmparser=1
 check_graph ic-host-tools --forbid-pattern "$yaml_allowed" --no-default-features --all-features \
@@ -98,17 +101,13 @@ check_graph ic-host-text --forbid-pattern "$yaml_allowed" --no-default-features 
     --require unicode-width=1 --require serde=1 --require yaml_serde=1 --require libyaml-rs=1
 check_graph ic-host-artifacts --forbid-pattern "$parser_free" \
     --forbid-pattern '^(ic-host-process|wasm-encoder|wasmparser|clap)$'
-for profile in wasm wasm-validation wasm-encoding wasm-text wasm-encoding,wasm-validation wasm-text,wasm-validation; do
+for profile in wasm wasm-validation wasm-text wasm-text,wasm-validation; do
     # One observation supplies package policy and effective feature assertions.
     # Preserve the existing policy selection for each independent profile.
     case "$profile" in
         wasm)
             observation=(observe_graph ic-host-artifacts --forbid-pattern "$parser_free"
                 --forbid-pattern '^wasm-encoder$' --require wasmparser=1) ;;
-        wasm-encoding)
-            observation=(observe_graph ic-host-artifacts --forbid-pattern "$parser_free"
-                --forbid-pattern "^(ic-host-(fs|process|text|tools)|ic-platform|${codec}|wasmparser)$"
-                --require wasm-encoder=1) ;;
         wasm-text)
             observation=(observe_graph ic-host-artifacts --forbid-pattern "$wat_allowed"
                 --forbid-pattern "^(ic-host-(fs|process|text|tools)|ic-platform|${codec}|wasmparser)$"

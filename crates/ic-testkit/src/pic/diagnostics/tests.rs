@@ -1,50 +1,24 @@
-use std::cell::Cell;
+use crate::{pocket_ic::PocketIc, test_support::http::Peer};
+use std::{io::Write, time::Duration};
 
 use crate::pocket_ic::CanisterLogRecord;
 use ic_host_artifacts::batch::BatchLabelError;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 
 use super::{
-    CanisterDiagnosticsReport, CanisterDiagnosticsRequest, CanisterLogRenderLimits,
-    LabeledCanisterDiagnosticsRequest, PocketIcDiagnosticsExt, render_log_records,
+    CanisterDiagnosticsRequest, CanisterLogRenderLimits, LabeledCanisterDiagnosticsRequest,
+    render_log_records,
 };
-
-struct Reporting {
-    calls: Cell<usize>,
-    request: Cell<Option<CanisterDiagnosticsRequest>>,
-}
-
-impl PocketIcDiagnosticsExt for Reporting {
-    fn collect_canister_diagnostics(
-        &self,
-        request: CanisterDiagnosticsRequest,
-    ) -> impl std::future::Future<Output = CanisterDiagnosticsReport> {
-        self.calls.set(self.calls.get() + 1);
-        self.request.set(Some(request));
-        std::future::ready(CanisterDiagnosticsReport {
-            request,
-            status: Err(crate::pocket_ic::ClientError::Protocol(
-                "synthetic status failure".into(),
-            )),
-            logs: Err(crate::pocket_ic::ClientError::Protocol(
-                "synthetic log failure".into(),
-            )),
-        })
-    }
-}
 
 #[tokio::test]
 async fn explicit_reporting_preserves_requests_and_writer_failures() {
-    let collector = Reporting {
-        calls: Cell::new(0),
-        request: Cell::new(None),
-    };
     let request = CanisterDiagnosticsRequest {
         canister_id: Principal::from_slice(&[1]),
         status_sender: Principal::from_slice(&[2]),
         log_sender: Principal::from_slice(&[3]),
         log_limits: CanisterLogRenderLimits::default(),
     };
+    let (collector, peer) = reporting_peer(vec![request, request]);
     let mut output = Vec::new();
     collector
         .write_canister_diagnostics(request, "install", &mut output)
@@ -57,16 +31,11 @@ async fn explicit_reporting_preserves_requests_and_writer_failures() {
         .await
         .unwrap_err();
     assert_eq!(error.kind(), std::io::ErrorKind::WriteZero);
-    assert_eq!(collector.calls.get(), 2);
-    assert_eq!(collector.request.get(), Some(request));
+    peer.finish();
 }
 
 #[tokio::test]
 async fn labeled_batch_retains_order_and_continues_after_entry_failure() {
-    let collector = Reporting {
-        calls: Cell::new(0),
-        request: Cell::new(None),
-    };
     let first = CanisterDiagnosticsRequest {
         canister_id: Principal::from_slice(&[1]),
         status_sender: Principal::from_slice(&[2]),
@@ -79,6 +48,7 @@ async fn labeled_batch_retains_order_and_continues_after_entry_failure() {
         log_sender: Principal::from_slice(&[6]),
         log_limits: CanisterLogRenderLimits::default(),
     };
+    let (collector, peer) = reporting_peer(vec![first, second]);
     let report = collector
         .collect_canister_diagnostics_batch(&[
             LabeledCanisterDiagnosticsRequest {
@@ -93,7 +63,6 @@ async fn labeled_batch_retains_order_and_continues_after_entry_failure() {
         .await
         .expect("valid labeled diagnostics batch");
 
-    assert_eq!(collector.calls.get(), 2);
     assert_eq!(report.entries.len(), 2);
     assert_eq!(report.entries[0].label, "root");
     assert_eq!(report.entries[0].report.request, first);
@@ -111,20 +80,18 @@ async fn labeled_batch_retains_order_and_continues_after_entry_failure() {
     assert!(compact.contains("label=\"root\""));
     assert!(compact.contains("label=\"worker\""));
     assert!(compact.contains("synthetic status failure"));
+    peer.finish();
 }
 
 #[tokio::test]
 async fn diagnostic_batch_rejects_invalid_labels_before_collection() {
-    let collector = Reporting {
-        calls: Cell::new(0),
-        request: Cell::new(None),
-    };
     let request = CanisterDiagnosticsRequest {
         canister_id: Principal::from_slice(&[1]),
         status_sender: Principal::from_slice(&[2]),
         log_sender: Principal::from_slice(&[3]),
         log_limits: CanisterLogRenderLimits::default(),
     };
+    let (collector, peer) = reporting_peer(vec![]);
     let empty = collector
         .collect_canister_diagnostics_batch(&[LabeledCanisterDiagnosticsRequest {
             label: String::new(),
@@ -133,7 +100,6 @@ async fn diagnostic_batch_rejects_invalid_labels_before_collection() {
         .await
         .expect_err("empty label must reject diagnostics batch");
     assert_eq!(empty, BatchLabelError::Empty { index: 0 });
-    assert_eq!(collector.calls.get(), 0);
 
     let duplicate = collector
         .collect_canister_diagnostics_batch(&[
@@ -156,7 +122,7 @@ async fn diagnostic_batch_rejects_invalid_labels_before_collection() {
             duplicate_index: 1,
         }
     );
-    assert_eq!(collector.calls.get(), 0);
+    peer.finish();
 }
 
 #[test]
@@ -266,4 +232,53 @@ fn logs_within_bounds_preserve_empty_records_and_raw_byte_totals() {
     assert_eq!(logs.omitted_records(), 0);
     assert_eq!(logs.omitted_content_bytes(), 0);
     assert!(!logs.was_truncated());
+}
+
+fn reporting_peer(requests: Vec<CanisterDiagnosticsRequest>) -> (PocketIc, Peer) {
+    let mut expected = requests
+        .into_iter()
+        .flat_map(|request| {
+            [
+                (
+                    "canister_status",
+                    request.status_sender,
+                    "synthetic status failure",
+                ),
+                (
+                    "fetch_canister_logs",
+                    request.log_sender,
+                    "synthetic log failure",
+                ),
+            ]
+        })
+        .collect::<Vec<_>>()
+        .into_iter();
+    let peer = Peer::spawn(
+        Some(expected.len()),
+        Duration::from_millis(30),
+        ic_host_process::testing::http::HttpFixtureLimits {
+            timeout: Duration::from_secs(5),
+            max_header_bytes: 16_384,
+            max_body_bytes: 16_384,
+        },
+        move |stream, request, _, _| {
+            let bytes = request.into_result().unwrap();
+            let split = bytes
+                .windows(4)
+                .position(|part| part == b"\r\n\r\n")
+                .unwrap()
+                + 4;
+            let call: crate::pocket_ic::common::rest::RawCanisterCall =
+                serde_json::from_slice(&bytes[split..]).unwrap();
+            let (method, sender, message) = expected.next().expect("no replay");
+            assert_eq!(call.method, method);
+            assert_eq!(call.sender, sender.as_slice());
+            let body = serde_json::json!({"message": message}).to_string();
+            write!(stream, "HTTP/1.1 500 Internal Server Error\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+        },
+    );
+    let client =
+        PocketIc::new_from_existing_instance(peer.url().clone(), 0, Duration::from_secs(1))
+            .unwrap();
+    (client, peer)
 }

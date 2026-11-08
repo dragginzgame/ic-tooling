@@ -28,16 +28,10 @@ pub struct RetryPolicy {
     pub cooldown: Duration,
 }
 
-/// Generic canister installation and structured install-code retry policy.
-///
-/// The extension creates canisters using `PocketIC` defaults. `InstallSpec::cycles`
-/// is an additional top-up, not the complete initial balance.
-#[expect(
-    async_fn_in_trait,
-    reason = "extension futures may retain caller-owned non-Send callbacks, iterators or writers; pool recipes separately require Send"
-)]
-pub trait CanisterInstallExt {
+impl PocketIc {
     /// Create and install one canister from a reusable specification.
+    /// Creates the canister using `PocketIC` defaults; `InstallSpec::cycles`
+    /// adds a top-up rather than setting its complete initial balance.
     ///
     /// Retains typed client failures during creation, cycle funding, and installation.
     /// The error identifies the stage and retains an id when creation succeeded.
@@ -46,36 +40,7 @@ pub trait CanisterInstallExt {
     ///
     /// # Errors
     /// Returns the failed creation or installation stage, retaining canister identity when available.
-    async fn try_create_and_install(
-        &self,
-        spec: InstallSpec,
-    ) -> Result<Principal, CanisterInstallError>;
-
-    /// Advance simulated time once, then tick twice for an install-code cooldown.
-    /// Zero duration skips time reads/writes while retaining both ticks.
-    ///
-    /// # Errors
-    /// Returns the first client failure without dispatching remaining ticks.
-    async fn wait_out_install_code_rate_limit(&self, cooldown: Duration)
-    -> Result<(), ClientError>;
-
-    /// Retry only while `PocketIC` reports install-code rate limiting.
-    ///
-    /// `RetryPolicy::max_attempts` includes the initial call. Before each
-    /// retry, this advances simulated time by the configured cooldown and
-    /// executes two `PocketIC` ticks. Other rejections are returned unchanged.
-    ///
-    /// # Errors
-    /// Returns non-rate-limit failures immediately, or the final rate-limit rejection.
-    /// A cooldown failure stops further installation attempts.
-    async fn retry_install_code<T, F>(&self, policy: RetryPolicy, op: F) -> Result<T, ClientError>
-    where
-        F: AsyncFnMut() -> Result<T, ClientError>;
-}
-
-impl CanisterInstallExt for PocketIc {
-    /// Install one arbitrary wasm module from a generic install specification.
-    async fn try_create_and_install(
+    pub async fn try_create_and_install(
         &self,
         spec: InstallSpec,
     ) -> Result<Principal, CanisterInstallError> {
@@ -107,15 +72,32 @@ impl CanisterInstallExt for PocketIc {
         Ok(canister_id)
     }
 
-    /// Wait out the `PocketIC` `install_code` cooldown window inside the same instance.
-    async fn wait_out_install_code_rate_limit(
+    /// Advance simulated time once, then tick twice for an install-code cooldown.
+    /// Zero duration skips time reads/writes while retaining both ticks.
+    ///
+    /// # Errors
+    /// Returns the first client failure without dispatching remaining ticks.
+    pub async fn wait_out_install_code_rate_limit(
         &self,
         cooldown: Duration,
     ) -> Result<(), ClientError> {
         super::time::advance_and_tick(self, cooldown, 2).await
     }
 
-    async fn retry_install_code<T, F>(&self, policy: RetryPolicy, op: F) -> Result<T, ClientError>
+    /// Retry only while `PocketIC` reports install-code rate limiting.
+    ///
+    /// `RetryPolicy::max_attempts` includes the initial call. Before each
+    /// retry, this advances simulated time by the configured cooldown and
+    /// executes two `PocketIC` ticks. Other rejections are returned unchanged.
+    ///
+    /// # Errors
+    /// Returns non-rate-limit failures immediately, or the final rate-limit rejection.
+    /// A cooldown failure stops further installation attempts.
+    pub async fn retry_install_code<T, F>(
+        &self,
+        policy: RetryPolicy,
+        op: F,
+    ) -> Result<T, ClientError>
     where
         F: AsyncFnMut() -> Result<T, ClientError>,
     {

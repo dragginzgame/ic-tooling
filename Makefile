@@ -48,7 +48,7 @@ endif
 .PHONY: help check clippy docs-check test test-artifacts-minimal test-tools-default tools-features-check compiler-check ci install-hooks tooling-command-check shared-tooling-check dependency-pins-check check-doc-links release-adapter-check publish publish-check publish-command-check release-version release-preflight release-verify release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
 help:
 	@echo 'Selected package: check, clippy, docs-check, test (PACKAGE=<crate>)'
-	@echo 'Artifact profiles: test-artifacts-minimal, test-artifacts-wasm, test-artifacts-encoding, test-artifacts-text'
+	@echo 'Artifact profiles: test-artifacts-minimal, test-artifacts-wasm, test-artifacts-text'
 	@echo 'Filesystem profiles: test-fs-minimal, test-fs-capability, test-fs-temporary-file'
 	@echo 'Unsupported-target compile contract: check-fs-non-unix (prepared Wasm target required)'
 	@echo 'Tools profiles: test-tools-default, test-tools-interface, test-tools-candid, test-tools-combined, test-tools-agent, test-tools-encoding, test-tools-registry and tools-features-check'
@@ -97,13 +97,10 @@ test-fs-capability:
 	+cargo test -p ic-host-fs --no-default-features --features capability --lib capability:: --locked --offline
 test-fs-temporary-file:
 	+cargo test -p ic-host-fs --no-default-features --features temporary-file --lib scratch::temporary:: --locked --offline
-.PHONY: test-artifacts-wasm test-artifacts-encoding
+.PHONY: test-artifacts-wasm
 test-artifacts-wasm:
 	+cargo test -p ic-host-artifacts --no-default-features --features wasm --lib --locked --offline wasm::
 	+cargo test -p ic-host-artifacts --no-default-features --features wasm --test consumer_contracts --locked --offline
-test-artifacts-encoding:
-	+cargo test -p ic-host-artifacts --no-default-features --features wasm-encoding --lib --locked --offline wasm_encoding::
-	+cargo test -p ic-host-artifacts --no-default-features --features wasm-encoding --test wasm_encoding --locked --offline
 .PHONY: test-artifacts-text
 test-artifacts-text:
 	+cargo test -p ic-host-artifacts --no-default-features --features wasm-text --lib --locked --offline wasm_text::
@@ -118,9 +115,11 @@ test-tools-interface:
 
 .PHONY: test-tools-candid test-tools-combined test-tools-encoding test-wasm-inspection
 test-tools-candid:
-	+cargo test -p ic-host-tools --no-default-features --features candid --all-targets --locked --offline candid::
+	+cargo test -p ic-host-tools --no-default-features --features candid --lib --locked --offline candid::decode::
+	+cargo test -p ic-host-tools --no-default-features --features candid --test public_decode --locked --offline
+	+cargo test -p ic-host-tools --no-default-features --features candid-service --lib --locked --offline candid::service::
 test-tools-combined:
-	+cargo test -p ic-host-tools --no-default-features --features candid,ic-interface --all-targets --locked --offline
+	+cargo test -p ic-host-tools --no-default-features --features candid-service,ic-interface --all-targets --locked --offline
 .PHONY: test-tools-agent
 test-tools-agent:
 	+cargo test -p ic-host-tools --no-default-features --features agent --all-targets --locked --offline agent::

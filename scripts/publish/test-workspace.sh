@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Shared companions: scripts/ci/next-release-version.sh
 set -euo pipefail
+selected_case=all
+if [[ $# != 0 ]]; then
+    [[ $# == 2 && $1 == --case && $2 == tooling-admission ]] || exit 2
+    selected_case=$2
+fi
 unset RELEASE_GROUP
 
 # Real locked/offline Cargo metadata; Git, workspace lint and publication are
@@ -150,6 +155,9 @@ STUB
 cat > bin/make <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "$*" == '--no-print-directory shared-tooling-check' ]]; then
+    exit "${PUBLISH_TOOLING_RESULT:-0}"
+fi
 if [[ "$*" == '--no-print-directory -f - MAKEFILES=' ]]; then
     exec "$REAL_PUBLISH_MAKE" "$@"
 fi
@@ -186,6 +194,16 @@ for mode in check publish; do
     done
 done
 export RELEASE_GROUP=foundation
+# Direct publication must refuse tooling drift before Cargo or evidence allocation.
+for mode in check publish; do
+    PUBLISH_TOOLING_RESULT=27 refuse "$mode"
+    [[ ! -e target/publish ]]
+done
+if [[ $selected_case == tooling-admission ]]; then
+    fixture_complete=true
+    echo 'Direct publication tooling drift refused before effects (check substituted).'
+    exit 0
+fi
 # Malformed membership refuses before Cargo, lint or attempt allocation.
 cp ci/cargo-release-groups.json original-group-policy.json
 for invalid_members in null '[]' '[1]' '["ic-build\nescape"]'; do

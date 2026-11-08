@@ -203,13 +203,12 @@ The manifest and tool catalogs own exact selections.
 
 ### Fixture Wasm encoding and validation boundary
 
-Published Host Artifacts 0.30.0 owns fixture Wasm encoding and full validation.
-The native-only `reply-fixtures` feature selects `wasm-encoding`; native development
-dependencies select `wasm-validation`. Testkit supplies IC import/export names,
-caller budgets, data placement and call order to Host's fixed-memory module
-encoder. Host owns binary sections and instructions through its private encoder;
-Testkit retains simulator installation and lifecycle policy. Platform continues
-to own the Candid/CDK/PocketIC boundary.
+Testkit's native-only `reply-fixtures` feature selects `wasm-encoder` directly.
+The fixture owner admits IC names, caller budgets, offsets and memory before
+emitting its fixed module. Native development dependencies select Artifacts'
+`wasm-validation` and `wasm-text` for independent validation and exact-byte
+comparison. Testkit owns simulator installation and lifecycle; Platform retains
+external Candid and IC protocol codecs.
 
 The optional native `held-reply-fixtures` feature additionally selects Host's
 `wasm-text` compiler for stateful single-use callbacks. Platform's native Candid

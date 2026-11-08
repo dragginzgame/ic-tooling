@@ -297,20 +297,29 @@ impl fmt::Display for CanisterDiagnosticsReport {
     }
 }
 
-/// Reusable structured `PocketIC` failure diagnostics.
-#[expect(
-    async_fn_in_trait,
-    reason = "extension futures may retain caller-owned non-Send callbacks, iterators or writers; pool recipes separately require Send"
-)]
-pub trait PocketIcDiagnosticsExt {
+impl PocketIc {
     /// Collect status and bounded logs using the request's exact senders.
     ///
     /// Both calls are attempted independently. Typed client failures remain in
     /// the report so diagnostics can stay subordinate to the original failure.
-    async fn collect_canister_diagnostics(
+    pub async fn collect_canister_diagnostics(
         &self,
         request: CanisterDiagnosticsRequest,
-    ) -> CanisterDiagnosticsReport;
+    ) -> CanisterDiagnosticsReport {
+        let status = self
+            .canister_status(request.canister_id, Some(request.status_sender))
+            .await;
+        let logs = self
+            .fetch_canister_logs(request.canister_id, request.log_sender)
+            .await
+            .map(|records| render_log_records(records, request.log_limits));
+
+        CanisterDiagnosticsReport {
+            request,
+            status,
+            logs,
+        }
+    }
 
     /// Explicitly collect and write one contextual diagnostic report.
     ///
@@ -324,7 +333,11 @@ pub trait PocketIcDiagnosticsExt {
     ///
     /// # Errors
     /// Returns the writer’s I/O error when diagnostics cannot be written.
-    async fn write_canister_diagnostics(
+    #[expect(
+        clippy::future_not_send,
+        reason = "caller-owned diagnostic writers need not be Send; no task is spawned"
+    )]
+    pub async fn write_canister_diagnostics(
         &self,
         request: CanisterDiagnosticsRequest,
         context: &str,
@@ -343,7 +356,7 @@ pub trait PocketIcDiagnosticsExt {
     ///
     /// # Errors
     /// Rejects invalid or duplicate labels before collecting diagnostics.
-    async fn collect_canister_diagnostics_batch(
+    pub async fn collect_canister_diagnostics_batch(
         &self,
         requests: &[LabeledCanisterDiagnosticsRequest],
     ) -> Result<CanisterDiagnosticsBatchReport, BatchLabelError> {
@@ -365,27 +378,6 @@ pub trait PocketIcDiagnosticsExt {
             entries,
             total: started.elapsed(),
         })
-    }
-}
-
-impl PocketIcDiagnosticsExt for PocketIc {
-    async fn collect_canister_diagnostics(
-        &self,
-        request: CanisterDiagnosticsRequest,
-    ) -> CanisterDiagnosticsReport {
-        let status = self
-            .canister_status(request.canister_id, Some(request.status_sender))
-            .await;
-        let logs = self
-            .fetch_canister_logs(request.canister_id, request.log_sender)
-            .await
-            .map(|records| render_log_records(records, request.log_limits));
-
-        CanisterDiagnosticsReport {
-            request,
-            status,
-            logs,
-        }
     }
 }
 

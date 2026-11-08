@@ -1,10 +1,10 @@
 //! `PocketIC` host-test harness extensions.
 //!
 //! Import the client and DTOs from `ic_testkit::pocket_ic`.
-//! This module owns Testkit's extension traits and policy types.
+//! This module owns Testkit's harness methods and policy types.
 //!
-//! Construct and own [`crate::pocket_ic::PocketIc`] instances normally, then import individual
-//! extension traits or [`prelude`] for installation, diagnostics and snapshots.
+//! Installation and snapshot helpers are inherent methods on that client.
+//! Diagnostic helpers are inherent methods on the client as well.
 //! Import the call functions, startup configuration and polling helpers explicitly.
 //! Native simulator operations are maintained in the client module.
 //!
@@ -50,13 +50,13 @@ pub use diagnostics::{
     CanisterDiagnosticLogRecord, CanisterDiagnosticLogs, CanisterDiagnosticsBatchEntry,
     CanisterDiagnosticsBatchReport, CanisterDiagnosticsReport, CanisterDiagnosticsRequest,
     CanisterLogRenderLimits, DEFAULT_CANISTER_LOG_BYTE_LIMIT, DEFAULT_CANISTER_LOG_RECORD_LIMIT,
-    LabeledCanisterDiagnosticsRequest, PocketIcDiagnosticsExt,
+    LabeledCanisterDiagnosticsRequest,
 };
 pub use errors::{CanisterInstallError, StandaloneCanisterInstallError};
-pub use lifecycle::{CanisterInstallExt, InstallSpec, RetryPolicy};
+pub use lifecycle::{InstallSpec, RetryPolicy};
 pub use snapshot::{
-    CanisterSnapshotTarget, ControllerSnapshotError, ControllerSnapshots, PocketIcSnapshotExt,
-    SnapshotCleanupFailure, SnapshotRestoreFunding,
+    CanisterSnapshotTarget, ControllerSnapshotError, ControllerSnapshots, SnapshotCleanupFailure,
+    SnapshotRestoreFunding,
 };
 pub use standalone::StandaloneCanisterFixture;
 pub use standalone_recipe::StandaloneCanisterRecipe;
@@ -68,11 +68,3 @@ pub use time::{TickUntilError, advance_and_tick, tick_until};
 pub use transport::is_dead_pocket_ic_transport_error;
 #[cfg(feature = "wire")]
 pub use wire::{WireCallContext, WireCallError, WireCallSpec, query_wire, update_wire};
-
-/// All `PocketIC` extension traits, and no data types.
-///
-/// Importing this module keeps policy/data types explicit while avoiding
-/// repeated trait lists across a large integration-test crate.
-pub mod prelude {
-    pub use super::{CanisterInstallExt, PocketIcDiagnosticsExt, PocketIcSnapshotExt};
-}

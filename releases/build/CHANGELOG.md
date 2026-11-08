@@ -6,6 +6,30 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.80.0] - Unreleased
+
+### 🔧 Changed
+
+- Adopt HMAC 0.13 with its compatible SHA-2 0.11 backend for private environment
+  comparison tags. Retain exact HMAC-SHA-256 domains, framing and tag bytes;
+  other SHA-2 consumers retain their existing dependency generation.
+
+### ⚠️ Breaking
+
+- Give Wasm and artifact batch reports one `CacheBatchReport` owner for ordered
+  results, filtering, success checks and elapsed time. Access those through
+  `report.batch`; domain-specific metrics, failure details and execution remain
+  on their existing owners. No forwarding methods are retained.
+
+### 🧪 Testing
+
+- Reuse existing package scaffolding and one offline lockfile generator in the
+  example/native fixture constructors, retaining their target-specific setup
+  ([#347](https://github.com/dragginzgame/ic-tooling/issues/347)).
+- Correct isolated-build handoff and library-output qualification to select
+  isolated Cargo targets explicitly instead of repeating the shared default.
+  Remove accidentally tracked generated cache markers.
+
 ## [0.79.1] - 2026-11-08
 
 ### ➕ Added

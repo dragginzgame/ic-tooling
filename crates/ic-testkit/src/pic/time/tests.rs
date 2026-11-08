@@ -152,7 +152,6 @@ async fn tick_batches_preserve_exact_transport_order_and_selected_counts() {
 
 #[tokio::test]
 async fn install_cooldown_uses_exactly_two_ticks() {
-    use crate::pic::CanisterInstallExt as _;
     for advance in [Duration::ZERO, Duration::from_nanos(7)] {
         assert_time_requests(advance, 2, async |pic| {
             pic.wait_out_install_code_rate_limit(advance).await.unwrap();

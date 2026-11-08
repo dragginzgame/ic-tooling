@@ -8,6 +8,36 @@ const LIMITS: RawReplyLimits = RawReplyLimits {
 };
 
 #[test]
+fn raw_reply_encoding_matches_the_fixed_module_contract() {
+    let expected = ic_host_artifacts::wasm_text::compile(
+        r#"(module
+            (type (func (param i32 i32)))
+            (type (func))
+            (import "ic0" "msg_reply_data_append" (func (type 0)))
+            (import "ic0" "msg_reply" (func (type 1)))
+            (memory (export "memory") 1 1)
+            (func (export "canister_query q") (type 1)
+                i32.const 0 i32.const 1 call 0 call 1)
+            (data (i32.const 0) "x"))"#,
+        ic_host_artifacts::wasm_text::CompileLimits {
+            source_bytes: 1024,
+            module_bytes: 1024,
+        },
+    )
+    .unwrap();
+    let actual = raw_reply_canister(
+        &[RawReplyMethod {
+            name: "q",
+            mode: ReplyMode::Query,
+            reply: b"x",
+        }],
+        LIMITS,
+    )
+    .unwrap();
+    assert_eq!(actual, expected);
+}
+
+#[test]
 fn exports_both_modes_preserving_raw_binary_data_and_page_boundaries() {
     let reply = vec![0xff; 65_537];
     let methods = [

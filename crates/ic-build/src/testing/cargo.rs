@@ -208,3 +208,24 @@ where
     );
     selected
 }
+
+/// Generate a fixture lockfile offline and return its selected Cargo executable.
+///
+/// # Panics
+/// Panics if the fixture command cannot start or Cargo rejects its manifest.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "lockfile generation is the operation; reusing the selected Cargo path is optional"
+)]
+pub fn generate_fixture_lockfile(root: &Path) -> std::ffi::OsString {
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    assert!(
+        std::process::Command::new(&cargo)
+            .current_dir(root)
+            .args(["generate-lockfile", "--offline"])
+            .status()
+            .unwrap()
+            .success()
+    );
+    cargo
+}

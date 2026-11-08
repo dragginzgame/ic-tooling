@@ -1,5 +1,15 @@
 # IC Tooling qualification
 
+Shared Tooling is selected by exact version in root
+`[workspace.metadata.toko-tooling]`. Commit `toko-tooling.lock` and
+`.shared-tooling.snapshot` with that declaration. Tooling is independent of
+application Cargo dependencies and Cargo.lock. Edit the declared version and run
+`make shared-tooling-update` to resolve/install it; use
+`make shared-tooling-install` to reinstall the locked release and
+`make shared-tooling-check` for offline drift admission. Direct publication and
+release adapters check tooling before effects. See the
+[root selection guide](consuming-snapshots.md#cargo-selection-and-installation).
+
 Local shell/browser fixture defaults and explicit outside-target selections are
 documented in [qualification scratch ownership](design/fixture-scratch.md).
 
@@ -140,19 +150,19 @@ public package with one full lint pass; it cannot upload.
 
 `make test-artifacts-minimal` checks the artifact library without optional
 features. `make test-artifacts-wasm` checks inspection without the encoder or
-validator. `make test-artifacts-encoding` checks encoding alone; its normal/build
-graph excludes wasmparser, while dev-only parser checks inspect emitted binaries.
+validator. Testkit owns direct raw-reply encoding and its independent byte-contract
+and installed query/update checks.
 `make test-artifacts-text` checks optional WAT compilation without a production
 parser or validator. Source/output admission, symbolic names, stateful instructions
 and separate full validation are covered in its all-feature profile.
-Select `--features wasm-encoding,wasm-validation` for full instruction/type
-validation of encoder fixtures. All-feature tests include both. The feature guard
-checks these profiles on Linux and both macOS target graphs, including exclusion
+Testkit development dependencies select full validation for generated fixtures.
+The feature guard checks the Artifacts profiles on Linux and both macOS target graphs, including exclusion
 of wasmparser's validation feature unless explicitly requested. These graph checks
 do not replace native qualification. Both capabilities require the declared
 compiler and native Linux/macOS evidence; native macOS remains separately reported.
 The direct-dependency policy restricts cap-std, cap-fs-ext and tempfile to FS,
-and wasmparser, wasm-encoder and wat to Artifacts, including dev/build and aliases.
+wasmparser and wat to Artifacts, and direct wasm-encoder to Testkit, including
+dev/build and aliases.
 All normal/build profiles except explicitly selected text compilation exclude
 wat/wast. FS defaults, CLI, Process and the inspector exclude the cap/tempfile
 backends. Independent `capability`, `temporary-file` and combined FS profiles
@@ -217,8 +227,10 @@ default and other unrelated profiles exclude its YAML parser.
 `make test-tools-encoding` checks canonical unsigned LEB128 admission. The decoder
 adds no dependencies. `make tools-features-check` excludes Candid and its parser
 from default and interface-only normal/build graphs. `make test-tools-combined`
-exercises `candid,ic-interface` together, including the DID/Wasm comparison.
-Native CI includes these profiles. Only explicit `candid` selects Platform's parser;
+exercises `candid-service,ic-interface` together, including the DID/Wasm comparison.
+`make test-tools-candid` checks binary decoding and service parsing separately,
+including the public decode consumer. Native CI includes these profiles.
+Only explicit `candid-service` selects Platform's parser;
 Agent and ledger evidence retain their required codec dependencies without it.
 Registry selects `ic-platform-types` directly, without the facade or codec. Its
 native and Wasm graph policies retain one canonical Principal identity. `ic-interface` adds

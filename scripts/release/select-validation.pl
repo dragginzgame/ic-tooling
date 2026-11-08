@@ -184,7 +184,23 @@ my @inputs = ('Makefile','Cargo.toml','Cargo.lock','rust-toolchain.toml','.share
     'scripts/ci/validation-evidence.pl','scripts/ci/ValidationPlan.pm',
     'scripts/ci/check-release-source.sh',$context_path,$baseline_path);
 push @inputs, map { $_->{changelog} } @{$groups->{groups}};
-my %environment = map { $_ => sha256_hex($ENV{$_}) } grep {
+# Shared's tools.mk prepends this exact pair on every recursive Make entry.
+# Collapse only adjacent leading repetitions: lookup precedence and every
+# remaining PATH byte stay identical. A new/reordered tool directory still
+# changes context, as does a direct invocation without the admitted prefix.
+sub context_environment {
+    my ($name) = @_;
+    my $value = $ENV{$name};
+    if ($name eq 'PATH') {
+        my $root = git('rev-parse', '--show-toplevel'); chomp $root;
+        my $prefix = "$root/.tools/host/bin:$root/.tools/rust/common/bin:";
+        while (index($value, "$prefix$prefix") == 0) {
+            substr($value, 0, length($prefix), '');
+        }
+    }
+    return sha256_hex($value);
+}
+my %environment = map { $_ => context_environment($_) } grep {
     /\A(?:CARGO(?:_|$)|RUST|CC(?:_|$)|CXX(?:_|$)|AR(?:_|$)|LD(?:_|$)|TARGET_|HOST_|MACOSX_DEPLOYMENT_TARGET$|SDKROOT$|SOURCE_DATE_EPOCH$|PATH$|HOME$|TMPDIR$)/ &&
         $_ !~ /\ACARGO_(?:MAKEFLAGS|RELEASE_METADATA_EDITOR|RELEASE_METADATA_MAX_BYTES)\z/
 } keys %ENV;

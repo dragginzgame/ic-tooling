@@ -105,13 +105,13 @@ its production graph has no filesystem or process dependency. No generic crate
 depends on Tools, Canic, IcyDB or an IC runtime. Test/example artifact features
 do not become production filesystem dependencies. Tools' default response
 interpretation adds no generic Host dependencies; `icp-project` selects Text.
-Candid service inspection requires its explicit `candid` feature.
+Candid service inspection requires its explicit `candid-service` feature.
 Native Candid extraction belongs to IC Build's `artifacts::candid`; generic line
 normalization belongs to `ic_host_text::normalize`.
-Shared method identities remain unconditional. Candid service inspection and
-bounded reply decoding require `candid`; Platform and its native parser are
-optional. `ic-interface` adds generic Wasm facts and export projection without
-Platform, Candid or filesystem/process dependencies. Select both `candid` and
+Shared method identities remain unconditional. Bounded reply decoding selects
+`candid` without the text parser; `candid-service` adds service parsing. Both
+select Platform explicitly. `ic-interface` adds generic Wasm facts and export projection without
+Platform, Candid or filesystem/process dependencies. Select both `candid-service` and
 `ic-interface` for service/export comparisons.
 Replica revision selection, install thresholds and resource-report policy belong
 to the consuming application. Host Artifacts retains generic Wasm facts; Tools
@@ -123,8 +123,7 @@ no longer owns an `ic-limits` profile or a reference-policy CLI example.
   including allocation-free visitation with caller-owned scratch and callbacks,
   optional gzip encoding/decoding, optional Wasm
   structural facts, encoded code/data statistics, bounded custom-section framing,
-  full core-module validation, generic fixed-memory call-module encoding and
-  optional core WebAssembly Text compilation.
+  full core-module validation, optional core WebAssembly Text compilation.
 - ic-host-fs owns no-follow directory hashing and ordered sync/checksum traversal
   over caller-held descriptors,
   held directory capabilities with private cap-* traversal and bounded enumeration,
@@ -267,17 +266,13 @@ metadata schemas, duplicate/append policy and aggregate module budgets stay with
 callers. They assemble and validate the containing module. Independent malformed-
 parser fixtures remain separate from encoder round-trip coverage.
 
-The independent `wasm-encoding` feature owns `wasm_encoding::encode` and its
-Host records, backed privately by `wasm-encoder`. Its demonstrated consumer is
-Testkit's raw-reply fixture builder: imports, fixed Wasm32 memory, active data and
-exported functions that call imports with i32 constants. Host encodes those generic
-mechanics. Testkit retains IC method-name admission, query/update prefixes,
-reply limits, offset/page selection, error translation and PocketIC lifecycle.
-No upstream encoder types or raw instruction escape hatch are exposed. The
-output-byte allowance checks input lower bounds before encoding and complete
-framing afterwards; it is not a hard allocation or CPU quota. This feature does
-not imply inspection or validation. The existing custom-section encoder retains
-its stronger pre-allocation admission and independent minimal feature contract.
+Testkit owns its raw-reply fixture generator and uses the optional native
+`wasm-encoder` dependency directly. One admission pass checks IC names, caller
+budgets and reply extents before emitting the fixed imports, memory, functions
+and data. Export-name extents are checked before emission, and complete encoded
+output must fit u32. There is no generic call-module
+DTO layer or instruction escape hatch. Artifacts retains structural inspection,
+full validation, custom-section framing and WAT compilation.
 
 `wasm-validation` adds `wasm::validate` and owned `ValidationError`, using the
 private parser's full validator rather than structural inspection. It implies
@@ -314,7 +309,7 @@ function export facts without reparsing Wasm. It preserves internal methods,
 empty names and mode differences for caller admission. Oneway remains distinct
 in Candid and maps explicitly to the update export namespace through `as_export`.
 Shared method identities remain available without Wasm or Candid support.
-Select `candid` for parsing and `ic-interface` for export projection.
+Select `candid-service` for parsing and `ic-interface` for export projection.
 Expected interfaces, CDK allowlists, type compatibility, payload annotations and
 Canic endpoint presentation remain consumer policy. IC Build owns build/cache
 orchestration separately; these libraries do not install tools or build canisters.

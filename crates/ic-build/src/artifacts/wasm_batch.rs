@@ -1,5 +1,5 @@
 use super::cache_fs::canonicalize_allow_missing;
-use super::{CacheBatchEntry, CacheOutcomeCounts};
+use super::{CacheBatchEntry, CacheBatchReport, CacheOutcomeCounts};
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
 
 use std::{
@@ -25,9 +25,9 @@ pub type LabeledWasmBuildSpec = super::batch::LabeledSpec<WasmBuildSpec>;
 /// Ordered outcomes and failures from a collect-all Wasm build batch.
 #[derive(Debug)]
 pub struct WasmBuildBatchReport {
-    entries: Vec<CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>>,
+    /// Common ordered outcomes and elapsed time.
+    pub batch: CacheBatchReport<WasmBuildOutcome, WasmBuildBatchFailure>,
     input_resolution: WasmBuildBatchInputMetrics,
-    total: Duration,
 }
 
 /// Structural error that prevents a labeled Wasm batch from starting.
@@ -83,32 +83,6 @@ pub enum WasmBuildBatchProgressEvent {
 }
 
 impl WasmBuildBatchReport {
-    /// Ordered labeled entries.
-    #[must_use]
-    pub fn entries(&self) -> &[CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>] {
-        &self.entries
-    }
-
-    /// Consume the report into its ordered labeled entries.
-    #[must_use]
-    pub fn into_entries(self) -> Vec<CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>> {
-        self.entries
-    }
-
-    /// Successful entries, retaining the canonical identity, result and timings.
-    pub fn outcomes(
-        &self,
-    ) -> impl Iterator<Item = &CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>> {
-        self.entries.iter().filter(|entry| entry.is_success())
-    }
-
-    /// Failed entries; inspect `error()` and `failure_details()` on each entry.
-    pub fn failures(
-        &self,
-    ) -> impl Iterator<Item = &CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>> {
-        self.entries.iter().filter(|entry| !entry.is_success())
-    }
-
     /// Canonical entries paired with their integrated shared-target maintenance.
     ///
     /// Batch-owned maintenance contributes at most one outcome for each
@@ -121,7 +95,7 @@ impl WasmBuildBatchReport {
             &SharedIncrementalTargetMaintenanceOutcome,
         ),
     > {
-        self.outcomes().filter_map(|entry| {
+        self.batch.outcomes().filter_map(|entry| {
             entry
                 .outcome()?
                 .record()
@@ -130,29 +104,22 @@ impl WasmBuildBatchReport {
         })
     }
 
-    /// Complete wall-clock time for the sequential collect-all batch.
-    #[must_use]
-    pub const fn total(&self) -> Duration {
-        self.total
-    }
-
-    /// Whether every specification completed successfully.
-    #[must_use]
-    pub fn is_success(&self) -> bool {
-        self.entries.iter().all(CacheBatchEntry::is_success)
-    }
-
     /// Aggregate outcome, input-resolution reuse, and timing counters.
     #[must_use]
     pub fn metrics(&self) -> WasmBuildBatchMetrics {
         let mut metrics = WasmBuildBatchMetrics {
-            specifications: self.entries.len(),
+            specifications: self.batch.entries.len(),
             input_resolution_runs: self.input_resolution.runs,
             input_resolution_reuses: self.input_resolution.reuses,
-            total: self.total,
+            total: self.batch.total,
             ..WasmBuildBatchMetrics::default()
         };
-        for outcome in self.entries.iter().filter_map(CacheBatchEntry::outcome) {
+        for outcome in self
+            .batch
+            .entries
+            .iter()
+            .filter_map(CacheBatchEntry::outcome)
+        {
             metrics.counts.record(outcome.is_reused());
             metrics.successful_timings = metrics
                 .successful_timings
@@ -323,9 +290,11 @@ where
         });
     }
     WasmBuildBatchReport {
-        entries,
+        batch: CacheBatchReport {
+            entries,
+            total: started.elapsed(),
+        },
         input_resolution: WasmBuildBatchInputMetrics::default(),
-        total: started.elapsed(),
     }
 }
 

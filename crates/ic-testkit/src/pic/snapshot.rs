@@ -108,12 +108,7 @@ pub enum ControllerSnapshotError {
     },
 }
 
-/// Exact-sender capture and restore of related canister snapshots.
-#[expect(
-    async_fn_in_trait,
-    reason = "extension futures may retain caller-owned non-Send callbacks, iterators or writers; pool recipes separately require Send"
-)]
-pub trait PocketIcSnapshotExt {
+impl PocketIc {
     /// Capture snapshots with one explicit sender per canister.
     ///
     /// The caller must stop and drain the complete target set before capture,
@@ -133,12 +128,75 @@ pub trait PocketIcSnapshotExt {
     ///
     /// # Errors
     /// Returns a target-admission or snapshot-capture error, retaining completed work.
-    async fn capture_snapshots<I>(
+    pub async fn capture_snapshots<I>(
         &self,
         targets: I,
     ) -> Result<ControllerSnapshots, ControllerSnapshotError>
     where
-        I: IntoIterator<Item = CanisterSnapshotTarget>;
+        I: IntoIterator<Item = CanisterSnapshotTarget>,
+    {
+        // Validate the entire input before issuing any management calls. The map
+        // also owns the deterministic canister order.
+        let mut ordered_targets = BTreeMap::new();
+        for target in targets {
+            if ordered_targets
+                .insert(target.canister_id, target.sender)
+                .is_some()
+            {
+                return Err(ControllerSnapshotError::DuplicateCanisterId {
+                    canister_id: target.canister_id,
+                });
+            }
+        }
+        let mut snapshots = BTreeMap::new();
+        for (canister_id, sender) in ordered_targets {
+            let mut pending = Vec::new();
+            let failure = match try_take_snapshot(self, canister_id, sender, &mut pending).await {
+                Ok(snapshot) => {
+                    snapshots.insert(canister_id, snapshot);
+                    continue;
+                }
+                Err(failure) => failure,
+            };
+            let cleanup_failures = cleanup_captured_snapshots(
+                pending
+                    .into_iter()
+                    .map(|snapshot_id| {
+                        (
+                            canister_id,
+                            ControllerSnapshot {
+                                snapshot_id,
+                                sender,
+                            },
+                        )
+                    })
+                    .chain(snapshots),
+                |canister_id, sender, snapshot_id| {
+                    self.delete_canister_snapshot(canister_id, sender, snapshot_id)
+                },
+            )
+            .await;
+            return Err(match failure {
+                transfer::Failure::Call(failure) => ControllerSnapshotError::CaptureFailed {
+                    canister_id,
+                    sender,
+                    source: Box::new(failure),
+                    cleanup_failures,
+                },
+                transfer::Failure::Invalid(message) => ControllerSnapshotError::InvalidSnapshot {
+                    canister_id,
+                    message,
+                    cleanup_failures,
+                },
+                transfer::Failure::Codec(source) => ControllerSnapshotError::SnapshotCodec {
+                    canister_id,
+                    source,
+                    cleanup_failures,
+                },
+            });
+        }
+        Ok(ControllerSnapshots(snapshots))
+    }
 
     /// Restore each snapshot with its exact captured sender and selected funding.
     ///
@@ -154,25 +212,7 @@ pub trait PocketIcSnapshotExt {
     ///
     /// # Errors
     /// Returns a funding or restoration error, retaining partial progress.
-    async fn restore_snapshots(
-        &self,
-        snapshots: &ControllerSnapshots,
-        funding: SnapshotRestoreFunding,
-    ) -> Result<(), ControllerSnapshotError>;
-}
-
-impl PocketIcSnapshotExt for PocketIc {
-    async fn capture_snapshots<I>(
-        &self,
-        targets: I,
-    ) -> Result<ControllerSnapshots, ControllerSnapshotError>
-    where
-        I: IntoIterator<Item = CanisterSnapshotTarget>,
-    {
-        capture_snapshot_set(self, targets).await
-    }
-
-    async fn restore_snapshots(
+    pub async fn restore_snapshots(
         &self,
         snapshots: &ControllerSnapshots,
         funding: SnapshotRestoreFunding,
@@ -182,76 +222,6 @@ impl PocketIcSnapshotExt for PocketIc {
         }
         Ok(())
     }
-}
-
-async fn capture_snapshot_set<I>(
-    pocket_ic: &PocketIc,
-    targets: I,
-) -> Result<ControllerSnapshots, ControllerSnapshotError>
-where
-    I: IntoIterator<Item = CanisterSnapshotTarget>,
-{
-    // Validate the entire input before issuing any management calls. The map
-    // also owns the deterministic canister order.
-    let mut ordered_targets = BTreeMap::new();
-    for target in targets {
-        if ordered_targets
-            .insert(target.canister_id, target.sender)
-            .is_some()
-        {
-            return Err(ControllerSnapshotError::DuplicateCanisterId {
-                canister_id: target.canister_id,
-            });
-        }
-    }
-    let mut snapshots = BTreeMap::new();
-    for (canister_id, sender) in ordered_targets {
-        let mut pending = Vec::new();
-        let failure = match try_take_snapshot(pocket_ic, canister_id, sender, &mut pending).await {
-            Ok(snapshot) => {
-                snapshots.insert(canister_id, snapshot);
-                continue;
-            }
-            Err(failure) => failure,
-        };
-        let cleanup_failures = cleanup_captured_snapshots(
-            pending
-                .into_iter()
-                .map(|snapshot_id| {
-                    (
-                        canister_id,
-                        ControllerSnapshot {
-                            snapshot_id,
-                            sender,
-                        },
-                    )
-                })
-                .chain(snapshots),
-            |canister_id, sender, snapshot_id| {
-                pocket_ic.delete_canister_snapshot(canister_id, sender, snapshot_id)
-            },
-        )
-        .await;
-        return Err(match failure {
-            transfer::Failure::Call(failure) => ControllerSnapshotError::CaptureFailed {
-                canister_id,
-                sender,
-                source: Box::new(failure),
-                cleanup_failures,
-            },
-            transfer::Failure::Invalid(message) => ControllerSnapshotError::InvalidSnapshot {
-                canister_id,
-                message,
-                cleanup_failures,
-            },
-            transfer::Failure::Codec(source) => ControllerSnapshotError::SnapshotCodec {
-                canister_id,
-                source,
-                cleanup_failures,
-            },
-        });
-    }
-    Ok(ControllerSnapshots(snapshots))
 }
 
 impl ControllerSnapshots {

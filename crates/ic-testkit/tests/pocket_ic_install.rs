@@ -3,8 +3,8 @@ mod support;
 
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
-    CanisterDiagnosticsRequest, CanisterInstallError, CanisterInstallExt, CanisterLogRenderLimits,
-    InstallSpec, PocketIcDiagnosticsExt, StandaloneCanisterFixture,
+    CanisterDiagnosticsRequest, CanisterInstallError, CanisterLogRenderLimits, InstallSpec,
+    StandaloneCanisterFixture,
 };
 
 #[tokio::test]

@@ -88,14 +88,14 @@ fn labeled_transactions_build_then_reuse_in_order() {
     })
     .expect("valid labeled batch");
 
-    assert!(built.is_success());
-    assert_eq!(built.entries().len(), 2);
-    assert_eq!(built.entries()[0].label(), "first");
-    assert_eq!(built.entries()[1].label(), "second");
+    assert!(built.batch.is_success());
+    assert_eq!(built.batch.entries().len(), 2);
+    assert_eq!(built.batch.entries()[0].label(), "first");
+    assert_eq!(built.batch.entries()[1].label(), "second");
     assert_eq!(built_labels, ["first", "second"]);
-    assert!(built.outcomes().all(|entry| {
+    assert!(built.batch.outcomes().all(|entry| {
         matches!(entry.outcome().unwrap(), ArtifactCacheOutcome::Built(_))
-            && entry.entry_elapsed() <= built.total()
+            && entry.entry_elapsed() <= built.batch.total()
     }));
     let built_metrics = built.metrics();
     assert_eq!(built_metrics.entries(), 2);
@@ -109,9 +109,10 @@ fn labeled_transactions_build_then_reuse_in_order() {
         Err::<(), _>("unexpected cache miss")
     })
     .expect("valid reused batch");
-    assert!(reused.is_success());
+    assert!(reused.batch.is_success());
     assert!(
         reused
+            .batch
             .outcomes()
             .all(|entry| entry.outcome().unwrap().is_reused())
     );
@@ -149,22 +150,23 @@ fn callback_failure_retains_label_timings_and_later_transaction() {
     })
     .expect("valid labeled batch");
 
-    assert!(!report.is_success());
-    assert_eq!(report.entries().len(), 3);
+    assert!(!report.batch.is_success());
+    assert_eq!(report.batch.entries().len(), 3);
     assert_eq!(
         report
+            .batch
             .outcomes()
             .map(CacheBatchEntry::label)
             .collect::<Vec<_>>(),
         ["first", "third"]
     );
-    for entry in report.outcomes().chain(report.failures()) {
+    for entry in report.batch.outcomes().chain(report.batch.failures()) {
         assert!(std::ptr::eq(
             entry,
-            &raw const report.entries()[entry.index()]
+            &raw const report.batch.entries()[entry.index()]
         ));
     }
-    let failures = report.failures().collect::<Vec<_>>();
+    let failures = report.batch.failures().collect::<Vec<_>>();
     assert_eq!(failures.len(), 1);
     let failure = &failures[0];
     assert_eq!(failure.index(), 1);
@@ -227,7 +229,7 @@ fn callback_and_abort_failures_retain_both_causes_and_continue() {
         Ok(())
     });
     let report = report.unwrap();
-    let failed = report.failures().next().unwrap();
+    let failed = report.batch.failures().next().unwrap();
     let ArtifactCacheBatchFailure::Callback {
         source,
         cleanup_error: Some(cleanup),
@@ -277,7 +279,7 @@ fn preparation_failure_is_labeled_timed_and_does_not_stop_later_entries() {
     })
     .expect("valid labeled batch");
 
-    let failures = report.failures().collect::<Vec<_>>();
+    let failures = report.batch.failures().collect::<Vec<_>>();
     assert_eq!(failures.len(), 1);
     let failure = &failures[0];
     assert_eq!(failure.index(), 1);
@@ -321,7 +323,7 @@ fn commit_failure_is_labeled_timed_and_does_not_stop_later_entries() {
     })
     .expect("valid labeled batch");
 
-    let failures = report.failures().collect::<Vec<_>>();
+    let failures = report.batch.failures().collect::<Vec<_>>();
     assert_eq!(failures.len(), 1);
     let failure = &failures[0];
     assert_eq!(failure.label(), "second");

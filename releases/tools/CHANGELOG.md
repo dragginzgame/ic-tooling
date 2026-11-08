@@ -4,6 +4,20 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.88.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Narrow `candid` to binary reply decoding. Select `candid-service` for the
+  textual `candid::service` API; it includes decoding. DID/Wasm comparisons
+  select `candid-service,ic-interface`. Decode-only consumers no longer select
+  `candid_parser`; Canic artifact inspection must select the new feature.
+
+### 🔧 Changed
+
+- Adopt Platform 0.27 for the optional external IC adapters. Existing ledger
+  DTO identity and caller-selected features are retained.
+
 ## [0.87.0] - 2026-11-08
 
 ### ⚠️ Breaking

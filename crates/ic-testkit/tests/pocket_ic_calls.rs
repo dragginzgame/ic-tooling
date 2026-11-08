@@ -30,7 +30,7 @@ const PROBE: WireCallSpec = WireCallSpec {
 #[tokio::test]
 async fn wire_calls_preserve_codec_refusals_and_error_identity() {
     use ic_testkit::pic::{
-        CanisterInstallExt as _, InstallSpec,
+        InstallSpec,
         fixtures::{RawReplyLimits, RawReplyMethod, ReplyMode, raw_reply_canister},
     };
     let valid =

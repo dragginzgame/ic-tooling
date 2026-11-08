@@ -5,7 +5,7 @@ mod support;
 use ic_platform_types::principal::ExternalPrincipal as Principal;
 use ic_testkit::pic::{
     CanisterDiagnosticsRequest, CanisterLogRenderLimits, LabeledCanisterDiagnosticsRequest,
-    PocketIcDiagnosticsExt, is_dead_pocket_ic_transport_error,
+    is_dead_pocket_ic_transport_error,
 };
 use ic_testkit::pocket_ic::CanisterSettings;
 

@@ -84,6 +84,9 @@ STUB
 cat > "$fixture/bin/make" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "$*" == '--no-print-directory shared-tooling-check' ]]; then
+    exit "${ADAPTER_TOOLING_RESULT:-0}"
+fi
 if [[ "$*" == '--no-print-directory -f - MAKEFILES=' ]]; then exec "$ADAPTER_REAL_MAKE" "$@"; fi
 printf 'make %s\n' "$*" >> "$ADAPTER_EVENTS"
 case "$*" in
@@ -139,6 +142,9 @@ for selected_group in "${groups[@]}"; do
     bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$checkout" --compact
     mv "$checkout/source-metadata.json" "$fixture/$selected_group.source-metadata.json"
     cd "$checkout"
+    # Match the production Make entry before selection. Publication below enters
+    # the real tools.mk again, exercising its repeated PATH prefix.
+    export PATH="$checkout/.tools/host/bin:$checkout/.tools/rust/common/bin:$PATH"
     git init -q -b main
     git config user.name Fixture
     git config user.email fixture@example.invalid
@@ -184,6 +190,7 @@ for selected_group in "${groups[@]}"; do
         [[ ! -s "$ADAPTER_EVENTS" ]]
         git restore -- README.md
     fi
+    ADAPTER_TOOLING_RESULT=27 refuse invoke preflight > "$fixture/$selected_group.tooling-drift.log" 2>&1
     invoke preflight > "$fixture/$selected_group.preflight.log" 2>&1
     [[ "$(grep -c '^make --no-print-directory install-tools$' "$ADAPTER_EVENTS")" == 1 ]]
     # The complete native/Wasm gate is substituted, never source/group checks.
@@ -269,9 +276,9 @@ for selected_group in "${groups[@]}"; do
         build) other_group=text ;;
         text) other_group=foundation ;;
         tools) other_group=testkit ;;
-        testkit) other_group=native ;;
-        native) other_group=testkit ;;
+        testkit) other_group=tools ;;
     esac
+    bash "$root/scripts/release/group.sh" "$root/ci/cargo-release-groups.json" "$other_group" members >/dev/null
     other_state=".git/release-state/$other_group-$RELEASE_VERSION.validation"
     cp "$state" "$other_state"
     cp "$state.notes" "$other_state.notes"
@@ -319,6 +326,16 @@ for selected_group in "${groups[@]}"; do
         lint_probe > "$fixture/lint-reused.log" 2>&1
         [[ ! -s "$ADAPTER_EVENTS" ]]
         grep 'Reused qualified workspace lint' "$fixture/lint-reused.log" >/dev/null
+        export ADAPTER_LINT_GROUP="$selected_group" ADAPTER_LINT_VERSION="$RELEASE_VERSION" ADAPTER_LINT_COMMIT="$RELEASE_COMMIT"
+        "$ADAPTER_REAL_MAKE" --no-print-directory -f - lint-context > "$fixture/lint-make-context.log" 2>&1 <<'MAKE'
+include make/tools.mk
+.PHONY: lint-context
+lint-context:
+	@bash scripts/release/publication-lint.sh "$$ADAPTER_LINT_GROUP" "$$ADAPTER_LINT_VERSION" "$$ADAPTER_LINT_COMMIT"
+MAKE
+        grep 'Reused qualified workspace lint' "$fixture/lint-make-context.log" >/dev/null
+        [[ ! -s "$ADAPTER_EVENTS" ]]
+        PATH="$fixture/bin:$PATH" refuse lint_probe > "$fixture/lint-path-precedence.log" 2>&1
         RUSTFLAGS='--cfg changed_publication_context' refuse lint_probe > "$fixture/lint-environment.log" 2>&1
         refuse bash "$root/scripts/release/publication-lint.sh" "$selected_group" "$RELEASE_VERSION" "$RELEASE_SOURCE" \
             > "$fixture/lint-source.log" 2>&1

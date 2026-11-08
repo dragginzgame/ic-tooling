@@ -130,10 +130,10 @@ uncertain update is never replayed automatically. Wire delegates to that same
 client and preserves the typed cause. Unrelated Rust panics propagate. The former
 panic-string transport adapter and blocking client are absent.
 
-`CanisterInstallExt` preserves create, funding and installation failures. Retry
+`PocketIc::try_create_and_install` preserves create, funding and installation failures. Retry
 policy uses `ErrorCode::CanisterInstallCodeRateLimited` and caller-selected
 attempt/cooldown values. Diagnostics are a separate explicit operation:
-`PocketIcDiagnosticsExt` retains status, controller-aware logs and bounded
+`PocketIc::collect_canister_diagnostics` retains status, controller-aware logs and bounded
 rendering. Installation does not silently fetch or print diagnostic logs.
 
 Upstream error enrichment could reduce these adapters if it preserves context,

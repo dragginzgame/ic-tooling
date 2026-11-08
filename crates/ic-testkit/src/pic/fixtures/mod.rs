@@ -1,10 +1,12 @@
 //! Opt-in native fixtures that build small canisters returning caller-selected raw bytes.
 
-use ic_host_artifacts::wasm_encoding::{
-    Call, CallModule, DataSegment, ExportedFunction, FunctionImport, Memory32, encode,
-};
 use std::collections::BTreeSet;
 use thiserror::Error;
+use wasm_encoder::{
+    CodeSection, ConstExpr, DataSection, EntityType, ExportKind, ExportSection, Function,
+    FunctionSection, ImportSection, Instruction, MemorySection, MemoryType, Module, TypeSection,
+    ValType,
+};
 
 #[cfg(feature = "held-reply-fixtures")]
 pub mod held;
@@ -117,7 +119,8 @@ pub enum RawReplyError {
 ///
 /// No startup, installation, codec policy or funding is selected. Reply storage
 /// is contiguous and memory cannot grow. The caller owns all method/payload policy.
-/// All caller ceilings and Wasm32 extents are checked before encoding the module.
+/// Caller ceilings and reply extents are checked before encoding. Export-name
+/// extents are checked before emission; the final encoded size must fit Wasm32.
 ///
 /// ```
 /// use ic_testkit::pic::fixtures::{
@@ -157,66 +160,70 @@ pub fn raw_reply_canister(
     i32::try_from(bytes).map_err(|_| RawReplyError::Wasm32Limits)?;
     let pages =
         u32::try_from(bytes.div_ceil(65_536).max(1)).map_err(|_| RawReplyError::Wasm32Limits)?;
-    let export_names: Vec<_> = methods
-        .iter()
-        .map(|method| {
-            let prefix = match method.mode {
-                ReplyMode::Query => "canister_query",
-                ReplyMode::Update => "canister_update",
-            };
-            format!("{prefix} {}", method.name)
-        })
-        .collect();
-    let mut functions = Vec::with_capacity(methods.len());
-    let mut data = Vec::with_capacity(methods.len());
+    let mut types = TypeSection::new();
+    types.ty().function([ValType::I32, ValType::I32], []);
+    types.ty().function([], []);
+    let mut imports = ImportSection::new();
+    imports.import("ic0", "msg_reply_data_append", EntityType::Function(0));
+    imports.import("ic0", "msg_reply", EntityType::Function(1));
+    let mut memory = MemorySection::new();
+    memory.memory(MemoryType {
+        minimum: u64::from(pages),
+        maximum: Some(u64::from(pages)),
+        memory64: false,
+        shared: false,
+        page_size_log2: None,
+    });
+    let mut functions = FunctionSection::new();
+    let mut exports = ExportSection::new();
+    exports.export("memory", ExportKind::Memory, 0);
+    let mut code = CodeSection::new();
+    let mut data = DataSection::new();
     let mut offset = 0_i32;
-    for (name, method) in export_names.iter().zip(methods) {
+    for (index, method) in (2..count + 2).zip(methods) {
+        let prefix = match method.mode {
+            ReplyMode::Query => "canister_query",
+            ReplyMode::Update => "canister_update",
+        };
+        method
+            .name
+            .len()
+            .checked_add(prefix.len() + 1)
+            .and_then(|length| u32::try_from(length).ok())
+            .ok_or(RawReplyError::Wasm32Limits)?;
+        exports.export(
+            &format!("{prefix} {}", method.name),
+            ExportKind::Func,
+            index,
+        );
+        functions.function(1);
         let length = i32::try_from(method.reply.len()).map_err(|_| RawReplyError::Wasm32Limits)?;
-        functions.push(ExportedFunction {
-            name,
-            calls: vec![
-                Call {
-                    import: 0,
-                    arguments: vec![offset, length],
-                },
-                Call {
-                    import: 1,
-                    arguments: vec![],
-                },
-            ],
-        });
-        data.push(DataSegment {
-            offset: offset.cast_unsigned(),
-            bytes: method.reply,
-        });
+        let mut body = Function::new([]);
+        body.instruction(&Instruction::I32Const(offset));
+        body.instruction(&Instruction::I32Const(length));
+        body.instruction(&Instruction::Call(0));
+        body.instruction(&Instruction::Call(1));
+        body.instruction(&Instruction::End);
+        code.function(&body);
+        data.active(
+            0,
+            &ConstExpr::i32_const(offset),
+            method.reply.iter().copied(),
+        );
         offset += length;
     }
-    // Testkit admits names, calls and memory/data extents above. Host owns the
-    // remaining complete-module Wasm32 extent check; no smaller output cap is added.
-    encode(
-        &CallModule {
-            imports: &[
-                FunctionImport {
-                    module: "ic0",
-                    name: "msg_reply_data_append",
-                    parameters: 2,
-                },
-                FunctionImport {
-                    module: "ic0",
-                    name: "msg_reply",
-                    parameters: 0,
-                },
-            ],
-            functions: &functions,
-            memory: Memory32 {
-                pages,
-                export: "memory",
-            },
-            data: &data,
-        },
-        usize::MAX,
-    )
-    .map_err(|_| RawReplyError::Wasm32Limits)
+    let mut module = Module::new();
+    module
+        .section(&types)
+        .section(&imports)
+        .section(&functions)
+        .section(&memory)
+        .section(&exports)
+        .section(&code)
+        .section(&data);
+    let encoded = module.finish();
+    u32::try_from(encoded.len()).map_err(|_| RawReplyError::Wasm32Limits)?;
+    Ok(encoded)
 }
 
 #[derive(Default)]

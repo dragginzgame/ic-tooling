@@ -57,6 +57,7 @@ fn isolated_wasm_spec(root: &Path, variant: &str) -> WasmBuildSpec {
         ic_build::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
+    .with_isolated_builds()
     .with_cargo_program(root.join("cargo.sh"))
     .with_environment(ic_build::testing::cargo::environment_with([
         (
@@ -309,8 +310,9 @@ fn batches_retain_distinct_successes_through_later_failure() {
     let specs = ["A", "B", "failure"]
         .map(|variant| LabeledWasmBuildSpec::new(variant, wasm_spec(&root, variant)));
     let report = build_wasm_canisters_cached_batch(&specs, None, spawn_cargo).unwrap();
-    assert_eq!(report.failures().count(), 1, "{report:?}");
+    assert_eq!(report.batch.failures().count(), 1, "{report:?}");
     let records: Vec<_> = report
+        .batch
         .outcomes()
         .map(|entry| entry.outcome().unwrap().record().clone())
         .collect();
@@ -345,8 +347,9 @@ fn batches_retain_distinct_successes_through_later_failure() {
             Ok(())
         })
         .unwrap();
-        assert_eq!(report.failures().count(), 1);
+        assert_eq!(report.batch.failures().count(), 1);
         let retained: Vec<_> = report
+            .batch
             .outcomes()
             .map(|entry| {
                 assert_eq!(entry.outcome().unwrap().is_reused(), warm);

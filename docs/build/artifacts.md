@@ -1018,7 +1018,7 @@ let specs = [
 ];
 let batch = build_wasm_canisters_cached_batch(&specs, None, |command: &mut std::process::Command| OwnedChild::spawn(command, CleanupPolicy::KillAndWait))?;
 eprintln!("{batch}");
-for failure in batch.failures() {
+for failure in batch.batch.failures() {
     eprintln!(
         "build {} ({}) failed in {:?} after {:?}: {}",
         failure.label(),
@@ -1031,6 +1031,12 @@ for failure in batch.failures() {
 }
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
+
+In 0.80, Wasm and artifact reports expose common results through
+`report.batch: CacheBatchReport<_, _>`. Access `entries()`, `into_entries()`,
+`outcomes()`, `failures()`, `total()` and `is_success()` on that field.
+`metrics()` and Wasm shared-target maintenance remain on the domain report.
+Canic’s Wasm batch reporting must adopt the same field access when upgrading.
 
 Starting with 0.13, `outcomes()` and `failures()` borrow canonical report entries
 instead of constructing separate success/failure view types. Successful entries

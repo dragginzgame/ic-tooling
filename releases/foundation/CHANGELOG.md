@@ -6,6 +6,31 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.76.0] - Unreleased
+
+### 🔧 Changed
+
+- Select toko-tooling 0.34 through root workspace metadata and a dedicated
+  `toko-tooling.lock`, independent of Cargo dependencies. Remove the prior 0.33
+  dev-dependency selection; preserve real qualification packages and release
+  requirements. Direct publication/release adapters refuse tooling drift before
+  effects.
+
+### ⚠️ Breaking
+
+- Remove the generic `wasm-encoding` feature and call-module API. Raw-reply
+  fixture consumers use Testkit’s `reply-fixtures` API; structural inspection,
+  full validation, custom-section encoding and WAT compilation remain available.
+
+### 🧪 Testing
+
+- Admit unchanged release lint through recursive Make's repeated leading tool
+  paths, with a real Make publication-admission regression and retained
+  changed-environment refusal
+  ([#345](https://github.com/dragginzgame/ic-tooling/issues/345)).
+- Exercise cross-group release receipt rejection against an active group and
+  remove an unused process fixture.
+
 ## [0.75.1] - 2026-11-08
 
 ### ➕ Added

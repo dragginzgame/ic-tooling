@@ -6,6 +6,33 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.94.0] - Unreleased
+
+### 🔧 Changed
+
+- Adopt Platform 0.27 for native external IC adapters, retaining the exact
+  management DTO 0.11 identity and existing protocol bytes.
+
+### ⚠️ Breaking
+
+- Make installation, install-code retry and snapshot-set helpers inherent
+  `PocketIc` methods. Remove `CanisterInstallExt` and `PocketIcSnapshotExt`;
+  callers remove those imports or bounds and retain their existing method calls.
+  Exact senders, rollback, funding and no-replay behavior are unchanged.
+- Make diagnostics collection and writing inherent as well, removing
+  `PocketIcDiagnosticsExt` and `pic::prelude`. Replace the trait fake with real
+  HTTP request/failure tests covering exact senders and independent outcomes.
+
+### 🧹 Cleanup
+
+- Keep instance admission and failure custody on the startup owner; remove
+  forwarding methods from the deadline layer while retaining cancellation drop
+  order and final admission checks
+  ([#346](https://github.com/dragginzgame/ic-tooling/issues/346)).
+- Encode raw-reply fixtures directly without intermediate generic module/call
+  objects. Preserve the public fixture API and encoded module bytes, with an
+  independent WAT comparison. Share the timer fixture across installed tests.
+
 ## [0.93.2] - 2026-11-08
 
 ### 🔧 Changed

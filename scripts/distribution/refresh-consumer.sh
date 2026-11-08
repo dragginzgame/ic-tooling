@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/shared-companions.sh
+# Shared companions: scripts/ci/shared-package-version.pl scripts/ci/shared-companions.sh scripts/distribution/registry-package.pl
 set -euo pipefail
 
 SCRIPT_ROOT="${BASH_SOURCE[0]}"
@@ -8,6 +8,13 @@ SCRIPT_ROOT="$(cd -P "${SCRIPT_ROOT%/*}/../.." && printf '%s/.' "$PWD")"
 SCRIPT_ROOT="${SCRIPT_ROOT%/.}"
 SOURCE_ROOT="$SCRIPT_ROOT"
 requested_revision=""
+registry_archive=""
+registry_checksum=""
+registry_version=""
+previous_archive=""
+previous_source=""
+previous_package=""
+registry_source='https://crates.io/crates/toko-tooling'
 EXECUTION_DIR=""
 CONSUMER_ROOT=""
 MANIFEST_PATH=".shared-tooling.snapshot"
@@ -27,6 +34,7 @@ takeover_payload_states=()
 usage() {
     cat >&2 <<'USAGE'
 usage: refresh-consumer.sh [--preview | --impact] [--source <shared-tooling-checkout>] [--revision <full-commit>] --consumer <repository> [--manifest <relative-path>] [--entrypoint <relative-path>]... [--add-entrypoint <relative-path>]... [--takeover-snapshot <relative-root|.> <relative-manifest>]...
+       refresh-consumer.sh --crate ARCHIVE --checksum SHA256 --package-version X.Y.Z [--previous-crate ARCHIVE | --previous-source OLD-GIT-CHECKOUT] --consumer REPOSITORY [--entrypoint PATH]...
 
 Use --entrypoint to select the complete set of roots, initially or on refresh.
 Otherwise refresh reuses the manifest's recorded entrypoints. --add-entrypoint
@@ -121,6 +129,10 @@ consumer_state() {
 
 committed_mode() {
     local revision="$1" path="$2" tree_entry tree_metadata entry_mode entry_type mode=""
+    if [[ -n "$registry_archive" && "$revision" == "$source_revision" ]]; then
+        perl "$SCRIPT_ROOT/scripts/distribution/registry-package.pl" mode "$SOURCE_ROOT" "$path"
+        return
+    fi
     # pipefail carries a failed Git observation even after a complete row. A
     # process substitution hides that status, and Bash 3.2 cannot wait for it.
     git -C "$SOURCE_ROOT" ls-tree -z "$revision" -- "$path" | {
@@ -137,6 +149,16 @@ committed_mode() {
     }
 }
 
+source_blob() {
+    local revision="$1" path="$2"
+    if [[ -n "$registry_archive" ]]; then
+        [[ "$revision" == "$source_revision" ]] || fail 'unexpected registry source identity'
+        perl "$SCRIPT_ROOT/scripts/distribution/registry-package.pl" read "$SOURCE_ROOT" "$path"
+    else
+        git -C "$SOURCE_ROOT" cat-file blob "$revision:$path"
+    fi
+}
+
 check_consumer_unchanged() {
     local path="$1" expected="$2" current
     current="$(consumer_state "$path")" || fail "cannot recheck consumer input: $path"
@@ -149,6 +171,24 @@ export_previous_payload() {
     local index="$1" output="$2" path mode revision_kind executable=-
     path="${previous_sources[$index]}"
     local revision="${previous_revisions[$index]}"
+    if [[ -n "$registry_archive" ]]; then
+        if [[ -n "$previous_package" ]]; then
+            mode="$(perl "$SCRIPT_ROOT/scripts/distribution/registry-package.pl" mode "$previous_package" "$path")" || fail 'previous package member is unavailable'
+            perl "$SCRIPT_ROOT/scripts/distribution/registry-package.pl" read "$previous_package" "$path" > "$output" || fail 'cannot read previous package member'
+        else
+            [[ -n "$previous_source" ]] || fail 'Git snapshot migration requires --previous-source for one-time ownership proof'
+            local previous_entry
+            previous_entry="$(git --no-replace-objects -C "$previous_source" --literal-pathspecs ls-tree "$revision" -- "$path")" || fail 'previous Git source is unavailable'
+            mode="${previous_entry%% *}"
+            [[ "$mode" == 100644 || "$mode" == 100755 ]] || fail 'previous Git member is not a regular file'
+            git --no-replace-objects -C "$previous_source" cat-file blob "$revision:$path" > "$output" || fail 'cannot read previous Git member'
+        fi
+        [[ "$mode" != 100755 ]] || executable=x
+        [[ "$executable" == "${previous_modes[$index]}" ]] || fail 'previous snapshot mode disagrees with its package'
+        bash "$SCRIPT_ROOT/scripts/ci/verify-file-checksum.sh" sha256 "${previous_digests[$index]}" "$output" || fail 'previous snapshot digest disagrees with its package'
+        chmod "${mode#100}" "$output"
+        return
+    fi
     revision_kind="$(git -C "$SOURCE_ROOT" cat-file -t "$revision")" ||
         fail "cannot inspect previous snapshot revision"
     [[ "$revision_kind" == commit ]] || fail "previous snapshot revision is not an available commit"
@@ -196,6 +236,17 @@ while [[ $# -gt 0 ]]; do
         [[ "$requested_revision" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || fail "--revision requires a full commit ID"
         shift 2
         ;;
+    --crate|--checksum|--package-version|--previous-crate|--previous-source)
+        [[ $# -ge 2 && -n "$2" ]] || { usage; exit 2; }
+        case "$1" in
+            --crate) registry_archive="$2" ;;
+            --checksum) registry_checksum="$2" ;;
+            --package-version) registry_version="$2" ;;
+            --previous-crate) previous_archive="$2" ;;
+            --previous-source) previous_source="$2" ;;
+        esac
+        shift 2
+        ;;
     --consumer)
         [[ $# -ge 2 ]] || { usage; exit 2; }
         CONSUMER_ROOT="$2"
@@ -240,13 +291,32 @@ SCRIPT_ROOT="$(resolve_directory "$SCRIPT_ROOT")"
 SOURCE_ROOT="$(resolve_directory "$SOURCE_ROOT")"
 CONSUMER_ROOT="$(resolve_directory "$CONSUMER_ROOT")"
 [[ "$CONSUMER_ROOT" != "/" ]] || fail "consumer repository may not be the filesystem root"
-[[ "$SOURCE_ROOT" != "$CONSUMER_ROOT" ]] || fail "source and consumer repositories must differ"
+[[ -n "$registry_archive" || "$SOURCE_ROOT" != "$CONSUMER_ROOT" ]] || fail "source and consumer repositories must differ"
 
-source_top="$(git -C "$SOURCE_ROOT" rev-parse --show-toplevel 2>/dev/null && printf '.')" ||
-    fail "source is not a Git checkout"
-source_top="${source_top%.}"
-source_top="$(resolve_directory "${source_top%$'\n'}")"
-[[ "$source_top" == "$SOURCE_ROOT" ]] || fail "--source must name the checkout root"
+if [[ -n "$registry_archive" ]]; then
+    [[ -z "$requested_revision" && "$registry_checksum" =~ ^[0-9a-f]{64}$ && ${#takeover_roots[@]} == 0 ]] ||
+        fail 'crate export requires its checksum; revision and takeover options belong to Git exports'
+    [[ "$registry_archive" == /* ]] || registry_archive="$PWD/$registry_archive"
+    [[ -z "$previous_archive" || "$previous_archive" == /* ]] || previous_archive="$PWD/$previous_archive"
+    [[ -z "$previous_source" ]] || previous_source="$(resolve_directory "$previous_source")"
+    execution_tmp="$(resolve_directory "${TMPDIR:-/tmp}")"
+    if [[ "$preview" == true ]]; then
+        case "$execution_tmp/" in "$SOURCE_ROOT/"*|"$CONSUMER_ROOT/"*) fail 'preview temporary directory must be outside source and consumer' ;; esac
+    fi
+    EXECUTION_DIR="$(mktemp -d "$execution_tmp/toko-tooling-package.XXXXXX")"
+    # The expected version comes from Cargo.lock, independently of archive bytes.
+    [[ -n "$registry_version" ]] || fail 'registry export requires the locked package version'
+    perl "$SCRIPT_ROOT/scripts/distribution/registry-package.pl" extract "$registry_archive" "$registry_checksum" \
+        "$registry_version" "$EXECUTION_DIR/package"
+    SOURCE_ROOT="$EXECUTION_DIR/package"
+else
+    [[ -z "$registry_checksum$registry_version$previous_archive$previous_source" ]] || fail 'crate options require --crate'
+    source_top="$(git -C "$SOURCE_ROOT" rev-parse --show-toplevel 2>/dev/null && printf '.')" ||
+        fail "source is not a Git checkout"
+    source_top="${source_top%.}"
+    source_top="$(resolve_directory "${source_top%$'\n'}")"
+    [[ "$source_top" == "$SOURCE_ROOT" ]] || fail "--source must name the checkout root"
+fi
 
 consumer_top="$(git -C "$CONSUMER_ROOT" rev-parse --show-toplevel 2>/dev/null && printf '.')" ||
     fail "consumer is not a Git checkout"
@@ -254,7 +324,9 @@ consumer_top="${consumer_top%.}"
 consumer_top="$(resolve_directory "${consumer_top%$'\n'}")"
 [[ "$consumer_top" == "$CONSUMER_ROOT" ]] || fail "--consumer must name the checkout root"
 
-if [[ -n "$requested_revision" ]]; then
+if [[ -n "$registry_archive" ]]; then
+    source_revision="$registry_checksum"
+elif [[ -n "$requested_revision" ]]; then
     # Never allow replacement refs to reinterpret a pinned commit or blob. Avoid
     # optional index refreshes: this mode is read-only with respect to the source.
     export GIT_NO_REPLACE_OBJECTS=1 GIT_OPTIONAL_LOCKS=0
@@ -271,7 +343,8 @@ if [[ -n "$requested_revision" ]]; then
     esac
     EXECUTION_DIR="$(mktemp -d "$execution_tmp/shared-tooling-execution.XXXXXX")"
     for path in scripts/distribution/refresh-consumer.sh scripts/ci/shared-companions.sh \
-        scripts/ci/verify-file-checksum.sh scripts/ci/verify-shared-tooling-snapshot.sh; do
+        scripts/ci/verify-file-checksum.sh scripts/ci/verify-shared-tooling-snapshot.sh scripts/ci/shared-package-version.pl \
+        scripts/distribution/registry-package.pl; do
         execution_entry="$(git -C "$SCRIPT_ROOT" --literal-pathspecs ls-tree "$execution_revision" -- "$path")" || fail "cannot inspect execution source: $path"
         execution_mode="${execution_entry%% *}"
         [[ "$execution_mode" == 100644 || "$execution_mode" == 100755 ]] || fail "execution source must be a committed regular file: $path"
@@ -295,17 +368,24 @@ fi
 # shellcheck source=scripts/ci/shared-companions.sh
 source "$SCRIPT_ROOT/scripts/ci/shared-companions.sh"
 [[ "$source_revision" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || fail "source revision is malformed"
-# Read the display version from the same immutable source as the payload, never
-# the working tree or the consumer's own VERSION. Preserve invalid extra lines.
-committed_mode "$source_revision" VERSION >/dev/null || fail "source VERSION must be a committed regular file"
-source_version="$(git -C "$SOURCE_ROOT" cat-file blob "$source_revision:VERSION" && printf '.')" ||
-    fail "cannot read committed source VERSION"
-source_version="${source_version%.}"
-source_version="${source_version%$'\n'}"
-[[ "$source_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] ||
-    fail "source VERSION must contain a canonical stable version"
-source_remote="$(git -C "$SOURCE_ROOT" remote get-url origin)" ||
-    fail "source checkout has no origin remote"
+# Read the version from the same immutable source as the payload. VERSION is
+# accepted only when exporting historical pre-Cargo commits, never as a second
+# current version source when Cargo.toml exists.
+if [[ -n "$registry_archive" ]]; then
+    source_version="$(perl "$SCRIPT_ROOT/scripts/ci/shared-package-version.pl" "$SOURCE_ROOT/Cargo.toml")"
+elif git -C "$SOURCE_ROOT" cat-file -e "$source_revision:Cargo.toml" 2>/dev/null; then
+    committed_mode "$source_revision" Cargo.toml >/dev/null || fail "source Cargo.toml must be a committed regular file"
+    source_version="$(git -C "$SOURCE_ROOT" cat-file blob "$source_revision:Cargo.toml" |
+        perl "$SCRIPT_ROOT/scripts/ci/shared-package-version.pl" -)" || fail "invalid committed package.version"
+else
+    committed_mode "$source_revision" VERSION >/dev/null || fail "historical source VERSION must be a committed regular file"
+    source_version="$(git -C "$SOURCE_ROOT" cat-file blob "$source_revision:VERSION" && printf '.')" || fail "cannot read historical VERSION"
+    source_version="${source_version%.}"
+    source_version="${source_version%$'\n'}"
+fi
+[[ "$source_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || fail "source version must be canonical stable SemVer"
+if [[ -n "$registry_archive" ]]; then source_remote="$registry_source";
+else source_remote="$(git -C "$SOURCE_ROOT" remote get-url origin)" || fail "source checkout has no origin remote"; fi
 [[ -n "$source_remote" ]] || fail "source origin remote is empty"
 case "$source_remote" in
 *$'\n'* | *$'\t'*) fail "source remote contains a forbidden control character" ;;
@@ -347,6 +427,7 @@ if [[ -e "$manifest" ]]; then
         fail "existing manifest is malformed"
     while IFS=$'\t' read -r record first second third; do
         case "$record" in
+            '# version') manifest_version="$first" ;;
             '# entrypoint') entrypoints+=("$first") ;;
             source) manifest_source="$first" ;;
             revision) manifest_revision="$first" ;;
@@ -359,8 +440,27 @@ if [[ -e "$manifest" ]]; then
                 previous_revisions+=("$manifest_revision") ;;
         esac
     done < "$STAGING_DIR/previous-records"
-    [[ "$manifest_source" == "$source_remote" ]] ||
-        fail "source remote differs from the existing manifest"
+    if [[ -n "$registry_archive" ]]; then
+        if [[ "$manifest_source" == "$registry_source" ]]; then
+            if [[ "$manifest_revision" == "$registry_checksum" ]]; then previous_package="$SOURCE_ROOT";
+            else
+                [[ -n "$previous_archive" && -n "${manifest_version:-}" ]] || fail 'previous registry package is required to prove ownership'
+                perl "$SCRIPT_ROOT/scripts/distribution/registry-package.pl" extract "$previous_archive" "$manifest_revision" \
+                    "$manifest_version" "$EXECUTION_DIR/previous"
+                previous_package="$EXECUTION_DIR/previous"
+            fi
+        else
+            case "${manifest_source%.git}" in
+                https://github.com/dragginzgame/shared-tooling|https://github.com/dragginzgame/toko-tooling|\
+                git@github.com:dragginzgame/shared-tooling|git@github.com:dragginzgame/toko-tooling|\
+                ssh://git@github.com/dragginzgame/shared-tooling|ssh://git@github.com/dragginzgame/toko-tooling)
+                    [[ -n "$previous_source" ]] || fail 'migrating a Git snapshot requires --previous-source for ownership proof' ;;
+                *) fail 'existing snapshot is not from the reviewed tooling registry or Git repository' ;;
+            esac
+        fi
+    else
+        [[ "$manifest_source" == "$source_remote" ]] || fail "source remote differs from the existing manifest"
+    fi
 else
     [[ ${#added_files[@]} -eq 0 ]] || fail "--add-entrypoint requires an existing snapshot"
 fi
@@ -482,7 +582,7 @@ while [[ "$cursor" -lt "${#proposed[@]}" ]]; do
     staged_parent="$staged_files"
     if [[ "$path" == */* ]]; then staged_parent+="/${path%/*}"; fi
     [[ -d "$staged_parent" ]] || mkdir -p "$staged_parent"
-    git -C "$SOURCE_ROOT" cat-file blob "$source_revision:$path" > "$staged_files/$path" || fail "cannot inspect companions: $path"
+    source_blob "$source_revision" "$path" > "$staged_files/$path" || fail "cannot inspect companions: $path"
     read_shared_companions "$staged_files/$path" "$path"
     for companion in ${shared_companions[@]+"${shared_companions[@]}"}; do
         validate_relative_path "$companion"
@@ -504,7 +604,7 @@ for index in "${!files[@]}"; do
     path="${files[$index]}"
     validate_relative_path "$path"
     [[ "$path" != "$MANIFEST_PATH" ]] || fail "manifest may not include itself"
-    if [[ -z "$requested_revision" ]]; then
+    if [[ -z "$requested_revision" && -z "$registry_archive" ]]; then
         source_file="$SOURCE_ROOT/$path"
         [[ -f "$source_file" && ! -L "$source_file" ]] ||
             fail "source file is missing or symlinked: $path"
@@ -638,7 +738,11 @@ done
 
 # Detect changes made while committed payloads and companions were prepared,
 # before publishing any selected file. Keep unrelated working/index edits intact.
-[[ "$(git -C "$SOURCE_ROOT" remote get-url origin)" == "$source_remote" ]] || fail "source origin changed during refresh"
+if [[ -n "$registry_archive" ]]; then
+    perl "$SCRIPT_ROOT/scripts/distribution/registry-package.pl" verify "$registry_archive" "$registry_checksum"
+else
+    [[ "$(git -C "$SOURCE_ROOT" remote get-url origin)" == "$source_remote" ]] || fail "source origin changed during refresh"
+fi
 check_consumer_unchanged "$MANIFEST_PATH" "$manifest_state"
 check_index_unchanged manifest "$MANIFEST_PATH"
 for index in "${!files[@]}"; do
@@ -700,6 +804,8 @@ if [[ "$preview" == true ]]; then
             printf 'HISTORY\tfirst adoption; no recorded base\n'
         elif [[ "$manifest_revision" == "$source_revision" || ${#history_paths[@]} == 0 ]]; then
             printf 'HISTORY\tno changed payload history\n'
+        elif [[ -n "$registry_archive" ]]; then
+            printf 'HISTORY\tregistry package versions %s -> %s; see packaged CHANGELOG.md\n' "${manifest_version:-unrecorded}" "$source_version"
         elif git -C "$SOURCE_ROOT" merge-base --is-ancestor "$manifest_revision" "$source_revision"; then
             git -C "$SOURCE_ROOT" --literal-pathspecs log --format='COMMIT%x09%H%x09%s' \
                 "$manifest_revision..$source_revision" -- "${history_paths[@]}" || fail 'cannot read impact history'

@@ -14,7 +14,6 @@ publish = ["crates-io"]
 default = []
 gzip = ["dep:flate2"]
 wasm = ["dep:leb128", "dep:wasmparser"]
-wasm-encoding = ["dep:wasm-encoder"]
 wasm-text = ["dep:wat"]
 wasm-validation = ["wasm", "wasmparser/validate"]
 
@@ -22,7 +21,6 @@ wasm-validation = ["wasm", "wasmparser/validate"]
 flate2 = { workspace = true, optional = true }
 leb128 = { workspace = true, optional = true }
 sha2.workspace = true
-wasm-encoder = { workspace = true, optional = true }
 wasmparser = { workspace = true, optional = true }
 wat = { workspace = true, optional = true }
 
@@ -38,7 +36,3 @@ workspace = true
 [[test]]
 name = "consumer_contracts"
 required-features = ["wasm"]
-
-[[test]]
-name = "wasm_encoding"
-required-features = ["wasm-encoding"]

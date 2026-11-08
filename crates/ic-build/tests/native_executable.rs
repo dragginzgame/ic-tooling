@@ -127,15 +127,7 @@ fn fixture() -> (std::path::PathBuf, OsString) {
         "fn main() { println!(\"binary\"); }\n",
     )
     .unwrap();
-    let cargo_program = std::env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"));
-    assert!(
-        Command::new(&cargo_program)
-            .current_dir(&root)
-            .args(["generate-lockfile", "--offline"])
-            .status()
-            .unwrap()
-            .success()
-    );
+    let cargo_program = ic_build::testing::cargo::generate_fixture_lockfile(&root);
     (root, cargo_program)
 }
 

@@ -1,4 +1,4 @@
-use super::{CacheBatchEntry, CacheOutcomeCounts};
+use super::{CacheBatchEntry, CacheBatchReport, CacheOutcomeCounts};
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
 
 use std::time::{Duration, Instant};
@@ -17,8 +17,8 @@ pub type LabeledArtifactCacheSpec = super::batch::LabeledSpec<ArtifactCacheSpec>
 /// Ordered labeled entries from a collect-all artifact transaction batch.
 #[derive(Debug)]
 pub struct ArtifactCacheBatchReport<E> {
-    entries: Vec<CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>>,
-    total: Duration,
+    /// Common ordered outcomes and elapsed time.
+    pub batch: CacheBatchReport<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>,
 }
 
 /// Partial phase timings retained for one failed artifact batch entry.
@@ -74,59 +74,20 @@ pub struct ArtifactCacheBatchMetrics {
 }
 
 impl<E> ArtifactCacheBatchReport<E> {
-    /// Ordered labeled entries.
-    #[must_use]
-    pub fn entries(
-        &self,
-    ) -> &[CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>] {
-        &self.entries
-    }
-
-    /// Consume the report into its ordered labeled entries.
-    #[must_use]
-    pub fn into_entries(
-        self,
-    ) -> Vec<CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>> {
-        self.entries
-    }
-
-    /// Successful entries, retaining the canonical identity, result and timings.
-    pub fn outcomes(
-        &self,
-    ) -> impl Iterator<Item = &CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>>
-    {
-        self.entries.iter().filter(|entry| entry.is_success())
-    }
-
-    /// Failed entries; inspect `failure()` on each entry.
-    pub fn failures(
-        &self,
-    ) -> impl Iterator<Item = &CacheBatchEntry<ArtifactCacheOutcome, ArtifactCacheBatchFailure<E>>>
-    {
-        self.entries.iter().filter(|entry| !entry.is_success())
-    }
-
-    /// Complete wall-clock time for the sequential collect-all batch.
-    #[must_use]
-    pub const fn total(&self) -> Duration {
-        self.total
-    }
-
-    /// Whether every specification completed successfully.
-    #[must_use]
-    pub fn is_success(&self) -> bool {
-        self.entries.iter().all(CacheBatchEntry::is_success)
-    }
-
     /// Aggregate outcome counters and successful-acquisition timings.
     #[must_use]
     pub fn metrics(&self) -> ArtifactCacheBatchMetrics {
         let mut metrics = ArtifactCacheBatchMetrics {
-            entries: self.entries.len(),
-            total: self.total,
+            entries: self.batch.entries.len(),
+            total: self.batch.total,
             ..ArtifactCacheBatchMetrics::default()
         };
-        for outcome in self.entries.iter().filter_map(CacheBatchEntry::outcome) {
+        for outcome in self
+            .batch
+            .entries
+            .iter()
+            .filter_map(CacheBatchEntry::outcome)
+        {
             metrics.counts.record(outcome.is_reused());
             metrics.successful_timings = metrics
                 .successful_timings
@@ -248,8 +209,10 @@ where
         entries.push(build_artifact_cache_entry(index, labeled, &mut populate));
     }
     Ok(ArtifactCacheBatchReport {
-        entries,
-        total: started.elapsed(),
+        batch: CacheBatchReport {
+            entries,
+            total: started.elapsed(),
+        },
     })
 }
 

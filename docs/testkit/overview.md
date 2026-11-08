@@ -130,13 +130,13 @@ and independently verify the domains relevant to each recipe.
 | --- | --- |
 | Async client | `pocket_ic::{PocketIc, PocketIcBuilder, ClientError}` |
 | Server and instance custody | `PocketIcStartupConfig`, `PocketIcManagedServer`, `PocketIcInstance` |
-| Installation | `CanisterInstallExt`, `InstallSpec`, `StandaloneCanisterFixture` |
+| Installation | `PocketIc::try_create_and_install`, `InstallSpec`, `StandaloneCanisterFixture` |
 | Typed calls | `query_wire`, `update_wire`, `WireCallSpec` (`wire` feature) |
-| Snapshots | `PocketIcSnapshotExt`, `ControllerSnapshots`, `CachedPocketIcBaseline` |
+| Snapshots | `PocketIc::capture_snapshots`, `ControllerSnapshots`, `CachedPocketIcBaseline` |
 | Reuse | `PocketIcBaselineRecipe`, `CachedPocketIcBaselinePool`, `StandaloneCanisterRecipe` |
-| Reporting/readiness | `PocketIcDiagnosticsExt`, `advance_and_tick`, `tick_until` |
+| Reporting/readiness | `PocketIc::collect_canister_diagnostics`, `advance_and_tick`, `tick_until` |
 
-Import helper traits individually or through `pic::prelude`. Pure parsing,
+Harness methods are inherent on `PocketIc`; import policy types explicitly. Pure parsing,
 formatting and Wasm generation remain synchronous; simulator operations are async.
 
 ## PocketIC ownership and concurrency

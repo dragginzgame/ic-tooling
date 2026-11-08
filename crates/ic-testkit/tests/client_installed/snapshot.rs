@@ -39,7 +39,7 @@ pub async fn qualify(pic: &PocketIc) {
     .await
     .unwrap();
     let wasm = compile(
-        include_str!("snapshot_timer.wat"),
+        include_str!("../fixtures/snapshot_timer.wat"),
         CompileLimits {
             source_bytes: 16 * 1024,
             module_bytes: 16 * 1024,

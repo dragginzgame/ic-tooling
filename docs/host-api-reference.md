@@ -67,21 +67,14 @@ caller-owned; the structural `wasm::inspect` contract is unchanged.
 Enable `wasm-validation` for `wasm::validate(bytes, max_bytes)`, which checks a
 complete core module's structure, types and instructions without executing it.
 This implies `wasm`; inspection alone does not select the validator.
-Enable the independent `wasm-encoding` feature for
-`wasm_encoding::encode(&CallModule { .. }, max_bytes)`. Artifacts owns the private
-`wasm-encoder` backend and its records for fixed Wasm32 memory, active data,
-i32/void imports and call-only exported functions. Callers supply exact names,
-data layout, calls and output allowances; IC entry-point and reply policy remain
-with the consumer. The allowance bounds returned bytes, not peak allocation.
-Encoding alone selects neither the parser nor validator; select
-`wasm-encoding,wasm-validation` together to validate generated modules.
-See the [0.29 adoption notes](../docs/changelog/0.29.md).
+Raw-reply fixture generation belongs to Testkit's native `reply-fixtures`
+feature. Artifacts has no generic call-module encoder API.
 
 Enable `wasm-text` for
 `wasm_text::compile(source, CompileLimits { source_bytes, module_bytes })`.
 Artifacts privately owns WAT compilation, with source admission before parsing
 and complete-output admission afterwards. It accepts the core text language,
-including stateful instructions beyond the call-only encoder. Compilation alone
+including stateful instructions. Compilation alone
 does not prove instruction/type validity; select `wasm-validation` when needed.
 `wasm-text` selects neither Host's binary inspector nor validator. Defaults remain
 empty, and inspection-only consumers do not select the text compiler.
@@ -106,10 +99,11 @@ See the [migration boundaries](../docs/changelog/0.29.md).
 
 `ic-host-tools` has no default features. Response and ICP command interpretation
 remain available without Platform. Enable `candid` for bounded Candid reply
-decoding and service facts. Select Platform's `certification-cbor` feature directly
+decoding without the textual parser; select `candid-service` for service facts. Select Platform's `certification-cbor` feature directly
 for strict certificate decoding. The independent `ic-interface` feature adds Wasm
-export facts; select it together with `candid` for DID/Wasm comparisons.
-Existing Candid-helper consumers must explicitly enable `candid` when adopting
+export facts; select it together with `candid-service` for DID/Wasm comparisons.
+Decoding consumers select `candid`; service-inspection consumers select
+`candid-service` when adopting
 0.28. See [the migration instructions](../docs/changelog/0.28.md).
 
 Native Candid extraction belongs to IC Build's `artifacts::candid` module;
