@@ -6,7 +6,7 @@ source "$root/scripts/ci/product-fixture.sh"
 fixture="$(tooling_fixture_create "$root" tooling-ci-selection)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "CI selection fixture retained"' EXIT
-"$root/.tools/host/bin/yq" -o json '.' "$root/.github/workflows/ci.yml" > "$fixture/workflow.json"
+"${YQ:-$root/.tools/host/bin/yq}" -o json '.' "$root/.github/workflows/ci.yml" > "$fixture/workflow.json"
 perl - "$root" "$fixture" <<'PERL'
 use strict;
 use warnings;

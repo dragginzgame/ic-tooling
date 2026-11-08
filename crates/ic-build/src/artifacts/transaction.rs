@@ -83,13 +83,7 @@ pub enum ArtifactCachePreparation {
 }
 
 /// Whether an artifact transaction published or reused its exact output set.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ArtifactCacheOutcome {
-    /// The caller populated staging and the complete result was published.
-    Built(ArtifactCacheRecord),
-    /// A complete existing entry was verified and materialized.
-    Reused(ArtifactCacheRecord),
-}
+pub type ArtifactCacheOutcome = super::batch::CacheOutcome<ArtifactCacheRecord>;
 
 /// Details shared by built and reused transactional artifact outcomes.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -539,22 +533,6 @@ impl ArtifactCachePreparation {
             Self::Reused(record) => Some(record),
             Self::Build(_) => None,
         }
-    }
-}
-
-impl ArtifactCacheOutcome {
-    /// Read the common acquisition record.
-    #[must_use]
-    pub const fn record(&self) -> &ArtifactCacheRecord {
-        match self {
-            Self::Built(record) | Self::Reused(record) => record,
-        }
-    }
-
-    /// Report whether a complete matching artifact set was reused.
-    #[must_use]
-    pub const fn is_reused(&self) -> bool {
-        matches!(self, Self::Reused(_))
     }
 }
 

@@ -41,7 +41,7 @@ _tooling_release_selection_mode := batch
 endif
 endif
 ifneq ($(shell bash '$(subst ','"'"',$(CURDIR))/scripts/release/group.sh' '$(subst ','"'"',$(CURDIR))/ci/cargo-release-groups.json' '$(subst ','"'"',$(_tooling_release_selection))' $(_tooling_release_selection_mode) && printf admitted),admitted)
-$(error Explicit RELEASE_GROUP=foundation, build, text, tools, testkit or native is required)
+$(error Explicit RELEASE_GROUP from ci/cargo-release-groups.json is required)
 endif
 endif
 
@@ -61,12 +61,12 @@ help:
 	@echo 'Source reports: cloc (this workspace); fleet reports run in Shared Tooling'
 	@echo 'Full release validation: ci (pinned compiler, workspace Clippy, native/Wasm and isolated features); compiler-check admits identities'
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
-	@echo 'Frozen Git + crates.io releases: release-patch/minor/major RELEASE_GROUP=foundation|build|text|tools|testkit|native'
+	@echo 'Frozen Git + crates.io releases: release-patch/minor/major RELEASE_GROUP=<group from ci/cargo-release-groups.json>'
 	@echo 'Batch selection: RELEASE_GROUPS=group,group; resume: release-batch-resume BATCH=batch-XXXXXXXX'
 	@echo 'Shared batch custody: release-batch-status, release-batch-reconcile, release-batch-retire BATCH=batch-XXXXXXXX'
 	@echo 'Legacy resume: release-resume RELEASE_GROUP=<same-group> VERSION=X.Y.Z'
 	@echo 'crates.io publication: publish-check (dry run), publish (upload); offline fixture: publish-command-check'
-	@echo 'Publication: select RELEASE_GROUP=foundation|build|text|tools|testkit|native; PACKAGE="crate ..." narrows that group'
+	@echo 'Publication: select RELEASE_GROUP=<group>; PACKAGE="crate ..." narrows that group'
 .PHONY: formatting-hook-check
 .PHONY: install-release-editor release-editor-check check-no-symlinks
 install-release-editor:

@@ -202,9 +202,19 @@ an offline attempt against already prepared caches. Registry lookup can require
 network access even with cached dependencies. Offline failure never triggers an
 online retry.
 
-Both publication modes require prepared dependencies and pass the same offline
-`make clippy-workspace` gate after source admission, before packaging or registry
-effects. The wrapper never installs tools or fetches missing lint dependencies.
+Both publication modes require prepared dependencies. After fresh source and
+metadata admission, they reuse full workspace lint only through the selected
+committed release's preflight selection context and version-5 receipt. Tooling
+carries that context when saving preflight selection; it never parses Shared's
+private release journal. The context grants reuse only after receipt re-admission.
+Older selections lacking context fall back to fresh lint. Admission checks the exact
+prepared payload, unchanged source, gate/log inventory, environment, compiler and
+host, and requires a completed full workspace lint stage. Missing, stale, corrupt
+or focused-only evidence falls back to offline `make clippy-workspace` before
+packaging or registry effects. The admission attempt retains `lint-evidence.log`.
+Whole-workspace `qualify` always runs fresh lint. Archive, license, provenance
+and source-drift checks stay fresh in every publication. The wrapper never
+installs tools or fetches missing lint dependencies.
 
 `make publish` uploads each selected package at its own current committed
 version to crates.io.

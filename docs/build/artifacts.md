@@ -1,5 +1,25 @@
 # Artifact and Wasm build APIs
 
+## Pending Build 0.79 migration
+
+Remove `WasmBuildBatchConfig` and the configuration argument from
+`build_wasm_canisters_cached_batch`. Configure shared incremental-target
+maintenance on each `WasmBuildSpec` instead. Standalone and batch builds now use
+the same policy; the batch attempts maintenance once per canonical target.
+Repeated policies must agree, including interval, limits and failure mode;
+conflicting entries fail before their build while other entries retain their
+results. Keep isolated specs without shared-target maintenance.
+
+`ArtifactCacheOutcome` and `WasmBuildOutcome` are domain specializations of
+`CacheOutcome<Record>`. Qualified variant matching, `record()` and `is_reused()`
+remain available. Import variants from `CacheOutcome` when using a variant import;
+type aliases cannot act as variant-import modules. The record types, cache engines,
+leases, verification and publication remain independent.
+
+`LabeledWasmBuildSpec` and `LabeledArtifactCacheSpec` likewise specialize
+`LabeledSpec<S>`. Their `new`, `label`, `spec` and `into_parts` methods retain the
+same behavior; labels remain report identity rather than cache identity.
+
 <a id="pending-build-078-migration"></a>
 
 ## Build 0.78 migration
@@ -968,7 +988,7 @@ Bounded diagnostics remain captured in `WasmBuildError` independently of heartbe
 phase work, terminates and waits for a running Cargo build, and then performs
 normal lock and incomplete-entry cleanup.
 
-Independent batches expose one batch entrypoint. Pass batch configuration explicitly and `None` for silent execution,
+Independent batches expose one batch entrypoint. Pass `None` for silent execution,
 or `Some((progress_config, &mut observer))` for progress reporting. The former
 `_with_config`, `_with_progress` and combined variants have no aliases.
 
@@ -980,7 +1000,7 @@ batch independent specs without changing Cargo feature semantics:
 # let environment = std::collections::BTreeMap::<std::ffi::OsString, std::ffi::OsString>::new();
 use ic_host_process::child::{CleanupPolicy, OwnedChild};
 use ic_build::artifacts::{
-    LabeledWasmBuildSpec, WasmBuildBatchConfig, WasmBuildSpec,
+    LabeledWasmBuildSpec, WasmBuildSpec,
     build_wasm_canisters_cached_batch,
 };
 
@@ -996,7 +1016,7 @@ let specs = [
         WasmBuildSpec::new(&workspace, &target, &["role_b"], environment.clone(), configuration_limits),
     ),
 ];
-let batch = build_wasm_canisters_cached_batch(&specs, WasmBuildBatchConfig::new(), None, |command: &mut std::process::Command| OwnedChild::spawn(command, CleanupPolicy::KillAndWait))?;
+let batch = build_wasm_canisters_cached_batch(&specs, None, |command: &mut std::process::Command| OwnedChild::spawn(command, CleanupPolicy::KillAndWait))?;
 eprintln!("{batch}");
 for failure in batch.failures() {
     eprintln!(
@@ -1053,8 +1073,8 @@ label, index, error, primary failed phase, partial phase timings, and elapsed
 time. Successful entries continue to expose detailed phase timings through
 their build records.
 
-When independent specs share incremental targets, batch-owned maintenance
-removes the caller convention of modifying the first spec:
+When independent specs share incremental targets, configure maintenance on each
+spec. The same specs work in standalone builds; batches deduplicate maintenance:
 
 ```rust,no_run
 use ic_host_process::child::{CleanupPolicy, OwnedChild};
@@ -1062,20 +1082,23 @@ use ic_build::artifacts::{
     LabeledWasmBuildSpec,
     SharedIncrementalTargetMaintenanceConfig,
     SharedIncrementalTargetMaintenanceFailureMode,
-    CacheRetentionLimits, WasmBuildBatchConfig,
+    CacheRetentionLimits,
     build_wasm_canisters_cached_batch,
 };
 use std::time::Duration;
 
-# let specs: Vec<LabeledWasmBuildSpec> = Vec::new();
+# let specs: Vec<(String, ic_build::artifacts::WasmBuildSpec)> = Vec::new();
 let maintenance = SharedIncrementalTargetMaintenanceConfig::new(
     CacheRetentionLimits::new().with_max_size_bytes(4 * 1024 * 1024 * 1024),
     Duration::from_secs(24 * 60 * 60),
 )
 .with_failure_mode(SharedIncrementalTargetMaintenanceFailureMode::BestEffort);
+let specs: Vec<_> = specs.into_iter().map(|(label, spec)|
+    LabeledWasmBuildSpec::new(label,
+        spec.with_shared_incremental_target_maintenance(maintenance))
+).collect();
 let batch = build_wasm_canisters_cached_batch(
     &specs,
-    WasmBuildBatchConfig::new().with_shared_incremental_target_maintenance(maintenance),
     None,
     |command| OwnedChild::spawn(command, CleanupPolicy::KillAndWait),
 )?;
@@ -1085,12 +1108,13 @@ for (entry, outcome) in batch.shared_incremental_maintenance_outcomes() {
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-Maintenance is attached to the first specification for each distinct resolved
+Maintenance runs on the first configured specification for each distinct resolved
 shared-target directory. Relative paths are workspace-relative, and filesystem
 aliases of the same directory share one maintenance attempt. Isolated specs
-are unaffected. A specification
-that also configures per-spec integrated maintenance receives a labeled,
-indexed error, and later entries still run.
+without maintenance are unaffected. Conflicting policies for the same canonical
+target receive a labeled, indexed error, and later entries still run. Standalone
+and batch execution use the same policy on `WasmBuildSpec`; there is no separate
+batch configuration argument.
 
 `ResolvedCargoBuildInputs::is_current` resolves the semantic fingerprint again,
 while `is_content_current` cheaply rehashes the conservative validation paths.

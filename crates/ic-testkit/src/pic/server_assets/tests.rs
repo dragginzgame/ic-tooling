@@ -20,6 +20,7 @@ fn archive(version: &str) -> (Asset, Vec<u8>) {
     (
         Asset {
             host: "fixture",
+            github_id: 0,
             digest: Sha256Digest::compute(&bytes),
         },
         bytes,
@@ -168,6 +169,7 @@ fn setup_rejects_corrupt_payloads_without_execution_or_publication() {
     ] {
         let asset = Asset {
             host: "fixture",
+            github_id: 0,
             digest: Sha256Digest::compute(&bytes),
         };
         let error = setup_with(root.root.path(), &asset, |path| {

@@ -1,8 +1,8 @@
 scripts/ci/test-qualification-record.sh	tooling,make-stub,retention,relative
 scripts/ci/test-tools-layering.sh	tooling,make-stub
-scripts/ci/test-product-ci-selection.sh	tooling,make-stub
+scripts/ci/test-product-ci-selection.sh	tooling,make-stub	fixture-ci-selection
 scripts/ci/test-product-candid-boundary.sh	tooling,make-stub,relative
-scripts/ci/test-product-fixture-scratch.sh	tooling,make-stub
+scripts/ci/test-product-fixture-scratch.sh	tooling,make-stub	fixture-scratch
 scripts/ci/test-product-evidence.sh	tooling,make-stub	fixture-evidence
 scripts/ci/test-host-fixture-retention.sh	tooling,make-stub,retention	fixture-retention
 scripts/release/test-stage-reuse.sh	tooling,make-stub

@@ -137,7 +137,15 @@ case "$operation" in
         if [[ "$fresh_tool_setup" == true ]]; then cargo fetch --locked
         else cargo fetch --locked --offline; fi
         if [[ "$operation" == preflight ]]; then
-            release_receipt_write "$selection" cat "$current_selection"
+            # Tooling owns this preflight record. Carry its release context so
+            # publication never interprets Shared's private journal format.
+            # shellcheck disable=SC2016 # jq, not Bash, binds these fields.
+            release_receipt_write "$selection" jq -cS \
+                --arg kind "$RELEASE_KIND" --arg previous "$RELEASE_PREVIOUS" \
+                --arg version "$RELEASE_VERSION" --arg date "$RELEASE_DATE" \
+                --arg remote "$RELEASE_REMOTE" --arg branch "$RELEASE_BRANCH" \
+                '.release = {kind:$kind,previous:$previous,version:$version,date:$date,remote:$remote,branch:$branch}' \
+                "$current_selection"
         else
             mkdir -p "$state"
             cp -p "$changelog" "$scratch/notes"
