@@ -6,6 +6,18 @@ optional YAML. Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.74.3] - Unreleased
+
+### ➕ Added
+
+- Render decimal quantities beyond `u128` with caller-selected power-of-ten units,
+  exact two-place rounding, unit promotion and terminal-safe suffixes. Invalid
+  input and scales refuse without selecting a caller fallback.
+  [#341 — Decimal quantity scales](https://github.com/dragginzgame/ic-tooling/issues/341).
+- Render full-range `u64` ratios as percentages with exact half-up rounding to
+  one decimal place. Zero denominators refuse; values above 100% remain valid.
+  [#342 — Exact ratio percentages](https://github.com/dragginzgame/ic-tooling/issues/342).
+
 ## [0.74.2] - 2026-11-04
 
 ### 🧹 Cleanup

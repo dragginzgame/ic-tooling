@@ -5,6 +5,7 @@ pub mod decimal;
 pub mod duration;
 pub mod escape;
 pub mod normalize;
+pub mod percent;
 pub mod progress;
 pub mod quantity;
 pub mod table;

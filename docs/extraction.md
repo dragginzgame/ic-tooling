@@ -168,6 +168,11 @@ no longer owns an `ic-limits` profile or a reference-policy CLI example.
   `i64::MAX`. Callers retain clocks, freshness and collection-time interpretation.
   Its `decimal` module owns exact two-place rounding/rendering with explicit
   scaling; consumers retain normalization, units, sentinels and raw report fields.
+  Its `quantity` module also selects caller-provided decimal power-of-ten units
+  for arbitrary-precision decimal strings, with two-place half-up rounding and
+  unit promotion. Its `percent` module renders exact `u64` ratios to one decimal
+  place. Consumers retain unit names, unavailable-value fallback, checked total
+  construction and report semantics; neither operation selects output or policy.
   Its `duration` module owns positive whole-second parsing, rounded single-unit
   display and truncating two-unit display. Clock selection, deadlines, freshness,
   persisted units and output remain caller-owned. Source and six tests are retained
