@@ -6,7 +6,7 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
-## [0.76.0] - Unreleased
+## [0.76.0] - 2026-11-08
 
 ### 🔧 Changed
 
