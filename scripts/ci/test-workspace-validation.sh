@@ -77,14 +77,15 @@ printf 'publication\n' >> "$WORKSPACE_TEST_EVENTS"
 STUB
 options=(--no-print-directory -j4)
 if make --help | rg -q -- --jobserver-style; then options+=(--jobserver-style=pipe); fi
+{ printf '%s\n' shared-tooling-check; cat "$fixture/expected"; } > "$fixture/guarded-expected"
 for mode in ci ci-publication; do
     : > "$WORKSPACE_TEST_EVENTS"
     make "${options[@]}" "$mode" > "$fixture/$mode.log" 2>&1
     if [[ $mode == ci-publication ]]; then
         awk '{print} $0 == "clippy-workspace" {print "publication"}' "$fixture/expected" > "$fixture/publication-expected"
         cmp "$fixture/publication-expected" "$WORKSPACE_TEST_EVENTS"
-    else cmp "$fixture/expected" "$WORKSPACE_TEST_EVENTS"; fi
-    for failure in tools-check clippy-workspace fmt-check testkit-package-check; do
+    else cmp "$fixture/guarded-expected" "$WORKSPACE_TEST_EVENTS"; fi
+    for failure in shared-tooling-check tools-check clippy-workspace fmt-check testkit-package-check; do
         : > "$WORKSPACE_TEST_EVENTS"
         if WORKSPACE_TEST_FAIL="$failure" make "${options[@]}" "$mode" > "$fixture/$mode-$failure.log" 2>&1; then exit 1; fi
         [[ $(tail -n 1 "$WORKSPACE_TEST_EVENTS") == "$failure" ]]
@@ -104,7 +105,7 @@ for mutation in missing new; do
     else jq -cS '.stages += ["release-stage-unmapped"]' "$fixture/policy" > ci/release-validation.json; fi
     : > "$WORKSPACE_TEST_EVENTS"
     if make "${options[@]}" ci > "$fixture/$mutation.log" 2>&1; then exit 1; fi
-    [[ ! -s $WORKSPACE_TEST_EVENTS ]]
+    [[ $(cat "$WORKSPACE_TEST_EVENTS") == shared-tooling-check ]]
 done
 cp "$fixture/policy" ci/release-validation.json
 for mutation in focus multiple-documents; do
@@ -113,7 +114,7 @@ for mutation in focus multiple-documents; do
     else cat "$fixture/coverage" "$fixture/coverage" > ci/release-validation-coverage.json; fi
     : > "$WORKSPACE_TEST_EVENTS"
     if make "${options[@]}" ci > "$fixture/$mutation.log" 2>&1; then exit 1; fi
-    [[ ! -s $WORKSPACE_TEST_EVENTS ]]
+    [[ $(cat "$WORKSPACE_TEST_EVENTS") == shared-tooling-check ]]
 done
 fixture_complete=true
 echo 'Both CI entrypoints preserve 33-stage coverage, one lint, fail-fast order and pipe jobserver access'

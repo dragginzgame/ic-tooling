@@ -24,6 +24,8 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
 
 ### 🧪 Testing
 
+- Qualify checkout-local tooling commands and CI's early tooling-drift guard
+  through the root-owned installer entrypoint.
 - Admit unchanged release lint through recursive Make's repeated leading tool
   paths, with a real Make publication-admission regression and retained
   changed-environment refusal

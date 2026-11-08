@@ -3,8 +3,8 @@
 set -euo pipefail
 selected_case=all
 if [[ $# != 0 ]]; then
-    [[ $# == 2 && $1 == --case && ( $2 == tooling-roster || $2 == release-routing ) ]] || {
-        echo 'usage: test-make-snapshot.sh [--case tooling-roster|release-routing]' >&2; exit 2;
+    [[ $# == 2 && $1 == --case && ( $2 == tooling-roster || $2 == release-routing || $2 == command-routing ) ]] || {
+        echo 'usage: test-make-snapshot.sh [--case tooling-roster|release-routing|command-routing]' >&2; exit 2;
     }
     selected_case="$2"
 fi
@@ -109,7 +109,7 @@ print {$out} 'frozen ', join(' ', @ARGV), "\n" or die $!;
 close $out or die $!;
 STUB
 mkdir -p "$fixture/local/scripts/dev"
-for helper in scripts/dev/install-git-hooks.sh scripts/ci/verify-shared-tooling-snapshot.sh; do
+for helper in scripts/dev/install-git-hooks.sh scripts/dev/shared-tooling.sh; do
     cat > "$fixture/local/$helper" <<'STUB'
 #!/usr/bin/env bash
 printf '%s %s\n' "${0##*/}" "$*" >> "$HOST_MAKE_EVENTS"
@@ -206,7 +206,9 @@ fi
 printf 'override RELEASE_REMOTE := recursive\n' > overrides.mk
 recursive_make="$(command -v make) --no-print-directory -f Makefile -f overrides.mk"
 routing_targets=(release-patch release-minor release-major release-resume release-batch-status release-batch-resume release-batch-reconcile release-batch-retire)
-if [[ $selected_case == all ]]; then
+if [[ $selected_case == command-routing ]]; then
+    routing_targets=(help fmt-check install-hooks shared-tooling-check shared-tooling-status shared-tooling-install shared-tooling-update)
+elif [[ $selected_case == all ]]; then
     routing_targets=(help fmt-check "${routing_targets[@]}" install-hooks shared-tooling-check)
 fi
 for selection in ordinary environment command nested recursive; do
@@ -241,7 +243,7 @@ for selection in ordinary environment command nested recursive; do
             release-patch|release-minor|release-major) printf 'frozen --root %s --groups testkit --kind %s --remote %s --branch release-review --delivery direct --publish-target publish --setup-target release-candidate-setup\n' "$PWD" "${target#release-}" "$remote" > "$fixture/expected" ;;
             release-batch-*) printf 'frozen --root %s --%s batch-_fixture --delivery direct\n' "$PWD" "${target#release-batch-}" > "$fixture/expected" ;;
             install-hooks) printf 'install-git-hooks.sh --consumer %s\n' "$PWD" > "$fixture/expected" ;;
-            shared-tooling-check) printf 'verify-shared-tooling-snapshot.sh --consumer %s --manifest .shared-tooling.snapshot\n' "$PWD" > "$fixture/expected" ;;
+            shared-tooling-*) printf 'shared-tooling.sh %s --consumer %s --manifest .shared-tooling.snapshot\n' "${target#shared-tooling-}" "$PWD" > "$fixture/expected" ;;
         esac
         cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
         if [[ "$target" == fmt-check ]]; then
@@ -252,6 +254,11 @@ for selection in ordinary environment command nested recursive; do
     done
 done
 unset SHARED_TOOLING_ROOT
+if [[ $selected_case == command-routing ]]; then
+    fixture_complete=true
+    echo 'Checkout-local tooling and formatting command routing passed (effects substituted).'
+    exit 0
+fi
 # Unsupported release delivery refuses before adapter effects; unrelated goals
 # remain available with the same environment selection.
 : > "$HOST_MAKE_EVENTS"
