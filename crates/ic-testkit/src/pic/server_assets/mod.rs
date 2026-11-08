@@ -36,6 +36,7 @@ pub const DEFAULT_DIRECTORY: &str = ".tools/ic-testkit-server";
 struct Asset {
     host: &'static str,
     digest: Sha256Digest,
+    github_id: u64,
 }
 
 fn write_evidence(path: &Path, bytes: &[u8]) -> Result<()> {
@@ -51,25 +52,30 @@ fn write_evidence(path: &Path, bytes: &[u8]) -> Result<()> {
 }
 
 fn selected_asset() -> Result<Asset> {
-    // Official GitHub release asset digests, reviewed 2026-10-09.
-    let (host, digest) = match (std::env::consts::OS, std::env::consts::ARCH) {
+    // Official digests reviewed 2026-10-09; matching GitHub asset IDs verified
+    // 2026-11-08. Admission still authenticates both archive and executable bytes.
+    let (host, digest, github_id) = match (std::env::consts::OS, std::env::consts::ARCH) {
         ("linux", "x86_64") => (
             "x86_64-linux",
             "131219d90dcf9bf6f3ed8ee02d8f55504ea24a6db382f5680675b7bd6b7ed3bf",
+            621_918_359,
         ),
         ("macos", "x86_64") => (
             "x86_64-darwin",
             "af9ad2d781530a43556ef2d1c8f93db99a2425c6cabdc78520f61922399ed530",
+            621_918_384,
         ),
         ("macos", "aarch64") => (
             "arm64-darwin",
             "9ae843fbb7ae6c6eb30137671c8629a80ef53b3a3652eb85b344847ac39f9fcd",
+            621_918_361,
         ),
         _ => return Err("no reviewed PocketIC server asset for this host".into()),
     };
     Ok(Asset {
         host,
         digest: digest.parse()?,
+        github_id,
     })
 }
 
@@ -169,8 +175,8 @@ pub fn setup(directory: &Path, mut interrupted: impl FnMut() -> bool) -> Result<
     let asset = selected_asset()?;
     setup_with(directory, &asset, |archive| {
         let url = format!(
-            "https://github.com/dfinity/pocketic/releases/download/{POCKET_IC_SERVER_VERSION}/pocket-ic-{}.gz",
-            asset.host
+            "https://api.github.com/repos/dfinity/pocketic/releases/assets/{}",
+            asset.github_id
         );
         let mut command = Command::new("curl");
         command
@@ -184,6 +190,8 @@ pub fn setup(directory: &Path, mut interrupted: impl FnMut() -> bool) -> Result<
                 "--silent",
                 "--show-error",
                 "--location",
+                "--header",
+                "Accept: application/octet-stream",
                 "--connect-timeout",
                 "15",
                 "--max-time",

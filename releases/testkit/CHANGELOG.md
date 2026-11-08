@@ -8,6 +8,12 @@ Joint history through 0.76.1 remains there once, with its original scope.
 
 ## [0.93.1] - Unreleased
 
+### 🩹 Fixed
+
+- Download the unchanged PocketIC 16.1 server through GitHub's official asset
+  API, avoiding the browser download route's observed gateway failures. Archive
+  digests, HTTPS/size/deadline limits and executable/version admission remain.
+
 ### 🧹 Cleanup
 
 - Share submit/await ingress mechanics between ordinary and bounded snapshot
