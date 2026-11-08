@@ -11,6 +11,7 @@ pub mod diagnostics;
 pub mod discovery;
 pub mod environment;
 pub mod execution;
+pub mod exports;
 pub mod flags;
 pub mod lock_projection;
 pub(crate) mod lockfile;
