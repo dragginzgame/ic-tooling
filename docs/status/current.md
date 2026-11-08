@@ -1,93 +1,99 @@
 # Current handoff
 
-## Five further simplifications — 2026-11-08
+## Build, Text and Testkit cleanup deployed — 2026-11-08
 
-Implemented locally, without staging or delivery. Pending Build remains
-**0.79.0** for the already documented batch API cut; its two labeled-spec domain
-names now share `LabeledSpec<S>`. Pending Testkit is **0.93.1**: ordinary/snapshot
-ingress calls share transport helpers with unchanged public APIs and protocol
-contracts. Three HTTP fixture families share private, native test-worker custody;
-responses, framing decisions, byte budgets and replay assertions stay local.
+The authorized cleanup is committed, pushed to main and published to crates.io.
+Implementation source is `e192870a0ef0959dbf2d0280af4cb0d0c95075d6`, including
+Text `441900ba`, consolidation `fe01d255` and the server-setup repair `e192870a`.
 
-Publication now obtains release context from Tooling's actual preflight selection
-and checks it against the sealed committed-release receipt. It no longer parses
-Shared's private journal or fabricates a journal in its fixture. Old/missing or
-changed context falls back to fresh publication lint. Group admission and fixture
-iteration derive identities from the catalog; qualification mappings stay explicit.
+| Group | Published version | Release commit / annotated tag |
+| --- | --- | --- |
+| Build | 0.79.0 | `e3e514f09bc45b3ebf6c2d1cb8e2d4e8973554f4` / `build-v0.79.0` |
+| Text | 0.74.3 | `439ead576bfac6b2d235d5e22de2993c47e290ee` / `text-v0.74.3` |
+| Testkit | 0.93.1 | `f494ea2d08e14959ed0e067742839385d05a3f62` / `testkit-v0.93.1` |
 
-Focused Linux/Rust 1.99.1 validation passed: Build/Testkit library/test Clippy,
-55 Rust cases (23 client/snapshot, four async startup, eight time, 13 Wasm batch,
-seven artifact batch), Build-only context/receipt and catalog rejection/recovery,
-publication wiring/refusals, Make tooling-roster routing, ShellCheck and donor/
-upstream reconstruction plus mutation guards. The adapter used the existing
-cached pinned 0.73 renderer with setup/gate effects substituted. Logs remain at
-`target/complexity-five-20261108/`. Package versions and dependencies are unchanged;
-Cargo.lock and the separate Text draft are preserved. Native macOS and full release
-qualification were not run. No Shared source, sibling callers or artifacts were retired.
+Frozen Build batch `batch-b1n6Stqb` completed first, followed by the supplier-first
+Text/Testkit patch batch `batch-XbEtnv9Z`. Both journals report complete Git and
+registry delivery. Official sparse-index checksums match all three downloaded
+archives; embedded clean VCS identities match their exact release commits.
+Private Dev/probe follow Testkit 0.93.1 and remain unpublished. Foundation stays
+0.75.0, Host Tools 0.86.0 and Native 0.80.0. The released lock retains Platform
+0.25.0, Runtime/macros/guard 0.20.0, Types 0.18.2 and Wire 0.17.12. Shared remains
+0.31.5 at `b2026a118e38de4af1555c527af327cb604eacdf`.
 
-## Four Build/release simplifications — 2026-11-08
+### Delivered behavior
 
-Implemented locally; nothing staged, committed or deployed. Pending Build is
-**0.79.0**, because removing `WasmBuildBatchConfig` and its batch argument breaks
-the public API. Configure maintenance on each `WasmBuildSpec`; matching policies
-run once per canonical target, while conflicting entries fail before building.
-Artifact/Wasm outcome names now specialize one `CacheOutcome<Record>` owner;
-records, engines and retention custody remain distinct. See the
-[migration](../build/artifacts.md#pending-build-079-migration) and
-[Canic #742](https://github.com/dragginzgame/canic/issues/742). No Canic source was edited.
+Build removes `WasmBuildBatchConfig` and its batch argument. Each
+`WasmBuildSpec` owns maintenance configuration: matching policies run once per
+canonical target, and conflicting entries fail before building. Artifact/Wasm
+outcome names specialize `CacheOutcome<Record>`; labeled-spec domain names
+specialize `LabeledSpec<S>`. Domain engines, records and retention remain distinct.
+The [migration](../build/artifacts.md#pending-build-079-migration) and
+[Canic #742](https://github.com/dragginzgame/canic/issues/742) record the consumer
+API change; no Canic source was edited here.
 
-The existing stage runner now reuses workflow/scratch matrices alongside its
-evidence/retention fixtures. Current group metadata and metadata-dependent
-release/publication fixtures remain fresh. Publication re-admits full workspace
-lint through the existing committed-release receipt, with fresh lint fallback;
-archive/license/provenance/source admission stay fresh.
+Text publishes both compatible additions from
+[#341](https://github.com/dragginzgame/ic-tooling/issues/341) and
+[#342](https://github.com/dragginzgame/ic-tooling/issues/342):
+`quantity::scaled_decimal_quantity_text` renders arbitrary-size exact decimal
+quantities with rounding/promotion and escaped suffixes;
+`percent::ratio_percent_text` renders exact `u64` ratios without floating point.
+Query can adopt 0.74.3 while retaining its unit tables and fallback policy.
+No Query source was changed.
 
-Focused Linux/Rust 1.99.1 checks passed: Build all-target/all-feature Clippy,
-13 batch tests, ten maintenance tests (three overlap the batch selection), four
-cross-process artifact-handoff tests, cross-group stage replay/invalidation,
-Build-only adapter receipt admission/refusal/recovery, publication wiring and
-fallback/archive refusal, ShellCheck with source following, and local doc links.
-Release fixtures substitute setup, qualification and external effects; the
-adapter used the cached pinned 0.73 renderer, without claiming current native
-tool-store admission. Logs: `target/complexity-four-20261108/`. Native macOS and
-full release qualification were not run. Package versions are unchanged; the
-entry Cargo.lock remains byte-for-byte intact. The independent Text work below
-is preserved.
+Testkit shares ordinary/snapshot ingress transport mechanics and private native
+HTTP fixture-worker custody. Public APIs, protocol bytes, limits, caller runtime,
+cancellation/no-replay behavior and fixture-specific responses remain unchanged.
+Donor/upstream reconstruction and mutation guards passed. PocketIC setup now
+uses the official GitHub asset API with fixed asset IDs and the unchanged digest,
+size, HTTPS and executable checks. The browser-download endpoint returned HTTP
+504 twice; the official API returned the identical pinned Linux archive.
 
-## Exact quantity and percentage formatting — 2026-11-08
+Release fixtures derive group identities from the catalog. Four unchanged
+workflow/scratch/evidence/retention fixtures use the existing admitted-stage cache;
+Testkit actually reused all four from Text in this deployment. Metadata-dependent
+fixtures remain fresh. Publication obtains context from Tooling's preflight
+selection and keeps fresh lint fallback, archive and provenance checks. The real
+publisher refused lint reuse on saved-context mismatch and successfully ran fresh
+workspace Clippy for each upload. [#345](https://github.com/dragginzgame/ic-tooling/issues/345)
+retains that efficiency defect; substituted fixtures did not expose it.
 
-Implemented [#341](https://github.com/dragginzgame/ic-tooling/issues/341) and
-[#342](https://github.com/dragginzgame/ic-tooling/issues/342) locally in Host Text.
-The pending Text version is **0.74.3**: both APIs are compatible additions to
-0.74.2. Package versions remain unchanged; nothing is committed or published.
+### Qualification and custody
 
-- `ic_host_text::quantity::scaled_decimal_quantity_text(value, units)` returns
-  `Option<String>`. Tables use the existing descending `(u64, &str)` divisors,
-  restricted to powers of ten ending in one. It reuses the existing exact decimal
-  renderer, validates all input, supports values beyond `u128`, rounds half up to
-  two places, trims fractional zeroes and promotes rounded units. Caller suffixes
-  remain terminal-escaped. The existing integer/binary formatter is preserved.
-- `ic_host_text::percent::ratio_percent_text(numerator, denominator)` returns
-  `Option<String>` for `u64` inputs. It uses wide integer arithmetic, rounds exact
-  halves upward to one decimal place, admits percentages above 100 and refuses
-  zero denominators.
+All three complete 34-stage Linux x86-64 release gates passed on Rust 1.99.1:
+workspace Clippy, formatting/docs, source/release fixtures, isolated feature and
+native/Wasm graphs, installed PocketIC 16.1 contracts, archived rebuilds/tests/
+doctests and installed workspace tests. Publication separately passed its source,
+lint, package verification and upload checks.
 
-After publication, Query can replace its decimal rate selection/promotion with
-the first helper using its existing cycle unit table. It retains original-input
-terminal-safe fallback. Query can replace ratio arithmetic with the second
-helper and retain its `"-"` fallback, checked count addition and report ownership.
-No Query source was changed; its adoption waits for the published API.
+Native macOS Intel and Apple Silicon qualification is **pending**, not inferred
+from Linux. Four workflows were dispatched asynchronously at the exact published
+source `f494ea2d08e14959ed0e067742839385d05a3f62`; all read back in progress:
+[CI](https://github.com/dragginzgame/ic-tooling/actions/runs/42469752240),
+[Build optimizer](https://github.com/dragginzgame/ic-tooling/actions/runs/42469755112),
+[Testkit runtime](https://github.com/dragginzgame/ic-tooling/actions/runs/42469758176)
+and [Browser fixture session](https://github.com/dragginzgame/ic-tooling/actions/runs/42469761028).
+Delivery did not wait for their completion. Issues requiring native evidence
+remain subject to their own acceptance criteria.
 
-Focused Linux x86-64 / Rust 1.99.1 validation passed: affected-package Clippy
-with warnings denied, 44 Host Text unit tests and five public API doctests, all
-with defaults disabled and the existing lock held. Regression cases include
-rounded promotion, irregular decimal scale gaps, arbitrary precision, late
-malformed suffixes, terminal-control suffixes, exact percentage halves and full
-integer ranges. Production dependencies remain only `unicode-width`; no new
-dependency, feature or policy owner was introduced. `git diff --check` passed.
-Native macOS Intel/Apple Silicon acceptance and release qualification were not
-run. The pre-existing Cargo.lock draft is byte-for-byte unchanged (SHA-256
-`3499ed042483ec4f068bfc9aed770cebff7c616752a66feaf40586f39faf8005`).
+The ordinary main checkout was reconciled through Shared's batch helper after
+each delivery. Its unrelated Cargo.lock selections were reapplied by three-way
+merge; all deferred registry package records compare exactly with the latest
+saved draft, while workspace records carry the published versions. The latest
+deferred selections include Platform 0.25.1, Runtime/macros/guard 0.20.1 and Wire
+0.17.13; they are **not** the captured release lock. Current deferred lock SHA-256
+is `607b4ce0e9f387559b9a2098a8e2fd91c367e54d4b85f38304e5b75bc5a1c95c`.
+
+Durable preservation refs are `preservation/cleanup-release-lock-20261108`
+(`7021230f`) and `preservation/cleanup-release-lock-20261108-updated`
+(`7fee0a54`). Batch Git, plans and receipts remain under
+`.git/release-state/frozen/`; candidate outputs and sealed proofs remain under
+`target/release-frozen/`. Readbacks, locks, reconciliation logs and registry
+verification remain in `target/deployment-cleanup-20261108/`; earlier focused
+logs remain under `target/complexity-four-20261108/` and
+`target/complexity-five-20261108/`. Superseded `batch-SeyigorP` retains both failed
+preflight downloads, without tag/upload effects. No batch, tool, artifact or
+sibling checkout was retired.
 
 ## Tools 0.86.0 and Testkit 0.93.0 deployed — 2026-11-07
 
