@@ -576,7 +576,6 @@ impl PocketIc {
         method: &str,
         payload: Vec<u8>,
     ) -> Result<RawMessageId, ClientError> {
-        let endpoint = "update/submit_ingress_message";
         let raw_canister_call = RawCanisterCall {
             sender: sender.as_slice().to_vec(),
             canister_id: canister_id.as_slice().to_vec(),
@@ -585,16 +584,41 @@ impl PocketIc {
             effective_principal,
             sender_info: None,
         };
-        self.post::<Result<RawMessageId, RejectResponse>, _>(endpoint, raw_canister_call)
-            .await?
-            .map_err(ClientError::from)
+        self.submit_ingress(raw_canister_call, None).await
+    }
+
+    async fn submit_ingress(
+        &self,
+        call: RawCanisterCall,
+        response_limit: Option<usize>,
+    ) -> Result<RawMessageId, ClientError> {
+        self.request_limited::<Result<RawMessageId, RejectResponse>, _>(
+            HttpMethod::Post,
+            "update/submit_ingress_message",
+            call,
+            response_limit,
+        )
+        .await?
+        .map_err(ClientError::from)
     }
 
     /// Await an update call submitted previously by `submit_call` or `submit_call_with_effective_principal`.
     pub async fn await_call(&self, message_id: RawMessageId) -> Result<Vec<u8>, ClientError> {
-        let endpoint = "update/await_ingress_message";
+        self.await_ingress(message_id, None).await
+    }
+
+    async fn await_ingress(
+        &self,
+        message_id: RawMessageId,
+        response_limit: Option<usize>,
+    ) -> Result<Vec<u8>, ClientError> {
         let result: RawCanisterResult = self
-            .post(endpoint, &message_id)
+            .request_limited(
+                HttpMethod::Post,
+                "update/await_ingress_message",
+                &message_id,
+                response_limit,
+            )
             .await
             .map_err(|error| error.with_ingress(message_id))?;
         Result::<Vec<u8>, RejectResponse>::from(result).map_err(ClientError::from)

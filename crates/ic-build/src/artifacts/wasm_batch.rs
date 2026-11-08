@@ -1,9 +1,9 @@
-use super::cache_fs::{CacheRetentionLimits, canonicalize_allow_missing};
+use super::cache_fs::canonicalize_allow_missing;
 use super::{CacheBatchEntry, CacheOutcomeCounts};
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
 
 use std::{
-    collections::HashSet,
+    collections::HashMap,
     path::PathBuf,
     time::{Duration, Instant},
 };
@@ -16,21 +16,11 @@ use super::wasm_cache::{
     shared_incremental_target,
 };
 
-/// Orchestration shared by every entry in one independent Wasm build batch.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct WasmBuildBatchConfig {
-    shared_incremental_maintenance: Option<SharedIncrementalTargetMaintenanceConfig>,
-}
-
 /// Caller-labeled specification for one exact Wasm batch entry.
 ///
 /// The label is report and progress identity only; it does not alter the
 /// underlying exact Wasm fingerprint or cache key.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct LabeledWasmBuildSpec {
-    label: String,
-    spec: WasmBuildSpec,
-}
+pub type LabeledWasmBuildSpec = super::batch::LabeledSpec<WasmBuildSpec>;
 
 /// Ordered outcomes and failures from a collect-all Wasm build batch.
 #[derive(Debug)]
@@ -47,35 +37,6 @@ pub enum WasmBuildBatchContractError {
     /// Invalid input labels, rejected before source validation or command effects.
     #[error("Wasm batch {0}")]
     Labels(#[source] BatchLabelError),
-}
-
-impl LabeledWasmBuildSpec {
-    /// Attach a caller-owned stable label to one Wasm build specification.
-    #[must_use]
-    pub fn new(label: impl Into<String>, spec: WasmBuildSpec) -> Self {
-        Self {
-            label: label.into(),
-            spec,
-        }
-    }
-
-    /// Caller-owned report and progress label.
-    #[must_use]
-    pub fn label(&self) -> &str {
-        &self.label
-    }
-
-    /// Underlying exact Wasm build specification.
-    #[must_use]
-    pub const fn spec(&self) -> &WasmBuildSpec {
-        &self.spec
-    }
-
-    /// Consume the entry into its label and Wasm build specification.
-    #[must_use]
-    pub fn into_parts(self) -> (String, WasmBuildSpec) {
-        (self.label, self.spec)
-    }
 }
 
 /// Build error together with the phase and partial timings at the failure.
@@ -257,46 +218,6 @@ impl WasmBuildBatchMetrics {
     }
 }
 
-impl WasmBuildBatchConfig {
-    /// Create batch orchestration without batch-owned target maintenance.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            shared_incremental_maintenance: None,
-        }
-    }
-
-    /// Maintain each distinct resolved shared target once through its first batch entry.
-    #[must_use]
-    pub const fn with_shared_incremental_target_maintenance(
-        mut self,
-        config: SharedIncrementalTargetMaintenanceConfig,
-    ) -> Self {
-        self.shared_incremental_maintenance = Some(config);
-        self
-    }
-
-    /// Strictly maintain each distinct shared target at most once per interval.
-    #[must_use]
-    pub const fn with_shared_incremental_target_maintenance_at_most_every(
-        self,
-        policy: CacheRetentionLimits,
-        minimum_interval: Duration,
-    ) -> Self {
-        self.with_shared_incremental_target_maintenance(
-            SharedIncrementalTargetMaintenanceConfig::new(policy, minimum_interval),
-        )
-    }
-
-    /// Batch-owned shared-target maintenance, when configured.
-    #[must_use]
-    pub const fn shared_incremental_target_maintenance(
-        self,
-    ) -> Option<SharedIncrementalTargetMaintenanceConfig> {
-        self.shared_incremental_maintenance
-    }
-}
-
 impl std::fmt::Display for WasmBuildBatchReport {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let metrics = self.metrics();
@@ -318,7 +239,9 @@ impl std::fmt::Display for WasmBuildBatchReport {
 
 /// Build every Wasm specification as an independent Cargo invocation.
 ///
-/// Pass explicit batch configuration and optional progress reporting.
+/// Each spec owns its maintenance policy. The batch applies matching policies
+/// once per canonical shared target and rejects conflicting policies per entry.
+/// Pass optional progress reporting.
 /// `spawn` selects Cargo child/group custody and cleanup for each cache miss,
 /// independently of progress; it may override the default null stdin.
 /// Specifications run sequentially and every result is retained. Each entry
@@ -335,7 +258,6 @@ impl std::fmt::Display for WasmBuildBatchReport {
 )]
 pub fn build_wasm_canisters_cached_batch(
     specs: &[LabeledWasmBuildSpec],
-    config: WasmBuildBatchConfig,
     mut progress: Option<(
         WasmBuildProgressConfig,
         &mut dyn FnMut(WasmBuildBatchProgressEvent),
@@ -348,7 +270,7 @@ pub fn build_wasm_canisters_cached_batch(
         .map_err(WasmBuildBatchContractError::Labels)?;
     let mut resolver =
         WasmBuildBatchInputResolver::new(specs.iter().map(LabeledWasmBuildSpec::spec));
-    let mut report = build_wasm_batch(specs, config, |spec, index, maintenance| {
+    let mut report = build_wasm_batch(specs, |spec, index, maintenance| {
         let progress_config = progress.as_ref().map(|(config, _)| *config);
         let mut forward = |event| {
             if let Some((_, observer)) = progress.as_mut() {
@@ -372,11 +294,7 @@ pub fn build_wasm_canisters_cached_batch(
     Ok(report)
 }
 
-fn build_wasm_batch<F>(
-    specs: &[LabeledWasmBuildSpec],
-    config: WasmBuildBatchConfig,
-    mut build: F,
-) -> WasmBuildBatchReport
+fn build_wasm_batch<F>(specs: &[LabeledWasmBuildSpec], mut build: F) -> WasmBuildBatchReport
 where
     F: FnMut(
         &WasmBuildSpec,
@@ -386,7 +304,7 @@ where
 {
     let started = Instant::now();
     let mut entries = Vec::with_capacity(specs.len());
-    let mut maintenance = BatchMaintenanceTracker::new(config.shared_incremental_maintenance);
+    let mut maintenance = BatchMaintenanceTracker::default();
     for (index, labeled) in specs.iter().enumerate() {
         let entry_started = Instant::now();
         let spec = &labeled.spec;
@@ -411,29 +329,19 @@ where
     }
 }
 
+#[derive(Default)]
 struct BatchMaintenanceTracker {
-    config: Option<SharedIncrementalTargetMaintenanceConfig>,
-    configured_targets: HashSet<PathBuf>,
+    configured_targets: HashMap<PathBuf, SharedIncrementalTargetMaintenanceConfig>,
 }
 
 impl BatchMaintenanceTracker {
-    fn new(config: Option<SharedIncrementalTargetMaintenanceConfig>) -> Self {
-        Self {
-            config,
-            configured_targets: HashSet::new(),
-        }
-    }
-
     fn prepare_spec(
         &mut self,
         spec: &WasmBuildSpec,
     ) -> Result<Option<SharedIncrementalTargetMaintenanceConfig>, WasmBuildError> {
-        let Some(config) = self.config else {
+        let Some(config) = spec.shared_incremental_target_maintenance() else {
             return Ok(None);
         };
-        if spec.shared_incremental_target_maintenance().is_some() {
-            return Err(batch_maintenance_ownership_error());
-        }
         let Some(target_dir) = shared_incremental_target(spec) else {
             return Ok(None);
         };
@@ -443,18 +351,17 @@ impl BatchMaintenanceTracker {
                 path: target_dir,
                 source,
             })?;
-        if !self.configured_targets.insert(canonical) {
+        if let Some(previous) = self.configured_targets.get(&canonical) {
+            if *previous != config {
+                return Err(WasmBuildError::InvalidSpec {
+                    message: "shared target has conflicting maintenance policies in one batch"
+                        .to_owned(),
+                });
+            }
             return Ok(None);
         }
+        self.configured_targets.insert(canonical, config);
         Ok(Some(config))
-    }
-}
-
-fn batch_maintenance_ownership_error() -> WasmBuildError {
-    WasmBuildError::InvalidSpec {
-        message:
-            "batch-owned shared-target maintenance cannot be combined with per-spec maintenance"
-                .to_owned(),
     }
 }
 

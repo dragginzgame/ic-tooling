@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-groups=(foundation build text tools testkit native)
+requested_group=''
 if [[ $# != 0 ]]; then
-    [[ $# == 2 && $1 == --group ]] || { echo 'usage: test-adapter.sh [--group GROUP]' >&2; exit 2; }
-    case $2 in foundation|build|text|tools|testkit|native) groups=("$2") ;; *) exit 2 ;; esac
+    [[ $# == 2 && $1 == --group && -n $2 ]] || { echo 'usage: test-adapter.sh [--group GROUP]' >&2; exit 2; }
+    requested_group=$2
 fi
 
 # Real group policy, Cargo metadata, Git, rendering and receipts. A compact
@@ -19,6 +19,13 @@ root="${BASH_SOURCE[0]}"
 [[ "$root" == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
+group_names=$(bash "$root/scripts/release/group.sh" "$root/ci/cargo-release-groups.json" --list)
+groups=()
+while IFS= read -r group; do groups+=("$group"); done <<< "$group_names"
+if [[ -n $requested_group ]]; then
+    bash "$root/scripts/release/group.sh" "$root/ci/cargo-release-groups.json" "$requested_group" members >/dev/null
+    groups=("$requested_group")
+fi
 # shellcheck source=scripts/ci/product-fixture.sh
 source "$root/scripts/ci/product-fixture.sh"
 fixture="$(tooling_fixture_create "$root" tooling-release-groups)"
@@ -34,7 +41,10 @@ ADAPTER_REAL_CARGO="$(command -v cargo)"
 export ADAPTER_REAL_STAGE_PATH="$PATH"
 ADAPTER_REAL_BASH="$(command -v bash)"
 ADAPTER_REAL_GIT="$(command -v git)"
-ADAPTER_REAL_EDITOR="$(bash "$root/scripts/release/editor.sh" check)"
+# Focused receipt fixtures can select an already prepared pinned renderer while
+# substituting setup admission. Production editor.sh always retains admission.
+ADAPTER_REAL_EDITOR="${ADAPTER_REAL_EDITOR:-$(bash "$root/scripts/release/editor.sh" check)}"
+[[ "$ADAPTER_REAL_EDITOR" == /* && -f "$ADAPTER_REAL_EDITOR" && -x "$ADAPTER_REAL_EDITOR" ]]
 ADAPTER_SELECTED_EDITOR="$fixture/editor"
 tooling="$fixture/tooling"$'\n'
 mkdir -p "$tooling" "$fixture/bin"
@@ -110,6 +120,18 @@ refuse() {
     if "$@"; then echo 'Unexpected release adapter admission' >&2; exit 1; fi
 }
 common_probes=true
+# Catalog identity is data, including newly declared groups. Qualification
+# coverage remains independently explicit in the production selector.
+jq '.groups += [(.groups[0] | .name = "additional-fixture-group")]' \
+    "$root/ci/cargo-release-groups.json" > "$fixture/catalog.json"
+{ printf '%s\n' "$group_names"; printf 'additional-fixture-group\n'; } > "$fixture/expected-groups"
+bash "$root/scripts/release/group.sh" "$fixture/catalog.json" --list > "$fixture/actual-groups"
+cmp "$fixture/expected-groups" "$fixture/actual-groups"
+bash "$root/scripts/release/group.sh" "$fixture/catalog.json" additional-fixture-group members >/dev/null
+for perturbation in '.groups += [.groups[0]]' '.groups[0].name = "../escape"' '.groups = []'; do
+    jq "$perturbation" "$fixture/catalog.json" > "$fixture/invalid-catalog.json"
+    refuse bash "$root/scripts/release/group.sh" "$fixture/invalid-catalog.json" --list > "$fixture/catalog-refusal.log" 2>&1
+done
 for selected_group in "${groups[@]}"; do
     checkout="$fixture/$selected_group checkout"
     mkdir "$checkout"
@@ -279,6 +301,41 @@ for selected_group in "${groups[@]}"; do
     RELEASE_COMMIT="$(git rev-parse HEAD)"
     printf '\nUnrelated live notes\n' >> "$ledger"
     invoke committed-check > "$fixture/$selected_group.committed.log" 2>&1
+    if [[ $common_probes == true ]]; then
+        # Publication reuses only the committed release's sealed full lint.
+        # Its source/archive checks remain separate and fresh in workspace.sh.
+        git restore --worktree -- "$ledger"
+        lint_probe() {
+            bash "$root/scripts/release/publication-lint.sh" "$selected_group" "$RELEASE_VERSION" "$RELEASE_COMMIT"
+        }
+        # Use the real preflight record; no hand-written Shared journal.
+        cp "$state.selection" "$fixture/lint-selection.json"
+        jq 'del(.release)' "$fixture/lint-selection.json" > "$state.selection"
+        refuse lint_probe > "$fixture/lint-missing-context.log" 2>&1
+        jq '.release.date = "2026-10-30"' "$fixture/lint-selection.json" > "$state.selection"
+        refuse lint_probe > "$fixture/lint-changed-context.log" 2>&1
+        cp "$fixture/lint-selection.json" "$state.selection"
+        : > "$ADAPTER_EVENTS"
+        lint_probe > "$fixture/lint-reused.log" 2>&1
+        [[ ! -s "$ADAPTER_EVENTS" ]]
+        grep 'Reused qualified workspace lint' "$fixture/lint-reused.log" >/dev/null
+        RUSTFLAGS='--cfg changed_publication_context' refuse lint_probe > "$fixture/lint-environment.log" 2>&1
+        refuse bash "$root/scripts/release/publication-lint.sh" "$selected_group" "$RELEASE_VERSION" "$RELEASE_SOURCE" \
+            > "$fixture/lint-source.log" 2>&1
+        printf '\nchanged source\n' >> README.md
+        refuse lint_probe > "$fixture/lint-dirty.log" 2>&1
+        git restore --worktree -- README.md
+        cp "$gate_directory/plan.json" "$fixture/lint-full-plan.json"
+        jq '.stages |= map(if .target == "release-stage-clippy-workspace" then .required = false else . end)' \
+            "$fixture/lint-full-plan.json" > "$gate_directory/plan.json"
+        refuse lint_probe > "$fixture/lint-narrow-plan.log" 2>&1
+        cp "$fixture/lint-full-plan.json" "$gate_directory/plan.json"
+        cp "$state" "$fixture/lint-receipt"
+        printf 'changed receipt\n' >> "$state"
+        refuse lint_probe > "$fixture/lint-corrupt-receipt.log" 2>&1
+        cp "$fixture/lint-receipt" "$state"
+        lint_probe > "$fixture/lint-recovered.log" 2>&1
+    fi
     unset RELEASE_COMMIT
     common_probes=false
 done

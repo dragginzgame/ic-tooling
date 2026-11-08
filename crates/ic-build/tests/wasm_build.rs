@@ -14,9 +14,9 @@ use ic_host_fs::read::read_file;
 use ic_build::artifacts::{
     ArtifactCacheError, ArtifactCachePreparation, ArtifactCacheSpec, CacheBatchEntry,
     CacheRetentionLimits, LabeledWasmBuildSpec, SharedIncrementalTargetMaintenanceOutcome,
-    WasmBuildBatchConfig, WasmBuildBatchMetrics, WasmBuildBatchReport, WasmBuildError,
-    WasmBuildOutcome, WasmBuildPhase, WasmBuildProgressConfig, build_wasm_canisters_cached,
-    prepare_artifact_cache, prune_wasm_build_cache, resolve_cargo_build_inputs,
+    WasmBuildBatchMetrics, WasmBuildBatchReport, WasmBuildError, WasmBuildOutcome, WasmBuildPhase,
+    WasmBuildProgressConfig, build_wasm_canisters_cached, prepare_artifact_cache,
+    prune_wasm_build_cache, resolve_cargo_build_inputs,
 };
 use std::{
     fs,
@@ -399,13 +399,8 @@ fn independent_wasm_batch_preserves_standalone_feature_resolution() {
         ),
     ];
 
-    let batch = ic_build::artifacts::build_wasm_canisters_cached_batch(
-        &specs,
-        WasmBuildBatchConfig::new(),
-        None,
-        spawn_cargo,
-    )
-    .unwrap();
+    let batch =
+        ic_build::artifacts::build_wasm_canisters_cached_batch(&specs, None, spawn_cargo).unwrap();
 
     assert!(batch.is_success());
     assert_cold_batch_metrics(batch.metrics());
@@ -453,7 +448,6 @@ fn independent_wasm_batch_preserves_standalone_feature_resolution() {
     ];
     let with_failure = ic_build::artifacts::build_wasm_canisters_cached_batch(
         &with_invalid_middle,
-        ic_build::artifacts::WasmBuildBatchConfig::new(),
         None,
         spawn_cargo,
     )
@@ -906,13 +900,8 @@ fn source_changes_during_shared_incremental_build_reject_exact_publication() {
         .fingerprint();
     let worker = thread::spawn(move || {
         let specs = [LabeledWasmBuildSpec::new("race", spec)];
-        ic_build::artifacts::build_wasm_canisters_cached_batch(
-            &specs,
-            WasmBuildBatchConfig::new(),
-            None,
-            spawn_cargo,
-        )
-        .expect("valid race-test batch")
+        ic_build::artifacts::build_wasm_canisters_cached_batch(&specs, None, spawn_cargo)
+            .expect("valid race-test batch")
     });
     wait_for_path(&started, "build start", Duration::from_secs(10)).expect("build start");
     fs::write(

@@ -96,7 +96,8 @@ git -C "$normal" remote add origin "$fixture/remote.git"
 git -C "$normal" push -q origin main
 source=$(git -C "$normal" rev-parse HEAD)
 [[ ! -e "$normal/.tools" ]]
-for group in foundation build text tools testkit native; do
+all_groups=$(bash "$normal/scripts/release/group.sh" "$normal/ci/cargo-release-groups.json" --list)
+for group in $all_groups; do
     make --no-print-directory -s -C "$normal" release-version "RELEASE_GROUP=$group" > "$fixture/version-$group"
 done
 if (cd "$normal" && bash scripts/release/group.sh ci/cargo-release-groups.json build,foundation batch) > "$fixture/order-refusal.log" 2>&1; then exit 1; fi

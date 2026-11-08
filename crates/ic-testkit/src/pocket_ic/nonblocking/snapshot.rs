@@ -19,10 +19,8 @@ impl PocketIc {
                     "snapshot request exceeds Candid byte budget".into(),
                 ));
             }
-            let message: Result<RawMessageId, RejectResponse> = self
-                .request_limited(
-                    HttpMethod::Post,
-                    "update/submit_ingress_message",
+            let message = self
+                .submit_ingress(
                     RawCanisterCall {
                         canister_id: Principal::management_canister().as_slice().to_vec(),
                         effective_principal: RawEffectivePrincipal::CanisterId(
@@ -36,19 +34,8 @@ impl PocketIc {
                     Some(limits.http_bytes),
                 )
                 .await?;
-            let message = message.map_err(ClientError::from)?;
             *ingress = Some(message.clone());
-            let result: RawCanisterResult = self
-                .request_limited(
-                    HttpMethod::Post,
-                    "update/await_ingress_message",
-                    &message,
-                    Some(limits.http_bytes),
-                )
-                .await
-                .map_err(|error| error.with_ingress(message))?;
-            let reply =
-                Result::<Vec<u8>, RejectResponse>::from(result).map_err(ClientError::from)?;
+            let reply = self.await_ingress(message, Some(limits.http_bytes)).await?;
             if reply.len() > limits.candid_bytes {
                 return Err(ClientError::Protocol(
                     "snapshot reply exceeds Candid byte budget".into(),

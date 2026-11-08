@@ -162,7 +162,10 @@ async fn install_cooldown_uses_exactly_two_ticks() {
 }
 
 async fn assert_time_requests(advance: Duration, ticks: u32, run: impl AsyncFnOnce(&PocketIc)) {
-    use std::{io::Write as _, net::TcpListener, thread, time::Instant};
+    use std::{
+        io::Write as _,
+        sync::{Arc, Mutex},
+    };
     let mut expected = Vec::new();
     if !advance.is_zero() {
         expected.extend(["/instances/0/read/get_time", "/instances/0/update/set_time"]);
@@ -172,33 +175,18 @@ async fn assert_time_requests(advance: Duration, ticks: u32, run: impl AsyncFnOn
         ticks as usize,
     ));
     let request_count = expected.len();
-    let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).unwrap();
-    listener.set_nonblocking(true).unwrap();
-    let url = format!("http://{}/", listener.local_addr().unwrap())
-        .parse()
-        .unwrap();
-    let worker = thread::spawn(move || {
-        let deadline = Instant::now() + Duration::from_secs(5);
-        let mut requests = Vec::new();
-        while requests.len() < request_count {
-            assert!(Instant::now() < deadline, "simulated-time peer timed out");
-            let (mut stream, _) = match listener.accept() {
-                Ok(connection) => connection,
-                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                    thread::sleep(Duration::from_millis(1));
-                    continue;
-                }
-                Err(error) => panic!("accept simulated-time request: {error}"),
-            };
-            let request = ic_host_process::testing::http::capture_http_request(
-                &mut stream,
-                Duration::from_secs(1),
-                16_384,
-                16_384,
-                ic_host_process::testing::http::HttpContentLength::Optional,
-            )
-            .into_result()
-            .unwrap();
+    let requests = Arc::new(Mutex::new(Vec::new()));
+    let recorded = Arc::clone(&requests);
+    let peer = crate::test_support::http::Peer::spawn(
+        Some(request_count),
+        Duration::ZERO,
+        ic_host_process::testing::http::HttpFixtureLimits {
+            timeout: Duration::from_secs(5),
+            max_header_bytes: 16_384,
+            max_body_bytes: 16_384,
+        },
+        move |stream, request, _deadline, _stop| {
+            let request = request.into_result().unwrap();
             let text = std::str::from_utf8(&request).unwrap();
             let path = text.split_whitespace().nth(1).unwrap().to_owned();
             let reply = if path.ends_with("/read/get_time") {
@@ -213,16 +201,18 @@ async fn assert_time_requests(advance: Duration, ticks: u32, run: impl AsyncFnOn
                     100 + u64::from(advance.subsec_nanos())
                 );
             }
-            stream
-                .set_write_timeout(Some(Duration::from_secs(1)))
-                .unwrap();
             write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{reply}", reply.len()).unwrap();
-            requests.push(path);
-        }
-        requests
-    });
-    let pic = PocketIc::new_from_existing_instance(url, 0, std::time::Duration::from_secs(1))
-        .expect("valid request budget");
+            recorded.lock().unwrap().push(path);
+        },
+    );
+
+    let pic = PocketIc::new_from_existing_instance(
+        peer.url().clone(),
+        0,
+        std::time::Duration::from_secs(1),
+    )
+    .expect("valid request budget");
     run(&pic).await;
-    assert_eq!(worker.join().unwrap(), expected);
+    peer.finish();
+    assert_eq!(*requests.lock().unwrap(), expected);
 }

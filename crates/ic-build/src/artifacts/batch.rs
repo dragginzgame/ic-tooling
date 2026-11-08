@@ -2,6 +2,68 @@
 
 use std::time::Duration;
 
+/// Caller-owned reporting label paired with one independent specification.
+/// Labels do not contribute to cache identity or combine specification policy.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LabeledSpec<S> {
+    pub(super) label: String,
+    pub(super) spec: S,
+}
+
+impl<S> LabeledSpec<S> {
+    /// Attach a stable report and callback label.
+    #[must_use]
+    pub fn new(label: impl Into<String>, spec: S) -> Self {
+        Self {
+            label: label.into(),
+            spec,
+        }
+    }
+
+    /// Caller-owned report and callback identity.
+    #[must_use]
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    /// Underlying independent specification.
+    #[must_use]
+    pub const fn spec(&self) -> &S {
+        &self.spec
+    }
+
+    /// Consume the label and specification without projecting either.
+    #[must_use]
+    pub fn into_parts(self) -> (String, S) {
+        (self.label, self.spec)
+    }
+}
+
+/// Whether an acquisition produced a new record or reused a verified record.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CacheOutcome<R> {
+    /// Work produced and published the record.
+    Built(R),
+    /// A complete matching record was verified and reused.
+    Reused(R),
+}
+
+impl<R> CacheOutcome<R> {
+    /// Borrow the acquisition record, retaining its domain-specific custody.
+    #[must_use]
+    pub const fn record(&self) -> &R {
+        match self {
+            Self::Built(record) | Self::Reused(record) => record,
+        }
+    }
+
+    /// Whether the record was reused without producing new outputs.
+    #[must_use]
+    pub const fn is_reused(&self) -> bool {
+        matches!(self, Self::Reused(_))
+    }
+}
+
 /// One caller-labeled result and its elapsed time in a collect-all cache batch.
 #[derive(Debug)]
 pub struct CacheBatchEntry<T, E> {

@@ -240,8 +240,7 @@ async fn async_borrowed_failure_leaves_server_authority_with_the_caller() {
 struct PendingHttpServer {
     port: u16,
     received: std::sync::Arc<std::sync::atomic::AtomicBool>,
-    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
-    worker: Option<std::thread::JoinHandle<()>>,
+    _peer: crate::test_support::http::Peer,
 }
 
 #[cfg(unix)]
@@ -251,62 +250,42 @@ impl PendingHttpServer {
             Arc,
             atomic::{AtomicBool, Ordering},
         };
-        let listener = std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).unwrap();
-        let port = listener.local_addr().unwrap().port();
-        listener.set_nonblocking(true).unwrap();
         let received = Arc::new(AtomicBool::new(false));
-        let stop = Arc::new(AtomicBool::new(false));
         let request_received = Arc::clone(&received);
-        let stop_worker = Arc::clone(&stop);
-        let worker = std::thread::spawn(move || {
-            while !stop_worker.load(Ordering::Acquire) {
-                match listener.accept() {
-                    Ok((mut stream, _)) => {
-                        if ic_host_process::testing::http::capture_http_request(
-                            &mut stream,
-                            Duration::from_secs(1),
-                            65_536,
-                            65_536,
-                            ic_host_process::testing::http::HttpContentLength::Optional,
+        let peer = crate::test_support::http::Peer::spawn(
+            None,
+            Duration::ZERO,
+            ic_host_process::testing::http::HttpFixtureLimits {
+                timeout: Duration::from_secs(5),
+                max_header_bytes: 65_536,
+                max_body_bytes: 65_536,
+            },
+            move |stream, request, _deadline, stop| {
+                if request.failure.is_some() {
+                    return;
+                }
+                request_received.store(true, Ordering::Release);
+                if let Some(path) = &exit_file {
+                    fs::write(path, b"exit").unwrap();
+                }
+                if respond {
+                    stream
+                        .write_all(
+                            b"HTTP/1.1 500 Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
                         )
-                        .into_result()
-                        .is_err()
-                        {
-                            continue;
-                        }
-                        request_received.store(true, Ordering::Release);
-                        if let Some(path) = &exit_file {
-                            fs::write(path, b"exit").unwrap();
-                        }
-                        if respond {
-                            stream.write_all(b"HTTP/1.1 500 Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
-                        } else {
-                            while !stop_worker.load(Ordering::Acquire) {
-                                std::thread::sleep(Duration::from_millis(10));
-                            }
-                        }
-                    }
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        .unwrap();
+                } else {
+                    while !stop.load(Ordering::Acquire) {
                         std::thread::sleep(Duration::from_millis(10));
                     }
-                    Err(error) => panic!("HTTP fixture accept failed: {error}"),
                 }
-            }
-        });
+            },
+        );
         Self {
-            port,
+            port: peer.url().port().unwrap(),
             received,
-            stop,
-            worker: Some(worker),
+            _peer: peer,
         }
-    }
-}
-
-#[cfg(unix)]
-impl Drop for PendingHttpServer {
-    fn drop(&mut self) {
-        self.stop.store(true, std::sync::atomic::Ordering::Release);
-        self.worker.take().unwrap().join().unwrap();
     }
 }
 

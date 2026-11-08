@@ -147,7 +147,8 @@ EVENTS
     printf '%s\n' 'fixture scripts/ci/test-qualification-record.sh' > "$fixture/expected"
     cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
     # Each release checks its actual adapter once; full CI keeps all groups.
-    for group in foundation build text tools testkit native; do
+    all_groups=$(bash scripts/release/group.sh ci/cargo-release-groups.json --list)
+    for group in $all_groups; do
         : > "$HOST_MAKE_EVENTS"
         PATH="$fixture/local:$PATH" IC_TOOLING_FULL_CI=0 make --no-print-directory tooling-command-check \
             "TOOLING_RELEASE_GROUP=$group" > "$fixture/tooling-$group.log" 2>&1

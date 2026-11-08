@@ -5,8 +5,8 @@ use ic_host_artifacts::batch::BatchLabelError;
 use ic_host_process::testing::write_executable_script;
 
 use super::{
-    BatchMaintenanceTracker, LabeledWasmBuildSpec, WasmBuildBatchConfig,
-    WasmBuildBatchContractError, WasmBuildBatchProgressEvent, build_wasm_canisters_cached_batch,
+    BatchMaintenanceTracker, LabeledWasmBuildSpec, WasmBuildBatchContractError,
+    WasmBuildBatchProgressEvent, build_wasm_canisters_cached_batch,
 };
 use crate::artifacts::{
     CacheBatchEntry, CacheRetentionLimits, SharedIncrementalTargetMaintenanceConfig,
@@ -26,8 +26,7 @@ use std::{fs, os::unix::fs::symlink};
 #[test]
 fn empty_independent_batch_succeeds_without_work() {
     let report =
-        build_wasm_canisters_cached_batch(&[], WasmBuildBatchConfig::new(), None, spawn_cargo)
-            .expect("empty labeled batch");
+        build_wasm_canisters_cached_batch(&[], None, spawn_cargo).expect("empty labeled batch");
     assert!(report.is_success());
     assert_eq!(report.outcomes().count(), 0);
     let metrics = report.metrics();
@@ -93,10 +92,7 @@ fn library_output_validation_survives_batch_resolution() {
             None
         );
     };
-    check(
-        build_wasm_canisters_cached_batch(&specs, WasmBuildBatchConfig::new(), None, spawn_cargo)
-            .unwrap(),
-    );
+    check(build_wasm_canisters_cached_batch(&specs, None, spawn_cargo).unwrap());
 
     fs::remove_dir_all(root).unwrap();
 }
@@ -136,8 +132,7 @@ fn batch_retains_every_indexed_failure() {
     ];
 
     let report =
-        build_wasm_canisters_cached_batch(&specs, WasmBuildBatchConfig::new(), None, spawn_cargo)
-            .expect("valid labeled batch");
+        build_wasm_canisters_cached_batch(&specs, None, spawn_cargo).expect("valid labeled batch");
 
     assert!(!report.is_success());
     assert_eq!(report.entries().len(), 2);
@@ -193,8 +188,7 @@ fn batch_failure_retains_partial_metadata_timing() {
     )];
 
     let report =
-        build_wasm_canisters_cached_batch(&specs, WasmBuildBatchConfig::new(), None, spawn_cargo)
-            .expect("valid labeled batch");
+        build_wasm_canisters_cached_batch(&specs, None, spawn_cargo).expect("valid labeled batch");
     let failure = report.failures().next().expect("metadata failure");
 
     assert_eq!(
@@ -244,7 +238,6 @@ fn malformed_shared_metadata_is_reported_for_every_entry() {
     ];
     let report = build_wasm_canisters_cached_batch(
         &specs,
-        WasmBuildBatchConfig::new(),
         Some((WasmBuildProgressConfig::new(), &mut |_| {})),
         spawn_cargo,
     )
@@ -285,7 +278,6 @@ fn batch_rejects_invalid_labels_before_progress_or_build_work() {
     let mut progress_events = 0;
     let empty_error = build_wasm_canisters_cached_batch(
         &empty,
-        WasmBuildBatchConfig::new(),
         Some((WasmBuildProgressConfig::new(), &mut |_| {
             progress_events += 1;
         })),
@@ -309,13 +301,8 @@ fn batch_rejects_invalid_labels_before_progress_or_build_work() {
         LabeledWasmBuildSpec::new("same", invalid),
     ];
     assert_eq!(
-        build_wasm_canisters_cached_batch(
-            &duplicate,
-            WasmBuildBatchConfig::new(),
-            None,
-            spawn_cargo,
-        )
-        .expect_err("duplicate labels must reject the batch"),
+        build_wasm_canisters_cached_batch(&duplicate, None, spawn_cargo,)
+            .expect_err("duplicate labels must reject the batch"),
         WasmBuildBatchContractError::Labels(BatchLabelError::Duplicate {
             label: "same".to_owned(),
             first_index: 0,
@@ -340,7 +327,6 @@ fn batch_progress_retains_the_caller_label() {
     let mut labels = Vec::new();
     let report = build_wasm_canisters_cached_batch(
         &specs,
-        WasmBuildBatchConfig::new(),
         Some((
             WasmBuildProgressConfig::new().with_heartbeat_interval(Duration::from_millis(5)),
             &mut |event| {
@@ -365,8 +351,7 @@ fn batch_maintenance_configures_each_shared_target_once() {
         Duration::from_secs(60),
     )
     .with_failure_mode(SharedIncrementalTargetMaintenanceFailureMode::BestEffort);
-    let batch = WasmBuildBatchConfig::new().with_shared_incremental_target_maintenance(maintenance);
-    let mut tracker = BatchMaintenanceTracker::new(batch.shared_incremental_target_maintenance());
+    let mut tracker = BatchMaintenanceTracker::default();
     let first = WasmBuildSpec::new(
         Path::new("."),
         Path::new("exact-a"),
@@ -374,7 +359,8 @@ fn batch_maintenance_configures_each_shared_target_once() {
         crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
-    .with_shared_incremental_target("shared-a");
+    .with_shared_incremental_target("shared-a")
+    .with_shared_incremental_target_maintenance(maintenance);
     let second = WasmBuildSpec::new(
         Path::new("."),
         Path::new("exact-b"),
@@ -382,7 +368,8 @@ fn batch_maintenance_configures_each_shared_target_once() {
         crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
-    .with_shared_incremental_target("shared-a");
+    .with_shared_incremental_target("shared-a")
+    .with_shared_incremental_target_maintenance(maintenance);
     let other = WasmBuildSpec::new(
         Path::new("."),
         Path::new("exact-c"),
@@ -390,7 +377,8 @@ fn batch_maintenance_configures_each_shared_target_once() {
         crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
-    .with_shared_incremental_target("shared-b");
+    .with_shared_incremental_target("shared-b")
+    .with_shared_incremental_target_maintenance(maintenance);
     let isolated = WasmBuildSpec::new(
         Path::new("."),
         Path::new("exact-d"),
@@ -405,7 +393,10 @@ fn batch_maintenance_configures_each_shared_target_once() {
         .expect("resolve shared target")
         .expect("first shared target must own maintenance");
     assert_eq!(prepared_first, maintenance);
-    assert!(first.shared_incremental_target_maintenance().is_none());
+    assert_eq!(
+        first.shared_incremental_target_maintenance(),
+        Some(maintenance)
+    );
     assert!(tracker.prepare_spec(&second).unwrap().is_none());
     assert!(tracker.prepare_spec(&other).unwrap().is_some());
     assert!(tracker.prepare_spec(&isolated).unwrap().is_none());
@@ -418,8 +409,14 @@ fn batch_maintenance_distinguishes_workspaces_and_deduplicates_aliases() {
     let (second_root, second) = fake_wasm_build_spec("batch-maintenance-second");
     let alias_root = unique_temp_directory("batch-maintenance-alias");
     symlink(&first_root, alias_root.join("alias")).expect("create workspace alias");
-    let first = first.with_shared_incremental_target("shared");
-    let second = second.with_shared_incremental_target("shared");
+    let maintenance =
+        SharedIncrementalTargetMaintenanceConfig::new(CacheRetentionLimits::new(), Duration::ZERO);
+    let first = first
+        .with_shared_incremental_target("shared")
+        .with_shared_incremental_target_maintenance(maintenance);
+    let second = second
+        .with_shared_incremental_target("shared")
+        .with_shared_incremental_target_maintenance(maintenance);
     let alias = first
         .clone()
         .with_shared_incremental_target(alias_root.join("alias/shared"));
@@ -428,12 +425,7 @@ fn batch_maintenance_distinguishes_workspaces_and_deduplicates_aliases() {
         LabeledWasmBuildSpec::new("second", second),
         LabeledWasmBuildSpec::new("alias", alias),
     ];
-    let config = WasmBuildBatchConfig::new()
-        .with_shared_incremental_target_maintenance_at_most_every(
-            CacheRetentionLimits::new(),
-            Duration::ZERO,
-        );
-    let report = super::build_wasm_canisters_cached_batch(&specs, config, None, spawn_cargo)
+    let report = super::build_wasm_canisters_cached_batch(&specs, None, spawn_cargo)
         .expect("valid maintenance batch");
     assert!(report.is_success(), "{report:?}");
     assert_eq!(report.shared_incremental_maintenance_outcomes().count(), 2);
@@ -466,41 +458,51 @@ fn batch_maintenance_distinguishes_workspaces_and_deduplicates_aliases() {
 }
 
 #[test]
-fn batch_maintenance_rejects_per_spec_policy_ownership() {
+#[cfg(unix)]
+fn batch_maintenance_rejects_conflicting_target_policies() {
+    let (root, spec) = fake_wasm_build_spec("batch-conflicting-policy");
     let maintenance = SharedIncrementalTargetMaintenanceConfig::new(
         CacheRetentionLimits::new(),
         Duration::from_secs(60),
     );
-    let spec = LabeledWasmBuildSpec::new(
+    let first = LabeledWasmBuildSpec::new(
         "fixture",
-        WasmBuildSpec::new(
-            Path::new("."),
-            Path::new("exact"),
-            &["fixture"],
-            crate::testing::cargo::environment(),
-            CONFIGURATION_LIMITS,
-        )
-        .with_shared_incremental_target("shared")
-        .with_shared_incremental_target_maintenance(maintenance),
+        spec.with_shared_incremental_target("shared")
+            .with_shared_incremental_target_maintenance(maintenance),
     );
-    let batch = WasmBuildBatchConfig::new().with_shared_incremental_target_maintenance(maintenance);
-
-    let report = build_wasm_canisters_cached_batch(&[spec], batch, None, spawn_cargo)
-        .expect("valid labeled batch");
+    let second = LabeledWasmBuildSpec::new(
+        "conflict",
+        first
+            .spec()
+            .clone()
+            .with_shared_incremental_target_maintenance(
+                maintenance
+                    .with_failure_mode(SharedIncrementalTargetMaintenanceFailureMode::BestEffort),
+            ),
+    );
+    let mut calls = 0;
+    let report = build_wasm_canisters_cached_batch(&[first, second], None, |command| {
+        calls += 1;
+        spawn_cargo(command)
+    })
+    .expect("valid labeled batch");
     let failures = report.failures().collect::<Vec<_>>();
-    assert_eq!(report.entries().len(), 1);
+    assert_eq!(calls, 1, "conflicting entry must fail before its build");
+    assert_eq!(report.entries().len(), 2);
     assert_eq!(failures.len(), 1);
     let failure = failures[0];
-    assert_eq!(failure.index(), 0);
-    assert_eq!(failure.label(), "fixture");
-    assert_eq!(failure.entry_elapsed(), report.entries()[0].entry_elapsed());
+    assert_eq!(failure.index(), 1);
+    assert_eq!(failure.label(), "conflict");
+    assert_eq!(failure.entry_elapsed(), report.entries()[1].entry_elapsed());
     assert_eq!(
         failure.failure_details().unwrap().phase(),
         WasmBuildPhase::Specification
     );
     assert!(
-        matches!(failure.error().unwrap(), WasmBuildError::InvalidSpec { message } if message.contains("cannot be combined"))
+        matches!(failure.error().unwrap(), WasmBuildError::InvalidSpec { message } if message.contains("conflicting maintenance policies"))
     );
+    drop(report);
+    fs::remove_dir_all(root).expect("remove conflicting policy workspace");
 }
 
 #[cfg(unix)]
@@ -511,21 +513,21 @@ fn unsafe_shared_target_does_not_fail_other_compatible_batch_entries() {
     fs::create_dir_all(&unsafe_target).expect("create unsafe shared target");
     let sentinel = unsafe_target.join("source-sentinel");
     fs::write(&sentinel, b"preserve").expect("write source sentinel");
+    let maintenance = SharedIncrementalTargetMaintenanceConfig::new(
+        CacheRetentionLimits::new().with_max_size_bytes(0),
+        Duration::ZERO,
+    );
     let specs = [
         LabeledWasmBuildSpec::new(
             "unsafe",
-            spec.clone().with_shared_incremental_target(&unsafe_target),
+            spec.clone()
+                .with_shared_incremental_target(&unsafe_target)
+                .with_shared_incremental_target_maintenance(maintenance),
         ),
         LabeledWasmBuildSpec::new("safe", spec),
     ];
-    let config = WasmBuildBatchConfig::new()
-        .with_shared_incremental_target_maintenance_at_most_every(
-            CacheRetentionLimits::new().with_max_size_bytes(0),
-            Duration::ZERO,
-        );
-
-    let report = build_wasm_canisters_cached_batch(&specs, config, None, spawn_cargo)
-        .expect("valid labeled batch");
+    let report =
+        build_wasm_canisters_cached_batch(&specs, None, spawn_cargo).expect("valid labeled batch");
     assert_eq!(report.outcomes().count(), 1);
     let failures = report.failures().collect::<Vec<_>>();
     assert_eq!(failures.len(), 1);
@@ -567,17 +569,11 @@ fn a_missing_input_does_not_fail_other_compatible_batch_entries() {
             let report = if observed {
                 build_wasm_canisters_cached_batch(
                     &specs,
-                    WasmBuildBatchConfig::new(),
                     Some((WasmBuildProgressConfig::new(), &mut |_| {})),
                     spawn_cargo,
                 )
             } else {
-                build_wasm_canisters_cached_batch(
-                    &specs,
-                    WasmBuildBatchConfig::new(),
-                    None,
-                    spawn_cargo,
-                )
+                build_wasm_canisters_cached_batch(&specs, None, spawn_cargo)
             }
             .expect("valid batch labels");
             assert_eq!(report.outcomes().count(), 1);
@@ -630,13 +626,7 @@ fn missing_tools_keep_their_phase_in_silent_and_observed_batches() {
                 WasmBuildProgressConfig::new(),
                 &mut observe as &mut dyn FnMut(_),
             ));
-            let report = build_wasm_canisters_cached_batch(
-                &specs,
-                WasmBuildBatchConfig::new(),
-                progress,
-                spawn_cargo,
-            )
-            .unwrap();
+            let report = build_wasm_canisters_cached_batch(&specs, progress, spawn_cargo).unwrap();
             let entry = &report.entries()[0];
             assert_eq!(entry.failure_details().unwrap().phase(), expected);
             assert!(

@@ -567,6 +567,41 @@ PUBLISH_CARGO_RESULT=17 invoke publish --packages ic-host-artifacts > batch-fail
 [[ "$status" == 17 && ! -e target/publish/lock ]] || exit 1
 printf 'metadata\nclippy\npackage\npublish\n' > expected-calls
 cmp expected-calls calls
+# The adapter fixture qualifies real receipt admission. Here substitute only
+# that decision to prove publisher wiring: admitted lint is not rerun, refusal
+# falls back, and qualification/archive admission retain their independent work.
+export REAL_PUBLISH_BASH
+REAL_PUBLISH_BASH="$(command -v bash)"
+cat > bin/bash <<'STUB'
+#!/bin/bash
+set -euo pipefail
+if [[ ${1##*/} == publication-lint.sh ]]; then
+    printf 'lint-receipt\n' >> "$PUBLISH_FIXTURE/calls"
+    exit "${PUBLISH_RECEIPT_RESULT:-0}"
+fi
+exec "$REAL_PUBLISH_BASH" "$@"
+STUB
+chmod +x bin/bash
+for mode in check publish; do
+    : > calls
+    PUBLISH_CLIPPY_RESULT=29 invoke "$mode" --packages ic-host-artifacts > "qualified-lint-$mode.log" 2>&1
+    printf 'metadata\nlint-receipt\n' > expected-calls
+    [[ $mode != publish ]] || printf 'package\n' >> expected-calls
+    printf 'publish\n' >> expected-calls
+    cmp expected-calls calls
+done
+: > calls
+PUBLISH_RECEIPT_RESULT=1 invoke check --packages ic-host-artifacts > stale-lint.log 2>&1
+printf 'metadata\nlint-receipt\nclippy\npublish\n' > expected-calls
+cmp expected-calls calls
+: > calls
+if PUBLISH_ARCHIVE_LICENSE=changed invoke publish --packages ic-host-artifacts > qualified-lint-archive.log 2>&1; then exit 1; fi
+printf 'metadata\nlint-receipt\npackage\n' > expected-calls
+cmp expected-calls calls
+: > calls
+invoke qualify > qualification-fresh-lint.log 2>&1
+printf 'metadata\nclippy\npublish\n' > expected-calls
+cmp expected-calls calls
 printf 'consumer artifact\n' > expected-retained
 cmp expected-retained target/retained
 echo 'Publication command checks passed (Git and upload effects substituted).'

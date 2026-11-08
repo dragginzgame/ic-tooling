@@ -6,6 +6,18 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.93.1] - Unreleased
+
+### 🧹 Cleanup
+
+- Share submit/await ingress mechanics between ordinary and bounded snapshot
+  calls. Public signatures, routing bytes, limits, rejection results and accepted
+  ingress evidence remain unchanged; uncertain operations are never replayed.
+- Consolidate native HTTP test-worker custody across client-failure, startup and
+  simulated-time fixtures. Each scenario retains its own responses, framing
+  admission, request budgets, cancellation controls and replay assertions.
+  Original client/donor provenance remains reconstructible.
+
 ## [0.93.0] - 2026-11-07
 
 ### ⚠️ Breaking

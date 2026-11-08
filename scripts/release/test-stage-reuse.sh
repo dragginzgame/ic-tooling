@@ -22,8 +22,9 @@ finish() {
 }
 trap finish EXIT
 mkdir -p "$fixture/work/ci"
-cp -R "$root/scripts" "$fixture/work/"
-cp "$root/ci/tooling-checks.tsv" "$fixture/work/ci/"
+bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$fixture/work"
+cp "$root/Cargo.toml" "$root/Cargo.lock" "$fixture/work/"
+export YQ="${YQ:-$root/.tools/host/bin/yq}"
 cd "$fixture/work"
 source_a=1111111111111111111111111111111111111111
 source_b=2222222222222222222222222222222222222222
@@ -34,7 +35,7 @@ run() {
 while IFS=$'\t' read -r stage _check; do
     run "$source_a" "$stage-first" foundation
     jq -e '.mode == "executed"' "admissions/$stage-first/$stage.json" >/dev/null
-    # These are deliberately unread by both fixture contracts.
+    # These are deliberately unread by the invariant fixture contracts.
     printf '[workspace]\n' > Cargo.toml
     printf 'version = 4\n' > Cargo.lock
     run "$source_b" "$stage-second" build

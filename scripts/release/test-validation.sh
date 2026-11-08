@@ -360,7 +360,8 @@ RELEASE_SOURCE=$(git rev-parse HEAD)
 : > "$fixture/expected"
 VALIDATION_TEST_EVENTS="$fixture/expected" bash scripts/ci/workspace-validation.sh ci \
     > "$fixture/full-ci.log" 2>&1
-for RELEASE_GROUP in foundation build text tools testkit native; do
+all_groups=$(bash scripts/release/group.sh ci/cargo-release-groups.json --list)
+for RELEASE_GROUP in $all_groups; do
     make_plan "full-$RELEASE_GROUP"
     jq -e '.selection == "full"' "$directory/context.json" >/dev/null
     jq -r '.stages[] | select(.required) | .target | sub("^release-stage-";"")' "$directory/plan.json" > "$fixture/selected"
