@@ -103,8 +103,9 @@ decoding without the textual parser; select `candid-service` for service facts. 
 for strict certificate decoding. The independent `ic-interface` feature adds Wasm
 export facts; select it together with `candid-service` for DID/Wasm comparisons.
 Decoding consumers select `candid`; service-inspection consumers select
-`candid-service` when adopting
-0.28. See [the migration instructions](../docs/changelog/0.28.md).
+`candid-service` when adopting 0.88. See the
+[Host Tools release notes](../releases/tools/CHANGELOG.md) and the
+[historical 0.28 migration](../docs/changelog/0.28.md).
 
 Native Candid extraction belongs to IC Build's `artifacts::candid` module;
 Host Tools no longer supplies an extraction feature or invocation wrapper.
