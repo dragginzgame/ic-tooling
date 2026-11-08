@@ -21,6 +21,11 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
   publication and qualification machinery. No API moved into PocketIC Testkit.
   Published versions and historical release/recovery records remain available.
 
+### 🩹 Fixed
+
+- Make the non-Linux kernel-lock observation stub const, satisfying the native
+  macOS lint gate without changing its unsupported-observation result.
+
 ### 🔧 Tooling
 
 - Adopt Shared Tooling 0.31.11, including authenticated hosted download caching,

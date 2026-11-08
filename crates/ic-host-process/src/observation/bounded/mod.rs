@@ -199,7 +199,7 @@ pub fn kernel_holder(
 #[cfg(not(target_os = "linux"))]
 /// Observe an opened inode's Linux flock holder; absence never proves unlock.
 #[must_use]
-pub fn kernel_holder(
+pub const fn kernel_holder(
     _file: &fs::File,
     _proc_root: &Path,
     _maximum_bytes: usize,
