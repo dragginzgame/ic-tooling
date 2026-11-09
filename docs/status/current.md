@@ -1,5 +1,23 @@
 # Current handoff
 
+## Testkit 0.96.0 delivered
+
+Frozen batch batch-Uw3itG2U qualified b1ad4500 and delivered release commit
+34a2582b7aa7dea13df7b210e9a16dc3854b9a3e to origin/main with testkit-v0.96.0.
+The complete Linux gate and selected registry package verification passed.
+crates.io confirms ic-testkit 0.96.0, not yanked, checksum
+0b919e80e03d7bd2ea5fa984a1a34982955facd7aa146d6430bf3cf083c9f6b3.
+Only Testkit was published; Foundation 0.77, Build 0.81.1 and Tools 0.89 remain
+pending. Hosted CI runs asynchronously; native macOS is not qualified by the
+Linux evidence. At delivery, CI 42639704365, runtime 42639704393 and optimizer
+42639704573 were running; browser fixture 42639704328 passed.
+
+The ordinary checkout reconciled the release. Its deferred ic-logging 0.24.13,
+itoa 1.0.19 and syn 3.0.10 selections were restored through Cargo and remain
+uncommitted. The original lock backup is under
+.git/release-state/testkit-0.96.0-deferred. Successful and failed batch evidence
+remains under target/release-frozen and .git/release-state/frozen; no cleanup ran.
+
 ## Testkit 0.96 deployment qualification
 
 Frozen batch batch-MXrdzwWs captured ff1b681f and stopped before version
@@ -27,8 +45,8 @@ contracts, Build artifact/HMAC/cache tests, eight snapshot failure tests, source
 provenance and consumer CI routing pass on Linux. Evidence is under
 target/tooling0374-sha2. No macOS or full release qualification ran.
 
-Testkit must publish its pending 0.96 release for consumers to adopt the owned
-Platform types. The complete local batch also has Foundation 0.77, Build 0.81.1
+Testkit's delivered 0.96 release lets consumers adopt the owned Platform types.
+The complete local batch also has Foundation 0.77, Build 0.81.1
 and Tools 0.89 pending. The maintainer subsequently selected Testkit 0.96.0 for
 frozen deployment; the other package groups remain unpublished. Unrelated lock
 patch selections are retained in .git/release-state/testkit-0.96.0-deferred for
