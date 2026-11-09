@@ -17,29 +17,29 @@ case "$1" in
     lint)
         packages=(-p "$package")
         if [[ $RELEASE_GROUP == text ]]; then packages+=(-p ic-host-tools); fi
-        packages+=(-p ic-testkit-dev)
-        cargo clippy "${packages[@]}" --all-targets --all-features --locked --offline -- -D warnings ;;
+        cargo clippy "${packages[@]}" --all-targets --all-features --locked --offline -- -D warnings
+        cargo clippy --manifest-path qualification/Cargo.toml -p ic-testkit-dev --all-targets --all-features --locked --offline -- -D warnings ;;
     graphs) bash scripts/ci/check-tools-features.sh ;;
     tests)
         cargo test -p "$package" --all-targets --all-features --locked --offline
         if [[ $RELEASE_GROUP == text ]]; then
             cargo test -p "$package" --no-default-features --lib --locked --offline
             make --no-print-directory test-text-yaml test-tools-icp-project
-            cargo test -p ic-testkit-dev --bin check_packages --locked --offline
+            cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --bin check_packages --locked --offline
         fi
         if [[ $RELEASE_GROUP == tools ]]; then
             make --no-print-directory test-tools-default test-tools-interface \
                 test-tools-candid test-tools-agent test-tools-encoding \
                 test-tools-registry test-tools-icp-project test-tools-icp-ledger test-tools-ledger-evidence
-            cargo test -p ic-testkit-dev --test public_contracts --locked --offline
+            cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --test public_contracts --locked --offline
         fi
         if [[ $RELEASE_GROUP == build ]]; then
-            cargo test -p ic-testkit-dev --bin check_packages --locked --offline
-            cargo test -p ic-testkit-dev --test public_contracts --locked --offline
+            cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --bin check_packages --locked --offline
+            cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --test public_contracts --locked --offline
             server=$(target/debug/ic-testkit-server check)
-            POCKET_IC_BIN="$server" cargo test -p ic-testkit-dev --test canister_wire --locked --offline
+            POCKET_IC_BIN="$server" cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --test canister_wire --locked --offline
         fi ;;
     docs) RUSTDOCFLAGS='-D warnings' cargo doc -p "$package" --all-features --locked --offline --no-deps ;;
-    archives) cargo run -p ic-testkit-dev --bin check_packages --locked --offline -- --package "$package" ;;
+    archives) cargo run --manifest-path qualification/Cargo.toml -p ic-testkit-dev --bin check_packages --locked --offline -- --package "$package" ;;
     *) exit 2 ;;
 esac

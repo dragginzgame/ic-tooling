@@ -20,6 +20,12 @@ mkdir -p "$temporary/wasm-qualification/optimizer" \
     "$repository/target/publish/admission/check.partial" \
     "$repository/target/archive-build-cache/debug" \
     "$repository/target/debug"
+server_attempt="$repository/.tools/ic-testkit-server/.setup-v1-123-0"
+mkdir -p "$server_attempt"
+printf 'curl: (22) HTTP error\n' > "$server_attempt/download.stderr"
+printf 'download exited unsuccessfully\n' > "$server_attempt/failure.txt"
+printf 'partial download\n' > "$server_attempt/archive.gz"
+printf 'server binary\n' > "$server_attempt/pocket-ic"
 printf 'failed optimizer\n' > "$temporary/wasm-qualification/optimizer/qualification.log"
 printf 'wasm bytes\n' > "$temporary/wasm-qualification/optimizer/output.wasm"
 printf 'fetch failed\n' > "$temporary/wasm-qualification/dependencies-fetch.log"
@@ -42,13 +48,17 @@ done
 for path in target/package-qualification-123-0/test-targets.stderr \
     target/package-qualification-456-0/selection.json \
     target/package-qualification-456-0/archives/test-targets.stderr \
-    target/package-qualification-123-0/.input target/publish/admission/check.partial/metadata.log; do
+    target/package-qualification-123-0/.input target/publish/admission/check.partial/metadata.log \
+    .tools/ic-testkit-server/.setup-v1-123-0/download.stderr \
+    .tools/ic-testkit-server/.setup-v1-123-0/failure.txt; do
     cmp "$repository/$path" "$fixture/extracted/$path"
 done
 [[ ! -e "$fixture/extracted/target/package-qualification-123-0/target" &&
    ! -e "$fixture/extracted/target/package-qualification-456-0/archives/target" &&
    ! -e "$fixture/extracted/target/debug" &&
-   ! -e "$fixture/extracted/target/archive-build-cache" ]] || exit 1
+   ! -e "$fixture/extracted/target/archive-build-cache" &&
+   ! -e "$fixture/extracted/.tools/ic-testkit-server/.setup-v1-123-0/archive.gz" &&
+   ! -e "$fixture/extracted/.tools/ic-testkit-server/.setup-v1-123-0/pocket-ic" ]] || exit 1
 # Shared archive admission refuses redirected ancestors, retaining original inputs.
 mv "$repository/target" "$fixture/retained-target"
 ln -s "$fixture/retained-target" "$repository/target"

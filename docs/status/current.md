@@ -1,5 +1,73 @@
 # Current handoff
 
+## IC Wire 0.19.0 / Toko Tooling 0.38.2 — local adoption
+
+Published registry selections and the authenticated 187-file tooling snapshot
+are adopted. The earlier 0.38.0 placement blocker is superseded: 0.38.1 supplies
+atomic qualification metadata/lock handling, retained by 0.38.2. Existing snapshot
+entrypoints, earlier CI repairs and unrelated Cargo.lock selections are preserved.
+
+Nine public products remain in crates/. Private ic-testkit-dev and
+ic-testkit-perf-probe moved from crates/ into the independent qualification/
+workspace, with its own catalog and Cargo.lock. Their private version remains
+0.96.0 and they no longer belong to Testkit's release group. Product package
+versions are unchanged. Root resolution no longer contains the probe-only
+Runtime, macros, guard or slotmap. Qualification retains those dependencies.
+
+The shared qualification_workspace release setting owns both manifests/locks
+in one transaction. Product release updates preserve private versions and
+unrelated suppliers. Full lint/tests/docs and formatting cover both roots;
+source policy, graph checks, package driver, browser fixture paths, release
+selection and post-publication contract callers now use the correct root.
+Tooling admission compares both workspaces against the same installed snapshot.
+
+Focused Linux evidence under target/wire019-toko0382 includes:
+- Both locked graphs fetched; snapshot/member admission and dependency pins pass.
+- Native/Wasm graph policy passes; an incompatible qualification-only requirement
+  refuses qualification resolution without blocking the independent product graph.
+- Six package-driver tests, four public-contract tests, nine Wire adapter tests
+  and the installed PocketIC 16.1 Wasm Wire probe pass.
+- Testkit release adapter passes with setup/full qualification substituted,
+  including rollback and preservation of private versions across the two locks.
+- Release selection and publication-roster fixtures pass with external effects
+  substituted; CI routing retains its 32-stage gate. Both-workspace formatting
+  and actual hook-preservation checks pass.
+
+No commit, push, release or publication ran for this adoption. Native macOS
+qualification and the full release gate were not rerun; prior macOS evidence
+below belongs to the earlier source. Pending Wire adoption is recorded under
+Testkit 0.97.0; no package version has been prepared.
+
+## CI run 42639956856 — local repairs
+
+Run 42639956856 tested 4005928c. Native macOS 15 Intel and Apple Silicon both
+passed CI/publication qualification. Linux stopped before qualification when
+PocketIC's curl download returned exit 22 (HTTP error). Its saved download.stderr
+was omitted from both artifact selections, so the HTTP status/cause cannot be
+recovered from the retained evidence. The dependent msrv job failed as a result.
+
+The separate history scan found two generated Mermaid package-edge identifiers
+in ff1b681f:docs/stack.md, lines 398 and 406. Exact historical fingerprints are
+now ignored, following the existing narrow ignore convention; the complete
+redacted history scan passes with zero findings. Product evidence now selects
+failed server download.stderr/failure.txt, excluding binaries/partial archives.
+The evidence fixture, ShellCheck and diff checks pass. Evidence is under
+target/ci-42639956856. These fixes are local; no push or rerun occurred. The HTTP
+failure itself remains unclassified, not proven fixed by this diagnostic change.
+
+## Toko Tooling 0.37.5 — local adoption
+
+The published installer refreshed all 185 recorded files with the existing
+entrypoints preserved. Root pin, policy exception, Cargo.lock and receipt select
+0.37.5; the scoped lock update changed only Toko and preserved the existing
+patch selections. This release adds a private Wire benchmark Candid oracle
+exception; Tooling retains its own narrower dependency policy.
+
+Snapshot/member admission, actual Host/Build dependency-boundary and feature
+graph callers, dependency pins, documentation links and diff checks pass on
+Linux. Evidence: target/toko0375-adoption. No executable tool setup, native
+macOS qualification, commit or deployment ran for this adoption.
+
 ## Testkit 0.96.0 delivered
 
 Frozen batch batch-Uw3itG2U qualified b1ad4500 and delivered release commit
@@ -212,3 +280,13 @@ require their separately scoped minor-version adoption; sibling source was not
 changed or qualified. Preserve the completed frozen batches `batch-jNmWYunP`
 and `batch-4F91gJ1U`, all unfinished older batches, source pins, receipts and
 retained builds. Do not replay earlier attempts against already-published versions.
+
+## Frozen deployment selection — 2026-11-09
+
+Deployment is authorized for Foundation 0.76.2 and Build 0.81.1 (patch), then
+Tools 0.89.0 and Testkit 0.97.0 (minor). Foundation tooling adoption does not
+break its published library contract; its pending heading was corrected.
+Unrelated lock patches are preserved on local branch
+`preserve/wire019-lock-selections` and in `.git/release-state/deferred-wire019-20261109`.
+The release captures the prior ic-logging/itoa/syn selections; deferred selections
+will be reapplied after reconciliation. No sibling repository is included.

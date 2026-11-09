@@ -6,7 +6,7 @@ The optional fixture benchmark driver, worker and report framework are retired.
 
 Prepare the selected PocketIC binary and Rust Wasm target through the normal
 [developer setup](../../docs/testkit/overview.md#toolchains-and-checks). Then run
-`cargo test -p ic-testkit-dev --bin check_packages --locked --offline` for the
+`cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --bin check_packages --locked --offline` for the
 archive adapter, or the installed `canister_wire` test with an admitted server.
 
 `make testkit-package-check` delegates exact coordinated archive qualification to

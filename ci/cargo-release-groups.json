@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "qualification_workspace": "qualification",
   "groups": [
     {
       "name": "foundation",
@@ -65,15 +66,11 @@
       "primary": "ic-testkit",
       "version": "package",
       "members": [
-        "ic-testkit",
-        "ic-testkit-dev",
-        "ic-testkit-perf-probe"
+        "ic-testkit"
       ],
       "changelog": "releases/testkit/CHANGELOG.md",
       "dependencies": [
-        "ic-testkit",
-        "ic-testkit-dev",
-        "ic-testkit-perf-probe"
+        "ic-testkit"
       ]
     }
   ]

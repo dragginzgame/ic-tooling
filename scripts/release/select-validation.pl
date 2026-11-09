@@ -133,6 +133,8 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
         }
         if ($safe) {
             my $metadata = $json->decode(command('cargo', 'metadata', '--no-deps', '--locked', '--offline', '--format-version', '1'));
+            my $qualification = $json->decode(command('cargo', 'metadata', '--manifest-path', 'qualification/Cargo.toml', '--no-deps', '--locked', '--offline', '--format-version', '1'));
+            push @{$metadata->{packages}}, @{$qualification->{packages}};
             my @parents = sort map {
                 my $parent = $_;
                 map { "$parent->{name}:" . ($_->{kind} // 'normal') }
@@ -145,20 +147,20 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
             # Text's runtime callers are bounded to these tested owners. A new
             # call surface needs an explicit mapping before it can be omitted.
             if ($group eq 'text') {
-                my $references = git('grep', '-l', 'ic_host_text', $source, '--', 'crates/ic-host-tools/src', 'crates/ic-testkit-dev/src');
+                my $references = git('grep', '-l', 'ic_host_text', $source, '--', 'crates/ic-host-tools/src', 'qualification/ic-testkit-dev/src');
                 for my $path (grep { length } split /\n/, $references) {
                     $path =~ s/^\Q$source\E://;
                     $safe &&= $path =~ m{\Acrates/ic-host-tools/src/icp_project/} ||
-                        $path eq 'crates/ic-testkit-dev/src/bin/check_packages.rs';
+                        $path eq 'qualification/ic-testkit-dev/src/bin/check_packages.rs';
                 }
             }
             if ($group eq 'tools' || $group eq 'build') {
                 my $import = $group eq 'tools' ? 'ic_host_tools' : 'ic_build';
-                my $references = git('grep', '-l', $import, $source, '--', 'crates/ic-testkit-dev');
+                my $references = git('grep', '-l', $import, $source, '--', 'qualification/ic-testkit-dev');
                 for my $path (grep { length } split /\n/, $references) {
                     $path =~ s/^\Q$source\E://;
-                    my $public = $path eq 'crates/ic-testkit-dev/tests/public_contracts.rs';
-                    my $build = $path =~ m{\Acrates/ic-testkit-dev/(?:src/(?:bin/(?:tests/|check_packages\.rs\z))|tests/canister_wire\.rs\z)};
+                    my $public = $path eq 'qualification/ic-testkit-dev/tests/public_contracts.rs';
+                    my $build = $path =~ m{\Aqualification/ic-testkit-dev/(?:src/(?:bin/(?:tests/|check_packages\.rs\z))|tests/canister_wire\.rs\z)};
                     $safe &&= $public || ($group eq 'build' && $build);
                 }
             }
@@ -175,7 +177,7 @@ my @stages = map {
      reason => $selected{$target} ? $reason : $narrow ? $exclusions{$target} :
         'Focused alternative is covered by the complete workspace gate.'}
 } @{$policy->{stages}};
-my @inputs = ('Makefile','Cargo.toml','Cargo.lock','rust-toolchain.toml','.toko-tooling.snapshot','ci/tool-versions.env','ci/tooling-checks.tsv',
+my @inputs = ('Makefile','Cargo.toml','Cargo.lock','qualification/Cargo.toml','qualification/Cargo.lock','rust-toolchain.toml','.toko-tooling.snapshot','ci/tool-versions.env','ci/tooling-checks.tsv',
     'ci/release-editor.env','ci/cargo-release-groups.json','ci/release-validation-coverage.json','ci/release-validation-baseline.jq',
     'make/release-validation-local.mk','make/testkit.mk','scripts/release/select-validation.pl',
     'scripts/release/validation-stage.sh','scripts/release/validation-focus.sh','scripts/release/validation-baseline.sh',

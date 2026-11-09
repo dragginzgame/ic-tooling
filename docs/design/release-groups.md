@@ -1,6 +1,6 @@
 # Release ownership
 
-One workspace, dependency catalog and lockfile retain five independent release
+One product workspace, dependency catalog and lockfile retain five independent release
 groups. Build and Text leave the original Foundation group without changing
 crate names, package versions, APIs, feature boundaries or dependency requirements.
 
@@ -10,7 +10,7 @@ crate names, package versions, APIs, feature boundaries or dependency requiremen
 | build | ic-build | none | ic-build | [Build](../../releases/build/CHANGELOG.md) |
 | text | ic-host-text | none | ic-host-text | [Text](../../releases/text/CHANGELOG.md) |
 | tools | ic-host-tools | none | ic-host-tools | [Host Tools](../../releases/tools/CHANGELOG.md) |
-| testkit | ic-testkit | ic-testkit-dev, ic-testkit-perf-probe | ic-testkit | [Testkit](../../releases/testkit/CHANGELOG.md) |
+| testkit | ic-testkit | none | ic-testkit | [Testkit](../../releases/testkit/CHANGELOG.md) |
 
 ## Dependency and type ownership
 
@@ -115,3 +115,10 @@ Tooling's core RPC profiles. Native macOS evidence remains separate.
 
 [The original three-group design](https://github.com/dragginzgame/ic-tooling/blob/405b27ad13d95962d729b5e756634ee866c760a8/docs/design/release-groups.md)
 records the earlier split and its historical recovery coordinates.
+
+Private qualification packages have their own workspace and lock under
+`qualification/`. They keep independent private versions and belong to no release
+group. The shared `qualification_workspace` release setting updates their product
+path requirements and lock identities atomically with each product release.
+Full CI lint, tests and docs cover both workspaces; focused release contracts
+select their qualification callers explicitly.

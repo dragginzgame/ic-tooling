@@ -253,6 +253,15 @@ for selected_group in "${groups[@]}"; do
     jq -r '.groups[] | select(.name != "'"$selected_group"'") | .changelog' ci/cargo-release-groups.json |
         while IFS= read -r other_ledger; do git diff --exit-code -- "$other_ledger"; done
     cargo metadata --locked --offline --no-deps --format-version 1 > "$fixture/$selected_group.metadata.json"
+    cargo metadata --manifest-path qualification/Cargo.toml --locked --offline --format-version 1 \
+        > "$fixture/$selected_group.qualification.json"
+    jq -e --slurpfile before qualification/source-metadata.json \
+        --slurpfile plan "$fixture/$selected_group.before.json" --arg next "$RELEASE_VERSION" '
+        def private_versions: . as $m | [.packages[] |
+            select(.id as $id | $m.workspace_members | index($id)) | {name,version}] | sort_by(.name);
+        (private_versions) == ($before[0] | private_versions) and
+        all(.packages[] | select(.name as $n | $plan[0].members | index($n)); .version == $next)
+    ' "$fixture/$selected_group.qualification.json" > /dev/null
     git show "$RELEASE_SOURCE:Cargo.toml" | "$YQ" -p toml -o json '.' > "$fixture/$selected_group.catalog-before.json"
     "$YQ" -p toml -o json '.' Cargo.toml > "$fixture/$selected_group.catalog-after.json"
     jq -ne --slurpfile plan "$fixture/$selected_group.before.json" \
@@ -293,7 +302,7 @@ for selected_group in "${groups[@]}"; do
     fi
     # The ordinary commit checks admit only the declared files. Real Git
     # creates a disposable commit solely to test selected-source verification.
-    git add -- Cargo.toml Cargo.lock "$ledger"
+    git add -- Cargo.toml Cargo.lock qualification/Cargo.toml qualification/Cargo.lock "$ledger"
     jq -r '.manifests[].path | select(. != "Cargo.toml")' "$fixture/$selected_group.before.json" |
         while IFS= read -r path; do git add -- "$path"; done
     if [[ $common_probes == true ]]; then

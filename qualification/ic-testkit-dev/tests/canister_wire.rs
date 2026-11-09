@@ -43,9 +43,7 @@ async fn install_probe() -> StandaloneCanisterFixture {
     .expect("observe complete Cargo workspace discovery");
     let workspace = decode_workspace_root(&workspace.stdout).expect("resolve Cargo workspace");
     assert!(
-        workspace
-            .join("crates/ic-testkit-perf-probe/Cargo.toml")
-            .is_file(),
+        workspace.join("ic-testkit-perf-probe/Cargo.toml").is_file(),
         "Wire qualification requires the workspace control canister"
     );
     let target_dir = ic_host_fs::owned_directory::OwnedDirectory::new(

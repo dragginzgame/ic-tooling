@@ -23,10 +23,14 @@ if [[ -f "$source_root/ci/cargo-release-groups.json" ]]; then
 fi
 cargo metadata --manifest-path "$source_root/Cargo.toml" --no-deps \
     --format-version 1 --locked --offline > "$destination/source-metadata.json"
+mkdir -p "$destination/qualification"
+cp "$source_root/qualification/Cargo.toml" "$source_root/qualification/Cargo.lock" "$destination/qualification/"
+cargo metadata --manifest-path "$source_root/qualification/Cargo.toml" --no-deps \
+    --format-version 1 --locked --offline > "$destination/qualification/source-metadata.json"
 jq -r '. as $m | .packages[] |
     select(.id as $id | $m.workspace_members | index($id)) |
     .manifest_path, (.targets[] | select(.kind | index("lib") or index("bin") or index("rlib") or index("cdylib")) | .src_path)' \
-    "$destination/source-metadata.json" |
+    "$destination/source-metadata.json" "$destination/qualification/source-metadata.json" |
     while IFS= read -r path; do
         case "$path" in
             "$source_root"/*) relative="${path#"$source_root"/}" ;;

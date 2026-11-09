@@ -25,13 +25,13 @@ bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$root" "$fixture/checkout"
 rm "$fixture/checkout/source-metadata.json"
 bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$fixture/checkout"
 # Preserve the known runtime caller surfaces for Text's reverse-consumer mapping.
-for path in crates/ic-host-tools/src/icp_project/mod.rs crates/ic-testkit-dev/src/bin/check_packages.rs; do
+for path in crates/ic-host-tools/src/icp_project/mod.rs qualification/ic-testkit-dev/src/bin/check_packages.rs; do
     mkdir -p "$fixture/checkout/${path%/*}"
     cp "$root/$path" "$fixture/checkout/$path"
 done
 # Keep the actual, explicitly qualified reverse-call surfaces for Tools/Build.
-for path in crates/ic-testkit-dev/tests/public_contracts.rs crates/ic-testkit-dev/tests/canister_wire.rs \
-    crates/ic-testkit-dev/src/bin/check_packages.rs crates/ic-testkit-dev/src/bin/tests/mod.rs; do
+for path in qualification/ic-testkit-dev/tests/public_contracts.rs qualification/ic-testkit-dev/tests/canister_wire.rs \
+    qualification/ic-testkit-dev/src/bin/check_packages.rs qualification/ic-testkit-dev/src/bin/tests/mod.rs; do
     mkdir -p "$fixture/checkout/${path%/*}"
     cp "$root/$path" "$fixture/checkout/$path"
 done
@@ -187,8 +187,8 @@ check_new_scopes() {
         make_plan "$selected-no-baseline"
         jq -e '.selection == "full"' "$directory/context.json" >/dev/null
         mv "$fixture/qualified-baseline" "$fixture/baseline.json"
-        printf '\npub fn unqualified_consumer() {}\n' >> crates/ic-testkit-dev/src/lib.rs
-        git add crates/ic-testkit-dev/src/lib.rs
+        printf '\npub fn unqualified_consumer() {}\n' >> qualification/ic-testkit-dev/src/lib.rs
+        git add qualification/ic-testkit-dev/src/lib.rs
         git commit -qm other-owner
         RELEASE_SOURCE=$(git rev-parse HEAD)
         make_plan "$selected-mixed"
@@ -196,8 +196,8 @@ check_new_scopes() {
         git checkout -q "$baseline"
         # A new use in an unqualified consumer surface broadens even when the
         # baseline already contains that source and Cargo's parent is unchanged.
-        printf 'use %s as supplier;\n' "${package//-/_}" >> crates/ic-testkit-dev/src/lib.rs
-        git add crates/ic-testkit-dev/src/lib.rs
+        printf 'use %s as supplier;\n' "${package//-/_}" >> qualification/ic-testkit-dev/src/lib.rs
+        git add qualification/ic-testkit-dev/src/lib.rs
         git commit -qm new-consumer-surface
         RELEASE_SOURCE=$(git rev-parse HEAD)
         jq --arg source "$RELEASE_SOURCE" '.source = $source | .jobs.jobs |= map(if has("head_sha") then .head_sha = $source else . end)' \
@@ -216,8 +216,8 @@ check_new_scopes() {
         make_plan "$selected-old-mapping"
         jq -e '.selection == "full"' "$directory/context.json" >/dev/null
         git checkout -q "$baseline"
-        printf '\n[build-dependencies]\n%s = { workspace = true }\n' "$package" >> crates/ic-testkit-dev/Cargo.toml
-        git add crates/ic-testkit-dev/Cargo.toml
+        printf '\n[build-dependencies]\n%s = { workspace = true }\n' "$package" >> qualification/ic-testkit-dev/Cargo.toml
+        git add qualification/ic-testkit-dev/Cargo.toml
         git commit -qm new-dependency-kind
         RELEASE_SOURCE=$(git rev-parse HEAD)
         jq --arg source "$RELEASE_SOURCE" '.source = $source | .jobs.jobs |= map(if has("head_sha") then .head_sha = $source else . end)' \

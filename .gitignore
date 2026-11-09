@@ -1,4 +1,5 @@
 /target/
+/qualification/target/
 /.tools/
 /testing/browser/internet-identity/node_modules/
 .DS_Store

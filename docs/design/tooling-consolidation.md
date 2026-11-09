@@ -77,8 +77,8 @@ Open work observed through GitHub:
 | Build crates/ic-build | crates/ic-build |
 | Testkit crates/ic-testkit | crates/ic-testkit |
 | Testkit crates/ic-testkit-native | crates/ic-testkit-native |
-| Testkit crates/ic-testkit-dev (unpublished) | crates/ic-testkit-dev |
-| Testkit crates/ic-testkit-perf-probe (unpublished Wasm fixture) | crates/ic-testkit-perf-probe |
+| Testkit crates/ic-testkit-dev (unpublished) | qualification/ic-testkit-dev |
+| Testkit crates/ic-testkit-perf-probe (unpublished Wasm fixture) | qualification/ic-testkit-perf-probe |
 | Testkit browser session support | testing/browser, with explicit Testkit ownership |
 | Package fixtures, license texts and package readmes | Beside the owning package; preserve publication contents |
 | Product-specific Build/Testkit guides and historical changelogs | docs/build and docs/testkit, repairing relative links |

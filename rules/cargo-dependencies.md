@@ -115,12 +115,13 @@ compile does not prove installed IC or macOS behavior.
   for the supported Cargo versions when centralizing declarations; inheritance
   must not silently enable features or raise MSRV.
 - Excluded packages, examples, integration harnesses and nested workspaces are
-  not implicit exemptions. An independently scoped child workspace requires a
-  documented boundary under the
-  [core and integration graph rule](rust-workspaces.md#core-and-integration-graph-boundary)
-  or a maintainer-approved exception. Name its authoritative root, scope and
-  reason in the local overlay so dependency ownership remains visible; each
-  independent workspace still owns its catalog and lockfile.
+  not exemptions from catalog inheritance. Separate qualification packages use
+  the standard independent `qualification/` workspace under the
+  [workspace rule](rust-workspaces.md#standard-layout), with their own catalog
+  and lockfile. Name each authoritative root and scope in the local overlay.
+  Additional nonstandard workspaces need a scoped maintainer exception. Product
+  packages must not declare normal, build or dev dependencies on qualification
+  packages; qualification consumes the products it checks.
 - Add or update the root catalog and affected inherited uses in the same batch.
   During manifest review, inspect every child dependency table, including target,
   development and build tables, for standalone version/source declarations.
@@ -139,6 +140,14 @@ Use the [CBOR source mode](../docs/candid-boundary.md#optional-cbor-source-enfor
 and [browser check](../docs/node-tools.md) alongside Cargo declarations.
 
 ## External IC dependency boundary
+
+The unpublished `ic-wire-benchmarks` package may select `candid` as an
+unconditional dev dependency solely for its independent codec oracle, including
+its Wasm measurement guest. This does not permit a production adapter, public
+package, normal/build edge, other SDK dependency or a replacement Platform
+codec mislabeled as Candid. Keep comparison inputs and admission changes explicit.
+Consumer policy may narrow this exception. Platform removed upstream Candid
+forwarding in 0.28; the oracle belongs to the comparison owner.
 
 The Tooling-owned `ic-testkit` native PocketIC implementation may select
 `candid`, `ic-certification`, `ic-management-canister-types` and

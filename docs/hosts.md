@@ -1,15 +1,25 @@
 # IC Tooling qualification
 
-Toko Tooling is selected once as `toko-tooling = "=0.37.1"` in root
-`[workspace.dependencies]`. Every real package inherits it unconditionally in
+Toko Tooling is selected as `toko-tooling = "=0.38.2"` in each workspace's
+`[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
+Every real package inherits it unconditionally in
 `[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
-the virtual root is not a package. Commit the declarations, normal `Cargo.lock`
-and `.toko-tooling.snapshot` together. To adopt another release, edit the root
-pin and its documented exact-pin exception in
-`ci/dependency-pinning-exceptions.json`, run `cargo update -p toko-tooling`, then
+the virtual roots are not packages. Commit the declarations, both `Cargo.lock`
+files and `.toko-tooling.snapshot` together. To adopt another release, edit both
+pins and their documented exact-pin exceptions in
+`ci/dependency-pinning-exceptions.json`, run `cargo update -p toko-tooling` and
+`cargo update --manifest-path qualification/Cargo.toml -p toko-tooling`, then
 `make toko-tooling-update`.
 Use `make toko-tooling-install` to install the existing Cargo.lock selection
 and `make toko-tooling-check` for offline package/pin/lock/snapshot admission.
+That check admits both workspaces against the same installed snapshot.
+
+The nine product packages remain in `crates/`. The private development driver
+and Wasm probe live in the independent `qualification/` workspace, with their
+own lockfile and private version. Run their Cargo commands with
+`--manifest-path qualification/Cargo.toml`. Formatting, full lint, documentation
+and installed tests select both roots. `make install-server` explicitly fetches
+both locked graphs; standalone checks remain offline.
 Installation remains explicit; Rust imports are unnecessary. Direct publication
 and release adapters check tooling before effects. See the
 [root selection guide](consuming-snapshots.md#cargo-selection-and-installation).

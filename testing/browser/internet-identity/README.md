@@ -36,7 +36,7 @@ npm ci --prefix testing/browser/internet-identity --ignore-scripts --no-audit --
 node testing/browser/internet-identity/inputs.mjs setup .tools/internet-identity/release-2026-10-02
 make install-server
 make install-ic-tools IC_TOOLS=didc
-cargo build --locked --offline -p ic-testkit-dev --bin internet_identity_fixture
+cargo build --manifest-path qualification/Cargo.toml --locked --offline -p ic-testkit-dev --bin internet_identity_fixture
 ```
 
 Select `DIDC` from the verified `bin` directory printed by the IC-tool installer;
@@ -54,7 +54,7 @@ Use a fresh evidence directory on every attempt:
 ```sh
 SERVER="$(target/debug/ic-testkit-server check)"
 node testing/browser/internet-identity/acceptance.mjs \
-  target/debug/internet_identity_fixture "$SERVER" "$DIDC" \
+  qualification/target/debug/internet_identity_fixture "$SERVER" "$DIDC" \
   .tools/internet-identity/release-2026-10-02 \
   target/ii-browser-acceptance-001 "$CHROMIUM"
 ```

@@ -93,7 +93,12 @@ requirements. Committed checks use the selected commit independently of today's
 working files. Preparation validates candidate TOML and the prepared
 locked Cargo graph, restoring original bytes/modes after failure or catchable
 interruption and retaining recovery evidence. Toko Tooling retains the preparation
-transaction, receipts and rollback. `make install-tools` includes the release
+transaction, receipts and rollback. The `qualification_workspace` policy adds `qualification/Cargo.toml`
+and `qualification/Cargo.lock` to the same transaction. It updates selected
+product requirements and identities, preserving private versions and unrelated
+suppliers; qualification packages are not product release members. The existing
+full gate covers both workspaces, and focused gates retain their explicit
+qualification callers. `make install-tools` includes the release
 editor; `make tools-check`/`make release-editor-check` admit it offline. Preflight
 can prepare a missing editor after source admission without per-shell exports;
 standalone verification never installs. Workspace libraries and release

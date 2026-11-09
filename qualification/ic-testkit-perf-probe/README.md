@@ -6,7 +6,7 @@
 
 Small canisters used by `ic-testkit` to test its own PocketIC harness behavior.
 
-The fixture package lives under `crates/ic-testkit-perf-probe` in the root
+The fixture package lives under `qualification/ic-testkit-perf-probe` in the independent qualification
 workspace. It is a test canister, not an application example.
 
 The probe selects Runtime's `cdk` feature for entrypoints, execution and IC0.
@@ -32,22 +32,23 @@ rustup target add wasm32-unknown-unknown
 For optional inspection of the probe artifact, build it with:
 
 ```sh
-make build-test-canisters
+cargo build --manifest-path qualification/Cargo.toml -p ic-testkit-perf-probe \
+  --target wasm32-unknown-unknown --target-dir qualification/target/pic-wasm --locked --offline
 ```
 
 This builds `ic_testkit_perf_probe.wasm` under
-`target/pic-wasm/wasm32-unknown-unknown/debug/`.
+`qualification/target/pic-wasm/wasm32-unknown-unknown/debug/`.
 
 Run only the installed Wire fixture test with:
 
 ```sh
-cargo test -p ic-testkit-dev --locked --test canister_wire \
+cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --locked --test canister_wire \
   perf_probe_wire_calls_preserve_state_and_typed_failures -- --exact --nocapture
 ```
 
 The test uses IC Build to retain its own exact Wasm in a temporary target
 directory; it does not consume the standalone artifact above. Both builds may
-reuse Cargo's incremental state under `target/pic-wasm`.
+reuse Cargo's incremental state under `qualification/target/pic-wasm`.
 Startup requires an explicit prepared `POCKET_IC_BIN` or caller-owned
 `IC_TESTKIT_POCKET_IC_URL`; it does not download a server. Prepare and admit the
 reviewed binary through `make install-server` and
@@ -57,7 +58,9 @@ Run the installed Wire qualification through the repository's prepared-server
 check with:
 
 ```sh
-make test-canisters
+server="$(target/debug/ic-testkit-server check)"
+POCKET_IC_BIN="$server" cargo test --manifest-path qualification/Cargo.toml \
+  -p ic-testkit-dev --locked --offline --test canister_wire
 ```
 
 The main CI test command includes this integration target. Generic build/cache

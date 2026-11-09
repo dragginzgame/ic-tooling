@@ -11,6 +11,9 @@ override TOKO_TOOLING_ROOT := $(CURDIR)
 export TOKO_TOOLING_ROOT
 LOCAL_TOOL_INSTALL_TARGETS += install-release-editor install-server
 LOCAL_TOOL_CHECK_TARGETS += release-editor-check server-check
+ifeq ($(filter qualification,$(FORMAT_RUST_ARGS)),)
+override FORMAT_RUST_ARGS += --extra-workspace qualification
+endif
 include ci/tool-versions.env
 IC_TOOLS := wasm-opt
 # Admit execution before custom CI, publication and installer prerequisites.
@@ -19,6 +22,14 @@ include make/consumer.mk
 include make/testkit.mk
 include make/release-validation-local.mk
 export YQ := $(CURDIR)/.tools/host/bin/yq
+
+# One installed snapshot serves both independently resolved Cargo workspaces.
+.PHONY: qualification-tooling-check
+toko-tooling-check: qualification-tooling-check
+qualification-tooling-check: toko-execution-check
+	+@product="$$(perl scripts/dev/tooling-lock.pl "$(CURDIR)")" && \
+		qualification="$$(perl scripts/dev/tooling-lock.pl "$(CURDIR)/qualification")" && \
+		{ test "$$product" = "$$qualification" || { echo 'Qualification and product tooling selections differ' >&2; exit 1; }; }
 
 .PHONY: release-candidate-setup
 # Toko Tooling selects prepare before fresh version lookup, check during recovery.
@@ -87,6 +98,7 @@ clippy:
 .PHONY: clippy-workspace
 clippy-workspace:
 	+cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings
+	+cargo clippy --manifest-path qualification/Cargo.toml --workspace --all-targets --all-features --locked --offline -- -D warnings
 docs-check:
 	+RUSTDOCFLAGS="-D warnings" cargo doc -p $(PACKAGE) --all-features --locked --offline --no-deps
 test:
@@ -175,8 +187,10 @@ ci ci-publication:
 .PHONY: docs-workspace test-workspace-installed
 docs-workspace:
 	+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --locked --offline --no-deps
+	+RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path qualification/Cargo.toml --workspace --all-features --locked --offline --no-deps
 test-workspace-installed:
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --workspace --all-targets --all-features --locked --offline
+	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --manifest-path qualification/Cargo.toml --workspace --all-targets --all-features --locked --offline
 release-version:
 	+@bash scripts/release/adapter.sh version
 release-preflight:

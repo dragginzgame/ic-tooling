@@ -12,7 +12,7 @@ receipts below preserve earlier source identities, results and limitations;
 their old commands and version numbers are historical evidence.
 
 The private test-canister package is `ic-testkit-perf-probe` under
-`crates/ic-testkit-perf-probe`. Cargo package selections use hyphens; Rust imports
+`qualification/ic-testkit-perf-probe`. Cargo package selections use hyphens; Rust imports
 and Cargo's generated `ic_testkit_perf_probe.wasm` retain underscores.
 
 The private development package owns archive qualification, the II fixture and
@@ -53,7 +53,7 @@ cargo tree --locked --offline -p ic-testkit --edges normal,build
 cargo tree --locked --offline -p ic-testkit --features wire --edges normal,build
 cargo tree --locked --offline -p ic-testkit --all-features --edges normal,build
 cargo tree --locked --offline -p ic-testkit --all-features --target wasm32-unknown-unknown --edges normal,build
-cargo tree --locked --offline -p ic-testkit-perf-probe --target wasm32-unknown-unknown --edges normal,build
+cargo tree --manifest-path qualification/Cargo.toml --locked --offline -p ic-testkit-perf-probe --target wasm32-unknown-unknown --edges normal,build
 ```
 
 `make dependency-pins-check` owns direct declaration admission.
@@ -295,7 +295,7 @@ change. Use this workspace's `target/`.
 | Operation errors and call decoding | `cargo test -p ic-testkit --lib --locked pic::transport::tests`; `cargo test -p ic-testkit --lib --locked pic::calls::tests` |
 | Platform Candid integration | `cargo test -p ic-testkit --lib --locked pic::calls::tests`; `cargo test -p ic-testkit --lib --locked pic::transport::tests` |
 | Canister library | `cargo check -p ic-testkit --lib --target wasm32-unknown-unknown --locked` |
-| Development build/report adapter | `cargo check -p ic-testkit-dev --all-targets --locked`; `cargo test -p ic-testkit-dev --bin check_packages --locked` |
+| Development build/report adapter | `cargo check --manifest-path qualification/Cargo.toml -p ic-testkit-dev --all-targets --locked`; `cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --bin check_packages --locked` |
 | Operator and private CLI parsing | `cargo test -p ic-testkit --features cli --bin ic-testkit-server --locked`; `cargo test -p ic-testkit --features cli --test server_runner --locked` |
 | Toko Tooling snapshot and real tooling callers | `make toko-tooling-check`; `make tools-check dependency-pins-check`; select the affected hook/release-adapter checks from the Makefile |
 | Formatting and API documentation | `make fmt-check`; `RUSTDOCFLAGS="-D warnings" cargo doc -p ic-testkit --no-deps --locked`; `cargo test -p ic-testkit --doc --locked` |
@@ -305,7 +305,7 @@ For live tests, build the owner CLI and admit the already prepared bundle:
 ```bash
 make build-server-cli
 server="$(target/debug/ic-testkit-server check)" || exit
-POCKET_IC_BIN="$server" cargo test -p ic-testkit-dev --test canister_wire --locked
+POCKET_IC_BIN="$server" cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --test canister_wire --locked
 ```
 
 Select a relevant `pocket_ic_*` integration target for runtime contract changes.

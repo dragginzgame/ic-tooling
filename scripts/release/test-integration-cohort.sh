@@ -29,9 +29,9 @@ finish() {
 trap 'finish "$?"' EXIT
 export RUSTUP_AUTO_INSTALL=0
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/target}"
-cargo metadata --locked --offline --format-version 1 > "$fixture/source-metadata.json"
+cargo metadata --manifest-path qualification/Cargo.toml --locked --offline --format-version 1 > "$fixture/source-metadata.json"
 mkdir "$fixture/src"
-cp crates/ic-testkit-dev/tests/public_contracts.rs "$fixture/src/lib.rs"
+cp qualification/ic-testkit-dev/tests/public_contracts.rs "$fixture/src/lib.rs"
 cat > "$fixture/Cargo.toml" <<'TOML'
 [package]
 name = "integration-cohort-consumer"

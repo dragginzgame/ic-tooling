@@ -1508,38 +1508,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-platform-macros"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98df66d597eefcc8b3502e8e76670d1c32d04db55f151357eed4cbd043370bda"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 3.0.9",
-]
-
-[[package]]
-name = "ic-platform-runtime"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c68b2ccef0e24eaf2e2f860e36ba8f63de422719aea060b872e0013cf99cd1b0"
-dependencies = [
- "ic-platform-macros",
- "ic-platform-runtime-guard",
- "ic-platform-types",
- "pin-project-lite",
- "serde",
- "slotmap",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "ic-platform-runtime-guard"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "539d72216e01a7021b28a7a12d03aacbab9fa3a5c778f5c30f2ffee4fc7da49c"
-
-[[package]]
 name = "ic-platform-types"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1582,39 +1550,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-testkit-dev"
-version = "0.96.0"
-dependencies = [
- "clap",
- "ic-build",
- "ic-host-artifacts",
- "ic-host-fs",
- "ic-host-process",
- "ic-host-text",
- "ic-host-tools",
- "ic-platform",
- "ic-platform-types",
- "ic-testkit",
- "ic-testkit-perf-probe",
- "ic-wire",
- "libc",
- "serde",
- "serde_json",
- "tokio",
- "toko-tooling",
-]
-
-[[package]]
-name = "ic-testkit-perf-probe"
-version = "0.96.0"
-dependencies = [
- "ic-platform-runtime",
- "ic-wire",
- "serde",
- "toko-tooling",
-]
-
-[[package]]
 name = "ic-transport-types"
 version = "0.49.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1648,9 +1583,9 @@ dependencies = [
 
 [[package]]
 name = "ic-wire"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16760e525bca7fa5c4042176551bd551a6235e39cec08564d1ecfffd20e2b130"
+checksum = "6f3272065b740a91cb245d819a75432953e26b6d4da56913d8cfe913b0fdb1f7"
 dependencies = [
  "bytemuck",
  "postcard",
@@ -2860,15 +2795,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
-name = "slotmap"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdd58c3c93c3d278ca835519292445cb4b0d4dc59ccfdf7ceadaab3f8aeb4038"
-dependencies = [
- "version_check",
-]
-
-[[package]]
 name = "smallvec"
 version = "1.16.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3149,9 +3075,9 @@ dependencies = [
 
 [[package]]
 name = "toko-tooling"
-version = "0.37.4"
+version = "0.38.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e83d18a633f4b4fbd5f21ae4fd431ee11bf2d825ab40b5413a4cee35a51295b7"
+checksum = "45c12cc2aa598d14e137dd7db50f12e943470b4ce351dfcaffeccde6821c1876"
 
 [[package]]
 name = "toml"

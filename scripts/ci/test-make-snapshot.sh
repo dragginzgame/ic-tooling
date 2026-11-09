@@ -42,19 +42,31 @@ for input in Makefile make/testkit.mk ci/tool-versions.env ci/release-delivery.t
 done
 cargo metadata --manifest-path "$root/Cargo.toml" --locked --offline --no-deps \
     --format-version 1 > "$fixture/source-metadata.json"
+cargo metadata --manifest-path "$root/qualification/Cargo.toml" --locked --offline --no-deps \
+    --format-version 1 > "$fixture/qualification-metadata.json"
+mkdir -p "$fixture/local/qualification"
+cp "$root/qualification/Cargo.toml" "$root/qualification/Cargo.lock" "$fixture/local/qualification/"
 while IFS= read -r manifest; do
     case "$manifest" in "$root"/*) relative="${manifest#"$root"/}" ;; *) exit 1 ;; esac
     mkdir -p "$fixture/local/${relative%/*}"
     cp "$manifest" "$fixture/local/$relative"
-done < <(jq -r '.packages[].manifest_path' "$fixture/source-metadata.json")
+done < <(jq -r '.packages[].manifest_path' "$fixture/source-metadata.json" "$fixture/qualification-metadata.json")
 export HOST_MAKE_METADATA="$fixture/formatting-metadata.json"
 jq --arg source "$root" --arg destination "$fixture/local" '
     .workspace_root = $destination |
     .packages[].manifest_path |= ($destination + .[($source | length):])
 ' "$fixture/source-metadata.json" > "$HOST_MAKE_METADATA"
+export HOST_MAKE_QUALIFICATION_METADATA="$fixture/qualification-formatting-metadata.json"
+jq --arg source "$root" --arg destination "$fixture/local" '
+    .workspace_root = ($destination + "/qualification") |
+    .packages[].manifest_path |= ($destination + .[($source | length):])
+' "$fixture/qualification-metadata.json" > "$HOST_MAKE_QUALIFICATION_METADATA"
 format_packages=()
 while IFS= read -r package; do format_packages+=(--package "$package"); done \
     < <(jq -r '.packages[].name' "$HOST_MAKE_METADATA")
+qualification_format_packages=()
+while IFS= read -r package; do qualification_format_packages+=(--package "$package"); done \
+    < <(jq -r '.packages[].name' "$HOST_MAKE_QUALIFICATION_METADATA")
 export HOST_MAKE_EVENTS="$fixture/events" HOST_MAKE_EXTERNAL="$fixture/external-events"
 export HOST_MAKE_JOBSERVER_PROBE="$fixture/local/scripts/ci/check-pipe-jobserver.pl"
 mkdir -p "$fixture/external/scripts/ci"
@@ -78,7 +90,9 @@ case "$*" in
     '--version') printf 'cargo 1.99.1 (fixture)\n' ;;
     'sort --version') printf 'cargo-sort %s\n' "$HOST_MAKE_SORT_VERSION" ;;
     'fmt --version') echo rustfmt ;;
-    'metadata --locked --offline --no-deps --format-version 1') cat "$HOST_MAKE_METADATA" ;;
+    'metadata --locked --offline --no-deps --format-version 1')
+        if [[ $PWD == */qualification ]]; then cat "$HOST_MAKE_QUALIFICATION_METADATA"
+        else cat "$HOST_MAKE_METADATA"; fi ;;
     *)
         printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
         if [[ "$1" == fixture ]]; then exit "${HOST_MAKE_FIXTURE_STATUS:-0}"; fi
@@ -127,6 +141,9 @@ ln -s "$root/.tools/host/bin/yq" "$fixture/local/.tools/host/bin/yq"
 . "$root/ci/tool-versions.env"
 export HOST_MAKE_SORT_VERSION="$TOKO_TOOLING_CARGO_SORT_VERSION"
 cd "$fixture/local"
+
+# Root/qualification selection admission has a separate real-Cargo contract.
+printf '\nqualification-tooling-check:\n\t@true\n' >> Makefile
 
 prepare_tooling_stubs() {
     local helpers helper
@@ -244,7 +261,9 @@ for selection in ordinary environment command nested recursive; do
             > "$fixture/$selection-$target.log" 2>&1
         case "$target" in
             help) : > "$fixture/expected" ;;
-            fmt-check) printf 'sort --workspace --grouped --check\nfmt %s -- --check\n' "${format_packages[*]}" > "$fixture/expected" ;;
+            fmt-check)
+                printf 'sort --workspace --grouped --check\nfmt %s -- --check\n' "${format_packages[*]}" > "$fixture/expected"
+                printf 'sort --workspace --grouped --check\nfmt %s -- --check\n' "${qualification_format_packages[*]}" >> "$fixture/expected" ;;
             release-resume) printf 'resume 0.9.5 %s release-review\n' "$remote" > "$fixture/expected" ;;
             release-patch|release-minor|release-major) printf 'frozen --root %s --groups testkit --kind %s --remote %s --branch release-review --delivery direct --publish-target publish --setup-target release-candidate-setup\n' "$PWD" "${target#release-}" "$remote" > "$fixture/expected" ;;
             release-batch-*) printf 'frozen --root %s --%s batch-_fixture --delivery direct\n' "$PWD" "${target#release-batch-}" > "$fixture/expected" ;;
@@ -398,8 +417,9 @@ for mode in install check; do
         fi
         if [[ "$failed" == none || "$failed" == server ]]; then
             if [[ "$mode" == install ]]; then
-                printf '%s\n' 'fetch --locked' >> "$fixture/expected"
-                printf '%s\n' 'build -p ic-testkit --features cli --locked --offline --bin ic-testkit-server' >> "$fixture/expected"
+                printf '%s\n' 'fetch --locked' \
+                    'fetch --manifest-path qualification/Cargo.toml --locked' \
+                    'build -p ic-testkit --features cli --locked --offline --bin ic-testkit-server' >> "$fixture/expected"
             fi
             printf 'install-server-tools.sh %s\n' "$mode" >> "$fixture/expected"
         fi
@@ -548,7 +568,7 @@ PATH="$fixture/local:$PATH" make --no-print-directory compiler-check > "$fixture
 PATH="$fixture/local:$PATH" make --no-print-directory "MAKE=$(command -v make)" testkit-wasm-check check-fs-non-unix isolated-features-check > "$fixture/compiler-profiles.log" 2>&1
 cat > "$fixture/expected" <<'EVENTS'
 check -p ic-testkit --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
-check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
+check --manifest-path qualification/Cargo.toml -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 check -p ic-host-fs --lib --bins --test unsupported_lock --all-features --target wasm32-unknown-unknown --locked --offline
 test -p ic-host-tools --no-default-features --features icp-project --all-targets --locked --offline icp_project::
 test -p ic-host-tools --no-default-features --features icp-ledger --all-targets --locked --offline icp_ledger::

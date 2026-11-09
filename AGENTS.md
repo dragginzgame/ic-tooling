@@ -14,8 +14,10 @@ records the exact adopted files and revision.
   selections. Supplier publication never waits on this checkout or an older
   published Testkit client. See [consumer adoption](docs/hosts.md#platform-and-wire-adoption).
 - Rust edition is 2024. Use ordinary directory modules and
-  inherited workspace dependencies. Every member uses the literal version of its
+  inherited workspace dependencies. Every product member uses the literal version of its
   group in `ci/cargo-release-groups.json`; each group's `primary` owns its version.
+  Private qualification packages live in the independent `qualification/` workspace
+  and retain their own versions outside product release groups.
   The root has no shared version. Group ledgers live
   under `releases/<group>/`, with the root changelog as their index.
   See [release ownership](docs/design/release-groups.md). Do not add Python tooling.

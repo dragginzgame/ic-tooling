@@ -10,6 +10,7 @@ root="$(cd -P "${root%/*}/../.." && pwd -P)"
 # The retired compiler fixture left no authored Rust under scripts. Keep that
 # optional root covered whenever a source or a forbidden symlink is present.
 sources=(crates docs)
+[[ ! -e "$root/qualification" && ! -L "$root/qualification" ]] || sources+=(qualification)
 # Tooling has no Canic fleet. Keep any future/fixture apps tree covered without
 # requiring an empty directory after the native inspector's relocation.
 [[ ! -e "$root/apps" && ! -L "$root/apps" ]] || sources+=(apps)

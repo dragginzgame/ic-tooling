@@ -19,6 +19,12 @@ done
 if [[ -e "$repository/target/publish" || -L "$repository/target/publish" ]]; then
     inputs+=("$repository" target/publish)
 fi
+# Keep downloader diagnostics from failed PocketIC setup, not server binaries
+# or partial archives. These attempts exist before product qualification starts.
+for path in "$repository"/.tools/ic-testkit-server/.setup-v1-*/download.stderr \
+    "$repository"/.tools/ic-testkit-server/.setup-v1-*/failure.txt; do
+    inputs+=("$repository" "${path#"$repository/"}")
+done
 # Package qualification owns an isolated Cargo target inside each attempt.
 # Retain source/lock snapshots, extracted packages and logs, excluding that cache.
 shopt -s dotglob

@@ -1,10 +1,19 @@
 # Testkit family changelog
 
-This ledger owns Testkit and the private development/probe packages. The retired
+This ledger owns the published Testkit package. Private development/probe packages
+now have independent qualification versions; older entries retain their original
+coordinated scope. The retired
 Native package's [frozen ledger](../native/CHANGELOG.md) retains its releases; its history
 through 0.79.0 retains its original scope below. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
+
+## [0.97.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt IC Wire 0.19 for public Wire adapter identities and the installed Wasm
+  probe. Keep bounded decoding, typed failures and no-replay behavior.
 
 ## [0.96.0] - 2026-11-09
 

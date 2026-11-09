@@ -6,20 +6,29 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
-## [0.77.0] - Unreleased
+## [0.76.2] - Unreleased
 
-### ⚠️ Breaking
+### 🔧 Changed
 
-- Adopt Toko Tooling 0.37.4 and its command/metadata naming contract. Use
+- Adopt Toko Tooling 0.38.2 and its command/metadata naming contract. Use
   `make toko-tooling-check`, `toko-tooling-update` and `toko-tooling-install`;
   the baseline and receipt are now `TOKO-TOOLING.md` and
   `.toko-tooling.snapshot`. Update automation using the retired Shared names.
   Preserve the existing product release gates and package boundaries.
 
-### 🔧 Changed
-
+- Move private qualification packages into the independent `qualification/`
+  workspace. Keep product release groups separate; atomically update qualification
+  product requirements and its lockfile through Toko's shared release transaction.
+  Formatting, source checks and validation cover both workspaces.
 - Adopt SHA-2 0.11.1 for artifact hashes while preserving digest bytes and bounded
   streaming behavior. Serialization consumers use the existing HashingWriter.
+
+### 🩹 Fixed
+
+- Ignore two exact historical secret-scan false positives in generated Mermaid
+  package identifiers. Other files, findings and future changes remain scanned.
+- Retain failed PocketIC setup diagnostics in CI product evidence, excluding
+  server binaries and partial download archives.
 
 ### 🧹 Cleanup
 

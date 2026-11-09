@@ -5,6 +5,7 @@ build-server-cli:
 	+cargo build -p ic-testkit --features cli --locked --offline --bin ic-testkit-server
 install-server:
 	+cargo fetch --locked
+	+cargo fetch --manifest-path qualification/Cargo.toml --locked
 	+$(MAKE) --no-print-directory build-server-cli
 	"$(SERVER_CLI)" setup
 server-check:
@@ -12,16 +13,17 @@ server-check:
 	"$(SERVER_CLI)" check
 testkit-wasm-check:
 	+cargo check -p ic-testkit --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
-	+cargo check -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
+	+cargo check --manifest-path qualification/Cargo.toml -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 testkit-browser-check:
 	node --test testing/browser/session.test.mjs testing/browser/internet-identity/inputs.test.mjs testing/browser/tests/scratch.test.mjs
 testkit-check: build-server-cli
-	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit -p ic-testkit-dev --all-features --locked --offline
+	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit --all-features --locked --offline
+	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --all-features --locked --offline
 testkit-installed-check: build-server-cli
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit --locked --offline --test client_installed -- --ignored
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit --features cli --locked --offline --test server_runner real_server_runs_a_separate_process_using_environment_startup -- --ignored --exact
 testkit-package-check: build-server-cli
-	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo run -p ic-testkit-dev --bin check_packages --locked --offline
+	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo run --manifest-path qualification/Cargo.toml -p ic-testkit-dev --bin check_packages --locked --offline
 testkit-graph-check:
 	bash scripts/ci/test-pocket-ic-source.sh
 	bash scripts/ci/check-testkit-graphs.sh
@@ -46,5 +48,5 @@ dependency-adoption-check: toko-tooling-check
 	+cargo test -p ic-testkit --features wire --locked --offline --lib pic::wire::tests::
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit \
 		--locked --offline --test client_installed installed_client_preserves_management_and_snapshot_state -- --ignored --exact
-	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit-dev \
+	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev \
 		--locked --offline --test canister_wire

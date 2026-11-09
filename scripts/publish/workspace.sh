@@ -108,7 +108,7 @@ jq -e '
     . as $workspace
     | [.packages[] | select(.id as $id | $workspace.workspace_members | index($id))] as $packages
     | ($packages | map(select(.publish != [])) | map(.name) | sort) == ($ARGS.positional | sort)
-      and ($packages | all(.publish == ["crates-io"] or (.publish == [] and (.name == "ic-testkit-dev" or .name == "ic-testkit-perf-probe"))))
+      and ($packages | all(.publish == ["crates-io"]))
       and ($packages | all(.repository == "https://github.com/dragginzgame/ic-tooling"))
       and ($packages | any(.name == "ic-host-wasm-inspect" and
           any(.targets[]; .name == "ic-host-wasm-inspect" and (.kind | index("bin")))))

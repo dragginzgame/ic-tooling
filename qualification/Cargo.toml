@@ -1,0 +1,42 @@
+[workspace]
+members = ["ic-testkit-dev", "ic-testkit-perf-probe"]
+resolver = "3"
+
+[workspace.package]
+version = "0.96.0"
+edition = "2024"
+rust-version = "1.99.1"
+license = "MIT"
+repository = "https://github.com/dragginzgame/ic-tooling"
+authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
+description = "Host-side artifact, filesystem, process and IC tooling"
+
+[workspace.dependencies]
+clap = { version = "4.6.7", default-features = false, features = ["std", "help", "usage", "error-context"] }
+ic-build = { path = "../crates/ic-build", version = "0.81.0", default-features = false }
+ic-host-artifacts = { path = "../crates/ic-host-artifacts", version = "0.76.1", default-features = false }
+ic-host-fs = { path = "../crates/ic-host-fs", version = "0.76.1", default-features = false }
+ic-host-process = { path = "../crates/ic-host-process", version = "0.76.1", default-features = false }
+ic-host-text = { path = "../crates/ic-host-text", version = "0.74.3", default-features = false }
+ic-host-tools = { path = "../crates/ic-host-tools", version = "0.88.0", default-features = false }
+ic-platform = { version = "0.28.0", default-features = false }
+ic-platform-runtime = { version = "0.21.0", default-features = false }
+ic-platform-types = { version = "0.19.0", default-features = false }
+ic-testkit = { path = "../crates/ic-testkit", version = "0.96.0", default-features = false }
+ic-testkit-perf-probe = { path = "ic-testkit-perf-probe", version = "0.96.0" }
+ic-wire = "0.19.0"
+libc = "0.2.190"
+serde = { version = "1.0.228", default-features = false }
+serde_json = "1.0.150"
+tokio = { version = "1.52.3", default-features = false }
+toko-tooling = "=0.38.2"
+
+[workspace.lints.rust]
+missing_docs = "warn"
+# Reviewed macOS process queries and scoped Unix signal actions permit local FFI.
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
