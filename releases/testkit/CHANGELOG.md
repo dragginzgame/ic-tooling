@@ -14,6 +14,8 @@ Joint history through 0.76.1 remains there once, with its original scope.
 
 - Adopt IC Wire 0.19 for public Wire adapter identities and the installed Wasm
   probe. Keep bounded decoding, typed failures and no-replay behavior.
+- Adopt Platform 0.29 for the owned Candid and native management DTO boundaries.
+  Preserve existing decoder budgets, management bytes and snapshot behavior.
 
 ## [0.96.0] - 2026-11-09
 

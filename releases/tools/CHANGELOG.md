@@ -8,7 +8,7 @@ Joint history through 0.76.1 remains there once, with its original scope.
 
 ### ⚠️ Breaking
 
-- Adopt Platform's owned binary Candid codec and ledger carriers. Binary decoding
+- Adopt Platform 0.29's owned binary Candid codec and ledger carriers. Binary decoding
   excludes registry Candid; callers select explicit work and logical-allocation
   budgets and match typed decoder refusals instead of upstream error downcasts.
 - Remove textual `candid::service` inspection, `candid-service`, Oneway projection

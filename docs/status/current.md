@@ -1,5 +1,22 @@
 # Current handoff
 
+## Platform 0.29.0 adoption for the pending Tools/Testkit deployment
+
+Both product and qualification catalogs/locks now select published Platform
+0.29.0 (registry checksum 96a33522b86e1c775fbe3ce124657a4ff8a63c9a4280f3bb851e49e1b4fc210b).
+Only Platform changed during the scoped update; Types/Runtime/Wire are unchanged.
+Existing codec entrypoints retain their work-derived skip budget. No new Tooling
+policy or public controls are introduced. Codec/ledger/public-decoder tests,
+management identity, installed management/snapshot behavior, public contracts,
+native/Wasm graphs, snapshot/pin admission, formatting and docs checks pass on
+Linux. Evidence: target/platform-adoption. Native macOS was not rerun.
+
+Foundation/Build batch batch-aL68C1ft retains its original Platform 0.28 inputs.
+Foundation 0.76.2 has published; Build qualification is in progress. Apply this
+adoption after reconciling that batch, before Tools 0.89.0 / Testkit 0.97.0.
+Unrelated newer lock selections are retained on preserve/platform029-lock-selections
+and in .git/release-state/deferred-platform029-20261109 for final restoration.
+
 ## IC Wire 0.19.0 / Toko Tooling 0.38.2 — local adoption
 
 Published registry selections and the authenticated 187-file tooling snapshot
