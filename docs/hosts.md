@@ -158,6 +158,9 @@ Tooling changes use the affected consumer check: `make release-adapter-check`,
 [validation policy](../TOKO-TOOLING.md#validation-and-evidence) owns execution cadence.
 Select `bash scripts/ci/test-make-snapshot.sh --case release-routing` for ordinary
 release Make dispatch and delivery refusal, with runner effects substituted.
+This consumer fixture also owns outer/inner runner failures and conflicting
+release selection. The generic minimal-checkout dispatch fixture is not repeated:
+it cannot model this repository's independent qualification admission.
 It does not qualify frozen delivery hooks. Installed frozen-hook qualification
 uses `bash scripts/release/test-frozen.sh`; it retains actual metadata/Git and
 publication-dry-run evidence, with product gate bodies substituted. Complete

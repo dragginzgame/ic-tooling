@@ -290,3 +290,12 @@ Unrelated lock patches are preserved on local branch
 `preserve/wire019-lock-selections` and in `.git/release-state/deferred-wire019-20261109`.
 The release captures the prior ic-logging/itoa/syn selections; deferred selections
 will be reapplied after reconciliation. No sibling repository is included.
+
+## Deployment dispatch correction
+
+Batch batch-st9pUW60 stopped before version preparation or upload because the
+redundant generic release-command fixture lacks qualification admission inputs.
+Its captured source and failure evidence are retained. The existing consumer
+Make fixture now owns complete dispatch coverage, including inner/frozen routes,
+runner failures and conflicting commands; focused routing and scratch checks pass.
+A new batch captures this correction without changing the failed batch.

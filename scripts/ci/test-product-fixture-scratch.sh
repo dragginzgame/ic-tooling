@@ -25,7 +25,7 @@ printf 'caller-owned\n' > "$fixture/file"
 if TMPDIR="$fixture/file" tooling_fixture_create "$checkout" file > "$fixture/file.log" 2>&1; then exit 1; fi
 [[ $(cat "$fixture/file") == caller-owned ]]
 
-# Actual Make/driver routing; substitute only the two unrelated leaf checks.
+# Actual Make/driver routing; substitute only the unrelated leaf check.
 bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$checkout" \
     Makefile make/consumer.mk make/testkit.mk ci/tool-versions.env
 printf 'scripts/ci/probe-scratch.sh\ttooling\n' > "$checkout/ci/tooling-checks.tsv"
@@ -39,14 +39,7 @@ printf '%s\n' "$child" > nested-path
 fixture_complete=true
 fixture_finish 0 "$child" 'Nested scratch cleanup failed'
 PROBE
-cat > "$checkout/scripts/ci/check-release-commands.sh" <<'PROBE'
-#!/usr/bin/env bash
-set -euo pipefail
-[[ $TMPDIR == "$PWD/target/tmp" && $RELEASE_GROUP == foundation ]]
-printf '%s\n' "$TMPDIR" > final-probe-parent
-PROBE
 (unset TMPDIR; make --no-print-directory -C "$checkout" tooling-command-check) > "$fixture/make.log" 2>&1
-[[ $(cat "$checkout/final-probe-parent") == "$checkout/target/tmp" ]]
 [[ ! -e $(cat "$checkout/nested-path") ]]
 fixture_complete=true
 echo 'Product scratch defaults, explicit/aliased paths, refusals and actual Make routing passed'

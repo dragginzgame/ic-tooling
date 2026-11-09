@@ -11,5 +11,4 @@ scripts/release/test-adapter.sh	tooling,make-stub,retention,relative
 scripts/release/test-validation.sh	tooling,make-stub,retention,relative
 scripts/publish/test-workspace.sh	tooling,make-stub,retention,relative
 scripts/ci/check-dependency-pins.sh	make-stub
-scripts/ci/check-release-commands.sh	make-stub
 scripts/ci/check-host-formatting.sh	retention

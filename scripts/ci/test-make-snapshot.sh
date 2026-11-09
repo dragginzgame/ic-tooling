@@ -112,6 +112,7 @@ cat > "$fixture/local/scripts/ci/run-release.sh" <<'STUB'
 #!/usr/bin/env bash
 if [[ "${HOST_MAKE_ASSERT_RELEASE_GROUP:-0}" == 1 ]]; then [[ "${RELEASE_GROUP:-}" == testkit ]] || exit 94; fi
 printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
+exit "${HOST_MAKE_RELEASE_STATUS:-0}"
 STUB
 # Qualify only the consumer's dispatch here; actual hooks and lock isolation
 # have their own product fixture and installed release evidence.
@@ -121,6 +122,7 @@ use warnings;
 open my $out, '>>', $ENV{HOST_MAKE_EVENTS} or die $!;
 print {$out} 'frozen ', join(' ', @ARGV), "\n" or die $!;
 close $out or die $!;
+exit($ENV{HOST_MAKE_RELEASE_STATUS} // 0);
 STUB
 mkdir -p "$fixture/local/scripts/dev"
 for helper in scripts/dev/install-git-hooks.sh scripts/dev/toko-tooling.sh; do
@@ -173,7 +175,6 @@ fixture scripts/ci/test-make-snapshot.sh
 fixture scripts/release/test-adapter.sh
 fixture scripts/release/test-validation.sh
 fixture scripts/publish/test-workspace.sh
-fixture scripts/ci/check-release-commands.sh
 EVENTS
     cmp "$fixture/expected" "$fixture/tooling-observed"
     : > "$HOST_MAKE_EVENTS"
@@ -299,7 +300,7 @@ make --no-print-directory release-version RELEASE_DELIVERY=pr \
 [[ "$status" == 2 && ! -s "$HOST_MAKE_EVENTS" ]] || exit 1
 make --no-print-directory help RELEASE_DELIVERY=pr > "$fixture/unrelated-delivery.log" 2>&1
 [[ ! -s "$HOST_MAKE_EVENTS" ]] || exit 1
-if [[ $selected_case == release-routing ]]; then
+if [[ $selected_case == release-routing || $selected_case == all ]]; then
     # A retired roster must refuse, rather than silently selecting one group.
     : > "$HOST_MAKE_EVENTS"
     if make --no-print-directory release-patch RELEASE_GROUP=testkit RELEASE_FROZEN_GROUPS=text,testkit \
@@ -355,9 +356,20 @@ STUB
         > "$fixture/reconciled-resume.log" 2>&1
     printf 'frozen --root %s --resume batch-_fixture --delivery direct --publication-result published\n' "$PWD" > "$fixture/expected"
     cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
-    fixture_complete=true
+    for active in 0 1; do
+        : > "$HOST_MAKE_EVENTS"
+        status=0
+        HOST_MAKE_RELEASE_STATUS=23 make --no-print-directory release-patch \
+            RELEASE_GROUP=testkit RELEASE_BATCH_ACTIVE="$active" \
+            > "$fixture/runner-failure-$active.log" 2>&1 || status=$?
+        [[ $status == 2 && -s $HOST_MAKE_EVENTS ]]
+    done
+    : > "$HOST_MAKE_EVENTS"
+    if make --no-print-directory release-patch release-minor RELEASE_GROUP=testkit \
+        > "$fixture/conflicting-release.log" 2>&1; then exit 1; fi
+    [[ ! -s $HOST_MAKE_EVENTS ]]
     echo 'Frozen entrypoint, captured group routing and delivery refusal passed (runner effects substituted)'
-    exit 0
+    if [[ $selected_case == release-routing ]]; then fixture_complete=true; exit 0; fi
 fi
 # Exercise the actual Host aggregate under parallel Make. Each stage must run
 # once in shared order, and a failure must prevent every later stage.
