@@ -13,11 +13,13 @@ trap 'fixture_finish "$?" "$fixture" "Candid consumer fixture retained"' EXIT
 # Exercise the actual Make routing, product policy and exported checker. Only
 # the unrelated metadata check is substituted; no Cargo, server or compiler runs.
 bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture" Makefile make/consumer.mk make/testkit.mk ci/tool-versions.env
-paths=$(jq -r '.allowances[].path' "$root/ci/candid-boundary.json" | LC_ALL=C sort -u)
 while IFS= read -r path; do
     mkdir -p "$fixture/${path%/*}"
     cp "$root/$path" "$fixture/$path"
-done <<< "$paths"
+done < <({
+    printf '%s\n' crates/ic-host-tools/src/ledger_evidence/mod.rs
+    jq -r '.allowances[].path' "$root/ci/candid-boundary.json"
+} | LC_ALL=C sort -u)
 mkdir -p "$fixture/apps" "$fixture/docs" "$fixture/scripts/fixtures/native-consumer"
 for path in apps/inventory.rs docs/inventory.rs; do
     printf '// Source-mask fixture data, never compiled.\n' > "$fixture/$path"
@@ -43,8 +45,8 @@ refuse() {
     fi
     grep -F "$diagnostic" "$fixture/$label.log" >/dev/null
 }
-# These are scanner input data, not executable Rust injection. Existing ledger
-# allowance must not admit another declaration through Platform's re-export.
+# These are scanner input data, not executable Rust injection. The owned ledger
+# must not regain a registry derive through Platform's retired re-export.
 cat >> "$fixture/crates/ic-host-tools/src/ledger_evidence/mod.rs" <<'RUST'
 #[derive(ic_platform::candid::contract::CandidType)]
 pub struct InternalReport;

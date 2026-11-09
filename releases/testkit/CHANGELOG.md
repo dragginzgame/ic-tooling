@@ -26,6 +26,9 @@ Joint history through 0.76.1 remains there once, with its original scope.
 
 ### 🧪 Testing
 
+- Update release fixtures for Platform-family graph refusals and the empty
+  registry Candid allowance inventory, retaining injected violation checks.
+  Create publication relocation fixture parents explicitly after the inspector move.
 - Own Platform/Wire adoption qualification through isolated default/Wire graphs,
   source-labelled adapter checks and installed management/snapshot/Wire contracts.
   Supplier releases remain independent of this downstream qualification

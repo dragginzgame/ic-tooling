@@ -355,6 +355,7 @@ for scenario in missing extra private duplicate; do
     grep -F 'expected the complete public crates.io roster' "$scenario-selection.log" >/dev/null
 done
 # Package directories follow real Cargo observations after an allowed layout move.
+mkdir -p apps
 mv crates/ic-host-artifacts 'apps/relocated artifacts'
 sed 's|crates/ic-host-artifacts|apps/relocated artifacts|g' original-Cargo.toml > Cargo.toml
 capture_metadata

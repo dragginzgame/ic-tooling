@@ -1,5 +1,15 @@
 # Current handoff
 
+## Testkit 0.96 deployment qualification
+
+Frozen batch batch-MXrdzwWs captured ff1b681f and stopped before version
+preparation or delivery. Its tooling gate exposed stale graph-diagnostic and
+nonempty-Candid-allowance fixture assumptions. Follow-up qualification also
+found an implicit apps directory in the relocation fixture. All three are fixed;
+graph/Candid/retention/routing, five-group release adapter, validation plan,
+publication and release-command fixtures pass. A fresh capture owns release
+qualification; retain the failed batch.
+
 ## Toko 0.37.4 and SHA-2 0.11.1 — local
 
 The authenticated released installer refreshed the recorded snapshot to Toko
