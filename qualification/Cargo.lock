@@ -765,7 +765,7 @@ dependencies = [
 
 [[package]]
 name = "ic-build"
-version = "0.81.0"
+version = "0.81.1"
 dependencies = [
  "cargo_metadata",
  "hmac",
