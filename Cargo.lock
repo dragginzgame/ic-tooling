@@ -1385,7 +1385,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.76.1"
+version = "0.76.2"
 dependencies = [
  "clap",
  "flate2",
@@ -1400,7 +1400,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.76.1"
+version = "0.76.2"
 dependencies = [
  "cap-fs-ext",
  "cap-std",
@@ -1416,7 +1416,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-http"
-version = "0.76.1"
+version = "0.76.2"
 dependencies = [
  "ic-host-artifacts",
  "reqwest",
@@ -1426,7 +1426,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.76.1"
+version = "0.76.2"
 dependencies = [
  "clap",
  "command-fds",
@@ -1470,7 +1470,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-wasm-inspect"
-version = "0.76.1"
+version = "0.76.2"
 dependencies = [
  "clap",
  "ic-host-artifacts",

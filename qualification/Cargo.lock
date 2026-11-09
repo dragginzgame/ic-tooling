@@ -795,7 +795,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.76.1"
+version = "0.76.2"
 dependencies = [
  "flate2",
  "sha2 0.11.1",
@@ -804,7 +804,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.76.1"
+version = "0.76.2"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -813,7 +813,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-http"
-version = "0.76.1"
+version = "0.76.2"
 dependencies = [
  "ic-host-artifacts",
  "reqwest",
@@ -821,7 +821,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.76.1"
+version = "0.76.2"
 dependencies = [
  "command-fds",
  "ic-host-artifacts",
