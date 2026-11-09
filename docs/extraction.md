@@ -105,14 +105,11 @@ its production graph has no filesystem or process dependency. No generic crate
 depends on Tools, Canic, IcyDB or an IC runtime. Test/example artifact features
 do not become production filesystem dependencies. Tools' default response
 interpretation adds no generic Host dependencies; `icp-project` selects Text.
-Candid service inspection requires its explicit `candid-service` feature.
 Native Candid extraction belongs to IC Build's `artifacts::candid`; generic line
 normalization belongs to `ic_host_text::normalize`.
 Shared method identities remain unconditional. Bounded reply decoding selects
-`candid` without the text parser; `candid-service` adds service parsing. Both
-select Platform explicitly. `ic-interface` adds generic Wasm facts and export projection without
-Platform, Candid or filesystem/process dependencies. Select both `candid-service` and
-`ic-interface` for service/export comparisons.
+`candid` through Platform's owned codec, without registry Candid or its parser. `ic-interface` adds generic Wasm facts and export projection without
+Platform, Candid or filesystem/process dependencies.
 Replica revision selection, install thresholds and resource-report policy belong
 to the consuming application. Host Artifacts retains generic Wasm facts; Tools
 no longer owns an `ic-limits` profile or a reference-policy CLI example.
@@ -300,16 +297,11 @@ Testkit/Query-style exclusive registrations. Canic's cooperative signal-hook
 callbacks and terminal restoration have distinct semantics; they are not replaced
 by an exclusively owned disposition guard. No second signal abstraction is added.
 
-`candid::service::inspect` uses the Candid parser for self-contained grammar and
-type checking, returning method names and modes without expanding argument/return
-types into a presentation tree. Imports are rejected rather than loaded or ignored.
-Consumers select source-byte and returned-method limits; these are not a hard
-heap, stack or CPU quota for the parser. `interface::exported_methods` borrows
-function export facts without reparsing Wasm. It preserves internal methods,
-empty names and mode differences for caller admission. Oneway remains distinct
-in Candid and maps explicitly to the update export namespace through `as_export`.
-Shared method identities remain available without Wasm or Candid support.
-Select `candid-service` for parsing and `ic-interface` for export projection.
+Textual Candid service inspection is removed. `interface::exported_methods`
+borrows function export facts without reparsing Wasm, preserving internal
+methods, empty names and mode differences for caller admission. Method identities
+remain available without Wasm or Candid support. Select `ic-interface` for export
+projection.
 Expected interfaces, CDK allowlists, type compatibility, payload annotations and
 Canic endpoint presentation remain consumer policy. IC Build owns build/cache
 orchestration separately; these libraries do not install tools or build canisters.
@@ -618,7 +610,7 @@ The manifests permit crates.io publication through the
 [explicit publication procedure](publishing.md). This contract assigns ownership;
 GitHub issues own follow-up tracking.
 
-The standalone `apps/ic-host-wasm-inspect` application composes artifact Wasm facts
+The standalone `crates/ic-host-wasm-inspect` CLI package composes artifact Wasm facts
 with bounded filesystem reads, without process execution or the Candid parser.
 The library boundaries stay independent. Explicit paths, four budgets and
 performance interpretation stay caller-owned. The standard selected Cargo

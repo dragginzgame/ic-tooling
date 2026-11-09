@@ -11,7 +11,7 @@ use ic_host_process::{
     child::{CleanupPolicy, OwnedChild},
     tool::{CompletedExecution, OutputLimit, OutputLimits, capture_command},
 };
-use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform::Principal;
 use ic_testkit::pic::{
     InstallSpec, StandaloneCanisterFixture, WireCallError, query_wire, update_wire,
 };

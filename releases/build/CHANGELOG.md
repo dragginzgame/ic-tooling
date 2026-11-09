@@ -6,6 +6,13 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.81.1] - Unreleased
+
+### 🔧 Changed
+
+- Consolidate input hashing and HMAC environment comparisons on SHA-2 0.11.1,
+  removing the separate dependency alias without changing identity or tag bytes.
+
 ## [0.81.0] - 2026-11-08
 
 ### ⚠️ Breaking

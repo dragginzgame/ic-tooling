@@ -2,16 +2,8 @@
   {
     "rule": "cargo-exact",
     "file": "Cargo.toml",
-    "subject": "ic-management-canister-types",
-    "value": "=0.11.0",
-    "reason": "The PocketIC 16.1 client and Platform 0.22 must share the qualified 0.11.0 management DTO identity and snapshot/status/settings schemas until a joint adapter upgrade is qualified.",
-    "evidence": "AGENTS.md#management-dto-identity"
-  },
-  {
-    "rule": "cargo-exact",
-    "file": "Cargo.toml",
     "subject": "toko-tooling",
-    "value": "=0.36.0",
+    "value": "=0.37.4",
     "reason": "Toko Tooling requires one exact workspace pin matching every inherited dev-dependency, Cargo.lock and the authenticated installed snapshot; compatible automatic upgrades would invalidate tool admission.",
     "evidence": "docs/hosts.md"
   }

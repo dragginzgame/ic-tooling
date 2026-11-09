@@ -6,6 +6,27 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.77.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Toko Tooling 0.37.4 and its command/metadata naming contract. Use
+  `make toko-tooling-check`, `toko-tooling-update` and `toko-tooling-install`;
+  the baseline and receipt are now `TOKO-TOOLING.md` and
+  `.toko-tooling.snapshot`. Update automation using the retired Shared names.
+  Preserve the existing product release gates and package boundaries.
+
+### 🔧 Changed
+
+- Adopt SHA-2 0.11.1 for artifact hashes while preserving digest bytes and bounded
+  streaming behavior. Serialization consumers use the existing HashingWriter.
+
+### 🧹 Cleanup
+
+- Move the Wasm inspector into `crates/ic-host-wasm-inspect`, preserving its
+  package, binary, Foundation membership and publication contract
+  ([#348](https://github.com/dragginzgame/ic-tooling/issues/348)).
+
 ## [0.76.1] - 2026-11-08
 
 ### 🔧 Changed

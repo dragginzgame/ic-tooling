@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "apps/ic-host-wasm-inspect",
     "crates/ic-build",
     "crates/ic-host-artifacts",
     "crates/ic-host-fs",
@@ -8,6 +7,7 @@ members = [
     "crates/ic-host-process",
     "crates/ic-host-text",
     "crates/ic-host-tools",
+    "crates/ic-host-wasm-inspect",
     "crates/ic-testkit",
     "crates/ic-testkit-dev",
     "crates/ic-testkit-perf-probe",
@@ -31,7 +31,7 @@ ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.76.1", def
 ic-host-fs = { path = "crates/ic-host-fs", version = "0.76.1", default-features = false }
 ic-host-http = { path = "crates/ic-host-http", version = "0.76.1", default-features = false }
 ic-host-process = { path = "crates/ic-host-process", version = "0.76.1", default-features = false }
-ic-host-wasm-inspect = { path = "apps/ic-host-wasm-inspect", version = "0.76.1" }
+ic-host-wasm-inspect = { path = "crates/ic-host-wasm-inspect", version = "0.76.1" }
 
 # Build
 # Changelog : releases/build/CHANGELOG.md
@@ -51,7 +51,6 @@ ic-testkit = { path = "crates/ic-testkit", version = "0.95.0", default-features 
 
 # External production dependencies
 base64 = "0.23.1"
-candid = { version = "0.10.38", default-features = false }
 cap-fs-ext = "4.0.2"
 cap-std = "4.0.2"
 cargo_metadata = "0.23.1"
@@ -59,16 +58,13 @@ command-fds = "0.3.3"
 flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
 hex = "0.4.3"
 hmac = "0.13.0"
-ic-management-canister-types = "=0.11.0"
-ic-platform = { version = "0.27.0", default-features = false }
-ic-platform-runtime = { version = "0.20.0", default-features = false }
-ic-platform-types = { version = "0.18.0", default-features = false }
+ic-platform = { version = "0.28.0", default-features = false }
+ic-platform-runtime = { version = "0.21.0", default-features = false }
+ic-platform-types = { version = "0.19.0", default-features = false }
 libc = "0.2.190"
 prost = "0.14.3"
 rustix = { version = "1.1.4", default-features = false, features = ["std", "fs"] }
-sha2 = "0.10.9"
-# HMAC 0.13 uses digest 0.11; other hashing/Write consumers retain digest 0.10.
-sha2_11 = { package = "sha2", version = "0.11.1", default-features = false }
+sha2 = { version = "0.11.1", default-features = false }
 tempfile = "3.27.0"
 thiserror = "2.0.18"
 toml = "1"
@@ -96,7 +92,7 @@ ic-logging = "0.24.8"
 ic-testkit-dev = { path = "crates/ic-testkit-dev", version = "0.95.0" }
 ic-testkit-perf-probe = { path = "crates/ic-testkit-perf-probe", version = "0.95.0" }
 strum = { version = "0.28.0", features = ["derive"] }
-toko-tooling = "=0.36.0"
+toko-tooling = "=0.37.4"
 tracing-subscriber = { version = "0.3.19", default-features = false, features = ["registry"] }
 
 [workspace.lints.rust]

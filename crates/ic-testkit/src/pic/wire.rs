@@ -2,7 +2,7 @@
 use crate::pocket_ic::ClientError;
 
 use crate::pocket_ic::PocketIc;
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 use ic_wire::{Limits, native};
 use serde::{Serialize, de::DeserializeOwned};
 

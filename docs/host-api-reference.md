@@ -99,13 +99,11 @@ See the [migration boundaries](../docs/changelog/0.29.md).
 
 `ic-host-tools` has no default features. Response and ICP command interpretation
 remain available without Platform. Enable `candid` for bounded Candid reply
-decoding without the textual parser; select `candid-service` for service facts. Select Platform's `certification-cbor` feature directly
-for strict certificate decoding. The independent `ic-interface` feature adds Wasm
-export facts; select it together with `candid-service` for DID/Wasm comparisons.
-Decoding consumers select `candid`; service-inspection consumers select
-`candid-service` when adopting 0.88. See the
-[Host Tools release notes](../releases/tools/CHANGELOG.md) and the
-[historical 0.28 migration](../docs/changelog/0.28.md).
+decoding through Platform's owned binary codec. Textual service inspection and
+its feature are removed. Select Platform's `certification-cbor` feature directly
+for strict certificate decoding. The independent `ic-interface` feature adds
+Wasm export facts without a service parser. See the
+[Host Tools release notes](../releases/tools/CHANGELOG.md).
 
 Native Candid extraction belongs to IC Build's `artifacts::candid` module;
 Host Tools no longer supplies an extraction feature or invocation wrapper.
@@ -134,9 +132,9 @@ The optional Tools `registry` feature shares focused Registry Protobuf
 projections and canister-range shard key/interval checks. These are partial
 projections, with normal Prost unknown-field behavior. Callers retain budgets,
 complete/sorted/disjoint range checks, trust, discovery and replay policy.
-Shard helpers take and return Platform-owned `ic_platform::Principal`. Convert
-explicitly to `ic_platform::principal::ExternalPrincipal` for external SDK calls
-and required Candid DTOs. Identity bytes remain unchanged; no direct IC dependency
+Shard helpers take and return canonical `ic_platform_types::Principal`.
+Platform-owned management DTOs use that identity directly. Native SDK suppliers
+retain their identities at private byte boundaries. Identity bytes remain unchanged; no direct IC dependency
 is introduced. See the [0.31 migration](../docs/changelog/0.31.md).
 
 The optional `icp-project` feature exposes

@@ -9,7 +9,10 @@ root="$(cd -P "${root%/*}/../.." && pwd -P)"
 # Never filter this selection by RELEASE_GROUP while retaining the full policy.
 # The retired compiler fixture left no authored Rust under scripts. Keep that
 # optional root covered whenever a source or a forbidden symlink is present.
-sources=(crates apps docs)
+sources=(crates docs)
+# Tooling has no Canic fleet. Keep any future/fixture apps tree covered without
+# requiring an empty directory after the native inspector's relocation.
+[[ ! -e "$root/apps" && ! -L "$root/apps" ]] || sources+=(apps)
 script_input=$(find "$root/scripts" -type d \( -name target -o -name .git -o -name .tools -o -name node_modules \) -prune \
     -o \( -name '*.rs' -o -type l \) -print -quit)
 [[ -z "$script_input" ]] || sources+=(scripts)

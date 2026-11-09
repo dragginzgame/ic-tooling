@@ -2,7 +2,7 @@
 //! Key custody, entropy, filtering, persistence and display belong to callers.
 use hmac::{Hmac, KeyInit, Mac};
 use serde::{Deserialize, Serialize};
-use sha2_11::Sha256;
+use sha2::Sha256;
 use std::{collections::BTreeMap, ffi::OsString};
 /// Failure to produce or compare bounded private evidence.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]

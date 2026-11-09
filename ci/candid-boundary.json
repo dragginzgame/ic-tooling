@@ -1,26 +1,4 @@
 {
   "schema": 1,
-  "allowances": [
-    {
-      "path": "crates/ic-host-tools/src/candid/decode/mod.rs",
-      "kind": "external-protocol",
-      "protocol": "Native IC Candid reply decoding",
-      "reason": "Bounded external-reply adapter delegates decoding to ic_platform::candid::decode_one; it defines no owned Candid payload type.",
-      "declaration": "pub fn decode_one<T: CandidType + DeserializeOwned>"
-    },
-    {
-      "path": "crates/ic-host-tools/src/ledger_evidence/mod.rs",
-      "kind": "external-protocol",
-      "protocol": "ICRC ledger generic-value block query record",
-      "reason": "External ledger record decoded by Candid query consumers before bounded chain admission. Its Nat and legacy Value come from Platform; Platform BlockWithId uses the distinct ICRC3Value, so it is not a drop-in replacement for this existing public adapter.",
-      "declaration": "#[derive(CandidType, Clone, Debug, Deserialize)] #[candid_path(\"ic_platform::candid::contract\")] pub struct LedgerBlock"
-    },
-    {
-      "path": "crates/ic-testkit/src/pocket_ic/nonblocking/snapshot.rs",
-      "kind": "external-protocol",
-      "protocol": "PocketIC 16.1 IC management canister snapshot methods",
-      "reason": "Native snapshot ingress encodes the exact upstream management arguments with candid::encode_one and decodes the upstream reply; bounded transport preserves the accepted-ingress receipt without replay. This is the enumerated native Testkit adapter exception, not an application DTO allowance.",
-      "declaration": "async fn snapshot_call<A: CandidType, R: for<'de> ArgumentDecoder<'de>>"
-    }
-  ]
+  "allowances": []
 }

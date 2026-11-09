@@ -3,7 +3,7 @@ use super::{
     SnapshotRestoreFunding,
 };
 use crate::pocket_ic::PocketIc;
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 
 /// One owned `PocketIC` instance/server record with snapshots and caller metadata.
 ///

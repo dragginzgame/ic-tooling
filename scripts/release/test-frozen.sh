@@ -4,7 +4,7 @@
 set -euo pipefail
 [[ $# == 0 ]] || exit 2
 root=$(cd -P "${BASH_SOURCE[0]%/*}/../.." && pwd -P)
-unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES SHARED_TOOLING_ROOT
+unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES TOKO_TOOLING_ROOT
 unset RELEASE_GROUP RELEASE_GROUPS RELEASE_PUBLISH_TARGET RELEASE_SETUP_TARGET
 unset RELEASE_SETUP_MODE RELEASE_BATCH_ACTIVE
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
@@ -25,14 +25,14 @@ while IFS= read -r -d '' path; do
 done < "$fixture/consumer-deletions"
 # Adopted managed payloads may be pending delivery. Qualify those exact verified
 # bytes rather than accidentally testing the preceding committed supplier.
-bash "$root/scripts/ci/verify-shared-tooling-snapshot.sh" --consumer "$root"
-bash "$root/scripts/ci/verify-shared-tooling-snapshot.sh" --read-manifest "$root/.shared-tooling.snapshot" > "$fixture/snapshot-records"
+bash "$root/scripts/ci/verify-toko-tooling-snapshot.sh" --consumer "$root"
+bash "$root/scripts/ci/verify-toko-tooling-snapshot.sh" --read-manifest "$root/.toko-tooling.snapshot" > "$fixture/snapshot-records"
 while IFS=$'\t' read -r kind _digest _mode path; do
     [[ $kind == file ]] || continue
     mkdir -p "$normal/$(dirname "$path")"
     cp -p "$root/$path" "$normal/$path"
 done < "$fixture/snapshot-records"
-cp "$root/.shared-tooling.snapshot" "$normal/.shared-tooling.snapshot"
+cp "$root/.toko-tooling.snapshot" "$normal/.toko-tooling.snapshot"
 # Include current consumer inputs in this disposable fixture. Its own commit
 # selects the captured graph; deferred normal-tree edits are injected below.
 git -C "$root" diff HEAD --name-only --diff-filter=d -z > "$fixture/consumer-changes"
@@ -55,7 +55,7 @@ set -euo pipefail
 platform=$("$YQ" -p toml -o json -r '.package[] | select(.name == "ic-platform") | .version' Cargo.lock)
 [[ $platform == "$FROZEN_TEST_PLATFORM" ]]
 printf '%s %s %s\n' "$RELEASE_GROUP" "$1" "$platform" >> "$FROZEN_TEST_RECORD/stages"
-if [[ $RELEASE_GROUP == text && $1 == shared-tooling-check && -f "$FROZEN_TEST_RECORD/fail-once" ]]; then
+if [[ $RELEASE_GROUP == text && $1 == toko-tooling-check && -f "$FROZEN_TEST_RECORD/fail-once" ]]; then
     cp "$FROZEN_TEST_RECORD/deferred-Cargo.lock" "$FROZEN_TEST_NORMAL/Cargo.lock"
     printf '\n# frozen qualification deferred edit\n' >> "$FROZEN_TEST_NORMAL/Cargo.lock"
     rm "$FROZEN_TEST_RECORD/fail-once"

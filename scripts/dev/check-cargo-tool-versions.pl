@@ -114,7 +114,7 @@ my $status = eval {
             my @command = ('curl', '--disable', '--silent', '--show-error', '--location',
                 '--proto', '=https', '--proto-redir', '=https', '--tlsv1.2', '--connect-timeout', '10',
                 '--max-time', '30', '--max-filesize', '8388608', '--user-agent',
-                'dragginzgame-shared-tooling (https://github.com/dragginzgame/shared-tooling)',
+                'dragginzgame-toko-tooling (https://github.com/dragginzgame/toko-tooling)',
                 '--output', "$evidence/$name.json", '--stderr', "$evidence/$name.stderr",
                 '--write-out', '%{http_code}', $url);
             open my $request, '-|', @command or die "start registry request: $!\n";

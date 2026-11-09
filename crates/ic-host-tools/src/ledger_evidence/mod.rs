@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod tests;
 
-use ic_platform::candid::contract::{CandidType, Nat};
+use ic_platform::candid_codec::Nat;
 use ic_platform::icrc_ledger_types::Value;
 use serde::Deserialize;
 use thiserror::Error;
@@ -29,14 +29,18 @@ pub struct LedgerTip {
 /// Passive standard generic-value block returned by a ledger's Candid query.
 ///
 
-#[derive(CandidType, Clone, Debug, Deserialize)]
-#[candid_path("ic_platform::candid::contract")]
+#[derive(Clone, Debug, Deserialize)]
 pub struct LedgerBlock {
     /// Ledger-assigned block index, before bounded admission.
     pub id: Nat,
     /// Uninterpreted generic block value returned by the ledger.
     pub block: Value,
 }
+
+ic_platform::candid_record!(LedgerBlock {
+    23515 => id: Nat,
+    3_036_443_981 => block: Value,
+});
 
 ///
 /// `BlockEvidenceLimits`

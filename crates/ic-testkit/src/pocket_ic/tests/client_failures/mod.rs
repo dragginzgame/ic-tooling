@@ -134,7 +134,7 @@ async fn malformed_read_state_preserves_codec_kind_and_source_without_replay() {
     ]);
     let error = server
         .client(Duration::from_secs(30))
-        .get_subnet_metrics(candid::Principal::management_canister())
+        .get_subnet_metrics(ic_platform_types::Principal::management_canister())
         .await
         .unwrap_err();
     assert!(matches!(
@@ -325,7 +325,7 @@ async fn rejection_remains_distinct_from_transport_failure() {
         r#"{"Err":{"reject_code":"CanisterReject","reject_message":"caller policy","error_code":"CanisterRejectedMessage","certified":false}}"#,
     )]);
     let client = server.client(Duration::from_secs(1));
-    let id = candid::Principal::anonymous();
+    let id = ic_platform_types::Principal::anonymous();
     let ClientError::Canister(rejection) = client
         .query_call(id, id, "reject", vec![])
         .await
@@ -516,7 +516,7 @@ async fn ingress_id_survives_loss_after_successful_submission() {
         Step::reply("/instances/7/update/await_ingress_message", 0, ""),
     ]);
     let client = server.client(Duration::from_secs(1));
-    let id = candid::Principal::anonymous();
+    let id = ic_platform_types::Principal::anonymous();
     let error = client
         .update_call(id, id, "once", vec![7])
         .await
@@ -550,8 +550,8 @@ async fn routed_calls_preserve_payloads_and_await_only_the_accepted_ingress() {
         ),
     ]);
     let client = server.client(Duration::from_secs(1));
-    let canister = candid::Principal::from_slice(&[3]);
-    let sender = candid::Principal::from_slice(&[7]);
+    let canister = ic_platform_types::Principal::from_slice(&[3]);
+    let sender = ic_platform_types::Principal::from_slice(&[7]);
     let route = RawEffectivePrincipal::SubnetId(vec![9]);
     assert_eq!(
         client

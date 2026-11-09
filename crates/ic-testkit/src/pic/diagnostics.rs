@@ -5,7 +5,7 @@ use std::{
 
 use crate::pocket_ic::{CanisterLogRecord, CanisterStatusResult, ClientError, PocketIc};
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 
 /// Default maximum number of canister-log records retained in diagnostics.
 pub const DEFAULT_CANISTER_LOG_RECORD_LIMIT: usize = 32;

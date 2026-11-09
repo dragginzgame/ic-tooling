@@ -3,8 +3,16 @@ use crate::pocket_ic::{
     common::rest::{RawCanisterCall, RawCanisterResult},
     snapshot::*,
 };
-use candid::{Principal, encode_args};
-use ic_management_canister_types::{
+use ic_platform::candid_codec::{
+    arguments::EncodeArgs,
+    decoder::{Arity, Limits, decode_args},
+};
+use ic_platform_types::Principal;
+
+fn encode_args<T: EncodeArgs>(args: T) -> Result<Vec<u8>, ic_platform::candid_codec::Error> {
+    ic_platform::candid_codec::arguments::encode_args(&args, 100_000)
+}
+use ic_platform::management_canister_types::{
     CanisterTimer, ChunkHash, OnLowWasmMemoryHookStatus, SnapshotMetadataGlobal,
 };
 use sha2::{Digest, Sha256};
@@ -14,8 +22,10 @@ fn limits() -> TransferLimits {
         call: CallLimits {
             http_bytes: 100_000,
             candid_bytes: 50_000,
-            decoding_quota: 1_000_000,
-            skipping_quota: 1_000_000,
+            type_entries: 1024,
+            header_bytes: 65536,
+            work: 1_000_000,
+            allocation: 1_000_000,
         },
         chunk_bytes: 4,
         total_bytes: 100,
@@ -277,7 +287,7 @@ async fn reply_limits_and_codec_errors_keep_accepted_ingress() {
             budget.candid_bytes = 200;
         }
         if mode == "quota" {
-            budget.decoding_quota = 0;
+            budget.work = 0;
         }
         let error = client
             .read_canister_snapshot_metadata(
@@ -297,7 +307,7 @@ async fn reply_limits_and_codec_errors_keep_accepted_ingress() {
         match mode {
             "http" => assert!(matches!(source, ClientError::ResponseTooLarge { .. })),
             "candid" => assert!(matches!(source, ClientError::Protocol(_))),
-            _ => assert!(matches!(source, ClientError::Candid(_))),
+            _ => assert!(matches!(source, ClientError::CandidDecode(_))),
         }
         assert_eq!(server.finish().len(), 2);
     }
@@ -369,8 +379,18 @@ async fn async_copy_bounds_each_region_and_preserves_valid_chunk_store() {
     let kinds: Vec<_> = [2, 6, 10, 14, 18]
         .into_iter()
         .map(|i| {
-            let (args,): (ReadCanisterSnapshotDataArgs,) =
-                candid::decode_args(&call(&requests[i]).payload).unwrap();
+            let (args,): (ReadCanisterSnapshotDataArgs,) = decode_args(
+                &call(&requests[i]).payload,
+                Limits {
+                    bytes: 100_000,
+                    header: 65536,
+                    types: 1024,
+                    work: 1_000_000,
+                    allocation: 1_000_000,
+                },
+                Arity::Exact,
+            )
+            .unwrap();
             args.kind
         })
         .collect();

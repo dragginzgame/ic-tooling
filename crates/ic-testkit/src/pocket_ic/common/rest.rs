@@ -4,8 +4,8 @@
 //! The server owns configuration validation and system-canister provisioning.
 
 use crate::pocket_ic::RejectResponse;
-use candid::Principal;
 use hex;
+use ic_platform_types::Principal;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -624,7 +624,7 @@ pub struct CanisterHttpRequest {
 impl From<RawCanisterHttpRequest> for CanisterHttpRequest {
     fn from(raw_canister_http_request: RawCanisterHttpRequest) -> Self {
         Self {
-            subnet_id: candid::Principal::from_slice(
+            subnet_id: ic_platform_types::Principal::from_slice(
                 &raw_canister_http_request.subnet_id.subnet_id,
             ),
             request_id: raw_canister_http_request.request_id,
@@ -737,7 +737,7 @@ pub struct MockCanisterHttpResponse {
 impl From<RawMockCanisterHttpResponse> for MockCanisterHttpResponse {
     fn from(raw_mock_canister_http_response: RawMockCanisterHttpResponse) -> Self {
         Self {
-            subnet_id: candid::Principal::from_slice(
+            subnet_id: ic_platform_types::Principal::from_slice(
                 &raw_mock_canister_http_response.subnet_id.subnet_id,
             ),
             request_id: raw_mock_canister_http_response.request_id,

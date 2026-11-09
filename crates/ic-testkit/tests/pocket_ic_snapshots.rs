@@ -2,7 +2,7 @@
 use ic_testkit::pocket_ic::ClientError;
 mod support;
 
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 use ic_testkit::pic::{CanisterSnapshotTarget, ControllerSnapshotError, SnapshotRestoreFunding};
 use ic_testkit::pocket_ic::CanisterSettings;
 

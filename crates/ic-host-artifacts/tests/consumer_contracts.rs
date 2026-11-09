@@ -51,7 +51,7 @@ fn wasm_parse_errors_expose_owned_offsets_and_diagnostics() {
 
 #[test]
 fn pretty_json_count_hash_and_staging_preserve_the_consumers_exact_encoding() {
-    use sha2::{Digest as _, Sha256};
+    use ic_host_artifacts::artifact::HashingWriter;
 
     let value = serde_json::json!({"rows": ["a", "b"], "schema_version": 1});
     let expected = br#"{
@@ -67,13 +67,10 @@ fn pretty_json_count_hash_and_staging_preserve_the_consumers_exact_encoding() {
     assert_eq!(count.bytes_written(), limit);
     assert!(!count.limit_exceeded());
 
-    let mut hash = BoundedWriter::new(Sha256::new(), limit);
+    let mut hash = HashingWriter::new(io::sink(), limit);
     serde_json::to_writer_pretty(&mut hash, &value).unwrap();
     assert_eq!(hash.bytes_written(), limit);
-    assert_eq!(
-        Sha256Digest::from_bytes(hash.into_inner().finalize().into()),
-        Sha256Digest::compute(expected)
-    );
+    assert_eq!(hash.into_parts().1.sha256, Sha256Digest::compute(expected));
 
     let mut staged = BoundedWriter::new(Vec::new(), limit);
     serde_json::to_writer_pretty(&mut staged, &value).unwrap();

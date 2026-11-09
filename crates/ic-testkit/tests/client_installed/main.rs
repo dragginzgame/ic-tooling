@@ -62,7 +62,7 @@ async fn installed_client_preserves_management_and_snapshot_state() {
         .unwrap();
     assert_eq!(
         pic.list_canister_snapshots(id, None).await.unwrap(),
-        [] as [ic_management_canister_types::Snapshot; 0]
+        [] as [ic_platform::management_canister_types::Snapshot; 0]
     );
     pic.start_canister(id, None).await.unwrap();
     pic.canister_status(id, None).await.unwrap();

@@ -8,15 +8,15 @@ mkdir -p "$root/target"
 fixture=$(fixture_create "$root/target/workspace-validation-test.XXXXXX")
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Workspace validation fixture retained"' EXIT
-unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES SHARED_TOOLING_ROOT
+unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES TOKO_TOOLING_ROOT
 mkdir "$fixture/checkout"
 bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/checkout" \
     Makefile make/consumer.mk make/testkit.mk scripts/ci/check-pipe-jobserver.pl
 cd "$fixture/checkout"
-# Independent observation of the 33-stage gate after fixture encoder retirement.
+# Independent observation of the 32-stage gate after fixture encoder retirement.
 # Production dispatch has one owner: ci/release-validation.json.
 cat > "$fixture/expected" <<'STAGES'
-shared-tooling-check
+toko-tooling-check
 check-no-symlinks
 tools-check
 compiler-check
@@ -42,7 +42,6 @@ testkit-package-check
 test-tools-default
 test-tools-interface
 test-tools-candid
-test-tools-combined
 test-tools-agent
 test-tools-encoding
 test-tools-registry
@@ -77,7 +76,7 @@ printf 'publication\n' >> "$WORKSPACE_TEST_EVENTS"
 STUB
 options=(--no-print-directory -j4)
 if make --help | rg -q -- --jobserver-style; then options+=(--jobserver-style=pipe); fi
-{ printf '%s\n' shared-tooling-check; cat "$fixture/expected"; } > "$fixture/guarded-expected"
+{ printf '%s\n' toko-tooling-check; cat "$fixture/expected"; } > "$fixture/guarded-expected"
 for mode in ci ci-publication; do
     : > "$WORKSPACE_TEST_EVENTS"
     make "${options[@]}" "$mode" > "$fixture/$mode.log" 2>&1
@@ -85,7 +84,7 @@ for mode in ci ci-publication; do
         awk '{print} $0 == "clippy-workspace" {print "publication"}' "$fixture/expected" > "$fixture/publication-expected"
         cmp "$fixture/publication-expected" "$WORKSPACE_TEST_EVENTS"
     else cmp "$fixture/guarded-expected" "$WORKSPACE_TEST_EVENTS"; fi
-    for failure in shared-tooling-check tools-check clippy-workspace fmt-check testkit-package-check; do
+    for failure in toko-tooling-check tools-check clippy-workspace fmt-check testkit-package-check; do
         : > "$WORKSPACE_TEST_EVENTS"
         if WORKSPACE_TEST_FAIL="$failure" make "${options[@]}" "$mode" > "$fixture/$mode-$failure.log" 2>&1; then exit 1; fi
         [[ $(tail -n 1 "$WORKSPACE_TEST_EVENTS") == "$failure" ]]
@@ -105,7 +104,7 @@ for mutation in missing new; do
     else jq -cS '.stages += ["release-stage-unmapped"]' "$fixture/policy" > ci/release-validation.json; fi
     : > "$WORKSPACE_TEST_EVENTS"
     if make "${options[@]}" ci > "$fixture/$mutation.log" 2>&1; then exit 1; fi
-    [[ $(cat "$WORKSPACE_TEST_EVENTS") == shared-tooling-check ]]
+    [[ $(cat "$WORKSPACE_TEST_EVENTS") == toko-tooling-check ]]
 done
 cp "$fixture/policy" ci/release-validation.json
 for mutation in focus multiple-documents; do
@@ -114,7 +113,7 @@ for mutation in focus multiple-documents; do
     else cat "$fixture/coverage" "$fixture/coverage" > ci/release-validation-coverage.json; fi
     : > "$WORKSPACE_TEST_EVENTS"
     if make "${options[@]}" ci > "$fixture/$mutation.log" 2>&1; then exit 1; fi
-    [[ $(cat "$WORKSPACE_TEST_EVENTS") == shared-tooling-check ]]
+    [[ $(cat "$WORKSPACE_TEST_EVENTS") == toko-tooling-check ]]
 done
 fixture_complete=true
-echo 'Both CI entrypoints preserve 33-stage coverage, one lint, fail-fast order and pipe jobserver access'
+echo 'Both CI entrypoints preserve 32-stage coverage, one lint, fail-fast order and pipe jobserver access'

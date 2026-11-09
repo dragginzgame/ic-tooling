@@ -15,11 +15,11 @@ use self::common::rest::{
     AutoProgressConfig, IcpFeatures, InitialTime, InstanceConfig, InstanceHttpGatewayConfig,
     RawTime, SubnetId,
 };
-pub use ic_management_canister_types::{
-    CanisterId, CanisterInstallMode, CanisterLogRecord, CanisterSettings, CanisterStatusResult,
+pub use ic_platform::ic_protocol::SubnetMetrics;
+pub use ic_platform::management_canister_types::{
+    CanisterInstallMode, CanisterLogRecord, CanisterSettings, CanisterStatusResult,
     EnvironmentVariable, Snapshot,
 };
-pub use ic_platform::ic_protocol::SubnetMetrics;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -203,7 +203,7 @@ pub enum CreateCanisterPlacement {
     /// Place the canister on the given subnet.
     SubnetId(SubnetId),
     /// Create the canister with the given specific canister ID.
-    CanisterId(CanisterId),
+    CanisterId(ic_platform_types::Principal),
 }
 
 /// Parameters for [`PocketIc::create_canister_with_params`].

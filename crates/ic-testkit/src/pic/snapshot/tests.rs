@@ -2,7 +2,7 @@
 async fn cleanup_preserves_causes_and_senders_and_continues_after_each_failure() {
     use super::{ControllerSnapshot, SnapshotCleanupFailure, cleanup_captured_snapshots};
     use crate::pocket_ic::{ClientError, ErrorCode, RejectCode, RejectResponse};
-    use ic_platform_types::principal::ExternalPrincipal as Principal;
+    use ic_platform_types::Principal;
 
     let ids = [1, 2, 3, 4].map(|byte| Principal::from_slice(&[byte]));
     let sender = Some(Principal::anonymous());

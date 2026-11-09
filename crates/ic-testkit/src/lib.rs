@@ -15,7 +15,7 @@ pub mod pocket_ic;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pic;
 
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 
 /// Deterministically derive a test [`Principal`] from `seed`.
 ///

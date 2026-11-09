@@ -22,7 +22,7 @@ case "$operation" in
     preflight|verify|prepare|check|commit-check|committed-check) ;;
     *) echo 'usage: adapter.sh version|files|preflight|verify|prepare|check|commit-check|committed-check' >&2; exit 2 ;;
 esac
-make --no-print-directory shared-tooling-check
+make --no-print-directory toko-tooling-check
 [[ "${RELEASE_SOURCE:?}" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || fail 'invalid source identity'
 selected_version="$(bash "$tooling_root/scripts/ci/next-release-version.sh" "${RELEASE_PREVIOUS:?}" "${RELEASE_KIND:?}")"
 [[ "$selected_version" == "${RELEASE_VERSION:?}" ]] || fail 'conflicting release selection'

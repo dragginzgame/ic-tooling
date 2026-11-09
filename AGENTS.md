@@ -1,7 +1,7 @@
 # IC Tooling Agent Rules
 
 Read [the current handoff](docs/status/current.md) and the installed
-[baseline](DRAGGINZGAME.md). [.shared-tooling.snapshot](.shared-tooling.snapshot)
+[baseline](TOKO-TOOLING.md). [.toko-tooling.snapshot](.toko-tooling.snapshot)
 records the exact adopted files and revision.
 
 ## Local rules
@@ -10,6 +10,9 @@ records the exact adopted files and revision.
   Do not add compatibility reexports for moved APIs or duplicate production owners.
 - Consumers own product-tool pins, byte budgets, credentials, targets, retries, schemas,
   installation policy and paid-operation recovery. Libraries never claim lifecycle ownership.
+- Tooling owns qualification of its Platform/Types/Runtime and optional Wire
+  selections. Supplier publication never waits on this checkout or an older
+  published Testkit client. See [consumer adoption](docs/hosts.md#platform-and-wire-adoption).
 - Rust edition is 2024. Use ordinary directory modules and
   inherited workspace dependencies. Every member uses the literal version of its
   group in `ci/cargo-release-groups.json`; each group's `primary` owns its version.
@@ -18,9 +21,9 @@ records the exact adopted files and revision.
   See [release ownership](docs/design/release-groups.md). Do not add Python tooling.
 - Preserve dirty source and artifacts. Check for active Cargo/rustc processes
   using this repository's target directory before editing or compiling.
-- Follow [the shared validation policy](DRAGGINZGAME.md#validation-and-evidence)
+- Follow [the shared validation policy](TOKO-TOOLING.md#validation-and-evidence)
   using the local commands in [the host guide](docs/hosts.md).
-  No implicit artifact cleanup. Explicit cleanup follows the Shared scope rules;
+  No implicit artifact cleanup. Explicit cleanup follows the Toko Tooling scope rules;
   plain Cargo cleanup retains its whole-workspace target semantics.
 - Linux x86-64 and macOS 15 on Intel and Apple Silicon are required hosts.
   Report native macOS qualification separately from Linux evidence.
@@ -30,8 +33,7 @@ records the exact adopted files and revision.
 ## Maintained native PocketIC client
 
 Tooling #324 transfers Platform’s qualified PocketIC 16.1 client into
-`ic-testkit::pocket_ic`. Preserve imported Apache-2.0 licenses, protocol bytes,
-external identities, fallible/no-replay behavior and bounded snapshot transfer.
+`ic-testkit::pocket_ic`. Preserve imported Apache-2.0 licenses, protocol bytes, fallible/no-replay behavior and bounded snapshot transfer.
 The exact donor and upstream reconstruction guards own its source provenance.
 The native module retains donor lint policy for unchanged imported bodies.
 The client requires an explicit server URL; `pic` owns server provisioning and
@@ -42,13 +44,14 @@ dependencies native.
 
 ### Management DTO identity
 
-The transferred PocketIC 16.1 client retains the donor's exact
-`ic-management-canister-types = "=0.11.0"` selection. Platform 0.26 exposes the same
-management DTO identity, including snapshot metadata and status/settings fields.
-Keep this pin until an intentional joint adapter upgrade qualifies client/facade
-type identity and the installed management/snapshot contract. Run the focused
-`client_management_identity` test and the `client_installed` test with an explicitly
-admitted 16.1 server; native host and Wasm graph obligations remain separate.
+The native client uses Platform-owned management DTOs and canonical Types
+Principal. No registry management dependency or external Principal alias remains.
+Native install/create/log DTOs belong to Platform alongside snapshot DTOs;
+keep them out of Wasm. Preserve external Candid/Serde bytes and admitted 16.1
+management/snapshot behavior. The owned codec uses explicit work and allocation
+budgets, not the retired upstream quotas. Run `client_management_identity` and
+the installed `client_installed` test with an explicitly admitted 16.1 server;
+native host and Wasm graph obligations remain separate.
 
 ### Async-only client contract
 

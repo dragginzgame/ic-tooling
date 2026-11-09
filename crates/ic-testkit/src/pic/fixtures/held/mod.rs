@@ -17,10 +17,10 @@ use crate::pocket_ic::{
 };
 use ic_host_artifacts::wasm_text::{CompileError, CompileLimits, compile};
 use ic_platform::{
-    candid::contract::encode_one,
+    candid_codec::encode_one,
     management_canister_types::{HttpMethod, HttpRequestArgs},
 };
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 use std::{collections::BTreeMap, fmt::Write};
 use thiserror::Error;
 
@@ -391,17 +391,20 @@ fn barrier_call(
     http: usize,
     slot: usize,
 ) -> Result<String, HeldReplyError> {
-    let request = encode_one(HttpRequestArgs {
-        url: format!("{prefix}{slot}"),
-        max_response_bytes: Some(256),
-        method: HttpMethod::GET,
-        headers: vec![],
-        body: Some((slot as u64).to_le_bytes().to_vec()),
-        transform: None,
-        is_replicated: Some(true),
-        pricing_version: None,
-    })
-    .map_err(|error| HeldReplyError::Management(error.to_string()))?;
+    let request = encode_one(
+        &HttpRequestArgs {
+            url: format!("{prefix}{slot}"),
+            max_response_bytes: Some(256),
+            method: HttpMethod::GET,
+            headers: vec![],
+            body: Some((slot as u64).to_le_bytes().to_vec()),
+            transform: None,
+            is_replicated: Some(true),
+            pricing_version: None,
+        },
+        usize::MAX,
+    )
+    .map_err(|error| HeldReplyError::Management(format!("{error:?}")))?;
     let payload = segment(source, offset, &request)?;
     Ok(format!(
         r"

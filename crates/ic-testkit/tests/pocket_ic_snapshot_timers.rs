@@ -3,12 +3,15 @@ mod support;
 
 use ic_host_artifacts::wasm_text::{CompileLimits, compile};
 use ic_platform::{
-    candid::contract::{self, DecoderConfig},
+    Principal,
+    candid_codec::{
+        decoder::{Limits, decode_one},
+        encode_one,
+    },
     management_canister_types::{
         CanisterTimer, ReadCanisterSnapshotMetadataArgs, ReadCanisterSnapshotMetadataResult,
         SnapshotSource,
     },
-    principal::ExternalPrincipal as Principal,
 };
 use ic_testkit::pic::{CachedPocketIcBaseline, CanisterSnapshotTarget, SnapshotRestoreFunding};
 use ic_testkit::pocket_ic::{CanisterSettings, PocketIc, common::rest::RawEffectivePrincipal};
@@ -34,16 +37,28 @@ async fn metadata(
             RawEffectivePrincipal::CanisterId(id.as_slice().to_vec()),
             Principal::anonymous(),
             "read_canister_snapshot_metadata",
-            contract::encode_one(ReadCanisterSnapshotMetadataArgs {
-                canister_id: id,
-                snapshot_id,
-            })
+            encode_one(
+                &ReadCanisterSnapshotMetadataArgs {
+                    canister_id: id,
+                    snapshot_id,
+                },
+                2_000_000,
+            )
             .unwrap(),
         )
         .await
         .unwrap();
-    let (reply,) = contract::decode_args_with_config(&bytes, &DecoderConfig::new()).unwrap();
-    reply
+    decode_one(
+        &bytes,
+        Limits {
+            bytes: 2_000_000,
+            header: 65536,
+            types: 1024,
+            work: 20_000_000,
+            allocation: 20_000_000,
+        },
+    )
+    .unwrap()
 }
 
 async fn install_timer_canister(pic: &PocketIc) -> (Principal, Vec<u8>) {

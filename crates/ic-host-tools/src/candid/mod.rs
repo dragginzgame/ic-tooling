@@ -1,5 +1,3 @@
-//! Candid service interpretation and bounded reply decoding.
+//! Bounded external Candid reply decoding.
 
 pub mod decode;
-#[cfg(feature = "candid-service")]
-pub mod service;

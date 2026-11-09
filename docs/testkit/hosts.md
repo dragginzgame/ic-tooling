@@ -37,9 +37,10 @@ not leak into the published Wasm library. The maintained feature contracts are:
 | Package and target | Feature selection | Required boundary |
 | --- | --- | --- |
 | Native `ic-testkit` | Default | Direct PocketIC client; separate Platform Candid/management adapters without its `pocket-ic` feature; no Wire, executor, Build, Host Text, Agent, parser or full CDK |
+| Native `ic-testkit` | `wire` only | One Wire identity without CLI, held fixtures or executor; otherwise the default native boundary |
 | Native `ic-testkit` | All features (`cli,wire,held-reply-fixtures`) | One Wire identity; otherwise the same native exclusions |
 | Native `ic-testkit-dev` | All features | One Build, Platform, direct PocketIC client and each Host package identity; no Platform `pocket-ic` feature; tooling is intentional |
-| Wasm `ic-testkit` | All features | One Types/Runtime identity with IC0; no facade, Metrics, Candid, PocketIC, Wire, Host, Build, Agent, parser, full CDK or executor |
+| Wasm `ic-testkit` | All features | One Types identity; no Runtime/IC0, facade, Metrics, Candid, PocketIC, Wire, Host, Build, Agent, parser, full CDK or executor |
 | Wasm `ic-testkit-perf-probe` | Default | One Types/Runtime/Wire identity with executor and IC0; no facade, Candid, PocketIC, Host, Build, Agent, parser or full CDK |
 
 Platform's private entrypoint macros are intentional in the probe graph. The
@@ -49,13 +50,14 @@ are the lockfile, selected package, target, features and normal/build edges:
 
 ```bash
 cargo tree --locked --offline -p ic-testkit --edges normal,build
+cargo tree --locked --offline -p ic-testkit --features wire --edges normal,build
 cargo tree --locked --offline -p ic-testkit --all-features --edges normal,build
 cargo tree --locked --offline -p ic-testkit --all-features --target wasm32-unknown-unknown --edges normal,build
 cargo tree --locked --offline -p ic-testkit-perf-probe --target wasm32-unknown-unknown --edges normal,build
 ```
 
-`make dependency-pins-check` now runs the direct declaration checks followed by
-`make dependency-graph-check`, which applies this matrix through Shared Tooling's
+`make dependency-pins-check` owns direct declaration admission.
+`make testkit-graph-check` applies this matrix separately through Toko Tooling's
 canonical locked, offline graph observer. The native target comes from the selected
 `rustc` host, and CI runs the gate on Linux and both supported macOS architectures.
 Wasm graphs also exclude the native Clap command-line parser. CI and the release
@@ -120,10 +122,11 @@ older identity until they adopt the published Testkit release
 Testkit 0.58 and 0.59 use Platform 0.4. The pending 0.60.0 batch adopts Platform
 0.5. Its `DecodeLimits` and typed Candid errors have that package identity, so
 callers exchanging these values select Platform 0.5.
-PocketIC, Candid DTOs and `fake_principal` retain `principal::ExternalPrincipal` (the
-original upstream type); the distinct application `ic_platform::Principal` is
-converted explicitly at an application/simulator boundary. No DTO, wire bytes,
-reply budget, executor or persisted representation changes here.
+That historical release retained external Principal. The pending owned-codec
+adoption replaces it with canonical Types Principal throughout PocketIC, native
+management DTOs and `fake_principal`; external SDK conversions stay at private
+byte boundaries. Candid bytes and simulator persistence remain unchanged.
+Decoder work/allocation units and error identities change explicitly.
 
 Platform 0.4 separates raw runtime calls from Candid codec helpers and owns
 runtime reject codes. Testkit's probe already supplies explicit Wire codecs;
@@ -176,7 +179,7 @@ Runtime or IC system calls. The private probe selects Runtime directly for its
 canister entrypoints. Its installed test checks bounded Wire requests, caller
 identity, state admission, intentional rejection and a successful query after a trap.
 
-`make dependency-pins-check` runs Shared Tooling's direct-dependency checker
+`make dependency-pins-check` runs Toko Tooling's direct-dependency checker
 against `ci/cargo-dependency-boundaries.json`. It checks canonical package names
 (including aliases), normal/build/dev and target-specific declarations for all
 members. The adopted checker does not scan unused root catalog entries, arbitrary
@@ -193,7 +196,7 @@ the graph gate separately enforces the selected native/Wasm profiles above.
 | `wasm32-unknown-unknown` | Portable principal API; the private probe qualifies installed Wire calls |
 
 Use Bash 3.2 or newer, GNU Make, Git, Perl and the native Unix utilities named in
-[Shared Tooling's setup prerequisites](../local-setup.md#bootstrap-prerequisites).
+[Toko Tooling's setup prerequisites](../local-setup.md#bootstrap-prerequisites).
 The workspace minimum and pinned development/release compiler are Rust 1.99.1.
 Prepare its Wasm target explicitly. `make install-tools` prepares common host
 and Cargo tools, builds the local owner CLI and explicitly provisions PocketIC.
@@ -280,7 +283,7 @@ See [the resolver constraint](POCKET-IC.md#resolver-constraint).
 
 ## Current focused qualification
 
-Follow the [shared validation policy](../../DRAGGINZGAME.md#validation-and-evidence):
+Follow the [shared validation policy](../../TOKO-TOOLING.md#validation-and-evidence):
 select checks for the affected owner, check for active validation first, and keep
 its inputs stable. Prepare missing locked sources with `cargo fetch --locked`
 before an offline run. These are focused choices, not a sequence to run for every
@@ -294,7 +297,7 @@ change. Use this workspace's `target/`.
 | Canister library | `cargo check -p ic-testkit --lib --target wasm32-unknown-unknown --locked` |
 | Development build/report adapter | `cargo check -p ic-testkit-dev --all-targets --locked`; `cargo test -p ic-testkit-dev --bin check_packages --locked` |
 | Operator and private CLI parsing | `cargo test -p ic-testkit --features cli --bin ic-testkit-server --locked`; `cargo test -p ic-testkit --features cli --test server_runner --locked` |
-| Shared snapshot and real tooling callers | `make shared-tooling-check`; `make tools-check dependency-pins-check`; select the affected hook/release-adapter checks from the Makefile |
+| Toko Tooling snapshot and real tooling callers | `make toko-tooling-check`; `make tools-check dependency-pins-check`; select the affected hook/release-adapter checks from the Makefile |
 | Formatting and API documentation | `make fmt-check`; `RUSTDOCFLAGS="-D warnings" cargo doc -p ic-testkit --no-deps --locked`; `cargo test -p ic-testkit --doc --locked` |
 
 For live tests, build the owner CLI and admit the already prepared bundle:
@@ -309,7 +312,7 @@ Select a relevant `pocket_ic_*` integration target for runtime contract changes.
 The installed Wire test consumes IC Build's retained artifact and validates actual
 Wire request/reply admission and trap handling; generic artifact-cache regression tests belong to
 IC Build. The former optional benchmark workload is retired.
-Shared Tooling's exported fixtures remain reviewed snapshot payloads for focused
+Toko Tooling's exported fixtures remain reviewed snapshot payloads for focused
 changed-contract qualification. Routine CI uses the consumer checks below.
 
 Use `make compiler-check` to admit the single local compiler selection, then
@@ -320,10 +323,11 @@ compiling every workspace target for Wasm does not qualify a supported product.
 Release execution retains separate maintainer authority.
 Passing Linux checks or cross-compilation does not qualify native macOS.
 
-## Shared tooling qualification boundary
+## Toko Tooling qualification boundary
 
-The current snapshot selects Shared Tooling 0.25.8 at
-`0a2d2ee3b5e0ae77755c2915ac28836d4d5ba359`. Clap 4.6.7, already selected in the
+The root Cargo dependency, normal lockfile and
+[snapshot receipt](../../.toko-tooling.snapshot) record the exact Toko Tooling
+version and crates.io checksum. Clap 4.6.7, already selected in the
 lockfile, owns all maintained Rust CLI schemas, typed values, defaults, help,
 version and parse diagnostics. Testkit retains server admission/lifecycle and
 exit-status policy; the private benchmark retains workload relationships such as
@@ -331,14 +335,14 @@ workers not exceeding iterations and distinct modes/capacities. Native path byte
 empty child arguments and the private worker's positional protocol remain intact.
 Clap is a native-only product dependency and stays out of library/probe Wasm graphs.
 
-CI failure collection uses Shared's `collect-tool-evidence.sh` orchestrator.
-Testkit selects outcomes, product logs and linked-parent diagnostics; Shared owns
+CI failure collection uses Toko Tooling's `collect-tool-evidence.sh` orchestrator.
+Testkit selects outcomes, product logs and linked-parent diagnostics; Toko Tooling owns
 selector/archiver receipts and refusal of failed selector output as path authority.
 `selection-status` retains the original tool failure; collection returns nonzero
 for incomplete evidence. Testkit's archive/upload/download fixture retains checks
 for redirected parents, partial archives, exact payload bytes and hosted bindings.
 
-The release-adapter fixture copies its declared helper closure through Shared's
+The release-adapter fixture copies its declared helper closure through Toko Tooling's
 canonical fixture preparer. The adapter's companion declaration owns that inventory;
 a new shared helper no longer requires another manually copied file list here.
 The graph observer and fixture preparer are explicit snapshot entrypoints.
@@ -350,7 +354,7 @@ then that same Clippy gate before registry observation or upload. Sequential
 recipes preserve refusal under parallel Make; lint success does not replace
 the remaining release checks.
 
-The locked IC Build 0.22.1 release editor replaces Shared's retired Perl
+The locked IC Build 0.22.1 release editor replaces Toko Tooling's retired Perl
 manifest/lock renderers. `make install-tools` prepares the selected executable;
 `make tools-check` and release preparation admit it offline. Standard release
 commands select it without per-shell exports. Fresh preflight prepares tools
@@ -367,7 +371,7 @@ prove the contents or dependency closure of deployed Wasm.
 The portable CI job admits this checkout's prepared tools, dependency selections
 and snapshot through its real Make targets under the system Bash and its declared
 temporary-directory context. It no longer replays six complete synthetic producer
-suites. The adopted Shared Tooling revision dispatches all six from its own
+suites. The adopted Toko Tooling revision dispatches all six from its own
 `scripts/ci/test-portable-tools.sh` on Linux and both supported macOS architectures.
 
 | Shared implementation proof | Testkit consumer proof retained |
@@ -379,7 +383,7 @@ suites. The adopted Shared Tooling revision dispatches all six from its own
 The existing hook checks, failure-evidence archive/transport qualification and
 product tests remain in CI. The canonical exporter retires the six unused producer
 matrix roots and their fixture-only companions at the same Shared revision.
-Shared Tooling retains those matrices; they are not needed to execute Testkit's
+Toko Tooling retains those matrices; they are not needed to execute Testkit's
 consumer checks.
 
 Runtime tooling is selected explicitly: the dependency-pin checker, Cargo-tool

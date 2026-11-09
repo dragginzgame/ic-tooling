@@ -1,6 +1,5 @@
 use super::*;
-#[cfg(feature = "candid-service")]
-use crate::candid::service::{ServiceLimits, inspect as inspect_service};
+
 use ic_host_artifacts::wasm::{Export, InspectionLimits, inspect};
 use std::collections::BTreeSet;
 
@@ -58,57 +57,5 @@ fn projection_preserves_names_modes_and_internal_exports_without_acceptance_poli
                 mode: MethodMode::Query
             },
         ])
-    );
-}
-
-#[cfg(feature = "candid-service")]
-#[test]
-fn declared_and_exported_modes_can_be_compared_without_discarding_mismatches() {
-    let methods = inspect_service(
-        "service : { read : () -> () query; notify : () -> () oneway; };",
-        ServiceLimits {
-            source_bytes: 128,
-            methods: 2,
-        },
-    )
-    .unwrap();
-    let mut module = b"\0asm\x01\0\0\0\x01\x04\x01\x60\0\0\x03\x02\x01\0".to_vec();
-    let mut exports = vec![2];
-    for name in ["canister_update read", "canister_update notify"] {
-        exports.push(u8::try_from(name.len()).unwrap());
-        exports.extend_from_slice(name.as_bytes());
-        exports.extend_from_slice(&[0, 0]);
-    }
-    module.extend_from_slice(&[7, u8::try_from(exports.len()).unwrap()]);
-    module.extend_from_slice(&exports);
-    module.extend_from_slice(&[10, 4, 1, 2, 0, 11]);
-    let facts = inspect(
-        &module,
-        InspectionLimits {
-            module_bytes: 1024,
-            sections: 4,
-            exports: 2,
-            custom_sections: 0,
-        },
-    )
-    .unwrap();
-    let declared = methods
-        .iter()
-        .map(|method| method.as_export())
-        .collect::<BTreeSet<_>>();
-    let exported = exported_methods(&facts).collect::<BTreeSet<_>>();
-    assert_eq!(
-        declared.difference(&exported).copied().collect::<Vec<_>>(),
-        vec![ExportedMethod {
-            name: "read",
-            mode: MethodMode::Query
-        }]
-    );
-    assert_eq!(
-        exported.difference(&declared).copied().collect::<Vec<_>>(),
-        vec![ExportedMethod {
-            name: "read",
-            mode: MethodMode::Update
-        }]
     );
 }

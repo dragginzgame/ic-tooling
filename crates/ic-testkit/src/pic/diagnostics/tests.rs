@@ -3,7 +3,7 @@ use std::{io::Write, time::Duration};
 
 use crate::pocket_ic::CanisterLogRecord;
 use ic_host_artifacts::batch::BatchLabelError;
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 
 use super::{
     CanisterDiagnosticsRequest, CanisterLogRenderLimits, LabeledCanisterDiagnosticsRequest,

@@ -4,6 +4,17 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.89.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Platform's owned binary Candid codec and ledger carriers. Binary decoding
+  excludes registry Candid; callers select explicit work and logical-allocation
+  budgets and match typed decoder refusals instead of upstream error downcasts.
+- Remove textual `candid::service` inspection, `candid-service`, Oneway projection
+  and their parser/combined qualification paths. Keep `ic-interface` for raw Wasm
+  export facts. Canic Host's service/export comparison must migrate separately.
+
 ## [0.88.0] - 2026-11-08
 
 ### ⚠️ Breaking

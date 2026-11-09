@@ -62,13 +62,13 @@ make test PACKAGE=ic-host-artifacts
 ```
 
 Setup is explicit; `tools-check` verifies prepared tools offline. Hook installation
-separately activates the repository-local formatter. Shared Tooling owns these
+separately activates the repository-local formatter. Toko Tooling owns these
 [common commands](docs/make-interface.md) and executable installation; this
 workspace owns the Host, Build and Testkit libraries, package checks and publication policy.
 
 Use `make check`, `make clippy`, `make docs-check`, `make test`
 with `PACKAGE=<crate>` for focused work. Follow the
-[shared validation policy](DRAGGINZGAME.md#validation-and-evidence) for when to
+[shared validation policy](TOKO-TOOLING.md#validation-and-evidence) for when to
 select those checks or full `make ci` validation. The
 [host guide](docs/hosts.md) describes feature-specific and hook checks;
 `make help` lists the available commands.
@@ -93,8 +93,8 @@ library boundaries without depending on Host Tools or the Candid parser. It prin
 and raw/structural facts after complete admission; budgets and interpretation
 stay caller-owned. It executes no Wasm and estimates no cycles or instructions.
 Select the published package, version and binary through the standard
-Shared Tooling Cargo installer; no extra feature selection is required.
+Toko Tooling Cargo installer; no extra feature selection is required.
 Append `--expect-sha256 SHA256` for digest verification before reporting, or
 `--details` for export/custom-section records after the TSV summary. These options
 replace the retired `ic-host-fs` `inspect_artifact` example; default CLI output
-is unchanged. See the [inspector guide](apps/ic-host-wasm-inspect/README.md).
+is unchanged. See the [inspector guide](crates/ic-host-wasm-inspect/README.md).

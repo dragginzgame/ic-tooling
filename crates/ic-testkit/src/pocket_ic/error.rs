@@ -82,8 +82,10 @@ pub enum ClientError {
     },
     #[error("canister rejected the call: {0:?}")]
     Canister(crate::pocket_ic::RejectResponse),
-    #[error("Candid failed: {0}")]
-    Candid(#[from] candid::Error),
+    #[error("management Candid encoding failed: {0:?}")]
+    CandidEncode(ic_platform::candid_codec::Error),
+    #[error("management Candid decoding failed: {0:?}")]
+    CandidDecode(ic_platform::candid_codec::decoder::Error),
     #[error("CBOR failed: {source}")]
     Cbor {
         /// Stable Testkit classification; no supplier downcast is required.

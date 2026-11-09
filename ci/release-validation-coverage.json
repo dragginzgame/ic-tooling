@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "common": [
-    "shared-tooling-check",
+    "toko-tooling-check",
     "check-no-symlinks",
     "compiler-check",
     "dependency-pins-check",
@@ -157,7 +157,6 @@
         "test-tools-default",
         "test-tools-interface",
         "test-tools-candid",
-        "test-tools-combined",
         "test-tools-agent",
         "test-tools-encoding",
         "test-tools-registry"
@@ -176,7 +175,6 @@
         "test-tools-default",
         "test-tools-interface",
         "test-tools-candid",
-        "test-tools-combined",
         "test-tools-agent",
         "test-tools-encoding",
         "test-tools-registry"

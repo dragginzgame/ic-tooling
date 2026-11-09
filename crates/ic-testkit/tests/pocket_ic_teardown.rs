@@ -5,7 +5,7 @@ use ic_testkit::pocket_ic::ClientError;
 mod support;
 
 use ic_host_process::testing::http::{HttpContentLength, capture_http_request};
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 use ic_testkit::pic::{
     CanisterDiagnosticsRequest, CanisterInstallError, CanisterLogRenderLimits, InstallSpec,
     PocketIcInstance, PocketIcStartupConfig, StandaloneCanisterFixture,

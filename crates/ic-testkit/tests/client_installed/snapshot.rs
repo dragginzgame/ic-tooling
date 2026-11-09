@@ -1,7 +1,7 @@
 //! Installed bounded copy preserves heap, stable memory, timer, hook and chunks.
-use candid::Principal;
 use ic_host_artifacts::wasm_text::{CompileLimits, compile};
-use ic_management_canister_types::{CanisterTimer, SnapshotSource};
+use ic_platform::management_canister_types::{CanisterTimer, SnapshotSource};
+use ic_platform_types::Principal;
 use ic_testkit::pocket_ic::{
     CanisterSettings, PocketIc,
     snapshot::{
@@ -58,8 +58,10 @@ pub async fn qualify(pic: &PocketIc) {
     let budget = CallLimits {
         http_bytes: 4_000_000,
         candid_bytes: 2_000_000,
-        decoding_quota: 20_000_000,
-        skipping_quota: 20_000_000,
+        type_entries: 1024,
+        header_bytes: 65536,
+        work: 20_000_000,
+        allocation: 20_000_000,
     };
     let metadata = pic
         .read_canister_snapshot_metadata(

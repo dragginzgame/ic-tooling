@@ -135,24 +135,13 @@ fn vectored_writes_remain_bounded_by_the_standard_write_contract() {
 }
 
 #[test]
-fn serialized_json_can_be_counted_or_hashed_without_an_encoded_copy() {
-    use crate::artifact::Sha256Digest;
-    use sha2::{Digest, Sha256};
-
+fn serialized_json_is_counted_and_bounded() {
     let value = serde_json::json!({"rows": ["a", "b"], "schema_version": 1});
     let expected = br#"{"rows":["a","b"],"schema_version":1}"#;
     let limit = u64::try_from(expected.len()).unwrap();
     let mut counter = BoundedWriter::new(io::sink(), limit);
     serde_json::to_writer(&mut counter, &value).unwrap();
     assert_eq!(counter.bytes_written(), limit);
-
-    let mut hasher = BoundedWriter::new(Sha256::new(), limit);
-    serde_json::to_writer(&mut hasher, &value).unwrap();
-    assert_eq!(hasher.bytes_written(), limit);
-    assert_eq!(
-        Sha256Digest::from_bytes(hasher.into_inner().finalize().into()),
-        Sha256Digest::compute(expected)
-    );
 
     let mut rejected = BoundedWriter::new(Vec::new(), limit - 1);
     let error = serde_json::to_writer(&mut rejected, &value).unwrap_err();

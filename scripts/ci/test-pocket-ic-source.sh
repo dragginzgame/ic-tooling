@@ -19,7 +19,7 @@ for mutation in import body license adaptation snapshot-adaptation module-adapta
         protocol-adaptation) printf '\nchanged protocol patch\n' >> "$fixture/$mutation/pocket-ic-provenance/protocol-codec.patch" ;;
         module-adaptation) printf '\nchanged module patch\n' >> "$fixture/$mutation/pocket-ic-provenance/module-transfer.patch" ;;
         http-body) printf '\nfn changed_http_body() {}\n' >> "$fixture/$mutation/src/pocket_ic/http.rs" ;;
-        import) perl -0777 -i -pe 's/ic_management_canister_types::/changed_management_types::/ == 1 or die "missing import\n"' "$fixture/$mutation/src/pocket_ic/mod.rs" ;;
+        import) perl -0777 -i -pe 's/ic_platform::management_canister_types::/changed_management_types::/ == 1 or die "missing import\n"' "$fixture/$mutation/src/pocket_ic/mod.rs" ;;
         body) printf '\nfn altered_client_body() {}\n' >> "$fixture/$mutation/src/pocket_ic/nonblocking.rs" ;;
         license) printf '\nchanged license\n' >> "$fixture/$mutation/pocket-ic-provenance/LICENSE" ;;
         adaptation) printf '\nchanged patch\n' >> "$fixture/$mutation/pocket-ic-provenance/upstream/fallible-client.patch" ;;

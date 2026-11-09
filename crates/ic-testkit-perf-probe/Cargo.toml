@@ -7,10 +7,10 @@ version = "0.95.0"
 publish = false
 repository.workspace = true
 
-[package.metadata.shared-tooling.loc]
+[package.metadata.toko-tooling.loc]
 category = "benchmarks"
 
-[package.metadata.shared-tooling.loc.paths]
+[package.metadata.toko-tooling.loc.paths]
 "src/protocol/tests.rs" = "tests"
 
 [package.metadata.cargo-machete]

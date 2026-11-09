@@ -9,7 +9,7 @@ fn topology_keeps_application_selection_and_canister_ranges() {
         CanisterCyclesCostSchedule, CanisterIdRange, RawCanisterId, SubnetConfig,
         SubnetInstructionConfig, SubnetKind, Topology,
     };
-    use candid::Principal;
+    use ic_platform_types::Principal;
     let id = |byte| Principal::from_slice(&[byte]);
     let topology = Topology {
         subnet_configs: [

@@ -1,12 +1,12 @@
 # Fleet reports and CI inspection
 
-Shared Tooling owns these central reports. They inspect selected repositories;
+Toko Tooling owns these central reports. They inspect selected repositories;
 they do not run sibling setup, build or release targets. Consumers retain their
 own validation and issue resolution. See the [ownership boundary](../README.md#repository-fleet-ownership)
 and [supported tool dependencies](supported-hosts.md#tool-specific-dependencies).
 
 Prepare tools explicitly using [local setup](local-setup.md). Commands below run
-from Shared Tooling unless another working directory is specified. Prepared
+from Toko Tooling unless another working directory is specified. Prepared
 host tools in this checkout's `.tools/host/bin` take precedence over `PATH`.
 
 ## Cargo workspace LOC report
@@ -92,6 +92,9 @@ functions. Nested comments and quoted/raw strings are opaque. `cfg(all(test,
 source inventory, not compilation, macro expansion or a shipped-Wasm measurement.
 Predicates disabled in both test and non-test modes are not evidence of tests.
 Inner attributes and raw module identifiers participate in module discovery.
+Test-only ranges are also discovered inside call-argument closures and nested
+expression blocks; macro token trees remain unexpanded. The focused scanner
+regressions run with `bash scripts/ci/test-cloc.sh --scopes-only`.
 
 Supporting `tests/`, `tests.rs` and `*_tests.rs` paths identify test code.
 Legacy `test/` and `test.rs` are counted as tests with hard-cut rename diagnostics.
@@ -105,11 +108,11 @@ visibility change or broad source relocation is needed merely to count lines.
 Declare exceptional roles in the owning package manifest, for example:
 
 ```toml
-[package.metadata.shared-tooling.loc]
+[package.metadata.toko-tooling.loc]
 category = "tests" # Whole fixture-only package, including its helper source.
 generated = ["src/generated"] # Existing file or directory, independent of role.
 
-[package.metadata.shared-tooling.loc.paths]
+[package.metadata.toko-tooling.loc.paths]
 "build.rs" = "build_tooling"
 "examples" = "examples"
 ```
@@ -121,6 +124,12 @@ the package role; declarations override path/target inference. Inline test-only
 items still count as tests. Generated markers (`@generated` or `DO NOT EDIT`
 near the file start) and declared generated paths set a separate flag; generated
 source under Cargo output remains excluded.
+
+The scanner rejects `package.metadata.<other-namespace>.loc` tables before
+counting source, including empty tables and declarations alongside the current
+namespace. Move the settings to `package.metadata.toko-tooling.loc` and resolve
+conflicting tables explicitly. The diagnostic names each affected manifest;
+no partial LOC report is emitted. Unrelated package metadata is unaffected.
 
 Shared target source is counted once and flagged with all observed target
 categories. Without an override or conventional path, the accounting owner is

@@ -1,5 +1,5 @@
 use crate::pocket_ic::ClientError;
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 
 use super::CanisterInstallError;
 

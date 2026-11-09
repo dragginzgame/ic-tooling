@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: docs/cargo-publication.md
+# Shared companions:
 set -euo pipefail
 
 # Check prepared archives and retrieve their exact commit into a fresh store.

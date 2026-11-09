@@ -7,10 +7,10 @@ license.workspace = true
 publish = false
 repository.workspace = true
 
-[package.metadata.shared-tooling.loc]
+[package.metadata.toko-tooling.loc]
 category = "build_tooling"
 
-[package.metadata.shared-tooling.loc.paths]
+[package.metadata.toko-tooling.loc.paths]
 "src/bin/tests/mod.rs" = "tests"
 "tests" = "tests"
 
@@ -38,7 +38,7 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "tim
 ic-host-fs = { workspace = true, features = ["test-support"] }
 ic-host-tools = { workspace = true, features = ["registry", "ledger-evidence"] }
 ic-platform = { workspace = true, features = ["principal", "ic-protocol", "icrc-ledger-types"] }
-ic-platform-types = { workspace = true, features = ["principal-external"] }
+ic-platform-types.workspace = true
 ic-testkit = { workspace = true, features = ["wire"] }
 ic-testkit-perf-probe.workspace = true
 ic-wire.workspace = true

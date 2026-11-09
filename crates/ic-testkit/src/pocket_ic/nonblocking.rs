@@ -13,16 +13,9 @@ use crate::pocket_ic::{ClientError, Operation, error::cbor_error, http::Exchange
 use crate::pocket_ic::{
     CreateCanisterParams, CreateCanisterPlacement, PocketIcBuilder, RejectResponse, Time,
 };
-use candid::{
-    Principal, decode_args, encode_args,
-    utils::{ArgumentDecoder, ArgumentEncoder},
-};
-use ic_management_canister_types::{
-    CanisterId, CanisterIdRecord, CanisterInstallMode, CanisterLogRecord, CanisterSettings,
-    CanisterStatusResult, ChunkHash, DeleteCanisterSnapshotArgs, FetchCanisterLogsResult,
-    InstallChunkedCodeArgs, InstallCodeArgs, LoadCanisterSnapshotArgs,
-    ProvisionalCreateCanisterWithCyclesArgs, Snapshot, StoredChunksResult,
-    TakeCanisterSnapshotArgs, UpdateSettingsArgs, UploadChunkArgs, UploadChunkResult,
+use ic_platform::candid_codec::{
+    arguments::{DecodeArgs, EncodeArgs, encode_args},
+    decoder::{Arity, Limits, decode_args},
 };
 use ic_platform::certification::cbor::decode_certificate;
 use ic_platform::certification::{Certificate, Label, LookupResult};
@@ -32,6 +25,14 @@ use ic_platform::ic_protocol::{
     ReadStateResponse, SubnetMetrics, decode_read_state_response, decode_subnet_metrics,
     encode_envelope,
 };
+use ic_platform::management_canister_types::{
+    CanisterIdRecord, CanisterInstallMode, CanisterLogRecord, CanisterSettings,
+    CanisterStatusResult, ChunkHash, DeleteCanisterSnapshotArgs, FetchCanisterLogsResult,
+    InstallChunkedCodeArgs, InstallCodeArgs, LoadCanisterSnapshotArgs,
+    ProvisionalCreateCanisterWithCyclesArgs, Snapshot, TakeCanisterSnapshotArgs,
+    UpdateSettingsArgs, UploadChunkArgs,
+};
+use ic_platform_types::Principal;
 use reqwest::{StatusCode, Url};
 use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
@@ -200,7 +201,7 @@ impl PocketIc {
     #[instrument(skip(self, data), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), data_len = %data.len(), compression = ?compression))]
     pub async fn set_stable_memory(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         data: Vec<u8>,
         compression: BlobCompression,
     ) -> Result<(), ClientError> {
@@ -220,7 +221,7 @@ impl PocketIc {
 
     /// Get stable memory of a canister.
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string()))]
-    pub async fn get_stable_memory(&self, canister_id: CanisterId) -> Result<Vec<u8>, ClientError> {
+    pub async fn get_stable_memory(&self, canister_id: Principal) -> Result<Vec<u8>, ClientError> {
         let endpoint = "read/get_stable_memory";
         let RawStableMemory { blob } = self
             .post(
@@ -500,7 +501,7 @@ impl PocketIc {
     #[instrument(ret, skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string()))]
     pub async fn get_controllers(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
     ) -> Result<Vec<Principal>, ClientError> {
         let endpoint = "read/get_controllers";
         let result: Vec<RawPrincipalId> = self
@@ -516,7 +517,7 @@ impl PocketIc {
 
     /// Get the current cycles balance of a canister.
     #[instrument(ret, skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string()))]
-    pub async fn cycle_balance(&self, canister_id: CanisterId) -> Result<u128, ClientError> {
+    pub async fn cycle_balance(&self, canister_id: Principal) -> Result<u128, ClientError> {
         let endpoint = "read/get_cycles";
         let result: RawCycles = self
             .post(
@@ -533,7 +534,7 @@ impl PocketIc {
     #[instrument(ret, skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), amount = %amount))]
     pub async fn add_cycles(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         amount: u128,
     ) -> Result<u128, ClientError> {
         let endpoint = "update/add_cycles";
@@ -552,7 +553,7 @@ impl PocketIc {
     /// Submit an update call (without executing it immediately).
     pub async fn submit_call(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Principal,
         method: &str,
         payload: Vec<u8>,
@@ -570,7 +571,7 @@ impl PocketIc {
     /// Submit an update with explicit routing, retaining its accepted ingress receipt.
     pub async fn submit_call_with_effective_principal(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         effective_principal: RawEffectivePrincipal,
         sender: Principal,
         method: &str,
@@ -653,7 +654,7 @@ impl PocketIc {
     #[instrument(skip(self, payload), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.to_string(), method = %method, payload_len = %payload.len()))]
     pub async fn update_call(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Principal,
         method: &str,
         payload: Vec<u8>,
@@ -671,7 +672,7 @@ impl PocketIc {
     /// Submit once with explicit routing, then await the accepted ingress.
     pub async fn update_call_with_effective_principal(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         effective_principal: RawEffectivePrincipal,
         sender: Principal,
         method: &str,
@@ -693,7 +694,7 @@ impl PocketIc {
     #[instrument(skip(self, payload), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.to_string(), method = %method, payload_len = %payload.len()))]
     pub async fn query_call(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Principal,
         method: &str,
         payload: Vec<u8>,
@@ -714,7 +715,7 @@ impl PocketIc {
     #[instrument(skip(self, payload), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), effective_principal = %effective_principal.to_string(), sender = %sender.to_string(), method = %method, payload_len = %payload.len()))]
     pub async fn query_call_with_effective_principal(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         effective_principal: RawEffectivePrincipal,
         sender: Principal,
         method: &str,
@@ -736,7 +737,7 @@ impl PocketIc {
     /// Fetch canister logs via a query call to the management canister.
     pub async fn fetch_canister_logs(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Principal,
     ) -> Result<Vec<CanisterLogRecord>, ClientError> {
         Ok(with_candid::<_, (FetchCanisterLogsResult,), _>(
@@ -761,7 +762,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn canister_status(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
     ) -> Result<CanisterStatusResult, ClientError> {
         Ok(self
@@ -778,7 +779,7 @@ impl PocketIc {
     /// Create a canister with default settings as the anonymous principal.
     /// The canister is created with 100T cycles.
     #[instrument(ret, skip(self), fields(instance_id=self.instance_id))]
-    pub async fn create_canister(&self) -> Result<CanisterId, ClientError> {
+    pub async fn create_canister(&self) -> Result<Principal, ClientError> {
         self.create_canister_with_params(None, CreateCanisterParams::default())
             .await
     }
@@ -790,7 +791,7 @@ impl PocketIc {
         &self,
         sender: Option<Principal>,
         settings: Option<CanisterSettings>,
-    ) -> Result<CanisterId, ClientError> {
+    ) -> Result<Principal, ClientError> {
         self.create_canister_with_params(
             sender,
             CreateCanisterParams {
@@ -814,8 +815,8 @@ impl PocketIc {
         &self,
         sender: Option<Principal>,
         settings: Option<CanisterSettings>,
-        canister_id: CanisterId,
-    ) -> Result<CanisterId, ClientError> {
+        canister_id: Principal,
+    ) -> Result<Principal, ClientError> {
         self.create_canister_with_params(
             sender,
             CreateCanisterParams {
@@ -835,7 +836,7 @@ impl PocketIc {
         sender: Option<Principal>,
         settings: Option<CanisterSettings>,
         subnet_id: SubnetId,
-    ) -> Result<CanisterId, ClientError> {
+    ) -> Result<Principal, ClientError> {
         self.create_canister_with_params(
             sender,
             CreateCanisterParams {
@@ -856,7 +857,7 @@ impl PocketIc {
         &self,
         sender: Option<Principal>,
         params: CreateCanisterParams,
-    ) -> Result<CanisterId, ClientError> {
+    ) -> Result<Principal, ClientError> {
         let cycles = params.cycles.unwrap_or(100_000_000_000_000);
         let (effective_principal, specified_id) = match params.placement {
             None => (RawEffectivePrincipal::None, None),
@@ -891,14 +892,14 @@ impl PocketIc {
     // retains its protocol method/DTO and the ordinary fallible, no-replay path.
     async fn management_call<Input, Output>(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
         method: &str,
         input: Input,
     ) -> Result<Output, ClientError>
     where
-        Input: ArgumentEncoder,
-        Output: for<'a> ArgumentDecoder<'a>,
+        Input: EncodeArgs,
+        Output: for<'a> DecodeArgs<'a>,
     {
         call_candid_as(
             self,
@@ -916,12 +917,12 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn upload_chunk(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
         chunk: Vec<u8>,
     ) -> Result<Vec<u8>, ClientError> {
         Ok(self
-            .management_call::<_, (UploadChunkResult,)>(
+            .management_call::<_, (ChunkHash,)>(
                 canister_id,
                 sender,
                 "upload_chunk",
@@ -936,11 +937,11 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn stored_chunks(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
     ) -> Result<Vec<Vec<u8>>, ClientError> {
         Ok(self
-            .management_call::<_, (StoredChunksResult,)>(
+            .management_call::<_, (Vec<ChunkHash>,)>(
                 canister_id,
                 sender,
                 "stored_chunks",
@@ -957,7 +958,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn clear_chunk_store(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
         self.management_call(
@@ -973,10 +974,10 @@ impl PocketIc {
     #[instrument(skip(self, mode, chunk_hashes_list, wasm_module_hash, arg), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string(), store_canister_id = %store_canister_id.to_string(), arg_len = %arg.len()))]
     pub async fn install_chunked_canister(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
         mode: CanisterInstallMode,
-        store_canister_id: CanisterId,
+        store_canister_id: Principal,
         chunk_hashes_list: Vec<Vec<u8>>,
         wasm_module_hash: Vec<u8>,
         arg: Vec<u8>,
@@ -1004,7 +1005,7 @@ impl PocketIc {
     async fn install_canister_helper(
         &self,
         mode: CanisterInstallMode,
-        canister_id: CanisterId,
+        canister_id: Principal,
         wasm_module: Vec<u8>,
         arg: Vec<u8>,
         sender: Option<Principal>,
@@ -1054,7 +1055,7 @@ impl PocketIc {
     #[instrument(skip(self, wasm_module, arg), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), wasm_module_len = %wasm_module.len(), arg_len = %arg.len(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn install_canister(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         wasm_module: Vec<u8>,
         arg: Vec<u8>,
         sender: Option<Principal>,
@@ -1073,7 +1074,7 @@ impl PocketIc {
     #[instrument(skip(self, wasm_module, arg), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), wasm_module_len = %wasm_module.len(), arg_len = %arg.len(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn upgrade_canister(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         wasm_module: Vec<u8>,
         arg: Vec<u8>,
         sender: Option<Principal>,
@@ -1092,7 +1093,7 @@ impl PocketIc {
     #[instrument(skip(self, wasm_module, arg), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), wasm_module_len = %wasm_module.len(), arg_len = %arg.len(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn reinstall_canister(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         wasm_module: Vec<u8>,
         arg: Vec<u8>,
         sender: Option<Principal>,
@@ -1111,7 +1112,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn uninstall_canister(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
         self.management_call::<(CanisterIdRecord,), ()>(
@@ -1127,7 +1128,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn take_canister_snapshot(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
         replace_snapshot: Option<Vec<u8>>,
     ) -> Result<Snapshot, ClientError> {
@@ -1151,7 +1152,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn load_canister_snapshot(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
         snapshot_id: Vec<u8>,
     ) -> Result<(), ClientError> {
@@ -1172,7 +1173,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn list_canister_snapshots(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
     ) -> Result<Vec<Snapshot>, ClientError> {
         Ok(self
@@ -1190,7 +1191,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn delete_canister_snapshot(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
         snapshot_id: Vec<u8>,
     ) -> Result<(), ClientError> {
@@ -1210,7 +1211,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn update_canister_settings(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
         settings: CanisterSettings,
     ) -> Result<(), ClientError> {
@@ -1231,7 +1232,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn set_controllers(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
         new_controllers: Vec<Principal>,
     ) -> Result<(), ClientError> {
@@ -1256,7 +1257,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn start_canister(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
         self.management_call::<(CanisterIdRecord,), ()>(
@@ -1272,7 +1273,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn stop_canister(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
         self.management_call::<(CanisterIdRecord,), ()>(
@@ -1288,7 +1289,7 @@ impl PocketIc {
     #[instrument(skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string(), sender = %sender.unwrap_or(Principal::anonymous()).to_string()))]
     pub async fn delete_canister(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
         sender: Option<Principal>,
     ) -> Result<(), ClientError> {
         self.management_call::<(CanisterIdRecord,), ()>(
@@ -1302,7 +1303,7 @@ impl PocketIc {
 
     /// Checks whether the provided canister exists.
     #[instrument(ret, skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string()))]
-    pub async fn canister_exists(&self, canister_id: CanisterId) -> Result<bool, ClientError> {
+    pub async fn canister_exists(&self, canister_id: Principal) -> Result<bool, ClientError> {
         Ok(self.get_subnet(canister_id).await?.is_some())
     }
 
@@ -1310,7 +1311,7 @@ impl PocketIc {
     #[instrument(ret, skip(self), fields(instance_id=self.instance_id, canister_id = %canister_id.to_string()))]
     pub async fn get_subnet(
         &self,
-        canister_id: CanisterId,
+        canister_id: Principal,
     ) -> Result<Option<SubnetId>, ClientError> {
         let endpoint = "read/get_subnet";
         let result: Option<RawSubnetId> = self
@@ -1338,7 +1339,10 @@ impl PocketIc {
         let paths = vec![path.clone()];
         let content = ReadState {
             ingress_expiry: self.get_time().await?.as_nanos_since_unix_epoch() + 240_000_000_000,
-            sender: Principal::anonymous(),
+            sender: Principal::anonymous()
+                .as_slice()
+                .try_into()
+                .map_err(|_| ClientError::Protocol("invalid read-state sender".into()))?,
             paths,
         };
         let envelope = Envelope {
@@ -1539,15 +1543,15 @@ impl PocketIc {
 /// PocketIC executes update calls synchronously, so there is no need to poll for the result.
 async fn call_candid_as<Input, Output>(
     env: &PocketIc,
-    canister_id: CanisterId,
+    canister_id: Principal,
     effective_principal: RawEffectivePrincipal,
     sender: Principal,
     method: &str,
     input: Input,
 ) -> Result<Output, ClientError>
 where
-    Input: ArgumentEncoder,
-    Output: for<'a> ArgumentDecoder<'a>,
+    Input: EncodeArgs,
+    Output: for<'a> DecodeArgs<'a>,
 {
     with_candid(input, |payload| async {
         env.update_call_with_effective_principal(
@@ -1568,11 +1572,22 @@ async fn with_candid<Input, Output, Fut>(
     f: impl FnOnce(Vec<u8>) -> Fut,
 ) -> Result<Output, ClientError>
 where
-    Input: ArgumentEncoder,
-    Output: for<'a> ArgumentDecoder<'a>,
+    Input: EncodeArgs,
+    Output: for<'a> DecodeArgs<'a>,
     Fut: Future<Output = Result<Vec<u8>, ClientError>>,
 {
-    let input = encode_args(input)?;
+    let input = encode_args(&input, usize::MAX).map_err(ClientError::CandidEncode)?;
     let output = f(input).await?;
-    Ok(decode_args(&output)?)
+    decode_args(
+        &output,
+        Limits {
+            bytes: output.len(),
+            header: output.len(),
+            types: output.len(),
+            work: usize::MAX,
+            allocation: usize::MAX,
+        },
+        Arity::Compatible,
+    )
+    .map_err(ClientError::CandidDecode)
 }

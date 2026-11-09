@@ -79,7 +79,7 @@ if [[ "$purpose" != qualify ]]; then
         done
     fi
 fi
-make --no-print-directory shared-tooling-check
+make --no-print-directory toko-tooling-check
 source="$(git rev-parse --verify HEAD)" || exit $?
 [[ "$source" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || fail 'invalid source identity'
 dirty="$(git status --porcelain --untracked-files=all)" || exit $?

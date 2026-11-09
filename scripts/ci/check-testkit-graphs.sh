@@ -16,7 +16,7 @@ policy=(--consumer "$consumer" --require ic-platform-types=1 --forbid ic-metrics
     --forbid ic-agent --forbid candid_parser --forbid ic0 --forbid pocket-ic --forbid-pattern '^ic-cdk')
 runtime_policy=("${policy[@]}")
 policy+=(--forbid ic-platform-runtime-guard)
-native_policy=("${policy[@]}" --require ic-platform=1 --forbid ic-platform-pocket-ic
+native_policy=("${policy[@]}" --forbid ic-management-canister-types --require ic-platform=1 --forbid ic-platform-pocket-ic
     --forbid-feature ic-platform/pocket-ic --forbid ic-platform-runtime
     --forbid slog --forbid tempfile --forbid schemars
     --forbid strum --forbid strum_macros)
@@ -24,9 +24,20 @@ native_policy+=(--forbid tracing-appender --forbid tracing-subscriber --forbid i
 native_policy+=(--forbid-feature reqwest/blocking --forbid-feature reqwest/multipart
     --forbid-feature reqwest/stream)
 
-perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
-    --package ic-testkit --target "$host" --forbid clap --forbid ic-wire \
-    --forbid wat --forbid wast --forbid wasm-encoder
+# Observe these roots separately: workspace/all-feature unification must not
+# conceal the optional Wire boundary. Render the actual selected identities.
+native_graph() {
+    local profile=$1 observation
+    shift
+    observation=$(perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
+        --package ic-testkit --target "$host" --forbid clap \
+        --forbid wat --forbid wast --forbid wasm-encoder --json --observations "$@")
+    jq -r --arg profile "$profile" '.observations[] |
+        select(.name | test("^ic-(testkit|platform(-types)?|wire)$")) |
+        "Testkit \($profile): \(.identity)"' <<< "$observation"
+}
+native_graph default --forbid ic-wire
+native_graph wire --features wire --require ic-wire=1
 perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --features reply-fixtures \
     --require wasm-encoder=1 --forbid wat --forbid wast

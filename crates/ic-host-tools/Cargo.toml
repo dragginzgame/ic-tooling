@@ -16,13 +16,16 @@ ignored = ["toko-tooling"]
 [features]
 default = []
 agent = ["dep:ic-platform", "ic-platform/agent", "dep:url"]
-candid = ["dep:ic-platform", "ic-platform/candid"]
-candid-service = ["candid", "ic-platform/candid-parser"]
+candid = ["dep:ic-platform", "ic-platform/candid-codec"]
 encoding = []
 ic-interface = ["dep:ic-host-artifacts", "ic-host-artifacts/wasm"]
 icp-ledger = ["dep:prost"]
 icp-project = ["dep:ic-host-text", "ic-host-text/yaml"]
-ledger-evidence = ["dep:ic-platform", "ic-platform/candid", "ic-platform/icrc-ledger-types"]
+ledger-evidence = [
+    "dep:ic-platform",
+    "ic-platform/candid-codec",
+    "ic-platform/icrc-ledger-types",
+]
 registry = ["dep:ic-platform-types", "dep:prost"]
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]

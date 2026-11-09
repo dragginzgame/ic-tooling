@@ -25,3 +25,26 @@ testkit-package-check: build-server-cli
 testkit-graph-check:
 	bash scripts/ci/test-pocket-ic-source.sh
 	bash scripts/ci/check-testkit-graphs.sh
+
+# Current-source downstream qualification; never a supplier release prerequisite.
+# Existing CI/release owners retain their full gates and native host matrix.
+.PHONY: dependency-adoption-check
+dependency-adoption-check: toko-tooling-check
+	+$(MAKE) --no-print-directory build-server-cli
+	@"$(SERVER_CLI)" check
+	@printf 'Current workspace composition; not qualification of an older published client.\nConsumer HEAD: '
+	@git rev-parse HEAD
+	@if ! git diff --quiet HEAD --; then printf 'Consumer includes uncommitted changes.\n'; fi
+	@printf 'Locked all-feature source inventory; isolated graphs are checked separately.\n'
+	+@metadata="$$(cargo metadata --all-features --locked --offline --format-version 1)" && \
+		printf '%s\n' "$$metadata" | jq -r '.packages[] | select(.name | test("^(ic-(testkit|host-tools|platform(-.*)?|wire|agent|management-canister-types|transport-types)|candid|ic_principal)$$")) | "\(.name) \(.version) source=\(.source // .manifest_path)"'
+	+bash scripts/ci/check-tools-features.sh
+	+bash scripts/ci/check-testkit-graphs.sh
+	+$(MAKE) --no-print-directory test-tools-candid test-tools-agent test-tools-registry test-tools-ledger-evidence
+	+cargo test -p ic-testkit --locked --offline --test client_management_identity
+	+cargo test -p ic-testkit --locked --offline --lib pocket_ic::tests::client_failures::
+	+cargo test -p ic-testkit --features wire --locked --offline --lib pic::wire::tests::
+	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit \
+		--locked --offline --test client_installed installed_client_preserves_management_and_snapshot_state -- --ignored --exact
+	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit-dev \
+		--locked --offline --test canister_wire

@@ -6,6 +6,31 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.96.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Use Platform-owned native management DTOs and canonical Types Principal
+  throughout the client, fixtures and snapshot APIs. Remove direct registry
+  Candid and management dependencies and the CanisterId alias. Keep external
+  management bytes, admitted 16.1 behavior and donor/upstream source guards.
+- Replace snapshot decoder quotas with explicit header/type/work/allocation
+  budgets. Keep distinct typed Candid encoding/decoding refusals, accepted-ingress
+  evidence and cancellation/no-replay behavior. Native transport still selects
+  upstream Candid transitively; Wasm Testkit stays Types-only.
+
+### 🔧 Changed
+
+- Adopt SHA-2 0.11.1 for native module and snapshot chunk hashing, preserving
+  protocol digests, transfer admission and imported client source provenance.
+
+### 🧪 Testing
+
+- Own Platform/Wire adoption qualification through isolated default/Wire graphs,
+  source-labelled adapter checks and installed management/snapshot/Wire contracts.
+  Supplier releases remain independent of this downstream qualification
+  ([#349](https://github.com/dragginzgame/ic-tooling/issues/349)).
+
 ## [0.95.0] - 2026-11-08
 
 ### ⚠️ Breaking

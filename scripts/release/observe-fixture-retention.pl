@@ -26,7 +26,7 @@ find({no_chdir=>1,wanted=>sub {
     $files{$_}=1;
 }}, $routing ? qw(scripts ci make .github docs rules) : ('scripts'));
 if ($routing) {
-    $files{$_}=1 for qw(Makefile rust-toolchain.toml .shared-tooling.snapshot DRAGGINZGAME.md);
+    $files{$_}=1 for qw(Makefile rust-toolchain.toml .toko-tooling.snapshot TOKO-TOOLING.md);
 }
 my %tools;
 for my $name (qw(awk bash cat cmp cp dirname env grep gzip jq ln mkdir mktemp mv perl rg rm sed tar tee),

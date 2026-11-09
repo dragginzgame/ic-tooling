@@ -1,6 +1,6 @@
 use std::io;
 
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 
 use super::{
     CachedPocketIcBaseline, CanisterSnapshotTarget, FailureDisposition, PocketIcBaselineRecipe,

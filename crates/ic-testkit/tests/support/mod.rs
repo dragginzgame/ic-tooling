@@ -16,7 +16,7 @@ pub fn empty_install_spec() -> ic_testkit::pic::InstallSpec {
 
 pub async fn install_empty_canister(
     pic: &ic_testkit::pocket_ic::PocketIc,
-) -> ic_platform_types::principal::ExternalPrincipal {
+) -> ic_platform_types::Principal {
     pic.try_create_and_install(empty_install_spec())
         .await
         .expect("install empty fixture canister")
@@ -50,7 +50,7 @@ pub fn wat_bytes(bytes: &[u8]) -> String {
 #[cfg(feature = "held-reply-fixtures")]
 pub async fn install_wat(
     pic: &ic_testkit::pocket_ic::PocketIc,
-    canister: ic_platform_types::principal::ExternalPrincipal,
+    canister: ic_platform_types::Principal,
     source: &str,
     module_bytes: usize,
 ) {

@@ -84,7 +84,7 @@ STUB
 cat > "$fixture/bin/make" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ "$*" == '--no-print-directory shared-tooling-check' ]]; then
+if [[ "$*" == '--no-print-directory toko-tooling-check' ]]; then
     exit "${ADAPTER_TOOLING_RESULT:-0}"
 fi
 if [[ "$*" == '--no-print-directory -f - MAKEFILES=' ]]; then exec "$ADAPTER_REAL_MAKE" "$@"; fi

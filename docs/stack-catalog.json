@@ -10,7 +10,7 @@
     {"name": "toko-miner", "paths": ["apps", "crates"], "npm": ["frontend/package.json"]},
     {"name": "canic", "paths": ["crates"], "native": ["crates/canic-cli", "crates/canic-host"], "exclude": ["crates/canic-tests", "crates/canic-testing-internal"]},
     {"name": "icydb", "paths": ["crates"], "native": ["crates/icydb-cli"]},
-    {"name": "ic-auth", "paths": ["crates", "apps/tooling"], "native": ["apps/tooling"]},
+    {"name": "ic-auth", "paths": ["crates"], "native": ["crates/ic-auth-tooling"]},
     {"name": "ic-backup", "paths": ["crates"]},
     {"name": "ic-blob-storage", "paths": ["crates", "canisters/standalone"], "native": ["crates/ic-blob-storage-cli"]},
     {"name": "ic-observability", "paths": ["crates"]},

@@ -1,9 +1,9 @@
 use super::*;
 use crate::pocket_ic::snapshot::*;
-use candid::{CandidType, DecoderConfig};
+use ic_platform::candid_codec::{Encode, encode_one};
 
 impl PocketIc {
-    async fn snapshot_call<A: CandidType, R: for<'de> ArgumentDecoder<'de>>(
+    async fn snapshot_call<A: Encode, R: for<'de> DecodeArgs<'de>>(
         &self,
         canister: Principal,
         sender: Principal,
@@ -13,12 +13,8 @@ impl PocketIc {
         ingress: &mut Option<RawMessageId>,
     ) -> Result<R, SnapshotError> {
         let result = async {
-            let payload = candid::encode_one(args)?;
-            if payload.len() > limits.candid_bytes {
-                return Err(ClientError::Protocol(
-                    "snapshot request exceeds Candid byte budget".into(),
-                ));
-            }
+            let payload =
+                encode_one(&args, limits.candid_bytes).map_err(ClientError::CandidEncode)?;
             let message = self
                 .submit_ingress(
                     RawCanisterCall {
@@ -41,11 +37,18 @@ impl PocketIc {
                     "snapshot reply exceeds Candid byte budget".into(),
                 ));
             }
-            let mut config = DecoderConfig::new();
-            config.set_full_error_message(false);
-            config.set_decoding_quota(limits.decoding_quota);
-            config.set_skipping_quota(limits.skipping_quota);
-            candid::decode_args_with_config(&reply, &config).map_err(ClientError::from)
+            decode_args(
+                &reply,
+                Limits {
+                    bytes: limits.candid_bytes,
+                    header: limits.header_bytes,
+                    types: limits.type_entries,
+                    work: limits.work,
+                    allocation: limits.allocation,
+                },
+                Arity::Compatible,
+            )
+            .map_err(ClientError::CandidDecode)
         }
         .await;
         result.map_err(|source| SnapshotError::Call {

@@ -16,7 +16,7 @@ root="$0"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
-unset SHARED_TOOLING_ROOT
+unset TOKO_TOOLING_ROOT
 unset TOOLING_STAGE_ADMISSIONS IC_TOOLING_RELEASE_GROUP TOOLING_RELEASE_GROUP
 unset RELEASE_GROUPS RELEASE_PUBLISH_TARGET RELEASE_SETUP_TARGET RELEASE_BATCH_ACTIVE
 unset RELEASE_SETUP_MODE PUBLICATION_RESULT
@@ -109,7 +109,7 @@ print {$out} 'frozen ', join(' ', @ARGV), "\n" or die $!;
 close $out or die $!;
 STUB
 mkdir -p "$fixture/local/scripts/dev"
-for helper in scripts/dev/install-git-hooks.sh scripts/dev/shared-tooling.sh; do
+for helper in scripts/dev/install-git-hooks.sh scripts/dev/toko-tooling.sh; do
     cat > "$fixture/local/$helper" <<'STUB'
 #!/usr/bin/env bash
 printf '%s %s\n' "${0##*/}" "$*" >> "$HOST_MAKE_EVENTS"
@@ -125,7 +125,7 @@ mkdir -p "$fixture/local/.tools/host/bin"
 ln -s "$root/.tools/host/bin/yq" "$fixture/local/.tools/host/bin/yq"
 # shellcheck source=/dev/null
 . "$root/ci/tool-versions.env"
-export HOST_MAKE_SORT_VERSION="$SHARED_TOOLING_CARGO_SORT_VERSION"
+export HOST_MAKE_SORT_VERSION="$TOKO_TOOLING_CARGO_SORT_VERSION"
 cd "$fixture/local"
 
 prepare_tooling_stubs() {
@@ -211,19 +211,20 @@ fi
 printf 'override RELEASE_REMOTE := recursive\n' > overrides.mk
 recursive_make="$(command -v make) --no-print-directory -f Makefile -f overrides.mk"
 routing_targets=(release-patch release-minor release-major release-resume release-batch-status release-batch-resume release-batch-reconcile release-batch-retire)
+tooling_targets=(toko-tooling-check toko-tooling-status toko-tooling-install toko-tooling-update toko-tooling-preview)
 if [[ $selected_case == command-routing ]]; then
-    routing_targets=(help fmt-check install-hooks shared-tooling-check shared-tooling-status shared-tooling-install shared-tooling-update)
+    routing_targets=(help fmt-check install-hooks "${tooling_targets[@]}")
 elif [[ $selected_case == all ]]; then
-    routing_targets=(help fmt-check "${routing_targets[@]}" install-hooks shared-tooling-check)
+    routing_targets=(help fmt-check "${routing_targets[@]}" install-hooks "${tooling_targets[@]}")
 fi
 for selection in ordinary environment command nested recursive; do
-    unset SHARED_TOOLING_ROOT
+    unset TOKO_TOOLING_ROOT
     remote=review
     command=(make --no-print-directory -j2)
     if [[ "$selection" == environment ]]; then
-        export SHARED_TOOLING_ROOT="$fixture/external"
+        export TOKO_TOOLING_ROOT="$fixture/external"
     elif [[ "$selection" != ordinary ]]; then
-        command+=("SHARED_TOOLING_ROOT=$fixture/external")
+        command+=("TOKO_TOOLING_ROOT=$fixture/external")
     fi
     if [[ "$selection" == nested || "$selection" == recursive ]]; then
         # Keep Make's recursive command and automatic variable literal.
@@ -248,11 +249,12 @@ for selection in ordinary environment command nested recursive; do
             release-patch|release-minor|release-major) printf 'frozen --root %s --groups testkit --kind %s --remote %s --branch release-review --delivery direct --publish-target publish --setup-target release-candidate-setup\n' "$PWD" "${target#release-}" "$remote" > "$fixture/expected" ;;
             release-batch-*) printf 'frozen --root %s --%s batch-_fixture --delivery direct\n' "$PWD" "${target#release-batch-}" > "$fixture/expected" ;;
             install-hooks) printf 'install-git-hooks.sh --consumer %s\n' "$PWD" > "$fixture/expected" ;;
-            shared-tooling-*) printf 'shared-tooling.sh %s --consumer %s --manifest .shared-tooling.snapshot\n' "${target#shared-tooling-}" "$PWD" > "$fixture/expected" ;;
+            toko-tooling-preview) printf 'toko-tooling.sh update --preview --consumer %s --manifest .toko-tooling.snapshot\n' "$PWD" > "$fixture/expected" ;;
+            toko-tooling-*) printf 'toko-tooling.sh %s --consumer %s --manifest .toko-tooling.snapshot\n' "${target#toko-tooling-}" "$PWD" > "$fixture/expected" ;;
         esac
         case "$target" in
             release-patch|release-minor|release-major|release-resume)
-                { printf 'shared-tooling.sh check --consumer %s --manifest .shared-tooling.snapshot\n' "$PWD"; cat "$fixture/expected"; } > "$fixture/guarded-expected"
+                { printf 'toko-tooling.sh check --consumer %s --manifest .toko-tooling.snapshot\n' "$PWD"; cat "$fixture/expected"; } > "$fixture/guarded-expected"
                 mv "$fixture/guarded-expected" "$fixture/expected" ;;
         esac
         cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
@@ -263,7 +265,7 @@ for selection in ordinary environment command nested recursive; do
         [[ ! -e "$HOST_MAKE_EXTERNAL" ]] || exit 1
     done
 done
-unset SHARED_TOOLING_ROOT
+unset TOKO_TOOLING_ROOT
 if [[ $selected_case == command-routing ]]; then
     fixture_complete=true
     echo 'Checkout-local tooling and formatting command routing passed (effects substituted).'
@@ -306,7 +308,7 @@ STUB
         : > "$HOST_MAKE_EVENTS"
         make --no-print-directory "release-$kind" RELEASE_GROUP=testkit RELEASE_BATCH_ACTIVE=1 \
             RELEASE_REMOTE=review RELEASE_BRANCH=release-review > "$fixture/captured-$kind.log" 2>&1
-        { printf 'shared-tooling.sh check --consumer %s --manifest .shared-tooling.snapshot\n' "$PWD"; printf '%s review release-review\n' "$kind"; } > "$fixture/expected"
+        { printf 'toko-tooling.sh check --consumer %s --manifest .toko-tooling.snapshot\n' "$PWD"; printf '%s review release-review\n' "$kind"; } > "$fixture/expected"
         cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
     done
     for mode in prepare check; do
@@ -380,7 +382,7 @@ for mode in install check; do
         : > "$HOST_MAKE_EVENTS"
         status=0
         PATH="$fixture/local:$PATH" HOST_MAKE_TOOL_FAIL="install-$failed-tools.sh" HOST_MAKE_TOOL_FAIL_MODE="$mode" make --no-print-directory -j4 "$target" "MAKE=$(command -v make)" \
-            "SHARED_TOOLING_ROOT=$fixture/external" > "$fixture/$target-$failed.log" 2>&1 || status=$?
+            "TOKO_TOOLING_ROOT=$fixture/external" > "$fixture/$target-$failed.log" 2>&1 || status=$?
         if [[ "$failed" == none ]]; then [[ "$status" == 0 ]] || exit 1;
         else [[ "$status" == 2 ]] || exit 1; fi
         : > "$fixture/expected"
@@ -568,10 +570,15 @@ for target in fmt fmt-check; do
     cmp "$fixture/expected-log" "$detail"
     [[ "$(wc -l < "$HOST_MAKE_EVENTS")" -eq 1 ]] || exit 1
 done
-# Qualify every actual Host target; Shared owns flag aliases and combinations.
+# Protected consumer boundaries retain failure propagation; ordinary help remains
+# available in dry-run mode. Toko owns flag aliases and combinations.
 make_probe_target_admission "$(command -v make)" "$PWD/Makefile" "$fixture/local" \
     "$HOST_MAKE_EVENTS" fmt fmt-check release-patch release-minor release-major release-resume \
-    "${cargo_targets[@]}" "${helper_targets[@]}"
+    ci ci-publication lint check-secrets publish publish-check install-tools tools-check \
+    install-release-editor install-server install-validation-tools toko-tooling-check toko-tooling-install toko-tooling-update
+: > "$HOST_MAKE_EVENTS"
+make --no-print-directory -n help > "$fixture/help-dry-run.log" 2>&1
+[[ ! -s "$HOST_MAKE_EVENTS" ]]
 [[ ! -e "$HOST_MAKE_EXTERNAL" ]] || exit 1
 # Exercise the real documentation Make entrypoint with a complete minimal corpus.
 # Runtime companion docs can link to other Shared guides outside this fixture's

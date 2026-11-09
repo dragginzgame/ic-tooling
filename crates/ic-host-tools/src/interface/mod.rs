@@ -1,4 +1,4 @@
-//! IC method identities shared by Candid services and optional Wasm export interpretation.
+//! IC method identities for optional Wasm export interpretation.
 //!
 //! No expected service, internal-export allowlist, signature validation or
 //! installation policy is implied. Source names are preserved without trimming.
@@ -9,7 +9,7 @@ use ic_host_artifacts::wasm::{ExportKind, WasmFacts};
 #[cfg(all(test, feature = "ic-interface"))]
 mod tests;
 
-/// Candid method mode, retaining the distinction between update and oneway.
+/// IC exported method mode.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum MethodMode {
     /// Ordinary update call.
@@ -18,20 +18,6 @@ pub enum MethodMode {
     Query,
     /// Composite query call.
     CompositeQuery,
-    /// Candid oneway update, with no reply.
-    Oneway,
-}
-
-impl MethodMode {
-    /// Project Candid call semantics to the corresponding Wasm export mode.
-    /// Wasm has no separate oneway export namespace.
-    #[must_use]
-    pub const fn export_mode(self) -> Self {
-        match self {
-            Self::Oneway => Self::Update,
-            mode => mode,
-        }
-    }
 }
 
 /// Borrowed method identity for comparing declared and exported interfaces.
@@ -39,7 +25,7 @@ impl MethodMode {
 pub struct ExportedMethod<'a> {
     /// Complete method name after its IC export prefix, including whitespace.
     pub name: &'a str,
-    /// Export namespace: update, query or composite query, never oneway.
+    /// Export namespace: update, query or composite query.
     pub mode: MethodMode,
 }
 

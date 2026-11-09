@@ -8,7 +8,6 @@ use crate::pocket_ic::{
 };
 
 use super::{PocketIc, Principal};
-use ic_platform::candid::contract;
 
 // Preserve the existing management reply and chunk limits. The envelope budget
 // includes JSON's byte-array expansion; neither this adapter nor the client
@@ -16,8 +15,10 @@ use ic_platform::candid::contract;
 const CALL_LIMITS: CallLimits = CallLimits {
     http_bytes: 16 * 1024 * 1024,
     candid_bytes: 2_000_000,
-    decoding_quota: usize::MAX,
-    skipping_quota: usize::MAX,
+    type_entries: 1024,
+    header_bytes: 65536,
+    work: usize::MAX,
+    allocation: usize::MAX,
 };
 const TRANSFER_LIMITS: TransferLimits = TransferLimits {
     call: CALL_LIMITS,
@@ -29,7 +30,7 @@ const TRANSFER_LIMITS: TransferLimits = TransferLimits {
 
 pub(super) enum Failure {
     Call(ClientError),
-    Codec(contract::Error),
+    Codec(ClientError),
     Invalid(&'static str),
 }
 
@@ -43,7 +44,7 @@ impl From<SnapshotError> for Failure {
     fn from(error: SnapshotError) -> Self {
         match error {
             SnapshotError::Call {
-                source: ClientError::Candid(error),
+                source: error @ (ClientError::CandidEncode(_) | ClientError::CandidDecode(_)),
                 ..
             } => Self::Codec(error),
             SnapshotError::Call { source, .. } => Self::Call(source),

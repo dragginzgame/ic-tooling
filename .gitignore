@@ -2,5 +2,5 @@
 /.tools/
 /testing/browser/internet-identity/node_modules/
 .DS_Store
-.shared-tooling-refresh.*
-.shared-tooling-payload.*
+.toko-tooling-refresh.*
+.toko-tooling-payload.*

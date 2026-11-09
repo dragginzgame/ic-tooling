@@ -9,7 +9,7 @@ use ic_testkit::pocket_ic::ClientError;
 
 use std::{error::Error, num::NonZeroUsize, time::Duration};
 
-use ic_platform::principal::ExternalPrincipal as Principal;
+use ic_platform::Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePreparationStage, CachedPocketIcBaseline,
     CachedPocketIcBaselinePool, CanisterSnapshotTarget, ControllerSnapshotError,

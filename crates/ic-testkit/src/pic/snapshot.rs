@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::pocket_ic::{ClientError, PocketIc};
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 
 mod transfer;
 
@@ -80,7 +80,7 @@ pub enum ControllerSnapshotError {
         /// Exact canister selected for capture.
         canister_id: Principal,
         /// Original external Candid codec failure.
-        source: ic_platform::candid::contract::Error,
+        source: ClientError,
         /// Known snapshot deletions that failed during rollback.
         cleanup_failures: Vec<SnapshotCleanupFailure>,
     },

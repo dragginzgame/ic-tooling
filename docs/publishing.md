@@ -5,7 +5,7 @@
 The maintainer-operated `make release-patch`, `make release-minor` and
 `make release-major` commands use the [shared release contract](releases.md).
 Host's [delivery policy](../ci/release-delivery.txt) selects `RELEASE_DELIVERY=direct`.
-Normal increment commands use Shared's [frozen release batches](release-batches.md):
+Normal increment commands use Toko Tooling's [frozen release batches](release-batches.md):
 capture committed source, qualify, prepare, commit/tag, atomically push, then
 publish each selected group to crates.io. **Do not follow a successful release
 with a second `make publish`.** Other delivery selections are rejected;
@@ -46,18 +46,18 @@ The runner prints `target/release-frozen/BATCH` and durable state under
 Start from clean committed source. Later normal-checkout lock/source edits stay
 deferred and cannot change active validation or uploads. The runner does not
 update the normal branch automatically. After preserving deferred work, use
-Shared's `release-batch-reconcile BATCH=...` on a clean checkout to import and
+Toko Tooling's `release-batch-reconcile BATCH=...` on a clean checkout to import and
 fast-forward the delivered refs, then deliberately reapply the deferred changes.
 Reconciliation never stashes, resets or resolves conflicts. Retain candidate Git,
 plans, publication receipts and unfinished work; normal `cargo clean` removes the
 managed checkout too, so it cannot run during delivery. Git/Cargo context
-overrides and mutable ancestor configuration retain Shared's explicit limits.
+overrides and mutable ancestor configuration retain Toko Tooling's explicit limits.
 `release-batch-retire BATCH=...` explicitly deletes that completed batch's
 checkout, ignored build/tool outputs and recovery records after integration and
 custody checks. Preserve needed evidence separately before selecting it; adoption
 or successful publication does not authorize retirement.
 
-Shared invokes `release-candidate-setup` before fresh version lookup and before
+Toko Tooling invokes `release-candidate-setup` before fresh version lookup and before
 resumed release/publication hooks. Its `prepare` mode selects host parsers; `check`
 admits the saved selection offline without installation. The standard release
 preflight retains editor/server setup and full product qualification. Read-only
@@ -83,7 +83,7 @@ One queue per normal checkout serializes frozen batches; the captured checkout
 retains its standard single-group release lock.
 
 Prepare the development toolchain selected in [rust-toolchain.toml](../rust-toolchain.toml),
-then run `make install-tools` and `make tools-check`. Shared Tooling owns
+then run `make install-tools` and `make tools-check`. Toko Tooling owns
 [common setup and executable storage](local-setup.md). Release preparation uses
 the released IC Build `ic-build-release-metadata` editor, pinned separately in
 `ci/release-editor.env` and selected through its verified tool-store receipt.
@@ -92,7 +92,7 @@ selected source; IC Build projects only the group's owned versions and supplier
 requirements. Committed checks use the selected commit independently of today's
 working files. Preparation validates candidate TOML and the prepared
 locked Cargo graph, restoring original bytes/modes after failure or catchable
-interruption and retaining recovery evidence. Shared retains the preparation
+interruption and retaining recovery evidence. Toko Tooling retains the preparation
 transaction, receipts and rollback. `make install-tools` includes the release
 editor; `make tools-check`/`make release-editor-check` admit it offline. Preflight
 can prepare a missing editor after source admission without per-shell exports;
@@ -128,7 +128,7 @@ workspace checks, isolated feature profiles, Testkit Wasm and unsupported-filesy
 compilation. `make compiler-check` admits the actual compiler; `make ci` retains
 the complete gate without the retired `msrv-qualification` target.
 Release verification uses Tooling's [source-bound group plans](design/release-validation.md)
-through Shared's [plan runner](release-group-validation.md). Foundation and Testkit
+through Toko Tooling's [plan runner](release-group-validation.md). Foundation and Testkit
 retain the complete gate. Text, Tools and Build may narrow only from
 an admitted complete three-host baseline with unchanged shared inputs and bounded
 consumer relationships. Tools/Build need a fresh comparison that executes their
@@ -205,7 +205,7 @@ online retry.
 Both publication modes require prepared dependencies. After fresh source and
 metadata admission, they reuse full workspace lint only through the selected
 committed release's preflight selection context and version-5 receipt. Tooling
-carries that context when saving preflight selection; it never parses Shared's
+carries that context when saving preflight selection; it never parses Toko Tooling's
 private release journal. The context grants reuse only after receipt re-admission.
 Older selections lacking context fall back to fresh lint. Admission checks the exact
 prepared payload, unchanged source, gate/log inventory, environment, compiler and
@@ -244,7 +244,7 @@ metadata admission and before package preparation or upload. The explicit packag
 allowlist remains separate from workspace membership. All package metadata must
 declare `https://github.com/dragginzgame/ic-tooling` as the repository.
 
-Shared's [canonical provenance helper](../scripts/ci/check-cargo-package-provenance.sh)
+Toko Tooling's [canonical provenance helper](../scripts/ci/check-cargo-package-provenance.sh)
 checks the prepared archives and fetches that exact commit from the declared HTTPS repository
 into a fresh bare object store beneath the publication attempt. Failed fetches,
 mismatched commit identities, missing/dirty package provenance and source changes
@@ -254,10 +254,10 @@ and retrieved objects are retained in the admission attempt's `provenance/`
 directory. This guard is a remote-read effect of the
 explicit upload command; it never pushes a ref or creates a commit.
 
-The [reviewed Shared snapshot](../.shared-tooling.snapshot) supplies this helper and the
+The [reviewed Toko Tooling snapshot](../.toko-tooling.snapshot) supplies this helper and the
 [selected-source reader](../scripts/ci/read-cargo-source-context.sh), alongside
 the existing release metadata/receipt custody. Host selects packages, manifests,
-versions and recovery; Shared owns exact commit retrieval, archive provenance
+versions and recovery; Toko Tooling owns exact commit retrieval, archive provenance
 and selected-source member observation. There are no local source-evidence copies.
 Both Git object formats, ambiguous parser-stream refusal and retained failure
 evidence remain part of admission; replacing the helper owner removes no check.
@@ -301,7 +301,7 @@ Older attempt records remain unchanged.
 
 Build/package artifacts and prior attempt evidence remain in `target`; there is
 no artifact cleanup. Host's `target/publish/lock` covers admission through command
-completion. Shared's stable `target/publish/.cargo-publication.lock` also blocks
+completion. Toko Tooling's stable `target/publish/.cargo-publication.lock` also blocks
 another command attempt and remains after interruption or incomplete evidence.
 A dispatch marker without completed statuses means the upload result is uncertain.
 Before removing only a stale lock, inspect its recorded owner and reconcile the

@@ -1,9 +1,6 @@
 use super::*;
 use ic_host_process::testing::http::{HttpFixture, HttpFixtureLimits};
-use ic_platform::{
-    Principal,
-    agent::{AgentError, TransportError},
-};
+use ic_platform::agent::{AgentError, TransportError};
 use std::{sync::Barrier, thread, time::Duration};
 
 #[test]
@@ -88,7 +85,8 @@ async fn native_transport_enforces_the_selected_response_ceiling() {
     )
     .expect("response fixture");
     let source = EndpointAgent::default();
-    let canister = ic_platform::principal::ExternalPrincipal::from(Principal::anonymous());
+    let canister =
+        ic_platform::agent::Identity::sender(&ic_platform::agent::AnonymousIdentity).unwrap();
     let error = source
         .get(fixture.endpoint(), 64)
         .unwrap()

@@ -1,21 +1,23 @@
 //! Bounded native snapshot copying. Callers own funding, custody and recovery.
 
 use crate::pocket_ic::{ClientError, common::rest::RawMessageId};
-use candid::Principal;
-pub use ic_management_canister_types::{
+pub use ic_platform::management_canister_types::{
     ReadCanisterSnapshotDataArgs, ReadCanisterSnapshotDataResult, ReadCanisterSnapshotMetadataArgs,
     ReadCanisterSnapshotMetadataResult, SnapshotDataKind, SnapshotDataOffset,
     UploadCanisterSnapshotDataArgs, UploadCanisterSnapshotMetadataArgs,
     UploadCanisterSnapshotMetadataResult,
 };
+use ic_platform_types::Principal;
 
 /// Explicit per-call bounds, including the outer PocketIC HTTP/JSON envelope.
 #[derive(Clone, Copy, Debug)]
 pub struct CallLimits {
     pub http_bytes: usize,
     pub candid_bytes: usize,
-    pub decoding_quota: usize,
-    pub skipping_quota: usize,
+    pub work: usize,
+    pub type_entries: usize,
+    pub header_bytes: usize,
+    pub allocation: usize,
 }
 
 /// Caller-selected memory/work limits. No implicit application budget is added.

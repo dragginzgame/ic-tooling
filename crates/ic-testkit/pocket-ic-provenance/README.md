@@ -147,3 +147,20 @@ Host HTTP. Request deadlines, accepted-ingress context, typed transport causes
 and no-replay behavior remain with the PocketIC exchange; allocation failures
 retain their typed cause and request context. The donor and upstream hashes
 are unchanged, and reverse reconstruction includes this reviewed adaptation.
+
+## Owned Platform management adoption
+
+The cumulative LOC surface patch now also migrates the maintained client to
+Platform's owned management DTOs, canonical Types Principal and binary Candid
+codec. Native install/create/log DTOs have one owner in Platform. The client no
+longer declares registry Candid or registry management dependencies; the native
+transport supplier still selects Candid transitively. Old Principal/management
+aliases are removed rather than forwarded. The private read-state adapter copies
+canonical Principal bytes into the upstream transport identity.
+
+Encoding and decoding retain distinct typed refusals. Snapshot calls retain
+accepted ingress, no replay and cancellation custody; explicit byte/header/type,
+work and logical-allocation budgets replace upstream decoder quotas. Installed
+16.1 checks cover management status/settings, snapshot transfer, certified subnet
+metrics and held HTTP replies. The cumulative patch reverses these changes before
+the unchanged donor/upstream fingerprints and licenses are checked.

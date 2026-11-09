@@ -1,21 +1,66 @@
 # IC Tooling qualification
 
-Shared Tooling is selected once as `toko-tooling = "=0.36.0"` in root
+Toko Tooling is selected once as `toko-tooling = "=0.37.1"` in root
 `[workspace.dependencies]`. Every real package inherits it unconditionally in
 `[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
 the virtual root is not a package. Commit the declarations, normal `Cargo.lock`
-and `.shared-tooling.snapshot` together. To adopt another release, edit the root
+and `.toko-tooling.snapshot` together. To adopt another release, edit the root
 pin and its documented exact-pin exception in
 `ci/dependency-pinning-exceptions.json`, run `cargo update -p toko-tooling`, then
-`make shared-tooling-update`.
-Use `make shared-tooling-install` to install the existing Cargo.lock selection
-and `make shared-tooling-check` for offline package/pin/lock/snapshot admission.
+`make toko-tooling-update`.
+Use `make toko-tooling-install` to install the existing Cargo.lock selection
+and `make toko-tooling-check` for offline package/pin/lock/snapshot admission.
 Installation remains explicit; Rust imports are unnecessary. Direct publication
 and release adapters check tooling before effects. See the
 [root selection guide](consuming-snapshots.md#cargo-selection-and-installation).
 
 Local shell/browser fixture defaults and explicit outside-target selections are
 documented in [qualification scratch ownership](design/fixture-scratch.md).
+
+## Platform and Wire adoption
+
+Tooling owns qualification of the published supplier selections it adopts
+([#349](https://github.com/dragginzgame/ic-tooling/issues/349)). Platform/Wire
+releases do not wait for Tooling's ranges, an older registry Testkit client or
+these composition checks. A supplier's tests using an older published client do
+not qualify the current Tooling working tree. Inspect the actual selected graph
+before choosing required API/type alignments; compatible optional patch refreshes
+do not require unrelated consumer releases.
+
+| Consumer profile | Supplier boundary and exposed identities |
+| --- | --- |
+| Native Testkit default | Platform owned Candid and management DTOs, IC protocol adapters and canonical Types Principal; no Runtime or Wire. Registry management is absent. Typed encode/decode refusals use the new codec budgets; native transport retains its supplier identity. |
+| Native Testkit `wire` | The same native client plus optional Wire. `WireCallSpec` limits and typed codec causes have Wire identity; graph qualification selects only this feature, independently of CLI/held fixtures. |
+| Testkit Wasm | Types only; no Platform facade, Runtime, native transport or Wire. |
+| Private Wasm probe | Runtime's `cdk` and its matching singleton guard, Types and Wire; not a second simulator or production adapter crate. |
+| Host Tools adapters | `candid` selects Platform's owned binary codec; `agent` and `ledger-evidence` select their explicit adapters; `registry` selects Types directly. Textual service inspection is removed. Default Tools has neither supplier. |
+
+Foundation and Build's normal/build graphs forbid the entire Platform family
+and higher product layers; development fixtures may still use integration owners.
+The existing graph checks own these exclusions and the probe's executor singleton.
+
+After explicit tool setup and `cargo fetch --locked`, use
+`make dependency-adoption-check` for a focused composition run. It never installs
+tools, upgrades suppliers or publishes. It prints consumer HEAD/dirty state and
+the locked supplier versions/sources actually exercised. It then reuses the
+existing isolated graph checks and Host Tools adapter tests, default Testkit DTO
+identity and transport/snapshot refusal tests, Wire-only adapter tests, installed
+PocketIC 16.1 certificate/metrics/management/snapshot contracts, and the private
+Wire canister's request/reply/state/failure test. The private driver is explicitly
+a Wire-enabled harness; its workspace features do not prove the default graph.
+
+`make tools-features-check` and `make testkit-graph-check` remain the cheaper
+graph-only entries. The latter now includes a separate Wire-only native graph;
+all-feature qualification is additional coverage. Keep installation, transport,
+protocol codecs and caller recovery with their current owners.
+
+This adoption command is not a new supplier or release gate. The existing
+[release plans](design/release-validation.md) and their 32-stage full CI roster
+are unchanged. Testkit retains the complete gate; Tools can narrow only through
+its admitted three-host baseline and directly affected adapters. A future supplier
+API/type break selects the affected Tooling minor and caller migration; it does
+not force generic Foundation/Build releases. Native macOS 15 Intel and Apple
+Silicon and product release obligations remain independent of focused Linux proof.
 
 Host profiles below remain independent. Build and Testkit share the root
 workspace and release matrix, with separate optimizer, browser-session and
@@ -100,7 +145,7 @@ alone for its release-metadata CLI target. Default unit tests need no feature.
 Tooling changes use the affected consumer check: `make release-adapter-check`,
 `make release-validation-plan-check`, `bash scripts/ci/test-make-snapshot.sh` or
 `bash scripts/ci/test-host-fixture-retention.sh`. The shared
-[validation policy](../DRAGGINZGAME.md#validation-and-evidence) owns execution cadence.
+[validation policy](../TOKO-TOOLING.md#validation-and-evidence) owns execution cadence.
 Select `bash scripts/ci/test-make-snapshot.sh --case release-routing` for ordinary
 release Make dispatch and delivery refusal, with runner effects substituted.
 It does not qualify frozen delivery hooks. Installed frozen-hook qualification
@@ -230,12 +275,11 @@ default and other unrelated profiles exclude its YAML parser.
 
 `make test-tools-encoding` checks canonical unsigned LEB128 admission. The decoder
 adds no dependencies. `make tools-features-check` excludes Candid and its parser
-from default and interface-only normal/build graphs. `make test-tools-combined`
-exercises `candid-service,ic-interface` together, including the DID/Wasm comparison.
-`make test-tools-candid` checks binary decoding and service parsing separately,
-including the public decode consumer. Native CI includes these profiles.
-Only explicit `candid-service` selects Platform's parser;
-Agent and ledger evidence retain their required codec dependencies without it.
+from default and interface-only normal/build graphs. `make test-tools-candid`
+checks owned binary decoding and its public consumer; its graph also excludes
+registry Candid. Textual service inspection and its combined test target are
+removed. Agent retains upstream native transport; ledger evidence uses the owned
+codec. Neither enables the textual parser.
 Registry selects `ic-platform-types` directly, without the facade or codec. Its
 native and Wasm graph policies retain one canonical Principal identity. `ic-interface` adds
 Host Artifacts and Wasm parsing. The standalone Wasm inspector
@@ -280,7 +324,7 @@ minimal artifact tests and each selected package with all features in sequence.
 Release metadata backup/install/restoration and receipt custody use pinned Shared
 helpers. Their synthetic failure matrices stay with Shared; Host's adapter fixture
 checks real rendering, disposable Git and committed-payload contracts for both
-release groups, with substituted setup/full qualification. Shared owns group
+release groups, with substituted setup/full qualification. Toko Tooling owns group
 rendering and transactions; source custody and the complete gates remain local.
 See [release ownership](design/release-groups.md).
 The consumer's [tooling-check roster](../ci/tooling-checks.tsv) selects ordinary
@@ -289,8 +333,8 @@ in its optional third column. Release gates can reuse retention and archive-evid
 fixture results through exact-input admission; ordinary CI executes both fixtures.
 Keep behavioral
 assertions independent of that roster when extending a selected check.
-Shared owns the synthetic Make-consumer, host/IC/Rust installer and LOC parser
-matrices in `shared-tooling/scripts/ci/test-portable-tools.sh`. Host retains its actual
+Toko Tooling owns the synthetic Make-consumer, host/IC/Rust installer and LOC parser
+matrices in `toko-tooling/scripts/ci/test-portable-tools.sh`. Host retains its actual
 Make routing, aggregate failure ordering, LOC arguments/status and pipe-jobserver
 checks in `scripts/ci/test-make-snapshot.sh`, plus prepared-tool admission and
 native qualification. Native identity admission and pipe-jobserver observation
@@ -319,7 +363,7 @@ cache transport failure falls through to setup. Main saves only after admission.
 This cache does not qualify native macOS behavior or guarantee a setup duration.
 `make formatting-hook-check` runs the shared adoption checker with Host's real
 Cargo manifest, Rust input and Make formatters. Generic formatter prerequisite
-and hook implementation matrices remain in Shared Tooling's own CI. Host keeps
+and hook implementation matrices remain in Toko Tooling's own CI. Host keeps
 prepared-tool admission and its actual Make failure-propagation checks.
 The caller selects direct roots; the shared fixture copier follows their
 declared companions, including new unstaged helpers.
@@ -361,7 +405,7 @@ Clap is shared by production CLIs and maintained examples. FS gates its binary
 and normal Clap edge behind `cli`; generic Artifacts/FS/Process library graphs
 exclude it. Clap owns typed arguments, help, version and diagnostics; CLIs retain
 their admission, output and operation semantics. Existing feature matrices use
-Shared's Cargo graph checker for canonical names/counts while retaining Host's
+Toko Tooling's Cargo graph checker for canonical names/counts while retaining Host's
 enabled-validator/compiler feature checks. These are not deployed-artifact proof.
 The Process alias is a test-only dependency of Tools' HTTP fixture and is excluded
 from the other packages' normal/build graphs. Process itself remains a production
@@ -369,9 +413,9 @@ package. Tokio stays in the production category because Agent transport also
 uses it transitively, although Host's direct Tokio declaration is dev-only.
 `make publish-command-check` exercises the workspace's real publication adapter,
 including package selection, provenance, Cargo/log failures, interruption and
-retained attempt locks. Shared Tooling owns the generic publication-runner
+retained attempt locks. Toko Tooling owns the generic publication-runner
 regression matrix; this consumer does not replay it separately.
-Host's direct-dependency guard selects Shared Tooling's
+Host's direct-dependency guard selects Toko Tooling's
 `ci/external-ic-dependencies.txt` inventory and composes it with stricter local
 `ci/cargo-dependency-boundaries.json` rules, including renamed, development, optional and
 target-specific declarations. The broader Platform boundary also requires review
@@ -384,7 +428,7 @@ Prepared/committed release checks sort-check the exact saved root manifest;
 unchanged member manifests belong to the previously qualified source.
 No release-only executable extends the aggregate common toolset.
 CI also owns native macOS execution; Linux qualification is not macOS evidence.
-The reviewed Shared snapshot owns `ci/tool-versions.env` and `ci/ic-tools.tsv`.
+The reviewed Toko Tooling snapshot owns `ci/tool-versions.env` and `ci/ic-tools.tsv`.
 Host uses these common defaults without catalog exceptions; Rust compiler policy
 remains local. Host, IC and Rust exceptions, if
 needed later, require independent explicit selection and native qualification.
@@ -415,7 +459,7 @@ The workflow runs on pull requests and pushes to `main`; it cannot qualify
 uncommitted local bytes. A scoped contribution PR exercises both macOS 15
 architectures and Linux against the candidate source before release. Bind
 results to that PR's tested commit and keep consumer rehearsals separate.
-Earlier Shared Tooling host-fixture failures on macOS remain historical evidence
+Earlier Toko Tooling host-fixture failures on macOS remain historical evidence
 in the original repository. The refreshed fixture has local Linux execution with
 substituted host identities here; native macOS qualification remains separate.
 
@@ -432,7 +476,7 @@ for the native target (or `CARGO_BUILD_TARGET`), including the combined Tools
 features. `bash scripts/ci/check-tools-features.sh TARGET` inspects a named supported
 Linux/macOS target without claiming native execution. The checker is in CI and
 release validation. Cargo aliases are reported by their resolved package names.
-Before those graph checks, Shared's canonical dependency-boundary checker reads
+Before those graph checks, Toko Tooling's canonical dependency-boundary checker reads
 the common external IC inventory together with
 `ci/cargo-dependency-boundaries.json` and rejects direct Candid, parser,
 certification and enumerated CDK dependencies in every workspace member, including
@@ -458,7 +502,7 @@ There is no canister build or deployment entrypoint in Host. This repository pub
 libraries and native CLIs. It cannot certify a downstream deployment's features,
 transitive test-only exclusions or final artifact digest. Deployment owners must
 enforce their own exclusions against their locked target/feature graph and bind
-successful build evidence to the installed artifact. Shared's sorter, pin checker
+successful build evidence to the installed artifact. Toko Tooling's sorter, pin checker
 and snapshot verification do not provide that admission. Further test-only catalog
 entries require explicit graph exclusions; comments alone do not activate them.
 Native macOS and deployment evidence remain distinct from graph checks.
@@ -476,7 +520,7 @@ headroom over the 0.66.3 run (native Intel macOS about 35 minutes, runtime about
 Runtime fixtures live below `runner.temp/portable-fixtures`, with command output
 in `portable-regression.log`, so the shared failure collector can retain them.
 
-The main CI workflow uses Shared's [change classifier](ci-change-selection.md)
+The main CI workflow uses Toko Tooling's [change classifier](ci-change-selection.md)
 and the exact product prose paths in `ci/docs-only-paths.txt`. Admitted prose
 changes run document links under the existing native/MSRV job names, without
 compiler setup, Cargo caches, product tests or native qualification receipts.

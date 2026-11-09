@@ -7,19 +7,21 @@ RELEASE_PUBLISH_TARGET ?= publish
 RELEASE_SETUP_TARGET ?= release-candidate-setup
 override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
 # Host commands use this checkout's reviewed snapshot, including parse-time probes.
-override SHARED_TOOLING_ROOT := $(CURDIR)
-export SHARED_TOOLING_ROOT
+override TOKO_TOOLING_ROOT := $(CURDIR)
+export TOKO_TOOLING_ROOT
 LOCAL_TOOL_INSTALL_TARGETS += install-release-editor install-server
 LOCAL_TOOL_CHECK_TARGETS += release-editor-check server-check
 include ci/tool-versions.env
 IC_TOOLS := wasm-opt
+# Admit execution before custom CI, publication and installer prerequisites.
+ci ci-publication lint check-secrets publish publish-check toko-tooling-check install-release-editor install-server install-validation-tools: toko-execution-check
 include make/consumer.mk
 include make/testkit.mk
 include make/release-validation-local.mk
 export YQ := $(CURDIR)/.tools/host/bin/yq
 
 .PHONY: release-candidate-setup
-# Shared selects prepare before fresh version lookup, check during recovery.
+# Toko Tooling selects prepare before fresh version lookup, check during recovery.
 # The standard preflight still owns editor/server setup and the product gate.
 release-candidate-setup:
 ifeq ($(RELEASE_SETUP_MODE),prepare)
@@ -45,20 +47,21 @@ $(error Explicit RELEASE_GROUP from ci/cargo-release-groups.json is required)
 endif
 endif
 
-.PHONY: help check clippy docs-check test test-artifacts-minimal test-tools-default tools-features-check compiler-check ci install-hooks tooling-command-check shared-tooling-check dependency-pins-check check-doc-links release-adapter-check publish publish-check publish-command-check release-version release-preflight release-verify release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
+.PHONY: help check clippy docs-check test test-artifacts-minimal test-tools-default tools-features-check compiler-check ci install-hooks tooling-command-check toko-tooling-check dependency-pins-check check-doc-links release-adapter-check publish publish-check publish-command-check release-version release-preflight release-verify release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
 help:
 	@echo 'Selected package: check, clippy, docs-check, test (PACKAGE=<crate>)'
 	@echo 'Artifact profiles: test-artifacts-minimal, test-artifacts-wasm, test-artifacts-text'
 	@echo 'Filesystem profiles: test-fs-minimal, test-fs-capability, test-fs-temporary-file'
 	@echo 'Unsupported-target compile contract: check-fs-non-unix (prepared Wasm target required)'
-	@echo 'Tools profiles: test-tools-default, test-tools-interface, test-tools-candid, test-tools-combined, test-tools-agent, test-tools-encoding, test-tools-registry and tools-features-check'
-	@echo 'Formatting and metadata: fmt, fmt-check, shared-tooling-check, dependency-pins-check, check-doc-links, release-adapter-check'
+	@echo 'Tools profiles: test-tools-default, test-tools-interface, test-tools-candid, test-tools-agent, test-tools-encoding, test-tools-registry and tools-features-check'
+	@echo 'Formatting and metadata: fmt, fmt-check, toko-tooling-check, dependency-pins-check, check-doc-links, release-adapter-check'
 	@echo 'Hook qualification: formatting-hook-check (disposable Git fixtures; prepared formatters required)'
 	@echo 'Common setup: install-tools (host and Cargo); install-hooks is separate'
 	@echo 'Release editor setup/admission: install-release-editor, release-editor-check'
 	@echo 'Offline setup checks: tools-check (complete set), host-tools-check, ic-tools-check, rust-tools-check'
 	@echo 'Individual setup: install-host-tools, install-ic-tools, install-rust-tools'
-	@echo 'Source reports: cloc (this workspace); fleet reports run in Shared Tooling'
+	@echo 'Focused Platform/Wire adoption: dependency-adoption-check (current source; prepared PocketIC required)'
+	@echo 'Source reports: cloc (this workspace); fleet reports run in Toko Tooling'
 	@echo 'Full release validation: ci (pinned compiler, workspace Clippy, native/Wasm and isolated features); compiler-check admits identities'
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
 	@echo 'Frozen Git + crates.io releases: release-patch/minor/major RELEASE_GROUP=<group from ci/cargo-release-groups.json>'
@@ -113,13 +116,10 @@ test-tools-default:
 test-tools-interface:
 	+cargo test -p ic-host-tools --no-default-features --features ic-interface --all-targets --locked --offline interface::
 
-.PHONY: test-tools-candid test-tools-combined test-tools-encoding test-wasm-inspection
+.PHONY: test-tools-candid test-tools-encoding test-wasm-inspection
 test-tools-candid:
 	+cargo test -p ic-host-tools --no-default-features --features candid --lib --locked --offline candid::decode::
 	+cargo test -p ic-host-tools --no-default-features --features candid --test public_decode --locked --offline
-	+cargo test -p ic-host-tools --no-default-features --features candid-service --lib --locked --offline candid::service::
-test-tools-combined:
-	+cargo test -p ic-host-tools --no-default-features --features candid-service,ic-interface --all-targets --locked --offline
 .PHONY: test-tools-agent
 test-tools-agent:
 	+cargo test -p ic-host-tools --no-default-features --features agent --all-targets --locked --offline agent::
@@ -202,12 +202,12 @@ GITLEAKS ?= $(CURDIR)/.tools/ci/bin/gitleaks
 install-validation-tools:
 	@bash -ec 'test "$$(uname -s):$$(uname -m)" = Linux:x86_64; \
 		. ci/tool-versions.env; \
-		bash scripts/ci/install-ci-tool.sh shellcheck --version "$$SHARED_TOOLING_SHELLCHECK_VERSION" \
-			--sha256 "$$SHARED_TOOLING_SHELLCHECK_SHA256_LINUX_X86_64" --install-dir "$(CURDIR)/.tools/ci/bin"; \
-		bash scripts/ci/install-ci-tool.sh actionlint --version "$$SHARED_TOOLING_ACTIONLINT_VERSION" \
-			--sha256 "$$SHARED_TOOLING_ACTIONLINT_SHA256_LINUX_AMD64" --install-dir "$(CURDIR)/.tools/ci/bin"; \
-		bash scripts/ci/install-ci-tool.sh gitleaks --version "$$SHARED_TOOLING_GITLEAKS_VERSION" \
-			--sha256 "$$SHARED_TOOLING_GITLEAKS_SHA256_LINUX_X64" --install-dir "$(CURDIR)/.tools/ci/bin"'
+		bash scripts/ci/install-ci-tool.sh shellcheck --version "$$TOKO_TOOLING_SHELLCHECK_VERSION" \
+			--sha256 "$$TOKO_TOOLING_SHELLCHECK_SHA256_LINUX_X86_64" --install-dir "$(CURDIR)/.tools/ci/bin"; \
+		bash scripts/ci/install-ci-tool.sh actionlint --version "$$TOKO_TOOLING_ACTIONLINT_VERSION" \
+			--sha256 "$$TOKO_TOOLING_ACTIONLINT_SHA256_LINUX_AMD64" --install-dir "$(CURDIR)/.tools/ci/bin"; \
+		bash scripts/ci/install-ci-tool.sh gitleaks --version "$$TOKO_TOOLING_GITLEAKS_VERSION" \
+			--sha256 "$$TOKO_TOOLING_GITLEAKS_SHA256_LINUX_X64" --install-dir "$(CURDIR)/.tools/ci/bin"'
 
 lint: check-shell check-workflows
 

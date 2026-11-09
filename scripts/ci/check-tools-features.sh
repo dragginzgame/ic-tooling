@@ -21,14 +21,16 @@ esac
 # Observe command failures separately from dependency violations.
 # Product families and higher Tooling layers never belong below Host or Build.
 upper_layers='^(ic-wire(?:-|$)|ic-testkit(?:-|$)|ic-(auth|backup|blob-storage|jobs|metrics|persistence|query|relay|replica-watch|timers)(?:-|$)|canic(?:-|$)|icydb(?:-|$))'
+platform_family='^ic-platform(?:-|$)'
 perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http --forbid ic-build --forbid-pattern "$upper_layers" \
+    --forbid-pattern "$platform_family" \
     --target "$target" --require reqwest=1 --require ic-host-artifacts=1 \
     --forbid-pattern '^(ic-platform|ic-platform-types|candid|ic-agent|ic-host-(fs|process|tools)|rustls|native-tls|async-compression)$'
 perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http \
     --target wasm32-unknown-unknown --forbid-pattern '^(?!ic-host-http$)'
-perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid ic-platform --forbid ic-platform-types --forbid-pattern "$upper_layers" \
+perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid-pattern "$platform_family" --forbid-pattern "$upper_layers" \
     --target "$target" --forbid clap
-perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid ic-platform --forbid ic-platform-types --forbid-pattern "$upper_layers" \
+perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid-pattern "$platform_family" --forbid-pattern "$upper_layers" \
     --target "$target" --features cli --require clap=1
 # Each profile selects its parser exclusions explicitly; labels carry no policy.
 # Repeated dependency families remain local profile vocabulary.
@@ -44,7 +46,7 @@ observe_graph() {
     local arguments=(--consumer "$root" --package "$package" --target "$target")
     arguments+=(--forbid ic-host-http --forbid ic-build --forbid-pattern "$upper_layers")
     # Tools explicitly owns selected Platform profiles; generic Host owners do not.
-    [[ "$package" == ic-host-tools ]] || arguments+=(--forbid ic-platform --forbid ic-platform-types)
+    [[ "$package" == ic-host-tools ]] || arguments+=(--forbid-pattern "$platform_family")
     arguments+=(--forbid-pattern '^(ciborium|ciborium-io|ciborium-ll)$')
     arguments+=(--forbid-pattern '^(ic-cdk|ic-cdk-macros|ic-cdk-executor|ic-platform-macros|ic-platform-runtime|ic-platform-runtime-guard|ic-platform-pocket-ic|ic0)$')
     arguments+=(--forbid-pattern '^(serde_yaml|unsafe-libyaml|serde_yaml_ng|serde_yml|serde-saphyr|granit-parser)$')
@@ -65,7 +67,7 @@ check_graph ic-host-tools --forbid-pattern "$yaml_allowed" --no-default-features
     --require ic-host-text=1 --require yaml_serde=1 --require libyaml-rs=1
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features ledger-evidence \
     --forbid-pattern '^(candid_parser|ic-host-(artifacts|fs|process|text)|wasmparser|ic-agent|reqwest|ic-stable-structures|icrc-ledger-types|icrc-cbor)$' \
-    --require ic-platform=1 --require candid=1
+    --require ic-platform=1 --forbid candid --forbid candid_derive
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features icp-ledger \
     --forbid-pattern "^(ic-platform|${codec}|ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$" \
     --require prost=1
@@ -83,16 +85,10 @@ check_graph ic-host-wasm-inspect --forbid-pattern "$parser_free" \
     --require ic-host-artifacts=1 --require ic-host-fs=1
 check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features candid \
     --forbid-pattern "^(ic-host-(artifacts|fs|process|text)|wasmparser|candid_parser|ic-certification|ic-agent|reqwest|${serialization})$" \
-    --require ic-platform=1 --require candid=1
-check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features candid-service \
-    --forbid-pattern "^(ic-host-(artifacts|fs|process|text)|wasmparser|ic-certification|ic-agent|reqwest|${serialization})$" \
-    --require ic-platform=1 --require candid=1 --require candid_parser=1
-check_graph ic-host-tools --forbid-pattern "$parser_free" --no-default-features --features candid-service,ic-interface \
-    --forbid-pattern "^(ic-host-(fs|process|text)|ic-certification|ic-agent|reqwest|${serialization})$" \
-    --require ic-platform=1 --require candid_parser=1 --require ic-host-artifacts=1 --require wasmparser=1
+    --require ic-platform=1 --forbid candid --forbid candid_derive
 check_graph ic-host-tools --forbid-pattern "$yaml_allowed" --no-default-features --all-features \
     --forbid-pattern '^(ic-host-(fs|process)|ic-stable-structures|icrc-ledger-types|icrc-cbor)$' \
-    --require ic-platform=1 --require candid_parser=1 --require serde_cbor=1 --require ic-certification=1 --require ic-host-artifacts=1 --require wasmparser=1 --require ic-agent=1 --require reqwest=1 --require ic-host-text=1 --require yaml_serde=1 --require libyaml-rs=1 --require prost=1
+    --require ic-platform=1 --forbid candid_parser --require serde_cbor=1 --require ic-certification=1 --require ic-host-artifacts=1 --require wasmparser=1 --require ic-agent=1 --require reqwest=1 --require ic-host-text=1 --require yaml_serde=1 --require libyaml-rs=1 --require prost=1
 check_graph ic-host-text --forbid-pattern "$parser_free" \
     --forbid-pattern "^(ic-host-(artifacts|fs|process|tools)|ic-platform|candid_parser|ic-agent|ic-certification|${serialization}|serde)$" \
     --require unicode-width=1
@@ -112,9 +108,7 @@ for profile in wasm wasm-validation wasm-text wasm-text,wasm-validation; do
             observation=(observe_graph ic-host-artifacts --forbid-pattern "$wat_allowed"
                 --forbid-pattern "^(ic-host-(fs|process|text|tools)|ic-platform|${codec}|wasmparser)$"
                 --require wat=1 --require wast=1 --require wasm-encoder=1) ;;
-        *)
-            observation=(perl scripts/ci/check-cargo-graph.pl --consumer "$root"
-                --package ic-host-artifacts --target "$target" --require ic-host-artifacts=1) ;;
+        *) observation=(observe_graph ic-host-artifacts --require ic-host-artifacts=1) ;;
     esac
     feature_graph="$("${observation[@]}" --no-default-features --features "$profile" --json --observations)" || exit
     validation=false text=false

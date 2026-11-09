@@ -4,7 +4,7 @@
 mod support;
 
 use ic_host_artifacts::wasm::validate;
-use ic_platform_types::principal::ExternalPrincipal as Principal;
+use ic_platform_types::Principal;
 use ic_testkit::pic::fixtures::{
     RawReplyLimits, RawReplyMethod, ReplyMode, cycle_reply_canister, held::HeldReplyFixture,
 };

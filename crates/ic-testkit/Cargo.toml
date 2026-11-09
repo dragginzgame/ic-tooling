@@ -28,25 +28,19 @@ reply-fixtures = ["dep:wasm-encoder"]
 held-reply-fixtures = ["reply-fixtures", "ic-host-artifacts/wasm-text"]
 wire = ["dep:ic-wire"]
 
-[dependencies]
-ic-platform-types = { workspace = true, features = ["principal-external"] }
-thiserror = { workspace = true }
-
 [target.'cfg(all(unix, not(target_family = "wasm")))'.dependencies]
 libc = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 base64 = { workspace = true }
-candid = { workspace = true, features = ["bignum", "serde_bytes", "printer"] }
 clap = { workspace = true, features = ["string"], optional = true }
 hex = { workspace = true, features = ["serde"] }
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
 ic-host-fs = { workspace = true }
 ic-host-http.workspace = true
 ic-host-process = { workspace = true }
-ic-management-canister-types = { workspace = true }
 # Held fixtures adapt the external management HTTP protocol on native targets only.
-ic-platform = { workspace = true, features = ["candid", "management-canister-types", "ic-protocol"] }
+ic-platform = { workspace = true, features = ["candid-codec", "management-canister-types", "ic-protocol"] }
 ic-wire = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["http2", "json", "rustls", "socks"] }
 serde = { workspace = true, features = ["derive"] }
@@ -55,6 +49,10 @@ sha2 = { workspace = true }
 tokio = { workspace = true, features = ["rt", "sync", "time", "net"] }
 tracing = { workspace = true }
 wasm-encoder = { workspace = true, optional = true }
+
+[dependencies]
+ic-platform-types.workspace = true
+thiserror = { workspace = true }
 
 [target.'cfg(all(unix, not(target_family = "wasm")))'.dev-dependencies]
 ic-host-fs = { workspace = true, features = ["test-support"] }

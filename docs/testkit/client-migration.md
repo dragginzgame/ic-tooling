@@ -263,9 +263,11 @@ permit concurrent recipe preparation.
 ## Dependency and provenance boundaries
 
 The client is native-only. Wasm measurement retains Runtime/Types without HTTP,
-server, Tokio, tempfile or Candid. Principal, management SDK 0.11, certification and
-transport identities stay unchanged. Platform supplies Candid/management adapters
-without a PocketIC feature. Earlier Platform client imports must migrate directly
+server, Tokio, tempfile or Candid. Platform owns binary Candid and management
+DTOs, with canonical Types Principal and explicit work/allocation budgets.
+There is no registry management dependency. Native certification/transport
+supplier identities retain private byte boundaries; IC transport still selects
+upstream Candid transitively. No PocketIC feature returns to Platform. Earlier Platform client imports must migrate directly
 to Testkit; no compatibility exports are supplied.
 
 [Provenance](../../crates/ic-testkit/pocket-ic-provenance/README.md) retains the
@@ -273,3 +275,24 @@ exact donor and upstream reconstruction. The maintenance patch records this cut;
 original donor/upstream hashes are unchanged. Use the focused commands in
 [host qualification](../hosts.md). Linux evidence is separate from native macOS
 Intel and Apple Silicon qualification.
+
+## Owned management and Principal hard cut
+
+The pending adoption replaces the registry management DTO and external Principal
+identities with Platform's owned types. Use `ic_platform_types::Principal` (also
+exported by Platform); do not select `principal-external` or import
+`pocket_ic::CanisterId`. Pass canonical principals directly to client, fixture and
+snapshot methods. Management types stay with `ic_platform::management_canister_types`.
+
+`CallLimits` now selects `candid_bytes`, `header_bytes`, `type_entries`, `work` and
+`allocation`, alongside the outer `http_bytes`. Work and cumulative logical
+allocation charges belong to the owned codec; they cannot reuse numeric upstream
+decoding/skipping quotas as equivalent policy. `ClientError::CandidEncode` and
+`CandidDecode` retain the owned codec's typed refusals. Snapshot ingress receipts
+and uncertain-outcome custody remain available; no call is replayed automatically.
+
+No stable-memory format or simulator persistence migration is required. Required
+external Candid bytes are preserved. Native IC transport still brings its upstream
+Candid/Principal identities; Wasm Testkit remains Types-only. The complete published
+Platform/Types/Runtime/Wire cohort must pass the downstream graphs before release;
+local path-selected evidence alone does not qualify registry identities.
