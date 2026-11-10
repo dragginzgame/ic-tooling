@@ -24,7 +24,7 @@ find({no_chdir=>1,wanted=>sub {
     return unless $routing || /\.sh\z/;
     -f $_ && !-l $_ or die "nonregular fixture input: $_\n";
     $files{$_}=1;
-}}, $routing ? qw(scripts ci make .github docs rules) : ('scripts'));
+}}, $routing ? qw(scripts ci make .github docs) : ('scripts'));
 if ($routing) {
     $files{$_}=1 for qw(Makefile rust-toolchain.toml .toko-tooling.snapshot TOKO-TOOLING.md);
 }

@@ -7,7 +7,7 @@ cp -R "$root/ci" "$root/make" "$root/scripts" "$destination/"
 cp "$root/Makefile" "$root/rust-toolchain.toml" "$root/.toko-tooling.snapshot" "$root/.gitignore" "$destination/"
 # The invariant workflow matrix observes its real workflow and admitted prose
 # inventory even inside the disposable release-adapter fixture.
-cp -R "$root/.github" "$root/docs" "$root/rules" "$destination/"
+cp -R "$root/.github" "$root/docs" "$destination/"
 cp "$root/TOKO-TOOLING.md" "$destination/"
 if [[ ${3:-} == --compact ]]; then
     # Metadata/recovery fixtures retain the real selector, source proofs and

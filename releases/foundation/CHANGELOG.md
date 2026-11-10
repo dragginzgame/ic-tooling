@@ -16,6 +16,8 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
   Testkit's approved native upstream PocketIC dependency.
 - Share Linux process-stat field parsing across process samples and identity
   observations, preserving each observer's admission and counter semantics.
+- Keep release fixtures and their reuse inventory independent of retired shared
+  reference directories.
 
 ## [0.76.2] - 2026-11-09
 
