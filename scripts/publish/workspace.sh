@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/cargo-publication-selection.pl scripts/release/group.sh scripts/release/publication-lint.sh
+# Shared companions: scripts/ci/cargo-publication-selection.pl scripts/ci/check-license.pl scripts/release/group.sh scripts/release/publication-lint.sh
 set -euo pipefail
 
 # Cargo workspace publication admission. Requires prepared Cargo 1.99, Git,
