@@ -1,6 +1,6 @@
 # Artifact and Wasm build APIs
 
-## Pending Build 0.82 migration
+## Build 0.82 migration
 
 Shared Cargo targets are the only compilation path. Replace `with_isolated_builds()`
 with `with_shared_incremental_target(fresh_caller_owned_directory)` when isolation

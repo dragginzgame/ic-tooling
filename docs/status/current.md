@@ -2,69 +2,65 @@
 
 ## Delivery
 
-The cleanup and upstream PocketIC migration are committed and published. Latest
-product release commit: `7b9749272b11f5984e83edc504c15671976ed687`.
-Both completed frozen batches were reconciled into the ordinary main checkout.
+The cache reductions, Wire adoption and tooling refresh are committed and
+published. Latest product release commit:
+`6f4128ae2ecc7c4fe25814cd7c1ccc48c8cc17ec`. Both frozen batches were reconciled
+into the ordinary main checkout.
 
 | Group | Published | Release commit |
 | --- | --- | --- |
-| Foundation (five packages) | 0.76.3 | bea2060f |
-| Build | 0.81.2 | d8c35757 |
-| Text | 0.74.4 | d29889e3 |
-| Host Tools | 0.89.1 | 3ca25b99 |
-| Testkit | 0.98.0 | 7b974927 |
+| Foundation (five packages) | 0.76.4 | a1b50ffc |
+| Build | 0.82.0 | ea58d4b9 |
+| Text | 0.74.5 | f0352237 |
+| Host Tools | 0.89.2 | fe337366 |
+| Testkit | 0.99.0 | 6f4128ae |
 
 All nine versions were verified present and not yanked in the crates.io index.
 Private qualification packages remain 0.96.0. The deployment preserved selected
 external dependencies; release preparation changed owned versions and their
-product/qualification references together. That release used Toko Tooling 0.39.6
-and Wire 0.19; the product Platform requirement remains 0.29 (locked to 0.29.2).
+product/qualification references together. The release uses Toko Tooling 0.39.9
+and Wire 0.20; the product Platform requirement remains 0.29 (locked to 0.29.2).
 
-## Local maintenance
+## Delivered reductions and adoption
 
 Toko Tooling 0.39.9 is selected in both workspaces and installed through the
 authenticated crates.io exporter, preserving the 113-file runtime selection.
 That refresh changed only its lock entries; the pre-existing product
 `rustls-pki-types` 1.16.0 selection remains intact. Tool catalogs are unchanged.
-This refresh is local and unpublished; product versions remain as listed above.
 The 0.39.9 checker admits native PocketIC dev-dependencies for simulator tests.
-Linux snapshot/pin admission, both workspaces' actual IC dependency boundaries and
-documentation links pass; logs are under `target/toko0399/`. Earlier prepared
-tool, publication licence and release-refusal proofs under `target/toko0398/`
-retain unchanged inputs. No full release gate or native macOS qualification ran
-for these refreshes.
+Focused adoption evidence remains under `target/toko0399/` and `target/toko0398/`;
+the complete release gates now qualify the delivered batch on Linux.
 
-Wire 0.20 is now adopted locally in both workspaces. Public adapter identities
-and upstream Postcard acceptance require the pending Testkit 0.99.0 minor;
-product versions remain unchanged. Fourteen focused tests cover nine adapter
+Wire 0.20 is adopted in both workspaces and published through Testkit 0.99.0.
+The minor release includes public adapter identities and upstream Postcard
+acceptance changes. Fourteen focused tests cover nine adapter
 cases, live native replies, type identity, probe budgets and installed Wasm
 requests/state/refusals. Graph policy, portable compilation, selected warning-denied
-lint, formatting and snapshot/pin/doc admission pass. Logs are under
-`target/wire020/`; this is Linux evidence, with no new full release gate or
-native macOS qualification.
+lint, formatting and snapshot/pin/doc admission pass. Focused logs remain under
+`target/wire020/`; native macOS qualification is separate below.
 
-Build's local reduction batch is pending 0.82.0: shared Cargo targets are the only
-compilation path, shared-target maintenance is explicit, and the full input digest
-owns both cache identity and mutation validation. The separate validation digest
+Build 0.82.0 makes shared Cargo targets the only compilation path and makes
+shared-target maintenance explicit. The full input digest owns both cache
+identity and mutation validation. The separate validation digest
 and receipt field are removed. New fingerprint keys preserve old cache entries;
 unrelated workspace manifest/lockfile edits can invalidate exact reuse. The
-[Build guide](../build/artifacts.md#pending-build-082-migration) records caller
-migration. Package versions are unchanged; this work is uncommitted and unpublished.
+[Build guide](../build/artifacts.md#build-082-migration) records caller migration.
 Focused Linux cache/batch/evidence and Cargo-input transaction tests, real Cargo
 Wasm/examples/artifact-handoff/process-lock tests, 103 durable-filesystem tests,
 warning-denied Build Clippy/rustdoc, formatting and document links pass. Logs and
-before/after Rust counts remain under `target/loc-audit/`. This is not a complete
-release gate or native macOS qualification.
+before/after Rust counts remain under `target/loc-audit/`.
 
-The same pending Build 0.82.0 batch now makes exact-cache pruning explicit too.
+Build 0.82.0 also makes exact-cache pruning explicit.
 Acquisitions no longer schedule pruning or attach nonfatal maintenance results,
 timings or phases. Callers invoke the existing prune functions and retain their
 records to protect live outputs; old exact-cache schedule markers remain untouched.
 Focused cache, transaction/batch and pruning tests, cross-process handoff, real
 Cargo Wasm acquisition, warning-denied Clippy/rustdoc and document links pass on
 Linux. Evidence is under `target/loc-audit/explicit-pruning/`. This continuation
-removes another 253 Rust lines, leaving 68,768 across both workspaces; package
-versions, publication and native macOS qualification remain unchanged.
+removed another 253 Rust lines. The two reduction passes removed 1,631 Rust lines
+overall, leaving 68,768 across both workspaces: 25,609 library/application,
+42,170 tests, 500 examples, 328 tooling and 161 benchmarks. These are source
+counts, not measured executable or Wasm savings.
 
 ## Current contracts
 
@@ -96,19 +92,24 @@ All five complete Linux release gates passed, including warning-denied lint in
 both workspaces, installed PocketIC, extracted-package tests, native/Wasm graphs,
 Wasm compilation, documentation and workspace tests. Cargo also verified each
 published package. Native macOS 15 Intel and Apple Silicon qualification remains
-separate and asynchronous through the manual [CI workflow](../../.github/workflows/ci.yml).
+separate and asynchronous. The manual [release-tag qualification run](https://github.com/dragginzgame/ic-tooling/actions/runs/42895053349)
+is in progress at this handoff; no native macOS pass is claimed.
 Cancelled or superseded hosted runs are not passes.
 
-Completed batches are `batch-HIlzE9l1` (eight patch packages) and
-`batch-hip1eX2W` (Testkit minor). Their source-bound plans, gate logs and upload
+Completed batches are `batch-4hupb2d0` (Foundation, Text and Tools patches) and
+`batch-UEWDKToB` (Build and Testkit minors). Their source-bound plans, gate logs and upload
 receipts remain under `.git/release-state/frozen/`; managed checkouts remain under
-`target/release-frozen/`. Normal-checkout logs are `target/deployment-*`, including
-the registry record and passing consumer tooling fixture suite.
+`target/release-frozen/`. Normal-checkout logs are `target/deploy-patches.log` and
+`target/deploy-minors.log`; independent registry observations are under
+`target/deploy-registry-20261110/`. Reconciliation logs are
+`target/deploy-patch-reconcile.log` and `target/deploy-minor-reconcile.log`.
 
 ## Custody and retained decisions
 
 Retain all completed/failed batches, refs, plans, receipts and artifacts; no
-deployment cleanup was performed. Failed batches `batch-Z5xKoNRN`,
+deployment cleanup was performed. Earlier completed batches `batch-HIlzE9l1`
+and `batch-hip1eX2W` remain retained and reconciled, with their
+`target/deployment-*` evidence. Failed batches `batch-Z5xKoNRN`,
 `batch-N0QLIhim` and `batch-3v7LxlbU` produced no release/upload and were superseded
 by the completed patch batch. Do not resume them against published versions.
 The older failed `batch-st9pUW60` also produced no release/upload. Original
