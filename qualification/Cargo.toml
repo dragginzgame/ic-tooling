@@ -6,7 +6,7 @@ resolver = "3"
 version = "0.96.0"
 edition = "2024"
 rust-version = "1.99.1"
-license = "MIT"
+license-file = "../LICENSE.md"
 repository = "https://github.com/dragginzgame/ic-tooling"
 authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
 description = "Host-side artifact, filesystem, process and IC tooling"
@@ -26,10 +26,11 @@ ic-testkit = { path = "../crates/ic-testkit", version = "0.97.0", default-featur
 ic-testkit-perf-probe = { path = "ic-testkit-perf-probe", version = "0.96.0" }
 ic-wire = "0.19.0"
 libc = "0.2.190"
+pocket-ic = "16.1.0"
 serde = { version = "1.0.228", default-features = false }
 serde_json = "1.0.150"
 tokio = { version = "1.52.3", default-features = false }
-toko-tooling = "=0.38.2"
+toko-tooling = "=0.39.6"
 
 [workspace.lints.rust]
 missing_docs = "warn"

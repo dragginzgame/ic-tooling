@@ -19,11 +19,9 @@ use ic_host_artifacts::{
 };
 use ic_host_fs::read::read_file_no_follow;
 use ic_host_process::tool::{OutputLimit, OutputLimits, capture_command};
-use ic_testkit::pocket_ic::common::rest::InstanceHttpGatewayConfig;
-use ic_testkit::{
-    pic::{PocketIcInstance, PocketIcStartupConfig},
-    pocket_ic::PocketIcBuilder,
-};
+use ic_testkit::pic::{PocketIcInstance, PocketIcStartupConfig};
+use pocket_ic::PocketIcBuilder;
+use pocket_ic::common::rest::InstanceHttpGatewayConfig;
 use serde::Deserialize;
 use serde_json::json;
 
@@ -159,7 +157,8 @@ async fn run(args: Arguments) -> Result<()> {
             args.output.join("server.stderr"),
         )),
     };
-    let builder = PocketIcBuilder::new(std::time::Duration::from_secs(60))
+    let builder = PocketIcBuilder::new()
+        .with_max_request_time_ms(Some(60_000))
         .with_nns_subnet()
         .with_ii_subnet()
         .with_application_subnet()
@@ -181,11 +180,11 @@ async fn run(args: Arguments) -> Result<()> {
     };
     // Timeout drops the ownership record and stops/reaps the managed server too.
     let cleanup = tokio::time::timeout(Duration::from_secs(5), instance.close()).await;
-    if !matches!(cleanup, Ok(Ok(()))) {
+    if cleanup.is_err() {
         eprintln!("II fixture cleanup: {cleanup:?}");
     }
     result?;
-    cleanup??;
+    cleanup?;
     Ok(())
 }
 
@@ -203,9 +202,9 @@ async fn serve(
     instance: &PocketIcInstance,
 ) -> Result<()> {
     let pic = instance.instance();
-    let backend = pic.create_canister().await?;
-    let frontend = pic.create_canister().await?;
-    let caller = pic.create_canister().await?;
+    let backend = pic.create_canister().await;
+    let frontend = pic.create_canister().await;
+    let caller = pic.create_canister().await;
     let gateway = pic.url().ok_or("missing local HTTP gateway")?;
     let port = gateway.port().ok_or("gateway needs an explicit port")?;
     let backend_origin = format!("http://{backend}.localhost:{port}");
@@ -228,8 +227,8 @@ async fn serve(
         (backend, wasm[0].clone(), backend_args),
         (frontend, wasm[1].clone(), frontend_args),
     ] {
-        pic.add_cycles(id, 10_000_000_000_000).await?;
-        pic.install_canister(id, module, arg, None).await?;
+        pic.add_cycles(id, 10_000_000_000_000).await;
+        pic.install_canister(id, module, arg, None).await;
     }
     let caller_wasm = wasm_text::compile(
         include_str!("../../../../testing/browser/internet-identity/caller.wat"),
@@ -238,10 +237,10 @@ async fn serve(
             module_bytes: 4096,
         },
     )?;
-    pic.add_cycles(caller, 2_000_000_000_000).await?;
+    pic.add_cycles(caller, 2_000_000_000_000).await;
     pic.install_canister(caller, caller_wasm, vec![], None)
-        .await?;
-    let root_key = pic.root_key().await?.ok_or("missing local root key")?;
+        .await;
+    let root_key = pic.root_key().await.ok_or("missing local root key")?;
     let connection = json!({
         "schema": 1, "release": pins.release, "revision": pins.revision,
         "serverUrl": pic.get_server_url().as_str(), "instanceId": pic.instance_id,
@@ -249,8 +248,8 @@ async fn serve(
         "backendOrigin": backend_origin, "backendCanisterId": backend.to_text(),
         "frontendCanisterId": frontend.to_text(), "callerCanisterId": caller.to_text(),
         "rootKey": root_key,
-        "backendModuleHash": pic.canister_status(backend, None).await?.module_hash,
-        "frontendModuleHash": pic.canister_status(frontend, None).await?.module_hash,
+        "backendModuleHash": pic.canister_status(backend, None).await.map_err(|error| error.to_string())?.module_hash,
+        "frontendModuleHash": pic.canister_status(frontend, None).await.map_err(|error| error.to_string())?.module_hash,
         "dummyAuth": false, "fetchRootKey": true, "serverVersion": "16.1.0",
     });
     write_new(

@@ -16,6 +16,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::{
     fs::{self, File, OpenOptions},
     io,
+    num::NonZeroUsize,
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
@@ -83,6 +84,21 @@ pub enum InstallError {
     },
 }
 
+/// Original bundle failure and the subsequent failed directory removal.
+///
+/// Retained inside [`InstallError::Io`]'s `source`, whose `path` identifies the
+/// unremoved bundle. The error chain follows the original failure; cleanup is
+/// separately inspectable and never replaces that cause.
+#[derive(Debug, thiserror::Error)]
+#[error("{source}; bundle cleanup also failed: {cleanup}")]
+pub struct BundleCleanupError<E> {
+    /// Original admission, staging or publication failure.
+    #[source]
+    pub source: E,
+    /// Directory removal failure.
+    pub cleanup: io::Error,
+}
+
 /// Admit both candidate and staged executable before publishing, then admit the installed path.
 /// # Errors
 /// Archive hash, staging, publication or caller admission/extraction failures.
@@ -122,7 +138,7 @@ pub fn install<T, E: From<InstallError> + std::error::Error + Send + Sync + 'sta
         .into());
     }
     verify_archive(spec.archive, spec.archive_sha256)?;
-    let temp = installation_scratch(scratch_root, spec.tool)?;
+    let temp = installation_scratch(scratch_root)?;
     extract(spec.archive, temp.path())?;
     let candidate = temp.path().join(spec.member);
     admit(&candidate)?;
@@ -241,7 +257,7 @@ fn stage_executable(candidate: &Path, stage: &Path) -> Result<(), InstallError> 
 /// Failed admission leaves the previous installation intact. Published bundles
 /// remain available to processes holding their canonical executable paths.
 #[cfg(unix)]
-fn publish_bundle<E: From<InstallError>>(
+fn publish_bundle<E: From<InstallError> + std::error::Error + Send + Sync + 'static>(
     tool: &str,
     candidate: &Path,
     library: &Path,
@@ -309,10 +325,18 @@ fn publish_bundle<E: From<InstallError>>(
                 ))
             })
     })();
-    if !published {
-        let _ = fs::remove_dir_all(&bundle);
+    match result {
+        Err(source) if !published => match fs::remove_dir_all(&bundle) {
+            Ok(()) => Err(source),
+            Err(cleanup) => Err(io_error(
+                "remove failed tool bundle",
+                &bundle,
+                io::Error::other(BundleCleanupError { source, cleanup }),
+            )
+            .into()),
+        },
+        result => result,
     }
-    result
 }
 
 fn stage_bundle_member(source: &Path, stage: &Path) -> Result<(), InstallError> {
@@ -360,27 +384,22 @@ fn io_error(operation: &'static str, path: &Path, source: io::Error) -> InstallE
     }
 }
 
-fn installation_scratch(root: &Path, tool: &str) -> Result<OwnedDirectory, InstallError> {
-    for _ in 0..TEMP_ATTEMPTS {
-        let path = root.join(format!(
-            "ic-build-{tool}-install-{}-{}",
-            std::process::id(),
-            TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed)
-        ));
-        match fs::create_dir(&path) {
-            Ok(()) => return Ok(OwnedDirectory::new(path)),
-            Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {}
-            Err(source) => {
-                return Err(io_error(
-                    "create temporary tool installation directory",
-                    &path,
-                    source,
-                ));
+fn installation_scratch(root: &Path) -> Result<OwnedDirectory, InstallError> {
+    ic_host_fs::directory::create_unique_directory(
+        root,
+        "ic-build-install",
+        0o777,
+        NonZeroUsize::new(TEMP_ATTEMPTS),
+    )
+    .map(OwnedDirectory::new)
+    .map_err(|source| {
+        if source.kind() == io::ErrorKind::AlreadyExists {
+            InstallError::TempDirectoryExhausted {
+                root: root.to_path_buf(),
             }
+        } else {
+            io_error("create temporary tool installation directory", root, source)
         }
-    }
-    Err(InstallError::TempDirectoryExhausted {
-        root: root.to_path_buf(),
     })
 }
 

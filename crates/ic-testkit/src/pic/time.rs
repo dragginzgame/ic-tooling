@@ -1,13 +1,9 @@
-use crate::pocket_ic::ClientError;
-use crate::pocket_ic::PocketIc;
+use pocket_ic::nonblocking::PocketIc;
 use std::{task::Poll, time::Duration};
 
 /// A caller-owned readiness check failed or exhausted its simulated round budget.
 #[derive(Debug, thiserror::Error)]
 pub enum TickUntilError<E> {
-    /// A simulated progression operation failed; no remaining ticks are dispatched.
-    #[error("PocketIC progression failed: {0}")]
-    Progress(#[source] ClientError),
     /// The predicate was still pending after this many advance/tick rounds.
     #[error("readiness remained pending after {rounds} rounds")]
     ProgressLimit {
@@ -25,20 +21,13 @@ pub enum TickUntilError<E> {
 /// without delivering a round. This function does not poll, retry, start a server
 /// or decide application readiness. Callers own completion and cadence budgets.
 ///
-/// # Errors
-/// Returns the first client failure without dispatching remaining ticks.
-pub async fn advance_and_tick(
-    pic: &PocketIc,
-    advance: Duration,
-    ticks: u32,
-) -> Result<(), ClientError> {
+pub async fn advance_and_tick(pic: &PocketIc, advance: Duration, ticks: u32) {
     if !advance.is_zero() {
-        pic.advance_time(advance).await?;
+        pic.advance_time(advance).await;
     }
     for _ in 0..ticks {
-        pic.tick().await?;
+        pic.tick().await;
     }
-    Ok(())
 }
 
 /// Check a caller-owned predicate, advancing simulated time and ticking while pending.
@@ -50,7 +39,7 @@ pub async fn advance_and_tick(
 /// on the last allowed round succeeds; predicate failures return immediately without another round.
 ///
 /// This bounds simulated progression, not wall-clock time spent inside `PocketIC`
-/// calls or the predicate. Client failures return immediately as `Progress`.
+/// calls or the predicate. Upstream transport panics propagate.
 /// Applications own readiness meaning and predicate error types.
 ///
 /// # Errors
@@ -71,7 +60,7 @@ pub async fn tick_until<T, E>(
 
 async fn poll_with_rounds<T, E>(
     max_rounds: u32,
-    mut round: impl AsyncFnMut() -> Result<(), ClientError>,
+    mut round: impl AsyncFnMut(),
     mut poll: impl AsyncFnMut() -> Poll<Result<T, E>>,
 ) -> Result<T, TickUntilError<E>> {
     let mut rounds = 0;
@@ -82,7 +71,7 @@ async fn poll_with_rounds<T, E>(
                 return Err(TickUntilError::ProgressLimit { rounds });
             }
             Poll::Pending => {
-                round().await.map_err(TickUntilError::Progress)?;
+                round().await;
                 rounds += 1;
             }
         }

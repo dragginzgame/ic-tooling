@@ -96,10 +96,8 @@ fn read_process(proc_root: &Path, pid: u32) -> Option<ProcessSample> {
 }
 
 fn parse_process(pid: u32, stat: &str) -> Option<ProcessSample> {
-    let (identity, _) = stat.rsplit_once(") ")?;
-    let (number, _) = identity.split_once(" (")?;
-    let (name, fields) = super::procfs::parse_stat(stat)?;
-    if number.parse::<u32>().ok()? != pid {
+    let (observed_pid, name, fields) = super::procfs::parse_stat(stat)?;
+    if observed_pid != Some(pid) {
         return None;
     }
     Some(ProcessSample {

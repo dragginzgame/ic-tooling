@@ -48,13 +48,13 @@ into a reliable test environment for a real application.**
 
 ## What does that mean?
 
-Testkit maintains the PocketIC Rust client and reusable simulator test helpers.
+Testkit supplies reusable simulator test helpers over published upstream PocketIC.
 The simulator/server is external. Application tests own topology, funding, RPC
 schemas, readiness, reset coverage and assertions. Build and Host own the lower
 layers described in [scope boundaries](#scope-boundaries).
 
-The client and lifecycle API are async-only. The pending 0.90 minor narrows
-request-budget and recipe reset contracts. See the [migration guide](client-migration.md)
+The selected client and lifecycle helpers are async. Pending 0.98 retires the
+local client fork. See the [migration guide](client-migration.md)
 for the current construction, reset and cancellation contract.
 
 ### A concrete example
@@ -63,7 +63,8 @@ On the caller's Tokio runtime, build a selected instance, await its operations,
 and explicitly close it while its server is available:
 
 ```rust,no_run
-use ic_testkit::{pic::PocketIcStartupConfig, pocket_ic::PocketIcBuilder};
+use ic_testkit::pic::PocketIcStartupConfig;
+use pocket_ic::PocketIcBuilder;
 use std::{path::Path, time::Duration};
 
 async fn example(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -73,18 +74,18 @@ async fn example(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
         server_hard_ttl: None,
         server_idle_ttl: None,
         server_output_files: None,
-    }.build_instance(PocketIcBuilder::new(Duration::from_secs(60)).with_application_subnet()).await?;
-    let canister = owned.instance().create_canister().await?;
-    assert!(owned.instance().canister_exists(canister).await?);
-    owned.close().await?;
+    }.build_instance(PocketIcBuilder::new().with_max_request_time_ms(Some(60_000)).with_application_subnet()).await?;
+    let canister = owned.instance().create_canister().await;
+    assert!(owned.instance().canister_exists(canister).await);
+    owned.close().await;
     Ok(())
 }
 ```
 
 ## Install
 
-Select `ic-testkit` directly. The default native library includes the maintained
-client; optional features select `wire`, `reply-fixtures`, `held-reply-fixtures`
+Select `ic-testkit` and `pocket-ic` 16.1 directly. Optional Testkit features select
+`wire`, `reply-fixtures`, `held-reply-fixtures`
 and the provisioning CLI (`cli`). Declare Tokio at the application/test entrypoint
 with its I/O and time drivers enabled. Testkit creates no private client runtime.
 The canister-side Wasm profile remains separate and lightweight.
@@ -96,7 +97,7 @@ See [server ownership](POCKET-IC.md#server-selection-and-provisioning).
 
 ## What ic-testkit provides
 
-- The maintained async PocketIC client, raw operations and external-protocol DTOs.
+- Harness functions over the upstream async PocketIC client and its native DTOs.
 - Explicit server startup/custody, installation, snapshots and bounded readiness.
 - Optional typed Wire calls and raw/held reply fixtures.
 - Recipe-owned baseline reuse with bounded concurrent capacity.
@@ -128,15 +129,15 @@ and independently verify the domains relevant to each recipe.
 
 | Area | Surface |
 | --- | --- |
-| Async client | `pocket_ic::{PocketIc, PocketIcBuilder, ClientError}` |
+| Async client | Upstream `pocket_ic::nonblocking::PocketIc`, `pocket_ic::PocketIcBuilder` |
 | Server and instance custody | `PocketIcStartupConfig`, `PocketIcManagedServer`, `PocketIcInstance` |
-| Installation | `PocketIc::try_create_and_install`, `InstallSpec`, `StandaloneCanisterFixture` |
+| Installation | `pic::create_and_install`, `InstallSpec`, `StandaloneCanisterFixture` |
 | Typed calls | `query_wire`, `update_wire`, `WireCallSpec` (`wire` feature) |
-| Snapshots | `PocketIc::capture_snapshots`, `ControllerSnapshots`, `CachedPocketIcBaseline` |
+| Snapshots | `pic::capture_snapshots`, `ControllerSnapshots`, `CachedPocketIcBaseline` |
 | Reuse | `PocketIcBaselineRecipe`, `CachedPocketIcBaselinePool`, `StandaloneCanisterRecipe` |
-| Reporting/readiness | `PocketIc::collect_canister_diagnostics`, `advance_and_tick`, `tick_until` |
+| Reporting/readiness | `pic::collect_canister_diagnostics`, `advance_and_tick`, `tick_until` |
 
-Harness methods are inherent on `PocketIc`; import policy types explicitly. Pure parsing,
+Harness functions take `&PocketIc`; import policy types explicitly. Pure parsing,
 formatting and Wasm generation remain synchronous; simulator operations are async.
 
 ## PocketIC ownership and concurrency
@@ -186,10 +187,11 @@ RPC uses Wire. Native Candid dependencies do not enter Testkit's Wasm graph.
 Provisioning owns exact archive authentication separately.
 
 Await `config.build_instance(builder)` for construction. The single startup deadline
-covers readiness and instance creation. Timeout, port/protocol, client and child
+covers readiness and instance creation. Timeout, port/protocol and child
 failures preserve their typed causes, bounded output and secondary cleanup evidence.
 Cancellation reaps an owned server. A borrowed-server creation may remain uncertain
-after a lost response or cancellation and requires caller reconciliation.
+after a lost response or cancellation and requires caller reconciliation. Upstream
+construction/transport panics propagate unchanged.
 
 The caller enables Tokio's I/O/time drivers. Readiness and network waits yield;
 small file reads, process spawning and exact owned-child cleanup remain synchronous.
@@ -206,10 +208,11 @@ See [the protocol/lifecycle boundary](POCKET-IC.md).
 
 ## Canister installation and fixtures
 
-Await `try_create_and_install(InstallSpec)` to create, optionally top up and install.
-Each failed stage retains its typed client cause and any created canister ID.
+Await `create_and_install(pic, spec)` to create, optionally top up and install.
+Upstream creation/funding/install panics propagate.
 Diagnostics are separately requested; installation does not print/fetch logs.
-`StandaloneCanisterFixture::try_install` retains instance ownership on failure.
+`StandaloneCanisterFixture::install` consumes its owner; panic unwinding releases
+managed-server custody. Keep a borrowed owner outside the helper for diagnostics.
 
 `reply-fixtures` supplies synchronous raw reply module generation with explicit
 method/name/reply byte ceilings. `held-reply-fixtures` adds async simulator-backed
@@ -219,18 +222,18 @@ owns catalogs, payload interpretation and readiness.
 
 ### Install-code rate limiting
 
-Await `retry_install_code(policy, async_callable)`. Only the typed install-code
+Await `retry_install_code(pic, policy, async_callable)`. Only the typed install-code
 rate-limit rejection permits another attempt. The caller selects the attempt
-count and simulated cooldown. Other client failures return without replay.
+count and simulated cooldown. Other rejections return without replay; panics propagate.
 Cooldown advances selected simulated time and performs exactly two ticks.
 
 ## Snapshots and cached baselines
 
 Capture/restore operations are async and controller-aware. Capture validates the
 complete target set before effects, preserves deterministic canister order and
-rolls back temporary snapshots after failure. Snapshot copying stays bounded and
-retains accepted ingress identities; interrupted transfer actions cannot be
-implicitly retried. The caller selects restore funding and owns timer/reset policy.
+rolls back known captures after a returned rejection. Ordinary upstream take/load
+replaces the fork's transfer engine. Cancellation or panic can leave partial
+captures. The caller selects restore funding and owns timer/reset policy.
 
 `CachedPocketIcBaseline::capture(instance, targets, metadata).await` retains instance,
 snapshots and caller metadata. Stop/drain the complete set before capture/restore,
@@ -250,9 +253,9 @@ shows the lifecycle and typed failure classification.
 warm failure gets at most one recovery build; failures retain both causes. Fatal
 failures, explicit invalidation, panic and cancelled preparation remain distinct.
 Dropping the lease returns its slot. Await `pool.close()` after every lease ends,
-before stopping a borrowed server, and retain every returned deletion failure.
+before stopping a borrowed server. Close returns `()`; deletion is best effort.
 For a shared or `static` pool use `pool.shutdown().await`: it closes admission,
-awaits lease return, and reports every attempted deletion failure. Future/queued
+awaits lease return, and awaits upstream deletion without an acknowledgement. Future/queued
 acquisitions return `BaselinePoolError::Closed`. Do not hold a lease in the task
 awaiting shutdown; keep the caller's runtime and borrowed servers alive until
 shutdown completes. Cancellation and no-replay custody are described in the
@@ -260,7 +263,7 @@ shutdown completes. Cancellation and no-replay custody are described in the
 
 ## Diagnostics and time
 
-Await `collect_canister_diagnostics(request)` for independent status/log outcomes.
+Await `collect_canister_diagnostics(pic, request)` for independent status/log outcomes.
 Senders and record/byte ceilings are explicit. Batch diagnostics validate all labels
 before effects, attempt every selected canister in order and retain each failure.
 Await `write_canister_diagnostics` for explicit output to a caller-owned writer;
@@ -293,8 +296,8 @@ It does not create identities or credentials.
 
 Host owns byte/stream, filesystem and process primitives. Build owns Cargo recipes,
 input evidence, artifact caches and package qualification. Text owns generic
-formatting/parsing. Testkit owns the maintained client and simulator
-helpers. Native owns dependency-free allocation measurement. IC Storage owns
+formatting/parsing. Testkit owns simulator
+helpers; upstream owns the client. The unused Native package is retired. IC Storage owns
 memory-IO metering; Canic owns its operational Metrics integration.
 
 Consumers own tools/admission, schemas, targets, budgets, retries, credentials,

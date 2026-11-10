@@ -22,24 +22,6 @@ async fn initial_completion_and_failure_do_not_advance() {
 }
 
 #[tokio::test]
-async fn progression_failure_stops_before_polling_again() {
-    let polls = Cell::new(0);
-    let result = poll_with_rounds(
-        3,
-        async || Err(ClientError::Protocol("tick failed".into())),
-        async || {
-            polls.set(polls.get() + 1);
-            Poll::<Result<(), ()>>::Pending
-        },
-    )
-    .await;
-    assert_eq!(polls.get(), 1);
-    assert!(
-        matches!(result, Err(TickUntilError::Progress(ClientError::Protocol(message))) if message == "tick failed")
-    );
-}
-
-#[tokio::test]
 async fn completion_on_last_round_preserves_poll_order() {
     let rounds = Cell::new(0);
     let polls = Cell::new(0);
@@ -48,7 +30,6 @@ async fn completion_on_last_round_preserves_poll_order() {
         async || {
             assert_eq!(polls.get(), rounds.get() + 1);
             rounds.set(rounds.get() + 1);
-            Ok(())
         },
         async || {
             assert_eq!(polls.get(), rounds.get());
@@ -74,7 +55,6 @@ async fn exhaustion_performs_exactly_the_allowed_rounds() {
             budget,
             async || {
                 rounds.set(rounds.get() + 1);
-                Ok(())
             },
             async || {
                 polls.set(polls.get() + 1);
@@ -96,7 +76,6 @@ async fn failure_after_progress_preserves_the_original_cause() {
         3,
         async || {
             rounds.set(rounds.get() + 1);
-            Ok(())
         },
         async || {
             if rounds.get() == 1 {
@@ -143,7 +122,7 @@ async fn tick_batches_preserve_exact_transport_order_and_selected_counts() {
     for advance in [Duration::ZERO, Duration::from_nanos(7)] {
         for ticks in [0, 2, 4, 24] {
             assert_time_requests(advance, ticks, async |pic| {
-                advance_and_tick(pic, advance, ticks).await.unwrap();
+                advance_and_tick(pic, advance, ticks).await;
             })
             .await;
         }
@@ -154,7 +133,7 @@ async fn tick_batches_preserve_exact_transport_order_and_selected_counts() {
 async fn install_cooldown_uses_exactly_two_ticks() {
     for advance in [Duration::ZERO, Duration::from_nanos(7)] {
         assert_time_requests(advance, 2, async |pic| {
-            pic.wait_out_install_code_rate_limit(advance).await.unwrap();
+            crate::pic::wait_out_install_code_rate_limit(pic, advance).await;
         })
         .await;
     }
@@ -204,12 +183,7 @@ async fn assert_time_requests(advance: Duration, ticks: u32, run: impl AsyncFnOn
         },
     );
 
-    let pic = PocketIc::new_from_existing_instance(
-        peer.url().clone(),
-        0,
-        std::time::Duration::from_secs(1),
-    )
-    .expect("valid request budget");
+    let pic = PocketIc::new_from_existing_instance(peer.url().clone(), 0, Some(1000));
     run(&pic).await;
     peer.finish();
     assert_eq!(*requests.lock().unwrap(), expected);

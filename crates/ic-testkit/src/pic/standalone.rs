@@ -1,7 +1,7 @@
-use crate::pocket_ic::PocketIc;
-use ic_platform_types::Principal;
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::nonblocking::PocketIc;
 
-use super::{InstallSpec, PocketIcInstance, StandaloneCanisterInstallError};
+use super::{InstallSpec, PocketIcInstance};
 
 /// One caller-built `PocketIC` instance/server owner and one installed canister.
 ///
@@ -15,24 +15,15 @@ pub struct StandaloneCanisterFixture {
 impl StandaloneCanisterFixture {
     /// Install one canister into a caller-configured `PocketIC` instance.
     ///
-    /// On failure, the error retains both the caller's instance/server ownership record and
-    /// the structured install failure.
-    ///
-    /// # Errors
-    /// Returns the installation failure with the owned instance for caller recovery.
-    pub async fn try_install(
-        instance: PocketIcInstance,
-        spec: InstallSpec,
-    ) -> Result<Self, StandaloneCanisterInstallError> {
-        let canister_id = match instance.instance().try_create_and_install(spec).await {
-            Ok(canister_id) => canister_id,
-            Err(error) => return Err(StandaloneCanisterInstallError::new(instance, error)),
-        };
+    /// Upstream installation panics propagate. Unwinding drops this record's
+    /// managed server; an externally owned server requires caller reconciliation.
+    pub async fn install(instance: PocketIcInstance, spec: InstallSpec) -> Self {
+        let canister_id = super::create_and_install(instance.instance(), spec).await;
 
-        Ok(Self {
+        Self {
             instance,
             canister_id,
-        })
+        }
     }
 
     /// Borrow the `PocketIC` instance that owns this standalone fixture.

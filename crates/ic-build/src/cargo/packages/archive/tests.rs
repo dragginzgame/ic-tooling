@@ -224,10 +224,19 @@ fn source_inventory_detects_bytes_modes_links_and_resource_overflow() {
         "sha256": Sha256Digest::compute(b"original").to_string(),
         "mode": fs::metadata(&file).unwrap().permissions().mode() & 0o777,
     }});
+    assert_eq!(serde_json::to_value(&before).unwrap(), expected);
+    let encoded = serde_json::to_vec(&before).unwrap();
     assert_eq!(
-        serde_json::to_vec(&before).unwrap(),
-        serde_json::to_vec(&expected).unwrap()
+        String::from_utf8(encoded.clone()).unwrap(),
+        format!(
+            "{{\"sample-1.0.0/source\":{{\"mode\":{},\"sha256\":\"{}\"}}}}",
+            fs::metadata(&file).unwrap().permissions().mode() & 0o777,
+            Sha256Digest::compute(b"original"),
+        )
     );
+    let inventory = root.join("inventory.json");
+    write_inventory(&inventory, &before).unwrap();
+    assert_eq!(fs::read(inventory).unwrap(), encoded);
     fs::write(&file, b"changed").unwrap();
     assert_ne!(before, sources(&root, &specs, limits()).unwrap());
     fs::write(&file, b"original").unwrap();
@@ -448,4 +457,10 @@ fn directory_depth_and_entry_counts_bound_empty_tree_traversal() {
             succeeds
         );
     }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn inventory_write_reports_buffer_flush_failure() {
+    assert!(write_inventory(Path::new("/dev/full"), &BTreeMap::new()).is_err());
 }

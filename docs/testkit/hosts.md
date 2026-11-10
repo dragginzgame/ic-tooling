@@ -36,10 +36,10 @@ not leak into the published Wasm library. The maintained feature contracts are:
 
 | Package and target | Feature selection | Required boundary |
 | --- | --- | --- |
-| Native `ic-testkit` | Default | Direct PocketIC client; separate Platform Candid/management adapters without its `pocket-ic` feature; no Wire, executor, Build, Host Text, Agent, parser or full CDK |
+| Native `ic-testkit` | Default | Published upstream PocketIC client and native DTOs; no Platform facade, Wire, executor, Build, Host Text, Agent, parser or full CDK |
 | Native `ic-testkit` | `wire` only | One Wire identity without CLI, held fixtures or executor; otherwise the default native boundary |
-| Native `ic-testkit` | All features (`cli,wire,held-reply-fixtures`) | One Wire identity; otherwise the same native exclusions |
-| Native `ic-testkit-dev` | All features | One Build, Platform, direct PocketIC client and each Host package identity; no Platform `pocket-ic` feature; tooling is intentional |
+| Native `ic-testkit` | All features (`cli,wire,held-reply-fixtures`) | One Wire identity; held fixtures select Platform codecs/management adapters; otherwise the same native exclusions |
+| Native `ic-testkit-dev` | All features, normal/build edges | One Build, upstream PocketIC client and each Host package identity; no Platform facade; test-only Platform adapters are separate |
 | Wasm `ic-testkit` | All features | One Types identity; no Runtime/IC0, facade, Metrics, Candid, PocketIC, Wire, Host, Build, Agent, parser, full CDK or executor |
 | Wasm `ic-testkit-perf-probe` | Default | One Types/Runtime/Wire identity with executor and IC0; no facade, Candid, PocketIC, Host, Build, Agent, parser or full CDK |
 
@@ -96,11 +96,11 @@ typed Host cause and I/O error classification; incomplete output is never decode
 
 ### Published Platform boundary
 
-Testkit owns native simulator APIs under `ic_testkit::pocket_ic`. Its separate
-Platform 0.24 dependency supplies general Candid and management adapters.
-The Wasm library selects Runtime 0.19 for IC0 and Types 0.18 for external Principal
-identity; it excludes the facade, native client, Candid and executor. Native
-PocketIC still requires Candid.
+Testkit uses upstream `pocket-ic` native APIs directly. Held fixtures select
+Platform's Candid/management adapters; default and Wire profiles exclude Platform.
+The Wasm library selects Types for portable Principal generation and excludes
+Runtime, the facade, native client, Candid and executor. Native PocketIC still
+requires its upstream Candid identity. See the [migration](client-migration.md).
 
 The following decoder adoption records describe earlier releases.
 
@@ -133,7 +133,7 @@ runtime reject codes. Testkit's probe already supplies explicit Wire codecs;
 its PocketIC-facing reject codes and DTOs retain the original external identities.
 The signature features are not selected. No local replacement API is needed.
 
-Testkit owns the native client and client-owned DTOs in `ic_testkit::pocket_ic`,
+Testkit uses upstream native client and DTOs directly,
 with provisioning, admission and fixture policy in `ic_testkit::pic`. The client
 preserves the PocketIC 16.1 protocol; the server remains pinned to 16.1.0. The library's Wasm
 normal/build graph must exclude the native client implementation, Candid, CDK
@@ -196,7 +196,7 @@ the graph gate separately enforces the selected native/Wasm profiles above.
 | `wasm32-unknown-unknown` | Portable principal API; the private probe qualifies installed Wire calls |
 
 Use Bash 3.2 or newer, GNU Make, Git, Perl and the native Unix utilities named in
-[Toko Tooling's setup prerequisites](../local-setup.md#bootstrap-prerequisites).
+[Toko Tooling's setup prerequisites](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/local-setup.md#bootstrap-prerequisites).
 The workspace minimum and pinned development/release compiler are Rust 1.99.1.
 Prepare its Wasm target explicitly. `make install-tools` prepares common host
 and Cargo tools, builds the local owner CLI and explicitly provisions PocketIC.
@@ -265,7 +265,8 @@ exit policy. CLI child statuses use Host's numeric projection with Testkit's
 interruption and descendant cleanup with `server_runner`; signal actions are
 process-global.
 
-`pic::try_pocket_ic_operation` runs one synchronous operation and returns only
+The following transport-adapter observations describe retired releases, not
+current APIs. `pic::try_pocket_ic_operation` ran one synchronous operation and returned only
 recognized transport panics as the existing `PocketIcOperationError`. Candid
 calls reuse it. Upstream returned values/rejections and unrelated panic payloads
 retain their behavior. The adapter adds no retries, deadlines or async polling
@@ -292,8 +293,8 @@ change. Use this workspace's `target/`.
 | Affected boundary | Focused checks |
 | --- | --- |
 | Native library and provisioning | `cargo check -p ic-testkit --lib --locked`; `cargo test -p ic-testkit --lib --locked pic::server_assets::tests` |
-| Operation errors and call decoding | `cargo test -p ic-testkit --lib --locked pic::transport::tests`; `cargo test -p ic-testkit --lib --locked pic::calls::tests` |
-| Platform Candid integration | `cargo test -p ic-testkit --lib --locked pic::calls::tests`; `cargo test -p ic-testkit --lib --locked pic::transport::tests` |
+| Wire rejection and codec behavior | `cargo test -p ic-testkit --features wire --lib --locked pic::wire::tests` |
+| Upstream management/snapshots | `cargo test -p ic-testkit --test client_installed --locked -- --ignored` with an explicitly admitted server |
 | Canister library | `cargo check -p ic-testkit --lib --target wasm32-unknown-unknown --locked` |
 | Development build/report adapter | `cargo check --manifest-path qualification/Cargo.toml -p ic-testkit-dev --all-targets --locked`; `cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --bin check_packages --locked` |
 | Operator and private CLI parsing | `cargo test -p ic-testkit --features cli --bin ic-testkit-server --locked`; `cargo test -p ic-testkit --features cli --test server_runner --locked` |
@@ -392,7 +393,7 @@ action and shared evidence collector are snapshot roots. These helpers used to
 arrive only through producer fixture roots; deleting a generic regression suite
 must not remove a consumer's real checker or evidence path. Required companions
 remain exporter-derived, with no local copies or alternate implementations.
-This selection follows the [shared consumer policy](../consuming-snapshots.md#consumer-qualification-selection).
+This selection follows the [shared consumer policy](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/consuming-snapshots.md#consumer-qualification-selection).
 It makes no measured gate-duration claim. Native macOS and the GitHub artifact
 round trip still require their configured CI runs.
 

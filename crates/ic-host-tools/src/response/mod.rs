@@ -187,36 +187,8 @@ fn json_error(error: &serde_json::Error) -> ResponseError {
     }
 }
 
-struct ResponseText<'a>(Cow<'a, str>);
-
-impl<'de> Deserialize<'de> for ResponseText<'de> {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        struct TextVisitor;
-        impl<'de> Visitor<'de> for TextVisitor {
-            type Value = ResponseText<'de>;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str("a string")
-            }
-
-            fn visit_borrowed_str<E: serde::de::Error>(
-                self,
-                text: &'de str,
-            ) -> Result<Self::Value, E> {
-                Ok(ResponseText(Cow::Borrowed(text)))
-            }
-
-            fn visit_str<E: serde::de::Error>(self, text: &str) -> Result<Self::Value, E> {
-                Ok(ResponseText(Cow::Owned(text.to_owned())))
-            }
-
-            fn visit_string<E: serde::de::Error>(self, text: String) -> Result<Self::Value, E> {
-                Ok(ResponseText(Cow::Owned(text)))
-            }
-        }
-        deserializer.deserialize_string(TextVisitor)
-    }
-}
+#[derive(serde::Deserialize)]
+struct ResponseText<'a>(#[serde(borrow)] Cow<'a, str>);
 
 struct Envelope<'a>(Option<Cow<'a, str>>);
 

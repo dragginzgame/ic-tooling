@@ -365,7 +365,7 @@ fn real_server_runs_a_separate_process_using_environment_startup() {
 #[ignore = "invoked by the real server runner test in a separate process"]
 async fn runner_environment_worker() {
     use ic_testkit::pic::PocketIcStartupConfig;
-    use ic_testkit::pocket_ic::PocketIcBuilder;
+    use pocket_ic::PocketIcBuilder;
     if std::env::var_os("IC_TESTKIT_TEST_PRECLIENT_DELAY").is_some() {
         thread::sleep(Duration::from_secs(65));
     }
@@ -373,7 +373,9 @@ async fn runner_environment_worker() {
     let pic = PocketIcStartupConfig::from_env(Duration::from_secs(30))
         .unwrap()
         .build_instance(
-            PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+            PocketIcBuilder::new()
+                .with_max_request_time_ms(Some(300_000))
+                .with_application_subnet(),
         )
         .await
         .unwrap();

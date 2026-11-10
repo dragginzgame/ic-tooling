@@ -1,82 +1,46 @@
-//! Integration checks for pocket ic install behavior.
+//! Installation uses the upstream client's panic-based failure contract.
 mod support;
+use ic_testkit::pic::{InstallSpec, StandaloneCanisterFixture, create_and_install};
 
-use ic_platform_types::Principal;
-use ic_testkit::pic::{
-    CanisterDiagnosticsRequest, CanisterInstallError, CanisterLogRenderLimits, InstallSpec,
-    StandaloneCanisterFixture,
-};
-
-#[tokio::test]
-async fn fallible_install_preserves_the_original_failure_for_caller_diagnostics() {
-    let owned = support::pocket_ic().await;
-    let pocket_ic = owned.instance();
-    let error = pocket_ic
-        .try_create_and_install(InstallSpec {
-            wasm: vec![0xde, 0xad],
-            init_bytes: vec![],
-            cycles: 0,
-            install_sender: None,
-            label: Some("invalid-wasm".into()),
-        })
-        .await
-        .expect_err("invalid Wasm should fail installation");
-
-    let CanisterInstallError::InstallCode {
-        canister_id,
-        label,
-        source,
-    } = &error
-    else {
-        panic!("invalid Wasm must fail at installation: {error}");
-    };
-    assert_eq!(label.as_deref(), Some("invalid-wasm"));
-    assert!(
-        source.to_string().contains("CanisterInvalidWasm"),
-        "original PocketIC rejection should be preserved: {source}"
-    );
-    let report = pocket_ic
-        .collect_canister_diagnostics(CanisterDiagnosticsRequest {
-            canister_id: *canister_id,
-            status_sender: Principal::anonymous(),
-            log_sender: Principal::anonymous(),
-            log_limits: CanisterLogRenderLimits::default(),
-        })
-        .await;
-    assert!(
-        report.status.is_ok(),
-        "the failed install's canister remains inspectable"
-    );
-    assert!(source.to_string().contains("CanisterInvalidWasm"));
+fn invalid_module() -> InstallSpec {
+    InstallSpec {
+        wasm: vec![0xde, 0xad],
+        init_bytes: vec![],
+        cycles: 0,
+        install_sender: None,
+    }
 }
 
-#[tokio::test]
-async fn failed_standalone_install_returns_the_caller_instance() {
-    let Err(error) = StandaloneCanisterFixture::try_install(
-        support::pocket_ic().await,
-        InstallSpec {
-            wasm: vec![0xde, 0xad],
-            init_bytes: vec![],
-            cycles: 0,
-            install_sender: None,
-            label: Some("invalid-standalone-wasm".into()),
-        },
-    )
-    .await
-    else {
-        panic!("invalid Wasm should fail standalone installation");
-    };
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn borrowed_install_panic_leaves_the_callers_instance_usable() {
+    let owner = support::pocket_ic().await;
+    let pic = owner.instance();
+    let panic =
+        support::catch_async_panic(async || create_and_install(pic, invalid_module()).await);
+    assert!(
+        panic.is_err(),
+        "upstream installation must propagate its panic"
+    );
+    assert!(!pic.topology().await.subnet_configs.is_empty());
+    owner.close().await;
+}
 
-    let CanisterInstallError::InstallCode {
-        canister_id, label, ..
-    } = error.install_error()
-    else {
-        panic!("invalid Wasm must fail at installation: {error}");
-    };
-    assert_eq!(label.as_deref(), Some("invalid-standalone-wasm"));
-    error
-        .pocket_ic()
-        .canister_status(*canister_id, None)
-        .await
-        .expect("caller-created instance should remain inspectable after install failure");
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn standalone_install_panic_releases_owned_server_custody() {
+    let owner = support::pocket_ic().await;
+    let url = owner.instance().get_server_url();
+    let managed = owner.server().is_some();
+    let panic = support::catch_async_panic(async move || {
+        StandaloneCanisterFixture::install(owner, invalid_module()).await
+    });
+    assert!(panic.is_err());
+    if managed {
+        assert!(
+            std::net::TcpStream::connect((
+                url.host_str().unwrap(),
+                url.port_or_known_default().unwrap()
+            ))
+            .is_err()
+        );
+    }
 }

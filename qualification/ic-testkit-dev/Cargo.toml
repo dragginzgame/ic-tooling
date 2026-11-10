@@ -3,9 +3,12 @@ name = "ic-testkit-dev"
 edition.workspace = true
 rust-version.workspace = true
 version.workspace = true
-license.workspace = true
+license-file.workspace = true
 publish = false
 repository.workspace = true
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+pocket-ic.workspace = true
 
 [package.metadata.toko-tooling.loc]
 category = "build_tooling"

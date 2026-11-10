@@ -1,13 +1,12 @@
 //! Integration checks for pocket ic calls behavior.
 #![cfg(feature = "wire")]
-use ic_testkit::pocket_ic::ClientError;
 
 mod support;
 
-use ic_platform_types::Principal;
 use ic_testkit::pic::{WireCallError, WireCallSpec, query_wire, update_wire};
-use ic_testkit::pocket_ic::{ErrorCode, RejectCode};
 use ic_wire::Limits;
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::{ErrorCode, RejectCode};
 
 const PROBE: WireCallSpec = WireCallSpec {
     method: "probe",
@@ -52,16 +51,16 @@ async fn wire_calls_preserve_codec_refusals_and_error_identity() {
                 },
             )
             .unwrap();
-            let id = pic
-                .try_create_and_install(InstallSpec {
+            let id = ic_testkit::pic::create_and_install(
+                pic,
+                InstallSpec {
                     wasm,
                     init_bytes: vec![],
                     cycles: 1_000_000_000_000,
                     install_sender: None,
-                    label: None,
-                })
-                .await
-                .unwrap();
+                },
+            )
+            .await;
             let result = match mode {
                 ReplyMode::Query => {
                     query_wire::<_, u64>(pic, id, Principal::anonymous(), PROBE, &()).await
@@ -77,7 +76,6 @@ async fn wire_calls_preserve_codec_refusals_and_error_identity() {
                         .unwrap()
                         .is::<ic_wire::Error>()
                 );
-                assert!(!ic_testkit::pic::is_dead_pocket_ic_transport_error(&error));
                 assert!(matches!(
                     error,
                     WireCallError::Decode {
@@ -96,7 +94,7 @@ async fn wire_calls_preserve_codec_refusals_and_error_identity() {
 async fn wire_call_errors_preserve_live_pocket_ic_rejections() {
     let owned = support::pocket_ic().await;
     let pic = owned.instance();
-    let removed = pic.create_canister().await.unwrap();
+    let removed = pic.create_canister().await;
     pic.stop_canister(removed, None).await.unwrap();
     pic.delete_canister(removed, None).await.unwrap();
     for caller in [Principal::anonymous(), Principal::management_canister()] {
@@ -111,13 +109,10 @@ async fn wire_call_errors_preserve_live_pocket_ic_rejections() {
             ),
         ] {
             let error = result.unwrap_err();
-            assert!(!ic_testkit::pic::is_dead_pocket_ic_transport_error(&error));
             let WireCallError::Call { context, source } = error else {
                 panic!("expected call failure");
             };
-            let ClientError::Canister(rejection) = *source else {
-                panic!("expected rejection");
-            };
+            let rejection = *source;
             assert_eq!(rejection.reject_code, RejectCode::DestinationInvalid);
             assert_eq!(rejection.error_code, ErrorCode::CanisterNotFound);
             assert_eq!(context.operation, operation);

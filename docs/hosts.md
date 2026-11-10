@@ -1,6 +1,6 @@
 # IC Tooling qualification
 
-Toko Tooling is selected as `toko-tooling = "=0.38.2"` in each workspace's
+Toko Tooling is selected as `toko-tooling = "=0.39.6"` in each workspace's
 `[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
 Every real package inherits it unconditionally in
 `[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
@@ -14,6 +14,11 @@ Use `make toko-tooling-install` to install the existing Cargo.lock selection
 and `make toko-tooling-check` for offline package/pin/lock/snapshot admission.
 That check admits both workspaces against the same installed snapshot.
 
+The snapshot contains the baseline, canonical root files and executable inputs.
+Shared reference guides stay upstream at the commit pinned by the links below;
+product documentation remains local under its existing topics. Update selections
+through the installer rather than copying or editing managed reference files.
+
 The nine product packages remain in `crates/`. The private development driver
 and Wasm probe live in the independent `qualification/` workspace, with their
 own lockfile and private version. Run their Cargo commands with
@@ -22,7 +27,7 @@ and installed tests select both roots. `make install-server` explicitly fetches
 both locked graphs; standalone checks remain offline.
 Installation remains explicit; Rust imports are unnecessary. Direct publication
 and release adapters check tooling before effects. See the
-[root selection guide](consuming-snapshots.md#cargo-selection-and-installation).
+[root selection guide](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/consuming-snapshots.md#cargo-selection-and-installation).
 
 Local shell/browser fixture defaults and explicit outside-target selections are
 documented in [qualification scratch ownership](design/fixture-scratch.md).
@@ -39,7 +44,7 @@ do not require unrelated consumer releases.
 
 | Consumer profile | Supplier boundary and exposed identities |
 | --- | --- |
-| Native Testkit default | Platform owned Candid and management DTOs, IC protocol adapters and canonical Types Principal; no Runtime or Wire. Registry management is absent. Typed encode/decode refusals use the new codec budgets; native transport retains its supplier identity. |
+| Native Testkit default | Published upstream `pocket-ic`, including its native Principal/management DTOs and protocol codecs; no Platform facade, Runtime or Wire. Portable principal generation retains Types. |
 | Native Testkit `wire` | The same native client plus optional Wire. `WireCallSpec` limits and typed codec causes have Wire identity; graph qualification selects only this feature, independently of CLI/held fixtures. |
 | Testkit Wasm | Types only; no Platform facade, Runtime, native transport or Wire. |
 | Private Wasm probe | Runtime's `cdk` and its matching singleton guard, Types and Wire; not a second simulator or production adapter crate. |
@@ -318,12 +323,14 @@ profiles use only Wire's core codec and do not select its optional metadata brid
 independent Types releases; incompatible Types changes still require explicit
 consumer and schema adoption.
 
-Native Testkit owns its client in `ic_testkit::pocket_ic`; callers select one
-Testkit version for client/DTO identities and lifecycle helpers. The separate
-Platform dependency supplies general Candid and management adapters. Both
-registry `pocket-ic` and `ic-platform-pocket-ic` are excluded.
-Wasm graphs exclude the native client
-implementation as well. The installed PocketIC server remains pinned to 16.1.0.
+Native Testkit depends on published `pocket-ic` directly under the maintainer's
+approved native exception. Callers import its async client and native DTOs
+directly; no Testkit client module or compatibility facade remains. Only held
+fixtures select Platform's Candid and management adapters. Graph checks exclude
+`ic-platform-pocket-ic`; Wasm excludes both clients and registry Candid/management.
+The installed PocketIC server remains pinned to 16.1.0. Qualify upstream panic,
+best-effort deletion and ordinary snapshot behavior through the
+[migration](testkit/client-migration.md), not the retired fork's guarantees.
 
 Native and Wasm Testkit graphs exclude Metrics; the library has no recording
 or instrumentation dependency. Default native and all-feature Wasm Testkit still
@@ -533,7 +540,7 @@ headroom over the 0.66.3 run (native Intel macOS about 35 minutes, runtime about
 Runtime fixtures live below `runner.temp/portable-fixtures`, with command output
 in `portable-regression.log`, so the shared failure collector can retain them.
 
-The main CI workflow uses Toko Tooling's [change classifier](ci-change-selection.md)
+The main CI workflow uses Toko Tooling's [change classifier](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/validation/ci-change-selection.md)
 and the exact product prose paths in `ci/docs-only-paths.txt`. Admitted prose
 changes run document links under the existing native/MSRV job names, without
 compiler setup, Cargo caches, product tests or native qualification receipts.
@@ -553,7 +560,7 @@ recipe digest; restore is followed by ordinary setup and admission.
 Offline Cargo-tool admission returns status 75 for an admitted busy selected
 slot. The release adapter preserves that refusal without dispatching setup.
 Read-only admission waits are explicit at the shared installer interface; see
-[the bounded wait contract](local-setup.md#standard-cargo-tool-build-environment).
+[the bounded wait contract](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/local-setup.md#standard-cargo-tool-build-environment).
 
 The optional artifact profile targets run their own Wasm inspection, encoding or
 text tests with defaults disabled. Minimal core tests run once; the complete

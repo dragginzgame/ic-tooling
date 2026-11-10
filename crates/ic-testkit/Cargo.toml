@@ -4,7 +4,7 @@ name = "ic-testkit"
 edition.workspace = true
 rust-version.workspace = true
 version = "0.97.0"
-license = "MIT AND Apache-2.0"
+license-file.workspace = true
 authors.workspace = true
 description = "PocketIC-oriented test utilities for IC canister tests"
 readme = "README.md"
@@ -25,29 +25,24 @@ required-features = ["cli"]
 default = []
 cli = ["dep:clap", "clap/derive"]
 reply-fixtures = ["dep:wasm-encoder"]
-held-reply-fixtures = ["reply-fixtures", "ic-host-artifacts/wasm-text"]
-wire = ["dep:ic-wire"]
+held-reply-fixtures = ["reply-fixtures", "ic-host-artifacts/wasm-text", "dep:ic-platform"]
+wire = ["dep:ic-wire", "dep:serde"]
 
 [target.'cfg(all(unix, not(target_family = "wasm")))'.dependencies]
 libc = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-base64 = { workspace = true }
 clap = { workspace = true, features = ["string"], optional = true }
-hex = { workspace = true, features = ["serde"] }
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
 ic-host-fs = { workspace = true }
-ic-host-http.workspace = true
 ic-host-process = { workspace = true }
 # Held fixtures adapt the external management HTTP protocol on native targets only.
-ic-platform = { workspace = true, features = ["candid-codec", "management-canister-types", "ic-protocol"] }
+ic-platform = { workspace = true, features = ["candid-codec", "management-canister-types"], optional = true }
 ic-wire = { workspace = true, optional = true }
-reqwest = { workspace = true, features = ["http2", "json", "rustls", "socks"] }
-serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
-sha2 = { workspace = true }
+pocket-ic.workspace = true
+serde = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["rt", "sync", "time", "net"] }
-tracing = { workspace = true }
+url.workspace = true
 wasm-encoder = { workspace = true, optional = true }
 
 [dependencies]
@@ -61,11 +56,8 @@ ic-host-process = { workspace = true, features = ["test-support"] }
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 clap = { workspace = true, features = ["string"] }
 ic-host-artifacts = { workspace = true, features = ["wasm-validation", "wasm-text"] }
-ic-logging = { workspace = true }
 serde_json = { workspace = true }
-strum = { workspace = true }
 tokio = { workspace = true, features = ["macros", "net", "rt-multi-thread", "test-util"] }
-tracing-subscriber = { workspace = true }
 
 [dev-dependencies]
 toko-tooling.workspace = true

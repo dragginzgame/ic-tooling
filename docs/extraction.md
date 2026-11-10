@@ -10,8 +10,9 @@ native allocator package is retired; it was not folded into Testkit.
 IC Storage owns backing-memory IO metering in its test-support API. `ic-testkit-dev` and
 `ic-testkit-perf-probe` are private qualification packages. Build and Testkit
 depend on Host; Host does not depend on either. The private Testkit driver
-may also depend on Build. One workspace contains independently versioned
-Foundation and integration [release groups](design/release-groups.md). These
+may also depend on Build. The product workspace contains independently versioned
+Foundation and integration [release groups](design/release-groups.md); private
+qualification packages have an independent workspace and lockfile. These
 groups preserve the capability boundaries and optional consumer features.
 
 The maintainer approved `ic-host-http` under
@@ -19,8 +20,7 @@ The maintainer approved `ic-host-http` under
 already-created native reqwest response and owns bounded body accumulation and
 typed partial-failure evidence. It reuses Artifacts' bounded allocation primitive.
 It never creates requests or selects status, TLS, compression, redirect, retry,
-timeout, decoding, redaction or retention policy. Existing Host/Build/Testkit
-packages do not depend on it. Query and Blob retain their distinct status and
+timeout, decoding, redaction or retention policy. Query and Blob retain their distinct status and
 failure-evidence contracts; consumer adoption is separate from this implementation.
 
 ## Direct Types, Runtime and external IC owners
@@ -29,21 +29,20 @@ Testkit selects published `ic-platform-types` for its existing external Principa
 identity. The portable library excludes Runtime, the facade, executor, macros
 and Candid. The private performance probe selects
 Runtime's CDK entrypoints and one guarded executor directly. Native simulator
-operations belong to the maintained client in `ic_testkit::pocket_ic`, under the
-same package version as Testkit's `pic` lifecycle helpers. Candid and management
-adapters retain Platform without its PocketIC feature. The workspace manifest
-owns exact dependency versions; the [client migration](testkit/client-migration.md)
-describes the async-only client and explicit teardown contract.
+operations use published upstream `pocket-ic` directly under an explicit native
+dependency-boundary exception. Testkit's `pic` owns harness policy and server
+custody; it owns no client fork. Held fixtures select Platform's Candid and
+management adapters. The [client migration](testkit/client-migration.md) describes
+upstream identities, panics, best-effort deletion and the removed transfer engine.
 
 ### Public supplier identities
 
 Tooling owns configuration and recovery classifications for its adapters.
 `ic_host_tools::candid::decode::DecodeLimits` expresses caller policy and is
-converted privately to Platform's limits. `ClientError::Cbor { kind, source }`
-uses Testkit's `CborErrorKind`; its boxed source retains the original typed
-codec error and causal chain. Neither configuration nor ordinary error matching
-requires a direct Platform dependency. Optional supplier-error downcasts retain
-their explicit supplier-version coupling. Platform continues to own every codec.
+converted privately to Platform's limits. Its decode errors retain the original
+typed codec cause. Configuration does not require a direct Platform dependency;
+supplier-error downcasts retain explicit supplier-version coupling. Upstream
+PocketIC owns its separate native protocol codecs and DTOs.
 
 The public-surface inventory for
 [#340](https://github.com/dragginzgame/ic-tooling/issues/340) retains these
@@ -52,9 +51,9 @@ deliberate interoperability boundaries:
 | Surface | Canonical owner / release group | Why identity is retained |
 | --- | --- | --- |
 | Application Principal | `ic-platform-types` / Types | Shared application identity, independent of facade releases. |
-| Simulator Principal and management DTOs | Upstream `ic_principal` and exact `ic-management-canister-types` 0.11.0, selected through Platform/Types | Exact external management and Candid identity; Testkit's direct management pin and identity tests remain authoritative. |
-| Subnet metrics | Upstream `ic-transport-types`, exposed through Platform | The facade reexports this DTO rather than defining a new type. Its upstream generation, not unrelated facade code, owns identity. |
-| Candid trait bounds, `Nat` and decoder causes | Upstream `candid`, selected through Platform | Typed external Candid exchange; those identities survive facade-only minor changes. |
+| Simulator Principal and management DTOs | Upstream `pocket-ic` | Testkit uses the upstream async client directly; convert explicitly to application Principal identity at consumer boundaries. |
+| Simulator subnet metrics | Upstream `pocket-ic` | The dependency owns read-state transport and decoding; Testkit does not maintain another codec. |
+| Candid trait bounds, `Nat` and decoder causes | Platform's owned Candid codec | Typed external Candid exchange retains explicit work/allocation limits; registry Candid is not the direct codec owner. |
 | Agent builder, agent and SDK errors | Upstream `ic-agent`, exposed through Platform | Callers deliberately configure and use the SDK; no competing agent wrapper or lifecycle owner. |
 | ICRC ledger `Value` in `LedgerBlock` and chain results | Platform / Platform | Standard external ledger schema and hashing have one owner. This optional adapter intentionally shares its selected Platform generation; unrelated error/configuration adapters do not. |
 | Wasm facts consumed by `interface::exported_methods` | `ic-host-artifacts` / Foundation | Borrowed, already-inspected facts preserve one parser, export model and admission owner. |
@@ -72,11 +71,11 @@ distinct from an unrelated facade release changing adapter error/configuration
 identities. Foundation/Text public-value upgrades likewise retain their explicit
 group contracts rather than acquiring duplicate models here.
 
-Host Tools selects Platform for external Candid decoding and native parsing.
+Host Tools selects Platform for binary Candid decoding; textual service inspection is retired.
 Platform owns certificate/hash-tree CBOR and typed IC packet codecs; Tools retains
 service-to-Wasm projections and caller-owned aggregate-byte accounting.
-Testkit uses Platform's packet codecs while retaining PocketIC transport and
-orchestration. Owned application protocols use IC Wire.
+Testkit delegates native simulator transport and protocol codecs to upstream
+PocketIC. Owned application protocols use IC Wire.
 
 <a id="fleet-candidcdk-boundary"></a>
 
@@ -96,8 +95,7 @@ implementation transfer.
 
 ## Current implementation
 
-The [source inventory](../ci/extraction-sources.json) and
-[provenance](provenance.md) retain original extraction identities.
+The [source inventory](../ci/extraction-sources.json) retains original extraction identities.
 
 Dependencies point down from ic-host-process to ic-host-fs and from each to
 ic-host-artifacts. Tools selects Artifacts only for explicit Wasm profiles;
@@ -211,6 +209,11 @@ Callers must enforce input/work budgets and own discovery, trusted versions,
 certification, full range ordering, completeness, replay and report policy.
 The projections preserve Query 0.57.0's tags/discriminants and are not a complete
 upstream Registry schema; unknown fields retain normal Prost behavior.
+
+The maintainer confirmed on 2026-11-10 that the five Registry projection files
+`registry/proto/{id,node,registry,routing,subnet}.rs` and the Ledger projection
+`icp_ledger/protobuf/mod.rs` under `crates/ic-host-tools/src/` were authored by
+the team. Their upstream schema references document wire compatibility.
 
 The optional native Tools `agent` feature shares response-bounded SDK construction
 and lazy exact endpoint/ceiling binding using Platform's supported Agent API.
@@ -664,9 +667,18 @@ are separate from this extraction.
 
 Environment comparison uses HMAC-SHA256 with distinct key-ID/value domains and
 length-prefixed fields. It provides private equality diagnostics, not cache or
-release authority. It reuses the workspace lockfile's HMAC 0.12.1 and SHA-256
+release authority. It reuses the workspace's HMAC 0.13 and SHA-256
 implementation; tags and key identifiers must not be published. Git observations
 retain raw NUL-separated porcelain status, which may contain sensitive paths.
 Tool publication preserves filesystem publication errors and their custody
 information. Runtime-library bundles use Unix symlink selectors; other platforms
 refuse that bundle operation explicitly.
+
+Failed Git/compiler probes retain Host's typed execution evidence inside their
+I/O error. Build delegates installation scratch allocation to Host FS with an
+explicit 64-attempt bound and ordinary directory permissions. Before bundle
+publication, failed removal retains `BundleCleanupError<E>` inside
+`InstallError::Io::source`: the outer path identifies the unremoved bundle,
+the causal chain retains the original caller error, and `cleanup` retains the
+removal failure. Once the selection is published, a later sync failure never
+triggers bundle deletion.

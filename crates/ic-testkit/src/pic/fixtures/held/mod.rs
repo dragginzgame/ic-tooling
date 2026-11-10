@@ -9,18 +9,18 @@
 //! test-control facility, not a deployed service or an authorization boundary.
 
 use super::{CatalogBudget, RawReplyError, RawReplyLimits, RawReplyMethod, ReplyMode, charge};
-use crate::pocket_ic::{
-    ClientError, PocketIc,
-    common::rest::{
-        CanisterHttpReply, CanisterHttpRequest, CanisterHttpResponse, MockCanisterHttpResponse,
-    },
-};
 use ic_host_artifacts::wasm_text::{CompileError, CompileLimits, compile};
 use ic_platform::{
     candid_codec::encode_one,
     management_canister_types::{HttpMethod, HttpRequestArgs},
 };
-use ic_platform_types::Principal;
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::{
+    common::rest::{
+        CanisterHttpReply, CanisterHttpRequest, CanisterHttpResponse, MockCanisterHttpResponse,
+    },
+    nonblocking::PocketIc,
+};
 use std::{collections::BTreeMap, fmt::Write};
 use thiserror::Error;
 
@@ -70,9 +70,6 @@ pub enum HeldReplyError {
     /// Host could not compile the admitted fixture.
     #[error(transparent)]
     Compile(#[from] CompileError),
-    /// The `PocketIC` client returned a typed failure.
-    #[error(transparent)]
-    Operation(#[from] ClientError),
 }
 
 /// Native controller and generated Wasm for a single fixture installation.
@@ -202,7 +199,7 @@ impl HeldReplyFixture {
         self.admit(pic).await?;
         Ok(pic
             .get_canister_http()
-            .await?
+            .await
             .into_iter()
             .filter_map(|request| {
                 let slot = self.pending_slot(&request)?;
@@ -235,7 +232,7 @@ impl HeldReplyFixture {
         self.admit(pic).await?;
         // Observe the server before rejecting a token, retaining admission and
         // transport error precedence without constructing every pending token.
-        let pending = pic.get_canister_http().await?;
+        let pending = pic.get_canister_http().await;
         let owner = (self.server.as_str(), self.instance, self.prefix.as_str());
         let requested_owner = (
             request.server.as_str(),
@@ -262,7 +259,7 @@ impl HeldReplyFixture {
             }),
             additional_responses: vec![],
         })
-        .await?;
+        .await;
         Ok(())
     }
 
@@ -287,7 +284,7 @@ impl HeldReplyFixture {
 }
 
 async fn manual(pic: &PocketIc) -> Result<(), HeldReplyError> {
-    if pic.auto_progress_enabled().await? {
+    if pic.auto_progress_enabled().await {
         return Err(HeldReplyError::AutomaticProgress);
     }
     Ok(())

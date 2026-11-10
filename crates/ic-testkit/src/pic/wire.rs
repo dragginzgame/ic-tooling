@@ -1,9 +1,9 @@
 //! Native typed transport; IC Wire remains the sole frame and codec owner.
-use crate::pocket_ic::ClientError;
+use pocket_ic::RejectResponse;
 
-use crate::pocket_ic::PocketIc;
-use ic_platform_types::Principal;
 use ic_wire::{Limits, native};
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::nonblocking::PocketIc;
 use serde::{Serialize, de::DeserializeOwned};
 
 /// Caller-selected endpoint identity and native Serde traversal allowances.
@@ -52,12 +52,12 @@ pub enum WireCallError {
         /// Original Wire refusal.
         source: ic_wire::Error,
     },
-    /// The underlying operation rejected or lost its transport.
+    /// The underlying operation returned a canister rejection.
     Call {
         /// Target, caller, operation and method identity.
         context: Box<WireCallContext>,
-        /// Complete rejection or original classified operation failure.
-        source: Box<ClientError>,
+        /// Complete rejection; upstream does not implement `Error` for this value.
+        source: Box<RejectResponse>,
     },
     /// The returned bytes failed the selected method's response admission.
     Decode {
@@ -78,16 +78,11 @@ impl std::fmt::Display for WireCallError {
                 context
             }
             Self::Call { context, source } => {
-                match source.as_ref() {
-                    ClientError::Canister(response) => write!(
-                        f,
-                        "PocketIC call rejected ({:?}, {:?})",
-                        response.reject_code, response.error_code
-                    )?,
-                    _ => {
-                        f.write_str("PocketIC client failed")?;
-                    }
-                }
+                write!(
+                    f,
+                    "PocketIC call rejected ({:?}, {:?})",
+                    source.reject_code, source.error_code
+                )?;
                 context
             }
             Self::Decode {
@@ -115,7 +110,7 @@ impl std::error::Error for WireCallError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::Encode { source, .. } | Self::Decode { source, .. } => Some(source),
-            Self::Call { source, .. } => Some(source.as_ref()),
+            Self::Call { .. } => None,
         }
     }
 }
@@ -124,7 +119,7 @@ impl std::error::Error for WireCallError {
 ///
 /// The caller supplies the exact name, identity and request/response limits.
 /// Explicit anonymous callers are permitted. Application-level results are returned
-/// unchanged. The upstream typed client failure is retained unchanged.
+/// unchanged. Returned upstream rejections are retained; transport panics propagate.
 /// Requests may borrow their input; responses must own their decoded data because
 /// the helper releases `PocketIC`'s reply buffer before returning.
 /// IC Wire owns native frame admission, primitive validation and traversal limits.
@@ -132,7 +127,8 @@ impl std::error::Error for WireCallError {
 /// to retain original frames when exact bytes are needed for hashes or retries.
 ///
 /// # Errors
-/// Returns request encoding, query rejection/transport or response decoding errors.
+/// Returns request encoding, query rejection or response decoding errors.
+/// Upstream transport panics propagate unchanged.
 #[expect(
     clippy::future_not_send,
     reason = "Serde requests may borrow local non-Sync values"
@@ -167,7 +163,8 @@ where
 /// A refused reply does not establish that the update had no effect.
 ///
 /// # Errors
-/// Returns request encoding, update rejection/transport or response decoding errors.
+/// Returns request encoding, update rejection or response decoding errors.
+/// Upstream transport panics propagate unchanged.
 #[expect(
     clippy::future_not_send,
     reason = "Serde requests may borrow local non-Sync values"
@@ -218,7 +215,7 @@ async fn call_wire<Request, Response>(
     context: WireCallContext,
     spec: WireCallSpec,
     request: &Request,
-    call: impl AsyncFnOnce(Vec<u8>) -> Result<Vec<u8>, ClientError>,
+    call: impl AsyncFnOnce(Vec<u8>) -> Result<Vec<u8>, RejectResponse>,
 ) -> Result<Response, WireCallError>
 where
     Request: Serialize + ?Sized,

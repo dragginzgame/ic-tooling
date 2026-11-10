@@ -4,6 +4,18 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.89.1] - Unreleased
+
+### 🧹 Cleanup
+
+- Use Serde's borrowed-string decoding for ICP response text, removing a custom
+  visitor while retaining escaped strings, strict envelopes and response limits.
+
+### 🧪 Testing
+
+- Cover duplicate installation-status fields and invalid ignored metadata
+  directly, retaining the existing Serde projection and failure classes.
+
 ## [0.89.0] - 2026-11-09
 
 ### ⚠️ Breaking

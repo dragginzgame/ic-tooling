@@ -3998,9 +3998,9 @@ documentation guard for that revision, including Intel macOS. It precedes the
   offline byte/version verification. Versions and native digests have one owner
   in the reviewed snapshot's `ci/tool-versions.env` and `ci/ic-tools.tsv`.
   Host, Rust and IC exceptions are selected independently under the shared
-  [catalog contract](../local-setup.md#catalog-selection). Compiler and PocketIC
+  [catalog contract](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/local-setup.md#catalog-selection). Compiler and PocketIC
   policy remain local. See the shared
-  [bootstrap instructions](../local-setup.md#bootstrap-prerequisites).
+  [bootstrap instructions](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/local-setup.md#bootstrap-prerequisites).
   Make selects `.tools/host/bin` and `.tools/ic/bin`; direct Cargo calls use the
   explicit PATH and `POCKET_IC_BIN` exports in the README.
 - Perl for the prepared standalone cloc payload and read-only sibling tooling

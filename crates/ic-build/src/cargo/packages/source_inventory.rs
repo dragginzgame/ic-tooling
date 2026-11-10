@@ -2,7 +2,7 @@
 
 use super::archive::{Cause, PackageArchiveSpec, PackageQualificationLimits};
 use ic_host_artifacts::artifact::Sha256Digest;
-use serde::{Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::SerializeStruct};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
@@ -24,9 +24,11 @@ pub(super) struct SourceFile {
 
 impl Serialize for SourceFile {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        // Keep the former encoding, including serde_json's feature-selected order.
-        serde_json::json!({"sha256": self.sha256.to_string(), "mode": self.mode.bits()})
-            .serialize(serializer)
+        // Fixed lexical order matches the existing qualification evidence.
+        let mut value = serializer.serialize_struct("SourceFile", 2)?;
+        value.serialize_field("mode", &self.mode.bits())?;
+        value.serialize_field("sha256", &self.sha256.to_string())?;
+        value.end()
     }
 }
 

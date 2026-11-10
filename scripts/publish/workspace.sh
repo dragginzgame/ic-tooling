@@ -84,7 +84,8 @@ source="$(git rev-parse --verify HEAD)" || exit $?
 [[ "$source" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || fail 'invalid source identity'
 dirty="$(git status --porcelain --untracked-files=all)" || exit $?
 [[ "$mode" != publish || -z "$dirty" ]] || fail 'commit workspace changes before publishing'
-[[ -f LICENSE && ! -L LICENSE ]] || fail 'expected a regular root license notice'
+[[ -f LICENSE.md && ! -L LICENSE.md ]] || fail 'expected a regular root licence'
+perl "$tooling_root/scripts/ci/check-license.pl" --file "$root/LICENSE.md"
 [[ ! -L target && ! -L target/publish && ! -L target/publish/admission ]] || fail 'symlinked publication evidence directory'
 umask 077
 mkdir -p target/publish/admission
@@ -110,9 +111,10 @@ jq -e '
     | ($packages | map(select(.publish != [])) | map(.name) | sort) == ($ARGS.positional | sort)
       and ($packages | all(.publish == ["crates-io"]))
       and ($packages | all(.repository == "https://github.com/dragginzgame/ic-tooling"))
+      and ($packages | all(.license == null and (.license_file | type) == "string"))
       and ($packages | any(.name == "ic-host-wasm-inspect" and
           any(.targets[]; .name == "ic-host-wasm-inspect" and (.kind | index("bin")))))
-' "$attempt/metadata.json" --args "${public_packages[@]}" > /dev/null || fail 'expected the complete public crates.io roster'
+' "$attempt/metadata.json" --args "${public_packages[@]}" > /dev/null || fail 'expected the complete public crates.io roster and root licence'
 perl "$tooling_root/scripts/ci/cargo-publication-selection.pl" "$attempt/metadata.json" \
     "${public_packages[*]}" "${packages[*]}" crates-io > "$attempt/selected-packages"
 selectors=()
@@ -123,9 +125,10 @@ for package in "${packages[@]}"; do
     physical="$(cd -P -- "$root/$directory" && printf '%s/.' "$PWD")" || fail "missing package directory for $package"
     [[ "${physical%/.}" == "$root/$directory" ]] || fail "aliased package directory for $package"
     [[ -f "$directory/Cargo.toml" && ! -L "$directory/Cargo.toml" ]] || fail "expected a regular manifest for $package"
-    notice="$directory/LICENSE"
-    [[ -f "$notice" && ! -L "$notice" ]] || fail "expected a regular license notice for $package"
-    cmp -s LICENSE "$notice" || fail "license notice differs from the root notice for $package"
+    licence="$(jq -er --arg package "$package" '.packages[] | select(.name == $package) | .license_file' "$attempt/metadata.json")"
+    [[ "$licence" == /* ]] || licence="$root/$directory/$licence"
+    licence_parent="$(cd -P -- "${licence%/*}" && printf '%s/.' "$PWD")" || fail "missing licence directory for $package"
+    [[ "${licence_parent%/.}/${licence##*/}" == "$root/LICENSE.md" ]] || fail "expected the root licence for $package"
     package_directories+=("$directory")
 done
 repository="$(jq -r '.packages[0].repository' "$attempt/metadata.json")"
@@ -165,9 +168,9 @@ if [[ "$mode" == publish ]]; then
     for index in "${!packages[@]}"; do
         package="${packages[$index]}"
         version="${selectors[$index]#*@}"
-        directory="${package_directories[$index]}"
-        perl "$tooling_root/scripts/ci/check-license.pl" --kind mit --file "$root/$directory/LICENSE" \
-            --archive "$root/target/package/$package-$version.crate" --member "$package-$version/LICENSE"
+        archive="$root/target/package/$package-$version.crate"
+        perl "$tooling_root/scripts/ci/check-license.pl" --file "$root/LICENSE.md" \
+            --archive "$archive" --member "$package-$version/LICENSE.md"
     done
 fi
 observed_source="$(git rev-parse --verify HEAD)" || exit $?

@@ -1,10 +1,8 @@
+use super::*;
+use pocket_ic::{ErrorCode, RejectCode};
 #[tokio::test]
-async fn cleanup_preserves_causes_and_senders_and_continues_after_each_failure() {
-    use super::{ControllerSnapshot, SnapshotCleanupFailure, cleanup_captured_snapshots};
-    use crate::pocket_ic::{ClientError, ErrorCode, RejectCode, RejectResponse};
-    use ic_platform_types::Principal;
-
-    let ids = [1, 2, 3, 4].map(|byte| Principal::from_slice(&[byte]));
+async fn cleanup_preserves_exact_id_sender_and_all_management_rejections() {
+    let ids = [1, 2, 3, 4].map(|x| Principal::from_slice(&[x]));
     let sender = Some(Principal::anonymous());
     let snapshots = ids
         .map(|id| {
@@ -17,59 +15,28 @@ async fn cleanup_preserves_causes_and_senders_and_continues_after_each_failure()
             )
         })
         .into_iter()
-        .collect::<std::collections::BTreeMap<_, _>>();
-    let rejection = RejectResponse {
-        reject_code: RejectCode::CanisterReject,
-        reject_message: "cleanup rejected".into(),
-        error_code: ErrorCode::CanisterCalledTrap,
-        certified: false,
-    };
+        .collect();
     let mut calls = Vec::new();
-    let failures = cleanup_captured_snapshots(snapshots, |id, selected_sender, snapshot_id| {
-        let result = (|| {
-            assert_eq!(snapshot_id, [7]);
-            calls.push((id, selected_sender));
-            if id == ids[1] {
-                return Err(ClientError::Canister(rejection.clone()));
-            }
-            if id == ids[2] {
-                return Err(ClientError::Protocol("synthetic cleanup failure".into()));
-            }
+    let failures = cleanup_captured_snapshots(snapshots, |id, caller, snapshot| {
+        calls.push((id, caller, snapshot));
+        std::future::ready(if id == ids[1] || id == ids[2] {
+            Err(RejectResponse {
+                reject_code: RejectCode::CanisterReject,
+                reject_message: format!("refused {id}"),
+                error_code: ErrorCode::CanisterRejectedMessage,
+                certified: false,
+            })
+        } else {
             Ok(())
-        })();
-        std::future::ready(result)
+        })
     })
     .await;
-    assert_eq!(calls, ids.map(|id| (id, sender)));
-    let [
-        SnapshotCleanupFailure {
-            canister_id: rejected_id,
-            sender: rejected_sender,
-            source: rejected,
-            snapshot_id: rejected_snapshot,
-        },
-        SnapshotCleanupFailure {
-            canister_id: panicked_id,
-            sender: panicked_sender,
-            source: panicked,
-            snapshot_id: panicked_snapshot,
-        },
-    ] = failures.as_slice()
-    else {
-        panic!("expected both cleanup failures: {failures:?}");
-    };
-    assert_eq!(*rejected_id, ids[1]);
-    assert_eq!(rejected_snapshot, &[7]);
-    assert_eq!(panicked_snapshot, &[7]);
-    assert_eq!(*rejected_sender, sender);
-    let ClientError::Canister(response) = rejected.as_ref() else {
-        panic!("expected rejection: {rejected:?}");
-    };
-    assert_eq!(response, &rejection);
-    assert_eq!(*panicked_id, ids[2]);
-    assert_eq!(*panicked_sender, sender);
-    let ClientError::Protocol(source) = panicked.as_ref() else {
-        panic!("expected operation failure: {panicked:?}");
-    };
-    assert_eq!(source, "synthetic cleanup failure");
+    assert_eq!(calls, ids.map(|id| (id, sender, vec![7])));
+    assert_eq!(failures.len(), 2);
+    for (failure, id) in failures.iter().zip([ids[1], ids[2]]) {
+        assert_eq!(failure.canister_id, id);
+        assert_eq!(failure.sender, sender);
+        assert_eq!(failure.snapshot_id, [7]);
+        assert_eq!(failure.rejection.reject_message, format!("refused {id}"));
+    }
 }

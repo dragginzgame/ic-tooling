@@ -22,12 +22,6 @@ fn ledger_blocks_keep_the_platform_value_identity() {
 }
 
 #[test]
-fn testkit_metrics_keep_the_platform_protocol_identity() {
-    let _: fn(ic_platform::ic_protocol::SubnetMetrics) -> ic_testkit::pocket_ic::SubnetMetrics =
-        |metrics| metrics;
-}
-
-#[test]
 fn tooling_callers_share_principal_and_wire_contracts() {
     let owner: ic_platform_types::Principal =
         ic_host_tools::registry::routing_shards::canister_range_start_from_key(
@@ -36,6 +30,8 @@ fn tooling_callers_share_principal_and_wire_contracts() {
         )
         .unwrap();
     let facade: ic_platform::Principal = owner;
+    let upstream = pocket_ic::CanisterId::from_slice(owner.as_slice());
+    assert_eq!(upstream.as_slice(), owner.as_slice());
     let _: ic_platform_types::Principal = facade;
     let limits = ic_wire::Limits {
         bytes: 1024,

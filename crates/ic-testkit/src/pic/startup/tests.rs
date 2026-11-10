@@ -1,4 +1,3 @@
-use crate::pocket_ic::ClientError;
 mod instances;
 
 use std::{
@@ -11,7 +10,7 @@ use super::{
     OwnedDirectory, PocketIcStartupConfig, PocketIcStartupError, PocketIcStartupFailure,
     StartupFiles, create_unique_directory,
 };
-use crate::pocket_ic::PocketIcBuilder;
+use pocket_ic::PocketIcBuilder;
 
 #[cfg(unix)]
 use ic_host_process::testing::write_executable_script;
@@ -37,12 +36,11 @@ fn completed_instances_must_still_meet_the_startup_deadline() {
         server: None,
     };
     let client = || {
-        crate::pocket_ic::PocketIc::new_from_existing_instance(
+        pocket_ic::nonblocking::PocketIc::new_from_existing_instance(
             "http://localhost/".parse().unwrap(),
             7,
-            Duration::from_secs(1),
+            Some(1000),
         )
-        .unwrap()
     };
     let instance = pending.admit(client()).unwrap();
     assert_eq!(instance.instance().instance_id, 7);
@@ -68,7 +66,6 @@ fn completed_instances_must_still_meet_the_startup_deadline() {
 
 #[test]
 fn original_failure_output_and_both_typed_cleanup_reports_survive_projection() {
-    use crate::pocket_ic::ClientError;
     use std::error::Error as _;
     for failure in [
         PocketIcStartupFailure::ReadinessTimeout {
@@ -82,9 +79,6 @@ fn original_failure_output_and_both_typed_cleanup_reports_survive_projection() {
             server_binary: "server".into(),
             value: "invalid".into(),
         },
-        PocketIcStartupFailure::BuilderFailed {
-            source: ClientError::Protocol("original-client-failure".into()),
-        },
         PocketIcStartupFailure::Io {
             operation: "original-io",
             path: "port".into(),
@@ -95,6 +89,7 @@ fn original_failure_output_and_both_typed_cleanup_reports_survive_projection() {
         let output = super::PocketIcManagedServerOutput {
             stdout: "original-stdout".into(),
             stderr: "original-stderr".into(),
+            ..Default::default()
         };
         let command = super::CleanupError {
             status: None,
@@ -131,16 +126,6 @@ fn original_failure_output_and_both_typed_cleanup_reports_survive_projection() {
                     .raw_os_error(),
                 Some(9)
             );
-        }
-        if let PocketIcStartupFailure::BuilderFailed { source } = error.failure() {
-            assert!(std::ptr::eq(
-                error
-                    .source()
-                    .unwrap()
-                    .downcast_ref::<ClientError>()
-                    .unwrap(),
-                source
-            ));
         }
         let displayed = error.to_string();
         assert!(displayed.starts_with(&primary_text));
@@ -343,31 +328,17 @@ fn version_capture_cleans_wrapper_descendants_on_exit_and_timeout() {
 
 #[cfg(unix)]
 #[tokio::test]
-async fn owned_builder_failure_retains_server_output_and_reaps_child() {
+async fn upstream_builder_panic_reaps_the_owned_server() {
     let script = TestServerScript::new(
         "builder-panic",
         "#!/bin/sh\nprintf '%s' \"$$\" > \"$0.pid\"\nprintf 'builder stdout'\nprintf 'builder stderr' >&2\nprintf '34567\\n' > \"$2\"\nexec sleep 30\n",
     );
-    let error = script
-        .config(Duration::from_secs(2))
-        .build_instance(PocketIcBuilder::new(std::time::Duration::from_secs(300)))
+    let config = script.config(Duration::from_secs(2));
+    let panic = tokio::spawn(async move { config.build_instance(PocketIcBuilder::new()).await })
         .await
         .err()
-        .unwrap();
-    let PocketIcStartupFailure::BuilderFailed { source } = error.failure() else {
-        panic!("expected builder failure, got {error:?}");
-    };
-    assert_ne!(source.to_string(), "");
-    assert!(std::ptr::eq(
-        std::error::Error::source(&error)
-            .unwrap()
-            .downcast_ref::<ClientError>()
-            .unwrap(),
-        source
-    ));
-    assert_eq!(error.output().stdout(), "builder stdout");
-    assert_eq!(error.output().stderr(), "builder stderr");
-    assert!(error.server_cleanup().is_none());
+        .expect("upstream transport failure must panic");
+    assert!(panic.is_panic());
     let pid_file = script.path().with_extension("pid");
     let pid = fs::read_to_string(&pid_file).unwrap().parse().unwrap();
     assert_eq!(process_state(pid), None);
@@ -437,7 +408,7 @@ fn reading_large_sparse_server_output_is_bounded() {
     file.write_all(b"server started\n").expect("write prefix");
     let size = 8_u64 * 1024 * 1024 * 1024;
     file.set_len(size).expect("extend sparse log");
-    let output = super::read_bounded_lossy(&files.stdout);
+    let output = super::read_bounded_lossy(&files.stdout).unwrap();
     assert!(output.starts_with("server started\n"));
     assert!(output.ends_with(&format!(
         "<truncated {} bytes>",
@@ -481,7 +452,7 @@ fn startup_readers_reject_fifos_without_waiting_for_a_writer() {
         let result = if path == &files.port {
             Some(files.read_port())
         } else {
-            assert_eq!(super::read_bounded_lossy(path), "");
+            assert!(super::read_bounded_lossy(path).is_err());
             None
         };
         let _ = stop_writer.send(());
@@ -759,7 +730,9 @@ async fn managed_startup_reports_an_exited_server_with_bounded_output() {
     let result = script
         .config(Duration::from_secs(2))
         .build_instance(
-            PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+            PocketIcBuilder::new()
+                .with_max_request_time_ms(Some(300_000))
+                .with_application_subnet(),
         )
         .await;
 
@@ -812,7 +785,9 @@ async fn managed_startup_terminates_a_server_that_never_becomes_ready() {
     let result = script
         .config(timeout)
         .build_instance(
-            PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+            PocketIcBuilder::new()
+                .with_max_request_time_ms(Some(300_000))
+                .with_application_subnet(),
         )
         .await;
 
@@ -952,7 +927,9 @@ async fn caller_provided_server_publishes_port_constructs_instance_and_cleans_up
         server_output_files: None,
     }
     .build_instance(
-        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+        PocketIcBuilder::new()
+            .with_max_request_time_ms(Some(300_000))
+            .with_application_subnet(),
     )
     .await
     .expect("owned managed spawn must construct an instance");
@@ -985,7 +962,9 @@ async fn caller_provided_server_publishes_port_constructs_instance_and_cleans_up
         timeout: Duration::from_secs(30),
     }
     .build_instance(
-        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+        PocketIcBuilder::new()
+            .with_max_request_time_ms(Some(300_000))
+            .with_application_subnet(),
     )
     .await
     .expect("construct instance through caller-provided server");
@@ -1035,4 +1014,27 @@ impl TestServerScript {
             server_output_files: None,
         }
     }
+}
+
+#[test]
+fn output_capture_distinguishes_missing_files_from_empty_output() {
+    let (files, stdout, stderr) = StartupFiles::create(None).unwrap();
+    drop((stdout, stderr));
+    let empty = files.capture();
+    assert_eq!(empty.stdout(), "");
+    assert!(empty.stdout_error().is_none());
+    assert!(empty.stderr_error().is_none());
+    fs::remove_file(&files.stdout).unwrap();
+    let missing = files.capture();
+    assert_eq!(missing.stdout(), "");
+    assert!(missing.stdout_error().is_some());
+    assert!(missing.stderr_error().is_none());
+    let error = PocketIcStartupError::new(PocketIcStartupFailure::Io {
+        operation: "original failure",
+        path: "capture".into(),
+        source: std::io::Error::from_raw_os_error(9),
+    })
+    .with_cleanup(None, Some((missing, None)));
+    assert!(error.to_string().contains("server stdout capture failed:"));
+    assert!(error.to_string().contains("original failure"));
 }

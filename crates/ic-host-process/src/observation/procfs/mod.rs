@@ -43,18 +43,16 @@ fn positive_sysconf(name: libc::c_int, fallback: u64) -> u64 {
 #[must_use]
 pub fn process_identity(proc_root: &Path, pid: u32) -> Option<u64> {
     let stat = fs::read_to_string(proc_root.join(pid.to_string()).join("stat")).ok()?;
-    let (_, fields) = stat_parts(&stat)?;
-    let mut fields = fields.split_whitespace();
-    fields.next()?; // state
-    fields.next()?.parse::<u64>().ok()?; // preserve full-stat PPID validation
-    fields.nth(17)?.parse().ok() // starttime is field 19 after the command
+    let (_, _, fields) = parse_stat(&stat)?;
+    fields[1].parse::<u64>().ok()?; // preserve PPID validation
+    fields[19].parse().ok()
 }
 
 /// Read base Linux process facts from a caller-selected procfs mount.
 #[must_use]
 pub fn basic_process(proc_root: &Path, pid: u32) -> Option<ProcessObservation> {
     let stat = fs::read_to_string(proc_root.join(pid.to_string()).join("stat")).ok()?;
-    let (name, fields) = parse_stat(&stat)?;
+    let (_, name, fields) = parse_stat(&stat)?;
     let number = |index: usize| fields.get(index)?.parse::<u64>().ok();
     let ns = |index| number(index).unwrap_or(0).saturating_mul(1_000_000_000) / ticks_per_second();
     Some(ProcessObservation {
@@ -80,18 +78,25 @@ pub fn basic_process(proc_root: &Path, pid: u32) -> Option<ProcessObservation> {
     })
 }
 
-fn stat_parts(stat: &str) -> Option<(&str, &str)> {
+pub(super) fn parse_stat(stat: &str) -> Option<(Option<u32>, &str, [&str; 22])> {
     let begin = stat.find('(')?;
     let end = stat.rfind(')')?;
-    Some((stat.get(begin + 1..end)?, stat.get(end + 1..)?))
-}
-
-pub(super) fn parse_stat(stat: &str) -> Option<(&str, [&str; 22])> {
-    let (name, fields) = stat_parts(stat)?;
+    let name = stat.get(begin + 1..end)?;
+    let fields = stat.get(end + 1..)?;
+    // The bounded observer requires the kernel's exact PID/delimiter spelling.
+    // Other observers retain their existing permissive prefix admission.
+    let pid = fields
+        .starts_with(' ')
+        .then(|| stat.get(..begin)?.strip_suffix(' ')?.parse().ok())
+        .flatten();
     let mut fields = fields.split_whitespace();
     // Only the first 22 fields are used. Keep them borrowed and on the stack;
     // samples and identity checks need neither the rest nor a temporary Vec.
-    Some((name, std::array::from_fn(|_| fields.next().unwrap_or(""))))
+    Some((
+        pid,
+        name,
+        std::array::from_fn(|_| fields.next().unwrap_or("")),
+    ))
 }
 
 fn field_value(text: &str, name: &str) -> Option<u64> {

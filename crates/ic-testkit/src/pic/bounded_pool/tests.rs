@@ -147,8 +147,14 @@ async fn shutdown_waits_for_leases_rejects_waiters_and_keeps_all_failures() {
             .is_pending()
     );
     assert!(pool.acquire().await.is_none());
+    // Closing wakes queued acquisitions without waiting for a held permit.
+    assert!(
+        tokio::time::timeout(Duration::from_secs(1), queued)
+            .await
+            .unwrap()
+            .is_none()
+    );
     drop(first);
-    assert!(queued.await.is_none());
     assert!(attempts.lock().unwrap().is_empty());
     drop((second, third));
     let failures = shutdown.await;
@@ -168,6 +174,12 @@ async fn cancelled_shutdown_retains_unattempted_values_without_replaying_deletio
     first.replace(1);
     second.replace(2);
     // Cancelling while quiescing closes admission without taking either value.
+    let mut queued = Box::pin(pool.acquire());
+    assert!(
+        std::future::poll_fn(|cx| std::task::Poll::Ready(queued.as_mut().poll(cx)))
+            .await
+            .is_pending()
+    );
     let mut waiting = Box::pin(pool.shutdown(|value| async move { Err(value) }));
     assert!(
         std::future::poll_fn(|cx| std::task::Poll::Ready(waiting.as_mut().poll(cx)))
@@ -176,6 +188,12 @@ async fn cancelled_shutdown_retains_unattempted_values_without_replaying_deletio
     );
     drop(waiting);
     assert!(pool.acquire().await.is_none());
+    assert!(
+        tokio::time::timeout(Duration::from_secs(1), queued)
+            .await
+            .unwrap()
+            .is_none()
+    );
     drop((first, second));
     let attempts = Arc::new(std::sync::Mutex::new(Vec::new()));
     let observed = Arc::clone(&attempts);

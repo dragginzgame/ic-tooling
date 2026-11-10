@@ -6,6 +6,25 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.81.2] - Unreleased
+
+### 🔧 Changed
+
+- Write package source inventories directly to buffered evidence files and
+  serialize their typed fields without temporary JSON objects. Evidence retains
+  lexical field order independently of unrelated JSON feature selections;
+  buffered write failures remain qualification failures.
+- Retain failed tool-probe status/output and both causes when failed bundle
+  staging cannot be cleaned up. Reuse Host FS's unique-directory allocator for
+  installation scratch without changing its collision bound or permissions.
+
+### 🧪 Testing
+
+- Cover aliases across separate input roots when excluding generated workspace
+  targets, preserving source-change detection and fingerprint boundaries.
+- Cover workspace markers that link to directories alongside dangling links and
+  malformed manifests, retaining typed discovery failures.
+
 ## [0.81.1] - 2026-11-09
 
 ### 🔧 Changed

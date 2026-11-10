@@ -2,7 +2,7 @@
 
 Release groups retain complete qualification of their own contracts. Tooling's
 [adapter](../../scripts/release/adapter.sh) uses the existing Shared
-[plan runner](../release-group-validation.md), without another release executor
+[plan runner](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/release-group-validation.md), without another release executor
 or metadata renderer. Repository `make ci`, hosted `make ci-publication` and
 publication gates retain their complete workspace coverage.
 
@@ -161,7 +161,7 @@ The remaining tooling roster and its first-failure behavior are unchanged.
 
 The fixture-retention, product-evidence, workflow-selection and scratch-routing
 stages use Shared's
-[stage runner](../release-validation-reuse.md). It observes every shell source
+[stage runner](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/release-validation-reuse.md). It observes every shell source
 under `scripts/`, the tooling roster, its observer, interpreter modules and the
 resolved fixture tools. The workflow/scratch matrices additionally observe their
 Make, CI, workflow, rule and companion-document trees, root toolchain/snapshot,

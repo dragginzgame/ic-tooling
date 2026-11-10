@@ -102,3 +102,16 @@ fn lock_observation_matches_exact_inode_and_ignores_waiters() {
         KernelLock::NotObserved
     );
 }
+
+#[test]
+fn stat_prefix_and_delimiters_retain_bounded_admission() {
+    let valid = stat(10, 42);
+    for invalid in [
+        valid.replacen("10 (", "11 (", 1),
+        valid.replacen("10 (", "10(", 1),
+        valid.replacen("10 (", "10  (", 1),
+        valid.replacen(") S", ")S", 1),
+    ] {
+        assert!(parse_process(10, &invalid).is_none(), "{invalid}");
+    }
+}

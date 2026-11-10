@@ -1792,7 +1792,7 @@ releases, retaining registry responses and reporting missing or unavailable
 observations separately. It uses Perl core modules and curl 8.4 or newer and
 does not execute installed tools. Receipts describe versions; `make rust-tools-check`
 continues to authenticate prepared bytes and build identities. See the
-[task guide](../../tasks/cargo-tool-versions.md) for statuses and alternate inputs.
+[task guide](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/tasks/cargo-tool-versions.md) for statuses and alternate inputs.
 Portable CI exercises the checker with substitute registry responses, including
 outdated/missing selections and incomplete observations.
 
@@ -1873,7 +1873,7 @@ refresh automatically retires unchanged owned files outside the selection after
 proving their prior source, digest and mode. Local edits, staging and concurrent
 changes still refuse. Remove `--retire-file` from any external refresh commands;
 directly used helpers must remain selected entrypoints. See the
-[adoption guide](../../docs/consuming-snapshots.md#retiring-obsolete-payloads).
+[adoption guide](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/consuming-snapshots.md#retiring-obsolete-payloads).
 Prepared tools, pin selections and library contracts are unchanged.
 
 ### Fixed: failure evidence for linked checkout directories

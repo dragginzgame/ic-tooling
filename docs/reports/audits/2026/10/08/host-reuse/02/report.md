@@ -4,7 +4,7 @@
 
 Requested 2026-10-08: audit Host and sibling repositories to remove redundant
 mechanisms and align adoption. Method:
-[flow convergence and duplication](../../../../../../../../audits/flow-convergence-and-duplication.md),
+[flow convergence and duplication](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/audits/flow-convergence-and-duplication.md),
 Shared Tooling 0.1.23 `0ba0ad00ed94848e54ecc82629b6b7873b7284c0`.
 Overlay: Host AGENTS.md and docs/extraction.md at released
 `81f9809861159def2fd0987fcb7961cda4afd969` (0.5.1). Host started clean.

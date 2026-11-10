@@ -11,9 +11,9 @@ use std::{
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt as _;
 
-use crate::pocket_ic::{ClientError, PocketIc, PocketIcBuilder};
 use ic_host_fs::{directory::create_unique_directory, owned_directory::OwnedDirectory};
 use ic_host_process::child::{CleanupError, CleanupPolicy, OwnedChild};
+use pocket_ic::{PocketIcBuilder, nonblocking::PocketIc};
 
 const STARTUP_POLL_INTERVAL: Duration = Duration::from_millis(20);
 const SERVER_OUTPUT_LIMIT: usize = 16 * 1024;
@@ -75,14 +75,14 @@ pub struct PocketIcManagedServer {
 /// Field projection cannot silently detach the client from its server:
 /// ```compile_fail
 /// use ic_testkit::pic::PocketIcInstance;
-/// fn detach(owned: PocketIcInstance) -> ic_testkit::pocket_ic::PocketIc {
+/// fn detach(owned: PocketIcInstance) -> pocket_ic::nonblocking::PocketIc {
 ///     owned.instance
 /// }
 /// ```
 /// Nor can a client borrow outlive a temporary owner:
 /// ```compile_fail
 /// use ic_testkit::pic::PocketIcInstance;
-/// fn escape(owner: PocketIcInstance) -> &'static ic_testkit::pocket_ic::PocketIc {
+/// fn escape(owner: PocketIcInstance) -> &'static pocket_ic::nonblocking::PocketIc {
 ///     owner.instance()
 /// }
 /// ```
@@ -119,7 +119,7 @@ impl PocketIcInstance {
     /// The borrow cannot outlive the owner:
     /// ```compile_fail
     /// use ic_testkit::pic::PocketIcInstance;
-    /// fn escape(mut owner: PocketIcInstance) -> &'static mut ic_testkit::pocket_ic::PocketIc {
+    /// fn escape(mut owner: PocketIcInstance) -> &'static mut pocket_ic::nonblocking::PocketIc {
     ///     owner.instance_mut()
     /// }
     /// ```
@@ -144,13 +144,11 @@ impl PocketIcInstance {
     }
     /// Delete this instance while retaining its managed server until the request finishes.
     /// Dropping the future stops an owned server; borrowed servers require caller reconciliation.
-    /// # Errors
-    /// Returns the client deletion failure, without retrying it.
-    pub async fn close(self) -> Result<(), ClientError> {
+    /// Upstream deletion is best effort and does not return transport failures.
+    pub async fn close(self) {
         let (instance, server) = self.into_parts();
-        let result = instance.drop().await;
+        instance.drop().await;
         drop(server);
-        result
     }
 }
 
@@ -158,11 +156,13 @@ impl PocketIcInstance {
 ///
 /// Each stream retains at most the first 16 KiB. A textual suffix reports the
 /// number of omitted bytes when truncation occurred. Unreadable streams and
-/// paths replaced with non-regular files are omitted.
+/// paths replaced with non-regular files retain a separate read diagnostic.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct PocketIcManagedServerOutput {
     stdout: String,
     stderr: String,
+    stdout_error: Option<String>,
+    stderr_error: Option<String>,
 }
 
 /// Original startup failure, bounded server output and typed cleanup failures.
@@ -327,12 +327,6 @@ pub enum PocketIcStartupFailure {
         /// Caller-selected deadline budget.
         timeout: Duration,
     },
-    /// Upstream `PocketIC` construction failed before returning an instance.
-    #[error("PocketIC startup failed: {source}")]
-    BuilderFailed {
-        /// Underlying operation failure.
-        source: ClientError,
-    },
     /// The command completed, but the owned server could not be cleaned up.
     #[error("PocketIC server cleanup failed after command exited with {command_status}")]
     ServerCleanup {
@@ -440,7 +434,8 @@ impl PocketIcStartupConfig {
 
     /// Construct an instance on the caller's Tokio runtime.
     ///
-    /// Preserves deadline, readiness, typed client/exit failures and bounded output.
+    /// Preserves deadline, readiness, child failures and bounded server output.
+    /// Upstream client construction panics propagate unchanged.
     /// Requires a Tokio runtime with its time driver enabled.
     /// Readiness and instance waits yield; process spawning and small file reads
     /// remain synchronous, as does exact owned-child cleanup. The deadline cannot
@@ -455,23 +450,23 @@ impl PocketIcStartupConfig {
     /// reconciliation. The deadline covers construction, not subsequent deletion.
     ///
     /// ```no_run
-    /// use ic_testkit::pocket_ic::PocketIcBuilder;
+    /// use pocket_ic::PocketIcBuilder;
     /// use ic_testkit::pic::PocketIcStartupConfig;
     /// use std::{path::Path, time::Duration};
     /// # async fn run(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
     /// let owned = PocketIcStartupConfig::Spawn { server_binary: binary.into(), timeout: Duration::from_secs(60), server_hard_ttl: None, server_idle_ttl: None, server_output_files: None }
-    ///     .build_instance(PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet()).await?;
-    /// let canister = owned.instance().create_canister().await?;
-    /// assert!(owned.instance().canister_exists(canister).await?);
+    ///     .build_instance(PocketIcBuilder::new().with_max_request_time_ms(Some(300_000)).with_application_subnet()).await?;
+    /// let canister = owned.instance().create_canister().await;
+    /// assert!(owned.instance().canister_exists(canister).await);
     /// let (instance, server) = owned.into_parts();
-    /// instance.drop().await?;
+    /// instance.drop().await;
     /// drop(server);
     /// # Ok(())
     /// # }
     /// ```
     ///
     /// # Errors
-    /// Returns configuration, startup, deadline or instance-creation failures with cleanup evidence.
+    /// Returns configuration, startup or deadline failures with cleanup evidence.
     pub async fn build_instance(
         self,
         builder: PocketIcBuilder,
@@ -718,6 +713,18 @@ impl PocketIcManagedServer {
 }
 
 impl PocketIcManagedServerOutput {
+    /// Diagnostic when standard output could not be read; distinct from empty output.
+    #[must_use]
+    pub fn stdout_error(&self) -> Option<&str> {
+        self.stdout_error.as_deref()
+    }
+
+    /// Diagnostic when standard error could not be read; distinct from empty output.
+    #[must_use]
+    pub fn stderr_error(&self) -> Option<&str> {
+        self.stderr_error.as_deref()
+    }
+
     /// Bounded lossy UTF-8 standard output.
     #[must_use]
     pub fn stdout(&self) -> &str {
@@ -806,8 +813,8 @@ impl InstanceStartup<'_> {
     }
 }
 
-fn parse_server_url(server_url: &str) -> Result<reqwest::Url, PocketIcStartupError> {
-    server_url.parse::<reqwest::Url>().map_err(|error| {
+fn parse_server_url(server_url: &str) -> Result<url::Url, PocketIcStartupError> {
+    server_url.parse::<url::Url>().map_err(|error| {
         PocketIcStartupError::new(PocketIcStartupFailure::InvalidServerUrl {
             server_url: server_url.to_owned(),
             message: error.to_string(),
@@ -838,7 +845,7 @@ async fn build_bounded(
     let builder = parse_server_url(server_url)
         .map(|url| builder.with_server_url(url))
         .map_err(|error| startup.fail(error))?;
-    let mut construction = std::pin::pin!(builder.build());
+    let mut construction = std::pin::pin!(builder.build_async());
     // Drop this local before the pending upstream future on cancellation.
     let mut startup = startup;
     loop {
@@ -848,16 +855,10 @@ async fn build_bounded(
             + startup
                 .deadline
                 .wait_interval(now, startup.server.is_some());
-        match tokio::time::timeout_at(next_check.into(), construction.as_mut()).await {
-            Ok(Ok(instance)) => {
-                return startup.admit(instance);
-            }
-            Ok(Err(source)) => {
-                return Err(startup.fail(PocketIcStartupError::new(
-                    PocketIcStartupFailure::BuilderFailed { source },
-                )));
-            }
-            Err(_) => {}
+        if let Ok(instance) =
+            tokio::time::timeout_at(next_check.into(), construction.as_mut()).await
+        {
+            return startup.admit(instance);
         }
     }
 }
@@ -1055,9 +1056,13 @@ impl StartupFiles {
     }
 
     fn capture(&self) -> PocketIcManagedServerOutput {
+        let stdout = read_bounded_lossy(&self.stdout);
+        let stderr = read_bounded_lossy(&self.stderr);
         PocketIcManagedServerOutput {
-            stdout: read_bounded_lossy(&self.stdout),
-            stderr: read_bounded_lossy(&self.stderr),
+            stdout_error: stdout.as_ref().err().map(ToString::to_string),
+            stderr_error: stderr.as_ref().err().map(ToString::to_string),
+            stdout: stdout.unwrap_or_default(),
+            stderr: stderr.unwrap_or_default(),
         }
     }
 
@@ -1120,16 +1125,14 @@ fn startup_file_error(
     })
 }
 
-fn read_bounded_lossy(path: &Path) -> String {
-    let Ok((bytes, length)) = ic_host_fs::read::read_file_prefix(path, SERVER_OUTPUT_LIMIT) else {
-        return String::new();
-    };
+fn read_bounded_lossy(path: &Path) -> io::Result<String> {
+    let (bytes, length) = ic_host_fs::read::read_file_prefix(path, SERVER_OUTPUT_LIMIT)?;
     let mut output = String::from_utf8_lossy(&bytes).into_owned();
     let omitted = length.saturating_sub(bytes.len() as u64);
     if omitted > 0 {
         let _ = write!(output, "\n<truncated {omitted} bytes>");
     }
-    output
+    Ok(output)
 }
 
 impl std::fmt::Display for PocketIcStartupError {
@@ -1140,6 +1143,14 @@ impl std::fmt::Display for PocketIcStartupError {
         }
         if !self.output.stderr.is_empty() {
             write!(formatter, "; server stderr: {}", self.output.stderr)?;
+        }
+        for (stream, error) in [
+            ("stdout", self.output.stdout_error()),
+            ("stderr", self.output.stderr_error()),
+        ] {
+            if let Some(error) = error {
+                write!(formatter, "; server {stream} capture failed: {error}")?;
+            }
         }
         for (owner, cleanup) in [
             ("command", self.command_cleanup()),

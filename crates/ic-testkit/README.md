@@ -6,10 +6,10 @@
 
 PocketIC-oriented test utilities for Internet Computer canister tests.
 
-Host-side tests select Testkit for both the client and lifecycle helpers. Host Tools releases independently.
+Host-side tests select upstream `pocket-ic` for the client and Testkit for lifecycle helpers. Host Tools releases independently.
 
 ```bash
-cargo add --dev ic-testkit
+cargo add --dev ic-testkit pocket-ic@16.1.0
 ```
 
 Cargo records the selected versions in the consuming manifest and lockfile.
@@ -22,37 +22,32 @@ The minimum and pinned development compiler is Rust 1.99.1, and the selected Poc
 Testkit's portable library provides deterministic test principals through
 `ic-platform-types`, without an IC runtime dependency. The private performance
 probe selects Runtime's entrypoints directly. Native simulator operations use
-`ic_testkit::pocket_ic`; `pic` supplies host-only lifecycle and fixture helpers.
-Testkit keeps its separate Platform dependency for Candid and management adapters.
+`pocket_ic::nonblocking::PocketIc` and `pocket_ic::PocketIcBuilder`; `pic` supplies
+host-only lifecycle and fixture helpers. Platform is selected only by held fixtures.
 Standalone recipe builders return `std::io::Result<StandaloneCanisterFixture>`.
 
-The builder supports NNS/II/system/application subnets, selected system canisters,
-time/progress, gateways and caller-owned persistent directories. Pass a path with
-`with_state_dir`; client teardown preserves it. Temporary state handles, custom
-creation DTOs and unused special-purpose configuration families are removed in
-the 0.88 [hard cut](../../docs/testkit/client-migration.md#instance-configuration).
+Upstream owns builder configuration, native Principal/management identities and
+client behavior. Testkit maintains no fork or compatibility re-export. See the
+[breaking migration](../../docs/testkit/client-migration.md).
 
 External interfaces that require Candid remain caller-owned: use a direct
 Platform dependency for encoding/decoding, then send the bytes through the
-maintained PocketIC client's raw operations.
+upstream PocketIC client's raw operations.
 PocketIC retains its upstream Candid dependencies; Testkit's Wasm profile remains
-Candid-free. Native Testkit also selects Platform's Candid and management DTO
-capabilities used by held fixtures, even when that fixture feature is disabled.
-This retains the existing dependency identity and API instead of adding a
-published support crate solely for target-specific feature isolation. The
-[#249 — Held-fixture Platform capabilities in default Testkit](https://github.com/dragginzgame/ic-tooling/issues/249) is
-intentional; native Testkit is not a Candid-free profile.
+Candid-free. Native default and Wire Testkit exclude Platform; `held-reply-fixtures`
+selects its owned Candid codec and management DTOs for the fixture protocol.
 
 The optional native `wire` feature adds `pic::query_wire` and `pic::update_wire`.
-Enable it on your Testkit dependency and declare `ic-wire = "0.18.0"` for your native
+Enable it on your Testkit dependency and declare `ic-wire = "0.19"` for your native
 Serde contracts. Await each helper. Each helper takes an explicit target/caller, a `WireCallSpec`
 with the exported name, method ID and request/response limits, and a borrowed
-request. Align your direct Wire dependency to 0.18 when supplying limits or matching
+request. Align your direct Wire dependency to 0.19 when supplying limits or matching
 typed codec errors. It executes one PocketIC operation without update retries; a refused reply
 does not prove absence of effects. It preserves
 application-level results. `WireCallError` retains typed codec causes, complete
-upstream `ClientError` values, including request context and accepted operation/ingress
-identities. Callers retain reconciliation policy; unrelated panics propagate. Display omits payloads; raw calls remain available for malformed
+upstream `RejectResponse` values. Transport panics propagate unchanged; upstream
+rejections do not implement `std::error::Error`. Callers retain reconciliation
+policy. Display omits payloads; raw calls remain available for malformed
 requests and original-byte evidence. Reply admission follows PocketIC's allocation,
 so it supplies no network pre-allocation or peak-heap guarantee. The feature is off
 by default and adds no Wire dependency to the canister library graph.
@@ -70,9 +65,9 @@ See the [0.65 migration](../../docs/changelog/0.65.md).
 This is the PocketIC package in the IC Tooling workspace. It provides:
 
 - optional typed Wire query/update helpers with contextual, structured errors
-- typed upstream client failures, with no panic-string adapters or automatic replay
+- upstream rejection values and panic behavior, with no automatic replay
 - canister install and retry helpers
-- explicit PocketIC startup, retained server/instance ownership, fallible async construction, and
+- explicit PocketIC startup, retained server/instance ownership, async construction, and
   structured child/readiness failures
 - explicit authenticated `ic-testkit-server setup`, offline `check`, and a shared
   environment startup contract with `ic-testkit-server run -- COMMAND`
@@ -91,14 +86,14 @@ absolute executable path to `PocketIcStartupConfig::Spawn`, without invoking the
 Explicit `server_assets::setup` takes a caller-owned cancellation predicate.
 Tests normally retain one
 `PocketIcInstance` and use `owned.instance()` for simulator operations;
-focused extension traits provide reusable harness behavior. Import all upstream
-client and DTO identities directly from `ic_testkit::pocket_ic`; Testkit owns no
-parallel client owner. See the [client migration](../../docs/testkit/client-migration.md).
+free `pic` functions provide reusable harness behavior. Import native client and
+DTO identities directly from `pocket_ic`. See the [client migration](../../docs/testkit/client-migration.md).
 The client and managed server remain privately paired. Use `server()` for shared
 server inspection, await `close()` for explicit instance deletion, and use
 `into_parts()` only when taking over teardown ordering. The client and network
 helpers are async-only; the caller owns the runtime. Rust Drop performs no client
-network I/O. See the [async migration](../../docs/testkit/client-migration.md).
+network I/O. Close and pool shutdown return `()` and await upstream best-effort
+deletion; they provide no borrowed-server deletion acknowledgement.
 Wrap a client on an externally owned server with
 `PocketIcInstance::from_borrowed_server(client)`.
 See the [0.66 migration](../../docs/changelog/0.66.md).
@@ -160,21 +155,18 @@ The published archive includes a `CHANGELOG.md` navigation file linking the
 historical upgrade actions. Current build and artifact-cache contracts belong to IC Build;
 historical Testkit artifact imports are not current entry points.
 
-Snapshot baselines retain global timer and low-Wasm-memory-hook state through
-metadata-upload snapshots, together with module/globals, heap, stable memory,
-certified data and the chunk store. Capture transfers data in bounded management
-messages and requires an additional temporary snapshot slot, memory and cycles. Initial capture is
-more work; warm reuse loads the already prepared snapshot. No server/client
-shared directory or application-specific timer reset is required.
+Snapshot baselines use upstream take/load operations directly. Testkit no longer
+owns a metadata/chunk transfer engine or promises its former timer/hook restoration.
+Use fresh instances or application-owned reset for those domains. Capture consumes
+ordinary snapshot slots, memory and cycles; warm reuse loads the captured snapshot.
 
 Custom recipes must stop/drain the whole captured set before capture and in
 `prepare_restore`, then restart only after complete capture or successful
 restore/reset in `drive_to_readiness`. Keep automatic progress disabled and
 exclude concurrent instance operations. The standalone recipe handles its
-single canister's stop/start lifecycle. Absolute captured deadlines are retained;
-current simulated time is not rewound, so an expired restored timer may fire on
-restart. Failures preserve primary causes and known snapshot cleanup IDs; a lost
-creation reply can leave an unknown snapshot requiring caller reconciliation.
+single canister's stop/start lifecycle. Simulated time and external effects are
+not rewound. Returned rejections retain known cleanup IDs; upstream panic or
+cancellation can leave partial captures requiring caller reconciliation.
 
 The repository also includes a complete
 [multi-canister baseline recipe](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-testkit/examples/multi_canister_baseline_pool.rs)
@@ -187,7 +179,7 @@ reset evidence before returning `Ok(())` from `reset_non_snapshot_state`.
 The pool restores captured snapshots with that funding, then runs reset,
 readiness and final validation before exposing a lease. Consumer recipes own
 reset-policy schemas and mismatched/missing evidence failures. See the
-[0.90 migration](https://github.com/dragginzgame/ic-tooling/blob/main/docs/testkit/client-migration.md#testkit-090-surface-cut).
+[client migration](../../docs/testkit/client-migration.md#snapshot-boundary).
 
 Generic Cargo/Wasm builds, retained artifact caches and freshness APIs belong to
 [IC Build](https://github.com/dragginzgame/ic-build). Depend on it directly and use
@@ -299,7 +291,8 @@ for setup and group releases.
 - `make testkit-browser-check`: browser-session support.
 
 The [0.62 migration](../../docs/changelog/0.62.md) replaces the old independent
-Testkit release flow. The [Testkit ledger](../../releases/testkit/CHANGELOG.md) covers Testkit, Native
-and private qualification packages. Host Tools has its own ledger and release group.
+Testkit release flow. The [Testkit ledger](../../releases/testkit/CHANGELOG.md) covers
+the published Testkit package; retired Native releases retain their own ledger.
+Private qualification packages are unpublished. Host Tools releases independently.
 Neither package checking nor ordinary validation
 authorizes downloads, publication or artifact cleanup.

@@ -25,7 +25,6 @@ testkit-installed-check: build-server-cli
 testkit-package-check: build-server-cli
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo run --manifest-path qualification/Cargo.toml -p ic-testkit-dev --bin check_packages --locked --offline
 testkit-graph-check:
-	bash scripts/ci/test-pocket-ic-source.sh
 	bash scripts/ci/check-testkit-graphs.sh
 
 # Current-source downstream qualification; never a supplier release prerequisite.
@@ -43,10 +42,9 @@ dependency-adoption-check: toko-tooling-check
 	+bash scripts/ci/check-tools-features.sh
 	+bash scripts/ci/check-testkit-graphs.sh
 	+$(MAKE) --no-print-directory test-tools-candid test-tools-agent test-tools-registry test-tools-ledger-evidence
-	+cargo test -p ic-testkit --locked --offline --test client_management_identity
-	+cargo test -p ic-testkit --locked --offline --lib pocket_ic::tests::client_failures::
+	+cargo test -p ic-testkit --locked --offline --lib pic::snapshot::tests::
 	+cargo test -p ic-testkit --features wire --locked --offline --lib pic::wire::tests::
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit \
-		--locked --offline --test client_installed installed_client_preserves_management_and_snapshot_state -- --ignored --exact
+		--locked --offline --test client_installed upstream_client_installs_and_restores_stable_memory -- --ignored --exact
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev \
 		--locked --offline --test canister_wire

@@ -1,5 +1,4 @@
 //! Integration checks for pocket ic concurrency behavior.
-use ic_testkit::pocket_ic::ClientError;
 mod support;
 
 use std::{
@@ -14,14 +13,14 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ic_platform_types::Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolError, BaselinePoolPreparationError,
     BaselinePreparationStage, CachedPocketIcBaselinePool, ControllerSnapshotError,
     PocketIcInstance, PocketIcStartupConfig, PocketIcStartupFailure, RebuildReason,
     SnapshotRestoreFunding, StandaloneCanisterFixture, StandaloneCanisterRecipe,
 };
-use ic_testkit::pocket_ic::PocketIcBuilder;
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::PocketIcBuilder;
 
 const READY_TIMEOUT: Duration = Duration::from_secs(60);
 const OPERATION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -97,7 +96,8 @@ async fn upstream_supports_two_overlapping_instances() {
     assert_two_instances_overlap(async move || {
         support::startup_config()
             .build_instance(
-                ic_testkit::pocket_ic::PocketIcBuilder::new(std::time::Duration::from_secs(300))
+                pocket_ic::PocketIcBuilder::new()
+                    .with_max_request_time_ms(Some(300_000))
                     .with_application_subnet(),
             )
             .await
@@ -119,7 +119,9 @@ async fn startup_configuration_returns_a_typed_startup_error() {
         server_output_files: None,
     }
     .build_instance(
-        PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+        PocketIcBuilder::new()
+            .with_max_request_time_ms(Some(300_000))
+            .with_application_subnet(),
     )
     .await;
 
@@ -133,16 +135,15 @@ async fn startup_configuration_returns_a_typed_startup_error() {
 async fn standalone_accepts_a_caller_built_instance_and_preserves_it_in_parts() {
     let caller_built = support::startup_config()
         .build_instance(
-            PocketIcBuilder::new(std::time::Duration::from_secs(300))
+            PocketIcBuilder::new()
+                .with_max_request_time_ms(Some(300_000))
                 .with_application_subnet()
                 .with_ii_subnet(),
         )
         .await
         .expect("build explicitly configured custom topology");
     let fixture =
-        StandaloneCanisterFixture::try_install(caller_built, support::empty_install_spec())
-            .await
-            .expect("install standalone fixture");
+        StandaloneCanisterFixture::install(caller_built, support::empty_install_spec()).await;
     let (owned, canister_id) = fixture.into_parts();
     let pocket_ic = owned.instance();
 
@@ -402,6 +403,32 @@ async fn structured_standalone_acquisition_error_retains_build_timings() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn standalone_snapshot_refusal_retains_the_structured_cause() {
+    let pool = single_canister_pool(NonZeroUsize::new(1).unwrap(), || async {
+        let fixture = build_empty_standalone_fixture().await?;
+        let pic = fixture.pocket_ic();
+        let id = fixture.canister_id();
+        pic.stop_canister(id, None).await.unwrap();
+        for _ in 0..10 {
+            pic.take_canister_snapshot(id, None, None).await.unwrap();
+        }
+        Ok(fixture)
+    });
+    let Err(BaselinePoolError::Preparation {
+        error: BaselinePoolPreparationError::Recipe { source, .. },
+        ..
+    }) = pool.acquire().await
+    else {
+        panic!("capture must fail when all snapshot slots are occupied");
+    };
+    assert!(matches!(
+        source.get_ref().and_then(|cause| cause.downcast_ref::<ControllerSnapshotError>()),
+        Some(ControllerSnapshotError::CaptureFailed { rejection, cleanup_failures, .. })
+            if rejection.reject_message.contains("snapshot") && cleanup_failures.is_empty()
+    ));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition() {
     let builds = Arc::new(AtomicUsize::new(0));
     let builder_count = Arc::clone(&builds);
@@ -455,8 +482,7 @@ async fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition(
                 source,
             },
             ..
-        } if matches!(source.get_ref().and_then(|error| error.downcast_ref::<ClientError>()),
-            Some(ClientError::Canister(_)))
+        } if source.kind() == io::ErrorKind::Other && source.to_string().contains("CanisterNotFound")
     ));
 
     let (fixture, outcome) = pool
@@ -489,8 +515,7 @@ async fn single_canister_recipe_applies_funding_before_warm_restore() {
     let initial_cycles = baseline
         .pocket_ic()
         .cycle_balance(*baseline.metadata())
-        .await
-        .unwrap();
+        .await;
     baseline
         .pocket_ic()
         .uninstall_canister(*baseline.metadata(), None)
@@ -509,7 +534,6 @@ async fn single_canister_recipe_applies_funding_before_warm_restore() {
             .pocket_ic()
             .cycle_balance(*baseline.metadata())
             .await
-            .unwrap()
             > initial_cycles
     );
     assert!(
@@ -525,7 +549,7 @@ async fn single_canister_recipe_applies_funding_before_warm_restore() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "requires POCKET_IC_BIN and stops a dedicated test-owned server"]
-async fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again() {
+async fn standalone_transport_panic_rebuilds_on_the_next_acquisition() {
     let server = PocketIcStartupConfig::Spawn {
         server_binary: (std::env::var_os("POCKET_IC_BIN")
             .expect("prepare POCKET_IC_BIN for dedicated-server recovery"))
@@ -545,21 +569,21 @@ async fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again
         let url = url.clone();
         async move {
             match attempt {
-                0 => StandaloneCanisterFixture::try_install(
+                0 => Ok(StandaloneCanisterFixture::install(
                     PocketIcStartupConfig::Connect {
                         server_url: (&url).into(),
                         timeout: READY_TIMEOUT,
                     }
                     .build_instance(
-                        PocketIcBuilder::new(std::time::Duration::from_secs(300))
+                        PocketIcBuilder::new()
+                            .with_max_request_time_ms(Some(300_000))
                             .with_application_subnet(),
                     )
                     .await
                     .unwrap(),
                     support::empty_install_spec(),
                 )
-                .await
-                .map_err(io::Error::other),
+                .await),
                 1 => build_deleted_standalone_fixture().await,
                 _ => build_empty_standalone_fixture().await,
             }
@@ -568,26 +592,26 @@ async fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again
     drop(pool.acquire().await.unwrap().0);
     drop(server);
 
-    let Err(BaselinePoolError::RecoveryFailed {
-        original,
-        rebuild,
-        timings,
+    let panic =
+        support::catch_async_panic(async || pool.acquire().await.map(|(lease, _)| drop(lease)));
+    assert!(panic.is_err(), "upstream transport panic must propagate");
+    let Err(BaselinePoolError::Preparation {
+        error:
+            BaselinePoolPreparationError::Recipe {
+                stage: BaselinePreparationStage::Build,
+                source,
+            },
+        ..
     }) = pool.acquire().await
     else {
-        panic!("dead transport and failed capture must retain both causes");
+        panic!("the next acquisition must rebuild the panicked preparation");
     };
-    assert!(ic_testkit::pic::is_dead_pocket_ic_transport_error(
-        original.as_ref()
-    ));
     assert!(matches!(
-        rebuild.as_ref(),
-        BaselinePoolPreparationError::Recipe { stage: BaselinePreparationStage::Build, source }
-            if matches!(source.get_ref().and_then(|error| error.downcast_ref::<ControllerSnapshotError>()),
-                Some(ControllerSnapshotError::CaptureFailed { .. }))
+        source
+            .get_ref()
+            .and_then(|error| error.downcast_ref::<ControllerSnapshotError>()),
+        Some(ControllerSnapshotError::CaptureFailed { .. })
     ));
-    assert!(timings.restore.is_some());
-    assert!(timings.build.is_some());
-    assert!(timings.stale_teardown.is_some());
     assert_eq!(builds.load(Ordering::SeqCst), 2);
 
     let (fixture, outcome) = pool.acquire().await.unwrap();
@@ -603,12 +627,11 @@ async fn standalone_dead_transport_preserves_failed_recovery_and_can_build_again
 
 fn build_empty_standalone_fixture() -> FixtureFuture {
     Box::pin(async {
-        StandaloneCanisterFixture::try_install(
+        Ok(StandaloneCanisterFixture::install(
             support::pocket_ic().await,
             support::empty_install_spec(),
         )
-        .await
-        .map_err(io::Error::other)
+        .await)
     })
 }
 
@@ -795,8 +818,7 @@ async fn run_worker<F>(
                 let id = support::install_empty_canister(pocket_ic).await;
                 let balance = pocket_ic
                     .add_cycles(id, (worker as u128 + 1) * 1_000_000)
-                    .await
-                    .unwrap();
+                    .await;
                 canister_id = Some(id);
                 if events
                     .send(Event::Initialized {
@@ -820,10 +842,7 @@ async fn run_worker<F>(
                 }
             }
             Command::Drop => {
-                owned
-                    .close()
-                    .await
-                    .expect("delete worker instance before reporting teardown");
+                owned.close().await;
                 let _ = events.send(Event::Dropped { worker });
                 return;
             }

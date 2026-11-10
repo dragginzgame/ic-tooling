@@ -6,6 +6,17 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.76.3] - Unreleased
+
+### 🔧 Changed
+
+- Adopt Toko Tooling 0.39.6 in both workspaces, retire managed reference copies
+  in favour of commit-pinned upstream links, and enable the explicit shared-release
+  interface. The installed checker now admits
+  Testkit's approved native upstream PocketIC dependency.
+- Share Linux process-stat field parsing across process samples and identity
+  observations, preserving each observer's admission and counter semantics.
+
 ## [0.76.2] - 2026-11-09
 
 ### 🔧 Changed

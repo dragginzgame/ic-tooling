@@ -3,7 +3,7 @@
 set -euo pipefail
 selected_case=all
 if [[ $# != 0 ]]; then
-    [[ $# == 2 && $1 == --case && $2 == tooling-admission ]] || exit 2
+    [[ $# == 2 && $1 == --case && ($2 == tooling-admission || $2 == licence) ]] || exit 2
     selected_case=$2
 fi
 unset RELEASE_GROUP
@@ -47,16 +47,15 @@ capture_metadata() {
 }
 capture_metadata
 cp metadata.json original-metadata.json
-# The generator must preserve actual notice drift so CI cannot synthesize a
+# The generator must preserve actual licence drift so CI cannot synthesize a
 # healthy publication input from an inconsistent source checkout.
-notice_directory="$(head -n 1 fixture-packages.tsv | cut -f 2)"
-cp "$notice_directory/LICENSE" notice-before
-printf '\nfixture source notice drift\n' >> "$notice_directory/LICENSE"
-projected="$FIXTURE_ROOT/notice projection"
+cp LICENSE.md licence-before
+printf '\nfixture source licence drift\n' >> LICENSE.md
+projected="$FIXTURE_ROOT/licence projection"
 mkdir "$projected"
 bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$fixture" "$projected"
-cmp "$notice_directory/LICENSE" "$projected/$notice_directory/LICENSE"
-mv notice-before "$notice_directory/LICENSE"
+cmp LICENSE.md "$projected/LICENSE.md"
+mv licence-before LICENSE.md
 cp Cargo.toml original-Cargo.toml
 export PUBLISH_FIXTURE="$fixture" REAL_PUBLISH_TEE REAL_PUBLISH_MAKE
 REAL_PUBLISH_TEE="$(command -v tee)"
@@ -106,12 +105,12 @@ case "$1" in
             version="$(jq -er --arg name "$package" '.packages[] | select(.name == $name) | .version' "$PUBLISH_FIXTURE/metadata.json")"
             directory="target/package/$package-$version"
             mkdir -p "$directory"
-            rm -f "$directory/LICENSE"
-            cp "$PUBLISH_FIXTURE/$package_root/LICENSE" "$directory/LICENSE"
+            rm -f "$directory/LICENSE.md"
+            cp "$PUBLISH_FIXTURE/LICENSE.md" "$directory/LICENSE.md"
             case "${PUBLISH_ARCHIVE_LICENSE:-}" in
-                missing) rm "$directory/LICENSE" ;;
-                changed) printf '\nchanged archive notice\n' >> "$directory/LICENSE" ;;
-                linked) rm "$directory/LICENSE"; ln -s outside-license "$directory/LICENSE" ;;
+                missing) rm "$directory/LICENSE.md" ;;
+                changed) printf '\nchanged archive notice\n' >> "$directory/LICENSE.md" ;;
+                linked) rm "$directory/LICENSE.md"; ln -s outside-license "$directory/LICENSE.md" ;;
             esac
             jq -n --arg source "${PUBLISH_PACKAGE_SOURCE:-0000000000000000000000000000000000000000}" \
                 --arg path "${PUBLISH_PACKAGE_PATH:-$package_root}" --argjson dirty "${PUBLISH_PACKAGE_DIRTY:-false}" \
@@ -214,6 +213,29 @@ for invalid_members in null '[]' '[1]' '["ic-build\nescape"]'; do
     [[ ! -e target/publish ]]
 done
 mv original-group-policy.json ci/cargo-release-groups.json
+# Canonical source licence drift must refuse before any Cargo dispatch.
+cp LICENSE.md licence-before
+for scenario in missing changed symlink; do
+    case "$scenario" in
+        missing) rm LICENSE.md ;;
+        changed) printf '\nchanged source licence\n' >> LICENSE.md ;;
+        symlink) rm LICENSE.md; ln -s licence-before LICENSE.md ;;
+    esac
+    for mode in check publish; do refuse "$mode"; done
+    rm -f LICENSE.md
+    cp licence-before LICENSE.md
+done
+# A plausible metadata result cannot redirect the inherited root licence.
+jq --arg package "$(head -n 1 foundation-packages)" '
+    .packages |= map(if .name == $package then .license_file = "README.md" else . end)
+' original-metadata.json > metadata.json
+for mode in check publish; do
+    : > calls
+    if invoke "$mode" > licence-path.log 2>&1; then exit 1; fi
+    printf 'metadata\n' > expected-calls
+    cmp expected-calls calls
+done
+cp original-metadata.json metadata.json
 # A dry run can review dirty work; an upload cannot admit it.
 PUBLISH_DIRTY=1 refuse publish
 for separator in $'\n' $'\r'; do
@@ -221,25 +243,6 @@ for separator in $'\n' $'\r'; do
     mkdir "$bad"
     PUBLISH_FIXTURE="$bad" refuse check
     rg 'CR/LF' refusal.log > /dev/null
-done
-# Package license checks follow metadata admission and precede package/upload.
-notice_package="$(head -n 1 foundation-packages)"
-notice_root="$(awk -F '\t' -v package="$notice_package" '$1 == package {print $2}' fixture-packages.tsv)"
-notice="$notice_root/LICENSE"
-for scenario in missing changed symlink; do
-    case "$scenario" in
-        missing) rm "$notice" ;;
-        changed) printf '\nchanged notice\n' >> "$notice" ;;
-        symlink) rm "$notice"; ln -s ../../LICENSE "$notice" ;;
-    esac
-    for mode in check publish; do
-        : > calls
-        if invoke "$mode" > refusal.log 2>&1; then exit 1; fi
-        printf 'metadata\n' > expected-calls
-        cmp expected-calls calls
-    done
-    rm -f "$notice"
-    cp LICENSE "$notice"
 done
 # Both public modes refuse a failed full lint gate before package/attempt intent.
 for mode in check publish; do
@@ -292,6 +295,11 @@ for scenario in missing changed linked; do
     printf 'metadata\nclippy\npackage\n' > expected-calls
     cmp expected-calls calls
 done
+if [[ $selected_case == licence ]]; then
+    fixture_complete=true
+    echo 'Root licence, inherited metadata and source/archive refusal checks passed'
+    exit 0
+fi
 printf 'metadata\nclippy\npackage\npublish\n' > expected-calls
 
 # Stop at Cargo's failure and retain the attempt's intent, log and artifacts.
@@ -368,7 +376,7 @@ cmp original-metadata.json metadata.json
 
 # Plausible metadata cannot redirect license/provenance reads outside the checkout.
 mkdir "$FIXTURE_ROOT/outside"
-cp LICENSE "$FIXTURE_ROOT/outside/LICENSE"
+cp LICENSE.md "$FIXTURE_ROOT/outside/"
 cp crates/ic-host-artifacts/Cargo.toml "$FIXTURE_ROOT/outside/Cargo.toml"
 ln -s "$FIXTURE_ROOT/outside" apps/package-alias
 for path in "$FIXTURE_ROOT/outside/Cargo.toml" "$fixture/../outside/Cargo.toml" \

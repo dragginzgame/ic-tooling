@@ -4,7 +4,7 @@
 
 # PocketIC upstream boundary
 
-Testkit maintains the PocketIC 16.1 client in `ic_testkit::pocket_ic`.
+Testkit depends on published upstream `pocket-ic` 16.1 directly.
 The simulator remains external infrastructure. Historical decisions remain in the
 [design records](README.md#historical-design-records) and
 [qualification receipts](qualification-history.md#historical-qualification-receipts).
@@ -13,12 +13,12 @@ has shipped.
 
 ## Ownership
 
-PocketIC owns the simulator and server protocol. Testkit owns the maintained
-native client and client-owned DTO/error identities in `ic_testkit::pocket_ic`.
-The client requires an explicit endpoint. The `pic` module supplies lifecycle
-and testing helpers. Both ship in one Testkit package and release group.
-Platform continues to supply general Candid and management adapters.
-See [the client migration](client-migration.md) for imports and provenance.
+PocketIC owns the simulator, native client, protocol codecs and DTOs. Import its
+async client and builder directly. Testkit's `pic` owns server admission/custody
+and harness policy. Only held fixtures select Platform's codec/management adapters.
+See [the client migration](client-migration.md) for breaking changes. The fork,
+its reconstruction guards and copied notices are retired together; the external
+dependency retains its own license.
 
 Testkit owns explicit server provisioning and fixture lifecycle policy. It adds
 bounded startup, server/instance custody, contextual calls, installation policy,
@@ -61,10 +61,11 @@ would still need an explicit owner.
 
 ## Bounded startup and process lifetime
 
-Testkit's async `build_instance` uses the explicit configuration, preserve a typed
-`PocketIcStartupFailure`, and return `PocketIcInstance` with the concrete client
+Testkit's async `build_instance` uses the explicit configuration, preserves a typed
+`PocketIcStartupFailure`, and returns `PocketIcInstance` with the concrete client
 instance and its server lifetime. Startup cancellation/failure cleans up the
-owned child; borrowed-server failure leaves ownership with its caller.
+owned child; borrowed-server failure leaves ownership with its caller. Upstream
+client construction panics propagate; Testkit does not recreate typed transport errors.
 
 `start_managed_server` exposes the same launcher without building an instance.
 Its `PocketIcManagedServer` can support several independent instances through an
@@ -89,23 +90,18 @@ it supplies equivalent cancellation, custody and error contracts. The existing
 synthetic and real instance-lifetime tests qualify those obligations separately
 from ordinary simulator behavior.
 
-### Bounded instance teardown
+### Explicit instance teardown
 
 The construction deadline ends when startup returns. All client network operations
 use the caller's Tokio runtime. Await `owned.close().await` to delete an instance
 while retaining its managed server, or await `client.drop().await` before releasing
 a separately held server. Rust Drop performs no client network I/O. Dropping a
 managed server still stops its instances and terminates/reaps its process group.
-Borrowed servers and uncertain deletion outcomes remain caller-owned.
-
-The controlled loopback test observes DELETE, confirms that explicit close is
-waiting, then acknowledges it and verifies completion. Its parent bounds its own
-waits and owns child termination/reaping; no PocketIC binary is required:
-
-```bash
-cargo test -p ic-testkit --locked --test pocket_ic_teardown \
-  instance_close_waits_for_the_deletion_response -- --exact --nocapture
-```
+Borrowed servers and uncertain deletion outcomes remain caller-owned. Close and
+shared pool shutdown return `()` and await upstream best-effort deletion; this
+does not acknowledge deletion on borrowed servers. Upstream logs network failures.
+The installed `pocket_ic_install` tests check panic propagation, continued borrowed
+instance usability and managed-server custody on installation unwind.
 
 ### Temporary-directory ownership
 
@@ -124,16 +120,16 @@ PocketIC's upstream Candid helpers remain upstream APIs. Testkit offers optional
 method-bound Wire calls for owned application endpoints and raw operations for
 caller-owned external protocol adapters. It does not add a Candid codec layer.
 
-The maintained async client returns typed transport, body, server, codec and
-canister failures. Accepted operation/ingress identities survive failures; an
-uncertain update is never replayed automatically. Wire delegates to that same
-client and preserves the typed cause. Unrelated Rust panics propagate. The former
-panic-string transport adapter and blocking client are absent.
+The upstream async client returns rejections for some operations and panics for
+transport, decoding and convenience-operation failures. Wire preserves returned
+`RejectResponse` values and propagates panics. Testkit never retries an uncertain
+update. Its former typed transport errors, response ceilings and accepted-operation
+contexts are gone; use upstream raw operations and caller-owned reconciliation.
 
-`PocketIc::try_create_and_install` preserves create, funding and installation failures. Retry
+`pic::create_and_install` follows upstream create, funding and installation semantics. Retry
 policy uses `ErrorCode::CanisterInstallCodeRateLimited` and caller-selected
 attempt/cooldown values. Diagnostics are a separate explicit operation:
-`PocketIc::collect_canister_diagnostics` retains status, controller-aware logs and bounded
+`pic::collect_canister_diagnostics` retains status, controller-aware logs and bounded
 rendering. Installation does not silently fetch or print diagnostic logs.
 
 Upstream error enrichment could reduce these adapters if it preserves context,
@@ -143,7 +139,8 @@ would not remove their current responsibilities.
 ## Snapshot baselines and reuse
 
 PocketIC owns canister snapshots. Testkit captures/restores a declared snapshot
-set and retains original rejection/operation causes. A baseline pool owns the
+set and retains returned rejections. The metadata/chunk transfer engine and its
+timer/hook restoration guarantee are retired. A baseline pool owns the
 recipe and canonical restoration; recipes own non-snapshot reset work, readiness
 and invariant checks. Reuse is admitted only when achieved reset coverage matches
 requirements. Canister snapshots do not automatically restore PocketIC time,

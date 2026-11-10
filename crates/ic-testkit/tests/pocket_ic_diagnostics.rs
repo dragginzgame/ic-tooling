@@ -1,13 +1,11 @@
 //! Integration checks for pocket ic diagnostics behavior.
-use ic_testkit::pocket_ic::ClientError;
 mod support;
 
-use ic_platform_types::Principal;
 use ic_testkit::pic::{
     CanisterDiagnosticsRequest, CanisterLogRenderLimits, LabeledCanisterDiagnosticsRequest,
-    is_dead_pocket_ic_transport_error,
 };
-use ic_testkit::pocket_ic::CanisterSettings;
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::CanisterSettings;
 
 #[tokio::test]
 async fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() {
@@ -24,8 +22,7 @@ async fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() 
                 ..CanisterSettings::default()
             }),
         )
-        .await
-        .unwrap();
+        .await;
 
     let request = CanisterDiagnosticsRequest {
         canister_id,
@@ -33,7 +30,7 @@ async fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() 
         log_sender,
         log_limits: CanisterLogRenderLimits::default(),
     };
-    let report = pocket_ic.collect_canister_diagnostics(request).await;
+    let report = ic_testkit::pic::collect_canister_diagnostics(pocket_ic, request).await;
 
     assert_eq!(report.request, request);
     assert!(report.status.is_ok(), "{report}");
@@ -42,8 +39,9 @@ async fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() 
     assert!(compact.contains("status=ok(state="));
     assert!(compact.contains("logs=<empty>"));
 
-    let batch = pocket_ic
-        .collect_canister_diagnostics_batch(&[
+    let batch = ic_testkit::pic::collect_canister_diagnostics_batch(
+        pocket_ic,
+        &[
             LabeledCanisterDiagnosticsRequest {
                 label: "denied".into(),
                 request: CanisterDiagnosticsRequest {
@@ -57,9 +55,10 @@ async fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() 
                 label: "controller".into(),
                 request,
             },
-        ])
-        .await
-        .expect("valid labeled diagnostics batch");
+        ],
+    )
+    .await
+    .expect("valid labeled diagnostics batch");
     assert_eq!(batch.entries.len(), 2);
     assert_eq!(batch.entries[0].label, "denied");
     assert_eq!(batch.entries[1].label, "controller");
@@ -70,23 +69,8 @@ async fn diagnostics_use_independent_exact_senders_and_preserve_both_outcomes() 
             .all(|entry| entry.entry_elapsed <= batch.total)
     );
     let denied = &batch.entries[0].report;
-    assert!(matches!(
-        denied.status.as_ref(),
-        Err(ClientError::Canister(_))
-    ));
-    assert!(matches!(
-        denied.logs.as_ref(),
-        Err(ClientError::Canister(_))
-    ));
-    for error in [
-        denied.status.as_ref().unwrap_err(),
-        denied.logs.as_ref().unwrap_err(),
-    ] {
-        assert!(
-            !is_dead_pocket_ic_transport_error(error),
-            "controller rejection must not be interpreted as a dead transport",
-        );
-    }
+    assert!(denied.status.is_err());
+    assert!(denied.logs.is_err());
     assert!(batch.entries[1].is_success());
     assert_eq!(batch.failures().count(), 1);
 }

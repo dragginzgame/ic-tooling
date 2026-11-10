@@ -52,7 +52,7 @@ validation commands and native evidence requirements.
 
 For development, prepare the toolchain selected in
 [rust-toolchain.toml](rust-toolchain.toml) and the
-[bootstrap prerequisites and shell PATH](docs/local-setup.md), then run:
+[bootstrap prerequisites and shell PATH](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/local-setup.md), then run:
 
 ```sh
 make install-tools
@@ -63,7 +63,7 @@ make test PACKAGE=ic-host-artifacts
 
 Setup is explicit; `tools-check` verifies prepared tools offline. Hook installation
 separately activates the repository-local formatter. Toko Tooling owns these
-[common commands](docs/make-interface.md) and executable installation; this
+[common commands](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/make-interface.md) and executable installation; this
 workspace owns the Host, Build and Testkit libraries, package checks and publication policy.
 
 Use `make check`, `make clippy`, `make docs-check`, `make test`
@@ -80,7 +80,7 @@ Consumers adopt and qualify registry selections independently.
 
 Read [the extraction contract](docs/extraction.md), [the handoff](docs/status/current.md)
 and [agent rules](AGENTS.md). Human and agent contributions follow the
-[PR contribution rules](rules/contributions.md).
+[PR contribution rules](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/rules/contributions.md).
 
 ### Bounded Wasm inspection CLI
 
@@ -98,3 +98,5 @@ Append `--expect-sha256 SHA256` for digest verification before reporting, or
 `--details` for export/custom-section records after the TSV summary. These options
 replace the retired `ic-host-fs` `inspect_artifact` example; default CLI output
 is unchanged. See the [inspector guide](crates/ic-host-wasm-inspect/README.md).
+
+[Licence](LICENSE.md) · [Contributing](CONTRIBUTING.md).

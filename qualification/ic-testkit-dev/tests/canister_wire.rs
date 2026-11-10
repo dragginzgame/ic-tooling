@@ -11,15 +11,14 @@ use ic_host_process::{
     child::{CleanupPolicy, OwnedChild},
     tool::{CompletedExecution, OutputLimit, OutputLimits, capture_command},
 };
-use ic_platform::Principal;
 use ic_testkit::pic::{
     InstallSpec, StandaloneCanisterFixture, WireCallError, query_wire, update_wire,
 };
-use ic_testkit::pocket_ic::ClientError;
 use ic_testkit_perf_probe::protocol::{
     self, BENCHMARK_ONCE, BENCHMARK_TRAP, INSPECT_STATE, MUTATE_STATE, PING, QUERY_CALLER,
     SEED_STATE, State, UPDATE_CALLER,
 };
+use pocket_ic::CanisterId as Principal;
 
 use std::process::Command;
 const PERF_PROBE_PACKAGE: &str = "ic-testkit-perf-probe";
@@ -79,11 +78,12 @@ async fn install_probe() -> StandaloneCanisterFixture {
         .first()
         .expect("perf probe build returns its retained Wasm");
     let wasm = read_file(wasm_path, 128 * 1024 * 1024).expect("read retained bounded Wasm");
-    StandaloneCanisterFixture::try_install(
+    StandaloneCanisterFixture::install(
         ic_testkit::pic::PocketIcStartupConfig::from_env(std::time::Duration::from_secs(30))
             .expect("configure prepared PocketIC")
             .build_instance(
-                ic_testkit::pocket_ic::PocketIcBuilder::new(std::time::Duration::from_secs(300))
+                pocket_ic::PocketIcBuilder::new()
+                    .with_max_request_time_ms(Some(300_000))
                     .with_application_subnet(),
             )
             .await
@@ -93,11 +93,9 @@ async fn install_probe() -> StandaloneCanisterFixture {
             init_bytes: vec![],
             cycles: 0,
             install_sender: None,
-            label: None,
         },
     )
     .await
-    .expect("install standalone fixture")
 }
 
 #[tokio::test]
@@ -134,7 +132,9 @@ async fn assert_probe_trap(fixture: &StandaloneCanisterFixture) {
         panic!("structured rejection required")
     };
     assert!(
-        matches!(*source, ClientError::Canister(response) if response.reject_message.contains("intentional perf probe trap"))
+        source
+            .reject_message
+            .contains("intentional perf probe trap")
     );
     assert_eq!(
         query_wire::<_, ic_wire::Text<4>>(

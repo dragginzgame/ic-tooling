@@ -1,4 +1,7 @@
 //! Derive generated roots from explicit nested Cargo workspaces, before hashing.
+//! Finish discovery across every root before hashing any root: a source alias
+//! can reach a generated target discovered under a different input root. The
+//! complete exclusion set also participates in per-root digest-cache admission.
 
 #[cfg(test)]
 mod tests;

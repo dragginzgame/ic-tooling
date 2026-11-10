@@ -135,18 +135,14 @@ fn project_file_exists(path: &Path) -> Result<bool, DiscoveryError> {
             });
         }
     };
-    if metadata.file_type().is_symlink() {
-        return match fs::metadata(path) {
-            Ok(metadata) if metadata.is_file() => Ok(true),
-            Ok(_) => Err(DiscoveryError::ExpectedFile {
-                path: path.to_path_buf(),
-            }),
-            Err(source) => Err(DiscoveryError::Inspect {
-                path: path.to_path_buf(),
-                source,
-            }),
-        };
-    }
+    let metadata = if metadata.file_type().is_symlink() {
+        fs::metadata(path).map_err(|source| DiscoveryError::Inspect {
+            path: path.to_path_buf(),
+            source,
+        })?
+    } else {
+        metadata
+    };
     if metadata.is_file() {
         Ok(true)
     } else {

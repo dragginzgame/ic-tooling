@@ -4,7 +4,7 @@
 masker from the committed 0.30.6 snapshot, revision
 `45c0295e23d3d23225e31f47c018c30ff0c75581`. The canonical exporter added the
 checker and its companions; no local scanner or lexer is maintained. See the
-[shared contract](../candid-boundary.md) and
+[shared contract](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/validation/candid-boundary.md) and
 [reviewed policy](../../ci/candid-boundary.json).
 
 ## Selected source inventory

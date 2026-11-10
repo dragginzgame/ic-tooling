@@ -104,3 +104,29 @@ fn complete_input_must_be_utf8_even_in_ignored_metadata() {
         ));
     }
 }
+
+#[test]
+fn installation_status_uses_the_last_module_hash_field() {
+    use crate::icp::decode_installation_status;
+    assert!(decode_installation_status(br#"{"module_hash":null,"module_hash":"hash"}"#).unwrap());
+    assert!(!decode_installation_status(br#"{"module_hash":"hash","module_hash":null}"#).unwrap());
+    assert!(decode_installation_status(br#"{"module_hash":{},"module_hash":"hash"}"#).unwrap());
+}
+
+#[test]
+fn installation_status_validates_ignored_metadata_before_projecting() {
+    use crate::icp::{InstallationStatusError, decode_installation_status};
+    for input in [
+        br#"{"module_hash":null,"extra":1e999}"#.as_slice(),
+        br#"{"module_hash":null,"extra":{"\ud800":true}}"#,
+        b"{\"module_hash\":null,\"extra\":\"\xff\"}",
+    ] {
+        assert!(
+            matches!(
+                decode_installation_status(input),
+                Err(InstallationStatusError::Json(_))
+            ),
+            "{input:?}"
+        );
+    }
+}

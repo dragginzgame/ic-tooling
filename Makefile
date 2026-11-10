@@ -16,6 +16,7 @@ override FORMAT_RUST_ARGS += --extra-workspace qualification
 endif
 include ci/tool-versions.env
 IC_TOOLS := wasm-opt
+TOKO_TOOLING_RELEASE := 1
 # Admit execution before custom CI, publication and installer prerequisites.
 ci ci-publication lint check-secrets publish publish-check toko-tooling-check install-release-editor install-server install-validation-tools: toko-execution-check
 include make/consumer.mk

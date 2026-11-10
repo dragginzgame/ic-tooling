@@ -1,12 +1,11 @@
 //! `PocketIC` host-test harness extensions.
 //!
-//! Import the client and DTOs from `ic_testkit::pocket_ic`.
+//! Import the client and DTOs directly from the upstream `pocket_ic` dependency.
 //! This module owns Testkit's harness methods and policy types.
 //!
-//! Installation and snapshot helpers are inherent methods on that client.
-//! Diagnostic helpers are inherent methods on the client as well.
+//! Installation, snapshot and diagnostic helpers are free functions taking the client.
 //! Import the call functions, startup configuration and polling helpers explicitly.
-//! Native simulator operations are maintained in the client module.
+//! Upstream owns native simulator operations and failure semantics.
 //!
 //! [`PocketIcManagedServer`] can explicitly own one exact caller-selected
 //! server child for a serial suite. No type serializes independent instances or
@@ -28,14 +27,12 @@ mod baseline;
 mod baseline_pool;
 mod bounded_pool;
 mod diagnostics;
-mod errors;
 mod lifecycle;
 mod snapshot;
 mod standalone;
 mod standalone_recipe;
 mod startup;
 mod time;
-mod transport;
 #[cfg(feature = "wire")]
 mod wire;
 
@@ -50,13 +47,16 @@ pub use diagnostics::{
     CanisterDiagnosticLogRecord, CanisterDiagnosticLogs, CanisterDiagnosticsBatchEntry,
     CanisterDiagnosticsBatchReport, CanisterDiagnosticsReport, CanisterDiagnosticsRequest,
     CanisterLogRenderLimits, DEFAULT_CANISTER_LOG_BYTE_LIMIT, DEFAULT_CANISTER_LOG_RECORD_LIMIT,
-    LabeledCanisterDiagnosticsRequest,
+    LabeledCanisterDiagnosticsRequest, collect_canister_diagnostics,
+    collect_canister_diagnostics_batch, write_canister_diagnostics,
 };
-pub use errors::{CanisterInstallError, StandaloneCanisterInstallError};
-pub use lifecycle::{InstallSpec, RetryPolicy};
+pub use lifecycle::{
+    InstallSpec, RetryPolicy, create_and_install, retry_install_code,
+    wait_out_install_code_rate_limit,
+};
 pub use snapshot::{
     CanisterSnapshotTarget, ControllerSnapshotError, ControllerSnapshots, SnapshotCleanupFailure,
-    SnapshotRestoreFunding,
+    SnapshotRestoreFunding, capture_snapshots, restore_snapshots,
 };
 pub use standalone::StandaloneCanisterFixture;
 pub use standalone_recipe::StandaloneCanisterRecipe;
@@ -65,6 +65,5 @@ pub use startup::{
     PocketIcStartupError, PocketIcStartupFailure,
 };
 pub use time::{TickUntilError, advance_and_tick, tick_until};
-pub use transport::is_dead_pocket_ic_transport_error;
 #[cfg(feature = "wire")]
 pub use wire::{WireCallContext, WireCallError, WireCallSpec, query_wire, update_wire};

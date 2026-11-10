@@ -2,8 +2,8 @@ use super::{
     CanisterSnapshotTarget, ControllerSnapshotError, ControllerSnapshots, PocketIcInstance,
     SnapshotRestoreFunding,
 };
-use crate::pocket_ic::PocketIc;
-use ic_platform_types::Principal;
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::nonblocking::PocketIc;
 
 /// One owned `PocketIC` instance/server record with snapshots and caller metadata.
 ///
@@ -19,7 +19,7 @@ impl<T> CachedPocketIcBaseline<T> {
     /// Capture a cached baseline with an explicit sender for every canister.
     ///
     /// Empty inputs are rejected before capture. Capture is ordered and transactional as documented by
-    /// [`crate::pocket_ic::PocketIc::capture_snapshots`]. No sender fallback is performed.
+    /// [`super::capture_snapshots`]. No sender fallback is performed.
     /// The caller stops/drains every target before capture and restarts only
     /// after the entire capture succeeds. Automatic progress must be disabled.
     ///
@@ -37,14 +37,12 @@ impl<T> CachedPocketIcBaseline<T> {
         let capture = if targets.peek().is_none() {
             Err(ControllerSnapshotError::EmptyCanisterSet)
         } else {
-            instance.instance().capture_snapshots(targets).await
+            super::capture_snapshots(instance.instance(), targets).await
         };
         let snapshots = match capture {
             Ok(snapshots) => snapshots,
             Err(error) => {
-                if let Err(cleanup) = instance.close().await {
-                    tracing::warn!("PocketIC deletion after capture failure failed: {cleanup}");
-                }
+                instance.close().await;
                 return Err(error);
             }
         };
@@ -58,7 +56,8 @@ impl<T> CachedPocketIcBaseline<T> {
     /// Restore with exactly the captured senders and selected cycle funding.
     /// Success means the complete captured set was restored.
     /// Stop/drain the entire set first; restart after complete restore/reset.
-    /// Absolute captured timers and hook state are restored; current time is not.
+    /// Uses upstream take/load semantics, without the retired timer/hook transfer.
+    /// Current time and non-snapshot state remain caller-owned.
     ///
     /// # Errors
     /// Returns a controller snapshot error if funding or snapshot restoration fails.
@@ -70,18 +69,14 @@ impl<T> CachedPocketIcBaseline<T> {
         &self,
         funding: SnapshotRestoreFunding,
     ) -> Result<(), ControllerSnapshotError> {
-        self.instance
-            .instance()
-            .restore_snapshots(&self.snapshots, funding)
-            .await
+        super::restore_snapshots(self.instance.instance(), &self.snapshots, funding).await
     }
 
     /// Explicitly delete the instance before releasing its managed server.
     /// Cancellation on a borrowed server requires caller reconciliation.
-    /// # Errors
-    /// Returns the client deletion failure, without retrying it.
-    pub async fn close(self) -> Result<(), crate::pocket_ic::ClientError> {
-        self.instance.close().await
+    /// Upstream deletion is best effort and does not report its failure.
+    pub async fn close(self) {
+        self.instance.close().await;
     }
 
     /// Borrow the owned `PocketIC` instance behind this cached baseline.

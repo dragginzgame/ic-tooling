@@ -3,9 +3,9 @@
 ## Git releases
 
 The maintainer-operated `make release-patch`, `make release-minor` and
-`make release-major` commands use the [shared release contract](releases.md).
+`make release-major` commands use the [shared release contract](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/releases.md).
 Host's [delivery policy](../ci/release-delivery.txt) selects `RELEASE_DELIVERY=direct`.
-Normal increment commands use Toko Tooling's [frozen release batches](release-batches.md):
+Normal increment commands use Toko Tooling's [frozen release batches](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/release-batches.md):
 capture committed source, qualify, prepare, commit/tag, atomically push, then
 publish each selected group to crates.io. **Do not follow a successful release
 with a second `make publish`.** Other delivery selections are rejected;
@@ -84,7 +84,7 @@ retains its standard single-group release lock.
 
 Prepare the development toolchain selected in [rust-toolchain.toml](../rust-toolchain.toml),
 then run `make install-tools` and `make tools-check`. Toko Tooling owns
-[common setup and executable storage](local-setup.md). Release preparation uses
+[common setup and executable storage](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/local-setup.md). Release preparation uses
 the released IC Build `ic-build-release-metadata` editor, pinned separately in
 `ci/release-editor.env` and selected through its verified tool-store receipt.
 Shared admits explicit group membership and reads member identities from the
@@ -133,7 +133,7 @@ workspace checks, isolated feature profiles, Testkit Wasm and unsupported-filesy
 compilation. `make compiler-check` admits the actual compiler; `make ci` retains
 the complete gate without the retired `msrv-qualification` target.
 Release verification uses Tooling's [source-bound group plans](design/release-validation.md)
-through Toko Tooling's [plan runner](release-group-validation.md). Foundation and Testkit
+through Toko Tooling's [plan runner](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/release-group-validation.md). Foundation and Testkit
 retain the complete gate. Text, Tools and Build may narrow only from
 an admitted complete three-host baseline with unchanged shared inputs and bounded
 consumer relationships. Tools/Build need a fresh comparison that executes their
@@ -144,7 +144,7 @@ and publication qualification keep their complete workspace gates.
 Both numbered pending-heading spellings, `## [X.Y.Z]` and
 `## [X.Y.Z] - Unreleased`, are finalized to the saved UTC date during preparation.
 
-Follow the [shared recovery procedure](releases.md#source-changes-after-saved-preparation-intent)
+Follow the [shared recovery procedure](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/releases.md#source-changes-after-saved-preparation-intent)
 for interrupted preparation and exact-version resume. Host preserves prior
 validation receipts, notes, gate directories and logs before fresh verification. Retain unfinished
 plans, earlier tool installations and failed artifacts; a retry must not relabel
@@ -272,17 +272,15 @@ remote provenance verification. The upload guard does not establish CI success
 or native host qualification, and callers must keep source stable throughout
 packaging/publication. See [#7](https://github.com/dragginzgame/ic-tooling/issues/7).
 
-Most packages use the standard MIT SPDX identifier. Testkit uses
-`MIT AND Apache-2.0` for its maintained PocketIC client and includes the imported
-Apache licenses, notices and reconstruction evidence under
-`pocket-ic-provenance/`. Its source guards preserve those original bytes.
-Each selected package's root `LICENSE` remains a regular copy of the canonical
-MIT notice for Tooling-owned code, compatible with the formatting hook and
-included in the package archive without redundant `license-file` metadata.
-Both publication commands reject missing, symlinked or differing
-notices before invoking Cargo. The CI publication fixture preserves real package
-notices, so the complete release gate observes source drift instead of synthesizing
-matching notices. Update every selected package's copy when the root notice changes.
+Product and qualification packages inherit `license-file` pointing to the root
+[LICENSE.md](../LICENSE.md). Cargo includes that file in each standalone archive;
+there are no maintained package-local licence copies. The root
+[CONTRIBUTING.md](../CONTRIBUTING.md) and licence are authenticated snapshot files.
+Publication checks admit the root licence and resolved metadata path before
+effects. Archive admission compares the licence again before upload. The fixture
+preserves actual source drift rather than synthesizing healthy licence bytes.
+There are no package-local licence or notice files. External dependencies retain
+their own licensing and notices.
 
 Before upload, review the dry run and confirm that the committed version is the
 intended registry release. Inspect current registry state for that exact version;
@@ -294,7 +292,7 @@ Host retains its selection, metadata and provenance in
 `target/publish/admission/check.*` or `target/publish/admission/publish.*`.
 The `publication-attempt` file links to the corresponding fresh command directory
 under `target/publish/check.*` or `target/publish/publish.*`. The selected
-[Shared attempt helper](cargo-publication.md) records exact package/version
+[Shared attempt helper](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/cargo-publication.md) records exact package/version
 selectors, source, arguments and working status before its dispatch marker. It
 retains Cargo output plus separate `cargo-status`, `log-status` and combined
 `status` files. Cargo failure takes priority over a logger failure; a logger failure

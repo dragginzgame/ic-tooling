@@ -10,16 +10,13 @@ pub fn empty_install_spec() -> ic_testkit::pic::InstallSpec {
         init_bytes: vec![],
         cycles: 0,
         install_sender: None,
-        label: None,
     }
 }
 
 pub async fn install_empty_canister(
-    pic: &ic_testkit::pocket_ic::PocketIc,
-) -> ic_platform_types::Principal {
-    pic.try_create_and_install(empty_install_spec())
-        .await
-        .expect("install empty fixture canister")
+    pic: &pocket_ic::nonblocking::PocketIc,
+) -> pocket_ic::CanisterId {
+    ic_testkit::pic::create_and_install(pic, empty_install_spec()).await
 }
 
 pub fn startup_config() -> ic_testkit::pic::PocketIcStartupConfig {
@@ -30,7 +27,8 @@ pub fn startup_config() -> ic_testkit::pic::PocketIcStartupConfig {
 pub async fn pocket_ic() -> ic_testkit::pic::PocketIcInstance {
     startup_config()
         .build_instance(
-            ic_testkit::pocket_ic::PocketIcBuilder::new(std::time::Duration::from_secs(300))
+            pocket_ic::PocketIcBuilder::new()
+                .with_max_request_time_ms(Some(300_000))
                 .with_application_subnet(),
         )
         .await
@@ -49,8 +47,8 @@ pub fn wat_bytes(bytes: &[u8]) -> String {
 
 #[cfg(feature = "held-reply-fixtures")]
 pub async fn install_wat(
-    pic: &ic_testkit::pocket_ic::PocketIc,
-    canister: ic_platform_types::Principal,
+    pic: &pocket_ic::nonblocking::PocketIc,
+    canister: pocket_ic::CanisterId,
     source: &str,
     module_bytes: usize,
 ) {
@@ -63,9 +61,7 @@ pub async fn install_wat(
     )
     .unwrap();
     ic_host_artifacts::wasm::validate(&wasm, module_bytes).unwrap();
-    pic.install_canister(canister, wasm, vec![], None)
-        .await
-        .unwrap();
+    pic.install_canister(canister, wasm, vec![], None).await;
 }
 
 /// Catch an async caller panic on its own runtime, retaining borrowed test inputs.
@@ -95,12 +91,12 @@ pub fn spawn_async<T: Send + 'static>(
 
 #[cfg(feature = "held-reply-fixtures")]
 pub async fn await_held_slot(
-    pic: &ic_testkit::pocket_ic::PocketIc,
+    pic: &pocket_ic::nonblocking::PocketIc,
     fixture: &ic_testkit::pic::fixtures::held::HeldReplyFixture,
     slot: usize,
 ) {
     for _ in 0..20 {
-        pic.tick().await.unwrap();
+        pic.tick().await;
         if fixture
             .pending(pic)
             .await

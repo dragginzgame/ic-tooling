@@ -1,6 +1,6 @@
 # Sibling Host reuse audit
 
-Method: [flow convergence and duplication](../../../../../../../../audits/flow-convergence-and-duplication.md),
+Method: [flow convergence and duplication](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/audits/flow-convergence-and-duplication.md),
 Shared baseline `b2646cde9abbc8861857a4379c683a0c19eba43e`, Host AGENTS.md overlay.
 User requested read-only sibling inspection after Host 0.10.1 delivery. Host HEAD
 is `c7bdc3d4e1c658957202eebd76bff2c51e22f645`. Its incoming dirty Cargo.lock

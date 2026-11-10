@@ -55,6 +55,18 @@ fn json_escapes_are_decoded_by_the_json_owner() {
 }
 
 #[test]
+fn response_text_borrows_plain_input_and_owns_decoded_escapes() {
+    use super::Envelope;
+    use std::borrow::Cow;
+
+    let plain: Envelope = serde_json::from_slice(br#"{"response_bytes":"00"}"#).unwrap();
+    assert!(matches!(plain.0, Some(Cow::Borrowed("00"))));
+    let escaped: Envelope =
+        serde_json::from_slice(br#"{"response_bytes":"\u0030\u0030"}"#).unwrap();
+    assert!(matches!(escaped.0, Some(Cow::Owned(text)) if text == "00"));
+}
+
+#[test]
 fn top_level_string_is_required_and_duplicate_authority_is_rejected() {
     for input in [
         b"{}".as_slice(),

@@ -8,6 +8,38 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.98.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Replace the maintained `ic_testkit::pocket_ic` fork with published upstream
+  `pocket-ic` 16.1. Import its async client, builder and native DTOs directly;
+  convert native Principal identities explicitly at application boundaries.
+- Adopt upstream panic/rejection behavior and best-effort async deletion.
+  Close and shared pool shutdown return `()`. Remove typed transport recovery,
+  response ceilings, accepted-operation contexts and the snapshot transfer engine.
+  Use ordinary snapshot take/load operations; timer/hook reset is caller-owned.
+- Replace inherent harness helpers with free `pic` functions and remove install
+  error wrappers and the unused installation label. See the
+  [migration](../../docs/testkit/client-migration.md).
+
+### 🐛 Fixed
+
+- Preserve startup output-file read diagnostics separately from empty output.
+- Wake queued baseline-pool acquisitions as soon as shutdown closes admission,
+  while waiting for held leases before deleting instances. The semaphore now
+  owns closure state; cancelled shutdowns remain closed without replaying deletion.
+- Apply the native-only module boundary to the entire Wasm target family,
+  consistently with native dependency selection.
+
+### 🔧 Changed
+
+- Reuse complete valid UTF-8 log buffers in diagnostics while preserving lossy
+  decoding, truncation accounting and bounded retention of partial records.
+- Select Platform only for held fixtures and Serde only for Wire helpers. Remove
+  fork-only HTTP, hashing, tracing and source-reconstruction machinery. Wasm remains
+  Types-only.
+
 ## [0.97.0] - 2026-11-09
 
 ### ⚠️ Breaking

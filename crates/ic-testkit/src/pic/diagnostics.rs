@@ -3,9 +3,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::pocket_ic::{CanisterLogRecord, CanisterStatusResult, ClientError, PocketIc};
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
-use ic_platform_types::Principal;
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::{CanisterLogRecord, CanisterStatusResult, RejectResponse, nonblocking::PocketIc};
 
 /// Default maximum number of canister-log records retained in diagnostics.
 pub const DEFAULT_CANISTER_LOG_RECORD_LIMIT: usize = 32;
@@ -193,9 +193,9 @@ pub struct CanisterDiagnosticsReport {
     /// Exact request used for this report.
     pub request: CanisterDiagnosticsRequest,
     /// Status result, independent of log retrieval.
-    pub status: Result<CanisterStatusResult, ClientError>,
+    pub status: Result<CanisterStatusResult, RejectResponse>,
     /// Log result, independent of status retrieval.
-    pub logs: Result<CanisterDiagnosticLogs, ClientError>,
+    pub logs: Result<CanisterDiagnosticLogs, RejectResponse>,
 }
 
 impl CanisterDiagnosticsReport {
@@ -297,90 +297,87 @@ impl fmt::Display for CanisterDiagnosticsReport {
     }
 }
 
-impl PocketIc {
-    /// Collect status and bounded logs using the request's exact senders.
-    ///
-    /// Both calls are attempted independently. Typed client failures remain in
-    /// the report so diagnostics can stay subordinate to the original failure.
-    pub async fn collect_canister_diagnostics(
-        &self,
-        request: CanisterDiagnosticsRequest,
-    ) -> CanisterDiagnosticsReport {
-        let status = self
-            .canister_status(request.canister_id, Some(request.status_sender))
-            .await;
-        let logs = self
-            .fetch_canister_logs(request.canister_id, request.log_sender)
-            .await
-            .map(|records| render_log_records(records, request.log_limits));
+/// Collect status and bounded logs using the request's exact senders.
+///
+/// Both calls are attempted independently. Typed client failures remain in
+/// the report so diagnostics can stay subordinate to the original failure.
+pub async fn collect_canister_diagnostics(
+    pic: &PocketIc,
+    request: CanisterDiagnosticsRequest,
+) -> CanisterDiagnosticsReport {
+    let status = pic
+        .canister_status(request.canister_id, Some(request.status_sender))
+        .await;
+    let logs = pic
+        .fetch_canister_logs(request.canister_id, request.log_sender)
+        .await
+        .map(|records| render_log_records(records, request.log_limits));
 
-        CanisterDiagnosticsReport {
-            request,
-            status,
-            logs,
-        }
-    }
-
-    /// Explicitly collect and write one contextual diagnostic report.
-    ///
-    /// Uses the request's exact senders and log limits, with no retry or output
-    /// destination selected implicitly. Unrelated collection/formatting/writer
-    /// panics propagate.
-    /// Ordinary writer errors are returned unchanged. Status/log failures remain
-    /// in the written report; successful output does not mean those calls passed.
-    /// Callers keep their primary failure authoritative and decide whether to
-    /// retain or ignore this secondary reporting result.
-    ///
-    /// # Errors
-    /// Returns the writer’s I/O error when diagnostics cannot be written.
-    #[expect(
-        clippy::future_not_send,
-        reason = "caller-owned diagnostic writers need not be Send; no task is spawned"
-    )]
-    pub async fn write_canister_diagnostics(
-        &self,
-        request: CanisterDiagnosticsRequest,
-        context: &str,
-        writer: &mut dyn io::Write,
-    ) -> io::Result<()> {
-        let report = self.collect_canister_diagnostics(request).await;
-        writeln!(writer, "{context}: {report}")
-    }
-
-    /// Collect every labeled request sequentially in its supplied order.
-    ///
-    /// Every target is attempted even when an earlier entry has client failures.
-    /// Each entry preserves its exact request and independent status/log
-    /// outcomes; no anonymous retry or fallback is performed.
-    /// Invalid labels return Host's [`BatchLabelError`] before collection starts.
-    ///
-    /// # Errors
-    /// Rejects invalid or duplicate labels before collecting diagnostics.
-    pub async fn collect_canister_diagnostics_batch(
-        &self,
-        requests: &[LabeledCanisterDiagnosticsRequest],
-    ) -> Result<CanisterDiagnosticsBatchReport, BatchLabelError> {
-        validate_labels(requests.iter().map(|request| request.label.as_str()))?;
-        let started = Instant::now();
-        let mut entries = Vec::with_capacity(requests.len());
-        for labeled in requests {
-            let entry_started = Instant::now();
-            let request = labeled.request;
-            let report = self.collect_canister_diagnostics(request).await;
-            entries.push(CanisterDiagnosticsBatchEntry {
-                label: labeled.label.clone(),
-                report,
-                entry_elapsed: entry_started.elapsed(),
-            });
-        }
-
-        Ok(CanisterDiagnosticsBatchReport {
-            entries,
-            total: started.elapsed(),
-        })
+    CanisterDiagnosticsReport {
+        request,
+        status,
+        logs,
     }
 }
 
+/// Explicitly collect and write one contextual diagnostic report.
+///
+/// Uses the request's exact senders and log limits, with no retry or output
+/// destination selected implicitly. Unrelated collection/formatting/writer
+/// panics propagate.
+/// Ordinary writer errors are returned unchanged. Status/log failures remain
+/// in the written report; successful output does not mean those calls passed.
+/// Callers keep their primary failure authoritative and decide whether to
+/// retain or ignore this secondary reporting result.
+///
+/// # Errors
+/// Returns the writer’s I/O error when diagnostics cannot be written.
+#[expect(
+    clippy::future_not_send,
+    reason = "caller-owned diagnostic writers need not be Send; no task is spawned"
+)]
+pub async fn write_canister_diagnostics(
+    pic: &PocketIc,
+    request: CanisterDiagnosticsRequest,
+    context: &str,
+    writer: &mut dyn io::Write,
+) -> io::Result<()> {
+    let report = collect_canister_diagnostics(pic, request).await;
+    writeln!(writer, "{context}: {report}")
+}
+
+/// Collect every labeled request sequentially in its supplied order.
+///
+/// Every target is attempted even when an earlier entry has client failures.
+/// Each entry preserves its exact request and independent status/log
+/// outcomes; no anonymous retry or fallback is performed.
+/// Invalid labels return Host's [`BatchLabelError`] before collection starts.
+///
+/// # Errors
+/// Rejects invalid or duplicate labels before collecting diagnostics.
+pub async fn collect_canister_diagnostics_batch(
+    pic: &PocketIc,
+    requests: &[LabeledCanisterDiagnosticsRequest],
+) -> Result<CanisterDiagnosticsBatchReport, BatchLabelError> {
+    validate_labels(requests.iter().map(|request| request.label.as_str()))?;
+    let started = Instant::now();
+    let mut entries = Vec::with_capacity(requests.len());
+    for labeled in requests {
+        let entry_started = Instant::now();
+        let request = labeled.request;
+        let report = collect_canister_diagnostics(pic, request).await;
+        entries.push(CanisterDiagnosticsBatchEntry {
+            label: labeled.label.clone(),
+            report,
+            entry_elapsed: entry_started.elapsed(),
+        });
+    }
+
+    Ok(CanisterDiagnosticsBatchReport {
+        entries,
+        total: started.elapsed(),
+    })
+}
 fn render_log_records(
     records: Vec<CanisterLogRecord>,
     limits: CanisterLogRenderLimits,
@@ -408,13 +405,21 @@ fn render_log_records(
             continue;
         }
 
-        let content = String::from_utf8_lossy(&record.content[..retained]).into_owned();
+        let original_content_bytes = record.content.len();
+        // Reuse complete valid buffers, but do not retain a large allocation
+        // merely to hold a caller-truncated prefix.
+        let content = if retained == original_content_bytes {
+            String::from_utf8(record.content)
+                .unwrap_or_else(|error| String::from_utf8_lossy(error.as_bytes()).into_owned())
+        } else {
+            String::from_utf8_lossy(&record.content[..retained]).into_owned()
+        };
         retained_bytes = retained_bytes.saturating_add(retained);
         rendered.push(CanisterDiagnosticLogRecord {
             index: record.idx,
             timestamp_nanos: record.timestamp_nanos,
             content,
-            original_content_bytes: record.content.len(),
+            original_content_bytes,
             omitted_content_bytes: omitted,
         });
     }

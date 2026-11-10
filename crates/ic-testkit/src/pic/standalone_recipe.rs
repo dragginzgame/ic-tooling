@@ -1,11 +1,10 @@
 use std::io;
 
-use ic_platform_types::Principal;
+use pocket_ic::CanisterId as Principal;
 
 use super::{
     CachedPocketIcBaseline, CanisterSnapshotTarget, FailureDisposition, PocketIcBaselineRecipe,
-    PreparedBaseline, RebuildReason, SnapshotRestoreFunding, StandaloneCanisterFixture,
-    is_dead_pocket_ic_transport_error,
+    PreparedBaseline, SnapshotRestoreFunding, StandaloneCanisterFixture,
 };
 
 /// Snapshot-only recipe for one caller-built, installed canister.
@@ -23,7 +22,8 @@ use super::{
 /// This recipe stops/drains its single canister before capture and warm restore,
 /// then starts it at readiness. Automatic progress must remain disabled.
 /// Non-transport restore failures are fatal: the pool discards the affected
-/// baseline before returning the error. Dead transport permits one recovery build.
+/// baseline before returning the error. Upstream transport panics propagate;
+/// an interrupted preparation must rebuild before the next lease is exposed.
 pub struct StandaloneCanisterRecipe<B> {
     funding: SnapshotRestoreFunding,
     build: B,
@@ -58,12 +58,10 @@ where
             let error = io::Error::other(super::ControllerSnapshotError::CaptureFailed {
                 canister_id,
                 sender: None,
-                source: Box::new(source),
+                rejection: Box::new(source),
                 cleanup_failures: Vec::new(),
             });
-            if let Err(cleanup) = pocket_ic.close().await {
-                tracing::warn!("PocketIC deletion after stop failure failed: {cleanup}");
-            }
+            pocket_ic.close().await;
             return Err(error);
         }
         let baseline = CachedPocketIcBaseline::capture(
@@ -77,9 +75,7 @@ where
         .await
         .map_err(io::Error::other)?;
         if let Err(error) = self.drive_to_readiness(&baseline).await {
-            if let Err(cleanup) = baseline.close().await {
-                tracing::warn!("PocketIC deletion after readiness failure failed: {cleanup}");
-            }
+            baseline.close().await;
             return Err(error);
         }
         Ok(baseline)
@@ -100,7 +96,7 @@ where
             .pocket_ic()
             .stop_canister(*baseline.metadata(), None)
             .await
-            .map_err(io::Error::other)
+            .map_err(|error| io::Error::other(error.to_string()))
     }
 
     async fn drive_to_readiness(
@@ -111,7 +107,7 @@ where
             .pocket_ic()
             .start_canister(*baseline.metadata(), None)
             .await
-            .map_err(io::Error::other)
+            .map_err(|error| io::Error::other(error.to_string()))
     }
 
     fn validate(
@@ -125,13 +121,9 @@ where
     fn classify_failure(
         &self,
         _stage: super::BaselinePreparationStage,
-        error: &(dyn std::error::Error + 'static),
+        _error: &(dyn std::error::Error + 'static),
     ) -> FailureDisposition {
-        if is_dead_pocket_ic_transport_error(error) {
-            FailureDisposition::Rebuild(RebuildReason::DeadPocketIcTransport)
-        } else {
-            FailureDisposition::Fatal
-        }
+        FailureDisposition::Fatal
     }
 }
 

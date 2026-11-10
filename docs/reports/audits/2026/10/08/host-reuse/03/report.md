@@ -3,7 +3,7 @@
 ## Scope, identity and verdict
 
 Requested 2026-10-08: check latest Shared Tooling, then continue audits and issues.
-Method: [flow convergence and duplication](../../../../../../../../audits/flow-convergence-and-duplication.md),
+Method: [flow convergence and duplication](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/audits/flow-convergence-and-duplication.md),
 Shared Tooling `75a8a60f49cec11d3f6aecab5c977029c42cc549` (0.1.26).
 The method is unchanged from run 02; this run refreshes selected source/adoption
 evidence, without a whole-system correctness or performance claim.

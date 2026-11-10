@@ -41,8 +41,6 @@ pub enum BaselinePreparationStage {
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RebuildReason {
-    /// `PocketIC` transport was no longer reachable.
-    DeadPocketIcTransport,
     /// Captured snapshot restoration failed.
     SnapshotRestoreFailure,
     /// Non-snapshot reset failed.
@@ -379,9 +377,9 @@ where
         }
     }
 
-    /// Consume the pool and await [`Self::shutdown`], retaining every deletion failure.
-    pub async fn close(self) -> Vec<crate::pocket_ic::ClientError> {
-        self.shutdown().await
+    /// Consume the pool and await [`Self::shutdown`]. Upstream deletion is best effort.
+    pub async fn close(self) {
+        self.shutdown().await;
     }
 
     /// Stop admission, await all leases, and attempt every cached instance deletion.
@@ -392,16 +390,21 @@ where
     /// their guards are dropped. Do not await shutdown while holding a lease
     /// in the same task. Borrowed server owners must outlive this operation.
     ///
-    /// Deletion failures do not stop remaining deletions. Concurrent shutdowns
-    /// serialize; each call returns its own failures, and completed attempts
-    /// are never replayed. The caller must inspect every returned error.
+    /// Upstream deletion logs failures instead of returning them. Concurrent
+    /// shutdowns serialize and completed attempts are never replayed. Completion
+    /// is not an acknowledgement that a borrowed server deleted every instance.
     ///
     /// Cancellation leaves admission closed and retains unattempted baselines
     /// for a later shutdown. An in-flight deletion has an unknown outcome and
     /// requires caller reconciliation; it is not retried. Rust Drop performs
     /// no client network I/O.
-    pub async fn shutdown(&self) -> Vec<crate::pocket_ic::ClientError> {
-        self.slots.shutdown(CachedPocketIcBaseline::close).await
+    pub async fn shutdown(&self) {
+        self.slots
+            .shutdown(async |baseline| {
+                baseline.close().await;
+                Ok::<(), std::convert::Infallible>(())
+            })
+            .await;
     }
 
     /// Maximum number of simultaneously leased `PocketIC` baselines.
@@ -675,9 +678,7 @@ const fn add_timing(total: &mut Option<Duration>, elapsed: Duration) {
 }
 
 async fn drop_baseline_safely<M>(baseline: CachedPocketIcBaseline<M>) {
-    if let Err(error) = baseline.close().await {
-        tracing::warn!("PocketIC baseline deletion failed: {error}");
-    }
+    baseline.close().await;
 }
 
 impl std::fmt::Display for BaselinePreparationStage {

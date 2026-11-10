@@ -1,5 +1,5 @@
 //! Integration checks for pocket ic baseline pool behavior.
-use ic_testkit::pocket_ic::ClientError;
+use pocket_ic::RejectResponse;
 mod support;
 
 use std::{
@@ -12,15 +12,15 @@ use std::{
     time::Duration,
 };
 
-use ic_platform_types::Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolError, BaselinePoolOutcome, BaselinePoolPreparationError,
     BaselinePreparationStage, CachedPocketIcBaseline, CachedPocketIcBaselinePool,
     CachedPocketIcBaselinePoolGuard, CanisterSnapshotTarget, ControllerSnapshotError,
     FailureDisposition, PocketIcBaselineRecipe, PocketIcStartupConfig, PocketIcStartupError,
-    PreparedBaseline, RebuildReason, SnapshotRestoreFunding, is_dead_pocket_ic_transport_error,
+    PreparedBaseline, RebuildReason, SnapshotRestoreFunding,
 };
-use ic_testkit::pocket_ic::PocketIcBuilder;
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::PocketIcBuilder;
 
 const OPERATION_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -59,31 +59,32 @@ async fn pool_shutdown_accepts_static_leases_and_waits_before_deletion() {
         pool.acquire().await,
         Err(BaselinePoolError::Closed { .. })
     ));
-    drop(first);
     assert!(matches!(
-        queued.await,
+        tokio::time::timeout(OPERATION_TIMEOUT, queued)
+            .await
+            .unwrap(),
         Err(BaselinePoolError::Closed { .. })
     ));
-    second.pocket_ic().topology().await.unwrap(); // held work remains usable.
+    drop(first);
+    second.pocket_ic().topology().await; // held work remains usable.
     drop(second);
-    assert!(
-        tokio::time::timeout(OPERATION_TIMEOUT, shutdown)
-            .await
-            .unwrap()
-            .is_empty()
-    );
+    tokio::time::timeout(OPERATION_TIMEOUT, shutdown)
+        .await
+        .unwrap();
     for url in urls {
         assert!(
-            ic_testkit::pocket_ic::PocketIc::list_instances(url, Duration::from_secs(5))
-                .await
-                .is_err()
+            std::net::TcpStream::connect((
+                url.host_str().unwrap(),
+                url.port_or_known_default().unwrap()
+            ))
+            .is_err()
         );
     }
-    assert!(pool.shutdown().await.is_empty());
+    pool.shutdown().await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn pool_shutdown_returns_every_borrowed_server_deletion_failure() {
+async fn pool_shutdown_is_best_effort_when_the_borrowed_server_is_gone() {
     let server = PocketIcStartupConfig::Spawn {
         server_binary: std::env::var_os("POCKET_IC_BIN")
             .expect("admit the installed server first")
@@ -110,24 +111,11 @@ async fn pool_shutdown_returns_every_borrowed_server_deletion_failure() {
     );
     drop((first, second));
     drop(server); // only this test's dedicated borrowed server is stopped.
-    let failures = tokio::time::timeout(OPERATION_TIMEOUT, pool.shutdown())
+    tokio::time::timeout(OPERATION_TIMEOUT, pool.shutdown())
         .await
         .unwrap();
-    assert_eq!(
-        failures.len(),
-        2,
-        "failure of the first delete cannot skip the second"
-    );
-    assert!(
-        failures
-            .iter()
-            .all(|error| is_dead_pocket_ic_transport_error(error))
-    );
     assert_eq!(controls.builds.load(Ordering::SeqCst), 2);
-    assert!(
-        pool.shutdown().await.is_empty(),
-        "failed deletes are not replayed"
-    );
+    pool.shutdown().await;
 }
 
 #[derive(Clone, Default)]
@@ -167,14 +155,14 @@ struct TwoCanisterMetadata {
 }
 
 async fn lifecycle(
-    call: impl AsyncFnOnce() -> Result<(), ic_testkit::pocket_ic::ClientError>,
+    call: impl AsyncFnOnce() -> Result<(), RejectResponse>,
 ) -> Result<(), TestRecipeError> {
     call().await.map_err(TestRecipeError::Lifecycle)
 }
 
 #[derive(Debug)]
 enum TestRecipeError {
-    Lifecycle(ClientError),
+    Lifecycle(RejectResponse),
     Snapshot(ControllerSnapshotError),
     Startup(PocketIcStartupError),
     DomainMutation(&'static str),
@@ -229,7 +217,9 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
                 timeout: OPERATION_TIMEOUT,
             }
             .build_instance(
-                PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+                PocketIcBuilder::new()
+                    .with_max_request_time_ms(Some(300_000))
+                    .with_application_subnet(),
             )
             .await
             .map_err(TestRecipeError::Startup)?
@@ -265,19 +255,10 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
             .pocket_ic()
             .get_time()
             .await
-            .unwrap()
             .as_nanos_since_unix_epoch();
         let baseline_cycles = [
-            baseline
-                .pocket_ic()
-                .cycle_balance(canister_ids[0])
-                .await
-                .unwrap(),
-            baseline
-                .pocket_ic()
-                .cycle_balance(canister_ids[1])
-                .await
-                .unwrap(),
+            baseline.pocket_ic().cycle_balance(canister_ids[0]).await,
+            baseline.pocket_ic().cycle_balance(canister_ids[1]).await,
         ];
         let metadata = baseline.metadata_mut();
         metadata.baseline_time_nanos = baseline_time_nanos;
@@ -299,8 +280,8 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
         if self.guarded_domain == Some(GuardedDomain::Cycles) {
             let [first, second] = baseline.metadata().canister_ids;
             let current_cycles = [
-                baseline.pocket_ic().cycle_balance(first).await.unwrap(),
-                baseline.pocket_ic().cycle_balance(second).await.unwrap(),
+                baseline.pocket_ic().cycle_balance(first).await,
+                baseline.pocket_ic().cycle_balance(second).await,
             ];
             if current_cycles != baseline.metadata().baseline_cycles {
                 return Err(TestRecipeError::DomainMutation("canister-cycles"));
@@ -334,7 +315,6 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
                     .pocket_ic()
                     .get_time()
                     .await
-                    .unwrap()
                     .as_nanos_since_unix_epoch()
                     != baseline.metadata().baseline_time_nanos
                 {
@@ -445,8 +425,6 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
     ) -> FailureDisposition {
         if self.controls.fatal_restore.load(Ordering::SeqCst) {
             FailureDisposition::Fatal
-        } else if is_dead_pocket_ic_transport_error(error) {
-            FailureDisposition::Rebuild(RebuildReason::DeadPocketIcTransport)
         } else if error
             .downcast_ref::<TestRecipeError>()
             .is_some_and(|error| matches!(error, TestRecipeError::ResetEvidence { .. }))
@@ -493,8 +471,10 @@ impl std::error::Error for TestRecipeError {
         match self {
             Self::Snapshot(error) => Some(error),
             Self::Startup(error) => Some(error),
-            Self::Lifecycle(error) => Some(error),
-            Self::DomainMutation(_) | Self::Synthetic(_) | Self::ResetEvidence { .. } => None,
+            Self::Lifecycle(_)
+            | Self::DomainMutation(_)
+            | Self::Synthetic(_)
+            | Self::ResetEvidence { .. } => None,
         }
     }
 }
@@ -850,13 +830,17 @@ async fn killed_dedicated_server_rebuilds_on_a_fresh_server() {
 
     drop(server);
 
+    assert!(
+        support::catch_async_panic(async || { pool.acquire().await.map(|(lease, _)| drop(lease)) })
+            .is_err()
+    );
     let (baseline, outcome) = pool
         .acquire()
         .await
         .expect("dead dedicated transport should rebuild on the default server");
     assert!(matches!(
         outcome.disposition,
-        BaselinePoolDisposition::Rebuilt(RebuildReason::DeadPocketIcTransport)
+        BaselinePoolDisposition::Rebuilt(RebuildReason::UnwindWhileLeased)
     ));
     assert_eq!(controls.builds.load(Ordering::SeqCst), 2);
     drop(baseline);
@@ -874,8 +858,7 @@ async fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations()
         baseline
             .pocket_ic()
             .advance_time(Duration::from_secs(1))
-            .await
-            .unwrap();
+            .await;
         drop(baseline);
 
         let (baseline, outcome) = pool
@@ -898,8 +881,7 @@ async fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations()
         let _ = baseline
             .pocket_ic()
             .add_cycles(canister_id, 1_000_000)
-            .await
-            .unwrap();
+            .await;
         drop(baseline);
 
         let (baseline, outcome) = pool
@@ -918,7 +900,7 @@ async fn guarded_recipe_rebuilds_after_time_cycle_and_extra_canister_mutations()
             .acquire()
             .await
             .expect("extra-canister-guarded baseline should build");
-        let extra_canister = baseline.pocket_ic().create_canister().await.unwrap();
+        let extra_canister = baseline.pocket_ic().create_canister().await;
         *controls
             .tracked_extra_canister
             .lock()

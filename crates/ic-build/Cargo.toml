@@ -6,7 +6,7 @@ version = "0.81.1"
 repository.workspace = true
 description = "Cargo and Wasm builds, exact inputs and retained artifact caches"
 readme = "README.md"
-license.workspace = true
+license-file.workspace = true
 exclude = ["target/"]
 publish = ["crates-io"]
 

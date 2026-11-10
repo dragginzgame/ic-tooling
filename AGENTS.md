@@ -1,8 +1,10 @@
 # IC Tooling Agent Rules
 
-Read [the current handoff](docs/status/current.md) and the installed
-[baseline](TOKO-TOOLING.md). [.toko-tooling.snapshot](.toko-tooling.snapshot)
-records the exact adopted files and revision.
+Apply the installed [Toko Tooling baseline](TOKO-TOOLING.md), recorded in
+[the snapshot](.toko-tooling.snapshot), for common engineering and action-authority
+rules. Keep this overlay focused on local contracts, commands and exceptions.
+
+Read [the current handoff](docs/status/current.md) before implementation.
 
 ## Local rules
 
@@ -29,38 +31,21 @@ records the exact adopted files and revision.
   plain Cargo cleanup retains its whole-workspace target semantics.
 - Linux x86-64 and macOS 15 on Intel and Apple Silicon are required hosts.
   Report native macOS qualification separately from Linux evidence.
-- Follow shared changelog rules. GitHub issues are the sole follow-up tracker;
-  source provenance, design and handoff documents are evidence, not issue queues.
+- Keep source provenance, design and handoff documents as evidence; follow-up
+  belongs in the owning GitHub issues under the baseline.
 
-## Maintained native PocketIC client
+## Upstream native PocketIC dependency
 
-Tooling #324 transfers Platform’s qualified PocketIC 16.1 client into
-`ic-testkit::pocket_ic`. Preserve imported Apache-2.0 licenses, protocol bytes, fallible/no-replay behavior and bounded snapshot transfer.
-The exact donor and upstream reconstruction guards own its source provenance.
-The native module retains donor lint policy for unchanged imported bodies.
-The client requires an explicit server URL; `pic` owns server provisioning and
-managed startup. Persistent instance directories are caller-owned paths; the
-client creates no temporary state handles or clones. Changes to hash, key or
-signature algorithms remain outside this maintenance scope. Keep all client
-dependencies native.
-
-### Management DTO identity
-
-The native client uses Platform-owned management DTOs and canonical Types
-Principal. No registry management dependency or external Principal alias remains.
-Native install/create/log DTOs belong to Platform alongside snapshot DTOs;
-keep them out of Wasm. Preserve external Candid/Serde bytes and admitted 16.1
-management/snapshot behavior. The owned codec uses explicit work and allocation
-budgets, not the retired upstream quotas. Run `client_management_identity` and
-the installed `client_installed` test with an explicitly admitted 16.1 server;
-native host and Wasm graph obligations remain separate.
-
-### Async-only client contract
-
-Testkit keeps one async PocketIC implementation. The caller owns
-its Tokio runtime. Network and lifecycle helpers must not recreate blocking
-wrappers or private runtimes. Explicit instance/baseline close and raw client
-async deletion retain server custody; Rust Drop performs no client network I/O.
-Keep cancellation/no-replay evidence and force cancelled pool preparations to
-rebuild before reuse. Pure fixture generation and command-process execution stay
-synchronous. See [the migration](docs/testkit/client-migration.md).
+The maintainer explicitly approved returning to published `pocket-ic` 16.1 with
+a breaking migration on 2026-11-10. Import its async client and builder directly;
+do not maintain a fork, a compatibility facade or duplicate protocol DTOs here.
+This is a scoped native IC dependency-boundary exception: upstream owns its
+Candid/management identities, transport panics, polling and best-effort deletion.
+Fork-specific typed transport recovery and bounded snapshot-transfer APIs retire.
+Testkit owns server admission/custody and harness policy. Its helpers use the
+upstream native `CanisterId`; portable helpers retain Platform Types Principal.
+Keep all client dependencies native, use the caller's runtime, and do not add
+blocking wrappers or a second transport to recreate removed fork guarantees.
+Cancelled pool preparations must still rebuild before reuse. Qualify actual
+16.1 behavior and report native macOS evidence separately. See
+[the migration](docs/testkit/client-migration.md).

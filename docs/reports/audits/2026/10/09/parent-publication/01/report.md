@@ -1,7 +1,7 @@
 # Parent publication review
 
 Scope: post-0.10.0 local-file boundary review under
-[code hygiene](../../../../../../../../audits/code-hygiene.md), with the unchanged
+[code hygiene](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/audits/code-hygiene.md), with the unchanged
 Shared baseline `b2646cde9abbc8861857a4379c683a0c19eba43e` and root AGENTS.md
 overlay. Source started clean at released Host
 `98562bea26a98993d93b80ed908bea4876c32a91`; the user authorized continued repairs.

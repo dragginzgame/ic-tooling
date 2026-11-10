@@ -1,9 +1,8 @@
 use super::{WireCallError, WireCallSpec, call_wire, context};
 
-use crate::pic::is_dead_pocket_ic_transport_error;
-use crate::pocket_ic::{ClientError, ErrorCode, RejectCode, RejectResponse};
-use ic_platform_types::Principal;
 use ic_wire::{Limits, native};
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::{ErrorCode, RejectCode, RejectResponse};
 
 const LIMITS: Limits = Limits {
     bytes: 64,
@@ -192,7 +191,6 @@ async fn invalid_responses_preserve_typed_refusal_and_context_without_payload_lo
                 .unwrap()
                 .is::<ic_wire::Error>()
         );
-        assert!(!is_dead_pocket_ic_transport_error(&error));
         let WireCallError::Decode {
             context,
             bytes,
@@ -292,7 +290,7 @@ async fn rejection_remains_structured_and_is_never_retried() {
     let mut calls = 0;
     let error = call_wire::<u32, Result<u64, ()>>(ctx.clone(), SAMPLE, &1, async |_| {
         calls += 1;
-        Err(ClientError::Canister(response.clone()))
+        Err(response.clone())
     })
     .await
     .unwrap_err();
@@ -302,25 +300,17 @@ async fn rejection_remains_structured_and_is_never_retried() {
         panic!("call failure required")
     };
     assert_eq!(*context, ctx);
-    assert!(matches!(*source, ClientError::Canister(saved) if saved == response));
+    assert_eq!(*source, response);
 }
 
 #[tokio::test]
-async fn transport_classification_and_original_unrelated_panics_are_preserved() {
+async fn original_transport_panics_are_preserved() {
     let ctx = context(
         "query_call",
         SAMPLE,
         Principal::anonymous(),
         Principal::anonymous(),
     );
-    let error = call_wire::<u32, Result<u64, ()>>(ctx.clone(), SAMPLE, &1, async |_| {
-        Err(ClientError::Protocol(
-            "application worker channel closed".into(),
-        ))
-    })
-    .await
-    .unwrap_err();
-    assert!(!is_dead_pocket_ic_transport_error(&error));
     let payload = Box::new(9_u8);
     let original = std::ptr::from_ref(payload.as_ref());
     let error = tokio::spawn(async move {

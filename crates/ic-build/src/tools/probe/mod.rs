@@ -4,10 +4,8 @@ use std::{io, process::Command};
 pub fn bytes(command: &mut Command, limits: OutputLimits) -> io::Result<Vec<u8>> {
     let output = capture_command(command, limits)
         .and_then(CompletedExecution::require_complete)
+        .and_then(CompletedExecution::require_success)
         .map_err(io::Error::other)?;
-    if !output.status.success() {
-        return Err(io::Error::other(format!("probe exited {}", output.status)));
-    }
     Ok(output.stdout)
 }
 pub fn text(command: &mut Command, limits: OutputLimits) -> io::Result<String> {
@@ -20,3 +18,6 @@ pub fn text(command: &mut Command, limits: OutputLimits) -> io::Result<String> {
     }
     Ok(text.to_owned())
 }
+
+#[cfg(all(test, unix))]
+mod tests;

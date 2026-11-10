@@ -2,10 +2,7 @@ use std::{
     collections::VecDeque,
     future::Future,
     num::NonZeroUsize,
-    sync::{
-        Mutex, OnceLock,
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::{Mutex, OnceLock},
     time::{Duration, Instant},
 };
 use tokio::sync::{RwLock, RwLockReadGuard, Semaphore, SemaphorePermit};
@@ -16,7 +13,6 @@ pub(super) struct BoundedSlotPool<T, R> {
     capacity: NonZeroUsize,
     state: OnceLock<AvailableSlots<T, R>>,
     permits: Semaphore,
-    closed: AtomicBool,
     lifecycle: RwLock<()>,
 }
 
@@ -54,27 +50,23 @@ impl<T, R> BoundedSlotPool<T, R> {
             capacity,
             state: OnceLock::new(),
             permits: Semaphore::const_new(capacity.get()),
-            closed: AtomicBool::new(false),
             lifecycle: RwLock::const_new(()),
         }
     }
 
     pub(super) async fn acquire(&self) -> Option<BoundedSlotLease<'_, T, R>> {
-        if self.closed.load(Ordering::Acquire) {
+        if self.permits.is_closed() {
             return None;
         }
         let lifecycle = self.lifecycle.read().await;
-        if self.closed.load(Ordering::Acquire) {
-            return None;
-        }
-        let state = self.state();
         let started = Instant::now();
-        // Tokio owns FIFO admission and cancellation of queued acquisitions.
-        let permit = self.permits.acquire().await.expect("pool is never closed");
-        if self.closed.load(Ordering::Acquire) {
+        // Tokio owns FIFO admission, cancellation and waking closed waiters.
+        let permit = self.permits.acquire().await.ok()?;
+        if self.permits.is_closed() {
             return None;
         }
-        let (slot_index, slot) = state
+        let (slot_index, slot) = self
+            .state()
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .pop_front()
@@ -104,7 +96,7 @@ impl<T, R> BoundedSlotPool<T, R> {
     where
         F: Future<Output = Result<(), E>>,
     {
-        self.closed.store(true, Ordering::Release);
+        self.permits.close();
         let _lifecycle = self.lifecycle.write().await;
         let mut failures = Vec::new();
         while let Some(value) = self.take_value() {

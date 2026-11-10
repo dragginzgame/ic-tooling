@@ -67,5 +67,9 @@ fn file_symlinks_resolve_but_dangling_markers_fail() {
     assert!(
         matches!(declared_workspace_root_from(&root), Err(DiscoveryError::Inspect { path, source }) if path == manifest && source.kind() == io::ErrorKind::NotFound)
     );
+    fs::create_dir(&target).unwrap();
+    assert!(
+        matches!(declared_workspace_root_from(&root), Err(DiscoveryError::ExpectedFile { path }) if path == manifest)
+    );
     fs::remove_dir_all(root).unwrap();
 }

@@ -13,16 +13,12 @@ test -n "$host"
 policy=(--consumer "$consumer" --require ic-platform-types=1 --forbid ic-metrics
     --forbid ic-wire-derive
     --forbid ic-build --forbid ic-host-text --forbid ic-wire-endpoint
-    --forbid ic-agent --forbid candid_parser --forbid ic0 --forbid pocket-ic --forbid-pattern '^ic-cdk')
+    --forbid ic-agent --forbid candid_parser --forbid ic0 --forbid-pattern '^ic-cdk')
 runtime_policy=(--consumer "$root/qualification" "${policy[@]:2}")
 policy+=(--forbid ic-platform-runtime-guard)
-native_policy=("${policy[@]}" --forbid ic-management-canister-types --require ic-platform=1 --forbid ic-platform-pocket-ic
-    --forbid-feature ic-platform/pocket-ic --forbid ic-platform-runtime
-    --forbid slog --forbid tempfile --forbid schemars
-    --forbid strum --forbid strum_macros)
-native_policy+=(--forbid tracing-appender --forbid tracing-subscriber --forbid ic-logging)
-native_policy+=(--forbid-feature reqwest/blocking --forbid-feature reqwest/multipart
-    --forbid-feature reqwest/stream)
+native_policy=("${policy[@]}" --require pocket-ic=1 --require ic-management-canister-types=1
+    --forbid ic-platform-pocket-ic --forbid-feature ic-platform/pocket-ic
+    --forbid ic-platform-runtime --forbid ic-logging)
 
 # Observe these roots separately: workspace/all-feature unification must not
 # conceal the optional Wire boundary. Render the actual selected identities.
@@ -36,33 +32,33 @@ native_graph() {
         select(.name | test("^ic-(testkit|platform(-types)?|wire)$")) |
         "Testkit \($profile): \(.identity)"' <<< "$observation"
 }
-native_graph default --forbid ic-wire
-native_graph wire --features wire --require ic-wire=1
+native_graph default --forbid ic-wire --forbid ic-platform
+native_graph wire --features wire --require ic-wire=1 --forbid ic-platform
 perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --features reply-fixtures \
-    --require wasm-encoder=1 --forbid wat --forbid wast
+    --require wasm-encoder=1 --forbid wat --forbid wast --forbid ic-platform
 perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --features held-reply-fixtures \
-    --require wat=1 --require wast=1 --require wasm-encoder=1
+    --require wat=1 --require wast=1 --require wasm-encoder=1 --require ic-platform=1
 perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --all-features \
     --require clap=1 --require ic-wire=1
 perl scripts/ci/check-cargo-graph.pl --consumer "$root/qualification" \
     --package ic-testkit-dev --target "$host" --all-features \
-    --require ic-build=1 --require ic-platform=1 --forbid ic-platform-pocket-ic \
+    --require ic-build=1 --forbid ic-platform --forbid ic-platform-pocket-ic \
     --forbid-feature ic-platform/pocket-ic \
-    --forbid pocket-ic --forbid ic-metrics --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
+    --require pocket-ic=1 --forbid ic-metrics --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
     --require ic-host-artifacts=1 --require ic-host-fs=1 \
     --require ic-host-process=1 --require ic-host-text=1
 perl scripts/ci/check-cargo-graph.pl "${policy[@]}" --package ic-testkit \
     --target wasm32-unknown-unknown --all-features --forbid-pattern '^ic-host-' \
     --forbid reqwest --forbid tokio --forbid tempfile --forbid flate2 --forbid ic-certification --forbid ic-transport-types \
-    --forbid candid --forbid candid_derive --forbid ic-platform-pocket-ic --forbid ic-wire --forbid clap \
+    --forbid pocket-ic --forbid candid --forbid candid_derive --forbid ic-platform-pocket-ic --forbid ic-wire --forbid clap \
     --forbid wat --forbid wast --forbid wasm-encoder --forbid wasmparser --forbid ic-management-canister-types \
     --forbid ic-platform --forbid ic-platform-macros --forbid ic-platform-runtime
 probe_wasm="$(perl scripts/ci/check-cargo-graph.pl "${runtime_policy[@]}" --package ic-testkit-perf-probe \
     --target wasm32-unknown-unknown --forbid-pattern '^ic-host-' \
-    --forbid ic-testkit \
+    --forbid ic-testkit --forbid pocket-ic \
     --forbid candid --forbid candid_derive --forbid ic-platform-pocket-ic --forbid clap \
     --forbid ic-platform --require ic-wire=1 --require ic-platform-runtime=1 --require ic-platform-runtime-guard=1 --json --observations)"
 jq -e 'any(.observations[]; .name == "ic-platform-runtime" and

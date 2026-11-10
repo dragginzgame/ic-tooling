@@ -15,7 +15,7 @@ use std::{
 };
 
 pub struct Peer {
-    url: reqwest::Url,
+    url: url::Url,
     stop: Arc<AtomicBool>,
     active: Arc<Mutex<Option<TcpStream>>>,
     worker: Option<JoinHandle<()>>,
@@ -23,7 +23,6 @@ pub struct Peer {
 
 /// Borrow the already-admitted request without repeating framing reads.
 pub struct Request<'a> {
-    pub line: &'a str,
     pub path: &'a str,
     pub body: &'a [u8],
 }
@@ -41,7 +40,6 @@ impl<'a> Request<'a> {
             .next()
             .unwrap();
         Self {
-            line,
             path: line.split_whitespace().nth(1).unwrap(),
             body: &bytes[end..],
         }
@@ -114,7 +112,7 @@ impl Peer {
         }
     }
 
-    pub(crate) const fn url(&self) -> &reqwest::Url {
+    pub(crate) const fn url(&self) -> &url::Url {
         &self.url
     }
 

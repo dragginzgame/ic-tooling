@@ -33,7 +33,7 @@ for (qw(GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY
     !exists($ENV{$_}) or die "release batch requires ordinary context; unset $_ or qualify it in the consumer adapter\n";
 }
 for (qw(RELEASE_FROZEN_GROUPS RELEASE_FROZEN_PUBLISH_TARGET RELEASE_FROZEN_SETUP_TARGET RELEASE_FROZEN_SETUP_MODE FROZEN_RELEASE_ACTIVE)) {
-    !exists($ENV{$_}) or die "retired release setting $_; adopt docs/release-batches.md\n";
+    !exists($ENV{$_}) or die "retired release setting $_; adopt docs/releases/release-batches.md\n";
 }
 sub output {
     my (@args)=@_;

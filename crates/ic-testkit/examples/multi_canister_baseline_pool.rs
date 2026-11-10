@@ -5,18 +5,15 @@
 //! ```text
 //! cargo run -p ic-testkit --example multi_canister_baseline_pool
 //! ```
-use ic_testkit::pocket_ic::ClientError;
-
 use std::{error::Error, num::NonZeroUsize, time::Duration};
 
-use ic_platform::Principal;
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePreparationStage, CachedPocketIcBaseline,
     CachedPocketIcBaselinePool, CanisterSnapshotTarget, ControllerSnapshotError,
     FailureDisposition, PocketIcBaselineRecipe, PocketIcStartupConfig, PocketIcStartupError,
-    PreparedBaseline, RebuildReason, SnapshotRestoreFunding, is_dead_pocket_ic_transport_error,
+    PreparedBaseline, SnapshotRestoreFunding,
 };
-use ic_testkit::pocket_ic::PocketIcBuilder;
+use pocket_ic::{CanisterId as Principal, PocketIcBuilder, RejectResponse};
 
 const EMPTY_WASM: &[u8] = b"\0asm\x01\0\0\0";
 
@@ -27,15 +24,17 @@ struct TopologyMetadata {
 }
 
 async fn lifecycle(
-    call: impl AsyncFnOnce() -> Result<(), ic_testkit::pocket_ic::ClientError>,
+    call: impl AsyncFnOnce() -> Result<(), RejectResponse>,
 ) -> Result<(), RecipeError> {
-    call().await.map_err(RecipeError::Lifecycle)
+    call()
+        .await
+        .map_err(|rejection| RecipeError::Lifecycle(Box::new(rejection)))
 }
 
 #[derive(Debug, thiserror::Error)]
 enum RecipeError {
     #[error("{0}")]
-    Lifecycle(#[source] ClientError),
+    Lifecycle(Box<RejectResponse>),
     #[error("{0}")]
     Startup(#[source] PocketIcStartupError),
     #[error("{0}")]
@@ -61,19 +60,20 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
     async fn build(&self) -> Result<CachedPocketIcBaseline<Self::Metadata>, Self::Error> {
         let pocket_ic = PocketIcStartupConfig::from_env(Duration::from_secs(30))?
             .build_instance(
-                PocketIcBuilder::new(std::time::Duration::from_secs(300)).with_application_subnet(),
+                PocketIcBuilder::new()
+                    .with_max_request_time_ms(Some(300_000))
+                    .with_application_subnet(),
             )
             .await?;
         let canister_ids = [
-            pocket_ic.instance().create_canister().await.unwrap(),
-            pocket_ic.instance().create_canister().await.unwrap(),
+            pocket_ic.instance().create_canister().await,
+            pocket_ic.instance().create_canister().await,
         ];
         for canister_id in canister_ids {
             pocket_ic
                 .instance()
                 .install_canister(canister_id, EMPTY_WASM.to_vec(), vec![], None)
-                .await
-                .unwrap();
+                .await;
             lifecycle(async || pocket_ic.instance().stop_canister(canister_id, None).await).await?;
         }
 
@@ -144,13 +144,9 @@ impl PocketIcBaselineRecipe for TwoCanisterRecipe {
     fn classify_failure(
         &self,
         stage: BaselinePreparationStage,
-        error: &(dyn std::error::Error + 'static),
+        _error: &(dyn std::error::Error + 'static),
     ) -> FailureDisposition {
-        if is_dead_pocket_ic_transport_error(error) {
-            FailureDisposition::Rebuild(RebuildReason::DeadPocketIcTransport)
-        } else {
-            FailureDisposition::Rebuild(stage.default_rebuild_reason())
-        }
+        FailureDisposition::Rebuild(stage.default_rebuild_reason())
     }
 }
 
@@ -185,12 +181,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     ));
     println!("second acquisition: {second:?}");
     drop(baseline);
-    let failures = pool.close().await;
-    for error in &failures {
-        eprintln!("instance deletion failed: {error}");
-    }
-    if let Some(error) = failures.into_iter().next() {
-        return Err(error.into());
-    }
+    pool.close().await;
     Ok(())
 }

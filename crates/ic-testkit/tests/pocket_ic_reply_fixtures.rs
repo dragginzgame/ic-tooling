@@ -3,11 +3,11 @@
 
 mod support;
 
-use ic_platform_types::Principal;
 use ic_testkit::pic::{
     InstallSpec,
     fixtures::{RawReplyLimits, RawReplyMethod, ReplyMode, raw_reply_canister},
 };
+use pocket_ic::CanisterId as Principal;
 
 #[tokio::test]
 async fn installed_fixture_returns_exact_query_and_update_bytes() {
@@ -35,16 +35,16 @@ async fn installed_fixture_returns_exact_query_and_update_bytes() {
     .expect("admit the explicit fixture catalog");
     let owned = support::pocket_ic().await;
     let pocket_ic = owned.instance();
-    let canister = pocket_ic
-        .try_create_and_install(InstallSpec {
+    let canister = ic_testkit::pic::create_and_install(
+        pocket_ic,
+        InstallSpec {
             wasm,
             init_bytes: vec![],
             cycles: 1_000_000_000_000,
             install_sender: None,
-            label: Some("raw-reply-fixture".into()),
-        })
-        .await
-        .expect("install generated Wasm");
+        },
+    )
+    .await;
     let caller = Principal::anonymous();
     assert_eq!(
         pocket_ic

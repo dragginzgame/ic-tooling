@@ -102,8 +102,8 @@ The caller owns the body's deadlines, browser lifecycle and paths.
 ### Native attachment and cleanup ownership
 
 Canic can create and install its issuer/receiver canisters in this instance using
-`ic_testkit::pocket_ic::PocketIc::new_from_existing_instance(server_url,
-instance_id, Duration::from_millis(request_timeout_ms))?`, with `server_url` parsed from `serverUrl`
+`pocket_ic::nonblocking::PocketIc::new_from_existing_instance(server_url,
+instance_id, Some(request_timeout_ms))`, with `server_url` parsed from `serverUrl`
 and `instance_id` checked into `usize` from `instanceId`. The caller selects its
 request timeout and Tokio runtime. This constructor borrows the existing
 instance; it creates no new instance or managed server. Keep all native setup
@@ -115,7 +115,7 @@ managed-server cleanup ownership. Attached clients must not delete the instance,
 stop progress/gateways, terminate the server or restore a snapshot that replaces
 the fixture state. Finish consumer requests and close consumer browsers/agents
 before returning from the body. An attached Rust handle can use
-`attached.drop().await?` to release its borrowed handle; it does not delete the
+`attached.drop().await` to release its borrowed handle; it does not delete the
 fixture instance. Creating a separate gateway on that handle is outside this
 attachment contract. Canic owns application canister setup and may explicitly
 stop/delete its own canisters while the session is live; whole-instance teardown

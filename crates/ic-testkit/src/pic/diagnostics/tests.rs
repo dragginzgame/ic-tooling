@@ -1,9 +1,10 @@
-use crate::{pocket_ic::PocketIc, test_support::http::Peer};
+use crate::test_support::http::Peer;
+use pocket_ic::nonblocking::PocketIc;
 use std::{io::Write, time::Duration};
 
-use crate::pocket_ic::CanisterLogRecord;
 use ic_host_artifacts::batch::BatchLabelError;
-use ic_platform_types::Principal;
+use pocket_ic::CanisterId as Principal;
+use pocket_ic::CanisterLogRecord;
 
 use super::{
     CanisterDiagnosticsRequest, CanisterLogRenderLimits, LabeledCanisterDiagnosticsRequest,
@@ -20,16 +21,19 @@ async fn explicit_reporting_preserves_requests_and_writer_failures() {
     };
     let (collector, peer) = reporting_peer(vec![request, request]);
     let mut output = Vec::new();
-    collector
-        .write_canister_diagnostics(request, "install", &mut output)
+    crate::pic::write_canister_diagnostics(&collector, request, "install", &mut output)
         .await
         .unwrap();
     let text = String::from_utf8(output).unwrap();
     assert!(text.contains("synthetic status failure") && text.contains("synthetic log failure"));
-    let error = collector
-        .write_canister_diagnostics(request, "install", &mut std::io::Cursor::new([0_u8; 0]))
-        .await
-        .unwrap_err();
+    let error = crate::pic::write_canister_diagnostics(
+        &collector,
+        request,
+        "install",
+        &mut std::io::Cursor::new([0_u8; 0]),
+    )
+    .await
+    .unwrap_err();
     assert_eq!(error.kind(), std::io::ErrorKind::WriteZero);
     peer.finish();
 }
@@ -49,8 +53,9 @@ async fn labeled_batch_retains_order_and_continues_after_entry_failure() {
         log_limits: CanisterLogRenderLimits::default(),
     };
     let (collector, peer) = reporting_peer(vec![first, second]);
-    let report = collector
-        .collect_canister_diagnostics_batch(&[
+    let report = crate::pic::collect_canister_diagnostics_batch(
+        &collector,
+        &[
             LabeledCanisterDiagnosticsRequest {
                 label: "root".into(),
                 request: first,
@@ -59,9 +64,10 @@ async fn labeled_batch_retains_order_and_continues_after_entry_failure() {
                 label: "worker".into(),
                 request: second,
             },
-        ])
-        .await
-        .expect("valid labeled diagnostics batch");
+        ],
+    )
+    .await
+    .expect("valid labeled diagnostics batch");
 
     assert_eq!(report.entries.len(), 2);
     assert_eq!(report.entries[0].label, "root");
@@ -92,17 +98,20 @@ async fn diagnostic_batch_rejects_invalid_labels_before_collection() {
         log_limits: CanisterLogRenderLimits::default(),
     };
     let (collector, peer) = reporting_peer(vec![]);
-    let empty = collector
-        .collect_canister_diagnostics_batch(&[LabeledCanisterDiagnosticsRequest {
+    let empty = crate::pic::collect_canister_diagnostics_batch(
+        &collector,
+        &[LabeledCanisterDiagnosticsRequest {
             label: String::new(),
             request,
-        }])
-        .await
-        .expect_err("empty label must reject diagnostics batch");
+        }],
+    )
+    .await
+    .expect_err("empty label must reject diagnostics batch");
     assert_eq!(empty, BatchLabelError::Empty { index: 0 });
 
-    let duplicate = collector
-        .collect_canister_diagnostics_batch(&[
+    let duplicate = crate::pic::collect_canister_diagnostics_batch(
+        &collector,
+        &[
             LabeledCanisterDiagnosticsRequest {
                 label: "same".into(),
                 request,
@@ -111,9 +120,10 @@ async fn diagnostic_batch_rejects_invalid_labels_before_collection() {
                 label: "same".into(),
                 request,
             },
-        ])
-        .await
-        .expect_err("duplicate labels must reject diagnostics batch");
+        ],
+    )
+    .await
+    .expect_err("duplicate labels must reject diagnostics batch");
     assert_eq!(
         duplicate,
         BatchLabelError::Duplicate {
@@ -264,17 +274,35 @@ fn reporting_peer(requests: Vec<CanisterDiagnosticsRequest>) -> (PocketIc, Peer)
         move |stream, request, _, _| {
             let bytes = request.into_result().unwrap();
             let request = crate::test_support::http::Request::new(&bytes);
-            let call: crate::pocket_ic::common::rest::RawCanisterCall =
+            let call: pocket_ic::common::rest::RawCanisterCall =
                 serde_json::from_slice(request.body).unwrap();
             let (method, sender, message) = expected.next().expect("no replay");
             assert_eq!(call.method, method);
             assert_eq!(call.sender, sender.as_slice());
-            let body = serde_json::json!({"message": message}).to_string();
-            write!(stream, "HTTP/1.1 500 Internal Server Error\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+            let body = serde_json::json!({"Err": {"reject_code":"CanisterReject", "reject_message": message, "error_code":"CanisterRejectedMessage", "certified":false}}).to_string();
+            write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
         },
     );
-    let client =
-        PocketIc::new_from_existing_instance(peer.url().clone(), 0, Duration::from_secs(1))
-            .unwrap();
+    let client = PocketIc::new_from_existing_instance(peer.url().clone(), 0, Some(1000));
     (client, peer)
+}
+
+#[test]
+fn log_truncation_preserves_valid_and_split_utf8_prefixes() {
+    for (limit, expected) in [(1, "a"), (2, "a�"), (3, "aé"), (4, "aéb")] {
+        let logs = render_log_records(
+            vec![CanisterLogRecord {
+                idx: 1,
+                timestamp_nanos: 2,
+                content: "aéb".as_bytes().to_vec(),
+            }],
+            CanisterLogRenderLimits {
+                record_limit: 1,
+                byte_limit: limit,
+            },
+        );
+        assert_eq!(logs.records()[0].content(), expected);
+        assert_eq!(logs.records()[0].original_content_bytes(), 4);
+        assert_eq!(logs.omitted_content_bytes(), 4 - limit);
+    }
 }

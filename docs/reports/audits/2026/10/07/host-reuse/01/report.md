@@ -6,8 +6,8 @@ Trigger: maintainer requested current/sibling code review, improvement here and
 removal of duplicated consumer mechanics. Named Canic and Toko Miner replacement
 patches were subsequently approved explicitly. All other siblings stayed read-only.
 
-Method: [flow convergence and duplication](../../../../../../../../audits/flow-convergence-and-duplication.md),
-with the [common evidence contract](../../../../../../../../audits/README.md), at
+Method: [flow convergence and duplication](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/audits/flow-convergence-and-duplication.md),
+with the [common evidence contract](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/audits/README.md), at
 Shared Tooling revision `46c02774a8335cb3949d6f04284c4f53375353c1`.
 [Inspection identities](inspection-identities.json) record the method/overlay
 bytes, source HEADs, dirty state, selected source hashes and lock package selections.

@@ -9,7 +9,7 @@ set -euo pipefail
 }
 source_root="$1" destination="$2"
 cp "$source_root/Cargo.toml" "$source_root/Cargo.lock" "$source_root/CHANGELOG.md" \
-    "$source_root/README.md" "$source_root/LICENSE" "$destination/"
+    "$source_root/README.md" "$source_root/LICENSE.md" "$destination/"
 if [[ -f "$source_root/ci/cargo-release-groups.json" ]]; then
     mkdir -p "$destination/ci"
     cp "$source_root/ci/cargo-release-groups.json" "$destination/ci/"
@@ -29,7 +29,8 @@ cargo metadata --manifest-path "$source_root/qualification/Cargo.toml" --no-deps
     --format-version 1 --locked --offline > "$destination/qualification/source-metadata.json"
 jq -r '. as $m | .packages[] |
     select(.id as $id | $m.workspace_members | index($id)) |
-    .manifest_path, (.targets[] | select(.kind | index("lib") or index("bin") or index("rlib") or index("cdylib")) | .src_path)' \
+    .manifest_path,
+    (.targets[] | select(.kind | index("lib") or index("bin") or index("rlib") or index("cdylib")) | .src_path)' \
     "$destination/source-metadata.json" "$destination/qualification/source-metadata.json" |
     while IFS= read -r path; do
         case "$path" in
@@ -38,12 +39,10 @@ jq -r '. as $m | .packages[] |
         esac
         mkdir -p "$destination/${relative%/*}"
         if [[ "${relative##*/}" == Cargo.toml ]]; then
-            cp "$path" "$destination/$relative"
-            notice="${path%/*}/LICENSE"
-            [[ -f "$notice" && ! -L "$notice" ]] || {
-                echo 'fixture requires the real regular package license notice' >&2; exit 1;
+            [[ -f "$path" && ! -L "$path" ]] || {
+                echo 'fixture requires a real regular manifest' >&2; exit 1;
             }
-            cp "$notice" "$destination/${relative%/*}/LICENSE"
+            cp "$path" "$destination/$relative"
         else
             : > "$destination/$relative"
         fi

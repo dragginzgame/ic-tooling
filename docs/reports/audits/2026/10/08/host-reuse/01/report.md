@@ -3,7 +3,7 @@
 ## Scope and identities
 
 Requested 2026-10-08: audit sibling modules for further redundancy. Method:
-[flow convergence and duplication](../../../../../../../../audits/flow-convergence-and-duplication.md),
+[flow convergence and duplication](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/audits/flow-convergence-and-duplication.md),
 Shared Tooling `2687f26317952c43c685f7f799ed09288dc10a67` (0.1.22).
 Consumer overlay: root AGENTS.md and docs/extraction.md at Host
 `db637fac8b7a9ef62301e1d9009ffeb5ffcd0be7`; exact relevant working-file hashes

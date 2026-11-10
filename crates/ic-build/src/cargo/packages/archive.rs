@@ -415,10 +415,7 @@ impl<'a> PreparedQualification<'a> {
         }
         fs::write(evidence.join("archive.sha256"), archive_hashes)?;
         let sources = sources(&evidence, packages, limits)?;
-        fs::write(
-            evidence.join("entry-sources.json"),
-            serde_json::to_vec(&sources)?,
-        )?;
+        write_inventory(&evidence.join("entry-sources.json"), &sources)?;
         let manifest = verification_manifest(packages)?;
         let manifest_path = evidence.join("Cargo.toml");
         let payload_lock = evidence.join("Cargo.lock");
@@ -488,10 +485,7 @@ impl QualificationBaseline {
             }
         }
         let final_sources = self::sources(evidence, packages, limits)?;
-        fs::write(
-            evidence.join("final-sources.json"),
-            serde_json::to_vec(&final_sources)?,
-        )?;
+        write_inventory(&evidence.join("final-sources.json"), &final_sources)?;
         if final_sources != self.sources {
             return Err("extracted package sources changed".into());
         }
@@ -503,6 +497,14 @@ impl QualificationBaseline {
         }
         Ok(())
     }
+}
+
+fn write_inventory(path: &Path, sources: &BTreeMap<PathBuf, SourceFile>) -> Result<(), Cause> {
+    use io::Write as _;
+    let mut output = io::BufWriter::new(fs::File::create(path)?);
+    serde_json::to_writer(&mut output, sources)?;
+    output.flush()?;
+    Ok(())
 }
 
 fn verification_manifest(packages: &[PackageArchiveSpec<'_>]) -> Result<String, toml::ser::Error> {
