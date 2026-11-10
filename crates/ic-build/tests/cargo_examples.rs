@@ -107,81 +107,71 @@ fn execute(spec: &WasmBuildSpec) {
 
 #[test]
 fn named_examples_build_and_reuse_without_aliasing_library_or_other_example() {
-    for shared in [false, true] {
-        let root = workspace();
-        let mut spec = recipe(&root).with_isolated_builds();
-        if shared {
-            spec = spec.with_shared_incremental_target(root.join("workspace/target/shared"));
-        }
-        assert_eq!(spec.example(), Some("probe"));
-        let inputs = resolve_cargo_build_inputs(&spec).unwrap();
-        assert_eq!(
-            inputs.artifact_paths().unwrap(),
-            &[
-                root.join(
-                    "workspace/target/cargo/wasm32-unknown-unknown/debug/examples/probe.wasm"
-                )
-            ]
-        );
-        let first = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
-        let bytes = fs::read(&first.record().artifacts()[0]).unwrap();
-        assert!(bytes.starts_with(b"\0asm"));
-        assert!(first.record().artifacts()[0].ends_with("debug/examples/probe.wasm"));
-        assert!(
-            build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
-                .unwrap()
-                .is_reused()
-        );
-        let other = build_wasm_canisters_cached(
-            &spec.clone().with_example("other-probe"),
-            OwnedChild::spawn_direct,
-        )
-        .unwrap();
-        assert_ne!(first.record().fingerprint(), other.record().fingerprint());
-        assert!(other.record().artifacts()[0].ends_with("debug/examples/other_probe.wasm"));
-        let library = WasmBuildSpec::new(
-            &root.join("workspace"),
-            &root.join("workspace/target/cargo"),
-            &["example-fixture"],
-            ic_build::testing::cargo::environment(),
-            CONFIGURATION_LIMITS,
-        )
-        .with_cargo_selection(CargoSelection {
-            features: CargoFeatureSelection {
-                features: ["probe".into()].into(),
-                ..Default::default()
-            },
-            locked: true,
-            offline: true,
+    let root = workspace();
+    let spec = recipe(&root);
+    assert_eq!(spec.example(), Some("probe"));
+    let inputs = resolve_cargo_build_inputs(&spec).unwrap();
+    assert_eq!(
+        inputs.artifact_paths().unwrap(),
+        &[root.join("workspace/target/cargo/wasm32-unknown-unknown/debug/examples/probe.wasm")]
+    );
+    let first = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
+    let bytes = fs::read(&first.record().artifacts()[0]).unwrap();
+    assert!(bytes.starts_with(b"\0asm"));
+    assert!(first.record().artifacts()[0].ends_with("debug/examples/probe.wasm"));
+    assert!(
+        build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
+            .unwrap()
+            .is_reused()
+    );
+    let other = build_wasm_canisters_cached(
+        &spec.clone().with_example("other-probe"),
+        OwnedChild::spawn_direct,
+    )
+    .unwrap();
+    assert_ne!(first.record().fingerprint(), other.record().fingerprint());
+    assert!(other.record().artifacts()[0].ends_with("debug/examples/other_probe.wasm"));
+    let library = WasmBuildSpec::new(
+        &root.join("workspace"),
+        &root.join("workspace/target/cargo"),
+        &["example-fixture"],
+        ic_build::testing::cargo::environment(),
+        CONFIGURATION_LIMITS,
+    )
+    .with_cargo_selection(CargoSelection {
+        features: CargoFeatureSelection {
+            features: ["probe".into()].into(),
             ..Default::default()
-        })
-        .with_isolated_builds();
-        let library = build_wasm_canisters_cached(&library, OwnedChild::spawn_direct).unwrap();
-        assert_ne!(first.record().fingerprint(), library.record().fingerprint());
-        let manifest = root.join("workspace/Cargo.toml");
-        let original = fs::read_to_string(&manifest).unwrap();
-        fs::write(
-            &manifest,
-            original.replace(
-                "crate-type=[\"cdylib\"]\nrequired-features",
-                "crate-type=[\"rlib\"]\nrequired-features",
-            ),
-        )
-        .unwrap();
-        assert!(
-            resolve_cargo_build_inputs(&spec)
-                .unwrap()
-                .artifact_paths()
-                .is_err()
-        );
-        assert!(matches!(
-            build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct),
-            Err(WasmBuildError::InvalidSpec { .. })
-        ));
-        assert_eq!(fs::read(&first.record().artifacts()[0]).unwrap(), bytes);
-        drop((first, other, library));
-        fs::remove_dir_all(root).unwrap();
-    }
+        },
+        locked: true,
+        offline: true,
+        ..Default::default()
+    });
+    let library = build_wasm_canisters_cached(&library, OwnedChild::spawn_direct).unwrap();
+    assert_ne!(first.record().fingerprint(), library.record().fingerprint());
+    let manifest = root.join("workspace/Cargo.toml");
+    let original = fs::read_to_string(&manifest).unwrap();
+    fs::write(
+        &manifest,
+        original.replace(
+            "crate-type=[\"cdylib\"]\nrequired-features",
+            "crate-type=[\"rlib\"]\nrequired-features",
+        ),
+    )
+    .unwrap();
+    assert!(
+        resolve_cargo_build_inputs(&spec)
+            .unwrap()
+            .artifact_paths()
+            .is_err()
+    );
+    assert!(matches!(
+        build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct),
+        Err(WasmBuildError::InvalidSpec { .. })
+    ));
+    assert_eq!(fs::read(&first.record().artifacts()[0]).unwrap(), bytes);
+    drop((first, other, library));
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
@@ -378,7 +368,7 @@ fn external_command_keeps_caller_failure_deadline_and_cancellation_policy() {
 fn batch_metadata_sharing_preserves_distinct_example_selections() {
     use ic_build::artifacts::{LabeledWasmBuildSpec, build_wasm_canisters_cached_batch};
     let root = workspace();
-    let first = recipe(&root).with_isolated_builds();
+    let first = recipe(&root);
     let second = first.clone().with_example("other-probe");
     let recipes = [
         LabeledWasmBuildSpec::new("probe", first),

@@ -34,10 +34,11 @@ async fn wire_calls_preserve_codec_refusals_and_error_identity() {
     };
     let valid =
         ic_wire::native::encode_response(PROBE.method_id, &42_u64, PROBE.response_limits).unwrap();
+    let nonminimal = [&valid[..valid.len() - 1], &[0xaa, 0]].concat();
     let owned = support::pocket_ic().await;
     let pic = owned.instance();
     for mode in [ReplyMode::Query, ReplyMode::Update] {
-        for reply in [valid.as_slice(), &[]] {
+        for reply in [valid.as_slice(), nonminimal.as_slice(), &[]] {
             let wasm = raw_reply_canister(
                 &[RawReplyMethod {
                     name: PROBE.method,
@@ -46,7 +47,7 @@ async fn wire_calls_preserve_codec_refusals_and_error_identity() {
                 }],
                 RawReplyLimits {
                     methods: 1,
-                    reply_bytes: valid.len(),
+                    reply_bytes: reply.len(),
                     method_name_bytes: 5,
                 },
             )

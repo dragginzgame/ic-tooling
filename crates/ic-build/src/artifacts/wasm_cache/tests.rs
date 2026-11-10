@@ -1,6 +1,4 @@
-use super::resolution::{
-    append_cargo_configuration_inputs, locked_package_identities, semantic_package_identity,
-};
+use super::resolution::append_cargo_configuration_inputs;
 use crate::cargo::selection::{CargoFeatureSelection, CargoSelection};
 use crate::testing::cargo::spawn_cargo;
 use ic_host_fs::owned_directory::OwnedDirectory;
@@ -10,17 +8,14 @@ use ic_host_process::child::OwnedChild;
 use ic_host_process::testing::write_executable_script;
 
 use super::{
-    ProgressReporter, SharedIncrementalTargetMaintenanceConfig,
-    SharedIncrementalTargetMaintenanceFailureMode, SharedIncrementalTargetMaintenanceOutcome,
-    WasmBuildBatchInputResolver, WasmBuildError, WasmBuildOutcome, WasmBuildPhase,
-    WasmBuildProgressConfig, WasmBuildProgressEvent, WasmBuildSpec, artifact_stamp_path,
-    build_wasm_canisters_cached, ensure_cache_directory_tag, finish_fingerprint_build,
-    integrated_shared_maintenance_result, lock_wasm_build_cache,
+    ProgressReporter, SharedIncrementalTargetMaintenanceOutcome, WasmBuildBatchInputResolver,
+    WasmBuildError, WasmBuildOutcome, WasmBuildPhase, WasmBuildProgressConfig,
+    WasmBuildProgressEvent, WasmBuildSpec, artifact_stamp_path, build_wasm_canisters_cached,
+    ensure_cache_directory_tag, finish_fingerprint_build, lock_wasm_build_cache,
     lock_wasm_build_cache_with_progress, maintain_shared_incremental_target,
     maintain_shared_incremental_target_at_most_every, materialize_artifacts,
-    perform_configured_shared_incremental_target_maintenance, prune_wasm_build_cache,
-    prune_wasm_build_cache_locked, publish_artifact_stamps, resolve_cargo_build_inputs,
-    run_cargo_build, validate_spec, validated_artifact_set,
+    prune_wasm_build_cache, publish_artifact_stamps, resolve_cargo_build_inputs, run_cargo_build,
+    validate_spec, validated_artifact_set,
 };
 use crate::artifacts::cache_fs::{CacheRetentionLimits, write_last_used};
 use crate::artifacts::digest::digest_bytes;
@@ -61,32 +56,6 @@ fn canonical_fixture(path: &Path) -> PathBuf {
 }
 
 #[cfg(unix)]
-fn cache_mode_fixtures(
-    label: &str,
-) -> impl Iterator<Item = (&'static str, PathBuf, WasmBuildSpec)> + '_ {
-    ["isolated", "shared", "scheduled"]
-        .into_iter()
-        .map(move |mode| {
-            let (root, spec) = fake_wasm_build_spec(label);
-            let spec = if mode == "isolated" {
-                spec
-            } else {
-                spec.with_shared_incremental_target(root.join("incremental"))
-            };
-            let spec = if mode == "scheduled" {
-                spec.with_shared_incremental_target_maintenance_at_most_every(
-                    CacheRetentionLimits::new(),
-                    Duration::from_secs(60),
-                )
-                .unwrap()
-            } else {
-                spec
-            };
-            (mode, root, spec)
-        })
-}
-
-#[cfg(unix)]
 #[test]
 fn outcome_facts_are_retained_without_additional_identity_probes() {
     let (root, spec) = fake_wasm_build_spec("outcome-facts");
@@ -111,8 +80,6 @@ fn outcome_facts_are_retained_without_additional_identity_probes() {
     assert_eq!(cloned.facts(), cold.record().facts());
     assert_eq!(fs::read(&log).unwrap(), before);
     let calls = String::from_utf8(before).unwrap();
-    assert_eq!(calls.lines().filter(|line| *line == "--version").count(), 4);
-    assert_eq!(calls.lines().filter(|line| *line == "metadata").count(), 4);
     assert_eq!(calls.lines().filter(|line| *line == "build").count(), 1);
     fs::remove_dir_all(root).unwrap();
 }
@@ -613,7 +580,7 @@ fn shared_target_boundaries_preserve_retained_exact_entries() {
     let unsafe_shared = root.join("shared");
     let mut nested = base.clone();
     nested.target_dir = unsafe_shared.join("exact");
-    // A retained isolated build already exists before shared maintenance is enabled.
+    // A retained exact entry already exists before selecting another shared target.
     let retained = build_wasm_canisters_cached(&nested, OwnedChild::spawn_direct)
         .expect("build retained exact artifact");
     let artifact = retained.record().artifacts()[0].clone();
@@ -718,7 +685,7 @@ fn nested_workspace_targets_do_not_change_cargo_snapshots() {
         assert!(before.is_content_current().unwrap());
         let after = resolve_cargo_build_inputs(&spec).unwrap();
         assert_eq!(before.fingerprint(), after.fingerprint());
-        assert_eq!(before.validation_digest(), after.validation_digest());
+        assert_eq!(before.input_digest(), after.input_digest());
         fs::write(target.join("generated"), b"changed compiler output").unwrap();
         assert!(before.is_content_current().unwrap());
         assert_eq!(
@@ -1036,8 +1003,8 @@ fn observed_facts_retain_probe_bytes_without_io_and_redact_debug() {
 }
 
 #[test]
-fn semantic_workspace_projection_ignores_unrelated_host_dependency_changes() {
-    let root = unique_temp_directory("semantic-workspace-projection-host");
+fn full_input_digest_tracks_unrelated_workspace_dependency_changes() {
+    let root = unique_temp_directory("full-workspace-input-host");
     write_projection_package(&root, "canister", "");
     write_projection_package(
         &root,
@@ -1065,25 +1032,31 @@ fn semantic_workspace_projection_ignores_unrelated_host_dependency_changes() {
         CONFIGURATION_LIMITS,
     );
 
-    let before = resolve_cargo_build_inputs(&spec).expect("resolve initial semantic projection");
+    let before = resolve_cargo_build_inputs(&spec).expect("resolve initial workspace inputs");
     write_workspace("host_dep_b");
     let after = resolve_cargo_build_inputs(&spec).expect("resolve changed host projection");
 
-    assert_eq!(before.input_digest(), after.input_digest());
-    assert_eq!(before.fingerprint(), after.fingerprint());
-    assert_ne!(before.validation_digest(), after.validation_digest());
-    assert!(before.is_current(&spec).expect("recheck semantic identity"));
+    assert_ne!(before.input_digest(), after.input_digest());
+    assert_ne!(before.fingerprint(), after.fingerprint());
+    assert!(!before.is_current(&spec).expect("recheck complete identity"));
     assert!(
         !before
             .is_content_current()
             .expect("validate conservative snapshot")
     );
+    let lockfile = root.join("Cargo.lock");
+    let mut lock = fs::read_to_string(&lockfile).unwrap();
+    lock.push_str("\n# unrelated lockfile edit\n");
+    fs::write(&lockfile, lock).unwrap();
+    // Content guards observe raw lockfile edits without letting Cargo normalize
+    // them away during a fresh metadata command.
+    assert!(!after.is_content_current().unwrap());
     fs::remove_dir_all(root).expect("remove host projection fixture");
 }
 
 #[test]
-fn semantic_workspace_projection_tracks_selected_dependencies_and_profiles() {
-    let root = unique_temp_directory("semantic-workspace-projection-selected");
+fn full_input_digest_tracks_selected_dependencies_and_profiles() {
+    let root = unique_temp_directory("full-workspace-input-selected");
     write_projection_package(
         &root,
         "canister",
@@ -1163,260 +1136,16 @@ fn explicit_environment_key_separates_retained_keys_and_keeps_stamp_format() {
     // the domain differs. This also isolates ambient environment/tool choices.
     assert_eq!(
         fingerprint.to_hex(),
-        "a3db61f964cd022bebd7068eba254d93916c18ee8f046d7708083388f7e65f82"
+        "111d0a132f7cf9e186b22a106ad267cca3cf944922e5559fe3a331223b7a4d27"
     );
     assert_ne!(
         fingerprint.to_hex(),
-        "18ec3a22f7bf556ef4858afa79aea7df5fd3c18939f7056cc4c481f4d3fefa46"
+        "a3db61f964cd022bebd7068eba254d93916c18ee8f046d7708083388f7e65f82"
     );
     assert_eq!(
         super::artifact_stamp_header(fingerprint),
         format!("ic-testkit-wasm-build-v1\nbuild-sha256:{fingerprint}\n")
     );
-}
-
-#[test]
-fn semantic_projection_uses_typed_v2_metadata_fields() {
-    let id = "path+file:///workspace/member#member@1.2.3";
-    let original = serde_json::json!({
-        "id": id, "name": "member", "version": "1.2.3",
-        "manifest_path": "/workspace/member/Cargo.toml", "source": null,
-        "dependencies": [], "targets": [], "features": {},
-        "metadata": {"z": 7, "a": true}, "description": null,
-        "authors": [], "edition": "2024", "rust_version": "1.88",
-    });
-    let package = serde_json::from_value(original.clone()).unwrap();
-    let identity = semantic_package_identity(
-        &package,
-        Path::new("/workspace"),
-        &super::resolution::LockedPackageIndex::new(),
-    )
-    .unwrap();
-    let value = serde_json::json!({
-        "id": id, "features": ["z", "a"], "dependencies": [],
-        "deps": [{"name": "self", "pkg": id,
-            "dep_kinds": [{"kind": null, "target": null, "future_field": "preserve"}]}],
-    });
-    let node = serde_json::from_value(value.clone()).unwrap();
-    let projection = super::resolution::semantic_package_projection(
-        &package,
-        &node,
-        &std::collections::HashMap::from([(id, identity)]),
-    )
-    .unwrap();
-
-    // Package identity framing is unchanged; the typed projection starts a new
-    // key domain rather than pretending to preserve the former raw JSON bytes.
-    assert_eq!(
-        identity.to_hex(),
-        "ba511839396518effb69ed5d2aaf730822eb6c49bba88c264799b97b76059adb"
-    );
-    assert_ne!(
-        projection.to_hex(),
-        "aa1361a94b31abb1e0c59b6b7c90e6e9946d137e357612f80cff3189e0d48b3a"
-    );
-    let identities = std::collections::HashMap::from([(id, identity)]);
-    let mut normalized = original.clone();
-    normalized.as_object_mut().unwrap().remove("description");
-    normalized["rust_version"] = serde_json::json!("1.88.0");
-    let normalized = serde_json::from_value(normalized).unwrap();
-    assert_eq!(
-        projection,
-        super::resolution::semantic_package_projection(&normalized, &node, &identities).unwrap()
-    );
-    let mut reordered = value.clone();
-    reordered["features"] = serde_json::json!(["a", "z"]);
-    reordered["deps"][0]["dep_kinds"][0]
-        .as_object_mut()
-        .unwrap()
-        .remove("future_field");
-    let reordered = serde_json::from_value(reordered).unwrap();
-    assert_eq!(
-        projection,
-        super::resolution::semantic_package_projection(&package, &reordered, &identities).unwrap()
-    );
-    for (field, changed) in [
-        ("description", serde_json::json!("changed")),
-        ("metadata", serde_json::json!({"z": 8, "a": true})),
-        ("edition", serde_json::json!("2021")),
-        ("rust_version", serde_json::json!("1.91")),
-    ] {
-        let mut changed_package = original.clone();
-        changed_package[field] = changed;
-        let changed_package = serde_json::from_value(changed_package).unwrap();
-        assert_ne!(
-            projection,
-            super::resolution::semantic_package_projection(&changed_package, &node, &identities)
-                .unwrap(),
-            "{field} remains hash-significant"
-        );
-    }
-    for changed in [
-        serde_json::json!({"name":"renamed", "pkg":id, "dep_kinds":[{"kind":null,"target":null}]}),
-        serde_json::json!({"name":"self", "pkg":id, "dep_kinds":[{"kind":"build","target":null}]}),
-        serde_json::json!({"name":"self", "pkg":id, "dep_kinds":[{"kind":null,"target":"cfg(unix)"}]}),
-    ] {
-        let mut changed_node = value.clone();
-        changed_node["deps"][0] = changed;
-        let changed_node = serde_json::from_value(changed_node).unwrap();
-        assert_ne!(
-            projection,
-            super::resolution::semantic_package_projection(&package, &changed_node, &identities)
-                .unwrap()
-        );
-    }
-    let mut unsupported = value;
-    unsupported["deps"][0]["dep_kinds"][0]["kind"] = serde_json::json!("future-kind");
-    let unsupported = serde_json::from_value(unsupported).unwrap();
-    assert!(matches!(
-        super::resolution::semantic_package_projection(&package, &unsupported, &identities),
-        Err(WasmBuildError::InvalidMetadata { message }) if message.contains("unsupported")
-    ));
-}
-
-#[test]
-fn semantic_projection_survives_checkout_relocation() {
-    let projected = ["/original", "/relocated"].map(|root| {
-        let id = format!("path+file://{root}/member#member@1.2.3");
-        let package = serde_json::from_value(serde_json::json!({
-            "id": id, "name": "member", "version": "1.2.3",
-            "manifest_path": format!("{root}/member/Cargo.toml"), "source": null,
-            "dependencies": [], "targets": [], "features": {}, "edition": "2024",
-            "readme": "README.md", "license_file": "LICENSE",
-        }))
-        .unwrap();
-        let node = serde_json::from_value(serde_json::json!({
-            "id": id, "features": ["a"], "dependencies": [],
-            "deps": [{"name": "self", "pkg": id,
-                "dep_kinds": [{"kind": null, "target": null}]}],
-        }))
-        .unwrap();
-        let identity = semantic_package_identity(
-            &package,
-            Path::new(root),
-            &super::resolution::LockedPackageIndex::new(),
-        )
-        .unwrap();
-        let projection = super::resolution::semantic_package_projection(
-            &package,
-            &node,
-            &std::collections::HashMap::from([(id.as_str(), identity)]),
-        )
-        .unwrap();
-        (identity, projection)
-    });
-    assert_eq!(projected[0], projected[1]);
-}
-
-#[test]
-fn semantic_package_identity_uses_selected_registry_lock_checksum() {
-    let root = unique_temp_directory("semantic-registry-lock-identity");
-    let source = "registry+https://example.invalid/index";
-    let package_id = format!("{source}#dependency@1.2.3");
-    let original = serde_json::json!({
-        "id": package_id, "name": "dependency", "version": "1.2.3",
-        "manifest_path": root.join("registry/dependency/Cargo.toml"),
-        "source": source, "dependencies": [], "targets": [], "features": {}, "metadata": null,
-    });
-    let package = serde_json::from_value(original).unwrap();
-    let write_lock = |checksum: Option<&str>| {
-        let checksum = checksum.map_or_else(String::new, |checksum| {
-            format!("checksum = \"{checksum}\"\n")
-        });
-        fs::write(
-            root.join("Cargo.lock"),
-            format!(
-                "version = 4\n\n[[package]]\nname = \"dependency\"\nversion = \"1.2.3\"\nsource = \"{source}\"\n{checksum}"
-            ),
-        )
-        .expect("write registry identity lockfile");
-    };
-
-    write_lock(Some("aaa"));
-    let first_lock = locked_package_identities(&root).expect("project first lockfile");
-    let first = semantic_package_identity(
-        &package,
-        &root,
-        &super::resolution::index_locked_packages(&first_lock),
-    )
-    .expect("project checksummed registry package");
-    write_lock(Some("bbb"));
-    let second_lock = locked_package_identities(&root).expect("project second lockfile");
-    let second = semantic_package_identity(
-        &package,
-        &root,
-        &super::resolution::index_locked_packages(&second_lock),
-    )
-    .expect("project changed registry checksum");
-    assert_ne!(first, second);
-
-    write_lock(None);
-    let missing_checksum = locked_package_identities(&root).expect("project incomplete lockfile");
-    assert!(
-        semantic_package_identity(
-            &package,
-            &root,
-            &super::resolution::index_locked_packages(&missing_checksum)
-        )
-        .is_none()
-    );
-
-    // Same names with different versions/sources must not shadow the exact row;
-    // duplicate exact rows retain the first checksum, even when it is missing.
-    for checksum in [Some("aaa"), None] {
-        write_lock(checksum);
-        let selected = fs::read_to_string(root.join("Cargo.lock")).unwrap();
-        let row = |name: &str, version: &str, source: &str| {
-            format!(
-                "\n[[package]]\nname = \"{name}\"\nversion = \"{version}\"\nsource = \"{source}\"\nchecksum = \"decoy\"\n"
-            )
-        };
-        let mut contents = String::from("version = 4\n");
-        contents.push_str(&row("other", "1.2.3", source));
-        contents.push_str(&row("dependency", "1.2.4", source));
-        contents.push_str(&row(
-            "dependency",
-            "1.2.3",
-            "registry+https://other.invalid",
-        ));
-        contents.push_str(selected.strip_prefix("version = 4\n").unwrap());
-        contents.push_str(&row("dependency", "1.2.3", source));
-        fs::write(root.join("Cargo.lock"), contents).unwrap();
-        let rows = locked_package_identities(&root).unwrap();
-        assert_eq!(
-            semantic_package_identity(
-                &package,
-                &root,
-                &super::resolution::index_locked_packages(&rows)
-            ),
-            checksum.map(|_| first)
-        );
-    }
-    fs::remove_dir_all(root).expect("remove registry identity fixture");
-}
-
-#[test]
-fn semantic_workspace_projection_falls_back_for_workspace_root_packages() {
-    let root = unique_temp_directory("semantic-workspace-projection-fallback");
-    fs::create_dir_all(root.join("src")).expect("create root package source directory");
-    fs::write(
-        root.join("Cargo.toml"),
-        "[package]\nname = \"root_canister\"\nversion = \"0.0.0\"\nedition = \"2024\"\n[workspace]\n",
-    )
-    .expect("write root package manifest");
-    fs::write(root.join("src/lib.rs"), "pub fn root_canister() {}\n")
-        .expect("write root package source");
-    let spec = WasmBuildSpec::new(
-        &root,
-        &root.join("target/exact"),
-        &["root_canister"],
-        crate::testing::cargo::environment(),
-        CONFIGURATION_LIMITS,
-    );
-
-    let resolved = resolve_cargo_build_inputs(&spec).expect("resolve fallback projection");
-    assert_eq!(resolved.input_digest(), resolved.validation_digest());
-    fs::remove_dir_all(root).expect("remove projection fallback fixture");
 }
 
 #[test]
@@ -1700,23 +1429,6 @@ fn build_spec_requires_at_least_one_package() {
         validate_spec(&spec),
         Err(WasmBuildError::InvalidSpec { .. })
     ));
-
-    let isolated_maintenance = WasmBuildSpec::new(
-        Path::new("."),
-        Path::new("target"),
-        &["fixture"],
-        crate::testing::cargo::environment(),
-        CONFIGURATION_LIMITS,
-    )
-    .with_isolated_builds()
-    .with_shared_incremental_target_maintenance_at_most_every(
-        CacheRetentionLimits::new(),
-        Duration::from_secs(60),
-    );
-    assert!(matches!(
-        isolated_maintenance,
-        Err(WasmBuildError::InvalidSpec { message }) if message.contains("requires a shared")
-    ));
 }
 
 #[cfg(unix)]
@@ -1725,7 +1437,13 @@ fn shared_target_exact_hit_preserves_size_and_last_build_use() {
     let (root, spec) = fake_wasm_build_spec("shared-target-exact-hit");
     let target = root.join("incremental");
     let spec = spec.with_shared_incremental_target(&target);
+    let old_schedule = spec
+        .target_dir()
+        .join(".ic-testkit/wasm-targets/.ic-testkit-last-maintenance");
+    fs::create_dir_all(old_schedule.parent().unwrap()).unwrap();
+    fs::write(&old_schedule, [0xff]).unwrap();
     let cold = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
+    assert_eq!(fs::read(&old_schedule).unwrap(), [0xff]);
     write_last_used(&target, UNIX_EPOCH + Duration::from_secs(1)).unwrap();
     let observe = || {
         (
@@ -1737,6 +1455,7 @@ fn shared_target_exact_hit_preserves_size_and_last_build_use() {
     let warm = build_wasm_canisters_cached(&spec, |_| panic!("an exact hit must not spawn Cargo"))
         .unwrap();
     assert!(warm.is_reused());
+    assert_eq!(fs::read(&old_schedule).unwrap(), [0xff]);
     assert_eq!(
         observe(),
         before,
@@ -1747,26 +1466,17 @@ fn shared_target_exact_hit_preserves_size_and_last_build_use() {
 }
 
 #[test]
-fn shared_target_maintenance_refuses_isolated_mode_and_leaves_missing_targets_uncreated() {
+fn shared_target_maintenance_leaves_missing_targets_uncreated() {
     let root = unique_temp_directory("shared-target-missing");
     let target = root.join("missing-shared-target");
-    let isolated = WasmBuildSpec::new(
+    let shared = WasmBuildSpec::new(
         &root,
         &root.join("exact"),
         &["fixture"],
         crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
-    .with_isolated_builds();
-    assert!(matches!(
-        maintain_shared_incremental_target_at_most_every(
-            &isolated,
-            CacheRetentionLimits::new(),
-            Duration::from_secs(60),
-        ),
-        Err(WasmBuildError::InvalidSpec { .. })
-    ));
-    let shared = isolated.with_shared_incremental_target(&target);
+    .with_shared_incremental_target(&target);
     let scheduled = maintain_shared_incremental_target_at_most_every(
         &shared,
         CacheRetentionLimits::new(),
@@ -1902,6 +1612,32 @@ fn scheduled_shared_target_maintenance_skips_expensive_work_inside_interval() {
 }
 
 #[test]
+#[cfg(unix)]
+fn failed_explicit_maintenance_does_not_prevent_wasm_acquisition() {
+    let (root, spec) = fake_wasm_build_spec("explicit-maintenance-failure");
+    let target = super::shared_incremental_target(&spec);
+    let marker = target.join(".ic-testkit/.ic-testkit-last-maintenance");
+    fs::create_dir_all(marker.parent().unwrap()).unwrap();
+    fs::write(&marker, [0xff]).unwrap();
+    let result = maintain_shared_incremental_target_at_most_every(
+        &spec,
+        CacheRetentionLimits::new().with_max_size_bytes(0),
+        Duration::from_secs(60),
+    );
+    assert!(matches!(result, Err(WasmBuildError::Io { .. })));
+    assert_eq!(fs::read(&marker).unwrap(), [0xff]);
+    // The caller can proceed with a build after refusing maintenance. Neither
+    // cold nor warm acquisition retries maintenance or advances its marker.
+    let cold = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
+    let warm = build_wasm_canisters_cached(&spec, |_| panic!("exact hit must not spawn")).unwrap();
+    assert!(!cold.is_reused());
+    assert!(warm.is_reused());
+    assert_eq!(fs::read(&marker).unwrap(), [0xff]);
+    drop((cold, warm));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn zero_progress_heartbeat_is_rejected_for_a_valid_build() {
     let root = unique_temp_directory("zero-progress-heartbeat");
     fs::create_dir_all(&root).expect("create heartbeat fixture");
@@ -1937,100 +1673,6 @@ fn zero_progress_heartbeat_is_rejected_for_a_valid_build() {
     assert!(outcome.record().artifacts()[0].is_file());
     drop(outcome);
     fs::remove_dir_all(root).expect("remove heartbeat fixture");
-}
-
-#[cfg(unix)]
-#[test]
-fn zero_interval_maintenance_ignores_bad_markers_and_keeps_exact_hits() {
-    let (root, spec) = fake_wasm_build_spec("zero-interval-maintenance");
-    let first = build_wasm_canisters_cached(&spec, spawn_cargo).unwrap();
-    assert_eq!(first.record().maintenance(), None);
-    let marker = spec
-        .target_dir()
-        .join(".ic-testkit/wasm-targets")
-        .join(".ic-testkit-last-maintenance");
-    for explicit_zero in [false, true] {
-        let always = if explicit_zero {
-            spec.clone()
-                .with_prune_policy_at_most_every(CacheRetentionLimits::new(), Duration::ZERO)
-        } else {
-            spec.clone().with_prune_policy(CacheRetentionLimits::new())
-        };
-        fs::write(&marker, [0xff]).unwrap();
-        let outcome = build_wasm_canisters_cached(&always, spawn_cargo).unwrap();
-        assert!(outcome.is_reused());
-        assert!(matches!(
-            outcome.record().maintenance(),
-            Some(crate::artifacts::ArtifactCacheMaintenance::Pruned(_))
-        ));
-        assert_eq!(outcome.record().fingerprint(), first.record().fingerprint());
-        assert!(fs::read_to_string(&marker).is_ok());
-    }
-    drop(first);
-    fs::remove_dir_all(root).unwrap();
-}
-
-#[test]
-fn best_effort_integrated_maintenance_retains_a_failure_message() {
-    let root = unique_temp_directory("best-effort-shared-maintenance-failure");
-    let target = root.join("shared");
-    let schedule_root = target.join(".ic-testkit");
-    fs::create_dir_all(&schedule_root).expect("create corrupt schedule fixture");
-    fs::write(schedule_root.join(".ic-testkit-last-maintenance"), [0xff])
-        .expect("write invalid UTF-8 schedule marker");
-    let config = SharedIncrementalTargetMaintenanceConfig::new(
-        CacheRetentionLimits::new(),
-        Duration::from_secs(60),
-    )
-    .with_failure_mode(SharedIncrementalTargetMaintenanceFailureMode::BestEffort);
-    let lock_wait = Duration::from_millis(7);
-    let outcome = perform_configured_shared_incremental_target_maintenance(
-        config,
-        &target,
-        lock_wait,
-        &mut ProgressReporter::silent(),
-    )
-    .expect("best-effort maintenance must preserve acquisition");
-
-    assert_eq!(outcome.target_dir(), target);
-    assert_eq!(outcome.lock_wait(), Some(lock_wait));
-    assert!(!outcome.was_performed());
-    assert!(outcome.schedule_check().is_none());
-    assert!(matches!(
-        &outcome,
-        SharedIncrementalTargetMaintenanceOutcome::Failed { .. }
-    ));
-    assert!(
-        outcome
-            .failure_message()
-            .is_some_and(|message| !message.is_empty())
-    );
-    assert_eq!(
-        fs::read(schedule_root.join(".ic-testkit-last-maintenance")).unwrap(),
-        [0xff]
-    );
-    fs::remove_dir_all(root).expect("remove best-effort maintenance fixture");
-}
-
-#[test]
-fn strict_integrated_maintenance_propagates_failure() {
-    let config = SharedIncrementalTargetMaintenanceConfig::new(
-        CacheRetentionLimits::new(),
-        Duration::from_secs(60),
-    );
-    let result = integrated_shared_maintenance_result(
-        config,
-        Path::new("target/shared"),
-        Duration::ZERO,
-        Err(WasmBuildError::InvalidSpec {
-            message: "synthetic strict failure".to_owned(),
-        }),
-    );
-
-    assert!(matches!(
-        result,
-        Err(WasmBuildError::InvalidSpec { message }) if message == "synthetic strict failure"
-    ));
 }
 
 #[test]
@@ -2751,7 +2393,8 @@ fn oversized_wasm_cache_stamp_requires_a_rebuild() {
 #[test]
 #[cfg(unix)]
 fn warm_wasm_outputs_follow_retained_entry_and_preserve_matching_files() {
-    for (mode, root, spec) in cache_mode_fixtures("warm-wasm-publication") {
+    {
+        let (root, spec) = fake_wasm_build_spec("warm-wasm-publication");
         let public = expected_artifacts(&spec, &spec.target_dir);
         fs::create_dir_all(public[0].parent().unwrap()).unwrap();
         let original = b"\0asm\x01\0\0\0";
@@ -2767,7 +2410,7 @@ fn warm_wasm_outputs_follow_retained_entry_and_preserve_matching_files() {
         let reused = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
         assert!(reused.is_reused());
         assert!(reused.record().timings().cargo_build.is_none());
-        assert_eq!(fs::read(&public[0]).unwrap(), original, "{mode}");
+        assert_eq!(fs::read(&public[0]).unwrap(), original);
         assert_eq!(fs::read(&reused.record().artifacts()[0]).unwrap(), original);
 
         let stamp = artifact_stamp_path(&public[0]);
@@ -2954,7 +2597,8 @@ fn failed_wasm_materialization_does_not_stamp_a_partial_public_set() {
 #[test]
 #[cfg(unix)]
 fn warm_caller_artifacts_do_not_replace_missing_or_retained_invalid_exact_entries() {
-    for (_, root, spec) in cache_mode_fixtures("missing-exact-entry") {
+    {
+        let (root, spec) = fake_wasm_build_spec("missing-exact-entry");
         let built = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
             .expect("build initial exact entry");
         let entry = built.record().exact_cache_path().to_owned();
@@ -3073,18 +2717,18 @@ fn size_pruning_removes_least_recently_used_entries_first() {
 }
 
 #[test]
-fn in_build_pruning_protects_the_active_fingerprint() {
+fn explicit_pruning_protects_retained_entries() {
     let target_dir = unique_temp_directory("protected-pruning");
     let cache_root = target_dir.join(".ic-testkit/wasm-targets");
     let stale = create_cache_entry(&cache_root, 'a', 10, UNIX_EPOCH + Duration::from_secs(1));
     let active = create_cache_entry(&cache_root, 'b', 10, UNIX_EPOCH + Duration::from_secs(2));
 
-    let report = prune_wasm_build_cache_locked(
+    let retained = super::RetainedCacheEntry::acquire(&active).unwrap();
+    let report = prune_wasm_build_cache(
         &target_dir,
         CacheRetentionLimits::new()
             .with_max_age(Duration::ZERO)
             .with_max_size_bytes(0),
-        Some(&active),
     )
     .expect("prune while protecting active cache entry");
 
@@ -3093,6 +2737,14 @@ fn in_build_pruning_protects_the_active_fingerprint() {
     assert!(!stale.exists());
     assert!(active.exists());
     assert!(report.bytes_retained() > 0);
+    drop(retained);
+    let report = prune_wasm_build_cache(
+        &target_dir,
+        CacheRetentionLimits::new().with_max_size_bytes(0),
+    )
+    .unwrap();
+    assert_eq!(report.entries_removed(), 1);
+    assert!(!active.exists());
     fs::remove_dir_all(target_dir).expect("remove protected-pruning test directory");
 }
 
@@ -3365,7 +3017,8 @@ fn create_cache_entry(
 #[test]
 fn warm_hits_reject_source_mutation_for_active_and_materialized_artifacts() {
     for active_artifact in [true, false] {
-        for (mode, root, spec) in cache_mode_fixtures("warm-hit-source-race") {
+        {
+            let (root, spec) = fake_wasm_build_spec("warm-hit-source-race");
             let cold = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
                 .expect("build initial artifacts");
             assert!(
@@ -3384,13 +3037,11 @@ fn warm_hits_reject_source_mutation_for_active_and_materialized_artifacts() {
                 "pub fn value() -> u8 { 2 }\n",
             )
             .unwrap();
-            let entry = super::cache_entry_directory(&spec, resolved.fingerprint());
-            let acquisition = super::AcquiredCargoTarget::Exact(&entry);
             let result = super::try_reuse_wasm_artifacts(
                 &spec,
                 &resolved,
                 Duration::ZERO,
-                &acquisition,
+                None,
                 std::time::Instant::now(),
                 &mut ProgressReporter::silent(),
             );
@@ -3399,7 +3050,7 @@ fn warm_hits_reject_source_mutation_for_active_and_materialized_artifacts() {
                     result,
                     Err(WasmBuildError::InputsChangedDuringAcquisition { .. })
                 ),
-                "{mode}, active={active_artifact}: {result:?}"
+                "active={active_artifact}: {result:?}"
             );
             drop(cold);
             fs::remove_dir_all(root).expect("remove warm-hit race fixture");
@@ -3496,23 +3147,17 @@ fn optional_duration_addition_preserves_absence_and_saturates() {
         let left = super::WasmBuildTimings {
             shared_incremental_lock_wait: left,
             cargo_build: left,
-            cache_maintenance: left,
             ..Default::default()
         };
         let right = super::WasmBuildTimings {
             shared_incremental_lock_wait: right,
             cargo_build: right,
-            cache_maintenance: right,
             ..Default::default()
         };
         let total = left.saturating_add(right);
         assert_eq!(
-            [
-                total.shared_incremental_lock_wait,
-                total.cargo_build,
-                total.cache_maintenance
-            ],
-            [expected; 3]
+            [total.shared_incremental_lock_wait, total.cargo_build],
+            [expected; 2]
         );
     }
 }

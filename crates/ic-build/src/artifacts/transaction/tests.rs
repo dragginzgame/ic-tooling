@@ -3,9 +3,7 @@ use super::{
     ArtifactOutputValidation, entry_directory, namespace_directory, prepare_artifact_cache,
     prune_artifact_cache, resolve_key,
 };
-use crate::artifacts::{
-    ArtifactCacheMaintenance, CacheRetentionLimits, WasmBuildSpec, resolve_cargo_build_inputs,
-};
+use crate::artifacts::{CacheRetentionLimits, WasmBuildSpec, resolve_cargo_build_inputs};
 use crate::testing::fs::unique_temp_directory;
 use std::{
     ffi::OsString,
@@ -195,8 +193,8 @@ fn nested_workspace_generated_outputs_preserve_transactions_and_explicit_guards(
 }
 
 #[test]
-fn cargo_snapshot_keys_semantic_identity_and_guards_raw_workspace_inputs() {
-    let root = unique_temp_directory("transaction-semantic-cargo-input");
+fn cargo_snapshot_keys_and_guards_full_workspace_inputs() {
+    let root = unique_temp_directory("transaction-full-cargo-input");
     for (package, dependency) in [
         ("canister", ""),
         (
@@ -269,12 +267,12 @@ fn cargo_snapshot_keys_semantic_identity_and_guards_raw_workspace_inputs() {
         Err(ArtifactCacheError::CargoBuildInputsChanged { .. })
     ));
     let after = resolve_cargo_build_inputs(&build_spec).expect("resolve second Cargo snapshot");
-    assert_eq!(before.fingerprint(), after.fingerprint());
+    assert_ne!(before.fingerprint(), after.fingerprint());
     let after_key = resolve_key(&artifact_spec(&after))
         .expect("resolve second artifact key")
         .key;
-    assert_eq!(before_key, after_key);
-    fs::remove_dir_all(root).expect("remove semantic Cargo transaction fixture");
+    assert_ne!(before_key, after_key);
+    fs::remove_dir_all(root).expect("remove full Cargo transaction fixture");
 }
 
 #[test]
@@ -309,6 +307,9 @@ fn one_output_is_built_materialized_repaired_and_reused() {
         .with_arguments(["-O3", "--strip-debug"])
         .with_output("optimized.wasm", &destination);
     assert!(!destination.starts_with(spec.cache_root()));
+    let old_schedule = namespace_directory(&spec).join(".ic-testkit-last-maintenance");
+    fs::create_dir_all(old_schedule.parent().unwrap()).unwrap();
+    fs::write(&old_schedule, [0xff]).unwrap();
 
     let transaction = expect_build(prepare_artifact_cache(&spec).expect("prepare miss"));
     fs::write(
@@ -319,6 +320,7 @@ fn one_output_is_built_materialized_repaired_and_reused() {
     )
     .expect("write staged output");
     let built = transaction.commit().expect("commit artifact transaction");
+    assert_eq!(fs::read(&old_schedule).unwrap(), [0xff]);
 
     assert!(matches!(built, ArtifactCacheOutcome::Built(_)));
     assert_eq!(fs::read(&destination).unwrap(), b"optimized-wasm");
@@ -330,6 +332,7 @@ fn one_output_is_built_materialized_repaired_and_reused() {
     assert_eq!(record.artifacts()[0].name(), "optimized.wasm");
     assert_eq!(fs::read(&destination).unwrap(), b"optimized-wasm");
     assert!(record.timings().caller_build.is_none());
+    assert_eq!(fs::read(&old_schedule).unwrap(), [0xff]);
     fs::remove_dir_all(root).expect("remove one-output test directory");
 }
 
@@ -960,17 +963,15 @@ fn pruning_protects_active_entry_and_removes_older_key() {
         .with_input("input", &input)
         .with_output("output", &root.join("output"));
     build_output(&base.clone().with_arguments(["old"]), b"old");
-    let active = base
-        .clone()
-        .with_arguments(["active"])
-        .with_prune_policy(CacheRetentionLimits::new().with_max_size_bytes(0));
+    let active = base.clone().with_arguments(["active"]);
 
     let outcome = build_output(&active, b"active");
-    let report = outcome
-        .record()
-        .maintenance()
-        .and_then(ArtifactCacheMaintenance::prune_report)
-        .expect("successful configured pruning");
+    let report = prune_artifact_cache(
+        active.cache_root(),
+        active.namespace(),
+        CacheRetentionLimits::new().with_max_size_bytes(0),
+    )
+    .unwrap();
 
     assert_eq!(report.entries_scanned(), 2);
     assert_eq!(report.entries_removed(), 1);
@@ -996,58 +997,6 @@ fn pruning_protects_active_entry_and_removes_older_key() {
         ArtifactCachePreparation::Build(_)
     ));
     fs::remove_dir_all(root).expect("remove transaction-pruning test directory");
-}
-
-#[test]
-fn scheduled_pruning_skips_an_immediate_second_acquisition() {
-    let root = unique_temp_directory("scheduled-transaction-pruning");
-    let input = root.join("input");
-    fs::write(&input, b"input").expect("write input");
-    let spec = ArtifactCacheSpec::new(&root.join("cache"), "scheduled", "recipe/v1")
-        .with_input("input", &input)
-        .with_output("output", &root.join("output"))
-        .with_prune_policy_at_most_every(CacheRetentionLimits::new(), Duration::from_hours(1));
-
-    let built = build_output(&spec, b"output");
-    assert!(built.record().maintenance().is_some());
-    let reused = prepare_artifact_cache(&spec).expect("reuse scheduled artifact");
-    let record = reused
-        .reused_record()
-        .expect("scheduled artifact should hit");
-    assert!(record.maintenance().is_none());
-    assert!(record.timings().maintenance.is_some());
-
-    let changed_policy = spec.clone().with_prune_policy_at_most_every(
-        CacheRetentionLimits::new().with_max_size_bytes(0),
-        Duration::from_hours(1),
-    );
-    let reused = prepare_artifact_cache(&changed_policy).expect("reuse under changed policy");
-    assert!(
-        reused
-            .reused_record()
-            .expect("changed policy should still hit")
-            .maintenance()
-            .is_some(),
-        "a changed retention policy must not inherit another policy's interval"
-    );
-    for explicit_zero in [false, true] {
-        let always = if explicit_zero {
-            spec.clone()
-                .with_prune_policy_at_most_every(CacheRetentionLimits::new(), Duration::ZERO)
-        } else {
-            spec.clone().with_prune_policy(CacheRetentionLimits::new())
-        };
-        let marker = namespace_directory(&always).join(".ic-testkit-last-maintenance");
-        fs::write(&marker, [0xff]).unwrap();
-        let reused = prepare_artifact_cache(&always).unwrap();
-        let record = reused.reused_record().unwrap();
-        assert!(matches!(
-            record.maintenance(),
-            Some(ArtifactCacheMaintenance::Pruned(_))
-        ));
-        assert!(fs::read_to_string(marker).is_ok());
-    }
-    fs::remove_dir_all(root).expect("remove scheduled-pruning test directory");
 }
 
 #[test]
@@ -1737,16 +1686,14 @@ fn cache_timing_accumulation_preserves_optional_presence_and_saturates() {
     ] {
         let left = super::ArtifactCacheTimings {
             caller_build: left,
-            maintenance: left,
             ..Default::default()
         };
         let right = super::ArtifactCacheTimings {
             caller_build: right,
-            maintenance: right,
             ..Default::default()
         };
         let total = left.saturating_add(right);
-        assert_eq!([total.caller_build, total.maintenance], [expected; 2]);
+        assert_eq!(total.caller_build, expected);
     }
 }
 

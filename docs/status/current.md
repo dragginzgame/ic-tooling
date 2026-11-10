@@ -17,8 +17,54 @@ Both completed frozen batches were reconciled into the ordinary main checkout.
 All nine versions were verified present and not yanked in the crates.io index.
 Private qualification packages remain 0.96.0. The deployment preserved selected
 external dependencies; release preparation changed owned versions and their
-product/qualification references together. Toko Tooling is 0.39.6, Wire is 0.19
-and the product Platform requirement remains 0.29 (locked to 0.29.2).
+product/qualification references together. That release used Toko Tooling 0.39.6
+and Wire 0.19; the product Platform requirement remains 0.29 (locked to 0.29.2).
+
+## Local maintenance
+
+Toko Tooling 0.39.9 is selected in both workspaces and installed through the
+authenticated crates.io exporter, preserving the 113-file runtime selection.
+That refresh changed only its lock entries; the pre-existing product
+`rustls-pki-types` 1.16.0 selection remains intact. Tool catalogs are unchanged.
+This refresh is local and unpublished; product versions remain as listed above.
+The 0.39.9 checker admits native PocketIC dev-dependencies for simulator tests.
+Linux snapshot/pin admission, both workspaces' actual IC dependency boundaries and
+documentation links pass; logs are under `target/toko0399/`. Earlier prepared
+tool, publication licence and release-refusal proofs under `target/toko0398/`
+retain unchanged inputs. No full release gate or native macOS qualification ran
+for these refreshes.
+
+Wire 0.20 is now adopted locally in both workspaces. Public adapter identities
+and upstream Postcard acceptance require the pending Testkit 0.99.0 minor;
+product versions remain unchanged. Fourteen focused tests cover nine adapter
+cases, live native replies, type identity, probe budgets and installed Wasm
+requests/state/refusals. Graph policy, portable compilation, selected warning-denied
+lint, formatting and snapshot/pin/doc admission pass. Logs are under
+`target/wire020/`; this is Linux evidence, with no new full release gate or
+native macOS qualification.
+
+Build's local reduction batch is pending 0.82.0: shared Cargo targets are the only
+compilation path, shared-target maintenance is explicit, and the full input digest
+owns both cache identity and mutation validation. The separate validation digest
+and receipt field are removed. New fingerprint keys preserve old cache entries;
+unrelated workspace manifest/lockfile edits can invalidate exact reuse. The
+[Build guide](../build/artifacts.md#pending-build-082-migration) records caller
+migration. Package versions are unchanged; this work is uncommitted and unpublished.
+Focused Linux cache/batch/evidence and Cargo-input transaction tests, real Cargo
+Wasm/examples/artifact-handoff/process-lock tests, 103 durable-filesystem tests,
+warning-denied Build Clippy/rustdoc, formatting and document links pass. Logs and
+before/after Rust counts remain under `target/loc-audit/`. This is not a complete
+release gate or native macOS qualification.
+
+The same pending Build 0.82.0 batch now makes exact-cache pruning explicit too.
+Acquisitions no longer schedule pruning or attach nonfatal maintenance results,
+timings or phases. Callers invoke the existing prune functions and retain their
+records to protect live outputs; old exact-cache schedule markers remain untouched.
+Focused cache, transaction/batch and pruning tests, cross-process handoff, real
+Cargo Wasm acquisition, warning-denied Clippy/rustdoc and document links pass on
+Linux. Evidence is under `target/loc-audit/explicit-pruning/`. This continuation
+removes another 253 Rust lines, leaving 68,768 across both workspaces; package
+versions, publication and native macOS qualification remain unchanged.
 
 ## Current contracts
 

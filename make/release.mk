@@ -9,7 +9,7 @@ release-patch release-minor release-major release-resume release-preflight clean
 # be ignored and accidentally reduce a requested multi-group release to one.
 _shared_retired_release_settings := $(strip $(foreach setting,RELEASE_FROZEN_GROUPS RELEASE_FROZEN_PUBLISH_TARGET RELEASE_FROZEN_SETUP_TARGET RELEASE_FROZEN_SETUP_MODE FROZEN_RELEASE_ACTIVE,$(if $(filter undefined,$(origin $(setting))),,$(setting))))
 ifneq ($(_shared_retired_release_settings),)
-$(error Retired release settings: $(_shared_retired_release_settings); adopt https://github.com/dragginzgame/toko-tooling/blob/626da7cd9626cc2e152594862a2d82ea82ef51da/docs/release-batches.md)
+$(error Retired release settings: $(_shared_retired_release_settings); adopt https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/release-batches.md)
 endif
 # Clean conventional source roots before capture as well as direct preflight.
 .PHONY: clean-empty-source-dirs

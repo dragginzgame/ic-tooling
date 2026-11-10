@@ -20,10 +20,9 @@ use super::inputs::boundaries::CargoInputBoundaries;
 
 use super::{
     cache_fs::{
-        ArtifactCacheMaintenance, ArtifactCachePruneReport, CacheFsError, CacheRetentionLimits,
-        LAST_USED_FILE, RetainedCacheEntry, canonicalize_allow_missing, ensure_cache_directory_tag,
-        finish_cache_build, is_sha256_directory, lock_cache_file,
-        perform_scheduled_cache_maintenance, prune_direct_child_directories,
+        ArtifactCachePruneReport, CacheFsError, CacheRetentionLimits, LAST_USED_FILE,
+        RetainedCacheEntry, canonicalize_allow_missing, ensure_cache_directory_tag,
+        finish_cache_build, is_sha256_directory, lock_cache_file, prune_direct_child_directories,
         record_cache_entry_use, remove_unretained_entry, try_lock_cache_file,
     },
     digest::{
@@ -71,7 +70,6 @@ pub struct ArtifactCacheSpec {
     identities: Vec<LabeledIdentity>,
     cargo_build_inputs: Vec<CargoBuildInputSet>,
     outputs: Vec<OutputSpec>,
-    pruning: Option<(CacheRetentionLimits, Duration)>,
 }
 
 /// Result of preparing a transactional artifact-set acquisition.
@@ -93,7 +91,6 @@ pub struct ArtifactCacheRecord {
     artifacts: Arc<[ArtifactCacheArtifact]>,
     _retention: RetainedCacheEntry,
     timings: ArtifactCacheTimings,
-    maintenance: Option<ArtifactCacheMaintenance>,
 }
 
 /// One read-only exact artifact retained by its owning acquisition record.
@@ -124,8 +121,6 @@ pub struct ArtifactCacheTimings {
     pub publication: Duration,
     /// Time spent materializing caller-facing output destinations.
     pub materialization: Duration,
-    /// Time spent on configured best-effort retention.
-    pub maintenance: Option<Duration>,
     /// Complete acquisition duration.
     pub total: Duration,
 }
@@ -185,9 +180,9 @@ pub enum ArtifactCacheError {
     CargoBuildInputsChanged {
         /// Caller-selected logical input-set label.
         label: String,
-        /// Semantic Cargo fingerprint or conservative validation digest captured.
+        /// Full Cargo fingerprint or source digest captured.
         before: InputDigest,
-        /// Semantic fingerprint or conservative validation digest revalidated.
+        /// Full Cargo fingerprint or source digest revalidated.
         after: InputDigest,
     },
     /// Rehashing a resolved Cargo input set failed.
@@ -295,7 +290,6 @@ impl ArtifactCacheSpec {
             identities: Vec::new(),
             cargo_build_inputs: Vec::new(),
             outputs: Vec::new(),
-            pruning: None,
         }
     }
 
@@ -390,8 +384,8 @@ impl ArtifactCacheSpec {
 
     /// Add one exact Cargo input snapshot as transactional cache identity and guard.
     ///
-    /// The semantic resolved fingerprint keys toolchain, arguments,
-    /// environment and the selected dependency closure. Its conservative
+    /// The resolved fingerprint keys toolchain, arguments, environment,
+    /// selected sources and the complete workspace manifest and lockfile. Its
     /// Cargo-aware validation paths and exclusions are rehashed automatically
     /// during preparation, cache-hit materialization and transaction commit.
     /// Labels are stored in canonical order; declaration order does not affect identity.
@@ -433,30 +427,6 @@ impl ArtifactCacheSpec {
         });
         self.outputs
             .sort_by(|left, right| left.name.cmp(&right.name));
-        self
-    }
-
-    /// Apply best-effort retention while protecting the acquired entry.
-    #[must_use]
-    pub const fn with_prune_policy(mut self, policy: CacheRetentionLimits) -> Self {
-        self.pruning = Some((policy, Duration::ZERO));
-        self
-    }
-
-    /// Apply retention at most once per `minimum_interval` for this namespace.
-    ///
-    /// The small due-marker check still occurs under the namespace lock.
-    /// Successful acquisitions skip the directory scan until the interval has
-    /// elapsed. The interval applies to attempted maintenance, including a
-    /// nonfatal failed attempt. A zero interval is equivalent to
-    /// [`Self::with_prune_policy`].
-    #[must_use]
-    pub const fn with_prune_policy_at_most_every(
-        mut self,
-        policy: CacheRetentionLimits,
-        minimum_interval: Duration,
-    ) -> Self {
-        self.pruning = Some((policy, minimum_interval));
         self
     }
 
@@ -520,7 +490,6 @@ impl std::fmt::Debug for ArtifactCacheSpec {
                 ),
             )
             .field("outputs", &self.outputs)
-            .field("pruning", &self.pruning)
             .finish()
     }
 }
@@ -564,12 +533,6 @@ impl ArtifactCacheRecord {
     pub const fn timings(&self) -> ArtifactCacheTimings {
         self.timings
     }
-
-    /// Best-effort retention attempted during this acquisition, when configured.
-    #[must_use]
-    pub const fn maintenance(&self) -> Option<&ArtifactCacheMaintenance> {
-        self.maintenance.as_ref()
-    }
 }
 
 impl ArtifactCacheArtifact {
@@ -606,7 +569,6 @@ impl ArtifactCacheTimings {
                 .saturating_add(other.output_validation),
             publication: self.publication.saturating_add(other.publication),
             materialization: self.materialization.saturating_add(other.materialization),
-            maintenance: super::sum_optional_durations(self.maintenance, other.maintenance),
             total: self.total.saturating_add(other.total),
         }
     }
@@ -616,7 +578,7 @@ impl std::fmt::Display for ArtifactCacheTimings {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             formatter,
-            "total={:?} coordination_lock={:?} content_lock={:?} namespace_lock={:?} inputs={:?} lookup={:?} build={:?} validation={:?} publication={:?} materialization={:?} maintenance={:?}",
+            "total={:?} coordination_lock={:?} content_lock={:?} namespace_lock={:?} inputs={:?} lookup={:?} build={:?} validation={:?} publication={:?} materialization={:?}",
             self.total,
             self.coordination_lock_wait,
             self.content_lock_wait,
@@ -627,7 +589,6 @@ impl std::fmt::Display for ArtifactCacheTimings {
             self.output_validation,
             self.publication,
             self.materialization,
-            self.maintenance,
         )
     }
 }
@@ -928,11 +889,8 @@ fn revalidate_cargo_build_input_fingerprints(
                 source,
             }
         })?;
-        if let Some((before, after)) = cargo_input
-            .resolved
-            .identity()
-            .difference(current.identity())
-        {
+        let (before, after) = (cargo_input.resolved.fingerprint(), current.fingerprint());
+        if before != after {
             return Err(ArtifactCacheError::CargoBuildInputsChanged {
                 label: cargo_input.label.clone(),
                 before,
@@ -945,9 +903,8 @@ fn revalidate_cargo_build_input_fingerprints(
 
 /// Prune one transactional artifact namespace without acquiring an artifact.
 ///
-/// This strict maintenance entry point returns cache errors directly. Build
-/// acquisitions configured with [`ArtifactCacheSpec::with_prune_policy`] use
-/// the same implementation but attach maintenance as a nonfatal record.
+/// This explicit maintenance entry point returns cache errors directly. Acquisitions
+/// never prune; callers choose the limits, cadence and error handling.
 /// Abandoned staging is removed only when its content-key lock is currently
 /// unowned and is reported separately from committed-entry retention.
 /// Entries owned by live acquisition records are skipped until their last owner drops.
@@ -968,7 +925,14 @@ pub fn prune_artifact_cache(
     let namespace_directory = namespace_directory_for_id(cache_root, &namespace_id);
     let lock_path = namespace_lock_path_for_id(cache_root, &namespace_id);
     let (_lock, _) = lock_cache_file(&lock_path).map_err(artifact_cache_fs_error)?;
-    prune_artifact_namespace_locked(cache_root, &namespace_directory, policy, None)
+    let mut report = prune_direct_child_directories(
+        &entries_directory(&namespace_directory),
+        policy,
+        is_sha256_directory,
+    )
+    .map_err(artifact_cache_fs_error)?;
+    remove_abandoned_staging(cache_root, &namespace_directory, &mut report)?;
+    Ok(report)
 }
 
 fn initialize_cache(
@@ -1244,12 +1208,12 @@ fn resolve_key(spec: &ArtifactCacheSpec) -> Result<ResolvedKey, ArtifactCacheErr
         for cargo_input in &spec.cargo_build_inputs {
             let current = cargo_input
                 .resolved
-                .current_validation_digest()
+                .current_input_digest()
                 .map_err(|source| ArtifactCacheError::CargoBuildInputRevalidation {
                     label: cargo_input.label.clone(),
                     source,
                 })?;
-            let before = cargo_input.resolved.validation_digest();
+            let before = cargo_input.resolved.input_digest();
             if current != before {
                 return Err(ArtifactCacheError::CargoBuildInputsChanged {
                     label: cargo_input.label.clone(),
@@ -1619,44 +1583,6 @@ fn materialize_outputs(
     Ok(())
 }
 
-fn perform_maintenance_locked(
-    spec: &ArtifactCacheSpec,
-    namespace: &Path,
-    protected_entry: &Path,
-) -> (Option<ArtifactCacheMaintenance>, Option<Duration>) {
-    spec.pruning.map_or((None, None), |(policy, interval)| {
-        let identity = policy.maintenance_identity();
-        let (outcome, elapsed) =
-            perform_scheduled_cache_maintenance(namespace, interval, &identity, || {
-                prune_artifact_namespace_locked(
-                    &spec.cache_root,
-                    namespace,
-                    policy,
-                    Some(protected_entry),
-                )
-                .map_err(|error| error.to_string())
-            });
-        (outcome, Some(elapsed))
-    })
-}
-
-fn prune_artifact_namespace_locked(
-    cache_root: &Path,
-    namespace: &Path,
-    policy: CacheRetentionLimits,
-    protected_entry: Option<&Path>,
-) -> Result<ArtifactCachePruneReport, ArtifactCacheError> {
-    let mut report = prune_direct_child_directories(
-        &entries_directory(namespace),
-        policy,
-        protected_entry,
-        is_sha256_directory,
-    )
-    .map_err(artifact_cache_fs_error)?;
-    remove_abandoned_staging(cache_root, namespace, &mut report)?;
-    Ok(report)
-}
-
 fn remove_abandoned_staging(
     cache_root: &Path,
     namespace: &Path,
@@ -1738,8 +1664,6 @@ fn complete_cache_record(
     let namespace = namespace_directory(spec);
     let entry = entry_directory(&namespace, resolved.key);
     record_cache_entry_use(&entry).map_err(artifact_cache_fs_error)?;
-    let (maintenance, maintenance_timing) = perform_maintenance_locked(spec, &namespace, &entry);
-    timings.maintenance = maintenance_timing;
     timings.total = total_started.elapsed();
     let retention = RetainedCacheEntry::acquire(&entry).map_err(artifact_cache_fs_error)?;
     Ok(ArtifactCacheRecord {
@@ -1755,7 +1679,6 @@ fn complete_cache_record(
             })
             .collect(),
         timings,
-        maintenance,
         _retention: retention,
     })
 }

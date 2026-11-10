@@ -13,10 +13,10 @@ use ic_host_fs::read::read_file;
 
 use ic_build::artifacts::{
     ArtifactCacheError, ArtifactCachePreparation, ArtifactCacheSpec, CacheBatchEntry,
-    CacheRetentionLimits, LabeledWasmBuildSpec, SharedIncrementalTargetMaintenanceOutcome,
-    WasmBuildBatchMetrics, WasmBuildBatchReport, WasmBuildError, WasmBuildOutcome, WasmBuildPhase,
-    WasmBuildProgressConfig, build_wasm_canisters_cached, prepare_artifact_cache,
-    prune_wasm_build_cache, resolve_cargo_build_inputs,
+    CacheRetentionLimits, LabeledWasmBuildSpec, WasmBuildBatchMetrics, WasmBuildBatchReport,
+    WasmBuildError, WasmBuildOutcome, WasmBuildPhase, WasmBuildProgressConfig,
+    build_wasm_canisters_cached, prepare_artifact_cache, prune_wasm_build_cache,
+    resolve_cargo_build_inputs,
 };
 use std::{
     fs,
@@ -37,83 +37,77 @@ use std::ffi::OsString;
 const PERF_PROBE_PACKAGE: &str = "fixture";
 
 #[test]
-fn hyphenated_packages_use_the_default_library_artifact_in_every_cache_mode() {
-    for shared in [false, true] {
-        let root = real_wasm_workspace();
-        let manifest = root.join("Cargo.toml");
-        let original = fs::read_to_string(&manifest)
+fn hyphenated_packages_use_the_default_library_artifact() {
+    let root = real_wasm_workspace();
+    let manifest = root.join("Cargo.toml");
+    let original = fs::read_to_string(&manifest)
+        .unwrap()
+        .replace("name = \"fixture\"", "name = \"fixture-canister\"");
+    fs::write(&manifest, &original).unwrap();
+    ic_build::testing::cargo::generate_fixture_lockfile(&root);
+    let target = root.join("exact");
+    let spec = support::wasm::spec(&root, &target, &["fixture-canister"]);
+    let first = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
+    assert_eq!(
+        first.record().artifacts()[0].file_name().unwrap(),
+        "fixture_canister.wasm"
+    );
+    let bytes = fs::read(&first.record().artifacts()[0]).unwrap();
+    assert!(bytes.starts_with(b"\0asm"));
+    assert!(
+        target
+            .join("wasm32-unknown-unknown/debug/fixture_canister.wasm")
+            .is_file()
+    );
+    assert!(
+        !target
+            .join("wasm32-unknown-unknown/debug/fixture-canister.wasm")
+            .exists()
+    );
+    assert!(
+        build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
             .unwrap()
-            .replace("name = \"fixture\"", "name = \"fixture-canister\"");
-        fs::write(&manifest, &original).unwrap();
-        ic_build::testing::cargo::generate_fixture_lockfile(&root);
-        let target = root.join("exact");
-        let mut spec =
-            support::wasm::spec(&root, &target, &["fixture-canister"]).with_isolated_builds();
-        if shared {
-            spec = spec.with_shared_incremental_target(root.join("target/shared"));
-        }
-        let first = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
-        assert_eq!(
-            first.record().artifacts()[0].file_name().unwrap(),
-            "fixture_canister.wasm"
-        );
-        let bytes = fs::read(&first.record().artifacts()[0]).unwrap();
-        assert!(bytes.starts_with(b"\0asm"));
-        assert!(
-            target
-                .join("wasm32-unknown-unknown/debug/fixture_canister.wasm")
-                .is_file()
-        );
-        assert!(
-            !target
-                .join("wasm32-unknown-unknown/debug/fixture-canister.wasm")
-                .exists()
-        );
-        assert!(
-            build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
-                .unwrap()
-                .is_reused()
-        );
-        fs::write(
-            &manifest,
-            original.replace("[lib]", "[lib]\nname=\"renamed\""),
-        )
-        .unwrap();
-        let renamed_inputs = resolve_cargo_build_inputs(&spec).unwrap();
-        assert_eq!(
-            renamed_inputs.artifact_paths().unwrap()[0]
-                .file_name()
-                .unwrap(),
-            "renamed.wasm"
-        );
-        let renamed = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
-            .expect("capture Cargo-reported custom library");
-        assert!(!renamed.is_reused());
-        assert_ne!(first.record().fingerprint(), renamed.record().fingerprint());
-        assert_eq!(
-            renamed.record().artifacts()[0].file_name().unwrap(),
-            "renamed.wasm"
-        );
-        assert!(
-            fs::read(&renamed.record().artifacts()[0])
-                .unwrap()
-                .starts_with(b"\0asm")
-        );
-        assert!(
-            build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
-                .unwrap()
-                .is_reused()
-        );
-        assert_eq!(fs::read(&first.record().artifacts()[0]).unwrap(), bytes);
-        fs::write(&manifest, original).unwrap();
-        assert!(
-            build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
-                .unwrap()
-                .is_reused()
-        );
-        drop((first, renamed));
-        fs::remove_dir_all(root).unwrap();
-    }
+            .is_reused()
+    );
+    fs::write(
+        &manifest,
+        original.replace("[lib]", "[lib]\nname=\"renamed\""),
+    )
+    .unwrap();
+    let renamed_inputs = resolve_cargo_build_inputs(&spec).unwrap();
+    assert_eq!(
+        renamed_inputs.artifact_paths().unwrap()[0]
+            .file_name()
+            .unwrap(),
+        "renamed.wasm"
+    );
+    let renamed = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
+        .expect("capture Cargo-reported custom library");
+    assert!(!renamed.is_reused());
+    assert_ne!(first.record().fingerprint(), renamed.record().fingerprint());
+    assert_eq!(
+        renamed.record().artifacts()[0].file_name().unwrap(),
+        "renamed.wasm"
+    );
+    assert!(
+        fs::read(&renamed.record().artifacts()[0])
+            .unwrap()
+            .starts_with(b"\0asm")
+    );
+    assert!(
+        build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
+            .unwrap()
+            .is_reused()
+    );
+    assert_eq!(fs::read(&first.record().artifacts()[0]).unwrap(), bytes);
+    fs::write(&manifest, original).unwrap();
+    assert!(
+        build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
+            .unwrap()
+            .is_reused()
+    );
+    drop((first, renamed));
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
@@ -157,35 +151,23 @@ fn shared_wasm_target_rejects_library_that_no_longer_produces_wasm() {
         .expect("read bounded Wasm");
     let manifest = workspace.join("feature_a/Cargo.toml");
     let contents = fs::read_to_string(&manifest).expect("read canister manifest");
-    for changed in [contents.replace("cdylib", "rlib")] {
-        fs::write(&manifest, changed).expect("change the declared library output");
-        // Cargo input snapshots remain useful for generic transactional builds.
-        resolve_cargo_build_inputs(&spec).expect("resolve changed library inputs");
-        let scheduled = spec
-            .clone()
-            .with_shared_incremental_target_maintenance(
-                ic_build::artifacts::SharedIncrementalTargetMaintenanceConfig::new(
-                    CacheRetentionLimits::new().with_max_size_bytes(0),
-                    Duration::ZERO,
-                ),
-            )
-            .unwrap();
-        for candidate in [&spec, &scheduled] {
-            let result = build_wasm_canisters_cached(candidate, OwnedChild::spawn_direct);
-            assert!(
-                matches!(
-                    result,
-                    Err(ic_build::artifacts::WasmBuildError::InvalidSpec { .. })
-                ),
-                "a changed library output must not certify old Wasm: {result:?}",
-            );
-            assert_eq!(
-                read_file(&wasm_path(&shared, "feature_a", "debug"), 128 * 1024 * 1024)
-                    .expect("read bounded Wasm"),
-                before
-            );
-        }
-    }
+    fs::write(&manifest, contents.replace("cdylib", "rlib"))
+        .expect("change the declared library output");
+    // Cargo input snapshots remain useful for generic transactional builds.
+    resolve_cargo_build_inputs(&spec).expect("resolve changed library inputs");
+    let result = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct);
+    assert!(
+        matches!(
+            result,
+            Err(ic_build::artifacts::WasmBuildError::InvalidSpec { .. })
+        ),
+        "a changed library output must not certify old Wasm: {result:?}",
+    );
+    assert_eq!(
+        read_file(&wasm_path(&shared, "feature_a", "debug"), 128 * 1024 * 1024)
+            .expect("read bounded Wasm"),
+        before
+    );
     assert!(
         !shared
             .join("wasm32-unknown-unknown/debug/libfeature_a.rlib")
@@ -208,51 +190,41 @@ fn shared_wasm_target_rejects_library_that_no_longer_produces_wasm() {
 
 #[test]
 fn wasm_acquisition_builds_library_when_binary_has_the_same_output_name() {
-    for shared_target in [false, true] {
-        for observed in [false, true] {
-            let root = unique_temp_dir("ic-testkit-library-output-collision");
-            let workspace = root.join("workspace");
-            write_independent_feature_workspace(&workspace);
-            fs::write(workspace.join("feature_a/src/main.rs"), "fn main() {}\n")
-                .expect("write same-name binary target");
-            let mut spec = support::wasm::spec(&workspace, &root.join("exact"), &["feature_a"]);
-            if shared_target {
-                spec = spec.with_shared_incremental_target(root.join("shared"));
-            } else {
-                spec = spec.with_isolated_builds();
-            }
-            let baseline_spec =
-                support::wasm::spec(&workspace, &root.join("baseline"), &["feature_a"])
-                    .with_isolated_builds();
-            let baseline = build_wasm_canisters_cached(&baseline_spec, OwnedChild::spawn_direct)
-                .expect("build library-only baseline");
-            let library =
-                fs::read(&baseline.record().artifacts()[0]).expect("read library baseline");
-            let outcome = if observed {
-                ic_build::artifacts::build_wasm_canisters_cached_with_progress(
-                    &spec,
-                    WasmBuildProgressConfig::new(),
-                    &mut |_| {},
-                    spawn_cargo,
-                )
-            } else {
-                build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
-            }
-            .expect("acquire default library build");
-            assert!(matches!(outcome, WasmBuildOutcome::Built(_)));
-            assert!(
-                fs::read(&outcome.record().artifacts()[0]).expect("read acquired Wasm") == library,
-                "binary must not replace library: shared={shared_target}, observed={observed}",
-            );
-            assert!(matches!(
-                build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
-                    .expect("reuse canister library"),
-                WasmBuildOutcome::Reused(_)
-            ));
-            drop(baseline);
-            drop(outcome);
-            fs::remove_dir_all(root).expect("remove library-output fixture");
+    for observed in [false, true] {
+        let root = unique_temp_dir("ic-testkit-library-output-collision");
+        let workspace = root.join("workspace");
+        write_independent_feature_workspace(&workspace);
+        fs::write(workspace.join("feature_a/src/main.rs"), "fn main() {}\n")
+            .expect("write same-name binary target");
+        let spec = support::wasm::spec(&workspace, &root.join("exact"), &["feature_a"]);
+        let baseline_spec = support::wasm::spec(&workspace, &root.join("baseline"), &["feature_a"]);
+        let baseline = build_wasm_canisters_cached(&baseline_spec, OwnedChild::spawn_direct)
+            .expect("build library-only baseline");
+        let library = fs::read(&baseline.record().artifacts()[0]).expect("read library baseline");
+        let outcome = if observed {
+            ic_build::artifacts::build_wasm_canisters_cached_with_progress(
+                &spec,
+                WasmBuildProgressConfig::new(),
+                &mut |_| {},
+                spawn_cargo,
+            )
+        } else {
+            build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
         }
+        .expect("acquire default library build");
+        assert!(matches!(outcome, WasmBuildOutcome::Built(_)));
+        assert!(
+            fs::read(&outcome.record().artifacts()[0]).expect("read acquired Wasm") == library,
+            "binary must not replace library: observed={observed}",
+        );
+        assert!(matches!(
+            build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
+                .expect("reuse canister library"),
+            WasmBuildOutcome::Reused(_)
+        ));
+        drop(baseline);
+        drop(outcome);
+        fs::remove_dir_all(root).expect("remove library-output fixture");
     }
 }
 
@@ -655,63 +627,6 @@ fn shared_incremental_wasm_cache_keeps_mutable_cargo_state_outside_exact_entries
 }
 
 #[test]
-fn scheduled_shared_target_maintenance_participates_in_wasm_acquisition() {
-    let workspace = real_wasm_workspace();
-    let root = unique_temp_dir("ic-testkit-integrated-shared-maintenance");
-    let target_dir = root.join("exact");
-    let shared_target = root.join("shared");
-    assert!(!shared_target.exists());
-    let spec = support::wasm::spec(&workspace, &target_dir, &[PERF_PROBE_PACKAGE])
-        .with_shared_incremental_target(&shared_target)
-        .with_shared_incremental_target_maintenance_at_most_every(
-            CacheRetentionLimits::new().with_max_size_bytes(u64::MAX),
-            Duration::from_hours(1),
-        )
-        .unwrap();
-
-    let first = ic_build::artifacts::build_wasm_canisters_cached_with_progress(
-        &spec,
-        WasmBuildProgressConfig::new(),
-        &mut |_| {},
-        spawn_cargo,
-    )
-    .expect("build with integrated shared-target maintenance");
-    assert!(matches!(first, WasmBuildOutcome::Built(_)));
-    assert!(shared_target.is_dir());
-    assert!(matches!(
-        first.record().shared_incremental_maintenance(),
-        Some(SharedIncrementalTargetMaintenanceOutcome::Performed { .. })
-    ));
-    assert!(first.to_string().contains("shared_maintenance=("));
-    let reused = ic_build::artifacts::build_wasm_canisters_cached_with_progress(
-        &spec,
-        WasmBuildProgressConfig::new(),
-        &mut |_| {},
-        spawn_cargo,
-    )
-    .expect("reuse with integrated shared-target maintenance");
-    assert!(matches!(reused, WasmBuildOutcome::Reused(_)));
-    let reused_timings = reused.record().timings();
-    assert!(reused_timings.shared_incremental_lock_wait.is_some());
-    assert!(matches!(
-        reused.record().shared_incremental_maintenance(),
-        Some(SharedIncrementalTargetMaintenanceOutcome::Skipped { .. })
-    ));
-
-    fs::remove_dir_all(&shared_target).expect("remove shared target before exact hit");
-    let recreated = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
-        .expect("exact hit must recreate configured shared maintenance target");
-    assert!(matches!(recreated, WasmBuildOutcome::Reused(_)));
-    assert!(shared_target.is_dir());
-    assert!(matches!(
-        recreated.record().shared_incremental_maintenance(),
-        Some(SharedIncrementalTargetMaintenanceOutcome::Performed { .. })
-    ));
-
-    fs::remove_dir_all(root).expect("clean integrated shared maintenance fixture");
-}
-
-#[test]
 fn resolved_cargo_inputs_guard_transactional_artifacts_through_commit() {
     let root = unique_temp_dir("ic-testkit-cargo-input-artifact-bridge");
     let workspace = root.join("workspace");
@@ -961,47 +876,41 @@ fn real_wasm_workspace() -> std::path::PathBuf {
 
 #[test]
 fn custom_library_names_do_not_overwrite_another_packages_outputs() {
-    for shared in [false, true] {
-        let root = unique_temp_dir("custom-library-layout");
-        fs::write(root.join("Cargo.toml"), "[workspace]\nmembers=[\"left\",\"right\"]\nresolver=\"3\"\n[profile.custom]\ninherits=\"release\"\n").unwrap();
-        for (directory, package, library, value) in
-            [("left", "alpha", "beta", 7), ("right", "beta", "alpha", 9)]
-        {
-            let path = root.join(directory);
-            ic_build::testing::cargo::write_fixture_package(
-                &path,
-                package,
-                &format!("[lib]\nname=\"{library}\"\ncrate-type=[\"cdylib\"]\n"),
-                &format!("#[unsafe(no_mangle)] pub extern \"C\" fn value() -> u32 {{ {value} }}\n"),
-            )
-            .unwrap();
-        }
-        let mut spec =
-            support::wasm::spec(&root, &root.join("exact with spaces"), &["alpha", "beta"])
-                .with_isolated_builds()
-                .with_cargo_selection(CargoSelection {
-                    profile: Some("custom".into()),
-                    offline: true,
-                    ..Default::default()
-                });
-        if shared {
-            spec = spec.with_shared_incremental_target(root.join("shared with spaces"));
-        }
-        let first = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
-        let paths = first.record().artifacts();
-        assert_eq!(paths[0].file_name().unwrap(), "beta.wasm");
-        assert_eq!(paths[1].file_name().unwrap(), "alpha.wasm");
-        let bytes = paths
-            .iter()
-            .map(|path| fs::read(path).unwrap())
-            .collect::<Vec<_>>();
-        assert_ne!(bytes[0], bytes[1]);
-        let reused = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
-        assert!(reused.is_reused());
-        for (path, expected) in reused.record().artifacts().iter().zip(bytes) {
-            assert_eq!(fs::read(path).unwrap(), expected);
-        }
-        drop((first, reused));
-        fs::remove_dir_all(root).unwrap();
+    let root = unique_temp_dir("custom-library-layout");
+    fs::write(root.join("Cargo.toml"), "[workspace]\nmembers=[\"left\",\"right\"]\nresolver=\"3\"\n[profile.custom]\ninherits=\"release\"\n").unwrap();
+    for (directory, package, library, value) in
+        [("left", "alpha", "beta", 7), ("right", "beta", "alpha", 9)]
+    {
+        let path = root.join(directory);
+        ic_build::testing::cargo::write_fixture_package(
+            &path,
+            package,
+            &format!("[lib]\nname=\"{library}\"\ncrate-type=[\"cdylib\"]\n"),
+            &format!("#[unsafe(no_mangle)] pub extern \"C\" fn value() -> u32 {{ {value} }}\n"),
+        )
+        .unwrap();
     }
+    let spec = support::wasm::spec(&root, &root.join("exact with spaces"), &["alpha", "beta"])
+        .with_cargo_selection(CargoSelection {
+            profile: Some("custom".into()),
+            offline: true,
+            ..Default::default()
+        });
+
+    let first = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
+    let paths = first.record().artifacts();
+    assert_eq!(paths[0].file_name().unwrap(), "beta.wasm");
+    assert_eq!(paths[1].file_name().unwrap(), "alpha.wasm");
+    let bytes = paths
+        .iter()
+        .map(|path| fs::read(path).unwrap())
+        .collect::<Vec<_>>();
+    assert_ne!(bytes[0], bytes[1]);
+    let reused = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
+    assert!(reused.is_reused());
+    for (path, expected) in reused.record().artifacts().iter().zip(bytes) {
+        assert_eq!(fs::read(path).unwrap(), expected);
+    }
+    drop((first, reused));
+    fs::remove_dir_all(root).unwrap();
 }

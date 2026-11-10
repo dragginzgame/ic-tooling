@@ -25,7 +25,7 @@ pub(super) fn fake_wasm_build_spec(label: &str) -> (PathBuf, super::wasm_cache::
         crate::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
-    .with_isolated_builds()
+    .with_shared_incremental_target(root.join("target/incremental"))
     .with_cargo_program(wrapper);
     (root, spec)
 }

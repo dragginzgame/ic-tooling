@@ -147,16 +147,10 @@ impl<'a> ProgressReporter<'a> {
             WasmBuildPhase::SharedTargetCoordination => timings
                 .shared_target_coordination
                 .get_or_insert(Duration::ZERO),
-            WasmBuildPhase::SharedTargetMaintenance => timings
-                .shared_target_maintenance
-                .get_or_insert(Duration::ZERO),
             WasmBuildPhase::CargoBuild => timings.cargo_build.get_or_insert(Duration::ZERO),
             WasmBuildPhase::ArtifactPublication => {
                 timings.artifact_publication.get_or_insert(Duration::ZERO)
             }
-            WasmBuildPhase::ExactCacheMaintenance => timings
-                .exact_cache_maintenance
-                .get_or_insert(Duration::ZERO),
             WasmBuildPhase::Cleanup => timings.cleanup.get_or_insert(Duration::ZERO),
         };
         *timing = timing.saturating_add(elapsed);

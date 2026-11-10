@@ -1,6 +1,6 @@
 # IC Tooling qualification
 
-Toko Tooling is selected as `toko-tooling = "=0.39.6"` in each workspace's
+Toko Tooling is selected as `toko-tooling = "=0.39.9"` in each workspace's
 `[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
 Every real package inherits it unconditionally in
 `[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
@@ -27,7 +27,7 @@ and installed tests select both roots. `make install-server` explicitly fetches
 both locked graphs; standalone checks remain offline.
 Installation remains explicit; Rust imports are unnecessary. Direct publication
 and release adapters check tooling before effects. See the
-[root selection guide](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/consuming-snapshots.md#cargo-selection-and-installation).
+[root selection guide](https://github.com/dragginzgame/toko-tooling/blob/e3053d30870ae9b542519996daa1be9dbdf80eab/docs/adoption/consuming-snapshots.md#cargo-selection-and-installation).
 
 Local shell/browser fixture defaults and explicit outside-target selections are
 documented in [qualification scratch ownership](design/fixture-scratch.md).
@@ -49,6 +49,13 @@ do not require unrelated consumer releases.
 | Testkit Wasm | Types only; no Platform facade, Runtime, native transport or Wire. |
 | Private Wasm probe | Runtime's `cdk` and its matching singleton guard, Types and Wire; not a second simulator or production adapter crate. |
 | Host Tools adapters | `candid` selects Platform's owned binary codec; `agent` and `ledger-evidence` select their explicit adapters; `registry` selects Types directly. Textual service inspection is removed. Default Tools has neither supplier. |
+
+The native Wire adapter and private probe select Wire 0.20. Decoding follows
+upstream Postcard, including redundant varints within width bounds; successful
+decoding does not promise byte-identical re-encoding. Keep original frames for
+exact retries, signatures and hashes. This adoption preserves encoder bytes,
+method identities and explicit budgets; there are no browser Wire bindings here
+to regenerate.
 
 Foundation and Build's normal/build graphs forbid the entire Platform family
 and higher product layers; development fixtures may still use integration owners.

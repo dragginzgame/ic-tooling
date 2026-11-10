@@ -170,7 +170,7 @@ async fn invalid_responses_preserve_typed_refusal_and_context_without_payload_lo
         (valid[..valid.len() - 1].to_vec(), ic_wire::Error::Malformed),
         ([valid.as_slice(), &[0]].concat(), ic_wire::Error::Trailing),
         (
-            [&valid[..valid.len() - 1], &[0x87, 0]].concat(),
+            [&valid[..valid.len() - 1], &[0x87]].concat(),
             ic_wire::Error::Malformed,
         ),
         (vec![0; LIMITS.bytes + 1], ic_wire::Error::Limit),
@@ -214,7 +214,7 @@ async fn sixteen_bit_responses_preserve_boundaries_and_malformed_refusals() {
             Some((u16::MAX - 1, i16::MAX)),
         ),
         ([0].as_slice(), Some((0, 0))),
-        ([0x80, 0].as_slice(), None),
+        ([0x80, 0].as_slice(), Some((0, 0))),
         ([0xff, 0xff, 0x04].as_slice(), None),
         ([0xff, 0xff].as_slice(), None),
     ] {

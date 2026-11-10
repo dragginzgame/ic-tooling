@@ -125,10 +125,7 @@ impl<'a> WasmBuildBatchInputResolver<'a> {
                         digest_cache,
                         &mut declarations,
                         workspace_root,
-                        (
-                            "hash batched Wasm build inputs",
-                            "hash batched semantic Wasm build inputs",
-                        ),
+                        "hash batched Wasm build inputs",
                     );
                     (discovered.index, result)
                 })

@@ -1,10 +1,9 @@
 //! Locked shared-target retention, scheduling and outcome projection.
 
 use super::{
-    CacheRetentionLimits, ProgressReporter, SharedIncrementalTargetMaintenance,
-    SharedIncrementalTargetMaintenanceConfig, SharedIncrementalTargetMaintenanceFailureMode,
-    SharedIncrementalTargetMaintenanceOutcome, WasmBuildError, WasmBuildPhase,
-    record_cache_entry_use, wasm_cache_fs_error,
+    CacheRetentionLimits, SharedIncrementalTargetMaintenance,
+    SharedIncrementalTargetMaintenanceOutcome, WasmBuildError, record_cache_entry_use,
+    wasm_cache_fs_error,
 };
 use crate::artifacts::cache_fs::{
     cache_entry_last_used, cache_maintenance_due, record_cache_maintenance,
@@ -159,54 +158,4 @@ fn clear_shared_incremental_target_contents(target_dir: &Path) -> Result<(), Was
         }
     }
     Ok(())
-}
-
-pub(super) fn perform_configured_shared_incremental_target_maintenance(
-    config: SharedIncrementalTargetMaintenanceConfig,
-    shared_target: &Path,
-    lock_wait: Duration,
-    progress: &mut ProgressReporter<'_>,
-) -> Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError> {
-    let result = progress.run_phase(WasmBuildPhase::SharedTargetMaintenance, || {
-        let schedule = schedule_shared_incremental_target_maintenance(
-            shared_target,
-            config.policy,
-            config.minimum_interval,
-            lock_wait,
-        )?;
-        match schedule {
-            SharedIncrementalTargetMaintenanceSchedule::Skipped(outcome) => Ok(outcome),
-            SharedIncrementalTargetMaintenanceSchedule::Due(due) => {
-                perform_due_shared_incremental_target_maintenance(
-                    shared_target,
-                    config.policy,
-                    lock_wait,
-                    due,
-                )
-            }
-        }
-    });
-    let outcome = integrated_shared_maintenance_result(config, shared_target, lock_wait, result)?;
-    Ok(outcome)
-}
-
-pub(super) fn integrated_shared_maintenance_result(
-    config: SharedIncrementalTargetMaintenanceConfig,
-    shared_target: &Path,
-    lock_wait: Duration,
-    result: Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError>,
-) -> Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError> {
-    match result {
-        Ok(outcome) => Ok(outcome),
-        Err(error)
-            if config.failure_mode == SharedIncrementalTargetMaintenanceFailureMode::BestEffort =>
-        {
-            Ok(SharedIncrementalTargetMaintenanceOutcome::Failed {
-                target_dir: shared_target.to_owned(),
-                lock_wait,
-                message: error.to_string(),
-            })
-        }
-        Err(error) => Err(error),
-    }
 }

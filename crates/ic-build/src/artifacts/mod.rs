@@ -109,7 +109,7 @@ mod host_tests;
 
 pub use crate::cargo::observation::facts::CargoBuildFacts;
 pub use batch::{CacheBatchEntry, CacheBatchReport, CacheOutcome, LabeledSpec};
-pub use cache_fs::{ArtifactCacheMaintenance, ArtifactCachePruneReport, CacheRetentionLimits};
+pub use cache_fs::{ArtifactCachePruneReport, CacheRetentionLimits};
 pub use digest::InputDigest;
 pub use evidence::{WasmArtifactReceipt, WasmBuildEvidence};
 pub use inputs::{
@@ -133,11 +133,10 @@ pub use wasm_batch::{
 };
 pub use wasm_cache::{
     CargoBuildInput, CargoInputProbePolicy, ResolvedCargoBuildInputs,
-    SharedIncrementalTargetMaintenance, SharedIncrementalTargetMaintenanceConfig,
-    SharedIncrementalTargetMaintenanceFailureMode, SharedIncrementalTargetMaintenanceOutcome,
-    WasmBuildError, WasmBuildFailureDetails, WasmBuildFailureTimings, WasmBuildOutcome,
-    WasmBuildProgressConfig, WasmBuildProgressEvent, WasmBuildRecord, WasmBuildSpec,
-    WasmBuildTimings, WasmInputResolutionTimings, build_wasm_canisters_cached,
+    SharedIncrementalTargetMaintenance, SharedIncrementalTargetMaintenanceOutcome, WasmBuildError,
+    WasmBuildFailureDetails, WasmBuildFailureTimings, WasmBuildOutcome, WasmBuildProgressConfig,
+    WasmBuildProgressEvent, WasmBuildRecord, WasmBuildSpec, WasmBuildTimings,
+    WasmInputResolutionTimings, build_wasm_canisters_cached,
     build_wasm_canisters_cached_with_progress, maintain_shared_incremental_target,
     maintain_shared_incremental_target_at_most_every, prune_wasm_build_cache,
     resolve_cargo_build_inputs, resolve_cargo_build_inputs_with_probe_policy,

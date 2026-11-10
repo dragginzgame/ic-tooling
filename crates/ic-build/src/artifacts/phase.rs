@@ -23,14 +23,10 @@ pub enum WasmBuildPhase {
     ContentHashing,
     /// Waiting for or preparing a shared incremental target.
     SharedTargetCoordination,
-    /// Inspecting or clearing a shared incremental target.
-    SharedTargetMaintenance,
     /// Compiling the selected Wasm packages.
     CargoBuild,
     /// Validating, copying, hashing or stamping exact artifacts.
     ArtifactPublication,
-    /// Applying retention to immutable exact-cache entries.
-    ExactCacheMaintenance,
     /// Removing an incomplete exact-cache entry after failure.
     Cleanup,
 }
@@ -46,10 +42,8 @@ impl std::fmt::Display for WasmBuildPhase {
             Self::InputDiscovery => "input discovery",
             Self::ContentHashing => "content hashing",
             Self::SharedTargetCoordination => "shared target coordination",
-            Self::SharedTargetMaintenance => "shared target maintenance",
             Self::CargoBuild => "cargo build",
             Self::ArtifactPublication => "artifact publication",
-            Self::ExactCacheMaintenance => "exact cache maintenance",
             Self::Cleanup => "cleanup",
         })
     }

@@ -18,7 +18,7 @@ use std::{
     cell::OnceCell,
     collections::{BTreeSet, HashMap, HashSet, VecDeque},
     ffi::{OsStr, OsString},
-    fs, io,
+    fs,
     path::{Path, PathBuf},
 };
 use toml::Value as TomlValue;
@@ -33,12 +33,7 @@ pub(super) struct ParsedCargoMetadata<'a> {
     workspace_packages: HashMap<&'a str, Option<&'a str>>,
     nodes: HashMap<&'a str, &'a schema::Node>,
     pub(super) workspace_root: &'a Path,
-    workspace: OnceCell<WorkspaceFacts>,
-}
-
-struct WorkspaceFacts {
-    manifest: TomlValue,
-    locked_packages: Vec<LockedPackageIdentity>,
+    workspace: OnceCell<TomlValue>,
 }
 
 impl<'a> ParsedCargoMetadata<'a> {
@@ -84,41 +79,13 @@ impl<'a> ParsedCargoMetadata<'a> {
     // This metadata context lives for one discovery group, never across a
     // fresh acquisition or mutation guard. Failed reads remain independently
     // observable by later entries instead of caching a reconstructed error.
-    fn workspace(&self) -> Result<&WorkspaceFacts, WasmBuildError> {
+    fn workspace(&self) -> Result<&TomlValue, WasmBuildError> {
         if let Some(workspace) = self.workspace.get() {
             return Ok(workspace);
         }
-        let workspace = WorkspaceFacts {
-            manifest: read_workspace_manifest(self.workspace_root)?,
-            locked_packages: locked_package_identities(self.workspace_root)?,
-        };
+        let workspace = read_workspace_manifest(self.workspace_root)?;
         Ok(self.workspace.get_or_init(|| workspace))
     }
-}
-
-pub(super) struct LockedPackageIdentity {
-    name: String,
-    version: String,
-    source: String,
-    checksum: Option<String>,
-}
-
-pub(super) type LockedPackageIndex<'a> =
-    HashMap<(&'a str, &'a str, &'a str), &'a LockedPackageIdentity>;
-
-pub(super) fn index_locked_packages(packages: &[LockedPackageIdentity]) -> LockedPackageIndex<'_> {
-    let mut index = HashMap::with_capacity(packages.len());
-    for package in packages {
-        // Preserve the first matching row, including an absent checksum.
-        index
-            .entry((
-                package.name.as_str(),
-                package.version.as_str(),
-                package.source.as_str(),
-            ))
-            .or_insert(package);
-    }
-    index
 }
 
 pub(super) fn resolve_local_inputs(
@@ -145,15 +112,7 @@ pub(super) fn resolve_local_inputs(
     }
 
     let workspace_root = metadata.workspace_root;
-    let workspace = metadata.workspace()?;
-    let root = &workspace.manifest;
-    let workspace_projection = semantic_workspace_projection(
-        metadata,
-        &closure,
-        workspace_root,
-        root,
-        &workspace.locked_packages,
-    )?;
+    let root = metadata.workspace()?;
     let (mut validation_inputs, configuration_identity) =
         workspace_configuration_inputs(spec, workspace_root, root)?;
     let declared_package_files = append_package_inputs(
@@ -171,7 +130,6 @@ pub(super) fn resolve_local_inputs(
             validation_inputs,
             base_exclusions,
             declared_package_files,
-            workspace_projection,
             configuration_identity,
             wasm_targets,
         },
@@ -202,240 +160,6 @@ pub(super) fn selected_package_ids<'a>(
     Ok(selected_ids)
 }
 
-fn semantic_workspace_projection(
-    metadata: &ParsedCargoMetadata<'_>,
-    closure: &BTreeSet<&str>,
-    workspace_root: &Path,
-    root: &TomlValue,
-    locked_packages: &[LockedPackageIdentity],
-) -> Result<Option<InputDigest>, WasmBuildError> {
-    // A workspace-root or external local package cannot be separated from the
-    // broad root safely; `None` keeps the complete-input fingerprint.
-    let locked_index = index_locked_packages(locked_packages);
-    let mut identities = HashMap::new();
-    for &id in closure {
-        let package = metadata
-            .packages
-            .get(id)
-            .ok_or_else(|| invalid_metadata(&format!("resolved package `{id}` is missing")))?;
-        let Some(identity) = semantic_package_identity(package, workspace_root, &locked_index)
-        else {
-            return Ok(None);
-        };
-        identities.insert(id, identity);
-    }
-
-    let mut projected_packages = closure
-        .iter()
-        .map(|&id| {
-            let package = metadata
-                .packages
-                .get(id)
-                .expect("selected package closure was validated above");
-            let identity = identities[id];
-            let node = metadata.nodes.get(id).ok_or_else(|| {
-                invalid_metadata(&format!("resolved package `{id}` has no dependency node"))
-            })?;
-            let projection = semantic_package_projection(package, node, &identities)?;
-            Ok::<_, WasmBuildError>((identity, projection))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    projected_packages.sort_by_key(|(identity, _)| *identity);
-
-    let mut hasher = InputHasher::new("wasm-semantic-workspace-projection-v1");
-    for (identity, projection) in projected_packages {
-        hasher.field("package-identity", identity.as_bytes());
-        hasher.field("package-projection", projection.as_bytes());
-    }
-    hash_toml_setting(&mut hasher, "cargo-features", root.get("cargo-features"));
-    hash_toml_setting(&mut hasher, "profile", root.get("profile"));
-    let workspace = root.get("workspace").and_then(TomlValue::as_table);
-    hash_toml_setting(
-        &mut hasher,
-        "workspace-resolver",
-        workspace.and_then(|table| table.get("resolver")),
-    );
-    hash_toml_setting(
-        &mut hasher,
-        "workspace-lints",
-        workspace.and_then(|table| table.get("lints")),
-    );
-    Ok(Some(hasher.finish()))
-}
-
-pub(super) fn locked_package_identities(
-    workspace_root: &Path,
-) -> Result<Vec<LockedPackageIdentity>, WasmBuildError> {
-    use crate::cargo::lockfile::{external_package, optional_string, required_string};
-    let lockfile = workspace_root.join("Cargo.lock");
-    let contents = match fs::read_to_string(&lockfile) {
-        Ok(contents) => contents,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(source) => {
-            return Err(WasmBuildError::Io {
-                operation: "read Cargo lockfile for semantic projection",
-                path: lockfile,
-                source,
-            });
-        }
-    };
-    let lock = toml::from_str::<TomlValue>(&contents).map_err(|error| {
-        invalid_metadata(&format!(
-            "Cargo lockfile could not be projected as TOML: {error}"
-        ))
-    })?;
-    let Some(packages) = lock.get("package").and_then(TomlValue::as_array) else {
-        return Ok(Vec::new());
-    };
-    let mut identities = Vec::new();
-    for package in packages {
-        let Some(table) = external_package(package)
-            .map_err(|message| invalid_metadata(&format!("Cargo lockfile {message}")))?
-        else {
-            continue;
-        };
-        let text = |field| {
-            required_string(table, field)
-                .map(str::to_owned)
-                .map_err(|_| {
-                    invalid_metadata(&format!(
-                        "Cargo lockfile package `{field}` is missing or not a string"
-                    ))
-                })
-        };
-        let source = required_string(table, "source")
-            .map_err(|_| invalid_metadata("Cargo lockfile package source is not a string"))?;
-        identities.push(LockedPackageIdentity {
-            name: text("name")?,
-            version: text("version")?,
-            source: source.to_owned(),
-            checksum: optional_string(table, "checksum")
-                .map_err(|_| invalid_metadata("Cargo lockfile package `checksum` is not a string"))?
-                .map(str::to_owned),
-        });
-    }
-    Ok(identities)
-}
-
-pub(super) fn semantic_package_identity(
-    package: &schema::Package,
-    workspace_root: &Path,
-    locked_packages: &LockedPackageIndex<'_>,
-) -> Option<InputDigest> {
-    let version = package.version.to_string();
-    let mut hasher = InputHasher::new("wasm-semantic-package-identity-v1");
-    hasher.field("name", package.name.as_bytes());
-    hasher.field("version", version.as_bytes());
-    if package.source.is_none() {
-        let manifest = package.manifest_path.strip_prefix(workspace_root).ok()?;
-        let package_root = package.manifest_path.parent()?;
-        if package_root == workspace_root {
-            return None;
-        }
-        hasher.field("local-manifest", &os_bytes(manifest.as_os_str()));
-    } else {
-        let metadata_source = &package.source.as_ref()?.repr;
-        let locked = locked_packages.get(&(
-            package.name.as_str(),
-            version.as_str(),
-            metadata_source.as_str(),
-        ))?;
-        match locked.source.as_str() {
-            source if source.starts_with("registry+") && locked.checksum.is_some() => {}
-            source if source.starts_with("git+") && source.contains('#') => {}
-            _ => return None,
-        }
-        hasher.field("external-package-id", package.id.repr.as_bytes());
-        hasher.field("external-source", locked.source.as_bytes());
-        hasher.field(
-            "external-checksum",
-            locked.checksum.as_deref().unwrap_or_default().as_bytes(),
-        );
-    }
-    Some(hasher.finish())
-}
-
-pub(super) fn semantic_package_projection(
-    package: &schema::Package,
-    node: &schema::Node,
-    identities: &HashMap<&str, InputDigest>,
-) -> Result<InputDigest, WasmBuildError> {
-    // These are the effective package values Cargo can expose to compilation
-    // through CARGO_PKG_* variables. Local manifests and external checksums
-    // cover the remaining package definition.
-    let mut hasher = InputHasher::new("wasm-semantic-package-projection-v2");
-    // Borrow typed fields explicitly: whole-package serialization would include
-    // checkout paths and inputs outside this semantic projection.
-    macro_rules! fields {
-        ($($field:ident),* $(,)?) => {$(
-            hasher.field("package-field-name", stringify!($field).as_bytes());
-            hasher.field("package-field-value", &serde_json::to_vec(&package.$field)
-                .expect("serializing Cargo fields into a Vec cannot fail"));
-        )*};
-    }
-    fields!(
-        authors,
-        default_run,
-        description,
-        documentation,
-        edition,
-        homepage,
-        license,
-        license_file,
-        links,
-        metadata,
-        name,
-        readme,
-        repository,
-        rust_version,
-        version
-    );
-
-    let mut features = node
-        .features
-        .iter()
-        .map(|feature| feature.as_str())
-        .collect::<Vec<_>>();
-    features.sort_unstable();
-    for feature in features {
-        hasher.field("enabled-feature", feature.as_bytes());
-    }
-
-    let mut dependencies = node
-        .deps
-        .iter()
-        .map(|dependency| {
-            if dependency.dep_kinds.iter().any(|kind| {
-                !matches!(
-                    kind.kind,
-                    schema::DependencyKind::Normal
-                        | schema::DependencyKind::Development
-                        | schema::DependencyKind::Build
-                )
-            }) {
-                return Err(invalid_metadata("unsupported Cargo dependency kind"));
-            }
-            let name = dependency.name.as_str();
-            let package_id = dependency.pkg.repr.as_str();
-            let identity = identities.get(package_id).copied().ok_or_else(|| {
-                invalid_metadata(&format!(
-                    "dependency `{package_id}` is outside the selected package closure"
-                ))
-            })?;
-            let kinds = serde_json::to_vec(&dependency.dep_kinds)
-                .expect("serializing Cargo dependency kinds into a Vec cannot fail");
-            Ok::<_, WasmBuildError>((name, identity, kinds))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    dependencies.sort();
-    for (name, identity, kinds) in dependencies {
-        hasher.field("dependency-name", name.as_bytes());
-        hasher.field("dependency-identity", identity.as_bytes());
-        hasher.field("dependency-kinds", &kinds);
-    }
-    Ok(hasher.finish())
-}
-
 fn hash_toml_setting(hasher: &mut InputHasher, label: &str, value: Option<&TomlValue>) {
     hasher.field("workspace-setting-name", label.as_bytes());
     match value {
@@ -444,19 +168,14 @@ fn hash_toml_setting(hasher: &mut InputHasher, label: &str, value: Option<&TomlV
     }
 }
 
-fn is_broad_workspace_input(label: &Path) -> bool {
-    label == Path::new("workspace/Cargo.toml") || label == Path::new("workspace/Cargo.lock")
-}
-
 pub(super) fn digest_resolved_local_inputs(
     inputs: &ResolvedLocalInputs,
     exclusions: &mut Vec<PathBuf>,
     cache: &mut LabeledPathDigestCache,
     declarations: &mut source_inputs::WorkspaceDeclarations,
     error_path: &Path,
-    validation_operation: &'static str,
-    semantic_operation: &'static str,
-) -> Result<(InputDigest, InputDigest), WasmBuildError> {
+    operation: &'static str,
+) -> Result<InputDigest, WasmBuildError> {
     // Tree admission is part of hashing, including missing/unreadable inputs.
     // Keep each batch entry's original failure phase and independent outcome.
     source_inputs::exclude_nested_workspace_targets(
@@ -469,11 +188,11 @@ pub(super) fn digest_resolved_local_inputs(
         declarations,
     )
     .map_err(|source| WasmBuildError::Io {
-        operation: validation_operation,
+        operation,
         path: error_path.to_owned(),
         source,
     })?;
-    let validation_digest = digest_labeled_paths_composable(
+    digest_labeled_paths_composable(
         "wasm-source-inputs-v1",
         inputs
             .validation_inputs
@@ -483,42 +202,10 @@ pub(super) fn digest_resolved_local_inputs(
         cache,
     )
     .map_err(|source| WasmBuildError::Io {
-        operation: validation_operation,
+        operation,
         path: error_path.to_owned(),
         source,
-    })?;
-    let input_digest = semantic_input_digest(inputs, validation_digest, exclusions, cache)
-        .map_err(|source| WasmBuildError::Io {
-            operation: semantic_operation,
-            path: error_path.to_owned(),
-            source,
-        })?;
-    Ok((input_digest, validation_digest))
-}
-
-fn semantic_input_digest(
-    inputs: &ResolvedLocalInputs,
-    validation_digest: InputDigest,
-    exclusions: &[PathBuf],
-    cache: &mut LabeledPathDigestCache,
-) -> io::Result<InputDigest> {
-    let Some(workspace) = inputs.workspace_projection else {
-        return Ok(validation_digest);
-    };
-    let path_digest = digest_labeled_paths_composable(
-        "wasm-source-inputs-v1",
-        inputs
-            .validation_inputs
-            .iter()
-            .filter(|(label, _)| !is_broad_workspace_input(label))
-            .map(|(label, path)| (label.as_path(), path.as_path())),
-        exclusions,
-        cache,
-    )?;
-    let mut hasher = InputHasher::new("wasm-semantic-source-inputs-v1");
-    hasher.field("path-input-digest", path_digest.as_bytes());
-    hasher.field("workspace-projection", workspace.as_bytes());
-    Ok(hasher.finish())
+    })
 }
 
 fn workspace_configuration_inputs(
@@ -725,9 +412,7 @@ fn source_exclusions(spec: &WasmBuildSpec, inputs: &[(PathBuf, PathBuf)]) -> Vec
         spec.workspace_root.join("target"),
         spec.workspace_root.join(".git"),
     ];
-    if let Some(shared_target) = shared_incremental_target(spec) {
-        exclusions.push(shared_target);
-    }
+    exclusions.push(shared_incremental_target(spec));
     for (_, path) in inputs {
         if path.is_dir() {
             exclusions.push(path.join("target"));
@@ -741,9 +426,7 @@ pub(super) fn validate_shared_incremental_target_boundary(
     spec: &WasmBuildSpec,
     inputs: &[(PathBuf, PathBuf)],
 ) -> Result<(), WasmBuildError> {
-    let Some(shared_target) = shared_incremental_target(spec) else {
-        return Ok(());
-    };
+    let shared_target = shared_incremental_target(spec);
     let shared_target =
         canonicalize_allow_missing(&shared_target).map_err(|source| WasmBuildError::Io {
             operation: "resolve shared incremental Cargo target boundary",

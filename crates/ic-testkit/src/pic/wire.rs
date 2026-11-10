@@ -125,6 +125,8 @@ impl std::error::Error for WireCallError {
 /// IC Wire owns native frame admission, primitive validation and traversal limits.
 /// Decoding may normalize collections or custom visitors. Use raw `PocketIC` calls
 /// to retain original frames when exact bytes are needed for hashes or retries.
+/// Primitive acceptance follows upstream Postcard, including redundant varint
+/// groups within width bounds; accepted bytes need not re-encode identically.
 ///
 /// # Errors
 /// Returns request encoding, query rejection or response decoding errors.

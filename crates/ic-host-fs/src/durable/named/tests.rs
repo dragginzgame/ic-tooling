@@ -186,56 +186,6 @@ fn parent_replacement_is_rejected_and_cleanup_uses_original_directory() {
 }
 
 #[test]
-fn sync_errors_have_correct_publication_state() {
-    let fixture = fixture();
-    let output = fixture.path().join("output");
-    fs::write(&output, b"old").unwrap();
-    let result = commit_path_with_options(
-        &output,
-        REPLACE_OPTIONS,
-        |_, file| {
-            use std::io::Write as _;
-            file.write_all(b"new")
-        },
-        (WriterCustody::Writable, |_, ()| Ok(())),
-        |step, _| {
-            if step == FileCommitStep::TemporaryFileSync {
-                Err(io::Error::from_raw_os_error(5))
-            } else {
-                Ok(())
-            }
-        },
-    );
-    assert!(
-        matches!(result, Err(NamedWriteError::BeforePublication { source, cleanup_error: None }) if source.raw_os_error() == Some(5))
-    );
-    assert_eq!(fs::read(&output).unwrap(), b"old");
-    assert_eq!(fs::read_dir(fixture.path()).unwrap().count(), 1);
-
-    let result = commit_path_with_options(
-        &output,
-        REPLACE_OPTIONS,
-        |_, file| {
-            use std::io::Write as _;
-            file.write_all(b"new")
-        },
-        (WriterCustody::Writable, |_, ()| Ok(())),
-        |step, _| {
-            if step == FileCommitStep::FinalParentSync {
-                Err(io::Error::from_raw_os_error(5))
-            } else {
-                Ok(())
-            }
-        },
-    );
-    assert!(
-        matches!(result, Err(NamedWriteError::AfterPublication { source }) if source.raw_os_error() == Some(5))
-    );
-    assert_eq!(fs::read(&output).unwrap(), b"new");
-    assert_eq!(fs::read_dir(fixture.path()).unwrap().count(), 1);
-}
-
-#[test]
 fn failed_publication_cleans_staging_before_dropping_the_produced_value() {
     use std::{cell::Cell, path::PathBuf};
 

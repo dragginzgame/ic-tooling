@@ -3,7 +3,7 @@
 use clap::{Arg, Command, value_parser};
 use ic_build::artifacts::{
     ArtifactCacheOutcome, ArtifactCachePreparation, ArtifactCacheSpec, CacheRetentionLimits,
-    prepare_artifact_cache,
+    prepare_artifact_cache, prune_artifact_cache,
 };
 use std::{path::PathBuf, time::Duration};
 use {
@@ -75,12 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_input("source", &input)
     .with_tool("transformer", &tool)
     .with_arguments(["<input>", "<output>"])
-    .with_output("result", &output)
-    .with_prune_policy(
-        CacheRetentionLimits::new()
-            .with_max_age(Duration::from_hours(7 * 24))
-            .with_max_size_bytes(2 * 1024 * 1024 * 1024),
-    );
+    .with_output("result", &output);
 
     let outcome = match prepare_artifact_cache(&spec)? {
         ArtifactCachePreparation::Reused(record) => ArtifactCacheOutcome::Reused(record),
@@ -97,6 +92,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    // This example chooses strict retention after acquisition; holding outcome
+    // protects the exact output while other entries are pruned.
+    let _ = prune_artifact_cache(
+        spec.cache_root(),
+        spec.namespace(),
+        CacheRetentionLimits::new()
+            .with_max_age(Duration::from_hours(7 * 24))
+            .with_max_size_bytes(2 * 1024 * 1024 * 1024),
+    )?;
     let disposition = if outcome.is_reused() {
         "reused"
     } else {

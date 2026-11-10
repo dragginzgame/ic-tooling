@@ -6,6 +6,30 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.82.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Build Wasm through one shared Cargo target path. Replace isolated-mode selection
+  with a fresh caller-owned target directory when independent compiler state is
+  required. Retained final artifacts and their leases remain independent.
+- Invoke shared-target maintenance and exact-cache pruning explicitly before or
+  after acquisition. Remove acquisition-time maintenance/pruning builders,
+  nonfatal maintenance records, timing fields and phases; callers select cadence
+  and error handling through the existing maintenance and prune functions.
+  Retained records continue to protect live outputs. Exact-cache schedule markers
+  remain untouched and no longer schedule pruning.
+- Use the full source/configuration digest for both cache identity and mutation
+  guards, including complete workspace manifest and lockfile bytes. Remove
+  `validation_digest()` and the corresponding export-receipt field. Unrelated
+  workspace configuration edits now invalidate exact reuse. New fingerprint keys
+  leave previous cache entries intact without automatic cleanup.
+
+### 🧹 Cleanup
+
+- Retire semantic package projections, lockfile identity indexing and duplicate
+  cache-mode tests while retaining source-race, locking and publication coverage.
+
 ## [0.81.2] - 2026-11-10
 
 ### 🔧 Changed

@@ -145,11 +145,12 @@ CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 perl -MJSON::PP -e '
                                 && ($dependency->{kind} // "") eq "dev" && !defined($dependency->{target})
                                 && ref($package->{publish}) eq "ARRAY" && !@{$package->{publish}})
                             && !($name eq "pocket-ic"
-                                && ($package->{name} eq "ic-testkit"
-                                    || ($package->{name} eq "ic-testkit-dev"
-                                        && ref($package->{publish}) eq "ARRAY" && !@{$package->{publish}}))
-                                && !defined($dependency->{kind})
-                                && ($dependency->{target} // "") eq q{cfg(not(target_family = "wasm"))})
+                                && ($dependency->{target} // "") eq q{cfg(not(target_family = "wasm"))}
+                                && (($dependency->{kind} // "") eq "dev"
+                                    || (!defined($dependency->{kind})
+                                        && ($package->{name} eq "ic-testkit"
+                                            || ($package->{name} eq "ic-testkit-dev"
+                                                && ref($package->{publish}) eq "ARRAY" && !@{$package->{publish}})))))
                             && !($package->{name} eq "ic-testkit"
                                 && ($name eq "candid" || $name eq "ic-certification" || $name eq "ic-management-canister-types" || $name eq "ic-transport-types")
                                 && !defined($dependency->{kind})

@@ -1,19 +1,12 @@
-use super::cache_fs::canonicalize_allow_missing;
 use super::{CacheBatchEntry, CacheBatchReport, CacheOutcomeCounts};
 use ic_host_artifacts::batch::{BatchLabelError, validate_labels};
 
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use super::wasm_cache::{
-    SharedIncrementalTargetMaintenanceConfig, SharedIncrementalTargetMaintenanceOutcome,
     WasmBuildBatchInputMetrics, WasmBuildBatchInputResolver, WasmBuildError,
     WasmBuildFailureDetails, WasmBuildOutcome, WasmBuildProgressConfig, WasmBuildProgressEvent,
     WasmBuildSpec, WasmBuildTimings, build_wasm_canisters_cached_in_batch,
-    shared_incremental_target,
 };
 
 /// Caller-labeled specification for one exact Wasm batch entry.
@@ -74,27 +67,6 @@ pub enum WasmBuildBatchProgressEvent {
 }
 
 impl WasmBuildBatchReport {
-    /// Canonical entries paired with their integrated shared-target maintenance.
-    ///
-    /// Batch-owned maintenance contributes at most one outcome for each
-    /// distinct configured shared-target path.
-    pub fn shared_incremental_maintenance_outcomes(
-        &self,
-    ) -> impl Iterator<
-        Item = (
-            &CacheBatchEntry<WasmBuildOutcome, WasmBuildBatchFailure>,
-            &SharedIncrementalTargetMaintenanceOutcome,
-        ),
-    > {
-        self.batch.outcomes().filter_map(|entry| {
-            entry
-                .outcome()?
-                .record()
-                .shared_incremental_maintenance()
-                .map(|outcome| (entry, outcome))
-        })
-    }
-
     /// Aggregate outcome, input-resolution reuse, and timing counters.
     #[must_use]
     pub fn metrics(&self) -> WasmBuildBatchMetrics {
@@ -190,8 +162,7 @@ impl std::fmt::Display for WasmBuildBatchReport {
 
 /// Build every Wasm specification as an independent Cargo invocation.
 ///
-/// Each spec owns its maintenance policy. The batch applies matching policies
-/// once per canonical shared target and rejects conflicting policies per entry.
+/// Shared-target maintenance is a separate caller-owned operation.
 /// Pass optional progress reporting.
 /// `spawn` selects Cargo child/group custody and cleanup for each cache miss,
 /// independently of progress; it may override the default null stdin.
@@ -220,7 +191,7 @@ pub fn build_wasm_canisters_cached_batch(
     validate_labels(specs.iter().map(LabeledWasmBuildSpec::label))?;
     let mut resolver =
         WasmBuildBatchInputResolver::new(specs.iter().map(LabeledWasmBuildSpec::spec));
-    let mut report = build_wasm_batch(specs, |spec, index, maintenance| {
+    let mut report = build_wasm_batch(specs, |spec, index| {
         let progress_config = progress.as_ref().map(|(config, _)| *config);
         let mut forward = |event| {
             if let Some((_, observer)) = progress.as_mut() {
@@ -233,7 +204,6 @@ pub fn build_wasm_canisters_cached_batch(
         };
         build_wasm_canisters_cached_in_batch(
             spec,
-            maintenance,
             index,
             &mut resolver,
             progress_config.map(|config| (config, &mut forward as &mut dyn FnMut(_))),
@@ -249,22 +219,14 @@ where
     F: FnMut(
         &WasmBuildSpec,
         usize,
-        Option<SharedIncrementalTargetMaintenanceConfig>,
     ) -> Result<WasmBuildOutcome, (WasmBuildError, WasmBuildFailureDetails)>,
 {
     let started = Instant::now();
     let mut entries = Vec::with_capacity(specs.len());
-    let mut maintenance = BatchMaintenanceTracker::default();
     for (index, labeled) in specs.iter().enumerate() {
         let entry_started = Instant::now();
         let spec = &labeled.spec;
-        let result = match maintenance.prepare_spec(spec) {
-            Ok(configured) => build(spec, index, configured),
-            Err(error) => Err((
-                error,
-                WasmBuildFailureDetails::specification(entry_started.elapsed()),
-            )),
-        };
+        let result = build(spec, index);
         entries.push(CacheBatchEntry {
             index,
             label: labeled.label.clone(),
@@ -278,42 +240,6 @@ where
             total: started.elapsed(),
         },
         input_resolution: WasmBuildBatchInputMetrics::default(),
-    }
-}
-
-#[derive(Default)]
-struct BatchMaintenanceTracker {
-    configured_targets: HashMap<PathBuf, SharedIncrementalTargetMaintenanceConfig>,
-}
-
-impl BatchMaintenanceTracker {
-    fn prepare_spec(
-        &mut self,
-        spec: &WasmBuildSpec,
-    ) -> Result<Option<SharedIncrementalTargetMaintenanceConfig>, WasmBuildError> {
-        let Some(config) = spec.shared_incremental_target_maintenance() else {
-            return Ok(None);
-        };
-        let Some(target_dir) = shared_incremental_target(spec) else {
-            return Ok(None);
-        };
-        let canonical =
-            canonicalize_allow_missing(&target_dir).map_err(|source| WasmBuildError::Io {
-                operation: "resolve batch shared incremental target",
-                path: target_dir,
-                source,
-            })?;
-        if let Some(previous) = self.configured_targets.get(&canonical) {
-            if *previous != config {
-                return Err(WasmBuildError::InvalidSpec {
-                    message: "shared target has conflicting maintenance policies in one batch"
-                        .to_owned(),
-                });
-            }
-            return Ok(None);
-        }
-        self.configured_targets.insert(canonical, config);
-        Ok(Some(config))
     }
 }
 

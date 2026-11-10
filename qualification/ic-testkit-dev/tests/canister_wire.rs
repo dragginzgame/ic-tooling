@@ -217,6 +217,19 @@ async fn assert_probe_contract(fixture: &StandaloneCanisterFixture) {
                 .unwrap(),
             expected
         );
+        // Wire 0.20 admits redundant Postcard groups on the actual Wasm server.
+        let mut nonminimal =
+            ic_wire::native::encode_request(SEED_STATE.id, &(), SEED_STATE.request_limits).unwrap();
+        nonminimal.extend_from_slice(&[u8::try_from(size).unwrap() | 0x80, 0]);
+        pic.update_call(id, caller, SEED_STATE.name, nonminimal)
+            .await
+            .expect("nonminimal seed request follows upstream Postcard admission");
+        assert_eq!(
+            query_wire::<_, State>(pic, id, caller, probe_wire_spec(INSPECT_STATE), &())
+                .await
+                .unwrap(),
+            expected
+        );
     }
     update_wire::<_, ()>(pic, id, caller, probe_wire_spec(MUTATE_STATE), &())
         .await

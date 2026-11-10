@@ -49,7 +49,7 @@ printf '%s' "$VARIANT" > "$output/wasm32-unknown-unknown/debug/fixture.wasm"
     root
 }
 
-fn isolated_wasm_spec(root: &Path, variant: &str) -> WasmBuildSpec {
+fn wasm_spec(root: &Path, variant: &str) -> WasmBuildSpec {
     WasmBuildSpec::new(
         &root.join("workspace"),
         &root.join("wasm"),
@@ -57,7 +57,7 @@ fn isolated_wasm_spec(root: &Path, variant: &str) -> WasmBuildSpec {
         ic_build::testing::cargo::environment(),
         CONFIGURATION_LIMITS,
     )
-    .with_isolated_builds()
+    .with_shared_incremental_target(root.join("shared"))
     .with_cargo_program(root.join("cargo.sh"))
     .with_environment(ic_build::testing::cargo::environment_with([
         (
@@ -66,29 +66,21 @@ fn isolated_wasm_spec(root: &Path, variant: &str) -> WasmBuildSpec {
         ),
         ("VARIANT", variant.to_owned()),
     ]))
-    .with_prune_policy(CacheRetentionLimits::new().with_max_size_bytes(0))
-}
-
-fn wasm_spec(root: &Path, variant: &str) -> WasmBuildSpec {
-    isolated_wasm_spec(root, variant).with_shared_incremental_target(root.join("shared"))
 }
 
 #[test]
-fn isolated_build_records_retain_cold_and_warm_artifacts() {
+fn build_records_retain_cold_and_warm_artifacts() {
     let root = fixture();
     let first =
-        build_wasm_canisters_cached(&isolated_wasm_spec(&root, "A"), OwnedChild::spawn_direct)
-            .unwrap();
+        build_wasm_canisters_cached(&wasm_spec(&root, "A"), OwnedChild::spawn_direct).unwrap();
     assert!(!first.is_reused());
     let entry = first.record().exact_cache_path().to_owned();
     assert!(first.record().artifacts()[0].starts_with(&entry));
     let other =
-        build_wasm_canisters_cached(&isolated_wasm_spec(&root, "B"), OwnedChild::spawn_direct)
-            .unwrap();
+        build_wasm_canisters_cached(&wasm_spec(&root, "B"), OwnedChild::spawn_direct).unwrap();
     assert_ne!(other.record().exact_cache_path(), entry);
     let reused =
-        build_wasm_canisters_cached(&isolated_wasm_spec(&root, "A"), OwnedChild::spawn_direct)
-            .unwrap();
+        build_wasm_canisters_cached(&wasm_spec(&root, "A"), OwnedChild::spawn_direct).unwrap();
     assert!(reused.is_reused());
     let record = reused.record().clone();
     assert_eq!(&record, reused.record());
@@ -121,7 +113,6 @@ fn post_spec(root: &Path, input: &Path) -> ArtifactCacheSpec {
     ArtifactCacheSpec::new(&root.join("post"), "handoff", "post-link/v1")
         .with_input("wasm", input)
         .with_output("deploy", &root.join("deploy.wasm"))
-        .with_prune_policy(CacheRetentionLimits::new().with_max_size_bytes(0))
 }
 
 fn post_link(spec: &ArtifactCacheSpec, input: &Path) -> ArtifactCacheOutcome {
@@ -203,7 +194,7 @@ fn exercise_process_handoff(warm: bool, terminate: bool) {
         drop(seed);
         // Force the worker's warm hit to rematerialize A, not just reuse an
         // already matching public output. Do not prune A during this setup.
-        let alternate = wasm_spec(&root, "B").with_prune_policy(CacheRetentionLimits::new());
+        let alternate = wasm_spec(&root, "B");
         drop(build_wasm_canisters_cached(&alternate, OwnedChild::spawn_direct).unwrap());
         fs::write(root.join("deploy.wasm"), b"B").unwrap();
     }

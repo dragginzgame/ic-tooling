@@ -75,7 +75,7 @@ yaml_serde = "0.10.7"
 
 # External mixed production/test dependencies
 clap = { version = "4.6.7", default-features = false, features = ["std", "help", "usage", "error-context"] }
-ic-wire = "0.19.0"
+ic-wire = "0.20.0"
 leb128 = "0.2.5"
 reqwest = { version = "0.13.5", default-features = false }
 serde = { version = "1.0.228", default-features = false }
@@ -84,7 +84,7 @@ tokio = { version = "1.52.3", default-features = false }
 wasmparser = { version = "0.263", default-features = false, features = ["std", "features"] }
 
 # Tests and tooling only
-toko-tooling = "=0.39.6"
+toko-tooling = "=0.39.9"
 
 [workspace.lints.rust]
 missing_docs = "warn"

@@ -178,7 +178,7 @@ when changing interfaces, persistence or installation/recovery behavior.
   releases; after changing the pin and Cargo.lock, run `make toko-tooling-update`.
   Offline admission checks every member, Cargo.lock and installed bytes together.
   See the
-  [tooling selection rule](https://github.com/dragginzgame/toko-tooling/blob/626da7cd9626cc2e152594862a2d82ea82ef51da/rules/cargo-dependencies.md#toko-tooling-during-dependency-updates).
+  [tooling selection rule](https://github.com/dragginzgame/toko-tooling/blob/d4b09ceb6dd94d825adee2b894fa26dac4618ae0/rules/cargo-dependencies.md#toko-tooling-during-dependency-updates).
 - Give repeated validation one execution owner: selected group scope must reach
   the leaf commands, and aggregate gates must not repeat full lint/setup through
   nested targets. Reuse unchanged release-stage evidence only through the
@@ -253,18 +253,26 @@ This section supersedes older linked guidance permitting new maintained imports.
 
 ## Canonical licence and contribution policy
 
-- Use only the Toko Studios Network Licence for first-party code. Each repository
-  keeps one root `LICENSE.md` and one root `CONTRIBUTING.md`, byte-identical to
+- Use only the Toko Studios Network Licence when granting a public licence for
+  first-party code. Repositories granting that licence keep one root `LICENSE.md`
+  and one root `CONTRIBUTING.md`, byte-identical to
   the canonical files in its reviewed Toko Tooling release. Adopt updates from
   that master deliberately; do not customise the copies or fetch moving `main`
   during builds. Local engineering instructions belong in `AGENTS.md`.
+- Confidential proprietary repositories do not adopt a public licence merely
+  to use this tooling. Omit first-party licence files and Cargo licence metadata;
+  set every private Cargo package to `publish = false` and npm packages to
+  `private: true`. Retain the canonical contribution policy. An unpublished
+  helper in a licensed repository still inherits that repository's licence;
+  publication flags alone do not determine licence coverage or confidentiality.
 - Do not retain nested licence files, alternate licences, `licenses/` trees or
   duplicate contribution policies in tracked source, including vendored tooling
   snapshots. Package metadata points to the root licence; a standalone package
   archive may include the canonical licence where its packaging requires it,
   without creating a second maintained source copy.
-- Rust workspaces declare `license-file` in `[workspace.package]`; every member,
-  including private and qualification packages, uses
+- Rust workspaces covered by the repository's Toko licence declare `license-file`
+  in `[workspace.package]`; every covered member, including unpublished helpers
+  and qualification packages, uses
   `[package] license-file.workspace = true`. The product workspace selects
   `"LICENSE.md"`; an independent `qualification/Cargo.toml` selects
   `"../LICENSE.md"`, pointing to the same repository-root file. Resolve the path
@@ -525,12 +533,12 @@ boundary, rather than automatically updating the whole fleet.
 Follow the [adoption planning contract](https://github.com/dragginzgame/toko-tooling/blob/626da7cd9626cc2e152594862a2d82ea82ef51da/docs/cargo-graph-checks.md#dependency-adoption-planning).
 Use root-owned dependency selections, reviewed toko tooling and explicit setup.
 Rust 1.99.1 is the approved minimum and pinned development/release compiler;
-follow the [compiler support policy](https://github.com/dragginzgame/toko-tooling/blob/626da7cd9626cc2e152594862a2d82ea82ef51da/rules/cargo-dependencies.md#minimum-supported-rust-version-msrv)
+follow the [compiler support policy](https://github.com/dragginzgame/toko-tooling/blob/d4b09ceb6dd94d825adee2b894fa26dac4618ae0/rules/cargo-dependencies.md#minimum-supported-rust-version-msrv)
 when adopting it and consolidating duplicate compiler checks. Preserve product
 host requirements. Select canonical identities
 from `ic-platform-types`, IC0/execution from `ic-platform-runtime`, and crypto or
 external IC adapters from `ic-platform`, following the
-[Platform ownership rules](https://github.com/dragginzgame/toko-tooling/blob/626da7cd9626cc2e152594862a2d82ea82ef51da/rules/cargo-dependencies.md#platform-package-owners).
+[Platform ownership rules](https://github.com/dragginzgame/toko-tooling/blob/d4b09ceb6dd94d825adee2b894fa26dac4618ae0/rules/cargo-dependencies.md#platform-package-owners).
 External IC dependencies remain behind that reviewed boundary; Types alone may
 add `ic_principal` for explicit registry conversions. Self-authentication does
 not enable those conversions. npm SDK Core uses

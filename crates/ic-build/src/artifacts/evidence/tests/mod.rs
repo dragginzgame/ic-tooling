@@ -32,10 +32,6 @@ fn export_preserves_exact_bytes_and_refuses_limits_and_changed_source() {
     let receipt = evidence.export_artifact(0, &destination, 8).unwrap();
     assert_eq!(receipt.build_fingerprint, inputs.fingerprint().to_string());
     assert_eq!(receipt.input_digest, inputs.input_digest().to_string());
-    assert_eq!(
-        receipt.validation_digest,
-        inputs.validation_digest().to_string()
-    );
     assert_eq!(fs::read(&destination).unwrap(), b"\0asm\x01\0\0\0");
     assert_eq!(
         receipt.wasm_sha256,
@@ -100,11 +96,8 @@ fn raw_input_changes_and_mismatched_recipe_fingerprints_refuse_evidence() {
     changed.extend_from_slice(b"\n# unrelated workspace edit\n");
     fs::write(root.join("Cargo.toml"), changed).unwrap();
     let current = resolve_cargo_build_inputs(&spec).unwrap();
-    assert_eq!(current.fingerprint(), evidence.identity.fingerprint);
-    assert_ne!(
-        current.validation_digest(),
-        evidence.identity.validation_digest
-    );
+    assert_ne!(current.fingerprint(), evidence.fingerprint);
+    assert_ne!(current.input_digest(), evidence.input_digest);
     assert!(evidence.verify_current().is_err());
     fs::write(root.join("Cargo.toml"), original).unwrap();
     fs::create_dir_all(root.join(".cargo")).unwrap();

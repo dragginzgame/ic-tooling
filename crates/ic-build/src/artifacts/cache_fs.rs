@@ -154,19 +154,6 @@ pub struct ArtifactCachePruneReport {
     uncommitted_bytes_removed: u64,
 }
 
-/// Nonfatal retention attempted as part of a successful cache acquisition.
-#[non_exhaustive]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ArtifactCacheMaintenance {
-    /// Configured retention completed under the cache lock.
-    Pruned(ArtifactCachePruneReport),
-    /// Configured retention failed after the requested artifacts were ready.
-    PruneFailed {
-        /// Cache error rendered without invalidating the successful acquisition.
-        message: String,
-    },
-}
-
 impl CacheRetentionLimits {
     /// Create explicit limits without an age or size threshold.
     #[must_use]
@@ -264,26 +251,6 @@ impl ArtifactCachePruneReport {
     pub(super) const fn record_uncommitted_removal(&mut self, bytes: u64) {
         self.uncommitted_directories_removed += 1;
         self.uncommitted_bytes_removed = self.uncommitted_bytes_removed.saturating_add(bytes);
-    }
-}
-
-impl ArtifactCacheMaintenance {
-    /// Successful pruning report, or `None` when maintenance failed.
-    #[must_use]
-    pub const fn prune_report(&self) -> Option<ArtifactCachePruneReport> {
-        match self {
-            Self::Pruned(report) => Some(*report),
-            Self::PruneFailed { .. } => None,
-        }
-    }
-
-    /// Rendered maintenance failure, or `None` when pruning succeeded.
-    #[must_use]
-    pub fn failure_message(&self) -> Option<&str> {
-        match self {
-            Self::Pruned(_) => None,
-            Self::PruneFailed { message } => Some(message),
-        }
     }
 }
 
@@ -416,43 +383,6 @@ pub(super) fn record_cache_maintenance(
     )
 }
 
-pub(super) fn perform_scheduled_cache_maintenance(
-    path: &Path,
-    minimum_interval: Duration,
-    maintenance_identity: &str,
-    maintenance: impl FnOnce() -> Result<ArtifactCachePruneReport, String>,
-) -> (Option<ArtifactCacheMaintenance>, Duration) {
-    let started = Instant::now();
-    match cache_maintenance_due(path, minimum_interval, maintenance_identity) {
-        Ok(false) => return (None, started.elapsed()),
-        Ok(true) => {}
-        Err(error) => {
-            return (
-                Some(ArtifactCacheMaintenance::PruneFailed {
-                    message: error.to_string(),
-                }),
-                started.elapsed(),
-            );
-        }
-    }
-
-    let result = maintenance();
-    let marker = record_cache_maintenance(path, maintenance_identity);
-    let outcome = match (result, marker) {
-        (Ok(report), Ok(())) => ArtifactCacheMaintenance::Pruned(report),
-        (Err(message), Ok(())) => ArtifactCacheMaintenance::PruneFailed { message },
-        (Ok(_), Err(error)) => ArtifactCacheMaintenance::PruneFailed {
-            message: error.to_string(),
-        },
-        (Err(message), Err(marker)) => ArtifactCacheMaintenance::PruneFailed {
-            message: format!(
-                "{message}; additionally failed to record the maintenance attempt: {marker}"
-            ),
-        },
-    };
-    (Some(outcome), started.elapsed())
-}
-
 pub(super) fn write_last_used(path: &Path, last_used: SystemTime) -> Result<(), CacheFsError> {
     let marker = path.join(LAST_USED_FILE);
     write_system_time(&marker, last_used, "record cache use time")
@@ -507,7 +437,6 @@ fn decode_system_time(contents: &str) -> Option<SystemTime> {
 pub(super) fn prune_direct_child_directories(
     cache_root: &Path,
     policy: CacheRetentionLimits,
-    protected_entry: Option<&Path>,
     is_eligible: impl Fn(&Path) -> bool,
 ) -> Result<ArtifactCachePruneReport, CacheFsError> {
     let mut entries = cache_entries(cache_root, is_eligible)?;
@@ -527,7 +456,7 @@ pub(super) fn prune_direct_child_directories(
     if let Some(max_age) = policy.max_age() {
         for entry in &mut entries {
             let age = now.duration_since(entry.last_used).unwrap_or_default();
-            if protected_entry != Some(entry.path.as_path()) && age > max_age {
+            if age > max_age {
                 remove_cache_entry(entry, &mut report)?;
             }
         }
@@ -544,9 +473,6 @@ pub(super) fn prune_direct_child_directories(
         for entry in &mut entries {
             if report.bytes_retained() <= max_size_bytes {
                 break;
-            }
-            if protected_entry == Some(entry.path.as_path()) {
-                continue;
             }
             remove_cache_entry(entry, &mut report)?;
         }

@@ -8,6 +8,16 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.99.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt IC Wire 0.20 for public adapter identities and the private Wasm probe.
+  Decoding follows upstream Postcard, accepting redundant varint groups within
+  width bounds and its primitive normalization. Encoder bytes, method identities
+  and budgets remain unchanged; retain original frames for exact retries/hashes.
+  Existing stored encodings need no rewriting.
+
 ## [0.98.0] - 2026-11-10
 
 ### ⚠️ Breaking
