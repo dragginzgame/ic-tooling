@@ -2,26 +2,47 @@
 
 ## Delivery
 
-Build/Testkit reductions and Platform/Wire adoption are published. Latest product
-release commit: `1e9667a02c90be1c53747bba7fa957b09369f5da`.
-Frozen batch `batch-OHBHvLXU` completed and was reconciled into ordinary main.
+Platform 0.31 adoption is published. Latest product release commit:
+`f760451d02d95664bbca888ea90d5c78e856058a`. Frozen Tools batch
+`batch-OsoImRVe` and Testkit batch `batch-LRmZoenK` completed and were reconciled
+into ordinary main.
 
 | Group | Published | Release commit |
 | --- | --- | --- |
 | Foundation (five packages) | 0.76.4 | a1b50ffc |
 | Build | 0.83.0 | 662516e5 |
 | Text | 0.74.5 | f0352237 |
-| Host Tools | 0.90.0 | 4dcfb962 |
-| Testkit | 0.100.0 | 1e9667a0 |
+| Host Tools | 0.91.0 | 1b60f3a0 |
+| Testkit | 0.100.1 | f760451d |
 
-The three new versions were independently verified present and not yanked, and
+Both new versions were independently verified present and not yanked, and
 GitHub's annotated tags match the local identities. Private qualification packages
 remain 0.96.0. Each group passed its complete 32-stage Linux gate, including
 warning-denied lint, archive qualification, installed PocketIC, Wasm/probe and
 workspace tests. Native macOS 15 Intel and Apple Silicon results are separate;
 new hosted qualification is asynchronous and not claimed as passing here.
 
-This batch captured Toko Tooling 0.39.9 before the subsequent refresh request.
+Both batches captured Toko Tooling 0.39.10, Platform 0.31.0 and Types 0.19.3.
+Runtime/macros/guard remain 0.21.1; release Wire selections remain 0.21.0.
+Unrelated ordinary lock selections were preserved outside both releases and
+reapplied after reconciliation. Durable copies are recorded by
+`preserve/deploy-20261111-platform31-dependencies`,
+`preserve/deploy-platform31-before-tools-reconcile` and
+`preserve/deploy-platform31-before-testkit-reconcile`; original files and patches
+remain under `.git/release-state/preserve/deploy-20261111-platform31-tools91-testkit1001/`.
+No batches or artifacts were retired. Candidate Git/journals remain under
+`.git/release-state/frozen/`, with managed checkouts under `target/release-frozen/`.
+Logs are `target/deploy-platform31-tools91.log` and
+`target/deploy-platform31-testkit1001.log`, with corresponding `-reconcile.log`
+files. Independent registry observations remain in `target/deploy-platform31-registry/`.
+
+The release-commit CI and Testkit runtime runs were in progress when checked;
+Browser fixture session passed. The final handoff delivery requests an explicit
+asynchronous native qualification run so a documentation-only push cannot
+supersede the required three-host proof. No hosted result is inferred from Linux.
+
+Earlier batch `batch-OHBHvLXU` published Build 0.83.0, Tools 0.90.0 and Testkit
+0.100.0, then reconciled into ordinary main. It captured Toko Tooling 0.39.9.
 Its release inputs retained Wire 0.21.0 in both workspaces. Unrelated ordinary
 lock selections, including Wire 0.21.1, were preserved outside publication and
 reapplied after reconciliation. Durable preservation branches are
@@ -41,9 +62,9 @@ the receipt. Baseline and tool catalogs are unchanged. Source preparation, tool
 admission, snapshot/inheritance/pin checks and actual Tools/Testkit native/Wasm
 dependency graphs pass. Evidence is under `target/toko03910/`.
 
-The root pin changes normalized package dev-dependency requirements. Patch notes
-are queued in the five group ledgers for their next releases; this follow-up
-delivers the development selection through Git without another publication batch.
+The root pin changes normalized package dev-dependency requirements. Tools and
+Testkit now ship those changes; Foundation, Build and Text retain queued notes
+for their next independently required releases.
 Unrelated product-lock refreshes remain unstaged.
 
 The hosted runtime workflow now selects the current standalone transport-panic
@@ -51,26 +72,28 @@ and failed-rebuild recovery test. The stale selector matched no tests. Its exact
 replacement command passed against published Testkit 0.100.0 in the completed
 frozen checkout; evidence is `target/deploy-hosted-selector-check.log`.
 
-## Pending Platform 0.31 adoption
+## Delivered Platform 0.31 adoption
 
 Both workspaces now require Platform 0.31.0 and Types 0.19.3. Runtime, macros and
 singleton guard remain 0.21.1; Wire selections are unchanged. No Rust callers or
 feature boundaries needed changes. These profiles select none of Platform's
 changed BLS, ECDSA or Ed25519 implementations. Codec/ledger public identities
-require pending Host Tools 0.91.0, carrying its previous 0.90.1 tooling note.
-Testkit's compatible private held-fixture adoption remains in pending 0.100.1.
-Actual package versions remain at the published versions above.
+ship in Host Tools 0.91.0, carrying its previous 0.90.1 tooling note. Testkit's
+compatible private held-fixture adoption ships in 0.100.1. Foundation, Build and
+Text do not need alignment releases.
 
 The current-source `make dependency-adoption-check` passes on Linux: isolated
 graphs, Tools codec/Agent/Registry/ledger adapters, snapshot refusal, Wire calls,
 installed PocketIC contracts and the private installed Wasm probe. Three public
 identity tests, two live held-reply tests and selected warning-denied Tools/
-Testkit library Clippy also pass. No new native macOS or full release gate ran.
+Testkit library Clippy also pass. These focused development checks preceded the
+two complete Linux release gates recorded above; no new native macOS result is
+claimed.
 Evidence and both original manifests/locks remain in
 `target/platform031-adoption.5fGOP5/`. Relative to the saved input, the final
 product lock changes only Platform; Types 0.19.3 was already selected there.
 Qualification changes only Platform/Types. Existing unrelated product-lock
-selections are preserved. This adoption is local/uncommitted/unpublished.
+selections are preserved. Source adoption commit: `3a567813`.
 
 ## Next three fixes
 
@@ -82,9 +105,9 @@ selections are preserved. This adoption is local/uncommitted/unpublished.
 These three audit findings are not implemented. Canic's existing Build caller
 migration remains in [Canic #762 — Migrate IC Build callers to explicit maintenance and pruning](https://github.com/dragginzgame/canic/issues/762).
 
-## Delivered dependency adoption
+## Earlier Platform 0.30 and Wire adoption
 
-The release workspaces select published Platform 0.30.0, Types 0.19.2 and Wire
+The preceding releases selected published Platform 0.30.0, Types 0.19.2 and Wire
 0.21.0. The private probe selects Runtime/macros/guard 0.21.1. Runtime now owns
 the upstream IC0 1.2.0 dependency; qualification admits that direct owner before
 requiring one raw provider, while native and portable Testkit keep forbidding it.
