@@ -6,10 +6,11 @@
 
 PocketIC-oriented test utilities for Internet Computer canister tests.
 
-Host-side tests select upstream `pocket-ic` for the client and Testkit for lifecycle helpers. Host Tools releases independently.
+Host-side tests select Testkit for lifecycle helpers and its `pocket_ic` re-export
+for the upstream client. Host Tools releases independently.
 
 ```bash
-cargo add --dev ic-testkit pocket-ic@16.1.0
+cargo add --dev ic-testkit
 ```
 
 Cargo records the selected versions in the consuming manifest and lockfile.
@@ -22,12 +23,14 @@ The minimum and pinned development compiler is Rust 1.99.1, and the selected Poc
 Testkit's portable library provides deterministic test principals through
 `ic-platform-types`, without an IC runtime dependency. The private performance
 probe selects Runtime's entrypoints directly. Native simulator operations use
-`pocket_ic::nonblocking::PocketIc` and `pocket_ic::PocketIcBuilder`; `pic` supplies
+`ic_testkit::pocket_ic::nonblocking::PocketIc` and
+`ic_testkit::pocket_ic::PocketIcBuilder`; `pic` supplies
 host-only lifecycle and fixture helpers. Platform is selected only by held fixtures.
 Standalone recipe builders return `std::io::Result<StandaloneCanisterFixture>`.
 
 Upstream owns builder configuration, native Principal/management identities and
-client behavior. Testkit maintains no fork or compatibility re-export. See the
+client behavior. The native-only re-export preserves those exact upstream types;
+a separate `pocket-ic` dependency is unnecessary. Testkit maintains no client fork. See the
 [breaking migration](../../docs/testkit/client-migration.md).
 
 External interfaces that require Candid remain caller-owned: use a direct

@@ -37,8 +37,10 @@ Read [the current handoff](docs/status/current.md) before implementation.
 ## Upstream native PocketIC dependency
 
 The maintainer explicitly approved returning to published `pocket-ic` 16.1 with
-a breaking migration on 2026-11-10. Import its async client and builder directly;
-do not maintain a fork, a compatibility facade or duplicate protocol DTOs here.
+a breaking migration on 2026-11-10. On 2026-11-11 the maintainer approved the
+native-only `ic_testkit::pocket_ic` re-export of that selected upstream crate, so
+callers need not select the client separately. Preserve upstream type identity;
+do not maintain a fork, restore fork-specific APIs or duplicate protocol DTOs here.
 This is a scoped native IC dependency-boundary exception: upstream owns its
 Candid/management identities, transport panics, polling and best-effort deletion.
 Fork-specific typed transport recovery and bounded snapshot-transfer APIs retire.

@@ -1,16 +1,20 @@
 # Upstream PocketIC migration — Testkit 0.98 and later
 
-Testkit no longer maintains a PocketIC client. Depend on published `pocket-ic`
-16.1 directly alongside Testkit. Import its asynchronous client from
-`pocket_ic::nonblocking::PocketIc` and its builder from `pocket_ic::PocketIcBuilder`.
-The retired `ic_testkit::pocket_ic` module has no replacement re-export or facade.
+Testkit no longer maintains a PocketIC client. The native-only
+`ic_testkit::pocket_ic` re-export now exposes its selected upstream `pocket-ic`
+16.1 dependency. Import the asynchronous client from
+`ic_testkit::pocket_ic::nonblocking::PocketIc` and its builder from
+`ic_testkit::pocket_ic::PocketIcBuilder`; no separate client dependency is needed.
+This additive export is pending publication after 0.100.1. Releases 0.98 through
+0.100.1 require a direct `pocket-ic` dependency. The re-export has upstream type
+identity and API behavior, not the retired fork's API.
 The server remains an explicitly admitted external PocketIC 16.1 binary.
 
 ## Construction and server custody
 
 ```rust,no_run
 use std::time::Duration;
-use pocket_ic::PocketIcBuilder;
+use ic_testkit::pocket_ic::PocketIcBuilder;
 use ic_testkit::pic::PocketIcStartupConfig;
 # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 let config = PocketIcStartupConfig::from_env(Duration::from_secs(30))?;
@@ -140,6 +144,8 @@ upstream retains its own licensing. Package metadata selects the repository's
 root licence, which Cargo includes in the archive.
 
 Canic, Query and other consumers importing the retired module or helper methods
-must add their own direct PocketIC dependency and migrate callers. Sibling source
+must migrate removed fork/helper APIs. With the new re-export they can select
+Testkit alone for the harness and client; existing direct upstream imports remain
+valid when they resolve to the same supplier version. Sibling source
 and releases are separate work; this migration changes only Tooling and its private
 qualification workspace. Product release and native macOS gates remain required.

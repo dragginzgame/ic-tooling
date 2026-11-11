@@ -1,6 +1,6 @@
 //! `PocketIC` host-test harness extensions.
 //!
-//! Import the client and DTOs directly from the upstream `pocket_ic` dependency.
+//! Import the upstream client and DTOs through [`crate::pocket_ic`].
 //! This module owns Testkit's harness methods and policy types.
 //!
 //! Installation, snapshot and diagnostic helpers are free functions taking the client.

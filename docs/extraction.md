@@ -30,7 +30,9 @@ identity. The portable library excludes Runtime, the facade, executor, macros
 and Candid. The private performance probe selects
 Runtime's CDK entrypoints and one guarded executor directly. Native simulator
 operations use published upstream `pocket-ic` directly under an explicit native
-dependency-boundary exception. Testkit's `pic` owns harness policy and server
+dependency-boundary exception. Its native-only `pocket_ic` re-export exposes
+that exact dependency so consumers need no independent client selection.
+Testkit's `pic` owns harness policy and server
 custody; it owns no client fork. Held fixtures select Platform's Candid and
 management adapters. The [client migration](testkit/client-migration.md) describes
 upstream identities, panics, best-effort deletion and the removed transfer engine.

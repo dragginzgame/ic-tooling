@@ -53,8 +53,8 @@ The simulator/server is external. Application tests own topology, funding, RPC
 schemas, readiness, reset coverage and assertions. Build and Host own the lower
 layers described in [scope boundaries](#scope-boundaries).
 
-The selected client and lifecycle helpers are async. Pending 0.98 retires the
-local client fork. See the [migration guide](client-migration.md)
+The selected client and lifecycle helpers are async. Version 0.98 retired the
+local client fork; the pending native re-export exposes the upstream crate. See the [migration guide](client-migration.md)
 for the current construction, reset and cancellation contract.
 
 ### A concrete example
@@ -64,7 +64,7 @@ and explicitly close it while its server is available:
 
 ```rust,no_run
 use ic_testkit::pic::PocketIcStartupConfig;
-use pocket_ic::PocketIcBuilder;
+use ic_testkit::pocket_ic::PocketIcBuilder;
 use std::{path::Path, time::Duration};
 
 async fn example(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -129,7 +129,7 @@ and independently verify the domains relevant to each recipe.
 
 | Area | Surface |
 | --- | --- |
-| Async client | Upstream `pocket_ic::nonblocking::PocketIc`, `pocket_ic::PocketIcBuilder` |
+| Async client | Upstream `ic_testkit::pocket_ic::nonblocking::PocketIc`, `ic_testkit::pocket_ic::PocketIcBuilder` |
 | Server and instance custody | `PocketIcStartupConfig`, `PocketIcManagedServer`, `PocketIcInstance` |
 | Installation | `pic::create_and_install`, `InstallSpec`, `StandaloneCanisterFixture` |
 | Typed calls | `query_wire`, `update_wire`, `WireCallSpec` (`wire` feature) |

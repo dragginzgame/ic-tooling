@@ -1,6 +1,6 @@
 //! Focused `PocketIC` test-harness utilities for Internet Computer canisters.
 //!
-//! Import native clients and DTOs directly from upstream `pocket_ic`.
+//! Import native clients and DTOs through `pocket_ic`, the selected upstream crate.
 //! `pic` adds optional typed Wire calls and free functions for
 //! installation, diagnostics and snapshots, startup errors, caller-owned
 //! managed-server startup and bounded readiness polling. It does not provide a
@@ -8,6 +8,32 @@
 //!
 //! Deterministic test principals through [`fake_principal`] are available on
 //! every target. The client and `pic` helpers are native-only.
+
+/// The upstream `PocketIC` client selected by Testkit, with unchanged type identity.
+///
+/// Consumers can use this path without declaring a separate `PocketIC` dependency.
+/// The upstream API and failure behavior apply; this does not restore the retired fork.
+///
+/// ```no_run
+/// use ic_testkit::{pic::PocketIcStartupConfig, pocket_ic::PocketIcBuilder};
+/// use std::time::Duration;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let config = PocketIcStartupConfig::from_env(Duration::from_secs(30))?;
+/// let owner = config.build_instance(
+///     PocketIcBuilder::new()
+///         .with_max_request_time_ms(Some(30_000))
+///         .with_application_subnet(),
+/// ).await?;
+/// let client: &ic_testkit::pocket_ic::nonblocking::PocketIc = owner.instance();
+/// let canister: ic_testkit::pocket_ic::CanisterId = client.create_canister().await;
+/// assert!(client.canister_exists(canister).await);
+/// owner.close().await;
+/// # Ok(())
+/// # }
+/// ```
+#[cfg(not(target_family = "wasm"))]
+pub use pocket_ic;
 
 #[cfg(not(target_family = "wasm"))]
 pub mod pic;
