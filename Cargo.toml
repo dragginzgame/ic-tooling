@@ -42,7 +42,7 @@ ic-host-text = { path = "crates/ic-host-text", version = "0.74.5", default-featu
 
 # Host Tools
 # Changelog : releases/tools/CHANGELOG.md
-ic-host-tools = { path = "crates/ic-host-tools", version = "0.90.0", default-features = false }
+ic-host-tools = { path = "crates/ic-host-tools", version = "0.91.0", default-features = false }
 
 # Testkit
 # Changelog : releases/testkit/CHANGELOG.md
