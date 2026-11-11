@@ -87,7 +87,7 @@ impl<T> CachedPocketIcBaseline<T> {
 
     /// Return the number of canisters captured by this baseline.
     #[must_use]
-    pub fn snapshot_count(&self) -> usize {
+    pub const fn snapshot_count(&self) -> usize {
         self.snapshots.len()
     }
 

@@ -16,8 +16,9 @@ use std::{
 use ic_testkit::pic::{
     BaselinePoolDisposition, BaselinePoolError, BaselinePoolPreparationError,
     BaselinePreparationStage, CachedPocketIcBaselinePool, ControllerSnapshotError,
-    PocketIcInstance, PocketIcStartupConfig, PocketIcStartupFailure, RebuildReason,
-    SnapshotRestoreFunding, StandaloneCanisterFixture, StandaloneCanisterRecipe,
+    PocketIcBaselineRecipe, PocketIcInstance, PocketIcStartupConfig, PocketIcStartupFailure,
+    RebuildReason, SnapshotRestoreFunding, StandaloneCanisterFixture,
+    StandaloneCanisterLifecycleError, StandaloneCanisterRecipe,
 };
 use pocket_ic::CanisterId as Principal;
 use pocket_ic::PocketIcBuilder;
@@ -383,7 +384,7 @@ async fn structured_standalone_acquisition_error_retains_build_timings() {
         build_deleted_standalone_fixture,
     );
     let Err(error) = pool.acquire().await else {
-        panic!("capturing a deleted fixture canister must fail");
+        panic!("stopping a deleted fixture canister must fail before capture");
     };
 
     let timings = error.timings();
@@ -395,10 +396,12 @@ async fn structured_standalone_acquisition_error_retains_build_timings() {
         BaselinePoolError::Preparation {
             error: BaselinePoolPreparationError::Recipe {
                 stage: BaselinePreparationStage::Build,
-                ..
+                source,
             },
             ..
-        }
+        } if matches!(source.get_ref().and_then(|cause| cause.downcast_ref::<StandaloneCanisterLifecycleError>()),
+            Some(StandaloneCanisterLifecycleError::Stop { rejection, .. })
+                if rejection.error_code == pocket_ic::ErrorCode::CanisterNotFound)
     ));
 }
 
@@ -465,6 +468,17 @@ async fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition(
         .delete_canister(*fixture.metadata(), None)
         .await
         .expect("delete fixture canister before restore");
+    let canister_id = *fixture.metadata();
+    let recipe = StandaloneCanisterRecipe::new(
+        SnapshotRestoreFunding::Preserve,
+        build_empty_standalone_fixture,
+    );
+    let error = recipe.drive_to_readiness(&fixture).await.unwrap_err();
+    assert!(matches!(
+        error.get_ref().and_then(|cause| cause.downcast_ref::<StandaloneCanisterLifecycleError>()),
+        Some(StandaloneCanisterLifecycleError::Start { canister_id: failed_id, rejection })
+            if *failed_id == canister_id && rejection.error_code == pocket_ic::ErrorCode::CanisterNotFound
+    ));
     drop(fixture);
 
     let Err(error) = pool.acquire().await else {
@@ -482,7 +496,9 @@ async fn failed_standalone_restore_is_timed_and_rebuilt_on_the_next_acquisition(
                 source,
             },
             ..
-        } if source.kind() == io::ErrorKind::Other && source.to_string().contains("CanisterNotFound")
+        } if matches!(source.get_ref().and_then(|cause| cause.downcast_ref::<StandaloneCanisterLifecycleError>()),
+            Some(StandaloneCanisterLifecycleError::Stop { canister_id: failed_id, rejection })
+                if *failed_id == canister_id && rejection.error_code == pocket_ic::ErrorCode::CanisterNotFound)
     ));
 
     let (fixture, outcome) = pool
@@ -609,8 +625,8 @@ async fn standalone_transport_panic_rebuilds_on_the_next_acquisition() {
     assert!(matches!(
         source
             .get_ref()
-            .and_then(|error| error.downcast_ref::<ControllerSnapshotError>()),
-        Some(ControllerSnapshotError::CaptureFailed { .. })
+            .and_then(|error| error.downcast_ref::<StandaloneCanisterLifecycleError>()),
+        Some(StandaloneCanisterLifecycleError::Stop { .. })
     ));
     assert_eq!(builds.load(Ordering::SeqCst), 2);
 

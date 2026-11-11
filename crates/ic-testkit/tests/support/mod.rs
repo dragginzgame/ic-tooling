@@ -1,7 +1,7 @@
 // Each integration target uses only the fixtures it needs.
-#![expect(
+#![allow(
     dead_code,
-    reason = "integration targets use different subsets of the shared server/wait helpers"
+    reason = "independent integration targets use different subsets; default concurrency uses every helper, so a shared expectation cannot cover all target/feature selections"
 )]
 
 pub fn empty_install_spec() -> ic_testkit::pic::InstallSpec {

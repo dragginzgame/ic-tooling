@@ -7,6 +7,28 @@ use super::{
     PreparedBaseline, SnapshotRestoreFunding, StandaloneCanisterFixture,
 };
 
+/// A standalone recipe's stop or start rejection, retained inside its `io::Error`.
+/// Upstream transport panics propagate without being converted into this error.
+#[derive(Debug, thiserror::Error)]
+pub enum StandaloneCanisterLifecycleError {
+    /// Stopping the canister before capture or restoration was rejected.
+    #[error("failed to stop standalone canister {canister_id}: {rejection}")]
+    Stop {
+        /// Target canister.
+        canister_id: Principal,
+        /// Complete original management rejection.
+        rejection: Box<pocket_ic::RejectResponse>,
+    },
+    /// Starting the canister at readiness was rejected.
+    #[error("failed to start standalone canister {canister_id}: {rejection}")]
+    Start {
+        /// Target canister.
+        canister_id: Principal,
+        /// Complete original management rejection.
+        rejection: Box<pocket_ic::RejectResponse>,
+    },
+}
+
 /// Snapshot-only recipe for one caller-built, installed canister.
 ///
 /// Use with [`super::CachedPocketIcBaselinePool`]. The baseline metadata is the
@@ -45,7 +67,7 @@ where
     Fut: std::future::Future<Output = io::Result<StandaloneCanisterFixture>> + Send,
 {
     type Metadata = Principal;
-    // Retain the typed snapshot/contract cause without another error vocabulary.
+    // Preserve builder errors and typed snapshot/lifecycle causes.
     type Error = io::Error;
 
     fn snapshot_funding(&self) -> SnapshotRestoreFunding {
@@ -55,11 +77,9 @@ where
     async fn build(&self) -> Result<CachedPocketIcBaseline<Principal>, io::Error> {
         let (pocket_ic, canister_id) = (self.build)().await?.into_parts();
         if let Err(source) = pocket_ic.instance().stop_canister(canister_id, None).await {
-            let error = io::Error::other(super::ControllerSnapshotError::CaptureFailed {
+            let error = io::Error::other(StandaloneCanisterLifecycleError::Stop {
                 canister_id,
-                sender: None,
                 rejection: Box::new(source),
-                cleanup_failures: Vec::new(),
             });
             pocket_ic.close().await;
             return Err(error);
@@ -96,7 +116,12 @@ where
             .pocket_ic()
             .stop_canister(*baseline.metadata(), None)
             .await
-            .map_err(|error| io::Error::other(error.to_string()))
+            .map_err(|rejection| {
+                io::Error::other(StandaloneCanisterLifecycleError::Stop {
+                    canister_id: *baseline.metadata(),
+                    rejection: Box::new(rejection),
+                })
+            })
     }
 
     async fn drive_to_readiness(
@@ -107,7 +132,12 @@ where
             .pocket_ic()
             .start_canister(*baseline.metadata(), None)
             .await
-            .map_err(|error| io::Error::other(error.to_string()))
+            .map_err(|rejection| {
+                io::Error::other(StandaloneCanisterLifecycleError::Start {
+                    canister_id: *baseline.metadata(),
+                    rejection: Box::new(rejection),
+                })
+            })
     }
 
     fn validate(

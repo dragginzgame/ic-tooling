@@ -34,11 +34,7 @@ mod progress;
 mod resolution;
 mod source_inputs;
 pub(super) use input_batch::{WasmBuildBatchInputMetrics, WasmBuildBatchInputResolver};
-use maintenance::{
-    SharedIncrementalTargetMaintenanceSchedule, maintain_shared_incremental_target_locked,
-    perform_due_shared_incremental_target_maintenance,
-    schedule_shared_incremental_target_maintenance,
-};
+use maintenance::maintain_shared_incremental_target_locked;
 use outputs::{ResolvedWasmOutputs, WasmArtifactTarget};
 use progress::ProgressReporter;
 use resolution::{ParsedCargoMetadata, digest_resolved_local_inputs, resolve_local_inputs};
@@ -277,81 +273,13 @@ pub struct SharedIncrementalTargetMaintenance {
     maintenance: Duration,
 }
 
-/// Result of interval-limited shared Cargo target maintenance.
-#[non_exhaustive]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum SharedIncrementalTargetMaintenanceOutcome {
-    /// The configured shared target does not exist, so nothing was created or inspected.
-    Missing {
-        /// Configured target path. A missing path cannot necessarily be canonicalized.
-        target_dir: PathBuf,
-    },
-    /// A successful matching maintenance pass is still inside the requested interval.
-    Skipped {
-        /// Canonical shared Cargo target directory.
-        target_dir: PathBuf,
-        /// Time spent waiting for another process using the shared target.
-        lock_wait: Duration,
-        /// Time spent checking the small cross-process schedule marker.
-        schedule_check: Duration,
-    },
-    /// Retention was evaluated under the shared-target lock.
-    Performed {
-        /// Completed retention report.
-        maintenance: SharedIncrementalTargetMaintenance,
-        /// Time spent checking the small cross-process schedule marker.
-        schedule_check: Duration,
-    },
-}
-
-/// Observation settings for one cacheable Wasm build.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct WasmBuildProgressConfig {
-    heartbeat_interval: Duration,
-}
-
 /// Phase-aware heartbeat emitted while a cacheable Wasm build is busy.
-#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum WasmBuildProgressEvent {
-    /// The current phase remained active until the next heartbeat.
-    Heartbeat {
-        /// Phase currently making or waiting for progress.
-        phase: WasmBuildPhase,
-        /// Time elapsed since this phase started.
-        elapsed: Duration,
-    },
-}
-
-impl Default for WasmBuildProgressConfig {
-    fn default() -> Self {
-        Self {
-            heartbeat_interval: Duration::from_secs(10),
-        }
-    }
-}
-
-impl WasmBuildProgressConfig {
-    /// Observe acquisition progress and emit a heartbeat at least every ten quiet seconds.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Select the maximum quiet interval between phase-aware heartbeat events.
-    ///
-    /// A zero interval is rejected before any build work begins.
-    #[must_use]
-    pub const fn with_heartbeat_interval(mut self, interval: Duration) -> Self {
-        self.heartbeat_interval = interval;
-        self
-    }
-
-    /// Configured positive heartbeat interval.
-    #[must_use]
-    pub const fn heartbeat_interval(self) -> Duration {
-        self.heartbeat_interval
-    }
+pub struct WasmBuildProgressEvent {
+    /// Phase currently making or waiting for progress.
+    pub phase: WasmBuildPhase,
+    /// Time elapsed since this phase started.
+    pub elapsed: Duration,
 }
 
 /// Structured failure from a cacheable Wasm build.
@@ -1117,76 +1045,6 @@ impl std::fmt::Display for SharedIncrementalTargetMaintenance {
     }
 }
 
-impl SharedIncrementalTargetMaintenanceOutcome {
-    /// Configured or canonical target associated with this result.
-    #[must_use]
-    pub fn target_dir(&self) -> &Path {
-        match self {
-            Self::Missing { target_dir } | Self::Skipped { target_dir, .. } => target_dir,
-            Self::Performed { maintenance, .. } => maintenance.target_dir(),
-        }
-    }
-
-    /// Completed maintenance report, when retention was evaluated.
-    #[must_use]
-    pub const fn maintenance(&self) -> Option<&SharedIncrementalTargetMaintenance> {
-        match self {
-            Self::Performed { maintenance, .. } => Some(maintenance),
-            Self::Missing { .. } | Self::Skipped { .. } => None,
-        }
-    }
-
-    /// Whether retention was evaluated during this call.
-    #[must_use]
-    pub const fn was_performed(&self) -> bool {
-        matches!(self, Self::Performed { .. })
-    }
-
-    /// Time spent waiting for another process, when the target existed.
-    #[must_use]
-    pub const fn lock_wait(&self) -> Option<Duration> {
-        match self {
-            Self::Missing { .. } => None,
-            Self::Skipped { lock_wait, .. } => Some(*lock_wait),
-            Self::Performed { maintenance, .. } => Some(maintenance.lock_wait()),
-        }
-    }
-
-    /// Time spent checking the schedule marker, when the target existed.
-    #[must_use]
-    pub const fn schedule_check(&self) -> Option<Duration> {
-        match self {
-            Self::Missing { .. } => None,
-            Self::Skipped { schedule_check, .. } | Self::Performed { schedule_check, .. } => {
-                Some(*schedule_check)
-            }
-        }
-    }
-}
-
-impl std::fmt::Display for SharedIncrementalTargetMaintenanceOutcome {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Missing { target_dir } => {
-                write!(formatter, "target={} action=missing", target_dir.display())
-            }
-            Self::Skipped {
-                target_dir,
-                lock_wait,
-                schedule_check,
-            } => write!(
-                formatter,
-                "target={} action=skipped lock={lock_wait:?} schedule={schedule_check:?}",
-                target_dir.display(),
-            ),
-            Self::Performed {
-                maintenance,
-                schedule_check,
-            } => write!(formatter, "{maintenance} schedule={schedule_check:?}"),
-        }
-    }
-}
-
 impl std::fmt::Display for WasmBuildTimings {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -1291,54 +1149,6 @@ pub fn maintain_shared_incremental_target(
     maintain_shared_incremental_target_locked(&canonical, policy, lock_wait).map(Some)
 }
 
-/// Apply whole-target retention at most once per interval across processes.
-///
-/// The schedule marker is checked under the same lock used by shared Cargo
-/// builds. A matching successful pass inside `minimum_interval` returns
-/// [`SharedIncrementalTargetMaintenanceOutcome::Skipped`] without resolving
-/// Cargo inputs or traversing the target. Missing targets are not created.
-/// Changing the policy makes maintenance immediately due, and a zero interval
-/// always evaluates retention.
-///
-/// Due maintenance performs exact Cargo input resolution before inspecting or
-/// clearing the target. Failures are returned and are not recorded as a
-/// successful pass, so an unsafe configuration cannot be hidden by the
-/// schedule.
-///
-/// # Errors
-/// Returns schedule, input-resolution, lock, inspection
-/// or target-removal errors. Failed maintenance does not advance the schedule.
-pub fn maintain_shared_incremental_target_at_most_every(
-    spec: &WasmBuildSpec,
-    policy: CacheRetentionLimits,
-    minimum_interval: Duration,
-) -> Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError> {
-    let target_dir = shared_incremental_target(spec);
-    if !shared_incremental_target_exists(
-        &target_dir,
-        "inspect shared incremental Cargo target before scheduled maintenance",
-    )? {
-        return Ok(SharedIncrementalTargetMaintenanceOutcome::Missing { target_dir });
-    }
-
-    let (_lock, lock_wait, canonical) = lock_shared_incremental_target(&target_dir)?;
-    let schedule = schedule_shared_incremental_target_maintenance(
-        &canonical,
-        policy,
-        minimum_interval,
-        lock_wait,
-    )?;
-    let schedule = match schedule {
-        SharedIncrementalTargetMaintenanceSchedule::Skipped(outcome) => return Ok(outcome),
-        SharedIncrementalTargetMaintenanceSchedule::Due(due) => due,
-    };
-
-    // Keep the schedule decision and maintenance in one critical section so
-    // concurrent test binaries cannot all perform the same expensive scan.
-    let _ = resolve_cargo_build_inputs(spec)?;
-    perform_due_shared_incremental_target_maintenance(&canonical, policy, lock_wait, schedule)
-}
-
 /// Build or reuse one exact set of Cargo Wasm artifacts.
 ///
 /// The operation takes an exclusive process lock scoped to `target_dir`, then
@@ -1384,7 +1194,7 @@ pub fn build_wasm_canisters_cached(
 /// Returns invalid progress/specification, execution, verification or publication errors.
 pub fn build_wasm_canisters_cached_with_progress<F>(
     spec: &WasmBuildSpec,
-    config: WasmBuildProgressConfig,
+    heartbeat_interval: Duration,
     mut observer: F,
     mut spawn: impl FnMut(&mut Command) -> io::Result<OwnedChild>,
 ) -> Result<WasmBuildOutcome, WasmBuildError>
@@ -1393,7 +1203,7 @@ where
 {
     build_wasm_canisters_cached_internal(
         spec,
-        &mut ProgressReporter::new(Some((config, &mut observer)))?,
+        &mut ProgressReporter::new(Some((heartbeat_interval, &mut observer)))?,
         None,
         &mut spawn,
     )
@@ -1407,10 +1217,7 @@ pub(super) fn build_wasm_canisters_cached_in_batch(
     spec: &WasmBuildSpec,
     index: usize,
     resolver: &mut WasmBuildBatchInputResolver<'_>,
-    observation: Option<(
-        WasmBuildProgressConfig,
-        &mut dyn FnMut(WasmBuildProgressEvent),
-    )>,
+    observation: Option<(Duration, &mut dyn FnMut(WasmBuildProgressEvent))>,
     mut spawn: &mut dyn FnMut(&mut Command) -> io::Result<OwnedChild>,
 ) -> Result<WasmBuildOutcome, (WasmBuildError, WasmBuildFailureDetails)> {
     let mut progress = ProgressReporter::new(observation).map_err(|error| {

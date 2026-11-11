@@ -55,8 +55,8 @@ cargo_metadata = "0.23.1"
 command-fds = "0.3.3"
 flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
 hmac = "0.13.0"
-ic-platform = { version = "0.29.0", default-features = false }
-ic-platform-types = { version = "0.19.0", default-features = false }
+ic-platform = { version = "0.30.0", default-features = false }
+ic-platform-types = { version = "0.19.2", default-features = false }
 libc = "0.2.190"
 pocket-ic = "16.1.0"
 prost = "0.14.3"
@@ -75,7 +75,7 @@ yaml_serde = "0.10.7"
 
 # External mixed production/test dependencies
 clap = { version = "4.6.7", default-features = false, features = ["std", "help", "usage", "error-context"] }
-ic-wire = "0.20.0"
+ic-wire = "0.21.0"
 leb128 = "0.2.5"
 reqwest = { version = "0.13.5", default-features = false }
 serde = { version = "1.0.228", default-features = false }

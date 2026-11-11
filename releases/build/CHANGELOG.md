@@ -6,6 +6,27 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.83.0]
+
+### ⚠️ Breaking
+
+- Pass a positive duration directly for progress observation and read heartbeat
+  and batch event fields directly. Resolve batch labels from the specification
+  slice using the event's index; heartbeats no longer clone an owned label.
+  Remove the one-field progress configuration and single-variant event enums;
+  phase timing and child custody are unchanged.
+- Remove interval-limited shared-target maintenance and its scheduled outcome
+  type. Call `maintain_shared_incremental_target` explicitly and choose cadence
+  and failure policy at the caller. Missing targets return `None`; completed
+  maintenance returns its report. Shared-target locking and source/cache
+  safeguards remain enforced; old schedule markers are left untouched.
+  See the [migration](../../docs/build/artifacts.md#build-083-migration).
+
+### 🧹 Cleanup
+
+- Derive exported input digests from the verified retained build record, removing
+  duplicate evidence state while retaining pre-acquisition and freshness guards.
+
 ## [0.82.0] - 2026-11-10
 
 ### ⚠️ Breaking

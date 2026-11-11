@@ -163,7 +163,7 @@ async fn assert_time_requests(advance: Duration, ticks: u32, run: impl AsyncFnOn
             max_header_bytes: 16_384,
             max_body_bytes: 16_384,
         },
-        move |stream, request, _deadline, _stop| {
+        move |stream, request, _stop| {
             let request = request.into_result().unwrap();
             let request = crate::test_support::http::Request::new(&request);
             let path = request.path.to_owned();

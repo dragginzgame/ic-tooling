@@ -51,7 +51,7 @@ impl Peer {
         request_count: Option<usize>,
         quiet: Duration,
         limits: HttpFixtureLimits,
-        mut request: impl FnMut(&mut TcpStream, HttpCapture, Instant, &AtomicBool) + Send + 'static,
+        mut request: impl FnMut(&mut TcpStream, HttpCapture, &AtomicBool) + Send + 'static,
     ) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}/", listener.local_addr().unwrap())
@@ -88,7 +88,7 @@ impl Peer {
                 stream
                     .set_write_timeout(Some(deadline.saturating_duration_since(Instant::now())))
                     .unwrap();
-                request(&mut stream, bytes, deadline, &worker_stop);
+                request(&mut stream, bytes, &worker_stop);
                 *worker_active.lock().unwrap() = None;
                 completed += 1;
             }

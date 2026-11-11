@@ -47,10 +47,10 @@ do not require unrelated consumer releases.
 | Native Testkit default | Published upstream `pocket-ic`, including its native Principal/management DTOs and protocol codecs; no Platform facade, Runtime or Wire. Portable principal generation retains Types. |
 | Native Testkit `wire` | The same native client plus optional Wire. `WireCallSpec` limits and typed codec causes have Wire identity; graph qualification selects only this feature, independently of CLI/held fixtures. |
 | Testkit Wasm | Types only; no Platform facade, Runtime, native transport or Wire. |
-| Private Wasm probe | Runtime's `cdk` and its matching singleton guard, Types and Wire; not a second simulator or production adapter crate. |
+| Private Wasm probe | Runtime's `cdk`, its matching singleton guard and qualified upstream `ic0`, plus Types and Wire; not a second simulator or production adapter crate. |
 | Host Tools adapters | `candid` selects Platform's owned binary codec; `agent` and `ledger-evidence` select their explicit adapters; `registry` selects Types directly. Textual service inspection is removed. Default Tools has neither supplier. |
 
-The native Wire adapter and private probe select Wire 0.20. Decoding follows
+The native Wire adapter and private probe select Wire 0.21. Decoding follows
 upstream Postcard, including redundant varints within width bounds; successful
 decoding does not promise byte-identical re-encoding. Keep original frames for
 exact retries, signatures and hashes. This adoption preserves encoder bytes,

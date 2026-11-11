@@ -212,54 +212,6 @@ fn last_use_markers_preserve_timestamps_and_bounded_fallbacks() {
 }
 
 #[test]
-fn maintenance_markers_preserve_policy_intervals_and_read_errors() {
-    let root = unique_temp_directory("bounded-maintenance-marker");
-    let marker = root.join(super::LAST_MAINTENANCE_FILE);
-    let identity = super::CacheRetentionLimits::new().maintenance_identity();
-    let interval = Duration::from_secs(3600);
-    let due = || super::cache_maintenance_due(&root, interval, &identity).unwrap();
-    assert!(due());
-    super::record_cache_maintenance(&root, &identity).unwrap();
-    assert!(!due());
-    assert!(super::cache_maintenance_due(&root, interval, "other-policy").unwrap());
-    assert!(super::cache_maintenance_due(&root, Duration::ZERO, &identity).unwrap());
-
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    for suffix in ["", "\r\n"] {
-        fs::write(&marker, format!("{}\r\n{identity}{suffix}", now.as_nanos())).unwrap();
-        assert!(!due());
-    }
-    for timestamp in [
-        "invalid".to_owned(),
-        "0".to_owned(),
-        (now + Duration::from_secs(3600)).as_nanos().to_string(),
-    ] {
-        fs::write(&marker, format!("{timestamp}\n{identity}\n")).unwrap();
-        assert!(due());
-    }
-    super::record_cache_maintenance(&root, &identity).unwrap();
-    fs::OpenOptions::new()
-        .write(true)
-        .open(&marker)
-        .unwrap()
-        .set_len(1024 * 1024 * 1024)
-        .unwrap();
-    assert!(due());
-
-    fs::write(&marker, [0xff]).unwrap();
-    assert!(super::cache_maintenance_due(&root, Duration::ZERO, &identity).unwrap());
-    let error = super::cache_maintenance_due(&root, interval, &identity).unwrap_err();
-    assert_eq!(error.operation, "read cache maintenance time");
-    assert_eq!(error.path, marker);
-    assert_eq!(error.source.kind(), std::io::ErrorKind::InvalidData);
-    fs::remove_file(&marker).unwrap();
-    fs::create_dir(&marker).unwrap();
-    assert!(super::cache_maintenance_due(&root, interval, &identity).is_err());
-    assert!(super::cache_maintenance_due(&root, Duration::ZERO, &identity).unwrap());
-    fs::remove_dir_all(root).unwrap();
-}
-
-#[test]
 fn cache_directory_tags_preserve_valid_standard_signatures() {
     let root = unique_temp_directory("cache-tag-signatures");
     let tag = root.join("CACHEDIR.TAG");

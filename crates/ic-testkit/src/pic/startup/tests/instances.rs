@@ -241,7 +241,7 @@ impl PendingHttpServer {
                 max_header_bytes: 65_536,
                 max_body_bytes: 65_536,
             },
-            move |stream, request, _deadline, stop| {
+            move |stream, request, stop| {
                 if request.failure.is_some() {
                     return;
                 }

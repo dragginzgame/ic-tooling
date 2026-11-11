@@ -290,6 +290,13 @@ async fn manual(pic: &PocketIc) -> Result<(), HeldReplyError> {
     Ok(())
 }
 
+const HTTP_BARRIER_IMPORTS: &str = r#"
+(import "ic0" "call_new" (func $new (param i32 i32 i32 i32 i32 i32 i32 i32)))
+(import "ic0" "call_data_append" (func $data (param i32 i32)))
+(import "ic0" "call_cycles_add128" (func $cycles (param i64 i64)))
+(import "ic0" "call_perform" (func $perform (result i32)))
+"#;
+
 pub(super) fn module(
     methods: &[RawReplyMethod<'_>],
     limits: RawReplyLimits,
@@ -303,12 +310,11 @@ pub(super) fn module(
 (import "ic0" "msg_reply_data_append" (func $append (param i32 i32)))
 (import "ic0" "msg_reply" (func $reply))
 (import "ic0" "msg_reject" (func $reject (param i32 i32)))
-(import "ic0" "call_new" (func $new (param i32 i32 i32 i32 i32 i32 i32 i32)))
-(import "ic0" "call_data_append" (func $data (param i32 i32)))
-(import "ic0" "call_cycles_add128" (func $cycles (param i64 i64)))
-(import "ic0" "call_perform" (func $perform (result i32)))
 "#,
     );
+    if barrier.is_some() {
+        source.push_str(HTTP_BARRIER_IMPORTS);
+    }
     if accept_cycles.is_some() {
         source.push_str(
             "(import \"ic0\" \"msg_cycles_accept128\" (func $accept (param i64 i64 i32)))\n",
@@ -316,29 +322,34 @@ pub(super) fn module(
     }
     // Keep the aligned acceptance-result scratch separate from immutable replies.
     let mut offset = if accept_cycles.is_some() { 16 } else { 0 };
-    let failure = segment(&mut source, &mut offset, b"held reply barrier failed")?;
+    let barrier = if let Some(settings) = barrier {
+        let failure = segment(&mut source, &mut offset, b"held reply barrier failed")?;
+        let http = segment(&mut source, &mut offset, b"http_request")?;
+        writeln!(
+            source,
+            "(func $failed (param i32) (call $reject (i32.const {failure}) (i32.const 25)))"
+        )
+        .unwrap();
+        Some((settings, http))
+    } else {
+        None
+    };
     let exhausted = segment(&mut source, &mut offset, b"held reply slots exhausted")?;
-    let http = segment(&mut source, &mut offset, b"http_request")?;
-    writeln!(
-        source,
-        "(func $failed (param i32) (call $reject (i32.const {failure}) (i32.const 25)))"
-    )
-    .unwrap();
     for (slot, method) in methods.iter().enumerate() {
         let reply = segment(&mut source, &mut offset, method.reply)?;
-        let sending = if let Some(barrier) = barrier {
-            barrier_call(&mut source, &mut offset, barrier, http, slot)?
+        let reply = format!(
+            "(call $append (i32.const {reply}) (i32.const {})) (call $reply)",
+            method.reply.len(),
+        );
+        let sending = if let Some((settings, http)) = barrier {
+            writeln!(source, "(func $reply{slot} (param i32) {reply})").unwrap();
+            barrier_call(&mut source, &mut offset, settings, http, slot)?
         } else {
-            format!("(call $reply{slot} (i32.const 0))")
+            reply
         };
         writeln!(
             source,
-            r"
-(global $used{slot} (mut i32) (i32.const 0))
-(func $reply{slot} (param i32)
- (call $append (i32.const {reply}) (i32.const {reply_len})) (call $reply))
-(func $send{slot}",
-            reply_len = method.reply.len()
+            "(global $used{slot} (mut i32) (i32.const 0))\n(func $send{slot}",
         )
         .unwrap();
         if let Some(cap) = accept_cycles {
@@ -367,18 +378,28 @@ pub(super) fn module(
         .unwrap();
     }
     let pages = offset.div_ceil(65_536).max(1);
-    writeln!(source, "(memory (export \"memory\") {pages} {pages})\n(table {} funcref)\n(elem (i32.const 0) $failed", methods.len() + 1).unwrap();
-    for slot in 0..methods.len() {
-        write!(source, " $reply{slot}").unwrap();
+    writeln!(source, "(memory (export \"memory\") {pages} {pages})").unwrap();
+    if barrier.is_some() {
+        writeln!(
+            source,
+            "(table {} funcref)\n(elem (i32.const 0) $failed",
+            methods.len() + 1
+        )
+        .unwrap();
+        for slot in 0..methods.len() {
+            write!(source, " $reply{slot}").unwrap();
+        }
+        source.push(')');
     }
-    source.push_str("))");
-    Ok(compile(
+    source.push(')');
+    compile(
         &source,
         CompileLimits {
             source_bytes: source.len(),
             module_bytes,
         },
-    )?)
+    )
+    .map_err(HeldReplyError::Compile)
 }
 
 fn barrier_call(

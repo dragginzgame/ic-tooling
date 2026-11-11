@@ -17,7 +17,6 @@ use std::{fs, io, path::Path, process::Command};
 pub struct WasmBuildEvidence {
     spec: WasmBuildSpec,
     fingerprint: InputDigest,
-    input_digest: InputDigest,
     build: WasmBuildOutcome,
 }
 
@@ -49,7 +48,6 @@ impl WasmBuildEvidence {
         let evidence = Self {
             spec,
             fingerprint: inputs.fingerprint(),
-            input_digest: inputs.input_digest(),
             build,
         };
         evidence.verify_current()?;
@@ -129,7 +127,7 @@ impl WasmBuildEvidence {
         Ok(WasmArtifactReceipt {
             wasm_sha256: identity.sha256.to_string(),
             build_fingerprint: record.fingerprint().to_string(),
-            input_digest: self.input_digest.to_string(),
+            input_digest: record.input_digest().to_string(),
         })
     }
 }

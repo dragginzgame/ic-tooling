@@ -399,12 +399,7 @@ where
     /// requires caller reconciliation; it is not retried. Rust Drop performs
     /// no client network I/O.
     pub async fn shutdown(&self) {
-        self.slots
-            .shutdown(async |baseline| {
-                baseline.close().await;
-                Ok::<(), std::convert::Infallible>(())
-            })
-            .await;
+        self.slots.shutdown(CachedPocketIcBaseline::close).await;
     }
 
     /// Maximum number of simultaneously leased `PocketIC` baselines.

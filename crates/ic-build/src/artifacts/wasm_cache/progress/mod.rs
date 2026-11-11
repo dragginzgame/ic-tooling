@@ -2,7 +2,7 @@
 
 use super::{
     WasmBuildError, WasmBuildFailureDetails, WasmBuildFailureTimings, WasmBuildPhase,
-    WasmBuildProgressConfig, WasmBuildProgressEvent,
+    WasmBuildProgressEvent,
 };
 use std::{
     sync::mpsc::{self, RecvTimeoutError},
@@ -11,7 +11,7 @@ use std::{
 };
 
 struct ProgressObservation<'a> {
-    config: WasmBuildProgressConfig,
+    heartbeat_interval: Duration,
     observer: &'a mut dyn FnMut(WasmBuildProgressEvent),
     last_event: Instant,
 }
@@ -26,7 +26,7 @@ impl<'a> ProgressReporter<'a> {
     pub(super) fn heartbeat_interval(&self) -> Option<Duration> {
         self.observation
             .as_ref()
-            .map(|observation| observation.config.heartbeat_interval())
+            .map(|observation| observation.heartbeat_interval)
     }
 
     pub(super) fn silent() -> Self {
@@ -38,15 +38,12 @@ impl<'a> ProgressReporter<'a> {
     }
 
     pub(super) fn new(
-        observation: Option<(
-            WasmBuildProgressConfig,
-            &'a mut dyn FnMut(WasmBuildProgressEvent),
-        )>,
+        observation: Option<(Duration, &'a mut dyn FnMut(WasmBuildProgressEvent))>,
     ) -> Result<Self, WasmBuildError> {
-        let Some((config, observer)) = observation else {
+        let Some((heartbeat_interval, observer)) = observation else {
             return Ok(Self::silent());
         };
-        if config.heartbeat_interval == Duration::ZERO {
+        if heartbeat_interval.is_zero() {
             return Err(WasmBuildError::InvalidSpec {
                 message: "Wasm build progress heartbeat interval must be greater than zero"
                     .to_owned(),
@@ -54,7 +51,7 @@ impl<'a> ProgressReporter<'a> {
         }
         Ok(Self {
             observation: Some(ProgressObservation {
-                config,
+                heartbeat_interval,
                 observer,
                 last_event: Instant::now(),
             }),
@@ -72,14 +69,13 @@ impl<'a> ProgressReporter<'a> {
     pub(super) fn heartbeat_due_in(&self) -> Option<Duration> {
         self.observation.as_ref().map(|observation| {
             observation
-                .config
                 .heartbeat_interval
                 .saturating_sub(observation.last_event.elapsed())
         })
     }
 
     pub(super) fn emit_heartbeat(&mut self, phase: WasmBuildPhase, elapsed: Duration) {
-        self.emit(WasmBuildProgressEvent::Heartbeat { phase, elapsed });
+        self.emit(WasmBuildProgressEvent { phase, elapsed });
     }
 
     pub(super) fn emit_heartbeat_if_due(&mut self, phase: WasmBuildPhase, elapsed: Duration) {

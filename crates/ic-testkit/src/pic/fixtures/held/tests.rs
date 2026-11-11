@@ -1,5 +1,5 @@
 use super::*;
-use ic_host_artifacts::wasm::validate;
+use ic_host_artifacts::wasm::{InspectionLimits, inspect, validate};
 
 const LIMITS: RawReplyLimits = RawReplyLimits {
     methods: 3,
@@ -119,6 +119,34 @@ fn validates_cycle_caps_without_changing_existing_catalog_admission() {
                 wasm.windows(20)
                     .any(|bytes| bytes == b"msg_cycles_accept128")
             );
+            let facts = inspect(
+                &wasm,
+                InspectionLimits {
+                    module_bytes: 10_000,
+                    sections: 32,
+                    custom_sections: 10,
+                    exports: 10,
+                },
+            )
+            .unwrap();
+            if barrier.is_none() {
+                assert_eq!(
+                    facts.imported_functions, 4,
+                    "reply, reject and cycle acceptance only"
+                );
+                assert_eq!(facts.defined_functions, 2, "one send and one update export");
+                assert!(!wasm.windows(12).any(|bytes| bytes == b"http_request"));
+            }
+            if cap == 1 {
+                let label = if barrier.is_some() { "held" } else { "cycle" };
+                eprintln!(
+                    "{label}: raw={} code={} imports={} functions={}",
+                    facts.raw_bytes,
+                    facts.code_section_bytes,
+                    facts.imported_functions,
+                    facts.defined_functions
+                );
+            }
         }
     }
     for limits in [

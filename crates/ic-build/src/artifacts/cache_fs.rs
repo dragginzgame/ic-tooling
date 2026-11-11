@@ -52,7 +52,6 @@ const CACHE_DIRECTORY_TAG_SUFFIX: &str = "\n\
 # This file is a cache directory tag created by ic-build.\n\
 # For information about cache directory tags see https://bford.info/cachedir/\n";
 pub(super) const LAST_USED_FILE: &str = ".ic-testkit-last-used";
-const LAST_MAINTENANCE_FILE: &str = ".ic-testkit-last-maintenance";
 // Nanoseconds are written as decimal u128 values, which need at most 39 bytes.
 const MAX_TIMESTAMP_BYTES: usize = 39;
 pub(super) const RETENTION_LOCK_FILE: &str = ".ic-testkit-retention-v1";
@@ -189,14 +188,6 @@ impl CacheRetentionLimits {
     pub const fn max_size_bytes(self) -> Option<u64> {
         self.max_size_bytes
     }
-
-    pub(super) fn maintenance_identity(self) -> String {
-        format!(
-            "age={:?};size={:?}",
-            self.max_age.map(|duration| duration.as_nanos()),
-            self.max_size_bytes
-        )
-    }
 }
 
 impl ArtifactCachePruneReport {
@@ -332,55 +323,6 @@ fn open_cache_lock_file(path: &Path) -> Result<File, CacheFsError> {
 
 pub(super) fn record_cache_entry_use(path: &Path) -> Result<(), CacheFsError> {
     write_last_used(path, SystemTime::now())
-}
-
-pub(super) fn cache_maintenance_due(
-    path: &Path,
-    minimum_interval: Duration,
-    maintenance_identity: &str,
-) -> Result<bool, CacheFsError> {
-    if minimum_interval.is_zero() {
-        return Ok(true);
-    }
-    let marker = path.join(LAST_MAINTENANCE_FILE);
-    // Allow both LF and CRLF for the timestamp and policy-identity lines.
-    let maximum_len = MAX_TIMESTAMP_BYTES + maintenance_identity.len() + 4;
-    let contents = match read_stamp_with_limit(&marker, maximum_len) {
-        Ok(Some(contents)) => contents,
-        Ok(None) => return Ok(true),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(true),
-        Err(source) => {
-            return Err(CacheFsError {
-                operation: "read cache maintenance time",
-                path: marker,
-                source,
-            });
-        }
-    };
-    let mut lines = contents.lines();
-    let Some(last_maintenance) = lines.next().and_then(decode_system_time) else {
-        return Ok(true);
-    };
-    if lines.next() != Some(maintenance_identity) {
-        return Ok(true);
-    }
-    Ok(SystemTime::now()
-        .duration_since(last_maintenance)
-        .map_or(true, |elapsed| elapsed >= minimum_interval))
-}
-
-pub(super) fn record_cache_maintenance(
-    path: &Path,
-    maintenance_identity: &str,
-) -> Result<(), CacheFsError> {
-    let marker = path.join(LAST_MAINTENANCE_FILE);
-    let elapsed = encode_system_time(&marker, SystemTime::now())?;
-    let contents = format!("{}\n{maintenance_identity}\n", elapsed.as_nanos());
-    write_cache_marker(
-        &marker,
-        contents.as_bytes(),
-        "record cache maintenance time",
-    )
 }
 
 pub(super) fn write_last_used(path: &Path, last_used: SystemTime) -> Result<(), CacheFsError> {

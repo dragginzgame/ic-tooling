@@ -1,79 +1,16 @@
-//! Locked shared-target retention, scheduling and outcome projection.
+//! Explicit locked shared-target retention.
 
 use super::{
-    CacheRetentionLimits, SharedIncrementalTargetMaintenance,
-    SharedIncrementalTargetMaintenanceOutcome, WasmBuildError, record_cache_entry_use,
-    wasm_cache_fs_error,
+    CacheRetentionLimits, SharedIncrementalTargetMaintenance, WasmBuildError,
+    record_cache_entry_use,
 };
-use crate::artifacts::cache_fs::{
-    cache_entry_last_used, cache_maintenance_due, record_cache_maintenance,
-};
+use crate::artifacts::cache_fs::cache_entry_last_used;
 use ic_host_fs::{owned_directory::remove_path_if_present, read::directory_logical_size};
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::Path,
     time::{Duration, Instant, SystemTime},
 };
-
-pub(super) enum SharedIncrementalTargetMaintenanceSchedule {
-    Skipped(SharedIncrementalTargetMaintenanceOutcome),
-    Due(DueSharedIncrementalTargetMaintenance),
-}
-
-pub(super) struct DueSharedIncrementalTargetMaintenance {
-    schedule_root: PathBuf,
-    maintenance_identity: String,
-    schedule_check: Duration,
-}
-
-pub(super) fn schedule_shared_incremental_target_maintenance(
-    canonical: &Path,
-    policy: CacheRetentionLimits,
-    minimum_interval: Duration,
-    lock_wait: Duration,
-) -> Result<SharedIncrementalTargetMaintenanceSchedule, WasmBuildError> {
-    let schedule_root = canonical.join(".ic-testkit");
-    let maintenance_identity = policy.maintenance_identity();
-    let schedule_started = Instant::now();
-    let due = cache_maintenance_due(&schedule_root, minimum_interval, &maintenance_identity)
-        .map_err(wasm_cache_fs_error)?;
-    let schedule_check = schedule_started.elapsed();
-    if !due {
-        return Ok(SharedIncrementalTargetMaintenanceSchedule::Skipped(
-            SharedIncrementalTargetMaintenanceOutcome::Skipped {
-                target_dir: canonical.to_owned(),
-                lock_wait,
-                schedule_check,
-            },
-        ));
-    }
-    Ok(SharedIncrementalTargetMaintenanceSchedule::Due(
-        DueSharedIncrementalTargetMaintenance {
-            schedule_root,
-            maintenance_identity,
-            schedule_check,
-        },
-    ))
-}
-
-pub(super) fn perform_due_shared_incremental_target_maintenance(
-    canonical: &Path,
-    policy: CacheRetentionLimits,
-    lock_wait: Duration,
-    due: DueSharedIncrementalTargetMaintenance,
-) -> Result<SharedIncrementalTargetMaintenanceOutcome, WasmBuildError> {
-    let DueSharedIncrementalTargetMaintenance {
-        schedule_root,
-        maintenance_identity,
-        schedule_check,
-    } = due;
-    let maintenance = maintain_shared_incremental_target_locked(canonical, policy, lock_wait)?;
-    record_cache_maintenance(&schedule_root, &maintenance_identity).map_err(wasm_cache_fs_error)?;
-    Ok(SharedIncrementalTargetMaintenanceOutcome::Performed {
-        maintenance,
-        schedule_check,
-    })
-}
 
 pub(super) fn maintain_shared_incremental_target_locked(
     canonical: &Path,

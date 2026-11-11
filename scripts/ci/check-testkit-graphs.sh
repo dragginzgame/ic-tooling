@@ -7,15 +7,19 @@ root="${BASH_SOURCE[0]}"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
 cd "$root"
+# Admit direct IC dependency owners in the independent qualification workspace
+# before allowing Runtime's transitive IC0 provider in its Wasm graph.
+bash scripts/ci/check-cargo-dependency-boundaries.sh --consumer "$root/qualification" --external-ic
 consumer="$root/"
 host="$(rustc -vV | sed -n 's/^host: //p')"
 test -n "$host"
 policy=(--consumer "$consumer" --require ic-platform-types=1 --forbid ic-metrics
     --forbid ic-wire-derive
     --forbid ic-build --forbid ic-host-text --forbid ic-wire-endpoint
-    --forbid ic-agent --forbid candid_parser --forbid ic0 --forbid-pattern '^ic-cdk')
-runtime_policy=(--consumer "$root/qualification" "${policy[@]:2}")
-policy+=(--forbid ic-platform-runtime-guard)
+    --forbid ic-agent --forbid candid_parser --forbid-pattern '^ic-cdk')
+# Runtime owns the probe's qualified raw system API; Testkit never selects it.
+runtime_policy=(--consumer "$root/qualification" "${policy[@]:2}" --require ic0=1)
+policy+=(--forbid ic-platform-runtime-guard --forbid ic0)
 native_policy=("${policy[@]}" --require pocket-ic=1 --require ic-management-canister-types=1
     --forbid ic-platform-pocket-ic --forbid-feature ic-platform/pocket-ic
     --forbid ic-platform-runtime --forbid ic-logging)

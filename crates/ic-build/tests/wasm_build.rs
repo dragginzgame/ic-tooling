@@ -14,9 +14,8 @@ use ic_host_fs::read::read_file;
 use ic_build::artifacts::{
     ArtifactCacheError, ArtifactCachePreparation, ArtifactCacheSpec, CacheBatchEntry,
     CacheRetentionLimits, LabeledWasmBuildSpec, WasmBuildBatchMetrics, WasmBuildBatchReport,
-    WasmBuildError, WasmBuildOutcome, WasmBuildPhase, WasmBuildProgressConfig,
-    build_wasm_canisters_cached, prepare_artifact_cache, prune_wasm_build_cache,
-    resolve_cargo_build_inputs,
+    WasmBuildError, WasmBuildOutcome, WasmBuildPhase, build_wasm_canisters_cached,
+    prepare_artifact_cache, prune_wasm_build_cache, resolve_cargo_build_inputs,
 };
 use std::{
     fs,
@@ -204,7 +203,7 @@ fn wasm_acquisition_builds_library_when_binary_has_the_same_output_name() {
         let outcome = if observed {
             ic_build::artifacts::build_wasm_canisters_cached_with_progress(
                 &spec,
-                WasmBuildProgressConfig::new(),
+                Duration::from_secs(10),
                 &mut |_| {},
                 spawn_cargo,
             )

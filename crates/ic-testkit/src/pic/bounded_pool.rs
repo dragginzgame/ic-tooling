@@ -1,6 +1,5 @@
 use std::{
     collections::VecDeque,
-    future::Future,
     num::NonZeroUsize,
     sync::{Mutex, OnceLock},
     time::{Duration, Instant},
@@ -92,19 +91,12 @@ impl<T, R> BoundedSlotPool<T, R> {
         })
     }
 
-    pub(super) async fn shutdown<E, F>(&self, mut delete: impl FnMut(T) -> F) -> Vec<E>
-    where
-        F: Future<Output = Result<(), E>>,
-    {
+    pub(super) async fn shutdown(&self, mut delete: impl AsyncFnMut(T)) {
         self.permits.close();
         let _lifecycle = self.lifecycle.write().await;
-        let mut failures = Vec::new();
         while let Some(value) = self.take_value() {
-            if let Err(error) = delete(value).await {
-                failures.push(error);
-            }
+            delete(value).await;
         }
-        failures
     }
 
     // Exclusive shutdown owns admission. Taking one value at a time retains

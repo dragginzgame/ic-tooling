@@ -4,6 +4,15 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.90.0]
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.30 for the public binary-codec traits, decoder errors and
+  ledger value identities. Callers exchanging those types must select Platform
+  0.30 too. Tooling already excludes the retired textual DID service; binary
+  bytes, explicit budgets and native adapter boundaries are unchanged.
+
 ## [0.89.2] - 2026-11-10
 
 ### 🔧 Changed

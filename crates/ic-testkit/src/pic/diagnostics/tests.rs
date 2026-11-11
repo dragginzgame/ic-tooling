@@ -271,7 +271,7 @@ fn reporting_peer(requests: Vec<CanisterDiagnosticsRequest>) -> (PocketIc, Peer)
             max_header_bytes: 16_384,
             max_body_bytes: 16_384,
         },
-        move |stream, request, _, _| {
+        move |stream, request, _| {
             let bytes = request.into_result().unwrap();
             let request = crate::test_support::http::Request::new(&bytes);
             let call: pocket_ic::common::rest::RawCanisterCall =

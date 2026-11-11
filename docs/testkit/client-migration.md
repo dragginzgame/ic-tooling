@@ -1,4 +1,4 @@
-# Upstream PocketIC migration — pending Testkit 0.98
+# Upstream PocketIC migration — Testkit 0.98 and later
 
 Testkit no longer maintains a PocketIC client. Depend on published `pocket-ic`
 16.1 directly alongside Testkit. Import its asynchronous client from
@@ -87,7 +87,37 @@ Wire calls retain IC Wire's limits and typed encoding/decoding failures. Their
 call rejection field now contains upstream `RejectResponse`; transport panics
 propagate. Response decoding never retries an update.
 
+## Wire identity alignment — Testkit 0.99 and 0.100
+
+Testkit 0.99.0 selects IC Wire 0.20. Callers using the `wire` feature must select
+Wire 0.20 too: `WireCallSpec` uses its `Limits`, and encoding/decoding failures
+retain its `Error` identity. No budget conversions or codec bridges are needed.
+This resolves
+[#350 — Testkit Wire types block Blob's Wire 0.20 adoption](https://github.com/dragginzgame/ic-tooling/issues/350).
+
+The pending Testkit 0.100.0 adopts Wire 0.21. Select that Wire minor when upgrading
+its typed call helpers; limits and codec errors have the new supplier identity.
+Wire 0.21's breaking TypeScript naming change requires no regeneration here:
+Testkit's native/probe profiles do not select its TypeScript generator.
+Runtime bytes, budgets and decoding acceptance remain unchanged from Wire 0.20.
+
+Decoder acceptance follows upstream Postcard, including redundant varint groups
+within width bounds and primitive normalization. Canonical encoder bytes and
+caller-selected budgets are unchanged; retain received frames for exact retries,
+signatures and hashes rather than relying on byte-identical re-encoding.
+Update response refusals do not imply the update had no effect and never cause
+automatic resubmission. The independent upstream PocketIC migration above also
+applies when upgrading from Testkit 0.97 or earlier.
+
 ## Snapshot boundary
+
+The pending Testkit 0.100.0 also corrects standalone recipe lifecycle failures.
+Builder failures remain the original `io::Error`; snapshot failures retain
+`ControllerSnapshotError`. Stop/start rejections instead retain
+`StandaloneCanisterLifecycleError::{Stop, Start}` inside `io::Error::get_ref()`.
+Downcast that cause to inspect the exact canister and original PocketIC rejection.
+A stop refusal before capture is no longer labelled as a snapshot failure.
+Transport panics and explicit teardown ownership are unchanged.
 
 The baseline uses upstream `take_canister_snapshot` and `load_canister_snapshot`.
 It retains deterministic ordering, duplicate-target admission, exact captured

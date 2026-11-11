@@ -1,5 +1,30 @@
 # Artifact and Wasm build APIs
 
+## Build 0.83 migration
+
+Shared-target maintenance has one explicit entrypoint:
+`maintain_shared_incremental_target(&spec, limits)`. Replace
+`maintain_shared_incremental_target_at_most_every` calls and remove
+`SharedIncrementalTargetMaintenanceOutcome` handling. The operation returns
+`None` for a missing target and `Some(report)` for completed maintenance.
+Callers own invocation cadence, cross-process scheduling if needed, and failure
+policy. Maintenance still holds the shared Cargo lock and validates source/cache
+boundaries before clearing state. Old schedule markers remain untouched and
+have no effect; this migration performs no artifact cleanup.
+
+The known Canic qualification caller migration is tracked in
+[Canic #762 — Migrate IC Build callers to explicit maintenance and pruning](https://github.com/dragginzgame/canic/issues/762).
+Consumer source and publication remain separate from this local Build change.
+
+Progress takes an explicit positive `Duration` instead of
+`WasmBuildProgressConfig`; pass `Duration::from_secs(10)` for the former default.
+Heartbeat records expose `phase` and `elapsed` directly. Batch records expose
+`index` and `event`; replace the former `Heartbeat` and `BuildProgress`
+variant patterns with those fields. Resolve the reporting label with
+`specs[event.index].label()` instead of retaining an owned label in every
+heartbeat. Result entries still own their labels. Zero intervals still refuse before effects;
+heartbeat cadence, phase attribution and caller-selected child custody are unchanged.
+
 ## Build 0.82 migration
 
 Shared Cargo targets are the only compilation path. Replace `with_isolated_builds()`
@@ -886,15 +911,14 @@ let spec = WasmBuildSpec::new(
     &["counter_canister"], environment.clone(), configuration_limits)
 .with_shared_incremental_target(&shared_incremental);
 // Callers choose when maintenance is allowed to discard incremental state.
-let maintenance = ic_build::artifacts::maintain_shared_incremental_target_at_most_every(
+let maintenance = ic_build::artifacts::maintain_shared_incremental_target(
     &spec,
     CacheRetentionLimits::new()
         .with_max_age(std::time::Duration::from_secs(7 * 24 * 60 * 60))
         .with_max_size_bytes(4 * 1024 * 1024 * 1024),
-    std::time::Duration::from_secs(24 * 60 * 60),
 )?;
 let outcome = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)?;
-eprintln!("maintenance={maintenance} {outcome}");
+eprintln!("maintenance={maintenance:?} {outcome}");
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
@@ -912,13 +936,11 @@ colocate unrelated data that needs to survive a clear. Before clearing, the
 exact Cargo resolver rejects a target that overlaps source, configuration, or
 additional inputs, or whose clearing could reach exact cached artifacts.
 The exact and shared target may use the same container, whose `.ic-testkit`
-metadata remains preserved. Independent high-frequency callers can use
-`maintain_shared_incremental_target_at_most_every`; matching recent passes
-coordinate through a small cross-process marker and skip both Cargo input
-resolution and whole-target traversal. Missing targets remain uncreated,
-policy changes are immediately due, and a zero interval always runs. A failed
-maintenance call returns its error without advancing the schedule. Callers choose
-whether that failure prevents their subsequent build.
+metadata remains preserved. Missing targets remain uncreated. Each explicit
+maintenance call resolves inputs and evaluates retention; high-frequency callers
+own any scheduling that avoids repeated work. Callers choose whether a failure
+prevents their subsequent build. Maintenance neither reads nor advances old
+schedule markers.
 
 Long input resolution, lock waits, Cargo builds and artifact
 publication can expose synchronous phase-aware heartbeats without changing the
@@ -929,8 +951,8 @@ existing silent API:
 # let environment = std::collections::BTreeMap::<std::ffi::OsString, std::ffi::OsString>::new();
 use ic_host_process::child::{CleanupPolicy, OwnedChild};
 use ic_build::artifacts::{
-    WasmBuildProgressConfig, WasmBuildProgressEvent, WasmBuildSpec,
-    build_wasm_canisters_cached,
+    WasmBuildProgressEvent, WasmBuildSpec,
+    build_wasm_canisters_cached_with_progress,
 };
 use std::time::Duration;
 
@@ -939,15 +961,13 @@ let spec = WasmBuildSpec::new(
     &workspace,
     &workspace.join("target/pic-wasm"),
     &["counter_canister"], environment.clone(), configuration_limits);
-let outcome = ic_build::artifacts::build_wasm_canisters_cached_with_progress(
+let outcome = build_wasm_canisters_cached_with_progress(
     &spec,
-        WasmBuildProgressConfig::new()
-            .with_heartbeat_interval(Duration::from_secs(15)),
-        &mut |event| {
-            if let WasmBuildProgressEvent::Heartbeat { phase, elapsed } = event {
-                eprintln!("{phase} is still active after {elapsed:?}");
-            }
-        },
+    Duration::from_secs(15),
+    &mut |event| {
+        let WasmBuildProgressEvent { phase, elapsed } = event;
+        eprintln!("{phase} is still active after {elapsed:?}");
+    },
     |command| OwnedChild::spawn(command, CleanupPolicy::KillAndWait))?;
 eprintln!("{outcome}");
 # Ok::<(), Box<dyn std::error::Error>>(())
@@ -1022,7 +1042,8 @@ must be nonempty and unique; invalid structure returns
 `ic_host_artifacts::batch::BatchLabelError` before resolution, progress, or build
 work. The `WasmBuildBatchReport` retains canonical ordered entries and provides
 structured labeled `outcomes` and `failures` iterators. Labels are reporting
-identity only and never affect exact cache keys. Progress carries the same label. Every entry uses the ordinary
+identity only and never affect exact cache keys. Progress identifies its input
+specification by index; observers borrow its label from that slice. Every entry uses the ordinary
 single-spec implementation and its own exact identity, locks, policy, and
 Cargo command; packages are never collapsed into one invocation that could
 unify shared dependency features.

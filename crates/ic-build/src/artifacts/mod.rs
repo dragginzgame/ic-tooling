@@ -133,13 +133,12 @@ pub use wasm_batch::{
 };
 pub use wasm_cache::{
     CargoBuildInput, CargoInputProbePolicy, ResolvedCargoBuildInputs,
-    SharedIncrementalTargetMaintenance, SharedIncrementalTargetMaintenanceOutcome, WasmBuildError,
-    WasmBuildFailureDetails, WasmBuildFailureTimings, WasmBuildOutcome, WasmBuildProgressConfig,
-    WasmBuildProgressEvent, WasmBuildRecord, WasmBuildSpec, WasmBuildTimings,
-    WasmInputResolutionTimings, build_wasm_canisters_cached,
+    SharedIncrementalTargetMaintenance, WasmBuildError, WasmBuildFailureDetails,
+    WasmBuildFailureTimings, WasmBuildOutcome, WasmBuildProgressEvent, WasmBuildRecord,
+    WasmBuildSpec, WasmBuildTimings, WasmInputResolutionTimings, build_wasm_canisters_cached,
     build_wasm_canisters_cached_with_progress, maintain_shared_incremental_target,
-    maintain_shared_incremental_target_at_most_every, prune_wasm_build_cache,
-    resolve_cargo_build_inputs, resolve_cargo_build_inputs_with_probe_policy,
+    prune_wasm_build_cache, resolve_cargo_build_inputs,
+    resolve_cargo_build_inputs_with_probe_policy,
 };
 
 /// Private keyed environment comparison evidence.

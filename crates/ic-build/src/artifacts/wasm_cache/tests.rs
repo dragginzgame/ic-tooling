@@ -8,14 +8,12 @@ use ic_host_process::child::OwnedChild;
 use ic_host_process::testing::write_executable_script;
 
 use super::{
-    ProgressReporter, SharedIncrementalTargetMaintenanceOutcome, WasmBuildBatchInputResolver,
-    WasmBuildError, WasmBuildOutcome, WasmBuildPhase, WasmBuildProgressConfig,
-    WasmBuildProgressEvent, WasmBuildSpec, artifact_stamp_path, build_wasm_canisters_cached,
-    ensure_cache_directory_tag, finish_fingerprint_build, lock_wasm_build_cache,
-    lock_wasm_build_cache_with_progress, maintain_shared_incremental_target,
-    maintain_shared_incremental_target_at_most_every, materialize_artifacts,
-    prune_wasm_build_cache, publish_artifact_stamps, resolve_cargo_build_inputs, run_cargo_build,
-    validate_spec, validated_artifact_set,
+    ProgressReporter, WasmBuildBatchInputResolver, WasmBuildError, WasmBuildOutcome,
+    WasmBuildPhase, WasmBuildProgressEvent, WasmBuildSpec, artifact_stamp_path,
+    build_wasm_canisters_cached, ensure_cache_directory_tag, finish_fingerprint_build,
+    lock_wasm_build_cache, lock_wasm_build_cache_with_progress, maintain_shared_incremental_target,
+    materialize_artifacts, prune_wasm_build_cache, publish_artifact_stamps,
+    resolve_cargo_build_inputs, run_cargo_build, validate_spec, validated_artifact_set,
 };
 use crate::artifacts::cache_fs::{CacheRetentionLimits, write_last_used};
 use crate::artifacts::digest::digest_bytes;
@@ -342,7 +340,7 @@ fn package_selection_agrees_across_identity_artifacts_and_cargo_invocation() {
     for observed in [false, true] {
         let mut observer = |_| {};
         let mut progress = if observed {
-            ProgressReporter::new(Some((WasmBuildProgressConfig::new(), &mut observer))).unwrap()
+            ProgressReporter::new(Some((Duration::from_secs(10), &mut observer))).unwrap()
         } else {
             ProgressReporter::silent()
         };
@@ -592,10 +590,6 @@ fn shared_target_boundaries_preserve_retained_exact_entries() {
     ));
     assert!(matches!(
         maintain_shared_incremental_target(&nested, policy),
-        Err(WasmBuildError::InvalidSpec { .. })
-    ));
-    assert!(matches!(
-        maintain_shared_incremental_target_at_most_every(&nested, policy, Duration::ZERO),
         Err(WasmBuildError::InvalidSpec { .. })
     ));
     assert!(artifact.is_file());
@@ -932,16 +926,6 @@ fn public_cargo_input_snapshot_detects_local_source_changes() {
     assert!(
         matches!(maintenance, Err(WasmBuildError::InvalidSpec { .. })),
         "unsafe maintenance returned {maintenance:?}",
-    );
-    assert!(sentinel.is_file());
-    let scheduled = maintain_shared_incremental_target_at_most_every(
-        &unsafe_target,
-        CacheRetentionLimits::new().with_max_size_bytes(0),
-        Duration::from_secs(60),
-    );
-    assert!(
-        matches!(scheduled, Err(WasmBuildError::InvalidSpec { .. })),
-        "unsafe scheduled maintenance returned {scheduled:?}",
     );
     assert!(sentinel.is_file());
 
@@ -1477,20 +1461,11 @@ fn shared_target_maintenance_leaves_missing_targets_uncreated() {
         CONFIGURATION_LIMITS,
     )
     .with_shared_incremental_target(&target);
-    let scheduled = maintain_shared_incremental_target_at_most_every(
-        &shared,
-        CacheRetentionLimits::new(),
-        Duration::from_secs(60),
-    )
-    .expect("schedule missing shared target maintenance");
-    assert!(matches!(
-        &scheduled,
-        SharedIncrementalTargetMaintenanceOutcome::Missing { .. }
-    ));
-    assert_eq!(scheduled.target_dir(), target);
-    assert!(!scheduled.was_performed());
-    assert_eq!(scheduled.lock_wait(), None);
-    assert_eq!(scheduled.schedule_check(), None);
+    assert!(
+        maintain_shared_incremental_target(&shared, CacheRetentionLimits::new())
+            .expect("maintain missing shared target")
+            .is_none()
+    );
     assert!(!target.exists());
     fs::remove_dir_all(root).expect("remove missing shared-target fixture");
 }
@@ -1508,6 +1483,9 @@ fn shared_target_maintenance_clears_cargo_state_but_preserves_coordination() {
         .expect("write shared Cargo state");
     fs::write(target.join(".rustc_info.json"), b"rustc state")
         .expect("write shared Cargo metadata");
+    let old_schedule = target.join(".ic-testkit/.ic-testkit-last-maintenance");
+    fs::create_dir_all(old_schedule.parent().unwrap()).unwrap();
+    fs::write(&old_schedule, [0xff]).unwrap();
     let spec = WasmBuildSpec::new(
         &root,
         &root.join("exact"),
@@ -1530,6 +1508,7 @@ fn shared_target_maintenance_clears_cargo_state_but_preserves_coordination() {
     assert!(!target.join(".rustc_info.json").exists());
     assert!(target.join("CACHEDIR.TAG").is_file());
     assert!(target.join(".ic-testkit/wasm-incremental.lock").is_file());
+    assert_eq!(fs::read(&old_schedule).unwrap(), [0xff]);
 
     let retained = maintain_shared_incremental_target(&spec, CacheRetentionLimits::new())
         .expect("reinspect shared target")
@@ -1543,96 +1522,28 @@ fn shared_target_maintenance_clears_cargo_state_but_preserves_coordination() {
 }
 
 #[test]
-fn scheduled_shared_target_maintenance_skips_expensive_work_inside_interval() {
-    let root = unique_temp_directory("scheduled-shared-target-maintenance");
-    let package = root.join("fixture");
-    crate::testing::cargo::write_workspace(&root, &["fixture"]).unwrap();
-    crate::testing::cargo::write_fixture_package(&package, "fixture", "", "pub fn fixture() {}\n")
-        .unwrap();
-    let workspace_manifest = root.join("Cargo.toml");
-    let target = root.join("shared-target");
-    fs::create_dir_all(target.join("debug/deps")).expect("create scheduled Cargo state");
-    fs::write(target.join("debug/deps/object.o"), vec![7_u8; 128])
-        .expect("write scheduled Cargo state");
-    let spec = WasmBuildSpec::new(
-        &root,
-        &root.join("exact"),
-        &["fixture"],
-        crate::testing::cargo::environment(),
-        CONFIGURATION_LIMITS,
-    )
-    .with_shared_incremental_target(&target);
-    let policy = CacheRetentionLimits::new().with_max_size_bytes(0);
-    let interval = Duration::from_hours(1);
-
-    let first = maintain_shared_incremental_target_at_most_every(&spec, policy, interval)
-        .expect("perform scheduled shared-target maintenance");
-    let report = first
-        .maintenance()
-        .expect("first scheduled maintenance must be performed");
-    assert!(first.was_performed());
-    assert!(report.was_cleared());
-    assert!(first.lock_wait().is_some());
-    assert!(first.schedule_check().is_some());
-
-    let sentinel = target.join("debug/deps/preserve-on-skip");
-    fs::create_dir_all(sentinel.parent().expect("scheduled sentinel parent"))
-        .expect("recreate shared Cargo state");
-    fs::write(&sentinel, b"preserve").expect("write scheduled skip sentinel");
-    fs::remove_file(&workspace_manifest).expect("hide Cargo metadata from skipped call");
-
-    let skipped = maintain_shared_incremental_target_at_most_every(&spec, policy, interval)
-        .expect("skip recently completed shared-target maintenance");
-    assert!(matches!(
-        &skipped,
-        SharedIncrementalTargetMaintenanceOutcome::Skipped { .. }
-    ));
-    assert!(!skipped.was_performed());
-    assert!(skipped.lock_wait().is_some());
-    assert!(skipped.schedule_check().is_some());
-    assert!(sentinel.is_file());
-
-    fs::write(
-        &workspace_manifest,
-        "[workspace]\nmembers = [\"fixture\"]\nresolver = \"2\"\n",
-    )
-    .expect("restore scheduled fixture workspace");
-    let changed_policy = CacheRetentionLimits::new().with_max_size_bytes(u64::MAX);
-    let changed = maintain_shared_incremental_target_at_most_every(&spec, changed_policy, interval)
-        .expect("changed policy must make scheduled maintenance due");
-    assert!(changed.was_performed());
-    assert!(sentinel.is_file());
-
-    let zero_interval =
-        maintain_shared_incremental_target_at_most_every(&spec, changed_policy, Duration::ZERO)
-            .expect("zero interval must perform shared-target maintenance");
-    assert!(zero_interval.was_performed());
-
-    fs::remove_dir_all(root).expect("remove scheduled shared-target fixture");
-}
-
-#[test]
 #[cfg(unix)]
 fn failed_explicit_maintenance_does_not_prevent_wasm_acquisition() {
     let (root, spec) = fake_wasm_build_spec("explicit-maintenance-failure");
     let target = super::shared_incremental_target(&spec);
-    let marker = target.join(".ic-testkit/.ic-testkit-last-maintenance");
-    fs::create_dir_all(marker.parent().unwrap()).unwrap();
-    fs::write(&marker, [0xff]).unwrap();
-    let result = maintain_shared_incremental_target_at_most_every(
+    fs::create_dir_all(&target).unwrap();
+    let cargo = root.join("selected-cargo");
+    let spec = spec.with_cargo_program(&cargo);
+    let sentinel = target.join("retained-compiler-state");
+    fs::write(&sentinel, b"preserve").unwrap();
+    let result = maintain_shared_incremental_target(
         &spec,
         CacheRetentionLimits::new().with_max_size_bytes(0),
-        Duration::from_secs(60),
     );
-    assert!(matches!(result, Err(WasmBuildError::Io { .. })));
-    assert_eq!(fs::read(&marker).unwrap(), [0xff]);
-    // The caller can proceed with a build after refusing maintenance. Neither
-    // cold nor warm acquisition retries maintenance or advances its marker.
+    assert!(matches!(result, Err(WasmBuildError::CommandSpawn { .. })));
+    // After the caller restores its selected tool, acquisitions do not retry
+    // the refused maintenance or discard the retained compiler state.
+    fs::copy(root.join("cargo.sh"), &cargo).unwrap();
     let cold = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct).unwrap();
     let warm = build_wasm_canisters_cached(&spec, |_| panic!("exact hit must not spawn")).unwrap();
     assert!(!cold.is_reused());
     assert!(warm.is_reused());
-    assert_eq!(fs::read(&marker).unwrap(), [0xff]);
+    assert_eq!(fs::read(&sentinel).unwrap(), b"preserve");
     drop((cold, warm));
     fs::remove_dir_all(root).unwrap();
 }
@@ -1657,7 +1568,7 @@ fn zero_progress_heartbeat_is_rejected_for_a_valid_build() {
     validate_spec(&spec).expect("valid heartbeat build spec");
     let result = crate::artifacts::build_wasm_canisters_cached_with_progress(
         &spec,
-        WasmBuildProgressConfig::new().with_heartbeat_interval(Duration::ZERO),
+        Duration::ZERO,
         &mut |_| {},
         spawn_cargo,
     );
@@ -1665,7 +1576,7 @@ fn zero_progress_heartbeat_is_rejected_for_a_valid_build() {
     assert!(!root.join("exact").exists());
     let outcome = crate::artifacts::build_wasm_canisters_cached_with_progress(
         &spec,
-        WasmBuildProgressConfig::new().with_heartbeat_interval(Duration::from_secs(1)),
+        Duration::from_secs(1),
         &mut |_| {},
         spawn_cargo,
     )
@@ -1683,7 +1594,7 @@ fn observed_phase_emits_phase_aware_heartbeats() {
         let mut observer = |event| {
             if matches!(
                 event,
-                WasmBuildProgressEvent::Heartbeat {
+                WasmBuildProgressEvent {
                     phase: WasmBuildPhase::ContentHashing,
                     ..
                 }
@@ -1692,11 +1603,8 @@ fn observed_phase_emits_phase_aware_heartbeats() {
             }
             events.push(event);
         };
-        let mut progress = ProgressReporter::new(Some((
-            WasmBuildProgressConfig::new().with_heartbeat_interval(Duration::from_millis(5)),
-            &mut observer,
-        )))
-        .unwrap();
+        let mut progress =
+            ProgressReporter::new(Some((Duration::from_millis(5), &mut observer))).unwrap();
         progress.run_phase(WasmBuildPhase::ContentHashing, move || {
             released
                 .recv_timeout(Duration::from_secs(10))
@@ -1708,7 +1616,7 @@ fn observed_phase_emits_phase_aware_heartbeats() {
     assert_eq!(value, 42);
     assert!(events.iter().any(|event| matches!(
         event,
-        WasmBuildProgressEvent::Heartbeat {
+        WasmBuildProgressEvent {
             phase: WasmBuildPhase::ContentHashing,
             ..
         }
@@ -1725,7 +1633,7 @@ fn observer_panic_joins_active_phase_worker() {
         let mut observer = |event| {
             if matches!(
                 event,
-                WasmBuildProgressEvent::Heartbeat {
+                WasmBuildProgressEvent {
                     phase: WasmBuildPhase::InputDiscovery,
                     ..
                 }
@@ -1736,11 +1644,8 @@ fn observer_panic_joins_active_phase_worker() {
                 panic!("synthetic observer panic");
             }
         };
-        let mut progress = ProgressReporter::new(Some((
-            WasmBuildProgressConfig::new().with_heartbeat_interval(Duration::from_millis(5)),
-            &mut observer,
-        )))
-        .unwrap();
+        let mut progress =
+            ProgressReporter::new(Some((Duration::from_millis(5), &mut observer))).unwrap();
         progress.run_phase(WasmBuildPhase::InputDiscovery, move || {
             assert_eq!(
                 released.recv_timeout(Duration::from_secs(10)),
@@ -1775,7 +1680,7 @@ fn exact_cache_lock_wait_emits_phase_aware_heartbeats() {
         let mut observer = |event| {
             if matches!(
                 &event,
-                WasmBuildProgressEvent::Heartbeat {
+                WasmBuildProgressEvent {
                     phase: WasmBuildPhase::ExactCacheCoordination,
                     ..
                 }
@@ -1784,11 +1689,8 @@ fn exact_cache_lock_wait_emits_phase_aware_heartbeats() {
             }
             events.push(event);
         };
-        let mut progress = ProgressReporter::new(Some((
-            WasmBuildProgressConfig::new().with_heartbeat_interval(Duration::from_millis(5)),
-            &mut observer,
-        )))
-        .unwrap();
+        let mut progress =
+            ProgressReporter::new(Some((Duration::from_millis(5), &mut observer))).unwrap();
         let (_lock, wait) = lock_wasm_build_cache_with_progress(&target_dir, &mut progress)
             .expect("acquire observed fixture cache lock");
         assert!(wait >= Duration::from_millis(5));
@@ -1797,7 +1699,7 @@ fn exact_cache_lock_wait_emits_phase_aware_heartbeats() {
 
     assert!(events.iter().any(|event| matches!(
         event,
-        WasmBuildProgressEvent::Heartbeat {
+        WasmBuildProgressEvent {
             phase: WasmBuildPhase::ExactCacheCoordination,
             ..
         }
@@ -1849,7 +1751,7 @@ done
         let mut observer = |event| {
             if matches!(
                 &event,
-                WasmBuildProgressEvent::Heartbeat {
+                WasmBuildProgressEvent {
                     phase: WasmBuildPhase::CargoBuild,
                     ..
                 }
@@ -1858,11 +1760,8 @@ done
             }
             events.push(event);
         };
-        let mut progress = ProgressReporter::new(Some((
-            WasmBuildProgressConfig::new().with_heartbeat_interval(Duration::from_millis(10)),
-            &mut observer,
-        )))
-        .unwrap();
+        let mut progress =
+            ProgressReporter::new(Some((Duration::from_millis(10), &mut observer))).unwrap();
 
         run_cargo_build(
             &spec,
@@ -1876,7 +1775,7 @@ done
 
     assert!(events.iter().any(|event| matches!(
         event,
-        WasmBuildProgressEvent::Heartbeat {
+        WasmBuildProgressEvent {
             phase: WasmBuildPhase::CargoBuild,
             ..
         }
@@ -1949,8 +1848,7 @@ fn cargo_failure_retains_diagnostics_with_or_without_heartbeats() {
         let error = {
             let mut observer = |_| {};
             let mut progress = if observed {
-                ProgressReporter::new(Some((WasmBuildProgressConfig::new(), &mut observer)))
-                    .unwrap()
+                ProgressReporter::new(Some((Duration::from_secs(10), &mut observer))).unwrap()
             } else {
                 ProgressReporter::silent()
             };
@@ -2005,7 +1903,7 @@ fn overflowing_cargo_diagnostics_are_bounded_with_or_without_heartbeats() {
     for observed in [false, true] {
         let mut observer = |_| {};
         let mut progress = if observed {
-            ProgressReporter::new(Some((WasmBuildProgressConfig::new(), &mut observer))).unwrap()
+            ProgressReporter::new(Some((Duration::from_secs(10), &mut observer))).unwrap()
         } else {
             ProgressReporter::silent()
         };
@@ -3080,7 +2978,7 @@ fn observed_cargo_panic_stops_compiler_descendants() {
         let mut observer = |event| {
             if matches!(
                 event,
-                WasmBuildProgressEvent::Heartbeat {
+                WasmBuildProgressEvent {
                     phase: WasmBuildPhase::CargoBuild,
                     ..
                 }
@@ -3089,11 +2987,8 @@ fn observed_cargo_panic_stops_compiler_descendants() {
                 panic!("synthetic Cargo observer panic");
             }
         };
-        let mut progress = ProgressReporter::new(Some((
-            WasmBuildProgressConfig::new().with_heartbeat_interval(Duration::from_millis(10)),
-            &mut observer,
-        )))
-        .unwrap();
+        let mut progress =
+            ProgressReporter::new(Some((Duration::from_millis(10), &mut observer))).unwrap();
         run_cargo_build(
             &spec,
             &root.join("cargo-target"),
@@ -3327,8 +3222,7 @@ fn cargo_spawn_custody_and_stdin_do_not_depend_on_progress() {
             .with_cargo_program("/bin/sh");
             let mut observer = |_| {};
             let mut progress = if observed {
-                ProgressReporter::new(Some((WasmBuildProgressConfig::new(), &mut observer)))
-                    .unwrap()
+                ProgressReporter::new(Some((Duration::from_secs(10), &mut observer))).unwrap()
             } else {
                 ProgressReporter::silent()
             };

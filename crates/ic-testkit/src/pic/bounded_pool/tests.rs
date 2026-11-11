@@ -122,7 +122,7 @@ async fn panic_while_leased_preserves_the_value_and_releases_capacity() {
 }
 
 #[tokio::test]
-async fn shutdown_waits_for_leases_rejects_waiters_and_keeps_all_failures() {
+async fn shutdown_waits_for_leases_rejects_waiters_and_attempts_each_value_once() {
     let pool = pool(3);
     let mut first = pool.acquire().await.unwrap();
     let mut second = pool.acquire().await.unwrap();
@@ -137,9 +137,8 @@ async fn shutdown_waits_for_leases_rejects_waiters_and_keeps_all_failures() {
     );
     let attempts = Arc::new(std::sync::Mutex::new(Vec::new()));
     let observed = Arc::clone(&attempts);
-    let mut shutdown = Box::pin(pool.shutdown(move |value| {
+    let mut shutdown = Box::pin(pool.shutdown(async move |value| {
         observed.lock().unwrap().push(value);
-        async move { Err(value) }
     }));
     assert!(
         std::future::poll_fn(|cx| std::task::Poll::Ready(shutdown.as_mut().poll(cx)))
@@ -157,13 +156,11 @@ async fn shutdown_waits_for_leases_rejects_waiters_and_keeps_all_failures() {
     drop(first);
     assert!(attempts.lock().unwrap().is_empty());
     drop((second, third));
-    let failures = shutdown.await;
-    assert_eq!(failures, vec![1, 2]);
+    shutdown.await;
     assert_eq!(*attempts.lock().unwrap(), vec![1, 2]);
-    assert_eq!(
-        pool.shutdown(|value| async move { Err(value) }).await,
-        Vec::<usize>::new()
-    );
+    pool.shutdown(async |value| attempts.lock().unwrap().push(value))
+        .await;
+    assert_eq!(*attempts.lock().unwrap(), vec![1, 2]);
 }
 
 #[tokio::test]
@@ -180,7 +177,9 @@ async fn cancelled_shutdown_retains_unattempted_values_without_replaying_deletio
             .await
             .is_pending()
     );
-    let mut waiting = Box::pin(pool.shutdown(|value| async move { Err(value) }));
+    let mut waiting = Box::pin(pool.shutdown(async |_| {
+        panic!("shutdown cannot delete while leases are held");
+    }));
     assert!(
         std::future::poll_fn(|cx| std::task::Poll::Ready(waiting.as_mut().poll(cx)))
             .await
@@ -197,9 +196,9 @@ async fn cancelled_shutdown_retains_unattempted_values_without_replaying_deletio
     drop((first, second));
     let attempts = Arc::new(std::sync::Mutex::new(Vec::new()));
     let observed = Arc::clone(&attempts);
-    let mut deleting = Box::pin(pool.shutdown(move |value| {
+    let mut deleting = Box::pin(pool.shutdown(async move |value| {
         observed.lock().unwrap().push(value);
-        std::future::pending::<Result<(), usize>>()
+        std::future::pending::<()>().await;
     }));
     assert!(
         std::future::poll_fn(|cx| std::task::Poll::Ready(deleting.as_mut().poll(cx)))
@@ -208,18 +207,18 @@ async fn cancelled_shutdown_retains_unattempted_values_without_replaying_deletio
     );
     drop(deleting);
     assert_eq!(*attempts.lock().unwrap(), vec![1]);
-    let failures = pool.shutdown(|value| async move { Err(value) }).await;
-    assert_eq!(failures, vec![2]); // the unknown first deletion is not replayed.
+    pool.shutdown(async |value| attempts.lock().unwrap().push(value))
+        .await;
+    assert_eq!(*attempts.lock().unwrap(), vec![1, 2]); // the unknown first deletion is not replayed.
 }
 
 #[tokio::test]
-async fn concurrent_shutdowns_serialize_and_an_unused_pool_never_allocates_slots() {
+async fn unused_pool_shutdown_is_idempotent_without_allocating_slots() {
     let pool = pool(1);
-    let (first, second) = tokio::join!(
-        pool.shutdown(|value| async move { Err(value) }),
-        pool.shutdown(|value| async move { Err(value) }),
+    tokio::join!(
+        pool.shutdown(async |_| panic!("unused pool has no cached values")),
+        pool.shutdown(async |_| panic!("unused pool has no cached values")),
     );
-    assert!(first.is_empty() && second.is_empty());
     assert!(pool.state.get().is_none());
     assert!(pool.acquire().await.is_none());
 }

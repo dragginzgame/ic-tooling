@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 
 use super::wasm_cache::{
     WasmBuildBatchInputMetrics, WasmBuildBatchInputResolver, WasmBuildError,
-    WasmBuildFailureDetails, WasmBuildOutcome, WasmBuildProgressConfig, WasmBuildProgressEvent,
-    WasmBuildSpec, WasmBuildTimings, build_wasm_canisters_cached_in_batch,
+    WasmBuildFailureDetails, WasmBuildOutcome, WasmBuildProgressEvent, WasmBuildSpec,
+    WasmBuildTimings, build_wasm_canisters_cached_in_batch,
 };
 
 /// Caller-labeled specification for one exact Wasm batch entry.
@@ -51,19 +51,14 @@ pub struct WasmBuildBatchMetrics {
     total: Duration,
 }
 
-/// Structured progress for an independent sequence of exact Wasm builds.
-#[non_exhaustive]
+/// Progress forwarded from one independent build in a batch.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum WasmBuildBatchProgressEvent {
-    /// Progress forwarded from one independent build.
-    BuildProgress {
-        /// Zero-based position in the supplied specification slice.
-        index: usize,
-        /// Caller-owned stable label.
-        label: String,
-        /// Event emitted by that build.
-        event: WasmBuildProgressEvent,
-    },
+pub struct WasmBuildBatchProgressEvent {
+    /// Zero-based position in the supplied specification slice; use it to borrow
+    /// that specification's caller-owned label.
+    pub index: usize,
+    /// Heartbeat emitted by that build.
+    pub event: WasmBuildProgressEvent,
 }
 
 impl WasmBuildBatchReport {
@@ -180,10 +175,7 @@ impl std::fmt::Display for WasmBuildBatchReport {
 )]
 pub fn build_wasm_canisters_cached_batch(
     specs: &[LabeledWasmBuildSpec],
-    mut progress: Option<(
-        WasmBuildProgressConfig,
-        &mut dyn FnMut(WasmBuildBatchProgressEvent),
-    )>,
+    mut progress: Option<(Duration, &mut dyn FnMut(WasmBuildBatchProgressEvent))>,
     mut spawn: impl FnMut(
         &mut std::process::Command,
     ) -> std::io::Result<ic_host_process::child::OwnedChild>,
@@ -192,21 +184,17 @@ pub fn build_wasm_canisters_cached_batch(
     let mut resolver =
         WasmBuildBatchInputResolver::new(specs.iter().map(LabeledWasmBuildSpec::spec));
     let mut report = build_wasm_batch(specs, |spec, index| {
-        let progress_config = progress.as_ref().map(|(config, _)| *config);
+        let heartbeat_interval = progress.as_ref().map(|(interval, _)| *interval);
         let mut forward = |event| {
             if let Some((_, observer)) = progress.as_mut() {
-                observer(WasmBuildBatchProgressEvent::BuildProgress {
-                    index,
-                    label: specs[index].label.clone(),
-                    event,
-                });
+                observer(WasmBuildBatchProgressEvent { index, event });
             }
         };
         build_wasm_canisters_cached_in_batch(
             spec,
             index,
             &mut resolver,
-            progress_config.map(|config| (config, &mut forward as &mut dyn FnMut(_))),
+            heartbeat_interval.map(|interval| (interval, &mut forward as &mut dyn FnMut(_))),
             &mut spawn,
         )
     });

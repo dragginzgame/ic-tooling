@@ -7,16 +7,12 @@ mod support;
 use ic_host_process::child::OwnedChild;
 use ic_host_process::testing::write_executable_script;
 
-use ic_build::artifacts::{
-    CacheRetentionLimits, SharedIncrementalTargetMaintenanceOutcome, WasmBuildOutcome,
-    WasmBuildSpec, build_wasm_canisters_cached, maintain_shared_incremental_target_at_most_every,
-};
+use ic_build::artifacts::{WasmBuildOutcome, WasmBuildSpec, build_wasm_canisters_cached};
 use ic_build::testing::fs::unique_temp_directory;
 use std::{
     ffi::OsString,
     fs,
     path::{Path, PathBuf},
-    time::Duration,
 };
 
 const WORKER_ROOT_ENV: &str = "IC_TESTKIT_WASM_PROCESS_ROOT";
@@ -46,30 +42,6 @@ fn different_cache_roots_coordinate_one_shared_incremental_target_across_process
         "different exact caches should each build once"
     );
     fs::remove_dir_all(root).expect("remove shared-target process fixture");
-}
-
-#[test]
-fn scheduled_shared_target_maintenance_runs_once_across_processes() {
-    let root = unique_temp_directory("wasm-shared-scheduled-maintenance");
-    support::wasm::write_workspace(&root.join("workspace")).expect("prepare maintenance workspace");
-    fs::create_dir_all(root.join("shared-target/debug/deps"))
-        .expect("create shared target for scheduled process test");
-    fs::write(root.join("shared-target/debug/deps/state"), b"state")
-        .expect("write shared target state for scheduled process test");
-    support::process::run_workers(
-        &root,
-        "scheduled_shared_target_maintenance_process_worker",
-        WORKER_ROOT_ENV,
-        WORKER_ID_ENV,
-    );
-    let mut outcomes = [
-        fs::read_to_string(root.join("maintenance-first")).expect("read first maintenance outcome"),
-        fs::read_to_string(root.join("maintenance-second"))
-            .expect("read second maintenance outcome"),
-    ];
-    outcomes.sort();
-    assert_eq!(outcomes, ["performed", "skipped"]);
-    fs::remove_dir_all(root).expect("remove scheduled-maintenance process fixture");
 }
 
 #[test]
@@ -115,42 +87,6 @@ fn shared_incremental_process_worker() {
     let outcome = build_wasm_canisters_cached(&spec, OwnedChild::spawn_direct)
         .expect("run shared-target worker build");
     assert!(matches!(outcome, WasmBuildOutcome::Built(_)));
-}
-
-#[test]
-#[ignore = "subprocess worker selected explicitly by the parent maintenance test"]
-fn scheduled_shared_target_maintenance_process_worker() {
-    let root = PathBuf::from(
-        std::env::var_os(WORKER_ROOT_ENV).expect("worker root environment must be set"),
-    );
-    let worker = std::env::var(WORKER_ID_ENV).expect("worker identity environment must be set");
-    support::process::await_parent(&root, &worker);
-
-    let workspace = root.join("workspace");
-    let spec = WasmBuildSpec::new(
-        &workspace,
-        &root.join(format!("cache-{worker}")),
-        &["fixture"],
-        ic_build::testing::cargo::environment(),
-        CONFIGURATION_LIMITS,
-    )
-    .with_shared_incremental_target(root.join("shared-target"));
-    let outcome = maintain_shared_incremental_target_at_most_every(
-        &spec,
-        CacheRetentionLimits::new().with_max_size_bytes(u64::MAX),
-        Duration::from_hours(1),
-    )
-    .expect("run scheduled shared-target maintenance worker");
-    let label = match outcome {
-        SharedIncrementalTargetMaintenanceOutcome::Performed { .. } => "performed",
-        SharedIncrementalTargetMaintenanceOutcome::Skipped { .. } => "skipped",
-        SharedIncrementalTargetMaintenanceOutcome::Missing { .. } => {
-            panic!("scheduled worker target must exist")
-        }
-        _ => panic!("unknown scheduled maintenance outcome"),
-    };
-    fs::write(root.join(format!("maintenance-{worker}")), label)
-        .expect("write scheduled maintenance outcome");
 }
 
 fn write_cargo_wrapper(path: &Path) {

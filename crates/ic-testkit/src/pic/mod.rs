@@ -59,7 +59,7 @@ pub use snapshot::{
     SnapshotRestoreFunding, capture_snapshots, restore_snapshots,
 };
 pub use standalone::StandaloneCanisterFixture;
-pub use standalone_recipe::StandaloneCanisterRecipe;
+pub use standalone_recipe::{StandaloneCanisterLifecycleError, StandaloneCanisterRecipe};
 pub use startup::{
     PocketIcInstance, PocketIcManagedServer, PocketIcManagedServerOutput, PocketIcStartupConfig,
     PocketIcStartupError, PocketIcStartupFailure,

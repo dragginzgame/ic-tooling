@@ -10,7 +10,7 @@ struct ControllerSnapshot {
 
 /// Deterministically ordered snapshots and the exact senders that captured them.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ControllerSnapshots(BTreeMap<Principal, ControllerSnapshot>);
+pub struct ControllerSnapshots(Vec<(Principal, ControllerSnapshot)>);
 
 /// One canister and caller-selected management sender.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -104,17 +104,17 @@ pub async fn capture_snapshots(
             });
         }
     }
-    let mut snapshots = BTreeMap::new();
+    let mut snapshots = Vec::with_capacity(ordered.len());
     for (canister_id, sender) in ordered {
         match pic.take_canister_snapshot(canister_id, sender, None).await {
             Ok(snapshot) => {
-                snapshots.insert(
+                snapshots.push((
                     canister_id,
                     ControllerSnapshot {
                         snapshot_id: snapshot.id,
                         sender,
                     },
-                );
+                ));
             }
             Err(source) => {
                 let cleanup_failures =
@@ -164,22 +164,22 @@ pub async fn restore_snapshots(
 impl ControllerSnapshots {
     /// Number of captured canisters.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.0.len()
     }
     /// Whether no canisters were captured.
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
     /// Captured ids in deterministic order.
     pub fn canister_ids(&self) -> impl Iterator<Item = Principal> + '_ {
-        self.0.keys().copied()
+        self.0.iter().map(|(id, _)| *id)
     }
 }
 
 async fn cleanup_captured_snapshots<F, Fut>(
-    snapshots: BTreeMap<Principal, ControllerSnapshot>,
+    snapshots: Vec<(Principal, ControllerSnapshot)>,
     mut remove: F,
 ) -> Vec<SnapshotCleanupFailure>
 where

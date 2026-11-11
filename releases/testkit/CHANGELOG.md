@@ -8,6 +8,54 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.100.0]
+
+### ⚠️ Breaking
+
+- Adopt Wire 0.21 for public call-spec limits and codec error identities; callers
+  exchanging them must select Wire 0.21. Runtime encoding, method identities,
+  budgets and decoding acceptance are unchanged. These profiles do not generate
+  TypeScript definitions, so there are no browser artifacts to regenerate here.
+- Downcast standalone stop/start failures to `StandaloneCanisterLifecycleError`
+  inside the existing `io::Error`. The typed cause distinguishes the operation
+  and retains the complete PocketIC rejection; a stop refusal before capture
+  no longer appears as `ControllerSnapshotError::CaptureFailed`. Snapshot and
+  builder errors retain their existing identities.
+
+### 🔧 Changed
+
+- Adopt Platform 0.30 for held fixtures and Types 0.19.2 for portable identities.
+  The private probe selects Runtime 0.21.1 with its matching singleton guard and
+  qualified upstream IC0 provider. Default/Wire Testkit still excludes Platform
+  and the runtime; Wasm Testkit remains Types-only.
+
+### 🧹 Cleanup
+
+- Retain captured snapshots in a flat ordered sequence, avoiding a second tree
+  while preserving duplicate admission, exact senders and rollback order.
+- Omit HTTP imports, callback tables, barrier data and reply callback functions
+  from cycle-only fixture Wasm. Held replies retain their real HTTP barrier;
+  cycle caps, single-use slots and raw reply semantics are unchanged.
+- Remove unused internal shutdown error collection after the upstream PocketIC
+  migration. Keep lease waiting, cancellation recovery and one deletion attempt
+  per cached instance; public shutdown remains best effort.
+
+### 🧪 Testing
+
+- Keep shared integration helpers lintable when a target uses either all helpers
+  or a subset; default-only concurrency lint no longer fails with an unfulfilled
+  lint expectation. Remove the unused deadline argument from HTTP fixture callbacks.
+- Share isolated server-provisioning fixture setup while retaining authentication,
+  corruption, failure recovery, path custody and concurrent-installation checks.
+
+### 📚 Documentation
+
+- Replace the retired baseline-pool design copy with a link to its immutable
+  historical record and the maintained client/recipe guidance.
+- Document the Wire 0.20 adapter identities shipped in Testkit 0.99.0 and the
+  accompanying PocketIC caller migration, resolving
+  [#350 — Testkit Wire types block Blob's Wire 0.20 adoption](https://github.com/dragginzgame/ic-tooling/issues/350).
+
 ## [0.99.0] - 2026-11-10
 
 ### ⚠️ Breaking

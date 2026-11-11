@@ -19,12 +19,12 @@ ic-host-fs = { path = "../crates/ic-host-fs", version = "0.76.4", default-featur
 ic-host-process = { path = "../crates/ic-host-process", version = "0.76.4", default-features = false }
 ic-host-text = { path = "../crates/ic-host-text", version = "0.74.5", default-features = false }
 ic-host-tools = { path = "../crates/ic-host-tools", version = "0.89.2", default-features = false }
-ic-platform = { version = "0.29.0", default-features = false }
-ic-platform-runtime = { version = "0.21.0", default-features = false }
-ic-platform-types = { version = "0.19.0", default-features = false }
+ic-platform = { version = "0.30.0", default-features = false }
+ic-platform-runtime = { version = "0.21.1", default-features = false }
+ic-platform-types = { version = "0.19.2", default-features = false }
 ic-testkit = { path = "../crates/ic-testkit", version = "0.99.0", default-features = false }
 ic-testkit-perf-probe = { path = "ic-testkit-perf-probe", version = "0.96.0" }
-ic-wire = "0.20.0"
+ic-wire = "0.21.0"
 libc = "0.2.190"
 pocket-ic = "16.1.0"
 serde = { version = "1.0.228", default-features = false }
