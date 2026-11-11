@@ -51,6 +51,27 @@ and failed-rebuild recovery test. The stale selector matched no tests. Its exact
 replacement command passed against published Testkit 0.100.0 in the completed
 frozen checkout; evidence is `target/deploy-hosted-selector-check.log`.
 
+## Pending Platform 0.31 adoption
+
+Both workspaces now require Platform 0.31.0 and Types 0.19.3. Runtime, macros and
+singleton guard remain 0.21.1; Wire selections are unchanged. No Rust callers or
+feature boundaries needed changes. These profiles select none of Platform's
+changed BLS, ECDSA or Ed25519 implementations. Codec/ledger public identities
+require pending Host Tools 0.91.0, carrying its previous 0.90.1 tooling note.
+Testkit's compatible private held-fixture adoption remains in pending 0.100.1.
+Actual package versions remain at the published versions above.
+
+The current-source `make dependency-adoption-check` passes on Linux: isolated
+graphs, Tools codec/Agent/Registry/ledger adapters, snapshot refusal, Wire calls,
+installed PocketIC contracts and the private installed Wasm probe. Three public
+identity tests, two live held-reply tests and selected warning-denied Tools/
+Testkit library Clippy also pass. No new native macOS or full release gate ran.
+Evidence and both original manifests/locks remain in
+`target/platform031-adoption.5fGOP5/`. Relative to the saved input, the final
+product lock changes only Platform; Types 0.19.3 was already selected there.
+Qualification changes only Platform/Types. Existing unrelated product-lock
+selections are preserved. This adoption is local/uncommitted/unpublished.
+
 ## Next three fixes
 
 1. Preserve exact paths in [tool probes](../../crates/ic-build/src/tools/probe/mod.rs)

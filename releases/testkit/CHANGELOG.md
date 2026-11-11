@@ -13,6 +13,9 @@ Joint history through 0.76.1 remains there once, with its original scope.
 ### 🔧 Changed
 
 - Select Toko Tooling 0.39.10 for development and CI.
+- Adopt Platform 0.31 privately for held-reply fixture encoding and Types 0.19.3
+  for portable Principals. Public harness types, encoded requests and snapshot
+  contracts are unchanged; default/Wire Testkit still excludes Platform.
 
 ### 🧪 Testing
 

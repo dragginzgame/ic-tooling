@@ -57,6 +57,14 @@ exact retries, signatures and hashes. This adoption preserves encoder bytes,
 method identities and explicit budgets; there are no browser Wire bindings here
 to regenerate.
 
+The pending adoption selects Platform 0.31 and Types 0.19.3, retaining Runtime
+0.21.1 for the private probe. Host Tools exposes Platform codec/ledger identities,
+so its next minor is 0.91.0. Testkit's Platform use stays private to held fixtures;
+its compatible adoption remains in 0.100.1. These profiles select none of the
+changed Platform BLS, ECDSA or Ed25519 implementations. The new DTO-declaration
+macro forms need no generated-code migration here; existing mappings remain
+supported. No wire/storage migration or budget changes are required.
+
 Foundation and Build's normal/build graphs forbid the entire Platform family
 and higher product layers; development fixtures may still use integration owners.
 The existing graph checks own these exclusions and the probe's executor singleton.

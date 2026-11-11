@@ -4,11 +4,19 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
-## [0.90.1]
+## [0.91.0]
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.31 for public codec traits, decoder errors and ledger value
+  identities; callers exchanging them must select Platform 0.31 too. No codec
+  budgets or wire formats change. Tooling selects none of Platform's changed
+  BLS, ECDSA or Ed25519 profiles.
 
 ### 🔧 Changed
 
 - Select Toko Tooling 0.39.10 for development and CI.
+- Adopt Types 0.19.3 for Registry Principal identities.
 
 ## [0.90.0] - 2026-11-11
 
