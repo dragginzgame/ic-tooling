@@ -1,8 +1,8 @@
 # Toko Tooling snapshot v1
-# version	0.39.9
+# version	0.39.10
 format	1
 source	https://crates.io/crates/toko-tooling
-revision	1dd7bdb5bbb9bb8076dd35d8dc179c9e49196d9945c8e585990e40091b468b48
+revision	ea181684d772d4632ba534b80bd47bb8b2044278ea346f2c02e37d2ea9991a57
 # entrypoint	.githooks/pre-commit
 # entrypoint	.github/actions/prepare-common-tools/action.yml
 # entrypoint	.github/actions/retain-failure-evidence/action.yml
@@ -84,7 +84,7 @@ file	21cdb5dbdbe3ccd0aeb0762dcde0647ed007f34121d1ef63057af61414e77a00	-	make/too
 file	8fb2e21888c67507645b0dd0d98c4bf8476f1e443e8ec8a6b3bfd803064ba856	x	scripts/ci/cargo-release-metadata.sh
 file	1d69a4a04dbf19db8a54a070d820ee89ffea457ded2ca666108777c310b0e9ac	-	scripts/ci/cargo-release-preflight.sh
 file	4c2ee09c8e87b43397d2df28bdbc1b5fc0197a10ebe0a94d89cb46916b93a9ca	x	scripts/ci/cargo-tool-cache-key.sh
-file	7e38c947d6d66c75a83ac45a6d49d11e602153d7906893436ec5083ff0c55cf0	x	scripts/ci/check-cargo-dependency-boundaries.sh
+file	38ff7dec5ac00d527023a4d13b89339f5d4298824ee0193ec785c1c7fc075244	x	scripts/ci/check-cargo-dependency-boundaries.sh
 file	06f16c4a6e7f97e13fc568b75b8adca7e7db399efbead9fa806d4a429bd5b742	-	scripts/ci/check-cargo-graph.pl
 file	b3764cf05af99fa9c2ad6f8cf8b84aa768bf10a99fd961875139c95f7d12e6cb	x	scripts/ci/check-cargo-package-provenance.sh
 file	99fee41166e07b87e361d0e0d75b67ea75916b5b11e595f964fcafd9ea5e0bc3	x	scripts/ci/check-crates-io-version.sh
@@ -151,7 +151,7 @@ file	2dd5d5da3a78a6b982f7eadb2c175cef9270d6e17753990817e5759f34fa1b7d	-	scripts/
 file	d459325be4a47909f1049a7c575c25bacffef02c4739633bd4652470d189960a	-	scripts/dev/tool-store.sh
 file	94bd2fe49818a11955dcb56f5ff6be26f47f50ae0d947d3eba96c15962db0689	-	ci/external-ic-dependencies.txt
 file	e6f6faf964a19009aa00a07bd1cb491fe9bd728be9d07fcde3a0bc6a00f4f568	-	ci/cbor-dependencies.json
-file	3cd252e070f971d54b8966f81e7917296e31b51aa0a0fa7670a555d47f8e629a	-	ci/hash-dependencies.json
+file	8de4cc409b28314667ddf6af521c421f9abc9be1e937f6f0130815a6861b7421	-	ci/hash-dependencies.json
 file	ec5bb55c605efae8b2acce32fedb7e912ace1cbe375b9962ef187bb6d7191499	-	scripts/ci/select-rust-formatting-sources.sh
 file	523996a3e4eb9dbe87e8daa4285293a28c5e005223feaa84bd5383d430784b09	-	scripts/ci/fixture-lifecycle.sh
 file	3f2971bfefccf71cf4929cabd1fa000e0c7b3d4002b9a08ca58821ccb048c123	-	LICENSE.md

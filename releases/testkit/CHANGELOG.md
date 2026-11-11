@@ -8,6 +8,17 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.100.1]
+
+### 🔧 Changed
+
+- Select Toko Tooling 0.39.10 for development and CI.
+
+### 🧪 Testing
+
+- Run the current standalone transport-panic and failed-rebuild recovery test in
+  hosted qualification, replacing a stale selector that matched no tests.
+
 ## [0.100.0] - 2026-11-11
 
 ### ⚠️ Breaking

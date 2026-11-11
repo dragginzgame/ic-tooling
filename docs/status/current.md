@@ -2,34 +2,74 @@
 
 ## Delivery
 
-The cache reductions, Wire adoption and tooling refresh are committed and
-published. Latest product release commit:
-`6f4128ae2ecc7c4fe25814cd7c1ccc48c8cc17ec`. Both frozen batches were reconciled
-into the ordinary main checkout.
+Build/Testkit reductions and Platform/Wire adoption are published. Latest product
+release commit: `1e9667a02c90be1c53747bba7fa957b09369f5da`.
+Frozen batch `batch-OHBHvLXU` completed and was reconciled into ordinary main.
 
 | Group | Published | Release commit |
 | --- | --- | --- |
 | Foundation (five packages) | 0.76.4 | a1b50ffc |
-| Build | 0.82.0 | ea58d4b9 |
+| Build | 0.83.0 | 662516e5 |
 | Text | 0.74.5 | f0352237 |
-| Host Tools | 0.89.2 | fe337366 |
-| Testkit | 0.99.0 | 6f4128ae |
+| Host Tools | 0.90.0 | 4dcfb962 |
+| Testkit | 0.100.0 | 1e9667a0 |
 
-All nine versions were verified present and not yanked in the crates.io index.
-Private qualification packages remain 0.96.0. The deployment preserved selected
-external dependencies; release preparation changed owned versions and their
-product/qualification references together. The release uses Toko Tooling 0.39.9
-and Wire 0.20; the product Platform requirement remains 0.29 (locked to 0.29.2).
+The three new versions were independently verified present and not yanked, and
+GitHub's annotated tags match the local identities. Private qualification packages
+remain 0.96.0. Each group passed its complete 32-stage Linux gate, including
+warning-denied lint, archive qualification, installed PocketIC, Wasm/probe and
+workspace tests. Native macOS 15 Intel and Apple Silicon results are separate;
+new hosted qualification is asynchronous and not claimed as passing here.
 
-## Local dependency adoption
+This batch captured Toko Tooling 0.39.9 before the subsequent refresh request.
+Its release inputs retained Wire 0.21.0 in both workspaces. Unrelated ordinary
+lock selections, including Wire 0.21.1, were preserved outside publication and
+reapplied after reconciliation. Durable preservation branches are
+`preserve/deploy-20261111-dependencies` and `preserve/deploy-20261111-followup`;
+records remain under `.git/release-state/preserve/deploy-20261111-build83-tools90-testkit100/`.
+The batch, candidate Git and receipts remain under `.git/release-state/frozen/`,
+with its managed checkout under `target/release-frozen/batch-OHBHvLXU/`.
+No release artifacts were retired. Logs are `target/deploy-build83-tools90-testkit100.log`
+and its `-reconcile.log`; registry observations are in `target/deploy-registry-20261111/`.
 
-Both workspaces now select published Platform 0.30.0, Types 0.19.2 and Wire
+## Toko Tooling follow-up
+
+Both workspaces now select and install published Toko Tooling 0.39.10 through the
+authenticated exporter. The preview retained all 113 managed files and selected
+entrypoints; only the dependency checker and hash-adapter policy changed, besides
+the receipt. Baseline and tool catalogs are unchanged. Source preparation, tool
+admission, snapshot/inheritance/pin checks and actual Tools/Testkit native/Wasm
+dependency graphs pass. Evidence is under `target/toko03910/`.
+
+The root pin changes normalized package dev-dependency requirements. Patch notes
+are queued in the five group ledgers for their next releases; this follow-up
+delivers the development selection through Git without another publication batch.
+Unrelated product-lock refreshes remain unstaged.
+
+The hosted runtime workflow now selects the current standalone transport-panic
+and failed-rebuild recovery test. The stale selector matched no tests. Its exact
+replacement command passed against published Testkit 0.100.0 in the completed
+frozen checkout; evidence is `target/deploy-hosted-selector-check.log`.
+
+## Next three fixes
+
+1. Preserve exact paths in [tool probes](../../crates/ic-build/src/tools/probe/mod.rs)
+   and check raw directory names before archive-path normalization.
+2. Propagate filesystem errors from [Cargo configuration selection](../../crates/ic-build/src/cargo/environment/mod.rs).
+3. Reject empty or malformed successful [process-state observations](../../crates/ic-host-process/src/testing/mod.rs).
+
+These three audit findings are not implemented. Canic's existing Build caller
+migration remains in [Canic #762 — Migrate IC Build callers to explicit maintenance and pruning](https://github.com/dragginzgame/canic/issues/762).
+
+## Delivered dependency adoption
+
+The release workspaces select published Platform 0.30.0, Types 0.19.2 and Wire
 0.21.0. The private probe selects Runtime/macros/guard 0.21.1. Runtime now owns
 the upstream IC0 1.2.0 dependency; qualification admits that direct owner before
 requiring one raw provider, while native and portable Testkit keep forbidding it.
 Default/Wire Testkit excludes Platform/runtime; portable Testkit stays Types-only.
 
-Public supplier identities require pending Host Tools 0.90.0 and Testkit 0.100.0;
+Public supplier identities ship in Host Tools 0.90.0 and Testkit 0.100.0;
 the previous Testkit 0.99.1 draft's cleanup is carried into 0.100.0. Platform's
 removed textual DID service was already unused here. Wire's TypeScript naming
 cut needs no local regeneration; these profiles select no TypeScript generator.
@@ -42,10 +82,13 @@ full release qualification ran. Logs and both original lock/manifest snapshots
 remain under `target/platform-wire-adoption.wBezlh/`. Only Platform/Wire changed
 in the product lock relative to the saved dirty input; qualification changed the
 requested family and added its IC0 leaf. Other selections and pending source
-work are preserved. These changes remain local/uncommitted/unpublished; package
-versions are unchanged until the authorized release workflow prepares them.
+work were preserved. The subsequent complete release qualification and delivery
+are recorded above.
 
 ## Delivered reductions and adoption
+
+The following records preserve earlier releases and development observations.
+Descriptions of then-pending/local work are superseded by the delivery state above.
 
 Toko Tooling 0.39.9 is selected in both workspaces and installed through the
 authenticated crates.io exporter, preserving the 113-file runtime selection.

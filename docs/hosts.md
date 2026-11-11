@@ -1,6 +1,6 @@
 # IC Tooling qualification
 
-Toko Tooling is selected as `toko-tooling = "=0.39.9"` in each workspace's
+Toko Tooling is selected as `toko-tooling = "=0.39.10"` in each workspace's
 `[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
 Every real package inherits it unconditionally in
 `[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
@@ -27,7 +27,7 @@ and installed tests select both roots. `make install-server` explicitly fetches
 both locked graphs; standalone checks remain offline.
 Installation remains explicit; Rust imports are unnecessary. Direct publication
 and release adapters check tooling before effects. See the
-[root selection guide](https://github.com/dragginzgame/toko-tooling/blob/e3053d30870ae9b542519996daa1be9dbdf80eab/docs/adoption/consuming-snapshots.md#cargo-selection-and-installation).
+[root selection guide](https://github.com/dragginzgame/toko-tooling/blob/6e364f0c8d2729d57566aa740a9cd951c744d707/docs/adoption/consuming-snapshots.md#cargo-selection-and-installation).
 
 Local shell/browser fixture defaults and explicit outside-target selections are
 documented in [qualification scratch ownership](design/fixture-scratch.md).

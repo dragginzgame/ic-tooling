@@ -95,7 +95,7 @@ retain its `Error` identity. No budget conversions or codec bridges are needed.
 This resolves
 [#350 — Testkit Wire types block Blob's Wire 0.20 adoption](https://github.com/dragginzgame/ic-tooling/issues/350).
 
-The pending Testkit 0.100.0 adopts Wire 0.21. Select that Wire minor when upgrading
+Testkit 0.100.0 adopts Wire 0.21. Select that Wire minor when upgrading
 its typed call helpers; limits and codec errors have the new supplier identity.
 Wire 0.21's breaking TypeScript naming change requires no regeneration here:
 Testkit's native/probe profiles do not select its TypeScript generator.
@@ -111,7 +111,7 @@ applies when upgrading from Testkit 0.97 or earlier.
 
 ## Snapshot boundary
 
-The pending Testkit 0.100.0 also corrects standalone recipe lifecycle failures.
+Testkit 0.100.0 also corrects standalone recipe lifecycle failures.
 Builder failures remain the original `io::Error`; snapshot failures retain
 `ControllerSnapshotError`. Stop/start rejections instead retain
 `StandaloneCanisterLifecycleError::{Stop, Start}` inside `io::Error::get_ref()`.
