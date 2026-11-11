@@ -13,7 +13,7 @@ into ordinary main.
 | Build | 0.83.0 | 662516e5 |
 | Text | 0.74.5 | f0352237 |
 | Host Tools | 0.91.0 | 1b60f3a0 |
-| Testkit | 0.100.1 | f760451d |
+| Testkit | 0.100.2 | b9415868 |
 
 Both new versions were independently verified present and not yanked, and
 GitHub's annotated tags match the local identities. Private qualification packages
@@ -41,19 +41,26 @@ Browser fixture session passed. The final handoff delivery requests an explicit
 asynchronous native qualification run so a documentation-only push cannot
 supersede the required three-host proof. No hosted result is inferred from Linux.
 
-## Pending Testkit client re-export
+## Published Testkit client re-export
 
 The maintainer approved native-only `ic_testkit::pocket_ic` as a direct re-export
 of Testkit's existing upstream dependency. Callers can select Testkit alone for
 the harness and client; no fork APIs, wrappers, dependencies or feature gates
 are added. The earlier no-re-export instruction is superseded for this path.
 The library, README, migration guidance and extraction contract are aligned.
-This is local and unpublished; no version bump, commit or delivery is included.
-The pre-existing dirty product Cargo.lock is preserved.
+Testkit 0.100.2 is published and independently verified present/not yanked.
+Commit `b9415868f0a30d2013f3abf3d2cdbc588b224594` and tag `testkit-v0.100.2`
+match GitHub. Frozen `batch-t7v74QxS` completed and was reconciled; all 32 local
+stages and publication archive verification passed. Gate evidence remains at
+`target/release-frozen/batch-t7v74QxS/target/release-validation/testkit-gate.81L3DM/`.
+Normal log: `target/deploy-testkit-reexport.log`. The saved unrelated lock draft
+is reapplied after reconciliation; originals/patch remain in
+`.git/release-state/preserve/testkit-reexport-20261111/`. No other group released.
 Focused Linux library Clippy, the public consumer doctest, native/Wasm dependency
 closures, Rust formatting and document links pass. The native graph has one
 PocketIC and no Platform/runtime; all-feature Wasm excludes PocketIC/Candid.
-No installed simulator run or fresh native macOS qualification was needed or claimed.
+The complete release gate also passed installed simulator and workspace tests.
+Hosted native qualification remains asynchronous; no fresh macOS pass is claimed.
 
 ## Current contracts
 

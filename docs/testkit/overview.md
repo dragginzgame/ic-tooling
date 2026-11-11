@@ -54,7 +54,7 @@ schemas, readiness, reset coverage and assertions. Build and Host own the lower
 layers described in [scope boundaries](#scope-boundaries).
 
 The selected client and lifecycle helpers are async. Version 0.98 retired the
-local client fork; the pending native re-export exposes the upstream crate. See the [migration guide](client-migration.md)
+local client fork; 0.100.2 exposes the upstream crate through its native re-export. See the [migration guide](client-migration.md)
 for the current construction, reset and cancellation contract.
 
 ### A concrete example

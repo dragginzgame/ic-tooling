@@ -5,8 +5,8 @@ Testkit no longer maintains a PocketIC client. The native-only
 16.1 dependency. Import the asynchronous client from
 `ic_testkit::pocket_ic::nonblocking::PocketIc` and its builder from
 `ic_testkit::pocket_ic::PocketIcBuilder`; no separate client dependency is needed.
-This additive export is pending publication after 0.100.1. Releases 0.98 through
-0.100.1 require a direct `pocket-ic` dependency. The re-export has upstream type
+Testkit 0.100.2 adds this export. Releases 0.98 through 0.100.1 require a direct
+`pocket-ic` dependency. The re-export has upstream type
 identity and API behavior, not the retired fork's API.
 The server remains an explicitly admitted external PocketIC 16.1 binary.
 
