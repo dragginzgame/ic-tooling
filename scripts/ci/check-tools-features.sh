@@ -28,6 +28,10 @@ perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http -
     --forbid-pattern '^(ic-platform|ic-platform-types|candid|ic-agent|ic-host-(fs|process|tools)|rustls|native-tls|async-compression)$'
 perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http \
     --target wasm32-unknown-unknown --forbid-pattern '^(?!ic-host-http$)'
+perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http \
+    --features endpoint --target wasm32-unknown-unknown --require url=1 \
+    --forbid-pattern "$upper_layers" --forbid-pattern "$platform_family" \
+    --forbid-pattern '^(reqwest|ic-host-(artifacts|fs|process|tools)|rustls|native-tls|async-compression)$'
 perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid-pattern "$platform_family" --forbid-pattern "$upper_layers" \
     --target "$target" --forbid clap
 perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid-pattern "$platform_family" --forbid-pattern "$upper_layers" \

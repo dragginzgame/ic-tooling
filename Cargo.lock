@@ -1455,6 +1455,7 @@ dependencies = [
  "reqwest",
  "tokio",
  "toko-tooling",
+ "url",
 ]
 
 [[package]]
@@ -3309,9 +3310,9 @@ dependencies = [
 
 [[package]]
 name = "toko-tooling"
-version = "0.39.12"
+version = "0.39.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acb1fd3f459a63940669e925d427fd6821abf02a7525bf9ef38d323dc778a8d2"
+checksum = "6cc984822e80e52ff7203aadcaf293a13f9fcf33f84175871321cb3a7de703a9"
 
 [[package]]
 name = "toml"

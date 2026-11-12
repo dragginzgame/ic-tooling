@@ -19,7 +19,9 @@ The maintainer approved `ic-host-http` under
 [#117](https://github.com/dragginzgame/ic-tooling/issues/117). It accepts an
 already-created native reqwest response and owns bounded body accumulation and
 typed partial-failure evidence. It reuses Artifacts' bounded allocation primitive.
-It never creates requests or selects status, TLS, compression, redirect, retry,
+Its opt-in endpoint module also admits explicitly strict credential-free HTTP(S)
+base URLs, without changing response-reading policy. It never creates requests or
+selects status, TLS, compression, redirect, retry,
 timeout, decoding, redaction or retention policy. Query and Blob retain their distinct status and
 failure-evidence contracts; consumer adoption is separate from this implementation.
 

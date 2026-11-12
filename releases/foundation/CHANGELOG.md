@@ -8,10 +8,41 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
 
 ## [0.76.5]
 
+### ✨ Added
+
+- Add `artifact::budget::ReadBudget` for caller-selected aggregate byte admission
+  across bounded stream reads, including conservative charging after partial
+  failures and growth beyond observed metadata.
+- Add capability-relative regular-file permission admission without following
+  symlinks or repairing modes, and an owned nonblocking `ExclusiveFileLock`
+  with explicit release and best-effort release on drop.
+- Add the opt-in portable HTTP `endpoint` feature for strict credential-free
+  HTTP(S) base URLs. Default Wasm remains dependency-free; enabling endpoint
+  selects `url` without the native response reader or request/TLS policy.
+
 ### 🔧 Changed
 
-- Select Toko Tooling 0.39.12 for development and CI, including width-bounded
-  LOC reports, the explicit `--wide` display and supplier-freshness review rules.
+- Select Toko Tooling 0.39.15 for development and CI, including sequential
+  `make deps-update` across both workspaces, width-bounded LOC reports,
+  the `--wide` display and supplier-freshness review rules.
+
+### 🧪 Testing
+
+- Cover aggregate-read growth and partial I/O failures, file permission refusal
+  and preservation, and lock release while duplicated descriptors remain open.
+- Qualify endpoint parsing independently on native and Wasm and enforce the
+  Wasm feature's dependency boundary.
+
+### 📝 Qualification
+
+- Supplier review retains the reviewed product graph for this additive release.
+  Optional Wire 0.21.3, qualification Runtime 0.21.2, Prost 0.14.5 and
+  Thiserror 2.0.21 updates are deferred to the next dependency-maintenance batch;
+  they are not required by these APIs. The release editor remains the separately
+  admitted IC Build 0.73.0 recipe; 0.83.0 is a later independent CLI adoption.
+  Common tool pins remain those authenticated by Toko 0.39.15, including
+  cargo-sort-derives 0.14.1; its newer 0.15.0 needs supplier-owned qualification.
+  Reviewed registry observations are retained under `target/deploy-foundation765/`.
 
 ## [0.76.4] - 2026-11-10
 

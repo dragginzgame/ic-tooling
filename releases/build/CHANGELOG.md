@@ -10,8 +10,9 @@ reset, release, tag or upload is implied by establishing this group.
 
 ### 🔧 Changed
 
-- Select Toko Tooling 0.39.12 for development and CI, including width-bounded
-  LOC reports, the explicit `--wide` display and supplier-freshness review rules.
+- Select Toko Tooling 0.39.15 for development and CI, including sequential
+  `make deps-update` across both workspaces, width-bounded LOC reports,
+  the `--wide` display and supplier-freshness review rules.
 
 ## [0.83.0] - 2026-11-11
 

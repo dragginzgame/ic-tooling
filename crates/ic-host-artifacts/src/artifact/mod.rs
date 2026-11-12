@@ -12,6 +12,7 @@ use std::{
     str::FromStr,
 };
 
+pub mod budget;
 pub mod buffer;
 mod chunks;
 mod copy;

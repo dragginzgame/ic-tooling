@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml make/release-validation-local.mk scripts/ci/workspace-validation.sh scripts/ci/run-tooling-checks.sh scripts/ci/check-product-candid-boundary.sh
+# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml make/release-validation-local.mk make/cargo-dependencies.mk scripts/ci/workspace-validation.sh scripts/ci/run-tooling-checks.sh scripts/ci/check-product-candid-boundary.sh
 PACKAGE ?= ic-host-artifacts
 RELEASE_DELIVERY ?= direct
 export RELEASE_GROUP
@@ -20,6 +20,7 @@ TOKO_TOOLING_RELEASE := 1
 # Admit execution before custom CI, publication and installer prerequisites.
 ci ci-publication lint check-secrets publish publish-check toko-tooling-check install-release-editor install-server install-validation-tools: toko-execution-check
 include make/consumer.mk
+include make/cargo-dependencies.mk
 include make/testkit.mk
 include make/release-validation-local.mk
 export YQ := $(CURDIR)/.tools/host/bin/yq
@@ -73,6 +74,7 @@ help:
 	@echo 'Offline setup checks: tools-check (complete set), host-tools-check, ic-tools-check, rust-tools-check'
 	@echo 'Individual setup: install-host-tools, install-ic-tools, install-rust-tools'
 	@echo 'Focused Platform/Wire adoption: dependency-adoption-check (current source; prepared PocketIC required)'
+	@echo 'Dependencies: deps-update (sequential cargo update -v in both workspaces; explicit lock updates)'
 	@echo 'Source reports: cloc (this workspace); fleet reports run in Toko Tooling'
 	@echo 'Full release validation: ci (pinned compiler, workspace Clippy, native/Wasm and isolated features); compiler-check admits identities'
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
@@ -146,6 +148,8 @@ test-wasm-inspection:
 	+cargo test -p ic-host-wasm-inspect --all-targets --locked --offline
 .PHONY: isolated-features-check test-tools-icp-project test-tools-icp-ledger test-tools-ledger-evidence test-text-yaml
 isolated-features-check:
+	+cargo test -p ic-host-http --no-default-features --features endpoint --lib --locked --offline endpoint::
+	+cargo check -p ic-host-http --no-default-features --features endpoint --lib --target wasm32-unknown-unknown --locked --offline
 	+$(MAKE) --no-print-directory test-tools-icp-project
 	+$(MAKE) --no-print-directory test-tools-icp-ledger
 	+$(MAKE) --no-print-directory test-tools-ledger-evidence

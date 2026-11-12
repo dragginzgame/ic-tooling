@@ -8,6 +8,14 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.101.1]
+
+### 🔧 Changed
+
+- Select Toko Tooling 0.39.15 for development and CI. Expose `make deps-update`
+  for sequential `cargo update -v` calls in the product and independent
+  qualification workspaces, with normal Cargo output and first-failure stopping.
+
 ## [0.101.0] - 2026-11-12
 
 ### ⚠️ Breaking

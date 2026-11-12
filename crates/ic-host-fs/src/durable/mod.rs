@@ -16,8 +16,8 @@ pub use directory::{
     admit_directory, commit_existing_directory_with, create_private_directory,
 };
 pub use lock_wait::{
-    SharedFileLock, lock_exclusive, lock_exclusive_with_wait, lock_shared, try_lock_exclusive,
-    unlock,
+    ExclusiveFileLock, SharedFileLock, lock_exclusive, lock_exclusive_with_wait, lock_shared,
+    try_lock_exclusive, unlock,
 };
 #[cfg(unix)]
 mod retained;

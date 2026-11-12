@@ -5,8 +5,13 @@
 //! The limit applies to bytes yielded by reqwest, after any enabled decompression.
 //! It does not bound reqwest's own chunk/decompression allocations or wire bytes.
 //! This crate does not enable TLS or compression; consumers select those features.
+//! The optional portable `endpoint` module admits strict HTTP(S) base URLs
+//! without creating requests or selecting transport policy.
 
 #[cfg(not(target_family = "wasm"))]
 mod response;
 #[cfg(not(target_family = "wasm"))]
 pub use response::{Body, ReadError, ReadFailure, ReadOptions, read_body, read_body_into};
+
+#[cfg(feature = "endpoint")]
+pub mod endpoint;

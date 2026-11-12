@@ -8,8 +8,9 @@ Joint history through 0.76.1 remains there once, with its original scope.
 
 ### 🔧 Changed
 
-- Select Toko Tooling 0.39.12 for development and CI, including width-bounded
-  LOC reports, the explicit `--wide` display and supplier-freshness review rules.
+- Select Toko Tooling 0.39.15 for development and CI, including sequential
+  `make deps-update` across both workspaces, width-bounded LOC reports,
+  the `--wide` display and supplier-freshness review rules.
 - Select compatible Platform 0.31.2 and Types 0.19.4 through the shared catalog.
 
 ## [0.91.0] - 2026-11-11

@@ -150,3 +150,34 @@ fn nonregular_descriptors_are_rejected_before_observation() {
         io::ErrorKind::InvalidInput
     );
 }
+
+#[test]
+fn exclusive_guard_releases_on_drop_and_explicit_release_with_duplicates() {
+    let fixture = fixture();
+    let path = fixture.path().join("exclusive-guard");
+    std::fs::write(&path, b"retained").unwrap();
+    for explicit in [false, true] {
+        let guard = super::ExclusiveFileLock::try_acquire(File::open(&path).unwrap()).unwrap();
+        let duplicate = guard.file().try_clone().unwrap();
+        let observer = File::open(&path).unwrap();
+        assert_eq!(
+            try_lock_exclusive(&observer).unwrap_err().kind(),
+            io::ErrorKind::WouldBlock
+        );
+        if explicit {
+            guard.release().unwrap();
+        } else {
+            drop(guard);
+        }
+        try_lock_exclusive(&observer).unwrap();
+        unlock(&observer).unwrap();
+        assert_eq!(duplicate.metadata().unwrap().len(), 8);
+    }
+    assert_eq!(std::fs::read(&path).unwrap(), b"retained");
+    assert_eq!(
+        super::ExclusiveFileLock::try_acquire(File::open(fixture.path()).unwrap())
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::InvalidInput
+    );
+}

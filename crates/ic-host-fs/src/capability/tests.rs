@@ -420,3 +420,55 @@ fn special_files_are_refused_without_waiting_for_a_fifo_writer() {
         .unwrap();
     assert_eq!(entries[0].kind, EntryKind::Other);
 }
+
+#[test]
+fn configured_regular_file_admission_preserves_modes_and_absence() {
+    let fixture = FixtureDirectory::new(&std::env::temp_dir(), "capability-file-modes").unwrap();
+    let root = Directory::open_root(fixture.path(), OBSERVE)
+        .unwrap()
+        .unwrap();
+    let entry = root
+        .resolve_parent(Path::new("file"), OBSERVE)
+        .unwrap()
+        .unwrap();
+    assert!(
+        entry
+            .open_regular_file_with_permissions(0o022)
+            .unwrap()
+            .is_none()
+    );
+    fs::write(fixture.path().join("file"), b"data").unwrap();
+    fs::set_permissions(
+        fixture.path().join("file"),
+        fs::Permissions::from_mode(0o620),
+    )
+    .unwrap();
+    assert!(matches!(
+        entry.open_regular_file_with_permissions(0o022),
+        Err(CapabilityError::Permissions { actual: 0o620, .. })
+    ));
+    assert!(
+        entry
+            .open_regular_file_with_permissions(0)
+            .unwrap()
+            .is_some()
+    );
+    assert_eq!(
+        fs::metadata(fixture.path().join("file"))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777,
+        0o620
+    );
+    assert!(entry.open_regular_file_with_permissions(0o1000).is_err());
+    fs::remove_file(fixture.path().join("file")).unwrap();
+    symlink("absent", fixture.path().join("file")).unwrap();
+    assert!(matches!(
+        entry.open_regular_file_with_permissions(0),
+        Err(CapabilityError::Refused {
+            reason: Refusal::SymbolicLink,
+            ..
+        })
+    ));
+}

@@ -296,6 +296,39 @@ pub struct FileEntry {
 }
 
 impl FileEntry {
+    /// Open a no-follow regular file and reject caller-selected permission bits.
+    /// Missing entries remain absent; existing permissions are never repaired.
+    /// # Errors
+    /// Returns invalid permission masks, original open/metadata failures or a permission refusal.
+    pub fn open_regular_file_with_permissions(
+        &self,
+        forbidden_permissions: u32,
+    ) -> Result<Option<File>, CapabilityError> {
+        let path = self.parent.display.join(&self.name);
+        validate_options(
+            &path,
+            DirectoryOptions {
+                create_permissions: None,
+                forbidden_permissions,
+            },
+        )?;
+        let Some(file) = self.open_regular_file()? else {
+            return Ok(None);
+        };
+        let metadata = file
+            .metadata()
+            .map_err(|source| failure(Operation::Metadata, &path, source))?;
+        let actual = std::os::unix::fs::PermissionsExt::mode(&metadata.permissions()) & 0o777;
+        if actual & forbidden_permissions != 0 {
+            return Err(CapabilityError::Permissions {
+                path,
+                actual,
+                forbidden: forbidden_permissions,
+            });
+        }
+        Ok(Some(file))
+    }
+
     /// Borrow the selected parent capability.
     #[must_use]
     pub const fn parent(&self) -> &Directory {

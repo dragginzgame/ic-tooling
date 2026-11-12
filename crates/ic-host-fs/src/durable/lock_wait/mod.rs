@@ -192,3 +192,43 @@ fn wait_for_lock(
         }
     }
 }
+
+/// An owned exclusive descriptor lock with explicit release and best-effort drop.
+/// Dropping never removes a path; duplicated descriptors do not extend its lock lifetime.
+#[derive(Debug)]
+pub struct ExclusiveFileLock {
+    file: File,
+    released: bool,
+}
+impl ExclusiveFileLock {
+    /// Attempt acquisition without waiting or reopening the descriptor.
+    /// # Errors
+    /// Returns original regular-file admission, contention or native locking failure.
+    pub fn try_acquire(file: File) -> io::Result<Self> {
+        try_lock_exclusive(&file)?;
+        Ok(Self {
+            file,
+            released: false,
+        })
+    }
+    /// Borrow the locked descriptor. Callers coordinate duplicates and lock-mode changes.
+    #[must_use]
+    pub const fn file(&self) -> &File {
+        &self.file
+    }
+    /// Release explicitly; on failure Drop retries before the descriptor closes.
+    /// # Errors
+    /// Returns the native unlock failure.
+    pub fn release(mut self) -> io::Result<()> {
+        unlock(&self.file)?;
+        self.released = true;
+        Ok(())
+    }
+}
+impl Drop for ExclusiveFileLock {
+    fn drop(&mut self) {
+        if !self.released {
+            let _ = unlock(&self.file);
+        }
+    }
+}

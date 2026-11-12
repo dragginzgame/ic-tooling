@@ -44,7 +44,13 @@ cargo test -p ic-host-http --locked --offline
 cargo clippy -p ic-host-http --all-targets --locked --offline -- -D warnings
 ```
 
-The Wasm package exposes no HTTP adapter or dependencies. Native macOS
+The default Wasm package exposes no HTTP adapter or dependencies. Native macOS
 qualification and publication precede consumer adoption. Query and Blob's
 existing implementations remain until their owners migrate and qualify them;
 this package does not change either sibling repository.
+
+Enable the portable `endpoint` feature and use `endpoint::parse_http_endpoint`
+when a caller explicitly requires a clean HTTP(S) base URL without credentials,
+query, fragment, whitespace or controls. This selects `url` on native and Wasm
+targets, without bringing the native response reader into Wasm.
+This opt-in admission does not select request, TLS, redirect or root-key policy.

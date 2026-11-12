@@ -1,6 +1,6 @@
 # IC Tooling qualification
 
-Toko Tooling is selected as `toko-tooling = "=0.39.12"` in each workspace's
+Toko Tooling is selected as `toko-tooling = "=0.39.15"` in each workspace's
 `[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
 Every real package inherits it unconditionally in
 `[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
@@ -13,6 +13,21 @@ pins and their documented exact-pin exceptions in
 Use `make toko-tooling-install` to install the existing Cargo.lock selection
 and `make toko-tooling-check` for offline package/pin/lock/snapshot admission.
 That check admits both workspaces against the same installed snapshot.
+
+Explicit `make deps-update` runs `cargo update -v` sequentially in the product
+and qualification workspaces, with Cargo's normal output and no separate
+metadata or registry audit. Cargo owns resolution and network/offline settings.
+Optional `DEPENDENCY_PACKAGE=<name>` and `DEPENDENCY_PRECISE=<version>` selectors
+apply to both roots; `DEPENDENCY_MANIFEST=<relative/Cargo.toml>` adds another
+explicit workspace. The command never rewrites requirements or synchronizes
+selections. Updates are not atomic: the first Cargo failure stops execution,
+preserves its status and names attempted workspaces whose locks may have changed;
+there is no automatic rollback. Inspect those diffs and qualify adopted changes.
+Avoid dependency updates during qualification or after freezing release inputs.
+The former `deps-review` and `deps-help` commands are removed. Supplier freshness
+review and adoption/deferral decisions remain required at applicable maintenance
+and release boundaries. See the
+[dependency maintenance contract](https://github.com/dragginzgame/toko-tooling/blob/45c75d1841a291df1c7e7d943ab107d5c3822d47/docs/validation/cargo-graph-checks.md#repository-dependency-maintenance).
 
 The snapshot contains the baseline, canonical root files and executable inputs.
 Shared reference guides stay upstream at the commit pinned by the links below;
@@ -581,3 +596,21 @@ The optional artifact profile targets run their own Wasm inspection, encoding or
 text tests with defaults disabled. Minimal core tests run once; the complete
 workspace suite separately covers all-feature composition. Native and Wasm Testkit graphs exclude Metrics. The installed Wire
 control-canister check remains in the private development package.
+
+## Configured evidence IO helpers
+
+`ic_host_artifacts::artifact::budget::ReadBudget` admits caller-selected per-stream
+and aggregate byte ceilings. The caller supplies metadata length and retains
+paths and freshness policy; success charges returned bytes, growth charges the
+limit sentinel, and failed IO/allocation conservatively charges the attempted
+ceiling plus one. Structured errors distinguish file, aggregate and host-accounting
+limits. It does not open or freeze a file.
+
+Host FS capability entries expose `open_regular_file_with_permissions` for explicit
+forbidden mode-bit admission on the opened descriptor. This never repairs modes
+or follows observed links. `durable::ExclusiveFileLock` owns a nonblocking acquired
+descriptor lock with explicit release and best-effort Drop, including duplicated
+descriptors; callers retain coordination-file contents and namespace custody.
+
+Host HTTP’s portable `endpoint` feature exposes `endpoint::parse_http_endpoint` admits strict credential-free
+HTTP(S) base URLs. It does not select endpoints, redirects, retry or trust roots.

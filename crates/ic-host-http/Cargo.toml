@@ -17,6 +17,13 @@ reqwest.workspace = true
 [package.metadata.cargo-machete]
 ignored = ["toko-tooling"]
 
+[features]
+default = []
+endpoint = ["dep:url"]
+
+[dependencies]
+url = { workspace = true, optional = true }
+
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 ic-host-artifacts = { workspace = true, features = ["gzip"] }
 reqwest = { workspace = true, features = ["gzip"] }
