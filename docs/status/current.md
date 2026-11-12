@@ -1,4 +1,4 @@
-# Current handoff — 2026-11-11
+# Current handoff — 2026-11-12
 
 ## Delivery
 
@@ -68,10 +68,75 @@ Testkit uses upstream PocketIC 16.1, preserving its native DTO identities,
 panics, polling and best-effort deletion. Harness helpers remain free `pic`
 functions; portable helpers retain Platform Types Principal. Fork-specific
 recovery/transfer APIs stay retired. See [the migration](../testkit/client-migration.md).
-Default/Wire Testkit excludes Platform; only held fixtures select its adapters.
+Native Testkit uses Platform's owned codec for coherent snapshots and held fixtures.
 Client dependencies remain native and the Wasm graph remains Types-only.
-Wire 0.21 public identities require aligned consumer selection. Toko 0.39.10
+Wire 0.21 public identities require aligned consumer selection. Toko 0.39.12
 remains installed; no supplier or sibling deployment is included in this work.
+
+## Pending Toko Tooling 0.39.12 adoption
+
+Both maintained workspaces select published Toko Tooling 0.39.12, the latest stable,
+non-yanked registry release observed during this refresh. The authenticated
+installer preserves all 113 managed files and recorded entrypoints. Relative to
+the local 0.39.11 adoption, only the baseline and receipt change; executable bytes,
+native tool pins, product versions and release gates are unchanged. The baseline
+now requires explicit supplier-freshness review and dispositions at applicable
+dependency-maintenance and release boundaries, including qualification graphs
+and native tools. Pin consistency alone is not freshness evidence.
+
+Offline tool admission, `make toko-tooling-check` and dependency-pin checks pass
+on Linux. The prior default/deep and wide LOC caller evidence remains applicable
+because both report scripts are unchanged from 0.39.11. Every unrelated entry in both lockfiles is
+byte-preserved relative to the saved inputs, including the ordinary checkout's
+Platform 0.31.1 and Wire 0.21.1 selections. Originals, preview, installer and
+focused-check evidence remain under `target/toko03912/`; prior LOC evidence is
+retained under `target/toko03911/`. This maintenance scope updates Toko only and
+does not assert freshness of other suppliers. Pending group notes are updated;
+this refresh is local and unpublished. No new native macOS qualification or full
+release gate was run.
+
+## Pending coherent snapshot correction — #263
+
+The reopened [#263](https://github.com/dragginzgame/ic-tooling/issues/263) reports
+timer-owner traps after a mutated cached baseline is reused with Testkit 0.100.2.
+Native capture now prepares metadata-upload snapshots via the upstream client's
+raw management calls and Platform-owned DTOs/codec. It transfers the complete
+snapshot, retains timer/hook metadata, deletes the temporary source only after
+successful preparation, and loads the prepared snapshot for warm reuse. Missing
+metadata or incomplete ranges refuse capture; known source/upload/earlier IDs
+participate in rollback and cleanup failures remain visible. No client fork,
+second transport, server filesystem dependency, timer reset or time rewind is used.
+
+Capture requires two free slots per target and transfer cycles. The new
+`ControllerSnapshotError::PreparationFailed` variant carries local refusals.
+These changes are queued for Testkit 0.101.0; actual package versions are unchanged.
+Native default/Wire graphs now require Platform's codec; Runtime/Agent remain
+excluded, and all-feature Wasm remains Types-only. Both workspaces require
+Platform 0.31.2 (latest published at selection), with compatible Types 0.19.4.
+This advances the earlier unrelated Platform 0.31.1 selection within the now
+authorized correction; the other saved lock selections remain preserved.
+
+The installed snapshot regression passes three reuses of the same pooled
+instance after timer/hook and multi-chunk memory mutation, verifies matching
+restored system metadata and heap/stable bytes, then fires and rearms callbacks
+without a competing-owner trap. Existing sender, duplicate-target, partial
+capture cleanup, funding and snapshot-slot refusal/recovery checks pass too.
+Native/Wasm graph and compilation checks pass. Evidence is under `target/issue263/`.
+Warning-denied Clippy and all 34 selected installed snapshot/pool/concurrency
+tests pass (two destructive-server cases remain separately ignored). Formatting,
+documentation links, tooling admission and dependency policy pass. Unrelated
+product lock blocks are preserved exactly; qualification adds only the required
+Testkit-to-Platform edge besides the Platform/Types update.
+Three native qualification public-contract checks also pass. The final timer
+case includes an unexported immutable global, nonempty chunk store and certified
+data, with its final run retained in `target/issue263/timer-final.log`.
+
+[IC Timers #87](https://github.com/dragginzgame/ic-timers/issues/87) tracks its own
+ownership regression coverage; the timer guard remains intact. Keep Tooling #263
+open for its explicit Canic two-case acceptance sequence after corrected-source
+adoption/publication. No Canic source, dependency override or test run is included
+here. No new native macOS qualification, full release gate, commit or publication
+has been performed for this correction.
 
 ## Next three fixes
 

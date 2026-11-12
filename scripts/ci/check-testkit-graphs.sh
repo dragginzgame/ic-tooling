@@ -36,11 +36,11 @@ native_graph() {
         select(.name | test("^ic-(testkit|platform(-types)?|wire)$")) |
         "Testkit \($profile): \(.identity)"' <<< "$observation"
 }
-native_graph default --forbid ic-wire --forbid ic-platform
-native_graph wire --features wire --require ic-wire=1 --forbid ic-platform
+native_graph default --forbid ic-wire --require ic-platform=1
+native_graph wire --features wire --require ic-wire=1 --require ic-platform=1
 perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --features reply-fixtures \
-    --require wasm-encoder=1 --forbid wat --forbid wast --forbid ic-platform
+    --require wasm-encoder=1 --forbid wat --forbid wast --require ic-platform=1
 perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --features held-reply-fixtures \
     --require wat=1 --require wast=1 --require wasm-encoder=1 --require ic-platform=1
@@ -49,7 +49,7 @@ perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --require clap=1 --require ic-wire=1
 perl scripts/ci/check-cargo-graph.pl --consumer "$root/qualification" \
     --package ic-testkit-dev --target "$host" --all-features \
-    --require ic-build=1 --forbid ic-platform --forbid ic-platform-pocket-ic \
+    --require ic-build=1 --require ic-platform=1 --forbid ic-platform-pocket-ic \
     --forbid-feature ic-platform/pocket-ic \
     --require pocket-ic=1 --forbid ic-metrics --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
     --require ic-host-artifacts=1 --require ic-host-fs=1 \

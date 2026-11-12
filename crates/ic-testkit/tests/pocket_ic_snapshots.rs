@@ -5,6 +5,257 @@ use ic_testkit::pic::{CanisterSnapshotTarget, ControllerSnapshotError, SnapshotR
 use pocket_ic::CanisterId as Principal;
 use pocket_ic::CanisterSettings;
 
+// This fixture independently models the heap/system ownership invariant. It
+// imports no timer library and traps if arming observes a different prior timer.
+const TIMER_WAT: &str = r#"(module
+  (import "ic0" "global_timer_set" (func $timer (param i64) (result i64)))
+  (import "ic0" "time" (func $time (result i64)))
+  (import "ic0" "msg_arg_data_copy" (func $args (param i32 i32 i32)))
+  (import "ic0" "msg_reply_data_append" (func $append (param i32 i32)))
+  (import "ic0" "msg_reply" (func $reply))
+  (import "ic0" "trap" (func $trap (param i32 i32)))
+  (import "ic0" "stable64_grow" (func $grow (param i64) (result i64)))
+  (import "ic0" "stable64_write" (func $write (param i64 i64 i64)))
+  (import "ic0" "stable64_read" (func $read (param i64 i64 i64)))
+  (import "ic0" "certified_data_set" (func $certify (param i32 i32)))
+  (memory (export "memory") 20)
+  (global $immutable i64 (i64.const 41))
+  (global $expected (mut i64) (i64.const 0))
+  (global $fired (mut i64) (i64.const 0))
+  (global $hooks (mut i64) (i64.const 0))
+  (data (i32.const 128) "competing global timer owner")
+  (func $arm (param $next i64)
+    (if (i64.ne (call $timer (local.get $next)) (global.get $expected))
+      (then (call $trap (i32.const 128) (i32.const 28))))
+    (global.set $expected (local.get $next)))
+  (func (export "canister_init")
+    (drop (call $grow (i64.const 20)))
+    (i32.store8 (i32.const 1200000) (i32.const 77))
+    (call $write (i64.const 1200000) (i64.const 1200000) (i64.const 1))
+    (call $certify (i32.const 1200000) (i32.const 1))
+    (call $arm (i64.add (call $time) (i64.const 60000000000))))
+  (func (export "canister_update mutate")
+    (call $args (i32.const 0) (i32.const 0) (i32.const 8))
+    (call $arm (i64.load (i32.const 0)))
+    (drop (memory.grow (i32.const 32)))
+    (i32.store8 (i32.const 1200000) (i32.const 99))
+    (call $write (i64.const 1200000) (i64.const 1200000) (i64.const 1))
+    (call $certify (i32.const 1200000) (i32.const 1))
+    (call $reply))
+  (func (export "canister_global_timer")
+    (global.set $expected (i64.const 0))
+    (global.set $fired (i64.add (global.get $fired) (i64.const 1)))
+    (call $arm (i64.add (call $time) (i64.const 10000000000))))
+  (func (export "canister_on_low_wasm_memory")
+    (global.set $hooks (i64.add (global.get $hooks) (i64.const 1))))
+  (func (export "canister_query state")
+    (i64.store (i32.const 0) (global.get $expected))
+    (i64.store (i32.const 8) (global.get $fired))
+    (call $read (i64.const 16) (i64.const 1200000) (i64.const 1))
+    (i32.store8 (i32.const 24) (i32.load8_u (i32.const 1200000)))
+    (i64.store (i32.const 32) (global.get $hooks))
+    (call $append (i32.const 0) (i32.const 40))
+    (call $reply)))"#;
+
+async fn snapshot_metadata(
+    pic: &pocket_ic::nonblocking::PocketIc,
+    id: Principal,
+) -> ic_platform::management_canister_types::ReadCanisterSnapshotMetadataResult {
+    use ic_platform::{
+        candid_codec::{
+            decoder::{Limits, decode_one},
+            encode_one,
+        },
+        management_canister_types::ReadCanisterSnapshotMetadataArgs,
+    };
+    let snapshot = pic.take_canister_snapshot(id, None, None).await.unwrap();
+    let payload = encode_one(
+        &ReadCanisterSnapshotMetadataArgs {
+            canister_id: ic_platform_types::Principal::from_slice(id.as_slice()),
+            snapshot_id: snapshot.id.clone(),
+        },
+        4096,
+    )
+    .unwrap();
+    let bytes = pic
+        .update_call_with_effective_principal(
+            Principal::management_canister(),
+            pocket_ic::common::rest::RawEffectivePrincipal::CanisterId(id.as_slice().to_vec()),
+            Principal::anonymous(),
+            "read_canister_snapshot_metadata",
+            payload,
+        )
+        .await
+        .unwrap();
+    let metadata = decode_one(
+        &bytes,
+        Limits {
+            bytes: 16_384,
+            header: 4096,
+            types: 128,
+            work: 1_000_000,
+            allocation: 1_000_000,
+        },
+    )
+    .unwrap();
+    pic.delete_canister_snapshot(id, None, snapshot.id)
+        .await
+        .unwrap();
+    metadata
+}
+
+async fn timer_state(pic: &pocket_ic::nonblocking::PocketIc, id: Principal) -> Vec<u8> {
+    pic.query_call(id, Principal::anonymous(), "state", vec![])
+        .await
+        .unwrap()
+}
+
+async fn mutate_timer_fixture(pic: &pocket_ic::nonblocking::PocketIc, id: Principal) {
+    let deadline = pic.get_time().await.as_nanos_since_unix_epoch() + 120_000_000_000;
+    pic.update_call(
+        id,
+        Principal::anonymous(),
+        "mutate",
+        deadline.to_le_bytes().to_vec(),
+    )
+    .await
+    .unwrap();
+    pic.clear_chunk_store(id, None).await.unwrap();
+}
+
+async fn build_timer_fixture() -> std::io::Result<ic_testkit::pic::StandaloneCanisterFixture> {
+    use ic_testkit::pic::{InstallSpec, StandaloneCanisterFixture};
+    let wasm = ic_host_artifacts::wasm_text::compile(
+        TIMER_WAT,
+        ic_host_artifacts::wasm_text::CompileLimits {
+            source_bytes: 8192,
+            module_bytes: 8192,
+        },
+    )
+    .unwrap();
+    let fixture = StandaloneCanisterFixture::install(
+        support::pocket_ic().await,
+        InstallSpec {
+            wasm,
+            init_bytes: vec![],
+            cycles: 50_000_000_000_000,
+            install_sender: None,
+        },
+    )
+    .await;
+    fixture
+        .pocket_ic()
+        .update_canister_settings(
+            fixture.canister_id(),
+            None,
+            CanisterSettings {
+                wasm_memory_limit: Some((4_u64 * 1024 * 1024).into()),
+                wasm_memory_threshold: Some((1024_u64 * 1024).into()),
+                ..CanisterSettings::default()
+            },
+        )
+        .await
+        .unwrap();
+    fixture
+        .pocket_ic()
+        .upload_chunk(fixture.canister_id(), None, vec![37; 262_153])
+        .await
+        .unwrap();
+    Ok(fixture)
+}
+
+#[tokio::test]
+async fn mutated_pool_restores_heap_timer_hook_and_memory_before_rearming() {
+    use ic_testkit::pic::{
+        BaselinePoolDisposition, CachedPocketIcBaselinePool, StandaloneCanisterRecipe,
+    };
+    use std::{num::NonZeroUsize, time::Duration};
+    let pool = CachedPocketIcBaselinePool::new(
+        NonZeroUsize::new(1).unwrap(),
+        StandaloneCanisterRecipe::new(SnapshotRestoreFunding::Preserve, build_timer_fixture),
+    );
+    let (lease, _) = pool.acquire().await.unwrap();
+    let id = *lease.metadata();
+    let instance = lease.pocket_ic().instance_id;
+    let initial = timer_state(lease.pocket_ic(), id).await;
+    let chunks = lease.pocket_ic().stored_chunks(id, None).await.unwrap();
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(initial[16], 77);
+    assert_eq!(initial[24], 77);
+    lease.pocket_ic().stop_canister(id, None).await.unwrap();
+    let baseline = snapshot_metadata(lease.pocket_ic(), id).await;
+    assert_eq!(baseline.certified_data, [77]);
+    assert!(matches!(
+        baseline.global_timer,
+        Some(ic_platform::management_canister_types::CanisterTimer::Active(_))
+    ));
+    lease.pocket_ic().start_canister(id, None).await.unwrap();
+    let mut lease = lease;
+    for iteration in 0..3 {
+        let pic = lease.pocket_ic();
+        mutate_timer_fixture(pic, id).await;
+        pic.stop_canister(id, None).await.unwrap();
+        let changed = snapshot_metadata(pic, id).await;
+        assert_eq!(changed.certified_data, [99]);
+        assert_eq!(
+            changed.wasm_chunk_store,
+            [] as [ic_platform::management_canister_types::ChunkHash; 0]
+        );
+        assert_ne!(
+            format!("{:?}", changed.global_timer),
+            format!("{:?}", baseline.global_timer)
+        );
+        assert_ne!(
+            format!("{:?}", changed.on_low_wasm_memory_hook_status),
+            format!("{:?}", baseline.on_low_wasm_memory_hook_status)
+        );
+        drop(lease);
+        let (next, outcome) = pool.acquire().await.unwrap();
+        assert!(matches!(
+            outcome.disposition,
+            BaselinePoolDisposition::Restored
+        ));
+        assert_eq!(
+            next.pocket_ic().instance_id,
+            instance,
+            "restore, never rebuild"
+        );
+        assert_eq!(*next.metadata(), id);
+        assert_eq!(timer_state(next.pocket_ic(), id).await, initial);
+        next.pocket_ic().stop_canister(id, None).await.unwrap();
+        let restored = snapshot_metadata(next.pocket_ic(), id).await;
+        assert_eq!(restored.certified_data, baseline.certified_data);
+        assert_eq!(
+            next.pocket_ic().stored_chunks(id, None).await.unwrap(),
+            chunks
+        );
+        assert_eq!(
+            format!("{:?}", restored.global_timer),
+            format!("{:?}", baseline.global_timer)
+        );
+        assert_eq!(
+            format!("{:?}", restored.on_low_wasm_memory_hook_status),
+            format!("{:?}", baseline.on_low_wasm_memory_hook_status)
+        );
+        next.pocket_ic().start_canister(id, None).await.unwrap();
+        lease = next;
+        if iteration == 2 {
+            lease
+                .pocket_ic()
+                .advance_time(Duration::from_secs(70))
+                .await;
+            for _ in 0..4 {
+                lease.pocket_ic().tick().await;
+            }
+            let fired = timer_state(lease.pocket_ic(), id).await;
+            assert!(u64::from_le_bytes(fired[8..16].try_into().unwrap()) > 0);
+            mutate_timer_fixture(lease.pocket_ic(), id).await;
+        }
+    }
+    drop(lease);
+    pool.close().await;
+}
+
 #[tokio::test]
 async fn explicit_snapshot_senders_support_mixed_controller_sets_without_fallback() {
     let owned = support::pocket_ic().await;
@@ -248,8 +499,8 @@ async fn snapshot_limit_refusal_preserves_existing_snapshots_and_can_recover() {
     pic.install_canister(id, b"\0asm\x01\0\0\0".to_vec(), vec![], None)
         .await;
     pic.stop_canister(id, None).await.unwrap();
-    // Ordinary upstream capture needs one snapshot slot. Fill the server's
-    // ten-snapshot allowance; refusal must preserve every caller snapshot.
+    // Coherent preparation needs source and upload slots. Refusal must preserve
+    // caller snapshots even when taking the temporary source already succeeded.
     let mut original = Vec::new();
     for _ in 0..10 {
         original.push(pic.take_canister_snapshot(id, None, None).await.unwrap().id);
@@ -278,6 +529,16 @@ async fn snapshot_limit_refusal_preserves_existing_snapshots_and_can_recover() {
     pic.delete_canister_snapshot(id, None, original.remove(0))
         .await
         .unwrap();
+    ic_testkit::pic::capture_snapshots(pic, [target])
+        .await
+        .unwrap_err();
+    assert_eq!(
+        pic.list_canister_snapshots(id, None).await.unwrap().len(),
+        9
+    );
+    pic.delete_canister_snapshot(id, None, original.remove(0))
+        .await
+        .unwrap();
     let snapshots = ic_testkit::pic::capture_snapshots(pic, [target])
         .await
         .unwrap();
@@ -286,7 +547,7 @@ async fn snapshot_limit_refusal_preserves_existing_snapshots_and_can_recover() {
         .unwrap();
     assert_eq!(
         pic.list_canister_snapshots(id, None).await.unwrap().len(),
-        10
+        9
     );
 }
 

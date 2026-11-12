@@ -8,6 +8,44 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.101.0]
+
+### ⚠️ Breaking
+
+- Coherent cached capture needs two free snapshot slots per target and transfer
+  cycles. Local preparation failures use the new `ControllerSnapshotError::PreparationFailed`
+  variant and `SnapshotPreparationError`. Native default/Wire profiles select
+  Platform's owned management codec; portable Wasm still excludes it.
+
+### 🐛 Fixed
+
+- Fix [#263 — timer ownership after cached restoration](https://github.com/dragginzgame/ic-tooling/issues/263):
+  prepare metadata-upload snapshots through upstream PocketIC management calls so
+  global timer and low-memory-hook state restore alongside globals, Wasm, heap,
+  stable memory, certified data and the chunk store. Preserve exact senders,
+  caller-selected funding, stop/drain/start ownership and rollback reporting.
+  Warm reuse performs no transfer and never rewinds current simulated time.
+  Retain upstream transport/polling/panic behavior and the timer ownership guard.
+  Timers qualification is tracked separately in [IC Timers #87](https://github.com/dragginzgame/ic-timers/issues/87).
+
+### 🔧 Changed
+
+- Select Toko Tooling 0.39.12 for development and CI, including width-bounded
+  LOC reports, the explicit `--wide` display and supplier-freshness review rules.
+- Use published Platform 0.31.2 and its compatible Types 0.19.4 selection for the
+  native codec; no runtime or native crypto features are enabled.
+
+### 🧪 Testing
+
+- Supplier review at release preparation: Platform 0.31.2, Types 0.19.4,
+  Toko Tooling 0.39.12 and PocketIC 16.1.0 are current stable registry releases.
+  The release locks retain Wire 0.21.0; defer optional 0.21.2 adoption to the next
+  Wire maintenance batch. Defer qualification Runtime/macros/guard 0.21.1 → 0.21.2
+  to the next qualification-dependency maintenance batch, and metadata editor
+  IC Build 0.73.0 → 0.83.0 to the next release-adapter maintenance batch. Revisit
+  these dispositions before the next release freeze. Ordinary-checkout Wire
+  0.21.2 and other unrelated lock refreshes remain outside this release.
+
 ## [0.100.2] - 2026-11-11
 
 ### ➕ Added

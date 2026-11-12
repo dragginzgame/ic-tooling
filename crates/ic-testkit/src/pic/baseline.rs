@@ -56,7 +56,7 @@ impl<T> CachedPocketIcBaseline<T> {
     /// Restore with exactly the captured senders and selected cycle funding.
     /// Success means the complete captured set was restored.
     /// Stop/drain the entire set first; restart after complete restore/reset.
-    /// Uses upstream take/load semantics, without the retired timer/hook transfer.
+    /// Loads the prepared snapshot's heap, global timer and low-memory-hook state.
     /// Current time and non-snapshot state remain caller-owned.
     ///
     /// # Errors

@@ -19,7 +19,7 @@ ic-host-fs = { path = "../crates/ic-host-fs", version = "0.76.4", default-featur
 ic-host-process = { path = "../crates/ic-host-process", version = "0.76.4", default-features = false }
 ic-host-text = { path = "../crates/ic-host-text", version = "0.74.5", default-features = false }
 ic-host-tools = { path = "../crates/ic-host-tools", version = "0.91.0", default-features = false }
-ic-platform = { version = "0.31.0", default-features = false }
+ic-platform = { version = "0.31.2", default-features = false }
 ic-platform-runtime = { version = "0.21.1", default-features = false }
 ic-platform-types = { version = "0.19.3", default-features = false }
 ic-testkit = { path = "../crates/ic-testkit", version = "0.100.2", default-features = false }
@@ -30,7 +30,7 @@ pocket-ic = "16.1.0"
 serde = { version = "1.0.228", default-features = false }
 serde_json = "1.0.150"
 tokio = { version = "1.52.3", default-features = false }
-toko-tooling = "=0.39.10"
+toko-tooling = "=0.39.12"
 
 [workspace.lints.rust]
 missing_docs = "warn"

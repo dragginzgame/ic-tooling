@@ -36,10 +36,10 @@ not leak into the published Wasm library. The maintained feature contracts are:
 
 | Package and target | Feature selection | Required boundary |
 | --- | --- | --- |
-| Native `ic-testkit` | Default | Published upstream PocketIC client and native DTOs; no Platform facade, Wire, executor, Build, Host Text, Agent, parser or full CDK |
+| Native `ic-testkit` | Default | Published upstream PocketIC client and native DTOs; Platform-owned snapshot codec; no Wire, executor, Build, Host Text, Agent, parser or full CDK |
 | Native `ic-testkit` | `wire` only | One Wire identity without CLI, held fixtures or executor; otherwise the default native boundary |
-| Native `ic-testkit` | All features (`cli,wire,held-reply-fixtures`) | One Wire identity; held fixtures select Platform codecs/management adapters; otherwise the same native exclusions |
-| Native `ic-testkit-dev` | All features, normal/build edges | One Build, upstream PocketIC client and each Host package identity; no Platform facade; test-only Platform adapters are separate |
+| Native `ic-testkit` | All features (`cli,wire,held-reply-fixtures`) | One Wire identity; snapshots and held fixtures share Platform codecs/management adapters; otherwise the same native exclusions |
+| Native `ic-testkit-dev` | All features, normal/build edges | One Build, upstream PocketIC client, Platform snapshot codec and each Host package identity; no Agent or Runtime |
 | Wasm `ic-testkit` | All features | One Types identity; no Runtime/IC0, facade, Metrics, Candid, PocketIC, Wire, Host, Build, Agent, parser, full CDK or executor |
 | Wasm `ic-testkit-perf-probe` | Default | One Types/Runtime/Wire identity with executor and IC0; no facade, Candid, PocketIC, Host, Build, Agent, parser or full CDK |
 
@@ -96,8 +96,9 @@ typed Host cause and I/O error classification; incomplete output is never decode
 
 ### Published Platform boundary
 
-Testkit uses upstream `pocket-ic` native APIs directly. Held fixtures select
-Platform's Candid/management adapters; default and Wire profiles exclude Platform.
+Testkit uses upstream `pocket-ic` native APIs directly. Native snapshot preparation
+and held fixtures select Platform's owned Candid/management adapters. Default and
+Wire profiles include that codec but exclude Platform Runtime and Agent.
 The Wasm library selects Types for portable Principal generation and excludes
 Runtime, the facade, native client, Candid and executor. Native PocketIC still
 requires its upstream Candid identity. See the [migration](client-migration.md).

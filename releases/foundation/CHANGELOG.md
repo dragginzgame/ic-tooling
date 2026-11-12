@@ -10,7 +10,8 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
 
 ### 🔧 Changed
 
-- Select Toko Tooling 0.39.10 for development and CI.
+- Select Toko Tooling 0.39.12 for development and CI, including width-bounded
+  LOC reports, the explicit `--wide` display and supplier-freshness review rules.
 
 ## [0.76.4] - 2026-11-10
 

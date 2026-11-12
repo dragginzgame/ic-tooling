@@ -1,6 +1,6 @@
 # IC Tooling qualification
 
-Toko Tooling is selected as `toko-tooling = "=0.39.10"` in each workspace's
+Toko Tooling is selected as `toko-tooling = "=0.39.12"` in each workspace's
 `[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
 Every real package inherits it unconditionally in
 `[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
@@ -339,12 +339,12 @@ independent Types releases; incompatible Types changes still require explicit
 consumer and schema adoption.
 
 Native Testkit depends on published `pocket-ic` directly under the maintainer's
-approved native exception. Callers import its async client and native DTOs
-directly; no Testkit client module or compatibility facade remains. Only held
-fixtures select Platform's Candid and management adapters. Graph checks exclude
+approved native exception. Callers import its async client and native DTOs through
+Testkit's native-only upstream re-export. Native snapshot preparation and held
+fixtures select Platform's owned Candid and management adapters. Graph checks exclude
 `ic-platform-pocket-ic`; Wasm excludes both clients and registry Candid/management.
 The installed PocketIC server remains pinned to 16.1.0. Qualify upstream panic,
-best-effort deletion and ordinary snapshot behavior through the
+best-effort deletion and coherent snapshot preparation through the
 [migration](testkit/client-migration.md), not the retired fork's guarantees.
 
 Native and Wasm Testkit graphs exclude Metrics; the library has no recording

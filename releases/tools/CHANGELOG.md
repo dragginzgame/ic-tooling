@@ -4,6 +4,14 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.91.1]
+
+### 🔧 Changed
+
+- Select Toko Tooling 0.39.12 for development and CI, including width-bounded
+  LOC reports, the explicit `--wide` display and supplier-freshness review rules.
+- Select compatible Platform 0.31.2 and Types 0.19.4 through the shared catalog.
+
 ## [0.91.0] - 2026-11-11
 
 ### ⚠️ Breaking

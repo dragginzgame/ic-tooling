@@ -56,7 +56,7 @@ pub use lifecycle::{
 };
 pub use snapshot::{
     CanisterSnapshotTarget, ControllerSnapshotError, ControllerSnapshots, SnapshotCleanupFailure,
-    SnapshotRestoreFunding, capture_snapshots, restore_snapshots,
+    SnapshotPreparationError, SnapshotRestoreFunding, capture_snapshots, restore_snapshots,
 };
 pub use standalone::StandaloneCanisterFixture;
 pub use standalone_recipe::{StandaloneCanisterLifecycleError, StandaloneCanisterRecipe};

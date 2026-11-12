@@ -55,7 +55,7 @@ cargo_metadata = "0.23.1"
 command-fds = "0.3.3"
 flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
 hmac = "0.13.0"
-ic-platform = { version = "0.31.0", default-features = false }
+ic-platform = { version = "0.31.2", default-features = false }
 ic-platform-types = { version = "0.19.3", default-features = false }
 libc = "0.2.190"
 pocket-ic = "16.1.0"
@@ -84,7 +84,7 @@ tokio = { version = "1.52.3", default-features = false }
 wasmparser = { version = "0.263", default-features = false, features = ["std", "features"] }
 
 # Tests and tooling only
-toko-tooling = "=0.39.10"
+toko-tooling = "=0.39.12"
 
 [workspace.lints.rust]
 missing_docs = "warn"

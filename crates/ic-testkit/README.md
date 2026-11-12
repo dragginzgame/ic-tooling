@@ -25,7 +25,8 @@ Testkit's portable library provides deterministic test principals through
 probe selects Runtime's entrypoints directly. Native simulator operations use
 `ic_testkit::pocket_ic::nonblocking::PocketIc` and
 `ic_testkit::pocket_ic::PocketIcBuilder`; `pic` supplies
-host-only lifecycle and fixture helpers. Platform is selected only by held fixtures.
+host-only lifecycle and fixture helpers. Platform owns the native snapshot and
+held-fixture management codecs.
 Standalone recipe builders return `std::io::Result<StandaloneCanisterFixture>`.
 
 Upstream owns builder configuration, native Principal/management identities and
@@ -37,8 +38,8 @@ External interfaces that require Candid remain caller-owned: use a direct
 Platform dependency for encoding/decoding, then send the bytes through the
 upstream PocketIC client's raw operations.
 PocketIC retains its upstream Candid dependencies; Testkit's Wasm profile remains
-Candid-free. Native default and Wire Testkit exclude Platform; `held-reply-fixtures`
-selects its owned Candid codec and management DTOs for the fixture protocol.
+Candid-free. Native Testkit selects Platform's owned codec and management DTOs
+for coherent snapshots; `held-reply-fixtures` uses the same adapter owner.
 
 The optional native `wire` feature adds `pic::query_wire` and `pic::update_wire`.
 Enable it on your Testkit dependency and declare `ic-wire = "0.19"` for your native
@@ -158,10 +159,15 @@ The published archive includes a `CHANGELOG.md` navigation file linking the
 historical upgrade actions. Current build and artifact-cache contracts belong to IC Build;
 historical Testkit artifact imports are not current entry points.
 
-Snapshot baselines use upstream take/load operations directly. Testkit no longer
-owns a metadata/chunk transfer engine or promises its former timer/hook restoration.
-Use fresh instances or application-owned reset for those domains. Capture consumes
-ordinary snapshot slots, memory and cycles; warm reuse loads the captured snapshot.
+Snapshot baselines prepare metadata-upload snapshots through upstream client
+management calls, preserving global timer and low-memory-hook state alongside
+Wasm, heap, stable memory, globals, certified data and the chunk store. Initial
+capture needs two free snapshot slots per target, transfer cycles and bounded
+message buffers; it deletes the temporary source after complete preparation.
+Warm reuse loads the prepared snapshot without retransferring it. Missing state
+or incomplete data refuses capture and rolls back known snapshots. Cancellation
+or upstream panics can leave unknown outcomes requiring caller reconciliation.
+No shared server filesystem, client fork or timer-reset shim is introduced.
 
 Custom recipes must stop/drain the whole captured set before capture and in
 `prepare_restore`, then restart only after complete capture or successful

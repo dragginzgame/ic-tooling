@@ -15,7 +15,8 @@ has shipped.
 
 PocketIC owns the simulator, native client, protocol codecs and DTOs. Import its
 async client and builder directly. Testkit's `pic` owns server admission/custody
-and harness policy. Only held fixtures select Platform's codec/management adapters.
+and harness policy. Native snapshots and held fixtures select Platform's owned
+codec/management adapters.
 See [the client migration](client-migration.md) for breaking changes. The fork,
 its reconstruction guards and copied notices are retired together; the external
 dependency retains its own license.
@@ -139,8 +140,11 @@ would not remove their current responsibilities.
 ## Snapshot baselines and reuse
 
 PocketIC owns canister snapshots. Testkit captures/restores a declared snapshot
-set and retains returned rejections. The metadata/chunk transfer engine and its
-timer/hook restoration guarantee are retired. A baseline pool owns the
+set and retains returned rejections. Native capture prepares metadata-upload
+snapshots through upstream management calls so timer/hook state restores with
+the heap. Platform owns DTOs/codec; no client fork or public transfer API returns.
+Capture needs two free snapshot slots and transfer cycles per target; warm loads
+reuse the prepared snapshot. A baseline pool owns the
 recipe and canonical restoration; recipes own non-snapshot reset work, readiness
 and invariant checks. Reuse is admitted only when achieved reset coverage matches
 requirements. Canister snapshots do not automatically restore PocketIC time,

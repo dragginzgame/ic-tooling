@@ -123,15 +123,28 @@ Downcast that cause to inspect the exact canister and original PocketIC rejectio
 A stop refusal before capture is no longer labelled as a snapshot failure.
 Transport panics and explicit teardown ownership are unchanged.
 
-The baseline uses upstream `take_canister_snapshot` and `load_canister_snapshot`.
-It retains deterministic ordering, duplicate-target admission, exact captured
-senders, caller-selected funding and rollback of known captures after a returned
-rejection. It no longer downloads/copies snapshot data or exposes metadata/chunk
-transfer APIs. Do not assume the retired transfer's global-timer and low-memory
-hook restoration: use fresh instances or explicit application-owned reset for
-those domains. Simulated time, pending work, extra canisters and external effects
-remain outside baseline rollback. Cancellation or upstream panic can leave partial
-captures on a borrowed server; reconcile them explicitly.
+The native baseline prepares a metadata-upload snapshot through the upstream
+client's raw management calls and Platform's owned DTOs/codec. This corrects the
+timer/hook regression in ordinary take/load reuse ([#263](https://github.com/dragginzgame/ic-tooling/issues/263)).
+No forked client, public transfer API or second transport is restored. Native
+default and Wire profiles now include Platform's codec; Wasm remains Types-only.
+
+Capture needs two free snapshot slots per target and transfer cycles. It copies
+the complete source in bounded management messages, retains its timer and hook
+metadata, then deletes the temporary source. Warm loads restore that state with
+the heap without retransferring data. Deterministic ordering, duplicate admission,
+exact senders and caller-selected restore funding are preserved. Returned
+management refusals retain the original rejection; local codec/missing-state/data
+refusals return `ControllerSnapshotError::PreparationFailed` with a
+`SnapshotPreparationError`. Both report failures rolling back known snapshots.
+
+Stop/drain all captured targets first, keep automatic progress disabled, and
+restart only after complete capture or restoration/reset. Current time is not
+rewound and captured absolute deadlines are not shifted; expired timers may run
+after restart. Pending work, extra canisters and external effects remain outside
+rollback. Cancellation or upstream panic can leave partial captures or unknown
+creation outcomes on a borrowed server; reconcile them explicitly. This is test
+baseline qualification, not production backup or cross-version recovery proof.
 
 ## Qualification and consumers
 

@@ -10,7 +10,8 @@ reset, release, tag or upload is implied by establishing this group.
 
 ### 🔧 Changed
 
-- Select Toko Tooling 0.39.10 for development and CI.
+- Select Toko Tooling 0.39.12 for development and CI, including width-bounded
+  LOC reports, the explicit `--wide` display and supplier-freshness review rules.
 
 ## [0.74.5] - 2026-11-10
 
