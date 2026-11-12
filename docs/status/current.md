@@ -1,26 +1,32 @@
 # Current handoff — 2026-11-12
 
-## Active Foundation delivery
+## Foundation 0.76.5 delivered
 
-Review selected Foundation 0.76.5, a compatible addition to Artifacts, FS and HTTP:
+Foundation 0.76.5 adds compatible APIs to Artifacts, FS and HTTP:
 aggregate bounded stream reads, capability-relative permission admission, an
 exclusive descriptor lock guard and optional portable strict HTTP endpoints.
-The pending Foundation ledger describes the APIs and qualification. Default Wasm
+The Foundation ledger describes the APIs and qualification. Default Wasm
 HTTP remains empty; opting into `endpoint` selects URL parsing without transport.
 Consumers still own paths, byte limits, permissions, trust and recovery.
 
-Review added partial-read failure coverage, independent endpoint native/Wasm
-qualification and its graph boundary. Deployment must use the existing frozen
-batch workflow from ordinary `main` to `dragginzgame/ic-tooling:main`, with tag
-`foundation-v0.76.5` and crates.io publication of all five Foundation packages.
-Managed execution belongs under `target/release-frozen/BATCH`, with durable
-journals under `.git/release-state/frozen/BATCH`. No sibling release is included.
-The full Foundation gate is required; qualification/publication have not run yet.
+Release commit `963df312794cf90e4756d48420a2462e963e6c69` and annotated tag
+`foundation-v0.76.5` match GitHub main. All five Foundation packages are present
+and non-yanked on crates.io. Frozen `batch-eTIfLgJR` completed and was reconciled
+into ordinary main. Source review commits are `715af316` and `bb4df402`.
+The complete 32-stage Linux gate passed, including warning-denied Clippy/docs,
+partial-read/permission/duplicate-lock tests, independent endpoint native/Wasm
+checks, installed PocketIC and extracted-package qualification. Fresh native
+macOS qualification remains asynchronous and is not claimed here.
+
+Retain `.git/release-state/frozen/batch-eTIfLgJR/`, its managed checkout under
+`target/release-frozen/`, and `target/deploy-foundation765/` logs and registry
+observations. Gate evidence is `target/release-validation/foundation-gate.XaK96U/`
+within that checkout. No sibling release or cleanup was performed.
 
 Frozen `batch-lc826t2Z` stopped before preparation at a stale Make fixture's
 isolated-feature expectation. Clippy and formatting passed; no release/tag/upload
-was created. Its inputs and evidence remain retained. The fixture now includes
-the two endpoint commands; corrected source requires a fresh batch.
+was created. Its inputs and evidence remain retained. The fixture's corrected
+two-command expectation passed focused and full-gate qualification in the new batch.
 
 Build 0.83.0, Text 0.74.5, Tools 0.91.0 and Testkit 0.101.0 remain published.
 Their pending notes describe contributor-tooling adoption, not a need to republish.
@@ -44,9 +50,12 @@ Optional patch/native-tool adoptions have dispositions in the Foundation ledger.
 
 Unrelated ordinary lock updates were saved outside the release graph at
 `.git/release-state/preserve/deploy-20261112-foundation765/`, including both full
-locks, their patch and the prior handoff. Restore those selections deliberately
-after frozen delivery/reconciliation, retaining the new local Foundation versions
-and HTTP dependency edge. No artifacts or release records were retired.
+locks, their patch and the prior handoff. The durable branch
+`preserve/deploy-20261112-foundation765-dependencies` retains the latest deferred
+choices. Both locks are restored after reconciliation, preserving every external
+package block byte-for-byte while retaining Foundation 0.76.5 and the HTTP edge.
+Both all-feature locked metadata checks pass. These deferred selections remain
+ordinary-checkout changes, outside the released graph. No artifacts were retired.
 
 ## Testkit snapshot correction and open issue
 
@@ -69,12 +78,11 @@ No Canic edits, dependency overrides or new tests are authorized by this deliver
 tracks its own coverage; the timer ownership guard remains intact.
 
 [Push CI on 43ebe178](https://github.com/dragginzgame/ic-tooling/actions/runs/43180163629)
-passed native Linux, native macOS 15 Intel and lint/security. Apple Silicon setup
-received HTTP 403 downloading PocketIC, so its tests did not run and MSRV failed
-on the native result. The same URL subsequently returned HTTP 200 with the exact
-reviewed archive checksum. Failed jobs were rerun asynchronously; no later pass
-is claimed here. Evidence remains under `target/ci43180163629/`. Do not use the
-prior hosted result to qualify the new Foundation source.
+now passes native Linux, native macOS 15 Intel and Apple Silicon, lint/security
+and MSRV. The failed Apple Silicon PocketIC HTTP 403 download cleared on retry;
+the same URL independently returned the reviewed archive checksum. Retained
+diagnostics remain under `target/ci43180163629/`. This qualifies the previous
+source; do not use it to qualify the new Foundation changes.
 
 ## Next independent fixes
 
