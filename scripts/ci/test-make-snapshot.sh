@@ -582,6 +582,8 @@ cat > "$fixture/expected" <<'EVENTS'
 check -p ic-testkit --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
 check --manifest-path qualification/Cargo.toml -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 check -p ic-host-fs --lib --bins --test unsupported_lock --all-features --target wasm32-unknown-unknown --locked --offline
+test -p ic-host-http --no-default-features --features endpoint --lib --locked --offline endpoint::
+check -p ic-host-http --no-default-features --features endpoint --lib --target wasm32-unknown-unknown --locked --offline
 test -p ic-host-tools --no-default-features --features icp-project --all-targets --locked --offline icp_project::
 test -p ic-host-tools --no-default-features --features icp-ledger --all-targets --locked --offline icp_ledger::
 test -p ic-host-tools --no-default-features --features ledger-evidence --all-targets --locked --offline ledger_evidence::

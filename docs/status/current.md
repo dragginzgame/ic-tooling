@@ -17,6 +17,11 @@ Managed execution belongs under `target/release-frozen/BATCH`, with durable
 journals under `.git/release-state/frozen/BATCH`. No sibling release is included.
 The full Foundation gate is required; qualification/publication have not run yet.
 
+Frozen `batch-lc826t2Z` stopped before preparation at a stale Make fixture's
+isolated-feature expectation. Clippy and formatting passed; no release/tag/upload
+was created. Its inputs and evidence remain retained. The fixture now includes
+the two endpoint commands; corrected source requires a fresh batch.
+
 Build 0.83.0, Text 0.74.5, Tools 0.91.0 and Testkit 0.101.0 remain published.
 Their pending notes describe contributor-tooling adoption, not a need to republish.
 Private qualification packages remain 0.96.0. Do not release unchanged groups.
