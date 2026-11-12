@@ -2,10 +2,10 @@
 
 ## Delivery
 
-Platform 0.31 adoption is published. Latest product release commit:
-`f760451d02d95664bbca888ea90d5c78e856058a`. Frozen Tools batch
-`batch-OsoImRVe` and Testkit batch `batch-LRmZoenK` completed and were reconciled
-into ordinary main.
+The coherent snapshot correction for #263 is published in Testkit 0.101.0.
+Release commit: `08a193d863fa42404d3a6ba36c65387468dcaa79`; source correction:
+`a54410f13f00560f8f9e302ce336c9974b3d05a8`. Frozen batch `batch-Aps5IIGp`
+completed and was reconciled into ordinary main. No other group released.
 
 | Group | Published | Release commit |
 | --- | --- | --- |
@@ -13,16 +13,37 @@ into ordinary main.
 | Build | 0.83.0 | 662516e5 |
 | Text | 0.74.5 | f0352237 |
 | Host Tools | 0.91.0 | 1b60f3a0 |
-| Testkit | 0.100.2 | b9415868 |
+| Testkit | 0.101.0 | 08a193d8 |
 
-Both new versions were independently verified present and not yanked, and
-GitHub's annotated tags match the local identities. Private qualification packages
-remain 0.96.0. Each group passed its complete 32-stage Linux gate, including
+Testkit 0.101.0 was independently verified present and not yanked; GitHub's
+annotated tag matches the local identity. Private qualification packages remain
+0.96.0. This release passed the complete 32-stage Linux gate, including
 warning-denied lint, archive qualification, installed PocketIC, Wasm/probe and
 workspace tests. Native macOS 15 Intel and Apple Silicon results are separate;
 new hosted qualification is asynchronous and not claimed as passing here.
 
-Both batches captured Toko Tooling 0.39.10, Platform 0.31.0 and Types 0.19.3.
+The batch captured Platform 0.31.2, Types 0.19.4, Toko Tooling 0.39.12 and Wire
+0.21.0. Supplier freshness observations remain under `target/deploy263/` and
+optional Wire, qualification Runtime and metadata-editor refreshes have explicit
+next-maintenance dispositions in the Testkit release ledger. Ordinary-checkout
+Wire 0.21.2 and unrelated lock selections were preserved outside publication and
+reapplied after reconciliation. Durable refs are
+`preserve/deploy-20261112-testkit101-dependencies` and
+`preserve/deploy-20261112-testkit101-reconcile`; copies and patches remain in
+`.git/release-state/preserve/deploy-20261112-testkit101/`.
+
+The batch's Git, plans and receipts remain under
+`.git/release-state/frozen/batch-Aps5IIGp/`; its managed checkout and full gate
+evidence remain under `target/release-frozen/batch-Aps5IIGp/`, including
+`target/release-validation/testkit-gate.yU5dqw/` within that checkout. Ordinary
+logs are `target/deploy263/release.log` and `target/deploy263/reconcile.log`;
+registry verification is `target/deploy263/ic-testkit-0.101.0.registry.json`.
+No artifacts or release records were retired. The final handoff delivery requests
+all four explicit asynchronous qualification workflows, including the native
+Linux/macOS matrix, so a documentation-only push cannot supersede their proof.
+
+Earlier Platform adoption batches `batch-OsoImRVe` and `batch-LRmZoenK` captured
+Toko Tooling 0.39.10, Platform 0.31.0 and Types 0.19.3.
 Runtime/macros/guard remain 0.21.1; release Wire selections remain 0.21.0.
 Unrelated ordinary lock selections were preserved outside both releases and
 reapplied after reconciliation. Durable copies are recorded by
@@ -36,10 +57,9 @@ Logs are `target/deploy-platform31-tools91.log` and
 `target/deploy-platform31-testkit1001.log`, with corresponding `-reconcile.log`
 files. Independent registry observations remain in `target/deploy-platform31-registry/`.
 
-The release-commit CI and Testkit runtime runs were in progress when checked;
-Browser fixture session passed. The final handoff delivery requests an explicit
-asynchronous native qualification run so a documentation-only push cannot
-supersede the required three-host proof. No hosted result is inferred from Linux.
+Those earlier release-commit CI and Testkit runtime runs were in progress at
+their handoff; Browser fixture session had passed. These historical observations
+do not qualify the new snapshot correction. No hosted result is inferred from Linux.
 
 ## Published Testkit client re-export
 
@@ -73,7 +93,7 @@ Client dependencies remain native and the Wasm graph remains Types-only.
 Wire 0.21 public identities require aligned consumer selection. Toko 0.39.12
 remains installed; no supplier or sibling deployment is included in this work.
 
-## Pending Toko Tooling 0.39.12 adoption
+## Toko Tooling 0.39.12 adoption
 
 Both maintained workspaces select published Toko Tooling 0.39.12, the latest stable,
 non-yanked registry release observed during this refresh. The authenticated
@@ -90,12 +110,14 @@ because both report scripts are unchanged from 0.39.11. Every unrelated entry in
 byte-preserved relative to the saved inputs, including the ordinary checkout's
 Platform 0.31.1 and Wire 0.21.1 selections. Originals, preview, installer and
 focused-check evidence remain under `target/toko03912/`; prior LOC evidence is
-retained under `target/toko03911/`. This maintenance scope updates Toko only and
-does not assert freshness of other suppliers. Pending group notes are updated;
-this refresh is local and unpublished. No new native macOS qualification or full
-release gate was run.
+retained under `target/toko03911/`. That focused maintenance updated Toko only;
+the subsequent snapshot release's supplier review is recorded above. The tooling
+selection and installed snapshot are committed and ship in Testkit 0.101.0.
+Foundation, Build, Text and Tools retain their notes for their next independently
+required release. The full Linux gate now qualifies the delivered batch; native
+macOS evidence remains separate.
 
-## Pending coherent snapshot correction — #263
+## Published coherent snapshot correction — #263
 
 The reopened [#263](https://github.com/dragginzgame/ic-tooling/issues/263) reports
 timer-owner traps after a mutated cached baseline is reused with Testkit 0.100.2.
@@ -109,7 +131,7 @@ second transport, server filesystem dependency, timer reset or time rewind is us
 
 Capture requires two free slots per target and transfer cycles. The new
 `ControllerSnapshotError::PreparationFailed` variant carries local refusals.
-These changes are queued for Testkit 0.101.0; actual package versions are unchanged.
+These changes ship in Testkit 0.101.0; other package versions are unchanged.
 Native default/Wire graphs now require Platform's codec; Runtime/Agent remain
 excluded, and all-feature Wasm remains Types-only. Both workspaces require
 Platform 0.31.2 (latest published at selection), with compatible Types 0.19.4.
@@ -135,8 +157,9 @@ data, with its final run retained in `target/issue263/timer-final.log`.
 ownership regression coverage; the timer guard remains intact. Keep Tooling #263
 open for its explicit Canic two-case acceptance sequence after corrected-source
 adoption/publication. No Canic source, dependency override or test run is included
-here. No new native macOS qualification, full release gate, commit or publication
-has been performed for this correction.
+here. Source delivery, complete Linux qualification and registry publication are
+recorded above; no fresh native macOS pass is claimed. Consumer acceptance remains
+open and is not implied by the supplier release.
 
 ## Next three fixes
 
