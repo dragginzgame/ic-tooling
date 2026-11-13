@@ -33,8 +33,6 @@ mod standalone;
 mod standalone_recipe;
 mod startup;
 mod time;
-#[cfg(feature = "wire")]
-mod wire;
 
 pub use baseline::CachedPocketIcBaseline;
 pub use baseline_pool::{
@@ -65,5 +63,3 @@ pub use startup::{
     PocketIcStartupError, PocketIcStartupFailure,
 };
 pub use time::{TickUntilError, advance_and_tick, tick_until};
-#[cfg(feature = "wire")]
-pub use wire::{WireCallContext, WireCallError, WireCallSpec, query_wire, update_wire};

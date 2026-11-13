@@ -8,6 +8,22 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.104.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Remove the `wire` feature and typed call exports. Import them from the
+  independently versioned `ic-testkit-wire` adapter; simulator lifecycle and raw
+  PocketIC calls no longer select a Wire generation under any Testkit feature.
+  See [#357](https://github.com/dragginzgame/ic-tooling/issues/357) and the
+  [migration](../../docs/testkit/wire-adapter.md).
+
+### 🔧 Changed
+
+- Adopt Toko Tooling 0.42.8 in both workspaces, including CDPATH-independent
+  hook installation and staged-only formatting. Retain the frozen deployment
+  workflow and existing product qualification requirements.
+
 ## [0.103.0] - 2026-11-13
 
 ### ⚠️ Breaking

@@ -13,11 +13,13 @@ server-check:
 	"$(SERVER_CLI)" check
 testkit-wasm-check:
 	+cargo check -p ic-testkit --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
+	+cargo check -p ic-testkit-wire --locked --offline --target wasm32-unknown-unknown
 	+cargo check --manifest-path qualification/Cargo.toml -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 testkit-browser-check:
 	node --test testing/browser/session.test.mjs testing/browser/internet-identity/inputs.test.mjs testing/browser/tests/scratch.test.mjs
 testkit-check: build-server-cli
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit --all-features --locked --offline
+	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit-wire --locked --offline
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev --all-features --locked --offline
 testkit-installed-check: build-server-cli
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit --locked --offline --test client_installed -- --ignored
@@ -43,7 +45,7 @@ dependency-adoption-check: toko-tooling-check
 	+bash scripts/ci/check-testkit-graphs.sh
 	+$(MAKE) --no-print-directory test-tools-candid test-tools-agent test-tools-registry test-tools-ledger-evidence
 	+cargo test -p ic-testkit --locked --offline --lib pic::snapshot::tests::
-	+cargo test -p ic-testkit --features wire --locked --offline --lib pic::wire::tests::
+	+cargo test -p ic-testkit-wire --locked --offline --lib
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test -p ic-testkit \
 		--locked --offline --test client_installed upstream_client_installs_and_restores_stable_memory -- --ignored --exact
 	+@server="$$("$(SERVER_CLI)" check)" && POCKET_IC_BIN="$$server" cargo test --manifest-path qualification/Cargo.toml -p ic-testkit-dev \

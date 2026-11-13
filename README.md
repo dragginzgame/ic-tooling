@@ -6,11 +6,12 @@ Build and Testkit use Host through explicit crate dependencies.
 Private test drivers and the Wasm probe remain unpublished.
 
 Foundation's five primitive/inspection packages, Build, Text, Host Tools and the
-Testkit family have independent release versions in this workspace.
+Testkit lifecycle and Wire adapter have independent release versions in this workspace.
 See [release ownership](docs/design/release-groups.md) and the
 [Foundation](releases/foundation/CHANGELOG.md), [Build](releases/build/CHANGELOG.md),
 [Text](releases/text/CHANGELOG.md), [Host Tools](releases/tools/CHANGELOG.md) and
-[Testkit](releases/testkit/CHANGELOG.md) ledgers.
+[Testkit](releases/testkit/CHANGELOG.md) and
+[Wire adapter](releases/testkit-wire/CHANGELOG.md) ledgers.
 
 See [the consolidation inventory](docs/design/tooling-consolidation.md),
 [Build documentation](docs/build/README.md) and

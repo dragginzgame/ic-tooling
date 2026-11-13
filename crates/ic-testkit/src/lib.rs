@@ -1,7 +1,7 @@
 //! Focused `PocketIC` test-harness utilities for Internet Computer canisters.
 //!
 //! Import native clients and DTOs through `pocket_ic`, the selected upstream crate.
-//! `pic` adds optional typed Wire calls and free functions for
+//! `pic` adds free functions for
 //! installation, diagnostics and snapshots, startup errors, caller-owned
 //! managed-server startup and bounded readiness polling. It does not provide a
 //! simulator wrapper or a host-wide runtime lock.

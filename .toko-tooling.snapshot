@@ -1,9 +1,9 @@
 # Toko Tooling snapshot v1
-# version	0.42.5
+# version	0.42.8
 # layout	vendor
 format	1
 source	https://crates.io/crates/toko-tooling
-revision	071631f382cbdb682ab04242bb8022bea9f1fa237eaa273456433b95ad6f2aec
+revision	10dde4572301be0c5540b54a04ddeb71d3cee0fab68e6700e5c6866b6cb877e2
 # entrypoint	vendor/toko-tooling/.githooks/pre-commit
 # entrypoint	vendor/toko-tooling/.github/actions/prepare-common-tools/action.yml
 # entrypoint	vendor/toko-tooling/.github/actions/retain-failure-evidence/action.yml
@@ -74,7 +74,7 @@ revision	071631f382cbdb682ab04242bb8022bea9f1fa237eaa273456433b95ad6f2aec
 # entrypoint	vendor/toko-tooling/make/cargo-dependencies.mk
 # entrypoint	vendor/toko-tooling/make/cargo-publication.mk
 # entrypoint	vendor/toko-tooling/.github/actions/cache-tool-downloads/action.yml
-file	84b06550c38b69342c283a5fda016d50c08b4f9a79a11ae6ac424bc6601c6de7	x	vendor/toko-tooling/.githooks/pre-commit
+file	1085e5521dfacb38aed065b70f905aab666ab73ef49dd5a25270c2ec2cf63710	x	vendor/toko-tooling/.githooks/pre-commit
 file	70f8ef2994e2d6ac6a3f6a164cdb4db7b8590fda25244f7129a184560abb1a47	-	vendor/toko-tooling/.github/actions/prepare-common-tools/action.yml
 file	26a269c0e63125e8bd939578a64a6a67dbc5280cd3fbfd7da8b9c8e4d44cc6d5	-	vendor/toko-tooling/.github/actions/retain-failure-evidence/action.yml
 file	29fc530f0a71ac9b8456d6492f0ed0b047dfb02a9c50f1390f3a688f90c38005	-	TOKO-TOOLING.md
@@ -129,7 +129,7 @@ file	aec8dfcff940adbf7ca69d0e9edb4cd31b65648e1deef299ffb194e94e64c536	x	vendor/t
 file	d44e94133bab7d4c05517bf38d2a3f8a0771fb3c0a0389b0c6e2cc6e427ed693	x	vendor/toko-tooling/scripts/dev/check-cargo-tool-versions.pl
 file	d2d43d1876ce29f5e08255ea86f92080ec5db0f9cadeed3b095bdd5d01fdaf1c	x	vendor/toko-tooling/scripts/dev/cloc.sh
 file	6eb261f79ff2780422a75e018b091bb119f552a1d155504acacefb7e2e290ba0	x	vendor/toko-tooling/scripts/dev/gh-ci.sh
-file	94f9af238ab42dbf016b2294008cba8ea1af946487a8f90cc1f272d77dcc7e2f	x	vendor/toko-tooling/scripts/dev/install-git-hooks.sh
+file	46077e4508b98e086e9772ac107b759bb251b3671aa965311c51b35dd71aef8d	x	vendor/toko-tooling/scripts/dev/install-git-hooks.sh
 file	86036e9aa03456ed624d3b890c1917685883421a6098a01193a9637bee427346	x	vendor/toko-tooling/scripts/dev/install-host-tools.sh
 file	c913280d89dbb1c4a2c324c58448354697dff08d570ca845c7ad36ad78a321a3	x	vendor/toko-tooling/scripts/dev/install-ic-tools.sh
 file	5327cdf29404378b34ce1e3795195d63518f41ef5b06450eea8dddf6c41b2971	x	vendor/toko-tooling/scripts/dev/install-rust-tools.sh

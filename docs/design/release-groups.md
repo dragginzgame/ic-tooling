@@ -1,6 +1,6 @@
 # Release ownership
 
-One product workspace, dependency catalog and lockfile retain five independent release
+One product workspace, dependency catalog and lockfile retain six independent release
 groups. Build and Text leave the original Foundation group without changing
 crate names, package versions, APIs, feature boundaries or dependency requirements.
 
@@ -11,6 +11,7 @@ crate names, package versions, APIs, feature boundaries or dependency requiremen
 | text | ic-host-text | none | ic-host-text | [Text](../../releases/text/CHANGELOG.md) |
 | tools | ic-host-tools | none | ic-host-tools | [Host Tools](../../releases/tools/CHANGELOG.md) |
 | testkit | ic-testkit | none | ic-testkit | [Testkit](../../releases/testkit/CHANGELOG.md) |
+| testkit-wire | ic-testkit-wire | none | ic-testkit-wire | [Wire adapter](../../releases/testkit-wire/CHANGELOG.md) |
 
 ## Dependency and type ownership
 
@@ -26,11 +27,14 @@ A Text-only change does not advance unrelated filesystem or build packages.
 
 Host Tools' normal/build graph uses selected Foundation, Text and optional Platform
 capabilities, without Testkit. Public Principal identities belong to Types;
-selected external IC adapters belong to Platform. Testkit uses Foundation,
-optional Wire and Platform's IC-format adapters, without Host Tools. It owns
-the maintained PocketIC client and selects Runtime directly for Wasm IC0. Its private driver
-also consumes Build and Text; those testing edges do not become public Testkit
-production dependencies. The Wasm probe remains in Testkit's existing family.
+selected external IC adapters belong to Platform. Testkit uses Foundation and
+Platform's IC-format adapters, without Host Tools or Wire. It selects published
+upstream PocketIC for native transport; its private Wasm probe selects Runtime
+directly. The independent Wire adapter consumes Testkit's selected client and
+Wire, with no lifecycle implementation or reciprocal Testkit dependency. Its
+first release is 0.1.0 from unpublished source version 0.0.0. See the
+[adapter migration](../testkit/wire-adapter.md). The private driver also consumes
+Build and Text; those testing edges do not become public Testkit dependencies.
 
 The unused native allocation package and its release group are retired. Its
 [frozen ledger](../../releases/native/CHANGELOG.md), published versions, tags and
@@ -48,7 +52,7 @@ Do not release unchanged groups merely because workspace qualification ran.
 
 ## Selection, history and recovery
 
-Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools` or `testkit` explicitly
+Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools`, `testkit` or `testkit-wire` explicitly
 for release, resume, publication and publication dry-run commands. For example:
 
 ```sh
@@ -62,7 +66,7 @@ These commands retain separate effect authorization and complete release gates.
 The standard runner, editor and one repository-wide lock serve every group.
 Tags and journals use the selected group prefix. Publication selects that group's
 public members; `PACKAGE` can narrow it, never infer or cross the group. Read-only
-archive qualification still covers all nine public packages. Cargo owns registry
+archive qualification still covers all ten public packages. Cargo owns registry
 publication dependency order.
 
 Build and Text start at their existing published 0.73.6 version. Foundation stays
@@ -75,7 +79,7 @@ Published [Foundation history through 0.73.6](../../releases/foundation/CHANGELO
 retains its original seven-package scope once. New Build/Text ledgers link it.
 The [joint integration ledger](../../releases/integration/CHANGELOG.md),
 [earlier coordinated history](../../releases/history.md), imported Git histories
-and old tags remain untouched. Root CHANGELOG.md indexes the five active ledgers and retired Native history.
+and old tags remain untouched. Root CHANGELOG.md indexes the active ledgers and retired Native history.
 
 Old `foundation-*` attempts may describe the original seven members. Never
 reinterpret or migrate their saved plans, receipts, partial uploads or tags under
@@ -108,8 +112,8 @@ and native-host execution remain distinct proofs; see the
 
 The private Dev `public_contracts` test requires shared public error, principal,
 subnet-metrics DTO and core Wire identities during ordinary qualification.
-The standard package check independently qualifies normalized archives of all nine
-public packages. After both integration groups are published, opt in to
+The standard package check independently qualifies normalized archives of all ten
+public packages. After the required integration groups are published, opt in to
 `CARGO_NET_OFFLINE=false bash scripts/release/test-integration-cohort.sh` for the
 same public caller tests against exact current registry versions, without source
 patches or root-lock edits. Evidence remains under `target/published-integration.*`.

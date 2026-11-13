@@ -1,0 +1,30 @@
+[package]
+name = "ic-testkit-wire"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = ["crates-io"]
+description = "Version-specific IC Wire calls over Testkit's native PocketIC client"
+readme = "README.md"
+categories = ["development-tools::testing"]
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+ic-testkit.workspace = true
+ic-wire.workspace = true
+serde.workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+ic-testkit = { workspace = true, features = ["reply-fixtures"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[dev-dependencies]
+toko-tooling.workspace = true
+
+[lints]
+workspace = true

@@ -87,7 +87,8 @@
 | Build | Cargo/Wasm builds and artifact caches | [Build ledger](releases/build/CHANGELOG.md) |
 | Text | Bounded text, Unicode and optional YAML | [Text ledger](releases/text/CHANGELOG.md) |
 | Host Tools | IC inspection, Agent, certificate and ledger helpers | [Host Tools ledger](releases/tools/CHANGELOG.md) |
-| Testkit | Simulator integration and private development/probe packages | [Testkit ledger](releases/testkit/CHANGELOG.md) |
+| Testkit | Simulator integration and custody | [Testkit ledger](releases/testkit/CHANGELOG.md) |
+| Testkit Wire | Native typed calls, independently aligned with Wire | [Wire adapter ledger](releases/testkit-wire/CHANGELOG.md) |
 
 The retired allocation package retains its [Native history](releases/native/CHANGELOG.md);
 it has no active release selector. Each active group owns its versions and notes. See

@@ -24,8 +24,8 @@ native_policy=("${policy[@]}" --require pocket-ic=1 --require ic-management-cani
     --forbid ic-platform-pocket-ic --forbid-feature ic-platform/pocket-ic
     --forbid ic-platform-runtime --forbid ic-logging)
 
-# Observe these roots separately: workspace/all-feature unification must not
-# conceal the optional Wire boundary. Render the actual selected identities.
+# Observe lifecycle and adapter roots separately. All Testkit features must stay
+# codec-independent; the adapter alone owns its matching Wire generation.
 native_graph() {
     local profile=$1 observation
     shift
@@ -37,7 +37,6 @@ native_graph() {
         "Testkit \($profile): \(.identity)"' <<< "$observation"
 }
 native_graph default --forbid ic-wire --require ic-platform=1
-native_graph wire --features wire --require ic-wire=1 --require ic-platform=1
 perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --features reply-fixtures \
     --require wasm-encoder=1 --forbid wat --forbid wast --require ic-platform=1
@@ -46,7 +45,11 @@ perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --require wat=1 --require wast=1 --require wasm-encoder=1 --require ic-platform=1
 perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --all-features \
-    --require clap=1 --require ic-wire=1
+    --require clap=1 --forbid ic-wire
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
+    --package ic-testkit-wire --target "$host" --require ic-testkit=1 \
+    --require ic-wire=1 --require ic-platform=1 --forbid clap \
+    --forbid wat --forbid wast --forbid wasm-encoder
 perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl --consumer "$root/qualification" \
     --package ic-testkit-dev --target "$host" --all-features \
     --require ic-build=1 --require ic-platform=1 --forbid ic-platform-pocket-ic \
@@ -60,6 +63,9 @@ perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${policy[@]}" --packag
     --forbid pocket-ic --forbid candid --forbid candid_derive --forbid ic-platform-pocket-ic --forbid ic-wire --forbid clap \
     --forbid wat --forbid wast --forbid wasm-encoder --forbid wasmparser --forbid ic-management-canister-types \
     --forbid ic-platform --forbid ic-platform-macros --forbid ic-platform-runtime
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl --consumer "$root" \
+    --package ic-testkit-wire --target wasm32-unknown-unknown --all-features \
+    --forbid ic-wire --forbid ic-testkit --forbid pocket-ic --forbid tokio
 probe_wasm="$(perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${runtime_policy[@]}" --package ic-testkit-perf-probe \
     --target wasm32-unknown-unknown --forbid-pattern '^ic-host-' \
     --forbid ic-testkit --forbid pocket-ic \

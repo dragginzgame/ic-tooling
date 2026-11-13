@@ -27,7 +27,8 @@
   },
   "fallback": {
     "foundation": "Foundation primitives have Build, Tools and Testkit reverse consumers, including installed and Wasm contracts.",
-    "testkit": "Testkit owns simulator lifecycle, Wasm/probe singletons and installed/server contracts."
+    "testkit": "Testkit owns simulator lifecycle, Wasm/probe singletons and installed/server contracts.",
+    "testkit-wire": "The native Wire adapter owns codec/client composition and installed typed-call contracts."
   },
   "exclusions": [
     {

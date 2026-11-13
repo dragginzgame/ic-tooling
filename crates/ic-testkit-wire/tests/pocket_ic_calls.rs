@@ -1,12 +1,21 @@
 //! Integration checks for pocket ic calls behavior.
-#![cfg(feature = "wire")]
+#![cfg(not(target_family = "wasm"))]
 
-mod support;
-
-use ic_testkit::pic::{WireCallError, WireCallSpec, query_wire, update_wire};
+use ic_testkit::pocket_ic::{CanisterId as Principal, ErrorCode, RejectCode};
+use ic_testkit_wire::{WireCallError, WireCallSpec, query_wire, update_wire};
 use ic_wire::Limits;
-use pocket_ic::CanisterId as Principal;
-use pocket_ic::{ErrorCode, RejectCode};
+
+async fn pocket_ic() -> ic_testkit::pic::PocketIcInstance {
+    ic_testkit::pic::PocketIcStartupConfig::from_env(std::time::Duration::from_secs(30))
+        .expect("configure prepared PocketIC")
+        .build_instance(
+            ic_testkit::pocket_ic::PocketIcBuilder::new()
+                .with_max_request_time_ms(Some(300_000))
+                .with_application_subnet(),
+        )
+        .await
+        .expect("construct configured instance")
+}
 
 const PROBE: WireCallSpec = WireCallSpec {
     method: "probe",
@@ -25,7 +34,6 @@ const PROBE: WireCallSpec = WireCallSpec {
     },
 };
 
-#[cfg(feature = "reply-fixtures")]
 #[tokio::test]
 async fn wire_calls_preserve_codec_refusals_and_error_identity() {
     use ic_testkit::pic::{
@@ -35,7 +43,7 @@ async fn wire_calls_preserve_codec_refusals_and_error_identity() {
     let valid =
         ic_wire::native::encode_response(PROBE.method_id, &42_u64, PROBE.response_limits).unwrap();
     let nonminimal = [&valid[..valid.len() - 1], &[0xaa, 0]].concat();
-    let owned = support::pocket_ic().await;
+    let owned = pocket_ic().await;
     let pic = owned.instance();
     for mode in [ReplyMode::Query, ReplyMode::Update] {
         for reply in [valid.as_slice(), nonminimal.as_slice(), &[]] {
@@ -93,7 +101,7 @@ async fn wire_calls_preserve_codec_refusals_and_error_identity() {
 
 #[tokio::test]
 async fn wire_call_errors_preserve_live_pocket_ic_rejections() {
-    let owned = support::pocket_ic().await;
+    let owned = pocket_ic().await;
     let pic = owned.instance();
     let removed = pic.create_canister().await;
     pic.stop_canister(removed, None).await.unwrap();

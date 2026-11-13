@@ -150,4 +150,4 @@ before=$(git --git-dir "$fixture/remote.git" rev-parse main)
 if make --no-print-directory -C "$normal" release-patch RELEASE_GROUP=text > "$fixture/remote-conflict.log" 2>&1; then exit 1; fi
 [[ $(git --git-dir "$fixture/remote.git" rev-parse main) == "$before" ]]
 cmp "$fixture/expected-publications" "$fixture/publications"
-echo 'Frozen Tooling hooks passed: five group queries, order refusal, deferred lock, interrupted/uncertain recovery, two archive identities, completed resume and remote conflict'
+echo 'Frozen Tooling hooks passed: all group queries, order refusal, deferred lock, interrupted/uncertain recovery, two archive identities, completed resume and remote conflict'

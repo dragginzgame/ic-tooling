@@ -41,6 +41,12 @@ uses upstream raw calls; DTOs, codec and transport retain their existing owners.
 The [client migration](testkit/client-migration.md) describes upstream identities,
 panics, best-effort deletion and coherent cached snapshot semantics.
 
+`ic-testkit-wire` owns version-specific typed calls over that selected native
+client, in its independent `testkit-wire` release group. Testkit itself has no
+Wire dependency, typed-call re-exports or Wire feature. Wire retains sole frame
+and codec ownership; the adapter owns no server, retry or runtime. See the
+[hard-cut migration](testkit/wire-adapter.md).
+
 ### Public supplier identities
 
 Tooling owns configuration and recovery classifications for its adapters.

@@ -275,9 +275,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.20.3"
+version = "3.20.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
+checksum = "87a0cf66fd1eb2fb7b822cb78370d82303750809bc6ba855f3f58e517d3238db"
 
 [[package]]
 name = "bytemuck"
@@ -1564,16 +1564,25 @@ dependencies = [
  "ic-host-process",
  "ic-platform",
  "ic-platform-types",
- "ic-wire",
  "libc",
  "pocket-ic",
- "serde",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
  "toko-tooling",
  "url",
  "wasm-encoder",
+]
+
+[[package]]
+name = "ic-testkit-wire"
+version = "0.0.0"
+dependencies = [
+ "ic-testkit",
+ "ic-wire",
+ "serde",
+ "tokio",
+ "toko-tooling",
 ]
 
 [[package]]
@@ -3310,9 +3319,9 @@ dependencies = [
 
 [[package]]
 name = "toko-tooling"
-version = "0.42.5"
+version = "0.42.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "071631f382cbdb682ab04242bb8022bea9f1fa237eaa273456433b95ad6f2aec"
+checksum = "10dde4572301be0c5540b54a04ddeb71d3cee0fab68e6700e5c6866b6cb877e2"
 
 [[package]]
 name = "toml"

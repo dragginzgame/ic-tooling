@@ -11,13 +11,12 @@ use ic_host_process::{
     child::{CleanupPolicy, OwnedChild},
     tool::{CompletedExecution, OutputLimit, OutputLimits, capture_command},
 };
-use ic_testkit::pic::{
-    InstallSpec, StandaloneCanisterFixture, WireCallError, query_wire, update_wire,
-};
+use ic_testkit::pic::{InstallSpec, StandaloneCanisterFixture};
 use ic_testkit_perf_probe::protocol::{
     self, BENCHMARK_ONCE, BENCHMARK_TRAP, INSPECT_STATE, MUTATE_STATE, PING, QUERY_CALLER,
     SEED_STATE, State, UPDATE_CALLER,
 };
+use ic_testkit_wire::{WireCallError, query_wire, update_wire};
 use pocket_ic::CanisterId as Principal;
 
 use std::process::Command;
@@ -315,8 +314,8 @@ const CONFIGURATION_LIMITS: ic_build::cargo::environment::ConfigurationLimits =
 // The fixture owns the native control frame for this installed Wire contract.
 const fn probe_wire_spec(
     method: ic_testkit_perf_probe::protocol::Method,
-) -> ic_testkit::pic::WireCallSpec {
-    ic_testkit::pic::WireCallSpec {
+) -> ic_testkit_wire::WireCallSpec {
+    ic_testkit_wire::WireCallSpec {
         method: method.name,
         method_id: method.id,
         request_limits: method.request_limits,

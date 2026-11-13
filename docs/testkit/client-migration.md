@@ -93,6 +93,9 @@ propagate. Response decoding never retries an update.
 
 ## Wire identity alignment — Testkit 0.99 and 0.100
 
+These are historical alignments. Testkit 0.104 removes this coupling through the
+independent [Wire adapter](wire-adapter.md); migrate current imports there.
+
 Testkit 0.99.0 selects IC Wire 0.20. Callers using the `wire` feature must select
 Wire 0.20 too: `WireCallSpec` uses its `Limits`, and encoding/decoding failures
 retain its `Error` identity. No budget conversions or codec bridges are needed.

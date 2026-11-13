@@ -25,7 +25,6 @@ default = []
 cli = ["dep:clap", "clap/derive"]
 reply-fixtures = ["dep:wasm-encoder"]
 held-reply-fixtures = ["reply-fixtures", "ic-host-artifacts/wasm-text"]
-wire = ["dep:ic-wire", "dep:serde"]
 
 [target.'cfg(all(unix, not(target_family = "wasm")))'.dependencies]
 libc = { workspace = true }
@@ -37,9 +36,7 @@ ic-host-fs = { workspace = true }
 ic-host-process = { workspace = true }
 # Native snapshots and held fixtures adapt external management protocols.
 ic-platform = { workspace = true, features = ["candid-codec", "management-canister-types"] }
-ic-wire = { workspace = true, optional = true }
 pocket-ic.workspace = true
-serde = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["rt", "sync", "time", "net"] }
 url.workspace = true
 wasm-encoder = { workspace = true, optional = true }

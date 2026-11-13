@@ -44,19 +44,19 @@ publish = false
 TOML
 # Keep manifest generation and identity assertions on the same resolved inputs.
 # Catalog requirements are compatible minimums, not exact selected patch versions.
-# The facade may coexist with another version; canonical Types/Wire remain singleton.
+# Public type composition is proved by compilation, without a global Wire singleton.
 jq -e '. as $source |
     ["ic-build", "ic-host-artifacts", "ic-host-process", "ic-host-tools",
-     "ic-testkit", "ic-platform", "ic-platform-types", "ic-wire"] |
+     "ic-testkit", "ic-testkit-wire", "ic-platform", "ic-platform-types", "ic-wire"] |
     map(. as $name |
         [$source.resolve.nodes[] |
             select(.id as $id | $source.workspace_members | index($id)) |
             .deps[] | select(.name == ($name | gsub("-"; "_"))) | .pkg] | unique as $ids |
         if ($ids | length) != 1 then error("expected one direct workspace selection for " + $name) else
         ($source.packages[] | select(.id == $ids[0])) as $package | {
-        name: $name, version: $package.version, singleton: ($name != "ic-platform"),
+        name: $name, version: $package.version,
+        singleton: ($name != "ic-platform" and $name != "ic-wire"),
         features: (if $name == "ic-host-tools" then ["registry"]
-            elif $name == "ic-testkit" then ["wire"]
             elif $name == "ic-platform" then ["principal", "ic-protocol"]
             else [] end)
     } end)' "$fixture/source-metadata.json" > "$fixture/selection.json"
@@ -84,7 +84,7 @@ perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl --consumer "$fixture" \
     --package integration-cohort-consumer --target "$host" \
     --require ic-platform-types=1 \
     --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
-    --forbid pocket-ic --json --observations > "$fixture/native-graph.json"
+    --require pocket-ic=1 --json --observations > "$fixture/native-graph.json"
 cargo test --locked --offline --manifest-path "$fixture/Cargo.toml" \
     > "$fixture/consumer.log" 2>&1
 cat "$fixture/consumer.log"

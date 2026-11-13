@@ -9,6 +9,7 @@ members = [
     "crates/ic-host-tools",
     "crates/ic-host-wasm-inspect",
     "crates/ic-testkit",
+    "crates/ic-testkit-wire",
 ]
 exclude = ["qualification"]
 resolver = "3"
@@ -33,6 +34,7 @@ ic-host-process = { path = "crates/ic-host-process", version = "0.77.2", default
 ic-host-text = { path = "crates/ic-host-text", version = "0.75.0", default-features = false }
 ic-platform = { version = "0.32.1", default-features = false }
 ic-platform-types = { version = "0.20.1", default-features = false }
+ic-testkit = { path = "crates/ic-testkit", version = "0.103.0", default-features = false }
 libc = "0.2.190"
 pocket-ic = "16.1.0"
 prost = "0.14.3"
@@ -58,7 +60,7 @@ serde_json = "1.0.150"
 tokio = { version = "1.52.3", default-features = false }
 wasmparser = { version = "0.263", default-features = false, features = ["std", "features"] }
 
-toko-tooling = "=0.42.5"
+toko-tooling = "=0.42.8"
 
 [workspace.lints.cargo]
 unused_dependencies = "deny"

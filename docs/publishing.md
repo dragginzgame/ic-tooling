@@ -11,7 +11,7 @@ publish each selected group to crates.io. **Do not follow a successful release
 with a second `make publish`.** Other delivery selections are rejected;
 the shared runner's optional PR flow is not qualified by this adapter.
 
-Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools` or `testkit` explicitly
+Select `RELEASE_GROUP=foundation`, `build`, `text`, `tools`, `testkit` or `testkit-wire` explicitly
 for a single-group release. For a batch, select `RELEASE_GROUPS` once as a
 comma-separated supplier-first roster. Unknown, duplicate and reversed workspace
 dependency selections refuse before capture; every group uses the same increment.
@@ -63,7 +63,7 @@ admits the saved selection offline without installation. The standard release
 preflight retains editor/server setup and full product qualification. Read-only
 version queries still use Cargo metadata without installing tools. Setup uses existing owners and verified shared
 stores; no normal-checkout tools, locks or compilation artifacts are copied.
-`bash scripts/release/test-frozen.sh` qualifies five fresh group queries, real
+`bash scripts/release/test-frozen.sh` qualifies every fresh group query, real
 metadata/Git hooks, two selected publication dry runs, deferred lock bytes,
 interrupted/uncertain recovery, completed resume and remote conflicts. Its product
 gate bodies are substituted; the installed release gate and actual registry
@@ -74,7 +74,8 @@ Cargo metadata has no version. Root `CHANGELOG.md` indexes the
 [Foundation](../releases/foundation/CHANGELOG.md),
 [Build](../releases/build/CHANGELOG.md), [Text](../releases/text/CHANGELOG.md),
 [Host Tools](../releases/tools/CHANGELOG.md),
-[Testkit](../releases/testkit/CHANGELOG.md) ledgers and the retired
+[Testkit](../releases/testkit/CHANGELOG.md) and
+[Wire adapter](../releases/testkit-wire/CHANGELOG.md) ledgers and the retired
 [Native history](../releases/native/CHANGELOG.md). Original joint integration
 notes remain in the [frozen ledger](../releases/integration/CHANGELOG.md), with
 earlier coordinated notes retained in [shared history](../releases/history.md).
@@ -187,7 +188,7 @@ Cargo metadata before running lint or packaging; private test packages stay out.
 
 Publication requires explicit `RELEASE_GROUP=foundation` for its five public
 packages, `build` for IC Build, `text` for Host Text, `tools` for Host Tools, or
-`testkit` for Testkit.
+`testkit` for Testkit, or `testkit-wire` for its independent Wire adapter.
 Private Testkit harnesses are never uploaded. For a Host Tools release:
 
 ```sh
@@ -218,7 +219,7 @@ archive qualification still selects the complete roster independently of a batch
 and `--locked --registry crates-io --dry-run`. It packages and verifies the selected
 workspace packages through exact `--package NAME@VERSION` selectors without
 uploading. The default selection is the chosen group's public members. Across
-all five groups, the roster remains six Host libraries, `ic-build`, `ic-testkit`,
+all six groups, the roster includes six Host libraries, `ic-build`, `ic-testkit`, `ic-testkit-wire`,
 and the `ic-host-wasm-inspect` CLI. The development driver and
 Wasm probe remain private. It admits working edits so packaging can be reviewed
 before committing. It can access the registry; set `CARGO_NET_OFFLINE=true` for

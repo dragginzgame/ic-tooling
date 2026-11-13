@@ -16,8 +16,9 @@ cargo add --dev ic-testkit
 Cargo records the selected versions in the consuming manifest and lockfile.
 When aligning an existing stack, select its qualified versions explicitly.
 
-For typed application calls, enable the `wire` feature and depend directly on
-`ic-wire` for method contracts. Testkit does not own Candid codecs or call helpers.
+For typed application calls, use the independent
+[`ic-testkit-wire`](../ic-testkit-wire/README.md) adapter. Testkit does not select
+a Wire generation or own application codecs.
 
 The minimum and pinned development compiler is Rust 1.100.0, and the selected PocketIC line is 16.
 Testkit's portable library provides deterministic test principals through
@@ -41,34 +42,13 @@ PocketIC retains its upstream Candid dependencies; Testkit's Wasm profile remain
 Candid-free. Native Testkit selects Platform's owned codec and management DTOs
 for coherent snapshots; `held-reply-fixtures` uses the same adapter owner.
 
-The optional native `wire` feature adds `pic::query_wire` and `pic::update_wire`.
-Enable it on your Testkit dependency and declare `ic-wire = "0.19"` for your native
-Serde contracts. Await each helper. Each helper takes an explicit target/caller, a `WireCallSpec`
-with the exported name, method ID and request/response limits, and a borrowed
-request. Align your direct Wire dependency to 0.19 when supplying limits or matching
-typed codec errors. It executes one PocketIC operation without update retries; a refused reply
-does not prove absence of effects. It preserves
-application-level results. `WireCallError` retains typed codec causes, complete
-upstream `RejectResponse` values. Transport panics propagate unchanged; upstream
-rejections do not implement `std::error::Error`. Callers retain reconciliation
-policy. Display omits payloads; raw calls remain available for malformed
-requests and original-byte evidence. Reply admission follows PocketIC's allocation,
-so it supplies no network pre-allocation or peak-heap guarantee. The feature is off
-by default and adds no Wire dependency to the canister library graph.
-Requests may use borrowed bounded fields. Responses must implement
-`serde::de::DeserializeOwned` because the helper releases the received buffer
-before returning. Wire validates primitives in one pass; collection and custom
-visitor normalization is consumer-owned. Re-encoding a decoded value need not
-reproduce the received frame. Use raw calls to retain original bytes for exact
-retries, signatures or hashes. Encode and decode budgets apply independently.
-Await `query_wire::<Request, Response>(pic, canister, caller, spec, &request)` or
-`update_wire` with the same arguments. The caller owns the Serde types and
-per-direction limits; finite-codec budgets need requalification for native Serde.
-See the [0.65 migration](../../docs/changelog/0.65.md).
+The [Wire adapter migration](../../docs/testkit/wire-adapter.md) describes typed
+query/update calls, explicit codec budgets and the independent publication boundary.
+Raw PocketIC calls remain available for any caller-selected codec or retained
+frame evidence. There is no `wire` feature in Testkit.
 
 This is the PocketIC package in the IC Tooling workspace. It provides:
 
-- optional typed Wire query/update helpers with contextual, structured errors
 - upstream rejection values and panic behavior, with no automatic replay
 - canister install and retry helpers
 - explicit PocketIC startup, retained server/instance ownership, async construction, and
@@ -195,7 +175,7 @@ Generic Cargo/Wasm builds, retained artifact caches and freshness APIs belong to
 `ic_build::artifacts`; Testkit keeps PocketIC lifecycle helpers.
 
 Pass `fixture.pocket_ic()` and `fixture.canister_id()` explicitly to
-`query_wire` or `update_wire` with the `wire` feature. The standalone fixture owns
+`ic_testkit_wire::query_wire` or `update_wire`. The standalone fixture owns
 installation and lifetime; Wire owns method contracts and codec limits.
 See the [canonical migration notes](../../releases/testkit/CHANGELOG.md).
 

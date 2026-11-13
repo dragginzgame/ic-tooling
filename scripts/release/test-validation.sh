@@ -350,7 +350,7 @@ make_plan focused-baseline
 jq '.jobs.jobs[0].steps = []' "$directory/baseline.json" > "$fixture/incomplete-baseline"
 cp "$fixture/incomplete-baseline" "$directory/baseline.json"
 refuse bash scripts/release/validation.sh run "$pointer" > "$fixture/baseline-recovery.log" 2>&1
-# Shared changes and mixed-group edits broaden all five groups to the original roster.
+# Shared changes and mixed-group edits broaden all declared groups to the original roster.
 printf '\n# shared input\n' >> Makefile
 git add Makefile
 git commit -qm shared

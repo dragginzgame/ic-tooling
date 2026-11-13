@@ -1,9 +1,14 @@
-//! Native typed transport; IC Wire remains the sole frame and codec owner.
-use pocket_ic::RejectResponse;
+//! Version-specific native Wire calls over Testkit's selected upstream client.
+//!
+//! Wire owns framing and validation. Testkit owns simulator admission and lifecycle;
+//! this independently versioned adapter only composes their public interfaces.
+//! Consumers select the same Wire generation as this adapter for limits and errors.
+#![forbid(unsafe_code)]
+#![cfg(not(target_family = "wasm"))]
+
+use ic_testkit::pocket_ic::{CanisterId as Principal, RejectResponse, nonblocking::PocketIc};
 
 use ic_wire::{Limits, native};
-use pocket_ic::CanisterId as Principal;
-use pocket_ic::nonblocking::PocketIc;
 use serde::{Serialize, de::DeserializeOwned};
 
 /// Caller-selected endpoint identity and native Serde traversal allowances.

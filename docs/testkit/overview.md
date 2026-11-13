@@ -84,8 +84,8 @@ async fn example(binary: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
 ## Install
 
-Select `ic-testkit` and `pocket-ic` 16.1 directly. Optional Testkit features select
-`wire`, `reply-fixtures`, `held-reply-fixtures`
+Select `ic-testkit` for its upstream client re-export. Optional Testkit features select
+`reply-fixtures`, `held-reply-fixtures`
 and the provisioning CLI (`cli`). Declare Tokio at the application/test entrypoint
 with its I/O and time drivers enabled. Testkit creates no private client runtime.
 The canister-side Wasm profile remains separate and lightweight.
@@ -132,7 +132,7 @@ and independently verify the domains relevant to each recipe.
 | Async client | Upstream `ic_testkit::pocket_ic::nonblocking::PocketIc`, `ic_testkit::pocket_ic::PocketIcBuilder` |
 | Server and instance custody | `PocketIcStartupConfig`, `PocketIcManagedServer`, `PocketIcInstance` |
 | Installation | `pic::create_and_install`, `InstallSpec`, `StandaloneCanisterFixture` |
-| Typed calls | `query_wire`, `update_wire`, `WireCallSpec` (`wire` feature) |
+| Typed calls | Independent [`ic-testkit-wire`](wire-adapter.md): `query_wire`, `update_wire`, `WireCallSpec` |
 | Snapshots | `pic::capture_snapshots`, `ControllerSnapshots`, `CachedPocketIcBaseline` |
 | Reuse | `PocketIcBaselineRecipe`, `CachedPocketIcBaselinePool`, `StandaloneCanisterRecipe` |
 | Reporting/readiness | `pic::collect_canister_diagnostics`, `advance_and_tick`, `tick_until` |

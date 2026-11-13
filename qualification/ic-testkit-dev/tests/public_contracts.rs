@@ -39,7 +39,7 @@ fn tooling_callers_share_principal_and_wire_contracts() {
         nodes: 1024,
         depth: 16,
     };
-    let call = ic_testkit::pic::WireCallSpec {
+    let call = ic_testkit_wire::WireCallSpec {
         method: "probe",
         method_id: 1,
         request_limits: limits,

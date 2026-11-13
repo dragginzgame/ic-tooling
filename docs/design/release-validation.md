@@ -190,7 +190,7 @@ cannot be reconstructed as new stage proofs. This limitation remains in #353.
 
 During release qualification, `tooling-command-check` runs the adapter fixture
 with `--group` for the selected release group. Ordinary CI and CI/publication
-continue to exercise all five groups, even when a release selection is inherited.
+continue to exercise all declared groups, even when a release selection is inherited.
 The remaining tooling roster and its first-failure behavior are unchanged.
 
 The fixture-retention, product-evidence, workflow-selection and scratch-routing
@@ -327,18 +327,18 @@ focused recovery checks, then recaptured and reran complete qualification.
 
 ## Qualification and limits
 
-`make release-validation-plan-check` exercises all five group fallbacks against
+`make release-validation-plan-check` exercises every group fallback against
 the same full-gate roster, focused group selection, required/excluded failure
 injection, discovery refusals, source/environment drift and receipt custody.
 Its Make effects are substituted. `bash scripts/release/test-adapter.sh` retains
-the real five-group metadata, rollback, commit and recovery contracts, also with
+the real group metadata, rollback, commit and recovery contracts, also with
 qualification effects substituted. Its disposable checkout uses three gate targets
 (source admission, lint and tooling proof) plus the focused vocabulary. This
 preserves actual selector/Shared-proof/receipt wiring without replaying 35 dummy
 product commands for every recovery probe. The complete production policy and
 roster-equivalence checks remain in `test-validation.sh` and ordinary CI.
 Common source/proof corruption, setup refusal and staging probes execute once in
-the five-group adapter run. Each group retains real metadata preparation, renderer
+the complete adapter run. Each group retains real metadata preparation, renderer
 and graph rollback, other-group receipt refusal and committed-payload admission.
 A single `--group` run includes the complete common probe set.
 These fixtures do not establish native-host

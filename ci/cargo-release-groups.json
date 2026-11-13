@@ -63,6 +63,18 @@
         "ic-testkit"
       ],
       "changelog": "releases/testkit/CHANGELOG.md",
+      "dependencies": [
+        "ic-testkit"
+      ]
+    },
+    {
+      "name": "testkit-wire",
+      "primary": "ic-testkit-wire",
+      "version": "package",
+      "members": [
+        "ic-testkit-wire"
+      ],
+      "changelog": "releases/testkit-wire/CHANGELOG.md",
       "dependencies": []
     }
   ]

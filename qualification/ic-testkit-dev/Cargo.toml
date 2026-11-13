@@ -45,8 +45,8 @@ ic-host-fs = { workspace = true, features = ["test-support"] }
 ic-host-tools = { workspace = true, features = ["registry", "ledger-evidence"] }
 ic-platform = { workspace = true, features = ["principal", "ic-protocol", "icrc-ledger-types"] }
 ic-platform-types.workspace = true
-ic-testkit = { workspace = true, features = ["wire"] }
 ic-testkit-perf-probe.workspace = true
+ic-testkit-wire.workspace = true
 ic-wire.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 

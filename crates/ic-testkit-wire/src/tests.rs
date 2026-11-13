@@ -1,8 +1,7 @@
 use super::{WireCallError, WireCallSpec, call_wire, context};
 
+use ic_testkit::pocket_ic::{CanisterId as Principal, ErrorCode, RejectCode, RejectResponse};
 use ic_wire::{Limits, native};
-use pocket_ic::CanisterId as Principal;
-use pocket_ic::{ErrorCode, RejectCode, RejectResponse};
 
 const LIMITS: Limits = Limits {
     bytes: 64,
@@ -74,10 +73,6 @@ const BAD_REQUEST: WireCallSpec = WireCallSpec {
         ..LIMITS
     },
     response_limits: LIMITS,
-};
-const BAD_REPLY: WireCallSpec = WireCallSpec {
-    response_limits: Limits { nodes: 1, ..LIMITS },
-    ..SAMPLE
 };
 
 #[tokio::test]
@@ -244,21 +239,31 @@ async fn sixteen_bit_responses_preserve_boundaries_and_malformed_refusals() {
 }
 
 #[tokio::test]
-async fn declared_decoder_work_budget_is_not_replaced_with_a_default() {
-    let reply = native::encode_response(SAMPLE.method_id, &Ok::<u64, ()>(1), LIMITS).unwrap();
-    // Native decoding owns both work-budget and oversized-frame admission.
-    for reply in [reply, vec![0; LIMITS.bytes + 1]] {
+async fn all_response_allowances_remain_caller_selected() {
+    let reply = native::encode_response(SAMPLE.method_id, &vec![1_u32, 2, 3], LIMITS).unwrap();
+    for response_limits in [
+        Limits { bytes: 0, ..LIMITS },
+        Limits {
+            allocation: 0,
+            ..LIMITS
+        },
+        Limits { nodes: 1, ..LIMITS },
+        Limits { depth: 0, ..LIMITS },
+    ] {
+        let spec = WireCallSpec {
+            response_limits,
+            ..SAMPLE
+        };
         let length = reply.len();
         let ctx = context(
             "query_call",
-            BAD_REPLY,
+            spec,
             Principal::anonymous(),
             Principal::anonymous(),
         );
-        let error =
-            call_wire::<u32, Result<u64, ()>>(ctx.clone(), BAD_REPLY, &1, async |_| Ok(reply))
-                .await
-                .unwrap_err();
+        let error = call_wire::<u32, Vec<u32>>(ctx.clone(), spec, &1, async |_| Ok(reply.clone()))
+            .await
+            .unwrap_err();
         let WireCallError::Decode {
             context,
             bytes,

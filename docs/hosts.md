@@ -51,7 +51,7 @@ Shared reference guides stay upstream at the commit pinned by the links below;
 product documentation remains local under its existing topics. Update selections
 through the installer rather than copying or editing managed reference files.
 
-The nine product packages remain in `crates/`. The private development driver
+The ten product packages remain in `crates/`. The private development driver
 and Wasm probe live in the independent `qualification/` workspace, with their
 own lockfile and private version. Run their Cargo commands with
 `--manifest-path qualification/Cargo.toml`. Formatting, full lint, documentation
@@ -77,7 +77,7 @@ do not require unrelated consumer releases.
 | Consumer profile | Supplier boundary and exposed identities |
 | --- | --- |
 | Native Testkit default | Published upstream `pocket-ic` owns its native Principal/management identities and transport. Private snapshot management encoding uses Platform's owned codec/DTOs. Portable principal generation retains Types; Runtime and Wire remain absent. |
-| Native Testkit `wire` | The same native client plus optional Wire. `WireCallSpec` limits and typed codec causes have Wire identity; graph qualification selects only this feature, independently of CLI/held fixtures. |
+| Native Wire adapter | Independent `ic-testkit-wire` composes the selected Testkit client with Wire. `WireCallSpec` limits and typed codec causes have the adapter's Wire identity. Testkit's own all-feature graph excludes Wire. |
 | Testkit Wasm | Types only; no Platform facade, Runtime, native transport or Wire. |
 | Private Wasm probe | Runtime's `cdk`, its matching singleton guard and qualified upstream `ic0`, plus Types and Wire; not a second simulator or production adapter crate. |
 | Host Tools adapters | `candid` selects Platform's owned binary codec; `agent` and `ledger-evidence` select their explicit adapters; `registry` selects Types directly. Textual service inspection is removed. Default Tools has neither supplier. |
@@ -142,7 +142,7 @@ Host profiles below remain independent. Build and Testkit share the root
 workspace and release matrix, with separate optimizer, browser-session and
 PocketIC lifecycle workflow jobs. `make testkit-check` runs aggregate Testkit
 qualification using the prepared server; `make testkit-wasm-check` qualifies deployed profiles. `make testkit-package-check`
-qualifies all nine public archives through Build. Private packages remain
+qualifies all ten public archives through Build. Private packages remain
 excluded from publication. Native macOS results must come from native runners.
 The driver's retained attempt holds selection diagnostics beside Build's
 `archives/` qualification directory. Its separate `target/archive-build-cache`
@@ -245,7 +245,7 @@ publication-dry-run evidence, with product gate bodies substituted. Complete
 installed release and registry proof remain separate.
 For receipt/prepared-version changes shared by all groups, select a representative
 owner with `bash scripts/release/test-adapter.sh --group testkit`; the default
-entrypoint retains all five groups for complete release qualification.
+entrypoint retains all declared groups for complete release qualification.
 The compact adapter fixture seals one real invariant proof; the complete
 production fixture roster remains qualified by the dedicated stage/gate tests.
 For publication lint fallback diagnostics and first-failure stopping, use
@@ -492,7 +492,7 @@ each admitted entrypoint before setup or other effects.
 `make check-no-symlinks` checks indexed and tracked/nonignored working paths in CI
 and the release gate. Publication checks complete regular source notices and the
 prepared archive's exact notice bytes before upload.
-Use `make deps-list` for all nine product and two qualification members. Root
+Use `make deps-list` for all ten product and two qualification members. Root
 dependency declarations exist only for actual member inheritance. Release
 admission checks each declared local alias's version/path against its group's
 dependency roster; every package remains in the separate group member roster.

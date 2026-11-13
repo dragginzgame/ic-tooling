@@ -292,13 +292,8 @@ for selected_group in "${groups[@]}"; do
     ' "$fixture/$selected_group.metadata.json" > /dev/null
     # Copying receipts to another group's namespace cannot authorize it even
     # with identical numeric versions and a real successful source receipt.
-    case "$selected_group" in
-        foundation) other_group=build ;;
-        build) other_group=text ;;
-        text) other_group=foundation ;;
-        tools) other_group=testkit ;;
-        testkit) other_group=tools ;;
-    esac
+    other_group=$(jq -er --arg selected "$selected_group" \
+        '[.groups[].name | select(. != $selected)][0]' ci/cargo-release-groups.json)
     bash "$root/scripts/release/group.sh" "$root/ci/cargo-release-groups.json" "$other_group" members >/dev/null
     other_state=".git/release-state/$other_group-$RELEASE_VERSION.validation"
     cp "$state" "$other_state"
