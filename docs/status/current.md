@@ -1,21 +1,29 @@
 # Current handoff — 2026-11-13
 
-## Authorized deployment in progress
+## Deployment delivered
 
-Publish Foundation 0.77.2 (five packages) and Tools 0.92.1 in a patch batch,
-reconcile it, then publish Testkit 0.103.0 in a minor batch. Use the installed
-Toko 0.42.5 frozen workflow in [publishing](../publishing.md); a successful
-release already publishes. No sibling changes, delivery, retirement or cleanup.
-Build 0.84.1 and Text 0.75.0 remain current: archive comparison proves Git-only
+The Toko 0.42.5 [frozen workflow](../publishing.md) delivered all seven selected
+packages to GitHub and crates.io. Downloaded registry archives match index
+checksums, non-yanked versions and exact release commits; remote annotated tags
+and main were verified. The ordinary checkout reconciled cleanly to `64fb53c2`;
+this handoff is subsequent Git-only documentation. No sibling changes or cleanup.
+
+| Group | Version | Release commit | Tag |
+| --- | --- | --- | --- |
+| Foundation (five packages) | 0.77.2 | `9d938d2814b637ea40d4ddbae110e87ab402c881` | `foundation-v0.77.2` |
+| Host Tools | 0.92.1 | `1c2eeb4614256108d247bd0bc90a9c2e3b53b582` | `tools-v0.92.1` |
+| Testkit | 0.103.0 | `64fb53c25121c3c54f9e2102551637bd92e9d48c` | `testkit-v0.103.0` |
+
+Patch `batch-iZ1FgHB1` captured corrected `45d7f88b`; after reconciliation,
+minor `batch-iZa8DNVj` captured `1c2eeb46`. Both completed and remain retained.
+Build 0.84.1 and Text 0.75.0 stay current: archive comparison proves Git-only
 development tooling/lint maintenance. Private qualification versions stay 0.96.0.
-Main is unprotected; direct integration pushes, tags and uploads are authorized.
-Hosted qualification is asynchronous; local required release gates remain intact.
 
 Preserve entry source/locks, supplier indexes, archive comparisons and logs under
 `.git/release-state/preserve/deploy0425-20261113.clk428/`.
 Current locks select Platform 0.32.2, Types 0.20.2, Runtime/macros/guard 0.22.2,
-Wire 0.22.1 and Mio 1.2.5. Their compatible patches were present at entry;
-do not refresh dependencies during deployment or reapply older saved locks.
+Wire 0.22.1 and Mio 1.2.5. Both final locks differ from entry only in the selected
+owned package versions. Do not reapply older saved locks over these selections.
 Declared minimums deliberately retain the reviewed compatible requirements.
 Tools changes its Platform/Types minimums; Testkit exposes Wire 0.22 identities.
 No application-state migration or PocketIC client fork is involved.
@@ -28,15 +36,12 @@ completed resume and remote conflict. Evidence: `frozen-hooks-corrected.log` in
 the durable deployment directory and `target/tmp/frozen-release.ydSER8/`.
 Its local bare-remote Git effects and Cargo dry runs were not public releases.
 
-Public batch `batch-iJtCSlO_` captured `130fd275` and stopped before preparation,
-Git delivery or upload in the detached release-adapter fixture. A duplicate
-`VALIDATION_REPOSITORY_ROOT` assignment selected the helper rather than consumer
-checkout. The normal-source correction retains the existing consumer `$PWD`;
-its Foundation/shared recovery cases pass. Commit and recapture. Do not alter
-or resume the failed capture with changed source. Preserve its journal, checkout,
-`patch-batch.log` and Foundation gate logs. Its first eight stages passed,
-including strict Clippy, formatting and docs; changed runner input invalidates
-whole-gate reuse. New capture needs the complete gate, not a collector-only retry.
+Failed public batch `batch-iJtCSlO_` stopped before preparation or delivery in the
+detached adapter fixture. Duplicate `VALIDATION_REPOSITORY_ROOT` selected the
+helper instead of consumer checkout. `45d7f88b` retains the consumer `$PWD`;
+the focused Foundation/shared recovery check passed before recapture. The
+corrected batch reran the complete gate. Preserve the failed journal, checkout,
+`patch-batch.log` and gate logs; never resume it as validation of changed source.
 
 ## Adopted tooling and validation
 
@@ -53,8 +58,20 @@ lint and relevant Make/CI routing, retention, evidence and reuse checks pass.
 Focused supplier qualification covers native codec/Agent/Registry adapters,
 installed PocketIC stable-memory restore, Wire state/typed-failure canister,
 portable/Wasm graphs and strict affected-library/probe Clippy. Complete release
-gates qualify the frozen current patches independently. Fresh native macOS 15
-Intel and Apple Silicon qualification is not yet claimed.
+gates passed 32 stages each for Foundation, Tools and Testkit. Rounded stage sums
+were 610/502/605 seconds; tooling accounted for 257/250/251. Whole-command wall
+times were 1,624.82 seconds for the patch batch and 866.71 for the minor, excluding
+planning, fixture qualification, failures, reconciliation and readback. Durable
+`deployment-records/` contains receipts and gate logs; `registry/` holds archives.
+See [cost observations](../design/release-validation.md#deployment-cost-observations).
+
+Explicit asynchronous [CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43489328225),
+[optimizer](https://github.com/dragginzgame/ic-tooling/actions/runs/43489334454),
+[runtime](https://github.com/dragginzgame/ic-tooling/actions/runs/43489342928) and
+[browser](https://github.com/dragginzgame/ic-tooling/actions/runs/43489351593) runs
+all returned main at `64fb53c2`, in progress at handoff. Their independent run
+identities survive the documentation push. Fresh native macOS 15 Intel and
+Apple Silicon passes are not yet claimed; do not infer them from Linux evidence.
 
 Toko 0.42.6 is available; all 116 installed payloads match 0.42.5 in bytes/mode.
 Defer that producer-only fixture change to the next refresh. Retain reviewed

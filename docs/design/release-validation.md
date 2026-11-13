@@ -310,6 +310,21 @@ with its own `OUT_DIR` marker. Only that regression and affected Clippy ran befo
 the new capture; changed source/checkout identity required new gate admissions.
 The failed batch remains retained and was not relabelled as current evidence.
 
+The Toko 0.42.5 deployment used patch `batch-iZ1FgHB1` and minor
+`batch-iZa8DNVj`: Foundation 0.77.2, Tools 0.92.1 and Testkit 0.103.0 each passed
+all 32 stages. Rounded gate sums were 610/502/605 seconds, including 257/250/251
+seconds of tooling fixtures. The patch batch admitted four invariant fixture
+proofs across groups; the separate minor batch executed its own proofs. Observed
+whole-command wall times were 1,624.82 seconds for the two-group patch and 866.71
+for the minor, excluding planning, fixture qualification, failed attempts,
+reconciliation and readback. These are observations, not controlled speedups;
+the normal runner still lacks separate preparation/Git/upload/index timings.
+Durable receipts, logs and archive readback are under
+`.git/release-state/preserve/deploy0425-20261113.clk428/`. An earlier capture
+stopped in the detached adapter before preparation: a duplicate consumer-root
+assignment selected the helper directory. The corrected normal source passed
+focused recovery checks, then recaptured and reran complete qualification.
+
 ## Qualification and limits
 
 `make release-validation-plan-check` exercises all five group fallbacks against
