@@ -26,6 +26,12 @@ Freeze those reviewed selections, including Platform 0.32.2, Types 0.20.2,
 Runtime/macros/guard 0.22.2, Wire 0.22.1 and Mio 1.2.5. No other supplier update
 belongs in this deployment. Planned registry versions are unoccupied.
 
+First capture `batch-g7FKs6lB` stopped after eight passing stages, before version
+preparation/delivery. The Make fixture's expected Wasm command list omitted the
+new empty adapter check. Correct the expectation in normal source and qualify
+the Make fixture before recapture. Preserve the failed capture and logs; changed
+runner inputs require a new full gate rather than reuse of its old receipt.
+
 ## Adopted Toko 0.42.8
 
 Both workspaces and all twelve members select the exact published package.

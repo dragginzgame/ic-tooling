@@ -588,6 +588,7 @@ PATH="$fixture/local:$PATH" make --no-print-directory compiler-check > "$fixture
 PATH="$fixture/local:$PATH" make --no-print-directory "MAKE=$(command -v make)" testkit-wasm-check check-fs-non-unix isolated-features-check > "$fixture/compiler-profiles.log" 2>&1
 cat > "$fixture/expected" <<'EVENTS'
 check -p ic-testkit --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
+check -p ic-testkit-wire --locked --offline --target wasm32-unknown-unknown
 check --manifest-path qualification/Cargo.toml -p ic-testkit-perf-probe --locked --offline --target wasm32-unknown-unknown
 check -p ic-host-fs --lib --bins --test unsupported_lock --all-features --target wasm32-unknown-unknown --locked --offline
 test -p ic-host-http --no-default-features --features endpoint --lib --locked --offline endpoint::
