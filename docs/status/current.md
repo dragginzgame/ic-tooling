@@ -1,6 +1,6 @@
 # Current handoff — 2026-11-13
 
-## Toko Tooling 0.41.0 — deployment preparing
+## Toko Tooling 0.41.0 — deployment delivered
 
 Both roots select published Toko 0.41.0; the authenticated 115-file snapshot and
 all recorded entrypoints remain. `make deps-list` reports all eleven packages
@@ -14,30 +14,72 @@ inheritance and unknown Cargo lints, plus invalid Rustdoc tables. Removed unused
 metadata and Testkit's redundant homepage; no dummy imports or lint allowances.
 Both-workspace all-target/all-feature Clippy with warnings denied, strict Rustdoc,
 portable Testkit/probe Wasm Clippy, snapshot/tool admission, pin checks and all
-five release-group graph admissions pass. Evidence: `target/toko041.36z7NR/`.
+five release-group graph admissions passed before capture.
 The Build adapter's real metadata/rendering/receipt checks pass with an empty
 alias roster; its setup/product gates were substituted. Native macOS is unrun.
 
 The [publishing guide](../publishing.md) records independent native test suppliers
-and optional-upgrade deferrals. Required gates/frozen admission remain; no deployment.
+and optional-upgrade deferrals. Required gates and frozen admission remain.
 Rust 1.100's `DropGuard` replaces the test-only
 produced-value destructor; `Path::trim_prefix` preserves optional manifest prefixes
 and `Vec::from_fn` constructs indexed package fixtures.
 [#355](https://github.com/dragginzgame/ic-tooling/issues/355) has Linux qualification
 for clean/warning, rendered/plain JSON, cold/cached artifacts and compiler denial.
 Native plain JSON preserves stderr ownership and compiler guards. Keep #355 open
-for native macOS acceptance; focused evidence is `target/rust100-355.AQ2hSA/`.
+for native macOS acceptance. The complete Linux release gates also passed these
+fixtures from source and extracted archives.
 
-The authorized frozen roster is Foundation 0.77.1, then Build 0.84.1. Preserve
-entry source/locks at `.git/release-state/preserve/deploy041-20261113.jBRdpw/`;
-current evidence is `target/deploy041.q8E0gh/`. Freeze current CC 1.11.2 and Toko
-0.41.0 without further updates. Normalized Text/Tools/Testkit payload review shows
+Frozen `batch-4szjd3du` completed from corrected source `d22fbd8f`. All six packages
+are published and non-yanked. Downloaded registry archives match index checksums
+and exact group release commits; remote main and annotated tags were verified.
+
+| Group | Version | Release commit | Tag |
+| --- | --- | --- | --- |
+| Foundation (five packages) | 0.77.1 | `698aab14b0618c06df10692a21952f413fda3502` | `foundation-v0.77.1` |
+| Build | 0.84.1 | `4ea33bbfedc0f9a8e57152b93325fc834e3f1890` | `build-v0.84.1` |
+
+The ordinary checkout reconciled cleanly to `4ea33bbf`; this handoff is subsequent
+Git-only documentation. Both lockfiles preserve unrelated package blocks
+byte-for-byte against entry copies, including reviewed CC 1.11.2 and Toko 0.41.0.
+Normalized Text/Tools/Testkit payload review shows
 only development tooling/lints and homepage metadata; deliver this maintenance
-through Git and retain their public versions. No new release/upload has run yet.
+through Git and retain Text 0.75.0, Tools 0.92.0 and Testkit 0.102.0.
+Private qualification packages remain 0.96.0; no sibling source or release was
+included. No artifact or historical checkout was retired.
+
+Both complete 32-stage Linux gates passed, including strict lint/docs, native
+and Wasm feature boundaries, installed PocketIC, extracted archives and installed
+workspace tests. Rounded stage sums were 668/510 seconds, including 274/256
+seconds of tooling fixtures. Only the four unchanged invariant fixture proofs
+were reused across groups; both publications admitted their full lint receipts
+and freshly checked source/archive custody. These are gate times, not total
+deployment latency or controlled speedup measurements.
+
+Explicit qualification is asynchronous: [CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43434488465),
+[Build optimizer](https://github.com/dragginzgame/ic-tooling/actions/runs/43434492809),
+[Testkit runtime](https://github.com/dragginzgame/ic-tooling/actions/runs/43434497041) and
+[Browser fixture session](https://github.com/dragginzgame/ic-tooling/actions/runs/43434501685).
+All four returned main at exact release `4ea33bbf`; they were queued/in progress
+at handoff. Their independent dispatch identities survive the subsequent ordinary
+documentation push. No fresh native macOS 15 Intel or Apple Silicon pass is
+claimed. Keep #355 and #354 open for their native macOS acceptance.
+
+Retain entry source/locks and final logs, timings, registry archives/readback,
+receipts and reconciliation evidence at
+`.git/release-state/preserve/deploy041-20261113.jBRdpw/`.
+The completed journal/Git remain under `.git/release-state/frozen/batch-4szjd3du/`;
+its managed checkout and current raw evidence are under `target/release-frozen/`
+and `target/deploy041.q8E0gh/`.
+
+During the first attempt the entire ordinary `target/` tree disappeared through
+an external action whose cause is not established. Earlier `target/` evidence
+paths mentioned below are historical and no longer available; durable copies
+under `.git/release-state/preserve/` remain. The original focused Toko/Rust 1.100
+logs were lost; the corrected batch's full gate logs are retained.
 `batch-K6l0kMh1` recovered its checkout after external target loss, then stopped
 after seven passing stages at a formatting fixture selecting the retired HTTP
 alias. No release was prepared. Retain its journal/logs; the corrected fixture
-selects retained FS/Process aliases and requires a new captured-source gate.
+selects retained FS/Process aliases and passed before the new source capture.
 
 ## Five-group deployment delivered
 
@@ -97,7 +139,7 @@ open until its native macOS acceptance is demonstrated; do not infer passes.
 
 ## Shipped compiler, tooling and suppliers
 
-Both roots select Rust 1.100.0 and published Toko Tooling 0.40.1; all eleven
+The preceding five-group release selected Rust 1.100.0 and Toko Tooling 0.40.1; all eleven
 members inherit the owning compiler/lint policy. All 115 managed paths and
 entrypoints remain. Cargo tools/editor are admitted for Rust 1.100.0, retaining
 older generations. Safe roots forbid unsafe code; reviewed FFI and the pool's

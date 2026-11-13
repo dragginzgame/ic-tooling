@@ -284,6 +284,25 @@ for that missing phase evidence and its separate collector-recovery boundary.
 Retain `target/deploy-minors-20261113.4mmynn/` and its durable log/readback copies
 under `.git/release-state/preserve/deploy-20261113-minors.XUnm1U/`.
 
+The subsequent Toko 0.41.0 patch batch `batch-4szjd3du` completed from corrected
+source `d22fbd8f` through release `4ea33bbf`. Foundation 0.77.1 passed all 32 stages
+in 668 rounded stage seconds (274 tooling); Build 0.84.1 passed all 32 in 510
+(256 tooling). Foundation executed the four invariant fixtures; Build admitted
+their unchanged proofs. Both publications reused their qualified lint receipts
+with fresh source/archive admission. These remain gate-only observations; they
+do not establish preparation, Git, upload or registry-availability durations.
+Final logs, timings, registry readback and reconciliation evidence remain under
+`.git/release-state/preserve/deploy041-20261113.jBRdpw/deployment-records/`.
+
+The first attempt lost its entire ordinary `target/` tree externally, including
+focused development logs; the cause is not established. Durable journals and
+preservation records survived. Recovered `batch-K6l0kMh1` then stopped after seven
+passes because the formatting fixture selected a retired workspace alias. It
+prepared no version, tag or upload. The fixture now perturbs retained FS/Process
+aliases; its focused check passed before a new capture. The corrected batch ran
+both complete gates. No source-changing receipt reuse or collector recovery was
+claimed, and the failed attempt's journal/logs remain preserved.
+
 Earlier `batch-j5L1wRS7` stopped at the 23rd stage after 22 passes: a Build fixture
 read Cargo's private build-script stdout path, changed in Cargo 1.100. No version,
 tag or upload was prepared. The corrected fixture compares cached JSON exports
