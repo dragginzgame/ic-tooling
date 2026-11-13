@@ -19,9 +19,9 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
 - Adopt setup recovery that distinguishes an admitted Cargo tool from failed
   post-activation maintenance, reusing the selected tool on retry instead of
   rebuilding it. Retain vendor-aware release-command substitution.
-- Anchor consumer validation in the checkout and include vendored inputs in reuse
-  fingerprints. Keep product initialization/EXIT checks while leaving generic
-  lifecycle matrices with Toko Tooling.
+- Anchor consumer validation in the checkout even when its helper is detached,
+  and include vendored inputs in reuse fingerprints. Keep product initialization
+  and EXIT checks while leaving generic lifecycle matrices with Toko Tooling.
 - Keep the private binary qualification package's tooling pin as an inherited
   source-only dev-dependency, avoiding unused tooling compilation in Cargo 1.100
   binary tests while retaining strict lint and snapshot admission.

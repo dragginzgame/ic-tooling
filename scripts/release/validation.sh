@@ -55,7 +55,6 @@ case $operation in
             "$directory/baseline.json" "$directory/plan.json" "$directory/context.json" --check
         CARGO_NET_OFFLINE=true VALIDATION_REPOSITORY_ROOT="$PWD" VALIDATION_LOG_DIR="$directory/logs" \
             TOOLING_STAGE_ADMISSIONS="$directory/stage-admissions" \
-            VALIDATION_REPOSITORY_ROOT="$root" \
                 bash "$root/vendor/toko-tooling/scripts/ci/run-validation-targets.sh" --plan "$directory/plan.json"
         release_receipt_write "$directory/shared-proof.json" \
             perl "$root/scripts/release/validation-proof.pl" verify "$source_sha" "$group" "$pointer"
