@@ -33,6 +33,12 @@ expand archives. jq, ripgrep, Binaryen, ShellCheck, Actionlint and Gitleaks matc
 their current releases. Required gates and final archive admission remain intact.
 Main is current and unprotected; planned registry versions are unoccupied.
 
+The first frozen-hook check retained `target/tmp/frozen-release.cwzRRh/`. Its
+synthetic Testkit patch heading competed with real pending 0.103.0, and admission
+correctly refused. Fixture copies now receive one independent synthetic ledger;
+the real ledgers/history are untouched. No public release or upload occurred.
+Rerun the frozen-hook check from corrected source; do not mutate its old capture.
+
 ## Toko Tooling 0.42.5 — local refresh
 
 Both workspace pins and locks select published 0.42.5. The only installed payload

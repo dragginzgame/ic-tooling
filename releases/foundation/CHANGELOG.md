@@ -25,6 +25,8 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
 - Keep the private binary qualification package's tooling pin as an inherited
   source-only dev-dependency, avoiding unused tooling compilation in Cargo 1.100
   binary tests while retaining strict lint and snapshot admission.
+- Give disposable frozen-hook fixtures their own patch ledgers so a real pending
+  minor release cannot create competing candidates in qualification inputs.
 
 ### 📝 Qualification
 

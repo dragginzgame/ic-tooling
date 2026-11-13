@@ -85,10 +85,10 @@ for group in text testkit; do
     ledger="$normal/releases/$group/CHANGELOG.md"
     version=$(cd "$normal" && bash scripts/release/group.sh ci/cargo-release-groups.json "$group" version)
     next=$(perl "$root/vendor/toko-tooling/scripts/ci/validate-release-inputs.pl" next-version "$version" patch)
-    if ! grep -Fxq "## [$next] - Unreleased" "$ledger" && ! grep -Fxq "## [$next]" "$ledger"; then
-        { printf '# Frozen consumer fixture\n\n## [%s] - Unreleased\n\n- Qualify captured hooks.\n\n' "$next"; cat "$ledger"; } > "$fixture/ledger"
-        cp "$fixture/ledger" "$ledger"
-    fi
+    # The fixture always qualifies patches, independently of real pending minor
+    # or major notes. Its copied ledger must contain one synthetic candidate.
+    printf '# Frozen consumer fixture\n\n## [%s] - Unreleased\n\n- Qualify captured hooks.\n' \
+        "$next" > "$ledger"
 done
 git init -q -b main "$normal"
 git -C "$normal" config user.name 'Tooling qualification'
