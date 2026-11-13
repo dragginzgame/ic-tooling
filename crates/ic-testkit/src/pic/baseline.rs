@@ -61,10 +61,6 @@ impl<T> CachedPocketIcBaseline<T> {
     ///
     /// # Errors
     /// Returns a controller snapshot error if funding or snapshot restoration fails.
-    #[expect(
-        clippy::future_not_send,
-        reason = "baseline metadata may be local; pool recipes separately require Sync metadata"
-    )]
     pub async fn restore(
         &self,
         funding: SnapshotRestoreFunding,

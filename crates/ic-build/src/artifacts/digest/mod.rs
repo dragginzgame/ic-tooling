@@ -223,16 +223,12 @@ fn destination_is_reusable(destination: &Path, expected_bytes: u64) -> bool {
         let effective_uid = rustix::process::geteuid().as_raw();
         // Detach links and normalize foreign-owned, restricted or executable
         // files, even when their bytes match a retained artifact.
-        if !metadata.file_type().is_file()
-            || metadata.nlink() != 1
-            || metadata.uid() != effective_uid
-            || metadata.mode() & 0o600 != 0o600
-            || metadata.mode() & 0o7111 != 0
-            || metadata.len() != expected_bytes
-        {
-            return false;
-        }
-        true
+        metadata.file_type().is_file()
+            && metadata.nlink() == 1
+            && metadata.uid() == effective_uid
+            && metadata.mode() & 0o600 == 0o600
+            && metadata.mode() & 0o7111 == 0
+            && metadata.len() == expected_bytes
     }
     #[cfg(not(unix))]
     {

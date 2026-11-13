@@ -87,7 +87,7 @@ if [[ "${HOST_MAKE_ASSERT_POCKET_IC:-0}" == 1 && "$1" == test ]]; then
     [[ "${POCKET_IC_BIN:-}" == '/prepared/pocket ic' ]] || exit 91
 fi
 case "$*" in
-    '--version') printf 'cargo 1.99.1 (fixture)\n' ;;
+    '--version') printf 'cargo 1.100.0 (fixture)\n' ;;
     'sort --version') printf 'cargo-sort %s\n' "$HOST_MAKE_SORT_VERSION" ;;
     'fmt --version') echo rustfmt ;;
     'metadata --locked --offline --no-deps --format-version 1')
@@ -177,6 +177,8 @@ fixture scripts/release/test-validation.sh
 fixture scripts/publish/test-workspace.sh
 EVENTS
     cmp "$fixture/expected" "$fixture/tooling-observed"
+    [[ $(grep -c '^Tooling fixture result: .*; status=0; elapsed_seconds=[0-9]*; route=fresh$' "$fixture/tooling-order.log") == 12 ]]
+    [[ $(grep -c '; route=fresh; reason=no-release-group$' "$fixture/tooling-order.log") == 4 ]]
     : > "$HOST_MAKE_EVENTS"
     status=0
     PATH="$fixture/local:$PATH" HOST_MAKE_FIXTURE_STATUS=23 make --no-print-directory tooling-command-check \
@@ -184,6 +186,9 @@ EVENTS
     [[ "$status" == 2 ]] || exit 1
     printf '%s\n' 'fixture scripts/ci/test-qualification-record.sh' > "$fixture/expected"
     cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
+    grep -E '^Tooling fixture result: scripts/ci/test-qualification-record.sh; status=23; elapsed_seconds=[0-9]+; route=fresh$' \
+        "$fixture/tooling-failure.log" >/dev/null
+    [[ $(grep -c '^Tooling fixture result:' "$fixture/tooling-failure.log") == 1 ]]
     # Each release checks its actual adapter once; full CI keeps all groups.
     all_groups=$(bash scripts/release/group.sh ci/cargo-release-groups.json --list)
     for group in $all_groups; do
@@ -192,12 +197,14 @@ EVENTS
             "TOOLING_RELEASE_GROUP=$group" > "$fixture/tooling-$group.log" 2>&1
         grep -Fx "fixture scripts/release/test-adapter.sh --group $group" "$HOST_MAKE_EVENTS" >/dev/null
         [[ $(grep -c '^fixture scripts/release/test-adapter.sh' "$HOST_MAKE_EVENTS") == 1 ]]
+        [[ $(grep -c '; route=fresh; reason=no-stage-admission-directory$' "$fixture/tooling-$group.log") == 4 ]]
     done
     : > "$HOST_MAKE_EVENTS"
     PATH="$fixture/local:$PATH" IC_TOOLING_FULL_CI=1 make --no-print-directory tooling-command-check \
         TOOLING_RELEASE_GROUP=testkit > "$fixture/tooling-full-ci.log" 2>&1
     grep -Fx 'fixture scripts/release/test-adapter.sh' "$HOST_MAKE_EVENTS" >/dev/null
     if grep -F -- '--group' "$HOST_MAKE_EVENTS" >/dev/null; then exit 1; fi
+    [[ $(grep -c '; route=fresh; reason=full-ci$' "$fixture/tooling-full-ci.log") == 4 ]]
     # Release routing uses the same named stages that the gate seals. Product
     # effects remain substituted here; test-stage-reuse.sh owns actual reuse.
     cat > scripts/release/reuse-fixture.sh <<'STUB'
@@ -211,6 +218,7 @@ STUB
         grep -Fx "fixture scripts/release/reuse-fixture.sh testkit $stage" "$HOST_MAKE_EVENTS" >/dev/null
     done
     if grep -E '^fixture scripts/ci/test-(product-evidence|host-fixture-retention).sh$' "$HOST_MAKE_EVENTS" >/dev/null; then exit 1; fi
+    [[ $(grep -c '; route=stage-admission; reason=matching-proof-required$' "$fixture/tooling-reuse.log") == 4 ]]
     : > "$HOST_MAKE_EVENTS"
     PATH="$fixture/local:$PATH" IC_TOOLING_FULL_CI=1 make --no-print-directory tooling-command-check \
         TOOLING_RELEASE_GROUP=testkit TOOLING_STAGE_ADMISSIONS=admissions > "$fixture/tooling-no-reuse.log" 2>&1

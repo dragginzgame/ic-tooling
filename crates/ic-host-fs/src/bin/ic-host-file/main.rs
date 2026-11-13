@@ -1,4 +1,5 @@
 //! Explicit bounded file operations over the existing filesystem owners.
+#![forbid(unsafe_code)]
 
 use clap::Parser as _;
 use std::{error::Error, path::PathBuf, process::ExitCode};
@@ -43,17 +44,24 @@ enum Operation {
     },
 }
 
+#[cfg_attr(
+    not(unix),
+    expect(
+        clippy::needless_pass_by_value,
+        reason = "the Unix backend consumes the parsed operation; other targets retain its rejection path"
+    )
+)]
 fn run(operation: Operation) -> Result<(), Box<dyn Error>> {
     #[cfg(unix)]
     unix::run(operation)?;
     #[cfg(not(unix))]
     {
         let _ = operation;
-        return Err(std::io::Error::new(
+        Err(std::io::Error::new(
             std::io::ErrorKind::Unsupported,
             "ic-host-file requires Unix",
         )
-        .into());
+        .into())
     }
     #[cfg(unix)]
     Ok(())

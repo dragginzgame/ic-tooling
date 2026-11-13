@@ -34,10 +34,6 @@ fn parallel_allocation_preserves_existing_entries_and_caller_retention() {
     let root = crate::tests::fixture();
     let marker = root.path().join("retained");
     fs::write(&marker, b"original evidence").unwrap();
-    #[expect(
-        clippy::needless_collect,
-        reason = "spawn every worker before joining to exercise concurrent allocation"
-    )]
     let paths = std::thread::scope(|scope| {
         let workers = (0..32)
             .map(|_| scope.spawn(|| create_fixture_directory(root.path(), "parallel").unwrap()))

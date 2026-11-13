@@ -332,10 +332,6 @@ pub async fn collect_canister_diagnostics(
 ///
 /// # Errors
 /// Returns the writer’s I/O error when diagnostics cannot be written.
-#[expect(
-    clippy::future_not_send,
-    reason = "caller-owned diagnostic writers need not be Send; no task is spawned"
-)]
 pub async fn write_canister_diagnostics(
     pic: &PocketIc,
     request: CanisterDiagnosticsRequest,

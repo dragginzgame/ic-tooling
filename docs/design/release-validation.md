@@ -52,9 +52,25 @@ push baselines retain their existing source/host/step and recovery checks.
 Renew the comparison when its mapping, runner, relevant configuration or covered
 contracts change, rather than for every push.
 
-Routine workflow/ref runs retain newest-revision cancellation. For a qualification
-comparison that must finish while delivery continues, dispatch the existing four
-workflows on main at one selected revision:
+Routine workflow/ref runs retain newest-revision cancellation. Renew an explicit
+comparison when its covered inputs change, not after every deployment. First
+inspect existing explicit runs for the selected revision:
+
+```sh
+gh run list --workflow ci.yml --event workflow_dispatch --commit "$(git rev-parse HEAD)" \
+  --limit 10 --json databaseId,headSha,status,conclusion,url
+```
+
+Record an existing in-progress matching qualification instead of dispatching it
+again; continue delivery without waiting. Check the other selected workflows the
+same way. A routine push runs full native CI but omits the focused comparisons,
+so it cannot replace an explicit comparison. Retrying failed jobs in an existing
+qualification preserves its identity; don't start another complete run merely
+because a native setup failed. Keep explicit qualification's independent
+concurrency: cancelling it in favour of routine CI would lose required evidence.
+
+When a new comparison is needed, dispatch the existing four workflows on main
+at one selected revision:
 
 ```sh
 gh workflow run ci.yml --ref main
@@ -152,6 +168,24 @@ logs while preserving earlier attempts. Changed source/scope/configuration needs
 a fresh admitted attempt. Historical version-2/3/4 receipts use their original
 source and adapter; they are never relabelled as version 5.
 
+### Collector-failure boundary
+
+Tooling's `validation.sh run` executes a selected plan and then seals its Shared
+proof. It is not a post-processing-only resume operation. `receipt` checks an
+already complete proof; `retained-receipt` produces an inventory for comparison
+with a trusted receipt.
+The adapter does not currently expose a qualified operation to finish a failed
+collector against an earlier successful run. Direct verifier invocation or a
+PASS line cannot substitute for that missing admission.
+
+Use the shared [failure-specific recovery decision](https://github.com/dragginzgame/toko-tooling/blob/dcc51b5cab3d9993f0668bc0902252364d7dc316/docs/releases/release-validation-reuse.md#failure-specific-recovery)
+with the original gate, logs and receipts. Identify successful execution separately
+from proof-publication failure. If the saved state cannot be admitted by an existing
+recovery command, disclose that limitation and the selected rerun scope before a
+new gate. Only the four qualified fixture stages and the separately admitted full
+publication lint have the reuse contracts described below; native runtime results
+cannot be reconstructed as new stage proofs. This limitation remains in #353.
+
 ## Selected adapter cases and unchanged-stage reuse
 
 During release qualification, `tooling-command-check` runs the adapter fixture
@@ -187,6 +221,48 @@ Fixture replay grants no Rust, dependency, runtime or archive qualification.
 Publication separately re-admits an existing full workspace lint through the
 [committed release receipt](../publishing.md#registry-publication), with fresh
 lint fallback. There is no whole-gate reuse or reinterpretation of older receipts.
+
+The adapter fixture uses one actual invariant execution proof in each disposable
+compact group. It retains real metadata, source/receipt sealing, prepared payload,
+lint admission and corruption/recovery checks. Its script copy uses the existing
+release-fixture preparer. `test-stage-reuse.sh` independently executes all four
+production invariant stages across groups, including changed inputs/environment,
+missing original logs and occupied destinations; `test-validation.sh` retains the
+full roster and receipt inventory. No production stage is removed or synthesized.
+
+### Deployment cost observations
+
+[#353 — Reduce tooling-command qualification cost in deployments and avoid duplicate same-source CI](https://github.com/dragginzgame/ic-tooling/issues/353)
+owns remaining deployment measurements. Normal tooling output now records every
+fixture's route, fallback reason, status and elapsed seconds. A `stage-admission`
+route is an attempt to admit proof, not a reuse claim: the resulting admission
+separately reports `executed` or `reused` and its monotonic duration. A cold or
+ineligible proof reports `no-admissible-matching-proof`; the Shared runner retains
+individual invalid-proof diagnostics. Publication surfaces the lint admission's
+refusal before its existing fresh-lint fallback. These messages grant no admission.
+
+Foundation 0.76.5's authorized frozen `batch-eTIfLgJR` retains its validation log
+under `.git/release-state/frozen/batch-eTIfLgJR/repository.git/release-state/`.
+Its 32 rounded Linux stage durations sum to 682 seconds: tooling commands took
+265, package qualification 106 and installed-workspace tests 105. All four
+invariant fixtures executed. This is gate time, not total deployment latency;
+the retained log cannot separately establish preparation, Git delivery, upload
+and registry-availability time. Do not infer those times from file modification
+timestamps or claim a cold checkout can reuse another checkout's proof.
+
+Separately, [push CI at 2fc42c74](https://github.com/dragginzgame/ic-tooling/actions/runs/43202983937)
+records 486 seconds for Linux tooling commands and 1,252 for Intel. Log boundaries
+attribute approximately 310/728 seconds to the adapter and 95/278 to validation
+fixtures. The [explicit run at the same source](https://github.com/dragginzgame/ic-tooling/actions/runs/43203026490)
+also adds the focused comparison; it is not semantically identical to push CI.
+Its Apple Silicon setup failed before qualification, so it supplies no complete
+three-host comparison. Hosted timings do not substitute for deployment timings.
+
+The focused Linux Foundation adapter fixture passed at 114.247 seconds before
+and 108.110 after the fixture reduction, with product/setup effects substituted.
+That is a modest local fixture improvement, not an end-to-end release or macOS
+speedup. The next authorized deployment must report actual stage modes/fallbacks
+and phase timings before #353's deployment acceptance can be considered complete.
 
 ## Qualification and limits
 

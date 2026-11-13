@@ -8,13 +8,28 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
-## [0.101.1]
+## [0.102.0]
+
+### ⚠️ Breaking
+
+- Adopt Types 0.20.0 for public portable principals; consumers using that identity
+  select the matching Types line. Native client identities remain upstream
+  PocketIC 16.1. Use Platform 0.32.0 privately for management/snapshot encoding and
+  Runtime/macros/guard 0.22.0 in the independent probe. Preserve caller-owned
+  lifecycle, byte budgets and serialized contracts; Wire stays at 0.21.5.
+- Require Rust 1.100.0 and Toko Tooling 0.40.0's inherited common lint policy.
+  Forbid unsafe code in the library while retaining the standalone CLI's reviewed
+  signal boundary. Check Send futures at pool recipes; local adapters retain
+  caller-owned runtime and non-Send value support.
+  [#354 — Adopt Rust 1.100.0 and the common lint policy across maintained workspaces](https://github.com/dragginzgame/ic-tooling/issues/354).
 
 ### 🔧 Changed
 
-- Select Toko Tooling 0.39.15 for development and CI. Expose `make deps-update`
+- Select Toko Tooling 0.40.1 for development and CI. Expose `make deps-update`
   for sequential `cargo update -v` calls in the product and independent
   qualification workspaces, with normal Cargo output and first-failure stopping.
+- Use directory modules for simulator helpers, nested startup tests and the
+  private probe protocol, preserving public module paths.
 
 ## [0.101.0] - 2026-11-12
 

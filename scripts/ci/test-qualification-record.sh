@@ -19,9 +19,9 @@ for tool in rustc cargo uname sw_vers; do
 #!/usr/bin/env bash
 set -euo pipefail
 case "${0##*/}" in
-    rustc) printf 'rustc fixture\nrelease: %s\nhost: fixture-host\n' "${QUALIFICATION_COMPILER:-1.99.1}"; exit "${QUALIFICATION_COMPILER_STATUS:-0}" ;;
+    rustc) printf 'rustc fixture\nrelease: %s\nhost: fixture-host\n' "${QUALIFICATION_COMPILER:-1.100.0}"; exit "${QUALIFICATION_COMPILER_STATUS:-0}" ;;
     cargo)
-        printf 'cargo %s (fixture)\n' "${QUALIFICATION_CARGO_VERSION:-1.99.1}"
+        printf 'cargo %s (fixture)\n' "${QUALIFICATION_CARGO_VERSION:-1.100.0}"
         if [[ "${QUALIFICATION_ADD_SOURCE:-false}" == true ]]; then
             printf 'new source\n' > unexpected-source
         fi ;;
@@ -45,7 +45,7 @@ cmp "$fixture/repository/Cargo.lock" "$fixture/native/Cargo.lock"
 QUALIFICATION_OS=Darwin bash "$root/scripts/ci/record-qualification.sh" "$fixture/repository" "$fixture/apple" native
 [[ "$(cat "$fixture/apple/os-version")" == 15.6 ]]
 cp "$fixture/repository/rust-toolchain.toml" "$fixture/toolchain-original"
-for invalid_pin in stable 1.99.0; do
+for invalid_pin in stable 1.99.1; do
     printf '[toolchain]\nchannel = "%s"\n' "$invalid_pin" > "$fixture/repository/rust-toolchain.toml"
     mkdir "$fixture/pin-$invalid_pin"
     if QUALIFICATION_ADD_SOURCE=true bash "$root/scripts/ci/check-rust-toolchain.sh" \
@@ -57,8 +57,8 @@ for refusal in observer floor cargo occupied new-source dirty; do
     output="$fixture/refuse-$refusal"
     case "$refusal" in
         observer) export QUALIFICATION_COMPILER_STATUS=23 ;;
-        floor) export QUALIFICATION_COMPILER=1.91.0 ;;
-        cargo) export QUALIFICATION_CARGO_VERSION=1.98.0 ;;
+        floor) export QUALIFICATION_COMPILER=1.99.1 ;;
+        cargo) export QUALIFICATION_CARGO_VERSION=1.99.1 ;;
         occupied) mkdir "$output"; printf retained > "$output/retained" ;;
         new-source) export QUALIFICATION_ADD_SOURCE=true ;;
         dirty) printf changed >> "$fixture/repository/Cargo.lock" ;;

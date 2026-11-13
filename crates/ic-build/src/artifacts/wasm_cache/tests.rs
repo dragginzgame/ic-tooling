@@ -1974,11 +1974,10 @@ exec {cargo} "$@"
                 let mut environment = original.environment().clone();
                 environment.remove(OsStr::new("RUSTC"));
                 original
-                    .clone()
                     .with_environment(environment)
                     .with_rustc_identity_program(&program)
             } else {
-                original.clone().with_cargo_program(&program)
+                original.with_cargo_program(&program)
             };
             let mut ready_since = None;
             let mut cancelled = || {

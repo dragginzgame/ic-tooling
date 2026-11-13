@@ -37,6 +37,7 @@ cat > "$fixture/Cargo.toml" <<'TOML'
 name = "integration-cohort-consumer"
 version = "0.0.0"
 edition = "2024"
+rust-version = "1.100.0"
 publish = false
 [workspace]
 [dependencies]

@@ -30,8 +30,8 @@ heap allocator package is retired; Testkit owns simulator support.
   <a href="https://docs.rs/ic-testkit"><img src="https://docs.rs/ic-testkit/badge.svg" alt="Docs.rs"></a>
   <a href="https://crates.io/crates/ic-testkit"><img src="https://img.shields.io/crates/d/ic-testkit.svg" alt="Downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
-  <a href="Cargo.toml"><img src="https://img.shields.io/badge/MSRV-1.99.1-blue.svg" alt="MSRV"></a>
-  <a href="README.md#toolchains-and-checks"><img src="https://img.shields.io/badge/internal%20rust-1.99.1-orange.svg" alt="Internal Rust"></a>
+  <a href="Cargo.toml"><img src="https://img.shields.io/badge/MSRV-1.100.0-blue.svg" alt="MSRV"></a>
+  <a href="README.md#toolchains-and-checks"><img src="https://img.shields.io/badge/internal%20rust-1.100.0-orange.svg" alt="Internal Rust"></a>
   <a href="Cargo.toml"><img src="https://img.shields.io/badge/edition-2024-purple.svg" alt="Rust edition"></a>
   <a href="Cargo.toml"><img src="https://img.shields.io/badge/PocketIC-16.1-green.svg" alt="PocketIC"></a>
   <a href="https://github.com/dragginzgame/ic-testkit"><img src="https://img.shields.io/badge/GitHub-dragginzgame%2Fic--testkit-black.svg" alt="Repository"></a>

@@ -4,14 +4,25 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
-## [0.91.1]
+## [0.92.0]
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.32.0 and Types 0.20.0 for exposed codec, ledger and Registry
+  values. Callers exchanging those Rust values must align their direct supplier
+  selections; serialized identity bytes and decoder budgets retain their contracts.
+- Require Rust 1.100.0 and Toko Tooling 0.40.0's inherited common lint policy,
+  retaining reviewed pedantic checks and forbidding unsafe code in the library.
+  [#354 — Adopt Rust 1.100.0 and the common lint policy across maintained workspaces](https://github.com/dragginzgame/ic-tooling/issues/354).
 
 ### 🔧 Changed
 
-- Select Toko Tooling 0.39.15 for development and CI, including sequential
+- Select Toko Tooling 0.40.1 for development and CI, including sequential
   `make deps-update` across both workspaces, width-bounded LOC reports,
   the `--wide` display and supplier-freshness review rules.
-- Select compatible Platform 0.31.2 and Types 0.19.4 through the shared catalog.
+- Use directory modules for ICP status and inventory with their existing tests,
+  preserving public module paths and exact source contents.
+- Align both workspace catalogs and locks with the published Platform family.
 
 ## [0.91.0] - 2026-11-11
 

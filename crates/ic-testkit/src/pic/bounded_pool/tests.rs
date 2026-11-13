@@ -102,10 +102,6 @@ async fn cancelled_preparation_keeps_the_value_and_releases_capacity() {
 }
 
 #[tokio::test]
-#[expect(
-    clippy::significant_drop_tightening,
-    reason = "the lease must remain held during the intentional panic"
-)]
 async fn panic_while_leased_preserves_the_value_and_releases_capacity() {
     let pool = Arc::new(pool(1));
     let worker_pool = Arc::clone(&pool);

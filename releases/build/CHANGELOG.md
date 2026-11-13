@@ -6,13 +6,40 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
-## [0.83.1]
+## [0.84.0]
+
+### ⚠️ Breaking
+
+- Require Rust 1.100.0 and Toko Tooling 0.40.0's inherited common lint policy.
+  Generated package fixtures declare the Build package's compiler minimum.
+  [#354 — Adopt Rust 1.100.0 and the common lint policy across maintained workspaces](https://github.com/dragginzgame/ic-tooling/issues/354).
+- Fix [#352 — Expose compiler/wrapper identity or complete refusal facts for build reuse](https://github.com/dragginzgame/ic-tooling/issues/352):
+  `ConfigurationFile.compiler_overrides` now contains typed
+  `CompilerOverride::Build` and `CompilerOverride::Environment` declarations.
+  Migrate stored field-name vectors and matches to these variants. Report all
+  four build fields and all eight direct/`CARGO_BUILD_*` environment names,
+  including included, empty, forced, relative or shadowed declarations.
+  Invalid `build`/`env` tables refuse observation instead of reporting absence.
+  Values remain private; this projection does not resolve Cargo precedence,
+  bind executable bytes or authorize cache reuse. Consumers must bind identity
+  independently or refuse reuse. Canic's integration remains in
+  [Canic #247 — Bind effective Cargo-configured wrappers in build reuse evidence](https://github.com/dragginzgame/canic/issues/247).
 
 ### 🔧 Changed
 
-- Select Toko Tooling 0.39.15 for development and CI, including sequential
+- Select Toko Tooling 0.40.1 for development and CI, including sequential
   `make deps-update` across both workspaces, width-bounded LOC reports,
   the `--wide` display and supplier-freshness review rules.
+- Use directory modules for Cargo and artifact implementations with child
+  modules or tests, preserving public module paths.
+
+### 🧪 Testing
+
+- Cover build and environment declarations, include trees, empty/forced/relative
+  values, malformed tables, unchanged ordinary settings and private-value redaction.
+- Qualify actual Cargo include/environment/empty-wrapper precedence while
+  retaining conservative facts, and unchanged version/configuration observations
+  after executable-byte replacement or symlink retargeting.
 
 ## [0.83.0] - 2026-11-11
 

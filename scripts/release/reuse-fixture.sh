@@ -24,6 +24,9 @@ for directory in "$state/tmp" "$destination"; do
     done
 done
 mkdir -p "$state/tmp" "$destination"
+[[ ! -e "$destination/$stage.json" && ! -L "$destination/$stage.json" ]] || {
+    echo "Occupied fixture admission: $destination/$stage.json" >&2; exit 1;
+}
 environment=$(mktemp "$state/environment.XXXXXX")
 capture=$(mktemp "$state/execution.XXXXXX")
 jq -cnS --arg path "$PATH" --arg tmp "$root/$state/tmp" --arg stage "$stage" \
@@ -41,3 +44,5 @@ jq -e --arg source "$source" --arg group "$group" --arg stage "$stage" '
     and (.mode == "executed" or .mode == "reused")' "$admission" >/dev/null
 [[ ! -e "$destination/$stage.json" && ! -L "$destination/$stage.json" ]]
 cp "$admission" "$destination/$stage.json"
+jq -r '"Tooling fixture admission: \(.stage); mode=\(.mode); elapsed_seconds=\(.elapsed_seconds); reason=" +
+    (if .mode == "reused" then "matching-proof-admitted" else "no-admissible-matching-proof" end)' "$admission"

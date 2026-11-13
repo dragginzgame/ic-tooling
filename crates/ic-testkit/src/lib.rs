@@ -8,6 +8,7 @@
 //!
 //! Deterministic test principals through [`fake_principal`] are available on
 //! every target. The client and `pic` helpers are native-only.
+#![forbid(unsafe_code)]
 
 /// The upstream `PocketIC` client selected by Testkit, with unchanged type identity.
 ///

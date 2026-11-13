@@ -111,13 +111,6 @@ pub fn children(pid: u32, capacity: usize) -> ChildProcesses {
 /// Observe the Linux scheduler-affinity CPU count for a PID.
 /// Returns None on another host or native query failure; fallback policy is caller-owned.
 #[must_use]
-#[cfg_attr(
-    not(target_os = "linux"),
-    expect(
-        clippy::missing_const_for_fn,
-        reason = "the Linux implementation queries live scheduler state and cannot be const"
-    )
-)]
 pub fn affinity_cpus(pid: u32) -> Option<u32> {
     #[cfg(target_os = "linux")]
     {

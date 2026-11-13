@@ -7,6 +7,7 @@
 //! This crate does not enable TLS or compression; consumers select those features.
 //! The optional portable `endpoint` module admits strict HTTP(S) base URLs
 //! without creating requests or selecting transport policy.
+#![forbid(unsafe_code)]
 
 #[cfg(not(target_family = "wasm"))]
 mod response;

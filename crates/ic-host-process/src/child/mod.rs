@@ -503,13 +503,6 @@ impl OwnedChild {
         result
     }
 
-    #[cfg_attr(
-        not(target_os = "macos"),
-        expect(
-            clippy::needless_pass_by_ref_mut,
-            reason = "Darwin inspects and may invalidate child ownership"
-        )
-    )]
     fn signal_group(&mut self, signal: Signal) -> io::Result<()> {
         let pid = self.pid()?;
         match retry_interrupted(|| kill_process_group(pid, signal).map_err(Into::into)) {

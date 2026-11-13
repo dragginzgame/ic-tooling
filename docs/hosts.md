@@ -1,6 +1,6 @@
 # IC Tooling qualification
 
-Toko Tooling is selected as `toko-tooling = "=0.39.15"` in each workspace's
+Toko Tooling is selected as `toko-tooling = "=0.40.1"` in each workspace's
 `[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
 Every real package inherits it unconditionally in
 `[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
@@ -59,7 +59,7 @@ do not require unrelated consumer releases.
 
 | Consumer profile | Supplier boundary and exposed identities |
 | --- | --- |
-| Native Testkit default | Published upstream `pocket-ic`, including its native Principal/management DTOs and protocol codecs; no Platform facade, Runtime or Wire. Portable principal generation retains Types. |
+| Native Testkit default | Published upstream `pocket-ic` owns its native Principal/management identities and transport. Private snapshot management encoding uses Platform's owned codec/DTOs. Portable principal generation retains Types; Runtime and Wire remain absent. |
 | Native Testkit `wire` | The same native client plus optional Wire. `WireCallSpec` limits and typed codec causes have Wire identity; graph qualification selects only this feature, independently of CLI/held fixtures. |
 | Testkit Wasm | Types only; no Platform facade, Runtime, native transport or Wire. |
 | Private Wasm probe | Runtime's `cdk`, its matching singleton guard and qualified upstream `ic0`, plus Types and Wire; not a second simulator or production adapter crate. |
@@ -72,13 +72,16 @@ exact retries, signatures and hashes. This adoption preserves encoder bytes,
 method identities and explicit budgets; there are no browser Wire bindings here
 to regenerate.
 
-The pending adoption selects Platform 0.31 and Types 0.19.3, retaining Runtime
-0.21.1 for the private probe. Host Tools exposes Platform codec/ledger identities,
-so its next minor is 0.91.0. Testkit's Platform use stays private to held fixtures;
-its compatible adoption remains in 0.100.1. These profiles select none of the
-changed Platform BLS, ECDSA or Ed25519 implementations. The new DTO-declaration
-macro forms need no generated-code migration here; existing mappings remain
-supported. No wire/storage migration or budget changes are required.
+The current adoption selects Platform 0.32.0 and Types 0.20.0 in both roots,
+with Runtime/macros/guard 0.22.0 for the private probe. These supplier minors
+adopt Rust 1.100.0 and lint/must-use policy. Host Tools exposes Platform codec,
+ledger and registry identities; Testkit's portable principal helper exposes Types.
+Align callers' direct Platform/Types selections when exchanging those values.
+The pending Tools 0.92.0 and Testkit 0.102.0 minors already cover this identity and
+compiler transition. Native PocketIC identities remain upstream 16.1. The locked
+Wire 0.21.5 selection stays unchanged: its optional Platform Types integration is
+not selected here. Existing codec budgets, method identities and serialized data
+contracts remain; this adoption requires no caller source or storage migration.
 
 Foundation and Build's normal/build graphs forbid the entire Platform family
 and higher product layers; development fixtures may still use integration owners.
@@ -140,12 +143,24 @@ failure stops subsequent stages even under parallel Make. Standalone `make ci`
 retains its own full lint gate and does not run the publication dry run.
 Both are full qualification commands, subject to the shared validation policy.
 
-The workspace minimum and pinned development/release compiler are Rust 1.99.1.
+The workspace minimum and pinned development/release compiler are Rust 1.100.0.
 `make compiler-check` reads the workspace manifest and toolchain pin and requires
 matching actual Cargo/rustc identities. Native CI and release qualification run
 that admission once, then retain native, isolated-feature, Testkit Wasm and
 unsupported-filesystem checks on the same compiler. The existing GitHub `msrv`
 status depends on all native results; it performs no duplicate build or cache setup.
+
+Both owning workspace roots apply the
+[common Rust lint policy](../TOKO-TOOLING.md#common-rust-lint-policy), and all eleven
+members inherit their owner's tables. Reviewed pedantic API/style checks remain;
+blanket nursery/restriction groups are removed and function length is non-blocking.
+Safe library/CLI roots forbid unsafe code. FFI and qualification targets inherit
+deny; the existing reviewed process/signal exceptions stay scoped. Generated
+exports are checked by the Wasm probe. Only the baseline-pool module selects
+`future_not_send`: its recipe contract promises Send futures, unlike local adapters
+and caller-owned writers.
+Strict Clippy and Rustdoc commands retain `-D warnings`; no documentation gate or
+runtime ownership boundary is relaxed by this adoption.
 
 Required hosts are Linux x86-64 and macOS 15 on Intel and Apple Silicon.
 Successful native jobs retain small `*-qualification-*` artifacts with
@@ -203,6 +218,10 @@ installed release and registry proof remain separate.
 For receipt/prepared-version changes shared by all groups, select a representative
 owner with `bash scripts/release/test-adapter.sh --group testkit`; the default
 entrypoint retains all five groups for complete release qualification.
+The compact adapter fixture seals one real invariant proof; the complete
+production fixture roster remains qualified by the dedicated stage/gate tests.
+For publication lint fallback diagnostics and first-failure stopping, use
+`bash scripts/publish/test-workspace.sh --case lint-fallback` (effects substituted).
 For full-CI roster and lint/publication ordering, use
 `bash scripts/ci/test-workspace-validation.sh`; it runs the actual Make routing
 with substituted check/build/publication effects and no Cargo compilation.
@@ -285,7 +304,7 @@ For Tools' independent `icp-ledger` profile, run `cargo test -p ic-host-tools
 --offline` using the pinned compiler. Its fixtures encode the official
 fields independently; the feature graph excludes Platform, Candid and Agent.
 
-Text's optional `yaml` feature and Tools' `icp-project` require Rust 1.99.1.
+Text's optional `yaml` feature and Tools' `icp-project` require Rust 1.100.0.
 Qualify YAML with `cargo test -p ic-host-text
 --features yaml --all-targets --locked --offline` and the equivalent Tools
 `--features icp-project` selection. Tests cover ignored-field duplicate/tag/merge
@@ -298,7 +317,7 @@ YAML-enabled graphs require the maintained `libyaml-rs` backend and exclude
 fork of the same low-level Rust port, not a rewrite that eliminates unsafe Rust.
 Both licenses and compiler floors were reviewed: `yaml_serde` is MIT/Apache-2.0
 with Rust 1.82; `libyaml-rs` is MIT with Rust 1.60. The public Host contract stays
-on Rust 1.99.1. All-feature and isolated YAML checks use the same pinned compiler
+on Rust 1.100.0. All-feature and isolated YAML checks use the same pinned compiler
 and native CI lane.
 
 Platform owns the strict certificate/hash-tree decoder and its grammar, recursion,
@@ -331,7 +350,7 @@ codec. Neither enables the textual parser.
 Registry selects `ic-platform-types` directly, without the facade or codec. Its
 native and Wasm graph policies retain one canonical Principal identity. `ic-interface` adds
 Host Artifacts and Wasm parsing. The standalone Wasm inspector
-retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.99.1
+retains its parser-free graph. These non-YAML profiles must qualify on Rust 1.100.0
 and native Linux/macOS matrix as the existing libraries.
 
 Platform 0.23 delegates IC system calls and the executor to independent Runtime
@@ -431,7 +450,7 @@ Release preparation uses the admitted IC Build metadata editor with source-bound
 member identities, with rollback qualification in disposable release fixtures.
 `make install-tools` includes the pinned release-only editor; `make tools-check`
 admits it offline. The published editor retains its own Rust 1.91 floor; the current workspace
-requires and builds with Rust 1.99.1.
+requires and builds with Rust 1.100.0.
 The editor selects published IC Build 0.73.0 with `cli` for group manifest edits.
 Both native CI cache paths include its tool-store entries; its pin participates
 in the cache key. `make release-adapter-check` exercises actual rendering and

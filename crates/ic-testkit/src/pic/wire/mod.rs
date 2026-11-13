@@ -131,10 +131,6 @@ impl std::error::Error for WireCallError {
 /// # Errors
 /// Returns request encoding, query rejection or response decoding errors.
 /// Upstream transport panics propagate unchanged.
-#[expect(
-    clippy::future_not_send,
-    reason = "Serde requests may borrow local non-Sync values"
-)]
 pub async fn query_wire<Request, Response>(
     pic: &PocketIc,
     canister_id: Principal,
@@ -167,10 +163,6 @@ where
 /// # Errors
 /// Returns request encoding, update rejection or response decoding errors.
 /// Upstream transport panics propagate unchanged.
-#[expect(
-    clippy::future_not_send,
-    reason = "Serde requests may borrow local non-Sync values"
-)]
 pub async fn update_wire<Request, Response>(
     pic: &PocketIc,
     canister_id: Principal,
@@ -209,10 +201,6 @@ const fn context(
     }
 }
 
-#[expect(
-    clippy::future_not_send,
-    reason = "local Serde values and caller-owned transport futures need not be Send"
-)]
 async fn call_wire<Request, Response>(
     context: WireCallContext,
     spec: WireCallSpec,

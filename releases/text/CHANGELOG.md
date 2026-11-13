@@ -6,11 +6,17 @@ optional YAML. Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
-## [0.74.6]
+## [0.75.0]
+
+### ⚠️ Breaking
+
+- Require Rust 1.100.0 and Toko Tooling 0.40.0's inherited common lint policy,
+  retaining reviewed pedantic checks and forbidding unsafe code in the library.
+  [#354 — Adopt Rust 1.100.0 and the common lint policy across maintained workspaces](https://github.com/dragginzgame/ic-tooling/issues/354).
 
 ### 🔧 Changed
 
-- Select Toko Tooling 0.39.15 for development and CI, including sequential
+- Select Toko Tooling 0.40.1 for development and CI, including sequential
   `make deps-update` across both workspaces, width-bounded LOC reports,
   the `--wide` display and supplier-freshness review rules.
 

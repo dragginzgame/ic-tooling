@@ -1,3 +1,5 @@
+mod compilers;
+
 use super::*;
 use crate::testing::fs::unique_temp_directory;
 use sha2::{Digest as _, Sha256};
@@ -79,9 +81,21 @@ fn observations_bind_raw_bytes_overrides_and_include_trees() {
         *observed[0].sha256.as_bytes(),
         <[u8; 32]>::from(Sha256::digest(source.as_bytes()))
     );
-    assert_eq!(observed[0].compiler_overrides, ["rustc", "rustdoc"]);
-    assert_eq!(observed[1].compiler_overrides, ["rustc-workspace-wrapper"]);
-    assert_eq!(observed[2].compiler_overrides, ["rustc-wrapper"]);
+    assert_eq!(
+        observed[0].compiler_overrides,
+        [
+            CompilerOverride::Build("rustc"),
+            CompilerOverride::Build("rustdoc")
+        ]
+    );
+    assert_eq!(
+        observed[1].compiler_overrides,
+        [CompilerOverride::Build("rustc-workspace-wrapper")]
+    );
+    assert_eq!(
+        observed[2].compiler_overrides,
+        [CompilerOverride::Build("rustc-wrapper")]
+    );
     fs::write(&config, source.replace("caller-doc", "changed-doc")).unwrap();
     assert_ne!(
         observe_configurations(std::slice::from_ref(&config), CONFIGURATION_LIMITS).unwrap()[0]
@@ -134,8 +148,14 @@ fn repeated_configuration_roots_keep_distinct_alias_include_trees() {
     );
     assert_eq!(observed[0].sha256, observed[2].sha256);
     assert_ne!(observed[1].sha256, observed[3].sha256);
-    assert_eq!(observed[1].compiler_overrides, ["rustc"]);
-    assert_eq!(observed[3].compiler_overrides, ["rustc"]);
+    assert_eq!(
+        observed[1].compiler_overrides,
+        [CompilerOverride::Build("rustc")]
+    );
+    assert_eq!(
+        observed[3].compiler_overrides,
+        [CompilerOverride::Build("rustc")]
+    );
     fs::remove_dir_all(root).unwrap();
 }
 

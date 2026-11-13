@@ -3,7 +3,7 @@
 set -euo pipefail
 selected_case=all
 if [[ $# != 0 ]]; then
-    [[ $# == 2 && $1 == --case && ($2 == tooling-admission || $2 == licence) ]] || exit 2
+    [[ $# == 2 && $1 == --case && ($2 == tooling-admission || $2 == licence || $2 == lint-fallback) ]] || exit 2
     selected_case=$2
 fi
 unset RELEASE_GROUP
@@ -65,6 +65,7 @@ cat > bin/git <<'STUB'
 set -euo pipefail
 case "$*" in
     'rev-parse --show-toplevel') echo "$PUBLISH_FIXTURE" ;;
+    'rev-parse --git-path release-state') echo .git/release-state ;;
     'rev-parse --verify HEAD')
         if [[ -e "$PUBLISH_FIXTURE/source-changed" ]]; then
             echo 1111111111111111111111111111111111111111
@@ -201,6 +202,28 @@ done
 if [[ $selected_case == tooling-admission ]]; then
     fixture_complete=true
     echo 'Direct publication tooling drift refused before effects (check substituted).'
+    exit 0
+fi
+if [[ $selected_case == lint-fallback ]]; then
+    # An absent receipt must explain the fresh lint and stop at its failure,
+    # before package preparation, upload or any completed publication intent.
+    for mode in check publish qualify; do
+        : > calls
+        status=0
+        PUBLISH_CLIPPY_RESULT=29 invoke "$mode" > "lint-$mode.log" 2>&1 || status=$?
+        [[ $status == 29 && ! -e target/publish/lock ]]
+        if [[ $mode == qualify ]]; then
+            grep -Fx 'Workspace lint: fresh; reason=publication-qualification' "lint-$mode.log" >/dev/null
+        else
+            grep -Fx 'Workspace lint reuse refused: missing or redirected selection' "lint-$mode.log" >/dev/null
+            grep -Fx 'Workspace lint: fresh; reason=qualified-lint-not-admitted' "lint-$mode.log" >/dev/null
+        fi
+        printf 'metadata\nclippy\n' > expected-calls
+        cmp expected-calls calls
+        if find target/publish -name intent -print | grep .; then exit 1; fi
+    done
+    fixture_complete=true
+    echo 'Publication explains fresh lint and preserves its failure before packaging/upload (effects substituted).'
     exit 0
 fi
 # Malformed membership refuses before Cargo, lint or attempt allocation.

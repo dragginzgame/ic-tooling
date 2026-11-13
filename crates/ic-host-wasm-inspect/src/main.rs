@@ -1,4 +1,5 @@
 //! Inspect explicit raw Wasm inputs without executing or transforming them.
+#![forbid(unsafe_code)]
 
 use clap::Parser as _;
 use ic_host_artifacts::{

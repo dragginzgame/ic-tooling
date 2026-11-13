@@ -48,7 +48,10 @@ ADAPTER_REAL_EDITOR="${ADAPTER_REAL_EDITOR:-$(bash "$root/scripts/release/editor
 ADAPTER_SELECTED_EDITOR="$fixture/editor"
 tooling="$fixture/tooling"$'\n'
 mkdir -p "$tooling" "$fixture/bin"
-bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$tooling" scripts/release/adapter.sh
+# This fixture already needs the complete release-script tree in each checkout.
+# Use its existing bulk preparation owner for the detached adapter too, rather
+# than walking a large companion closure with pairwise inode comparisons.
+bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$tooling"
 adapter="$tooling/scripts/release/adapter.sh"
 cat > "$ADAPTER_SELECTED_EDITOR" <<'STUB'
 #!/usr/bin/env bash
@@ -140,6 +143,15 @@ for selected_group in "${groups[@]}"; do
     mkdir "$checkout"
     bash "$root/scripts/ci/prepare-workspace-fixture.sh" "$root" "$checkout"
     bash "$root/scripts/release/prepare-validation-fixture.sh" "$root" "$checkout" --compact
+    # This suite checks metadata/receipt integration, not the invariant fixture
+    # bodies. One real execution proof exercises that boundary; test-stage-reuse
+    # owns all four actual stages and test-validation owns their complete gate
+    # inventory. Keep the production roster unchanged outside this owned fixture.
+    awk -F '\t' 'BEGIN { OFS="\t" } { if ($3 != "fixture-evidence") NF=2; print }' \
+        "$checkout/ci/tooling-checks.tsv" > "$fixture/adapter-roster"
+    mv "$fixture/adapter-roster" "$checkout/ci/tooling-checks.tsv"
+    [[ $(bash "$checkout/scripts/ci/select-tooling-checks.sh" reusable) == \
+        $'fixture-evidence\tscripts/ci/test-product-evidence.sh' ]]
     mv "$checkout/source-metadata.json" "$fixture/$selected_group.source-metadata.json"
     cd "$checkout"
     # Match the production Make entry before selection. Publication below enters
@@ -328,6 +340,7 @@ for selected_group in "${groups[@]}"; do
         cp "$state.selection" "$fixture/lint-selection.json"
         jq 'del(.release)' "$fixture/lint-selection.json" > "$state.selection"
         refuse lint_probe > "$fixture/lint-missing-context.log" 2>&1
+        grep -F 'Workspace lint reuse refused: invalid selection context' "$fixture/lint-missing-context.log" >/dev/null
         jq '.release.date = "2026-10-30"' "$fixture/lint-selection.json" > "$state.selection"
         refuse lint_probe > "$fixture/lint-changed-context.log" 2>&1
         cp "$fixture/lint-selection.json" "$state.selection"
@@ -348,17 +361,21 @@ MAKE
         RUSTFLAGS='--cfg changed_publication_context' refuse lint_probe > "$fixture/lint-environment.log" 2>&1
         refuse bash "$root/scripts/release/publication-lint.sh" "$selected_group" "$RELEASE_VERSION" "$RELEASE_SOURCE" \
             > "$fixture/lint-source.log" 2>&1
+        grep -F 'Workspace lint reuse refused: release HEAD mismatch' "$fixture/lint-source.log" >/dev/null
         printf '\nchanged source\n' >> README.md
         refuse lint_probe > "$fixture/lint-dirty.log" 2>&1
+        grep -F 'Workspace lint reuse refused: source observation failed or source changed' "$fixture/lint-dirty.log" >/dev/null
         git restore --worktree -- README.md
         cp "$gate_directory/plan.json" "$fixture/lint-full-plan.json"
         jq '.stages |= map(if .target == "release-stage-clippy-workspace" then .required = false else . end)' \
             "$fixture/lint-full-plan.json" > "$gate_directory/plan.json"
         refuse lint_probe > "$fixture/lint-narrow-plan.log" 2>&1
+        grep -F 'Workspace lint reuse refused: full workspace lint absent from plan' "$fixture/lint-narrow-plan.log" >/dev/null
         cp "$fixture/lint-full-plan.json" "$gate_directory/plan.json"
         cp "$state" "$fixture/lint-receipt"
         printf 'changed receipt\n' >> "$state"
         refuse lint_probe > "$fixture/lint-corrupt-receipt.log" 2>&1
+        grep -F 'Workspace lint reuse refused: committed release receipt admission failed' "$fixture/lint-corrupt-receipt.log" >/dev/null
         cp "$fixture/lint-receipt" "$state"
         lint_probe > "$fixture/lint-recovered.log" 2>&1
     fi

@@ -1,8 +1,8 @@
 # Toko Tooling snapshot v1
-# version	0.39.15
+# version	0.40.1
 format	1
 source	https://crates.io/crates/toko-tooling
-revision	6cc984822e80e52ff7203aadcaf293a13f9fcf33f84175871321cb3a7de703a9
+revision	fb884b05e2e5bbca2388dd0b757833fb5ad37e91b3ced09f6a37b454c7fe9f90
 # entrypoint	.githooks/pre-commit
 # entrypoint	.github/actions/prepare-common-tools/action.yml
 # entrypoint	.github/actions/retain-failure-evidence/action.yml
@@ -74,7 +74,7 @@ revision	6cc984822e80e52ff7203aadcaf293a13f9fcf33f84175871321cb3a7de703a9
 file	0211c9124882f1e59ab6a11a7e341e6d030020b4b577d9bfbf9d1445d02322d7	x	.githooks/pre-commit
 file	a593d7c0061faadbbb3d1106618eb93ace197657131756b197ed48a06008cd62	-	.github/actions/prepare-common-tools/action.yml
 file	26a269c0e63125e8bd939578a64a6a67dbc5280cd3fbfd7da8b9c8e4d44cc6d5	-	.github/actions/retain-failure-evidence/action.yml
-file	5564b1a5905a808003b3f3461e5ac9c886d08ece834bf54e72327ab4396340f9	-	TOKO-TOOLING.md
+file	2cdaad0fee111f69e993739f4d5419d1dd151aec239d65f4226abd84011a2c96	-	TOKO-TOOLING.md
 file	e32b68b467e75ae309748f3933fa652204617f03fb846cb042f6ab75e46837a2	-	ci/ic-tools.tsv
 file	9f29743b6961b36c2fdb285c9b08d2aec4f0dbb5bcf5584b556cb98185540574	-	ci/tool-versions.env
 file	91a8c4e1dc4ddb8fbba5825b1190716ddf29eb3cb49784067620b9a86b45c784	-	make/consumer.mk

@@ -51,7 +51,7 @@ Batch label errors use `ic_host_artifacts::batch::BatchLabelError`.
 
 ## Use
 
-IC Build requires Rust 1.99.1 or newer:
+IC Build requires Rust 1.100.0 or newer:
 
 ```toml
 [dependencies]

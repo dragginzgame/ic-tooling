@@ -804,10 +804,6 @@ fn coordinate_workers(
     }
 }
 
-#[expect(
-    clippy::future_not_send,
-    reason = "test worker polls borrowed builders and blocking channels on its own runtime"
-)]
 async fn run_worker<F>(
     worker: usize,
     build: &F,

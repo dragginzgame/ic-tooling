@@ -26,6 +26,31 @@ pub struct ConfigurationLimits {
     pub depth: usize,
 }
 
+/// A compiler-related declaration whose effective executable is not observed.
+///
+/// Facts contain only recognized key names, never values. Presence includes empty
+/// strings, table forms and declarations shadowed by other inputs. Consumers may
+/// refuse reuse on these facts without resolving Cargo precedence or tool paths.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CompilerOverride {
+    /// A `build` field: `rustc`, `rustc-wrapper`, `rustc-workspace-wrapper` or `rustdoc`.
+    Build(&'static str),
+    /// A direct compiler variable or `CARGO_BUILD_*` alias declared under `env`.
+    /// Includes string/table values regardless of `force`, `relative` or emptiness.
+    Environment(&'static str),
+}
+
+const COMPILER_VARIABLES: [&str; 8] = [
+    "RUSTC",
+    "RUSTC_WRAPPER",
+    "RUSTC_WORKSPACE_WRAPPER",
+    "RUSTDOC",
+    "CARGO_BUILD_RUSTC",
+    "CARGO_BUILD_RUSTC_WRAPPER",
+    "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
+    "CARGO_BUILD_RUSTDOC",
+];
+
 /// One observed configuration's location, raw-byte identity and compiler overrides.
 ///
 /// Full configuration contents, which may contain credentials, are not retained.
@@ -40,8 +65,10 @@ pub struct ConfigurationFile {
     /// environment entries, excluding output directories and unrelated credentials.
     /// `None` means the configuration contains no comparison-relevant settings.
     pub recipe_sha256: Option<Sha256Digest>,
-    /// Present build compiler/wrapper fields, in canonical field order.
-    pub compiler_overrides: Vec<&'static str>,
+    /// Compiler-related declarations in canonical order: `build` fields, then
+    /// `env` variables. Includes declarations regardless of values or precedence;
+    /// an empty list is not compiler identity, origin or cache-admission evidence.
+    pub compiler_overrides: Vec<CompilerOverride>,
 }
 
 /// Configuration observation failure; diagnostics exclude configuration contents.
@@ -65,7 +92,7 @@ pub enum ConfigurationError {
         /// Original filesystem error.
         source: io::Error,
     },
-    /// Invalid TOML or include structure, without embedding source text.
+    /// Invalid TOML, include or selection-table structure, without source text.
     #[error("invalid Cargo configuration {}: {message}", path.display())]
     Invalid {
         /// Selected configuration path.
@@ -131,10 +158,14 @@ pub fn preferred_configuration(directory: &Path) -> Option<PathBuf> {
 ///
 /// Callers own source custody, root selection and re-observation before acceptance.
 /// This does not resolve tools, execute Cargo, admit compilers or grant cache/release validity.
+/// Override facts retain every declaration; traversal order does not implement
+/// Cargo's include/config/environment precedence. Supply command-selected config
+/// files as roots too; inline `--config`, toolchain selection and the actual
+/// command environment require separate caller admission.
 ///
 /// # Errors
 /// Returns original filesystem errors or a structural refusal for relative roots,
-/// invalid TOML, malformed includes and exhausted traversal limits. Bounded reads
+/// invalid TOML, malformed include/selection tables and exhausted traversal limits. Bounded reads
 /// refuse non-regular files and excessive bytes. Error text excludes configuration contents.
 pub fn observe_configurations(
     roots: &[PathBuf],
@@ -165,20 +196,12 @@ pub(crate) fn observe_configurations_admitting(
 }
 
 /// Whether a variable overrides the selected Rust compiler, Rustdoc or their wrappers.
-/// The caller decides whether to admit or refuse such an override.
+/// Classifies names only, including Cargo aliases. Check every present entry even
+/// when its value is empty. No environment or precedence is read; callers retain
+/// effective executable admission or refusal.
 #[must_use]
 pub fn is_compiler_override(name: &str) -> bool {
-    matches!(
-        name,
-        "RUSTC"
-            | "RUSTC_WRAPPER"
-            | "RUSTC_WORKSPACE_WRAPPER"
-            | "RUSTDOC"
-            | "CARGO_BUILD_RUSTC"
-            | "CARGO_BUILD_RUSTC_WRAPPER"
-            | "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER"
-            | "CARGO_BUILD_RUSTDOC"
-    )
+    COMPILER_VARIABLES.contains(&name)
 }
 
 /// Whether a variable supplies Rust flags or Cargo build/profile/target settings.
@@ -282,7 +305,7 @@ impl ConfigurationTraversal<'_> {
         let configuration = toml::from_str::<Value>(&contents)
             .map_err(|_| invalid_configuration(config, "invalid TOML"))?;
         (self.admit)(config, &configuration)?;
-        let compiler_overrides = configured_compilers(&configuration);
+        let compiler_overrides = configured_compilers(&configuration, config)?;
         self.files.push(ConfigurationFile {
             path: config.to_owned(),
             location: location.clone(),
@@ -383,19 +406,40 @@ fn configuration_recipe(configuration: &Value) -> Option<Sha256Digest> {
         .then(|| Sha256Digest::compute(Value::Table(selected).to_string().as_bytes()))
 }
 
-fn configured_compilers(configuration: &Value) -> Vec<&'static str> {
-    [
+fn configured_compilers(
+    configuration: &Value,
+    path: &Path,
+) -> Result<Vec<CompilerOverride>, ConfigurationError> {
+    let table = |name| {
+        configuration
+            .get(name)
+            .map(|value| {
+                value.as_table().ok_or_else(|| {
+                    invalid_configuration(
+                        path,
+                        match name {
+                            "build" => "Cargo configuration `build` must be a table",
+                            _ => "Cargo configuration `env` must be a table",
+                        },
+                    )
+                })
+            })
+            .transpose()
+    };
+    let build = table("build")?;
+    let environment = table("env")?;
+    let build = [
         "rustc",
         "rustc-wrapper",
         "rustc-workspace-wrapper",
         "rustdoc",
     ]
     .into_iter()
-    .filter(|field| {
-        configuration
-            .get("build")
-            .and_then(|build| build.get(field))
-            .is_some()
-    })
-    .collect()
+    .filter(|field| build.is_some_and(|build| build.contains_key(*field)))
+    .map(CompilerOverride::Build);
+    let environment = COMPILER_VARIABLES
+        .into_iter()
+        .filter(|name| environment.is_some_and(|environment| environment.contains_key(*name)))
+        .map(CompilerOverride::Environment);
+    Ok(build.chain(environment).collect())
 }

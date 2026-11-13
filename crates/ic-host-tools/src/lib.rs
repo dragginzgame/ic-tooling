@@ -1,4 +1,5 @@
 //! IC-specific interface facts and bounded ICP responses.
+#![forbid(unsafe_code)]
 #[cfg(all(feature = "agent", not(target_family = "wasm")))]
 pub mod agent;
 #[cfg(feature = "candid")]

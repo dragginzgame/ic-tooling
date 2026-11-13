@@ -334,10 +334,6 @@ impl<'a> PreparedQualification<'a> {
         })
     }
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "ordered archive qualification retains one before/after custody boundary"
-    )]
     fn run(
         self,
         cargo: &mut impl FnMut() -> Command,

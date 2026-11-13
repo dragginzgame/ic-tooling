@@ -49,6 +49,7 @@ while read -r owner kind forbidden version expected profile; do
 name = "$owner"
 version = "0.0.0"
 edition = "2024"
+rust-version = "1.100.0"
 [workspace]
 resolver = "3"
 [features]

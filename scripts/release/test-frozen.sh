@@ -136,7 +136,7 @@ for group in text testkit; do
     package=ic-testkit
     [[ $group != text ]] || package=ic-host-text
     version=$(make --no-print-directory -s -C "$work" release-version "RELEASE_GROUP=$group")
-    # Cargo 1.99 retains publication dry-run archives in tmp-crate.
+    # Cargo retains publication dry-run archives in tmp-crate.
     archive="$work/target/package/tmp-crate/$package-$version.crate"
     sha=$(git --git-dir "$gitdir" rev-parse "$group-v$version^{}")
     tar -xOf "$archive" "$package-$version/.cargo_vcs_info.json" |

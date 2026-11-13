@@ -1,5 +1,33 @@
 # Artifact and Wasm build APIs
 
+## Build 0.84 migration
+
+`ConfigurationFile.compiler_overrides` now stores `Vec<CompilerOverride>` instead
+of bare field names. Match `CompilerOverride::Build(field)` for the four
+compiler/wrapper fields in `[build]`, or `CompilerOverride::Environment(name)`
+for `RUSTC`, `RUSTDOC`, both wrapper variables and their four `CARGO_BUILD_*`
+aliases declared in `[env]`. Update consumer diagnostic fields to the typed list.
+Code that only tests `is_empty()` needs no change.
+
+These are conservative declaration facts, not effective tool selections. Empty
+values still count, including empty wrappers that disable configured wrappers.
+String/table forms, `force` and `relative`, and declarations shadowed by included,
+parent, environment or command-line settings all remain visible. The observer
+does not retain or return the values. Invalid `build`/`env` tables are refused
+with `ConfigurationError::Invalid`; Cargo owns the remaining value semantics.
+
+Consumers may refuse reuse for any reported declaration while leaving ordinary
+Cargo execution untouched. To accept one, independently bind its effective
+executable identity and namespace custody. Configuration/recipe hashes and equal
+`--version` output do not detect replacement of the named executable or a path
+alias; an unkeyed executable digest is not origin authentication. An empty facts
+list is not a complete tool attestation either. Observe the actual command's
+environment (using `is_compiler_override` for known names), toolchain/launcher
+selection and command-line overrides separately. Supply `--config` file roots
+explicitly; refuse unsupported inline overrides rather than guessing precedence.
+Canic owns its actual cache hit/refusal integration under
+[Canic #247 — Bind effective Cargo-configured wrappers in build reuse evidence](https://github.com/dragginzgame/canic/issues/247).
+
 ## Build 0.83 migration
 
 Shared-target maintenance has one explicit entrypoint:
@@ -662,7 +690,10 @@ Published 0.6.1 exposes the engine's configuration walker through
 and the explicitly supplied Cargo home without reading ambient environment.
 `preferred_configuration` selects `config` before `config.toml`;
 `observe_configurations` follows selected include trees and returns lookup paths,
-stable locations, raw SHA-256 identities and compiler-override field names.
+stable locations, raw SHA-256 identities and typed compiler-override declarations.
+See the [Build 0.84 migration](#build-084-migration) for the conservative refusal
+surface; it neither merges declarations into an effective selection nor binds
+compiler/wrapper executable identities.
 Release 0.16 stores `ConfigurationFile.sha256` as Host's `Sha256Digest`;
 use `as_bytes()` for its unchanged raw bytes or `Display` for hexadecimal text.
 Within one call, recorded lookup paths are not read or expanded again; distinct
@@ -1311,7 +1342,7 @@ removed in 0.3.0; existing `.ic-testkit-input` sidecars are left untouched and
 grant no admission through these APIs. ICP readiness policy belongs to consumers.
 
 The cache intentionally contains no Binaryen, `icp build`, package-name, or
-PocketIC policy. This guide and [IC Build's public cache documentation](../../crates/ic-build/src/artifacts/transaction.rs)
+PocketIC policy. This guide and [IC Build's public cache documentation](../../crates/ic-build/src/artifacts/transaction/mod.rs)
 describe the supported transactional contract. Shared-target maintenance remains an IC Build contract with caller-owned policy.
 
 ## Historical extraction references

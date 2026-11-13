@@ -1,4 +1,5 @@
 //! Explicit, read-only Cargo release-candidate rendering.
+#![forbid(unsafe_code)]
 
 #[cfg(unix)]
 mod release_metadata_cli;

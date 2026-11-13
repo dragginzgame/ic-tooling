@@ -53,7 +53,8 @@ pub fn write_fixture_package(
     fs::write(
         directory.join("Cargo.toml"),
         format!(
-            "[package]\nname = \"{name}\"\nversion = \"0.0.0\"\nedition = \"2024\"\n{manifest_tail}"
+            "[package]\nname = \"{name}\"\nversion = \"0.0.0\"\nedition = \"2024\"\nrust-version = \"{}\"\n{manifest_tail}",
+            env!("CARGO_PKG_RUST_VERSION")
         ),
     )?;
     fs::write(directory.join("src/lib.rs"), source)

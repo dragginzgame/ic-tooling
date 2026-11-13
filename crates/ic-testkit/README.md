@@ -19,7 +19,7 @@ When aligning an existing stack, select its qualified versions explicitly.
 For typed application calls, enable the `wire` feature and depend directly on
 `ic-wire` for method contracts. Testkit does not own Candid codecs or call helpers.
 
-The minimum and pinned development compiler is Rust 1.99.1, and the selected PocketIC line is 16.
+The minimum and pinned development compiler is Rust 1.100.0, and the selected PocketIC line is 16.
 Testkit's portable library provides deterministic test principals through
 `ic-platform-types`, without an IC runtime dependency. The private performance
 probe selects Runtime's entrypoints directly. Native simulator operations use

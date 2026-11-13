@@ -6,6 +6,42 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.77.0]
+
+### ⚠️ Breaking
+
+- Raise the package minimum and development/release compiler to Rust 1.100.0,
+  adopting Toko Tooling 0.40.0's common inherited Rust/Clippy/Rustdoc policy.
+  Preserve reviewed FFI exceptions, forbid unsafe code in safe library/CLI roots,
+  and keep line-count advice outside blocking gates.
+  [#354 — Adopt Rust 1.100.0 and the common lint policy across maintained workspaces](https://github.com/dragginzgame/ic-tooling/issues/354).
+
+### 🔧 Changed
+
+- Reduce repeated invariant suites in release-adapter fixtures while preserving
+  real receipt/recovery checks and the full production qualification roster.
+  Report per-fixture timing, stage-admission modes and fresh-lint fallback reasons
+  for [#353 — Reduce tooling-command qualification cost in deployments and avoid duplicate same-source CI](https://github.com/dragginzgame/ic-tooling/issues/353).
+  Deployment speedup still requires measurement during an authorized release.
+- Adopt Toko Tooling 0.40.1, including deployment sequencing and failure-specific
+  recovery guidance. Document the current collector-recovery limitation; the
+  update does not install a new recovery mechanism or waive fresh artifact admission.
+- Use ordinary directory modules for Artifacts, FS, HTTP and Process, including
+  nested tests, preserving public module paths.
+
+### 📝 Qualification
+
+- Freeze the reviewed current locked graphs, including Platform 0.32.0, Types
+  0.20.0, qualification Runtime 0.22.0 and Wire 0.21.5. Retain full pre-deployment
+  source/lock copies under `.git/release-state/preserve/deploy-20261113-minors.XUnm1U/`.
+- Keep the authenticated Toko 0.40.1 tool catalog for this batch. Newer
+  cargo-sort-derives 0.15.0, yq 4.54.3 and cloc 2.12 require supplier-owned
+  catalog qualification; the release editor remains the admitted Build 0.73.0
+  recipe. Revisit these in tool maintenance, rather than changing release inputs.
+  Cloc 2.12 fixes archive expansion security; this repository's LOC command
+  counts selected source files without expanding archives. Registry and native
+  release observations remain under `target/deploy-minors-20261113.4mmynn/`.
+
 ## [0.76.5] - 2026-11-12
 
 ### ✨ Added

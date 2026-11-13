@@ -3,7 +3,7 @@
 ## Git releases
 
 The maintainer-operated `make release-patch`, `make release-minor` and
-`make release-major` commands use the [shared release contract](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/releases.md).
+`make release-major` commands use the [shared release contract](https://github.com/dragginzgame/toko-tooling/blob/dcc51b5cab3d9993f0668bc0902252364d7dc316/docs/releases/releases.md).
 Host's [delivery policy](../ci/release-delivery.txt) selects `RELEASE_DELIVERY=direct`.
 Normal increment commands use Toko Tooling's [frozen release batches](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/release-batches.md):
 capture committed source, qualify, prepare, commit/tag, atomically push, then
@@ -102,7 +102,7 @@ qualification callers. `make install-tools` includes the release
 editor; `make tools-check`/`make release-editor-check` admit it offline. Preflight
 can prepare a missing editor after source admission without per-shell exports;
 standalone verification never installs. Workspace libraries and release
-qualification require the pinned Rust 1.99.1 compiler. No Cargo-edit command renders release metadata.
+qualification require the pinned Rust 1.100.0 compiler. No Cargo-edit command renders release metadata.
 
 The read-only `make release-version RELEASE_GROUP=<group>` query needs Cargo,
 jq and the locked offline workspace metadata; it installs no tools. Prepare
@@ -128,7 +128,7 @@ policy through Shared roster admission; there is no separate Make check list.
 This mode cannot upload or select a subset. Standalone `make ci` and
 `make publish-check` each retain their full lint gate. This combined command
 does not upload packages or authorize publication.
-Full release verification and CI use the same Rust 1.99.1 qualification: native
+Full release verification and CI use the same Rust 1.100.0 qualification: native
 workspace checks, isolated feature profiles, Testkit Wasm and unsupported-filesystem
 compilation. `make compiler-check` admits the actual compiler; `make ci` retains
 the complete gate without the retired `msrv-qualification` target.
@@ -159,6 +159,14 @@ also seals the original proof and logs for admitted unchanged-stage reuse before
 version preparation, then checks the frozen inventory during payload/recovery
 admission. See [stage reuse and custody](design/release-validation.md#selected-adapter-cases-and-unchanged-stage-reuse).
 Never reinterpret an older receipt as version 5.
+
+For the next deployment, follow the reviewed
+[sequencing checklist](https://github.com/dragginzgame/toko-tooling/blob/dcc51b5cab3d9993f0668bc0902252364d7dc316/docs/releases/releases.md#plan-once-recover-the-failed-phase).
+Use the [focused consumer wiring checks](hosts.md) before the selected
+product gate when their inputs changed. The [local recovery boundary](design/release-validation.md#collector-failure-boundary)
+identifies which existing operations can reuse evidence and which require a new
+gate; a snapshot update does not add collector recovery. State the selected scope,
+known stage costs and invalidation reason before starting a costly retry.
 
 ## Registry publication
 

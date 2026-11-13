@@ -2,7 +2,7 @@
 # Shared companions: scripts/ci/cargo-publication-selection.pl scripts/ci/check-license.pl scripts/release/group.sh scripts/release/publication-lint.sh
 set -euo pipefail
 
-# Cargo workspace publication admission. Requires prepared Cargo 1.99, Git,
+# Cargo workspace publication admission. Requires prepared Cargo 1.100, Git,
 # jq and tar; Host admits archive/source proof, Shared owns attempt/Cargo/tee dispatch.
 # Cargo owns packaging, dependency ordering, verification, upload
 # and index waiting. The caller owns credentials and partial-upload recovery.
@@ -142,6 +142,12 @@ if [[ "$purpose" != qualify ]] &&
         > "$attempt/lint-evidence.log" 2>&1; then
     cat "$attempt/lint-evidence.log"
 else
+    if [[ "$purpose" == qualify ]]; then
+        printf 'Workspace lint: fresh; reason=publication-qualification\n'
+    else
+        cat "$attempt/lint-evidence.log"
+        printf 'Workspace lint: fresh; reason=qualified-lint-not-admitted\n'
+    fi
     make --no-print-directory clippy-workspace
 fi
 # Persist Host's admitted package/provenance selection before package preparation.

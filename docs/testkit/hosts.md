@@ -198,7 +198,7 @@ the graph gate separately enforces the selected native/Wasm profiles above.
 
 Use Bash 3.2 or newer, GNU Make, Git, Perl and the native Unix utilities named in
 [Toko Tooling's setup prerequisites](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/adoption/local-setup.md#bootstrap-prerequisites).
-The workspace minimum and pinned development/release compiler are Rust 1.99.1.
+The workspace minimum and pinned development/release compiler are Rust 1.100.0.
 Prepare its Wasm target explicitly. `make install-tools` prepares common host
 and Cargo tools, builds the local owner CLI and explicitly provisions PocketIC.
 Generic IC executables remain optional. `make tools-check` checks prepared
@@ -319,7 +319,7 @@ changed-contract qualification. Routine CI uses the consumer checks below.
 
 Use `make compiler-check` to admit the single local compiler selection, then
 choose the affected package/target profile. Native CI and release qualification
-use the same Rust 1.99.1 checks; no independent older-compiler lane remains.
+use the same Rust 1.100.0 checks; no independent older-compiler lane remains.
 The private development harness and its Host/Build dependencies are native-only;
 compiling every workspace target for Wasm does not qualify a supported product.
 Release execution retains separate maintainer authority.

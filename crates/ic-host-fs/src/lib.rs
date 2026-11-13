@@ -2,6 +2,7 @@
 //!
 //! Optional Unix APIs: `capability` selects held directory/file capabilities;
 //! `temporary-file` selects scoped named scratch files. Defaults select neither.
+#![forbid(unsafe_code)]
 pub mod cache_tag;
 #[cfg(all(unix, feature = "capability"))]
 pub mod capability;

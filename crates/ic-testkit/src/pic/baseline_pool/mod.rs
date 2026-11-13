@@ -1,3 +1,6 @@
+// Pool recipes promise Send futures for multithreaded runtimes; local adapters do not.
+#![warn(clippy::future_not_send)]
+
 use std::{
     num::NonZeroUsize,
     ops::Deref,
@@ -419,10 +422,6 @@ where
     ///
     /// Returns a stage-specific recipe or contract error. If warm preparation
     /// and its one recovery build both fail, the error preserves both causes.
-    #[expect(
-        clippy::significant_drop_tightening,
-        reason = "lease and coordinator scope deliberately cover the complete operation"
-    )]
     pub async fn acquire(
         &self,
     ) -> Result<

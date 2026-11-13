@@ -1,6 +1,7 @@
 //! Pure text decoding, normalization, terminal-safe rendering and tables.
 //!
 //! Callers own schemas, input-byte allowances and output.
+#![forbid(unsafe_code)]
 pub mod decimal;
 pub mod duration;
 pub mod escape;
