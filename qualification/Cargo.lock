@@ -920,7 +920,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-tools"
-version = "0.91.0"
+version = "0.92.0"
 dependencies = [
  "ic-platform",
  "ic-platform-types",
