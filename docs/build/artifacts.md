@@ -255,6 +255,19 @@ post-build input revalidation; they do not add redundant before/after probes.
 `select_cdylib_wasm` selects only reported outputs for the admitted manifest;
 capture or retain those bytes before another build can replace them.
 
+Warning policy belongs to the caller. With Rust/Cargo 1.100, set
+`CargoInvocation::render_diagnostics = true` when using
+`CARGO_BUILD_WARNINGS=deny`: Cargo refuses both newly emitted and cached warnings
+while retaining structured artifact and build-script messages. Plain
+`--message-format=json` may still return success under that Cargo setting.
+Strict plain-JSON recipes must retain compiler-level denial such as
+`RUSTFLAGS="-D warnings"`, including for cached Wasm recipes and
+`build_native_executable`. The native helper retains plain JSON so compiler
+diagnostics reach its supplied sink without overriding caller-configured stderr.
+Neither helper adds warning denial to ordinary application builds. Inspect exit
+status before admitting messages/facts; a warning-refused Cargo process may still
+report a cached artifact (`fresh = true`), which does not make execution successful.
+
 Wasm builds and batches take a final Host spawner
 argument. Pass `ic_host_process::child::OwnedChild::spawn_direct` for direct-child
 ownership, or a closure calling `OwnedChild::spawn(command, cleanup)` for an owned

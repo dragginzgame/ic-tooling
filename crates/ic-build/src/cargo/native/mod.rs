@@ -83,6 +83,10 @@ pub struct NativeExecutable {
 /// `admit` runs before each command factory. `interrupted` is polled during both
 /// metadata and build capture; cancellation retains Host's typed cleanup evidence.
 /// The caller owns signal handlers and cancellation meaning.
+/// Warning policy is also caller-owned. This plain-JSON caller needs compiler-level
+/// denial (for example, `RUSTFLAGS="-D warnings"`) when warnings must fail the build:
+/// `CARGO_BUILD_WARNINGS=deny` alone is insufficient on Cargo 1.100. Ordinary
+/// application builds may emit warnings. Existing compiler flags are never rewritten.
 ///
 /// Callers exclude source/config/tool mutation and retain artifact custody. No
 /// cache, installation, release admission, retry or elapsed-time default is added.

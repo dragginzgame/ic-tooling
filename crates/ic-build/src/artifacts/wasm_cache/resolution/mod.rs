@@ -375,8 +375,7 @@ fn append_package_inputs(
         let relative_manifest = package
             .manifest_path
             .as_std_path()
-            .strip_prefix(workspace_root)
-            .unwrap_or(package.manifest_path.as_std_path());
+            .trim_prefix(workspace_root);
         let label = PathBuf::from(format!("package/{}@{}", package.name, package.version))
             .join(relative_manifest.parent().unwrap_or_else(|| Path::new(".")));
         inputs.push((label, root.as_std_path().to_owned()));

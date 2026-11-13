@@ -8,7 +8,6 @@ license-file.workspace = true
 authors.workspace = true
 description = "PocketIC-oriented test utilities for IC canister tests"
 readme = "README.md"
-homepage = "https://github.com/dragginzgame/ic-tooling"
 repository.workspace = true
 keywords = ["internet-computer", "canister", "dfinity", "icp", "testing"]
 categories = ["development-tools::testing", "wasm"]

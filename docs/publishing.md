@@ -168,6 +168,17 @@ identifies which existing operations can reuse evidence and which require a new
 gate; a snapshot update does not add collector recovery. State the selected scope,
 known stage costs and invalidation reason before starting a costly retry.
 
+Toko 0.41 clarifies dependency isolation, rather than removing required tests.
+Qualify the selected product and required test graphs at their actual type,
+protocol and executor boundaries; an older native test supplier need not match
+every product dependency generation. A failed optional upgrade probe may be
+deferred while releasing the qualified frozen selection. A real incompatibility,
+security defect or failed required integration check still blocks it. Record the
+conflicting package, target/features and introducing paths before declaring a
+dependency blocker. These [adoption rules](https://github.com/dragginzgame/toko-tooling/blob/b4e6308894c495169278b34ea7803973c125adb6/TOKO-TOOLING.md#current-dependencies-and-upstream-independence)
+do not change this repository's full/focused gate selection, frozen delivery or
+fresh archive/registry admission. Supplier releases never wait for this checkout.
+
 ## Registry publication
 
 The consumer-owned [public package list](../ci/public-packages.txt) selects both

@@ -74,7 +74,7 @@ help:
 	@echo 'Offline setup checks: tools-check (complete set), host-tools-check, ic-tools-check, rust-tools-check'
 	@echo 'Individual setup: install-host-tools, install-ic-tools, install-rust-tools'
 	@echo 'Focused Platform/Wire adoption: dependency-adoption-check (current source; prepared PocketIC required)'
-	@echo 'Dependencies: deps-update (sequential cargo update -v in both workspaces; explicit lock updates)'
+	@echo 'Dependencies: deps-list (offline package versions/groups), deps-update (sequential explicit Cargo updates in both workspaces)'
 	@echo 'Source reports: cloc (this workspace); fleet reports run in Toko Tooling'
 	@echo 'Full release validation: ci (pinned compiler, workspace Clippy, native/Wasm and isolated features); compiler-check admits identities'
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'

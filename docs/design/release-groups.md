@@ -88,7 +88,10 @@ changed ownership; an occupied lock remains a recovery condition. The retired
 
 The reviewed Shared snapshot and pinned Build metadata editor own admission,
 selected edits and rollback; this change adds no renderer or release runner.
-Every root catalog entry retains its literal version/path and one owning block.
+Used root dependency aliases retain literal versions/paths and one owning group.
+Display-only aliases are removed from the group's `dependencies` roster without
+removing packages from `members`. `make deps-list` owns the complete package,
+version and release-group inventory, including the independent qualification root.
 
 `bash scripts/release/test-adapter.sh` exercises all declared plans, rollback,
 source/commit custody, unselected versions/requirements/ledgers and wrong-group

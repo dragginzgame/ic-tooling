@@ -17,9 +17,7 @@
       "dependencies": [
         "ic-host-artifacts",
         "ic-host-fs",
-        "ic-host-http",
-        "ic-host-process",
-        "ic-host-wasm-inspect"
+        "ic-host-process"
       ]
     },
     {
@@ -30,9 +28,7 @@
         "ic-build"
       ],
       "changelog": "releases/build/CHANGELOG.md",
-      "dependencies": [
-        "ic-build"
-      ]
+      "dependencies": []
     },
     {
       "name": "text",
@@ -57,9 +53,7 @@
       "metadata_files": [
         "releases/tools/0.82.md"
       ],
-      "dependencies": [
-        "ic-host-tools"
-      ]
+      "dependencies": []
     },
     {
       "name": "testkit",
@@ -69,9 +63,7 @@
         "ic-testkit"
       ],
       "changelog": "releases/testkit/CHANGELOG.md",
-      "dependencies": [
-        "ic-testkit"
-      ]
+      "dependencies": []
     }
   ]
 }

@@ -57,6 +57,10 @@ pub struct CargoInvocation {
     /// Explicit Cargo `--config` values, retaining their order.
     pub configurations: Vec<OsString>,
     /// Request Cargo's `json-render-diagnostics` instead of `json` messages.
+    /// Use rendered diagnostics with Cargo's `CARGO_BUILD_WARNINGS=deny` policy.
+    /// Plain JSON on Cargo 1.100 may succeed despite that policy; callers needing
+    /// strict plain JSON must retain compiler-level denial (for example, `-D warnings`).
+    /// Neither mode imposes warning denial on ordinary application builds.
     pub render_diagnostics: bool,
     /// Continue independent compilation jobs after a build error.
     pub keep_going: bool,

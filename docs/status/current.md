@@ -1,5 +1,40 @@
 # Current handoff — 2026-11-13
 
+## Toko Tooling 0.41.0 — deployment preparing
+
+Both roots select published Toko 0.41.0; the authenticated 115-file snapshot and
+all recorded entrypoints remain. `make deps-list` reports all eleven packages
+offline. Five unused product catalog aliases and their group dependency aliases
+were removed; all nine product group members remain. Tooling adoption changed only
+Toko lock blocks; deployment also includes the reviewed CC patch. Standard setup admitted the
+new installer-policy receipts while retaining old tool generations.
+
+Both roots now deny unused Cargo dependencies/workspace metadata, missing lint
+inheritance and unknown Cargo lints, plus invalid Rustdoc tables. Removed unused
+metadata and Testkit's redundant homepage; no dummy imports or lint allowances.
+Both-workspace all-target/all-feature Clippy with warnings denied, strict Rustdoc,
+portable Testkit/probe Wasm Clippy, snapshot/tool admission, pin checks and all
+five release-group graph admissions pass. Evidence: `target/toko041.36z7NR/`.
+The Build adapter's real metadata/rendering/receipt checks pass with an empty
+alias roster; its setup/product gates were substituted. Native macOS is unrun.
+
+The [publishing guide](../publishing.md) records independent native test suppliers
+and optional-upgrade deferrals. Required gates/frozen admission remain; no deployment.
+Rust 1.100's `DropGuard` replaces the test-only
+produced-value destructor; `Path::trim_prefix` preserves optional manifest prefixes
+and `Vec::from_fn` constructs indexed package fixtures.
+[#355](https://github.com/dragginzgame/ic-tooling/issues/355) has Linux qualification
+for clean/warning, rendered/plain JSON, cold/cached artifacts and compiler denial.
+Native plain JSON preserves stderr ownership and compiler guards. Keep #355 open
+for native macOS acceptance; focused evidence is `target/rust100-355.AQ2hSA/`.
+
+The authorized frozen roster is Foundation 0.77.1, then Build 0.84.1. Preserve
+entry source/locks at `.git/release-state/preserve/deploy041-20261113.jBRdpw/`;
+current evidence is `target/deploy041.q8E0gh/`. Freeze current CC 1.11.2 and Toko
+0.41.0 without further updates. Normalized Text/Tools/Testkit payload review shows
+only development tooling/lints and homepage metadata; deliver this maintenance
+through Git and retain their public versions. No new release/upload has run yet.
+
 ## Five-group deployment delivered
 
 Frozen `batch-_HKWam5i` completed from reviewed source `918fd7bf`. All nine public

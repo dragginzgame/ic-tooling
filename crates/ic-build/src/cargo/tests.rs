@@ -156,7 +156,7 @@ fn incomplete_tree_capture_and_spawn_failures_preserve_typed_host_errors() {
 #[test]
 fn grouping_bounds_observer_work_for_compatible_and_conflicting_packages() {
     for count in [1, 4, 16, 64] {
-        let packages = (0..count).map(|i| format!("role-{i}")).collect::<Vec<_>>();
+        let packages = Vec::from_fn(count, |i| format!("role-{i}"));
         for conflicting in [false, true] {
             let mut calls = 0;
             let groups = compatible_package_groups(

@@ -3,7 +3,7 @@
     "rule": "cargo-exact",
     "file": "Cargo.toml",
     "subject": "toko-tooling",
-    "value": "=0.40.1",
+    "value": "=0.41.0",
     "reason": "Toko Tooling requires one exact workspace pin matching every inherited dev-dependency, Cargo.lock and the authenticated installed snapshot; compatible automatic upgrades would invalidate tool admission.",
     "evidence": "docs/hosts.md"
   },
@@ -11,7 +11,7 @@
     "rule": "cargo-exact",
     "file": "qualification/Cargo.toml",
     "subject": "toko-tooling",
-    "value": "=0.40.1",
+    "value": "=0.41.0",
     "reason": "Toko Tooling requires one exact workspace pin matching every inherited dev-dependency, Cargo.lock and the authenticated installed snapshot; compatible automatic upgrades would invalidate tool admission.",
     "evidence": "docs/hosts.md"
   }

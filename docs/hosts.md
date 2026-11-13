@@ -1,6 +1,6 @@
 # IC Tooling qualification
 
-Toko Tooling is selected as `toko-tooling = "=0.40.1"` in each workspace's
+Toko Tooling is selected as `toko-tooling = "=0.41.0"` in each workspace's
 `[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
 Every real package inherits it unconditionally in
 `[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
@@ -13,6 +13,10 @@ pins and their documented exact-pin exceptions in
 Use `make toko-tooling-install` to install the existing Cargo.lock selection
 and `make toko-tooling-check` for offline package/pin/lock/snapshot admission.
 That check admits both workspaces against the same installed snapshot.
+
+Read-only `make deps-list` reports all local packages, versions and release groups
+in the product and qualification workspaces offline. It changes no lockfile and
+queries no registry; it replaces display-only dependency catalog entries.
 
 Explicit `make deps-update` runs `cargo update -v` sequentially in the product
 and qualification workspaces, with Cargo's normal output and no separate
@@ -27,7 +31,7 @@ Avoid dependency updates during qualification or after freezing release inputs.
 The former `deps-review` and `deps-help` commands are removed. Supplier freshness
 review and adoption/deferral decisions remain required at applicable maintenance
 and release boundaries. See the
-[dependency maintenance contract](https://github.com/dragginzgame/toko-tooling/blob/45c75d1841a291df1c7e7d943ab107d5c3822d47/docs/validation/cargo-graph-checks.md#repository-dependency-maintenance).
+[dependency maintenance contract](https://github.com/dragginzgame/toko-tooling/blob/b4e6308894c495169278b34ea7803973c125adb6/docs/validation/cargo-graph-checks.md#repository-dependency-maintenance).
 
 The snapshot contains the baseline, canonical root files and executable inputs.
 Shared reference guides stay upstream at the commit pinned by the links below;
@@ -42,7 +46,7 @@ and installed tests select both roots. `make install-server` explicitly fetches
 both locked graphs; standalone checks remain offline.
 Installation remains explicit; Rust imports are unnecessary. Direct publication
 and release adapters check tooling before effects. See the
-[root selection guide](https://github.com/dragginzgame/toko-tooling/blob/6e364f0c8d2729d57566aa740a9cd951c744d707/docs/adoption/consuming-snapshots.md#cargo-selection-and-installation).
+[root selection guide](https://github.com/dragginzgame/toko-tooling/blob/b4e6308894c495169278b34ea7803973c125adb6/docs/adoption/consuming-snapshots.md#cargo-selection-and-installation).
 
 Local shell/browser fixture defaults and explicit outside-target selections are
 documented in [qualification scratch ownership](design/fixture-scratch.md).
@@ -77,7 +81,7 @@ with Runtime/macros/guard 0.22.0 for the private probe. These supplier minors
 adopt Rust 1.100.0 and lint/must-use policy. Host Tools exposes Platform codec,
 ledger and registry identities; Testkit's portable principal helper exposes Types.
 Align callers' direct Platform/Types selections when exchanging those values.
-The pending Tools 0.92.0 and Testkit 0.102.0 minors already cover this identity and
+Published Tools 0.92.0 and Testkit 0.102.0 cover this identity and
 compiler transition. Native PocketIC identities remain upstream 16.1. The locked
 Wire 0.21.5 selection stays unchanged: its optional Platform Types integration is
 not selected here. Existing codec budgets, method identities and serialized data
@@ -86,6 +90,15 @@ contracts remain; this adoption requires no caller source or storage migration.
 Foundation and Build's normal/build graphs forbid the entire Platform family
 and higher product layers; development fixtures may still use integration owners.
 The existing graph checks own these exclusions and the probe's executor singleton.
+
+Toko 0.41's dependency-isolation rule admits each selected product and required
+qualification graph independently. An older native test supplier may coexist with
+newer product suppliers when actual exchanged types, protocols and executor
+ownership remain valid. Duplicate package names in a whole lockfile do not prove
+a conflict. Failed optional upgrade experiments block that upgrade, not release
+of a qualified frozen selection. Required integration checks and real conflicts
+still refuse; do not force a transitive version outside its owner's supported
+range to make the lockfile look uniform.
 
 After explicit tool setup and `cargo fetch --locked`, use
 `make dependency-adoption-check` for a focused composition run. It never installs
@@ -464,12 +477,14 @@ each admitted entrypoint before setup or other effects.
 `make check-no-symlinks` checks indexed and tracked/nonignored working paths in CI
 and the release gate. Publication checks complete regular source notices and the
 prepared archive's exact notice bytes before upload.
-The root catalog groups all twelve local members by release ownership, with full
-versions and their group changelog paths, including private and unused entries.
-External production-only and mixed production/test dependencies have separate
-blocks; no current external dependency is build-only or test-only. Catalog entries
-add no graph edges until members inherit them. Release admission checks every
-entry's version, actual member path and owning group's dependency roster.
+Use `make deps-list` for all nine product and two qualification members. Root
+dependency declarations exist only for actual member inheritance. Release
+admission checks each declared local alias's version/path against its group's
+dependency roster; every package remains in the separate group member roster.
+Both roots deny unused dependencies/workspace metadata, missing lint inheritance
+and unknown Cargo lints. Rustdoc also denies invalid Markdown tables. Keep strict
+compiler warning enforcement on structured JSON callers; Cargo warning mode alone
+does not reliably reject plain-JSON warnings on Rust 1.100.
 Clap is shared by production CLIs and maintained examples. FS gates its binary
 and normal Clap edge behind `cli`; generic Artifacts/FS/Process library graphs
 exclude it. Clap owns typed arguments, help, version and diagnostics; CLIs retain

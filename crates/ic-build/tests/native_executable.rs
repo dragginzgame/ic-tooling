@@ -112,6 +112,79 @@ fn actual_cargo_reports_custom_profile_executable_and_streams_failed_build_diagn
     fs::remove_dir_all(root).expect("remove native fixture");
 }
 
+#[test]
+fn native_plain_json_preserves_diagnostics_artifacts_and_compiler_warning_denial() {
+    let (root, cargo_program) = fixture();
+    let target = root.join("warning-target");
+    for (target_name, target_kind, warning) in [
+        ("worker", NativeTargetKind::Example, true),
+        ("native-fixture", NativeTargetKind::Binary, false),
+    ] {
+        let spec = NativeExecutableSpec {
+            package: "native-fixture",
+            target_name,
+            target_kind,
+            selection: CargoSelection {
+                locked: true,
+                offline: true,
+                ..Default::default()
+            },
+            max_message_bytes: 1024 * 1024,
+        };
+        for (warning_level, compiler_deny) in [("warn", false), ("deny", false), ("warn", true)] {
+            let mut original = None;
+            for _ in 0..2 {
+                let mut diagnostics = Vec::new();
+                let result = build_native_executable(
+                    &spec,
+                    || {
+                        let mut command = command(&cargo_program, &root, &target);
+                        command
+                            .env_remove("RUSTFLAGS")
+                            .env_remove("CARGO_ENCODED_RUSTFLAGS")
+                            .env("CARGO_BUILD_WARNINGS", warning_level);
+                        if compiler_deny {
+                            command.env("RUSTFLAGS", "-D warnings");
+                        }
+                        command
+                    },
+                    &mut diagnostics,
+                    || Ok(()),
+                    OwnedChild::spawn_direct,
+                    || false,
+                );
+                if warning && compiler_deny {
+                    let error = result.unwrap_err();
+                    let failure = error.downcast_ref::<ToolError>().unwrap();
+                    assert_eq!(
+                        failure.evidence().unwrap().status.unwrap().code(),
+                        Some(101)
+                    );
+                } else {
+                    let built = result.unwrap();
+                    assert_eq!(built.target_directory, target);
+                    let selected = (
+                        built.executable.clone(),
+                        fs::read(built.executable).unwrap(),
+                    );
+                    if let Some(original) = &original {
+                        assert_eq!(&selected, original);
+                    } else {
+                        original = Some(selected);
+                    }
+                }
+                if warning {
+                    assert!(String::from_utf8_lossy(&diagnostics).contains("unused_fixture"));
+                }
+                if let Some((path, bytes)) = &original {
+                    assert_eq!(&fs::read(path).unwrap(), bytes);
+                }
+            }
+        }
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
 fn fixture() -> (std::path::PathBuf, OsString) {
     let root = ic_build::testing::fs::unique_temp_directory("native-executable");
     fs::create_dir(root.join("examples")).unwrap();

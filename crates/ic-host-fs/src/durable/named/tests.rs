@@ -187,17 +187,7 @@ fn parent_replacement_is_rejected_and_cleanup_uses_original_directory() {
 
 #[test]
 fn failed_publication_cleans_staging_before_dropping_the_produced_value() {
-    use std::{cell::Cell, path::PathBuf};
-
-    struct ProducedValue<'a> {
-        stage: PathBuf,
-        present_on_drop: &'a Cell<Option<bool>>,
-    }
-    impl Drop for ProducedValue<'_> {
-        fn drop(&mut self) {
-            self.present_on_drop.set(Some(self.stage.exists()));
-        }
-    }
+    use std::{cell::Cell, mem::DropGuard};
 
     let fixture = fixture();
     let output = fixture.path().join("output");
@@ -213,10 +203,9 @@ fn failed_publication_cleans_staging_before_dropping_the_produced_value() {
             |stage, file| {
                 use std::io::Write as _;
                 file.write_all(b"new")?;
-                Ok::<_, io::Error>(ProducedValue {
-                    stage: stage.to_path_buf(),
-                    present_on_drop: &present_on_drop,
-                })
+                Ok::<_, io::Error>(DropGuard::new(stage.to_path_buf(), |stage| {
+                    present_on_drop.set(Some(stage.exists()));
+                }))
             },
             (WriterCustody::Writable, |_, _| Ok(())),
             |current, _| {

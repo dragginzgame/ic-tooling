@@ -6,6 +6,37 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.77.1]
+
+### 🔧 Changed
+
+- Adopt published Toko Tooling 0.41.0 and its offline `make deps-list` inventory
+  across both workspaces. Remove unused display-only aliases while preserving
+  package membership, release ownership and unrelated lock selections.
+- Deny Cargo's unused dependency/metadata, missing lint inheritance and unknown
+  lint findings, plus Rustdoc tables with discarded cells. Remove unused metadata
+  and the redundant Testkit homepage instead of suppressing warnings.
+- Document independent native test-supplier generations and optional-upgrade
+  deferrals at real type/protocol/executor boundaries. Required product checks,
+  frozen delivery and fresh artifact admission remain enforced.
+- Replace a test-only produced-value destructor with Rust 1.100's `DropGuard`,
+  retaining the staging-cleanup-before-value-drop regression.
+
+### 📝 Qualification
+
+- Release Foundation 0.77.1 and Build 0.84.1 from the current locked selections,
+  including the reviewed CC 1.11.2 patch. Preserve entry source and locks at
+  `.git/release-state/preserve/deploy041-20261113.jBRdpw/`. Published first-party
+  Platform/Types/Runtime, Wire, Toko and PocketIC selections are current at freeze.
+- Retain the authenticated Toko 0.41.0 native tool catalog and admitted Build
+  0.73.0 metadata editor. Newer cargo-sort-derives 0.15.0 and the previously
+  reviewed yq/cloc updates remain bounded tool-maintenance deferrals; this batch
+  does not change formatter policy or use Cloc archive expansion.
+- Normalized package review finds Text/Tools/Testkit changes limited to development
+  tooling/lints and Testkit's redundant homepage metadata. Deliver that maintenance
+  through Git, retaining their current public versions until their next product
+  release. No product API, runtime or normal/build dependency contract changed.
+
 ## [0.77.0] - 2026-11-13
 
 ### ⚠️ Breaking

@@ -6,6 +6,23 @@ Its unchanged published baseline is 0.73.6, from the
 Earlier history remains there once, under its original package scope; no version
 reset, release, tag or upload is implied by establishing this group.
 
+## [0.84.1]
+
+### 🧪 Testing
+
+- Qualify caller-owned warning policy with real Cargo 1.100 clean/warning builds,
+  fresh/cached artifacts, rendered/plain JSON, compiler-level denial and native
+  executable diagnostics. Preserve artifact/build-script selection and failed
+  process evidence; document plain JSON's Cargo warning-mode limitation without
+  changing permissive application builds or caller-owned stderr
+  ([#355 — Qualify structured Cargo warning enforcement](https://github.com/dragginzgame/ic-tooling/issues/355)).
+
+### 🧹 Cleanup
+
+- Express optional manifest-prefix removal with Rust 1.100's `Path::trim_prefix`,
+  preserving external workspace paths and input labels. Use `Vec::from_fn` for
+  indexed package fixture construction without an intermediate iterator chain.
+
 ## [0.84.0] - 2026-11-13
 
 ### 🩹 Fixed
