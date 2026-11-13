@@ -1,162 +1,123 @@
 # Current handoff — 2026-11-13
 
-## Foundation 0.76.5 delivered
+## Five-group deployment delivered
 
-Foundation 0.76.5's ledger owns its bounded-read, permission, lock and HTTP APIs.
-Consumers retain byte/path limits, permissions, trust and recovery policy.
+Frozen `batch-_HKWam5i` completed from reviewed source `918fd7bf`. All nine public
+packages are published and non-yanked; downloaded registry archives match Cargo
+index checksums and their exact group release commits. Remote main and annotated
+tags were verified. The ordinary checkout reconciled cleanly to `bdb84eba`.
 
-Release commit `963df312794cf90e4756d48420a2462e963e6c69` and annotated tag
-`foundation-v0.76.5` match GitHub main. All five Foundation packages are present
-and non-yanked on crates.io. Frozen `batch-eTIfLgJR` completed and was reconciled
-into ordinary main. Source review commits are `715af316` and `bb4df402`.
-The complete 32-stage Linux gate passed, including strict Clippy/docs and native,
-Wasm, installed PocketIC and extracted-package checks. Fresh native macOS
-qualification remains asynchronous and is not claimed here.
+| Group | Version | Release commit | Tag |
+| --- | --- | --- | --- |
+| Foundation (five packages) | 0.77.0 | `f366520eb6830d049c0622adec8e68ba7d329ced` | `foundation-v0.77.0` |
+| Build | 0.84.0 | `a86d688ad39d69ca68843b64f7e2967e5352d673` | `build-v0.84.0` |
+| Text | 0.75.0 | `42956d02b58d0ff5d1b9a68d34729e80cb5a7f39` | `text-v0.75.0` |
+| Host Tools | 0.92.0 | `1c32f4c0df1b78aec118bc25cab871543d6f03ce` | `tools-v0.92.0` |
+| Testkit | 0.102.0 | `bdb84eba0a382d65d87f6bbda5c6886df34ff2a7` | `testkit-v0.102.0` |
 
-Retain `.git/release-state/frozen/batch-eTIfLgJR/`, its managed checkout under
-`target/release-frozen/`, and `target/deploy-foundation765/` logs and registry
-observations. Gate evidence is `target/release-validation/foundation-gate.XaK96U/`
-within that checkout. No sibling release or cleanup was performed.
+Private qualification packages remain 0.96.0. No sibling source or release was
+included. No artifact or historical checkout was retired.
 
-Frozen `batch-lc826t2Z` stopped before preparation at a stale Make fixture's
-isolated-feature expectation. Clippy and formatting passed; no release/tag/upload
-was created. Its inputs and evidence remain retained. The fixture's corrected
-two-command expectation passed focused and full-gate qualification in the new batch.
+Retain `.git/release-state/frozen/batch-_HKWam5i/`, its managed checkout under
+`target/release-frozen/`, and `target/deploy-minors-20261113.4mmynn/`.
+`.git/release-state/preserve/deploy-20261113-minors.XUnm1U/` holds full entry
+source/locks, untracked files, final logs and registry readback evidence. Both
+lockfiles' non-product package blocks remain byte-identical to those entry copies;
+release preparation changed only owned product identities. Do not reapply old
+preservation locks over these supplier selections.
 
-Build 0.83.0, Text 0.74.5, Tools 0.91.0 and Testkit 0.101.0 remain published.
-Pending compiler-floor minors are Foundation 0.77.0, Build 0.84.0, Text 0.75.0,
-Tools 0.92.0 and Testkit 0.102.0. Build also includes the refusal API change below.
-Private qualification packages remain 0.96.0. Do not release unchanged groups.
+## Qualification and deployment cost
 
-## Pending Build 0.84.0 — compiler refusal facts
-
-[#352 — Compiler/wrapper identity or complete refusal facts for build reuse](https://github.com/dragginzgame/ic-tooling/issues/352)
-is closed for the local typed `Build`/`Environment` refusal facts. Empty, forced,
-relative and shadowed declarations remain; values stay private, invalid tables
-refuse and no precedence/executable resolver is added. Build 0.84.0 requires
-vector/match migration; `is_empty()` remains valid. Canic owns adoption in
-[Canic #247 — Bind effective Cargo-configured wrappers in build reuse evidence](https://github.com/dragginzgame/canic/issues/247);
-No sibling edits or delivery. All 14 configuration tests, Clippy/Rustdoc and
-links pass on Linux (`target/issue352/`); no full gate or native macOS proof.
-
-## Pending Rust 1.100.0 and Toko Tooling 0.40.1
-
-[#354 — Adopt Rust 1.100.0 and the common lint policy across maintained workspaces](https://github.com/dragginzgame/ic-tooling/issues/354)
-is implemented locally for Linux. Both roots select 1.100.0 and published Toko
-0.40.1; all eleven members inherit their owning lint table and compiler minimum.
-All 115 managed paths/entrypoints remain. Cargo tools/editor are admitted for
-1.100.0; older generations stay retained. Common/pedantic lints, safe-root forbids
-and scoped FFI/Send boundaries are qualified in `target/toko040-rust1100.2MC9BA/`.
-That batch passed both-workspace strict Clippy/Rustdoc, minimal/portable graphs,
-focused runtime and positive/negative lint consumers; Windows proof is compile-only.
-The owning issue records cases. Keep #354 open for native macOS 15 Intel/ARM.
-0.40.1's [deployment-rule review](../publishing.md), admission and one-lint CI/
-release/publication routing checks are under `target/toko0401.XXEGwz/`.
-Directory-module provenance and prior 0.39.x evidence remain; the optional Rustdoc
-checker is unselected. The authorized five-group frozen deployment is preparing;
-no new release, full gate or upload has completed yet.
-
-## Pending Platform adoption
-
-Both roots now select Platform 0.32.0 and Types 0.20.0; the private probe selects
-Runtime/macros/guard 0.22.0. Tools 0.92.0 and Testkit 0.102.0 cover the exposed Rust
-identity transition; native PocketIC remains 16.1. Wire stays at 0.21.5 with its
-optional Types integration disabled. Adoption changed only Platform-family blocks.
-Strict affected-caller Clippy, isolated graphs, Wasm/probe and public-contract
-checks pass. Installed snapshot restoration and Wire state/failure calls pass on
-Linux. The sandbox denied one Agent loopback fixture; only that case was retried
-with local-network access before continuing the remaining composition stages.
-Evidence: `target/platform-adoption.2onG3b/`. No caller edits, macOS proof or delivery.
-Keep historical preservation refs, but do not reapply their old Platform blocks.
-
-## Pending deployment qualification work
+All five complete 32-stage Linux gates passed: strict Clippy/Rustdoc, native and
+isolated feature profiles, Wasm, unsupported-filesystem compilation, installed
+PocketIC, extracted archives and installed workspace tests. Every publication
+reused its qualified full lint receipt and freshly checked source/archive custody.
+Rounded gate totals were 610/467/451/439/426 seconds in supplier order, including
+253/246/254/262/247 seconds of tooling fixtures. Later groups reused the four
+unchanged invariant fixture stages. These are gate times, not total deployment
+latency or controlled speedup measurements; preparation/Git/upload/index phases
+lack separate timings. See [the observations](../design/release-validation.md#deployment-cost-observations).
 
 [#353 — Reduce tooling-command qualification cost in deployments and avoid duplicate same-source CI](https://github.com/dragginzgame/ic-tooling/issues/353)
-has local fixture reductions and timing/admission/fallback diagnostics. All four
-production fixture stages and the 32-stage gate remain; focused Linux adapter
-samples are 114.247/108.110 seconds, not deployment/macOS speedup evidence.
-Checks are under `target/issue353/`. The [release design](../design/release-validation.md#deployment-cost-observations)
-owns timing details. Its [collector boundary](../design/release-validation.md#collector-failure-boundary)
-has no post-processing-only recovery; explain the failed phase, missing admission
-and rerun scope before retry. Keep #353 open for real deployment measurements.
-The deployment will supply actual phase evidence; no sibling delivery is included.
+remains open for missing phase evidence and the documented collector-recovery
+boundary. No collector-only recovery or whole-gate reuse was added.
 
-## Released tooling and selected inputs
+First capture `batch-j5L1wRS7` stopped at archive qualification after 22 passing
+stages. A Build fixture read Cargo's private build-script stdout path, changed
+in 1.100. It created no prepared version, tag or upload. The fix in `918fd7bf`
+compares cached JSON exports with a fixture-owned `OUT_DIR` marker; package IDs,
+cached exports and custody remain checked. The exact regression and strict Build
+Clippy passed before recapture; all subsequent archive gates passed. Retain the
+failed journal, checkout and logs without relabelling them.
 
-Foundation 0.76.5 captured Toko Tooling 0.39.15's 115-file snapshot. Prior proofs
-remain under `target/toko03913/` through `target/toko03917/` and
-`target/toko-adoption.ZfdcMi/`; current commands are in [the host guide](../hosts.md).
+[CI on the final release](https://github.com/dragginzgame/ic-tooling/actions/runs/43418366917)
+is asynchronous. Fresh native macOS 15 Intel and Apple Silicon qualification is
+not claimed by the Linux evidence. Keep
+[#354 — Adopt Rust 1.100.0 and the common lint policy across maintained workspaces](https://github.com/dragginzgame/ic-tooling/issues/354)
+open until its native macOS acceptance is demonstrated; do not infer passes.
 
-The released graph retains Platform 0.31.2, Types 0.19.4, Wire 0.21.0 and
-qualification Runtime/macros/guard 0.21.1. Its metadata/freshness evidence remains
-under `target/deploy-foundation765/`; the Foundation ledger records deferrals.
+## Shipped compiler, tooling and suppliers
 
-Unrelated ordinary lock updates were saved outside the release graph at
-`.git/release-state/preserve/deploy-20261112-foundation765/`, including both full
-locks, their patch and the prior handoff. The durable branch
-`preserve/deploy-20261112-foundation765-dependencies` retains the latest deferred
-choices. Both locks were restored after reconciliation, preserving external blocks.
-The new deployment freezes these reviewed current selections with the intended
-supplier updates, without a dependency update. Exact source, untracked files and
-both locks are preserved at `.git/release-state/preserve/deploy-20261113-minors.XUnm1U/`.
-Both locked all-feature metadata checks and the Foundation adapter/selection
-fixtures pass; evidence is `target/deploy-minors-20261113.4mmynn/`. The roster is
-Foundation 0.77.0, Build 0.84.0, Text 0.75.0, Tools 0.92.0, Testkit 0.102.0.
-No artifacts were retired.
+Both roots select Rust 1.100.0 and published Toko Tooling 0.40.1; all eleven
+members inherit the owning compiler/lint policy. All 115 managed paths and
+entrypoints remain. Cargo tools/editor are admitted for Rust 1.100.0, retaining
+older generations. Safe roots forbid unsafe code; reviewed FFI and the pool's
+Send contract keep their narrow scopes. Directory modules preserve public paths.
+Earlier compiler, lint-consumer and tooling-rule proofs remain in
+`target/toko040-rust1100.2MC9BA/` and `target/toko0401.XXEGwz/`.
 
-First capture `batch-j5L1wRS7` stopped in archive tests after 22 passing stages:
-a Build fixture read Cargo's private build-script stdout path, changed in 1.100.
-It created no prepared version, tag or upload. Retain its checkout and durable
-journal. The fixture now compares cached JSON exports with its own `OUT_DIR`
-marker; the exact regression passes. A corrected source capture requires a full
-gate because current receipts cannot admit stages across source/checkout changes.
+Both roots select Platform 0.32.0 and Types 0.20.0; the private probe selects
+Runtime/macros/guard 0.22.0. Wire resolves to 0.21.5 with optional Types integration
+disabled. Native PocketIC remains upstream 16.1. Tools/Testkit minors cover exposed
+Platform/Principal identities. Focused adoption evidence remains under
+`target/platform-adoption.2onG3b/`; the final full gates cover the released graphs.
 
-## Testkit snapshot correction and open issue
+The Foundation ledger records bounded tool deferrals: keep Toko's reviewed
+cargo-sort-derives 0.14.1, yq 4.47.2 and cloc 2.10 catalog, plus the admitted Build
+0.73.0 release editor, for this batch. Revisit newer suppliers in tool maintenance.
+Cloc 2.12 fixes archive expansion security; the selected LOC flow counts source
+files without expanding archives. Do not hand-edit managed tool catalogs.
+
+## Consumer acceptance and open work
+
+[#352 — Compiler/wrapper identity or complete refusal facts for build reuse](https://github.com/dragginzgame/ic-tooling/issues/352)
+is shipped in Build 0.84.0. `ConfigurationFile.compiler_overrides` now contains
+`CompilerOverride::Build`/`Environment` facts, preserving empty, forced, relative
+and shadowed declarations without values or a precedence/executable resolver.
+Consumers must migrate vectors/matches and independently bind compiler identity
+or refuse reuse. Canic owns adoption in
+[Canic #247 — Bind effective Cargo-configured wrappers in build reuse evidence](https://github.com/dragginzgame/canic/issues/247).
 
 [#263 — Cached snapshots and timer state](https://github.com/dragginzgame/ic-tooling/issues/263)
-is corrected in published Testkit 0.101.0, release `08a193d8`, source `a54410f1`.
-Frozen `batch-Aps5IIGp` completed and was reconciled. Its complete 32-stage Linux
-gate passed. Retain `.git/release-state/frozen/batch-Aps5IIGp/`, its managed
-checkout and `target/deploy263/`. The registry checksum and delivery verification
-are recorded in those receipts and the Testkit ledger.
-
-Native capture prepares metadata-upload snapshots through upstream PocketIC and
-Platform-owned DTOs/codec, preserving timer/hook, globals, heap/stable, Wasm,
-certified data and chunks. It requires two slots per target and transfer cycles;
-stop/drain/start, exact senders, funding and partial-failure recovery remain
-caller-owned. No client fork, second transport, timer reset or time rewind.
-Installed regressions cover repeated mutated-baseline reuse and callback rearming.
-Keep #263 open for Canic's exact two-case acceptance against the corrected release.
-No Canic edits, dependency overrides or new tests are authorized by this delivery.
+remains open for Canic's exact two-case acceptance of the correction first shipped
+in Testkit 0.101.0. Native snapshots preserve timer/hook, globals, heap/stable,
+Wasm, certified data and chunks through upstream PocketIC and Platform codecs.
+Two slots per target and transfer cycles are required; stop/drain/start, sender,
+funding and partial-failure recovery remain caller-owned. No client fork, timer
+reset, second transport or time rewind. Installed regressions pass on Linux.
 [Timers #87 — Snapshot regression qualification](https://github.com/dragginzgame/ic-timers/issues/87)
-tracks its own coverage; the timer ownership guard remains intact.
+tracks separate coverage; no sibling edits or qualification are included here.
 
-[Push CI on 43ebe178](https://github.com/dragginzgame/ic-tooling/actions/runs/43180163629)
-passes all hosts after its HTTP 403 retry (`target/ci43180163629/`); this does not
-qualify later local source changes or Rust 1.100.0.
-
-## Next independent fixes
+Next independent fixes remain outside this deployment:
 
 1. Preserve exact paths in [Build tool probes](../../crates/ic-build/src/tools/probe/mod.rs)
    and check raw directory names before archive normalization.
 2. Propagate filesystem errors from [Cargo configuration selection](../../crates/ic-build/src/cargo/environment/mod.rs).
-3. Reject empty/malformed successful [process-state observations](../../crates/ic-host-process/src/testing/mod.rs).
+3. Reject malformed successful [process observations](../../crates/ic-host-process/src/testing/mod.rs).
 
-These findings are not part of this release. Canic's separate Build migration is
+Canic's separate Build migration is
 [Canic #762 — Explicit maintenance and pruning](https://github.com/dragginzgame/canic/issues/762).
 
-## Retained evidence and contracts
+## Retained historical evidence and contracts
 
-The [previous committed handoff](https://github.com/dragginzgame/ic-tooling/blob/43ebe17817da21f9a0c376d8e87d7638a76582f6/docs/status/current.md)
-records earlier batches, exact publication identities, preservation refs and
-recovery paths. Retain them all; failed attempts must not resume under newer
-published versions or today's adapters. Existing `preserve/*` refs and
-`.git/release-state/preserve/` hold deferred lock/reconciliation evidence.
-The retired client archive remains `/tmp/ic-tooling-upstream-migration/retired-client.tar.gz`;
+The [pre-deployment handoff](https://github.com/dragginzgame/ic-tooling/blob/918fd7bffc93b51fabb573a18235085bff040978/docs/status/current.md)
+records prior delivered Foundation 0.76.5 (`batch-eTIfLgJR`) and Testkit 0.101.0
+(`batch-Aps5IIGp`), failed attempts, preservation refs and exact recovery paths.
+Retain their original journals/adapters; never relabel old receipts as current.
+Existing `preserve/*` refs and `.git/release-state/preserve/` remain intact.
+The retired client archive is `/tmp/ic-tooling-upstream-migration/retired-client.tar.gz`;
 original source is `0c17900090f0c2d2ebf3182598b49e651223845e`.
 
 Keep two-pass generated-root discovery, Darwin `File::sync_all` durability and
 discovery error downcast identity. Retain the snapshot cleanup callback's explicit
 future type; attempted `AsyncFnMut` alternatives failed its Send lifetime contract.
-Native macOS 15 Intel and Apple Silicon evidence is separate from Linux. Hosted
-qualification after delivery is asynchronous; do not wait or infer passes.

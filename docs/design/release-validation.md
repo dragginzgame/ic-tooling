@@ -261,8 +261,35 @@ three-host comparison. Hosted timings do not substitute for deployment timings.
 The focused Linux Foundation adapter fixture passed at 114.247 seconds before
 and 108.110 after the fixture reduction, with product/setup effects substituted.
 That is a modest local fixture improvement, not an end-to-end release or macOS
-speedup. The next authorized deployment must report actual stage modes/fallbacks
-and phase timings before #353's deployment acceptance can be considered complete.
+speedup.
+
+The 2026-11-13 five-group deployment completed as frozen `batch-_HKWam5i`, from
+source `918fd7bf` through release `bdb84eba`. All five selected complete gates:
+
+| Group | Passed stages | Sum of rounded stage seconds | Tooling seconds |
+| --- | --- | --- | --- |
+| Foundation 0.77.0 | 32 | 610 | 253 |
+| Build 0.84.0 | 32 | 467 | 246 |
+| Text 0.75.0 | 32 | 451 | 254 |
+| Tools 0.92.0 | 32 | 439 | 262 |
+| Testkit 0.102.0 | 32 | 426 | 247 |
+
+Foundation executed the four invariant fixture stages; subsequent groups reused
+them through matching admissions. Every publication admitted its own full-workspace
+lint receipt and freshly checked source/archive provenance. These observations
+are gate durations, not total deployment time or a controlled speedup comparison:
+compiler, source and cache warmth differ. The normal log does not separately time
+preparation, Git delivery, uploads and registry availability; #353 remains open
+for that missing phase evidence and its separate collector-recovery boundary.
+Retain `target/deploy-minors-20261113.4mmynn/` and its durable log/readback copies
+under `.git/release-state/preserve/deploy-20261113-minors.XUnm1U/`.
+
+Earlier `batch-j5L1wRS7` stopped at the 23rd stage after 22 passes: a Build fixture
+read Cargo's private build-script stdout path, changed in Cargo 1.100. No version,
+tag or upload was prepared. The corrected fixture compares cached JSON exports
+with its own `OUT_DIR` marker. Only that regression and affected Clippy ran before
+the new capture; changed source/checkout identity required new gate admissions.
+The failed batch remains retained and was not relabelled as current evidence.
 
 ## Qualification and limits
 
