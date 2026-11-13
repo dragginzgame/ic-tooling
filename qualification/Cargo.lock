@@ -1010,7 +1010,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.101.0"
+version = "0.102.0"
 dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",

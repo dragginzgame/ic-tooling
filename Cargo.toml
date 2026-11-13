@@ -46,7 +46,7 @@ ic-host-tools = { path = "crates/ic-host-tools", version = "0.92.0", default-fea
 
 # Testkit
 # Changelog : releases/testkit/CHANGELOG.md
-ic-testkit = { path = "crates/ic-testkit", version = "0.101.0", default-features = false }
+ic-testkit = { path = "crates/ic-testkit", version = "0.102.0", default-features = false }
 
 # External production dependencies
 cap-fs-ext = "4.0.2"
