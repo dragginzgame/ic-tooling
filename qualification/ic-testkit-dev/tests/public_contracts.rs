@@ -30,7 +30,7 @@ fn tooling_callers_share_principal_and_wire_contracts() {
         )
         .unwrap();
     let facade: ic_platform::Principal = owner;
-    let upstream = pocket_ic::CanisterId::from_slice(owner.as_slice());
+    let upstream = ic_testkit::pocket_ic::CanisterId::from_slice(owner.as_slice());
     assert_eq!(upstream.as_slice(), owner.as_slice());
     let _: ic_platform_types::Principal = facade;
     let limits = ic_wire::Limits {

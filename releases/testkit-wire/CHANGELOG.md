@@ -3,6 +3,14 @@
 This independent group owns `ic-testkit-wire`. Typed calls previously shipped
 inside [Testkit](../testkit/CHANGELOG.md); that history remains there.
 
+## [0.1.1] - Unreleased
+
+### 🧪 Testing
+
+- Make the registry-only caller proof use Testkit's selected client re-export
+  and explicitly select its ledger adapter features. This qualification-only
+  maintenance requires Git delivery, with no product version increment or upload.
+
 ## [0.1.0] - 2026-11-13
 
 ### ➕ Added

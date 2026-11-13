@@ -56,8 +56,8 @@ jq -e '. as $source |
         ($source.packages[] | select(.id == $ids[0])) as $package | {
         name: $name, version: $package.version,
         singleton: ($name != "ic-platform" and $name != "ic-wire"),
-        features: (if $name == "ic-host-tools" then ["registry"]
-            elif $name == "ic-platform" then ["principal", "ic-protocol"]
+        features: (if $name == "ic-host-tools" then ["registry", "ledger-evidence"]
+            elif $name == "ic-platform" then ["principal", "ic-protocol", "icrc-ledger-types"]
             else [] end)
     } end)' "$fixture/source-metadata.json" > "$fixture/selection.json"
 # These are new registry-only inputs, never edits to release metadata or root lock.
