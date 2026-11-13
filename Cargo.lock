@@ -1556,7 +1556,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.102.0"
+version = "0.103.0"
 dependencies = [
  "clap",
  "ic-host-artifacts",
