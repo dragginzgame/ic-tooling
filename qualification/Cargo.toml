@@ -22,7 +22,7 @@ ic-platform-runtime = { version = "0.22.1", default-features = false }
 ic-platform-types = { version = "0.20.1", default-features = false }
 ic-testkit = { path = "../crates/ic-testkit", version = "0.104.0", default-features = false }
 ic-testkit-perf-probe = { path = "ic-testkit-perf-probe", version = "0.96.0" }
-ic-testkit-wire = { path = "../crates/ic-testkit-wire", version = "0.0.0" }
+ic-testkit-wire = { path = "../crates/ic-testkit-wire", version = "0.1.0" }
 ic-wire = "0.22.0"
 libc = "0.2.190"
 pocket-ic = "16.1.0"

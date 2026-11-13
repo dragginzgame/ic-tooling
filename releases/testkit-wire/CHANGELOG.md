@@ -3,7 +3,7 @@
 This independent group owns `ic-testkit-wire`. Typed calls previously shipped
 inside [Testkit](../testkit/CHANGELOG.md); that history remains there.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-11-13
 
 ### ➕ Added
 
