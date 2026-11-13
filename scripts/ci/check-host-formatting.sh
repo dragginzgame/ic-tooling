@@ -13,9 +13,9 @@ fixture="$(tooling_fixture_create "$root" host-formatting)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Host formatting input retained"' EXIT
 
-# Keep the labelled first entry fixed while perturbing entries within its group.
+# Perturb adjacent used dependencies; display-only catalog aliases are retired.
 perl "$root/scripts/ci/prepare-cargo-formatting-fixture.pl" \
-    "$root/Cargo.toml" workspace.dependencies ic-host-fs ic-host-http > "$fixture/unsorted.toml"
+    "$root/Cargo.toml" workspace.dependencies ic-host-fs ic-host-process > "$fixture/unsorted.toml"
 bash "$root/scripts/ci/check-formatting-hooks.sh" "$root" \
     crates/ic-host-fs/src/durable/mod.rs Cargo.toml "$fixture/unsorted.toml" --rust-sources \
     make/consumer.mk ci/tool-versions.env ci/release-delivery.txt \

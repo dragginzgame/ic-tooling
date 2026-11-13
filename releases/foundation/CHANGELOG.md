@@ -21,6 +21,8 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
   frozen delivery and fresh artifact admission remain enforced.
 - Replace a test-only produced-value destructor with Rust 1.100's `DropGuard`,
   retaining the staging-cleanup-before-value-drop regression.
+- Keep formatting-hook perturbation on retained dependencies after retiring
+  display-only workspace aliases.
 
 ### 📝 Qualification
 

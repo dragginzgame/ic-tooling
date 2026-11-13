@@ -34,6 +34,10 @@ current evidence is `target/deploy041.q8E0gh/`. Freeze current CC 1.11.2 and Tok
 0.41.0 without further updates. Normalized Text/Tools/Testkit payload review shows
 only development tooling/lints and homepage metadata; deliver this maintenance
 through Git and retain their public versions. No new release/upload has run yet.
+`batch-K6l0kMh1` recovered its checkout after external target loss, then stopped
+after seven passing stages at a formatting fixture selecting the retired HTTP
+alias. No release was prepared. Retain its journal/logs; the corrected fixture
+selects retained FS/Process aliases and requires a new captured-source gate.
 
 ## Five-group deployment delivered
 
