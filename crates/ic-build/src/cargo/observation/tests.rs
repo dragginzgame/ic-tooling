@@ -174,6 +174,8 @@ fn actual_build_script_messages_distinguish_same_name_workspaces_and_cached_expo
             root.join("build.rs"),
             format!(
                 "fn main() {{ let root = {root:?}; \
+             std::fs::write(std::path::Path::new(&std::env::var_os(\"OUT_DIR\").unwrap())\
+             .join(\"observed-external\"), format!(\"{{}}/external.txt\", root)).unwrap(); \
              println!(\"cargo::rustc-env=OBSERVED_EXTERNAL={{}}/external.txt\", root); \
              println!(\"cargo::rerun-if-changed=build.rs\"); }}\n"
             ),
@@ -220,17 +222,16 @@ fn actual_build_script_messages_distinguish_same_name_workspaces_and_cached_expo
     assert_eq!(cached[0].package_id, second_scripts[0].package_id);
     assert_eq!(cached[0].out_dir, second_scripts[0].out_dir);
     assert_eq!(cached[0].env, second_scripts[0].env);
-    let retained_output =
-        fs::read_to_string(cached[0].out_dir.parent().unwrap().join("output")).unwrap();
     let exported = cached[0]
         .env
         .iter()
         .find(|(name, _)| name == "OBSERVED_EXTERNAL")
         .unwrap();
-    assert!(
-        retained_output
-            .lines()
-            .any(|line| line == format!("cargo::rustc-env={}={}", exported.0, exported.1))
+    // OUT_DIR is Cargo's public contract; its private captured-stdout layout
+    // changed in Cargo 1.100 and is not part of this observer's API.
+    assert_eq!(
+        fs::read_to_string(cached[0].out_dir.join("observed-external")).unwrap(),
+        exported.1
     );
     for root in [first, second, target] {
         fs::remove_dir_all(root).unwrap();

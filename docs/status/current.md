@@ -104,6 +104,13 @@ fixtures pass; evidence is `target/deploy-minors-20261113.4mmynn/`. The roster i
 Foundation 0.77.0, Build 0.84.0, Text 0.75.0, Tools 0.92.0, Testkit 0.102.0.
 No artifacts were retired.
 
+First capture `batch-j5L1wRS7` stopped in archive tests after 22 passing stages:
+a Build fixture read Cargo's private build-script stdout path, changed in 1.100.
+It created no prepared version, tag or upload. Retain its checkout and durable
+journal. The fixture now compares cached JSON exports with its own `OUT_DIR`
+marker; the exact regression passes. A corrected source capture requires a full
+gate because current receipts cannot admit stages across source/checkout changes.
+
 ## Testkit snapshot correction and open issue
 
 [#263 — Cached snapshots and timer state](https://github.com/dragginzgame/ic-tooling/issues/263)

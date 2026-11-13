@@ -8,6 +8,12 @@ reset, release, tag or upload is implied by establishing this group.
 
 ## [0.84.0]
 
+### 🩹 Fixed
+
+- Qualify cached build-script exports through a fixture-owned `OUT_DIR` file,
+  retaining package/export custody checks without relying on Cargo's private
+  captured-stdout layout, which changed in Cargo 1.100.
+
 ### ⚠️ Breaking
 
 - Require Rust 1.100.0 and Toko Tooling 0.40.0's inherited common lint policy.
