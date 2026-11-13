@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: ci/release-validation.json ci/release-validation-coverage.json ci/cargo-release-groups.json scripts/ci/validation-evidence.pl
+# Shared companions: ci/release-validation.json ci/release-validation-coverage.json ci/cargo-release-groups.json vendor/toko-tooling/scripts/ci/validation-evidence.pl
 set -euo pipefail
 [[ $# == 1 && ( $1 == full || $1 == focused || $1 == groups ) ]] || exit 2
 root="$(cd -P "${BASH_SOURCE[0]%/*}/../.." && pwd -P)"
@@ -15,7 +15,7 @@ finish() {
 }
 trap finish EXIT
 jq -cS '[.groups[].name]' ci/cargo-release-groups.json > "$scratch/groups.json"
-perl scripts/ci/validation-evidence.pl roster "$root" ci/release-validation.json \
+perl vendor/toko-tooling/scripts/ci/validation-evidence.pl roster "$root" ci/release-validation.json \
     "$scratch/groups.json" > "$scratch/stages"
 # These annotations own product coverage, not a second dispatch roster. Admit
 # every classification before publishing any target to a CI/release caller.

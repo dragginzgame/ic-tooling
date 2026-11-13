@@ -80,10 +80,11 @@ eval {
             }
             for my $p (sort { ($groups{$a->{name}} // '') cmp ($groups{$b->{name}} // '')
                     || $a->{name} cmp $b->{name} } @packages) {
-                push @rows, [$relative, $groups{$p->{name}} // '-', $p->{name}, $p->{version}];
+                my $workspace = $relative eq 'Cargo.toml' ? '(root)' : $relative =~ s{Cargo\.toml\z}{}r;
+                push @rows, [$p->{name}, $groups{$p->{name}} // '-', $workspace, $p->{version}];
             }
         }
-        my @width = map { length } qw(WORKSPACE GROUP PACKAGE VERSION);
+        my @width = map { length } qw(PACKAGE GROUP WORKSPACE VERSION);
         for my $row (@rows) {
             for my $i (0..3) {
                 $row->[$i] !~ /[\x00-\x1f\x7f]/ or die "invalid display value\n";
@@ -91,7 +92,8 @@ eval {
             }
         }
         my $format = join('  ', map { "%-${_}s" } @width) . "\n";
-        printf $format, qw(WORKSPACE GROUP PACKAGE VERSION);
+        printf $format, qw(PACKAGE GROUP WORKSPACE VERSION);
+        printf $format, map { '-' x $_ } @width;
         printf $format, @$_ for @rows;
         exit 0;
     }

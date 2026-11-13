@@ -33,7 +33,7 @@ published version that the consumer has qualified. Setup is explicit:
 
 ```sh
 : "${INSPECTOR_VERSION:?Select a qualified published inspector version}"
-bash scripts/dev/install-rust-tools.sh --consumer "$PWD" \
+bash vendor/toko-tooling/scripts/dev/install-rust-tools.sh --consumer "$PWD" \
     --package ic-host-wasm-inspect --version "$INSPECTOR_VERSION" \
     --bin ic-host-wasm-inspect --profile release
 ```
@@ -41,7 +41,7 @@ bash scripts/dev/install-rust-tools.sh --consumer "$PWD" \
 Later checks and execution use the admitted executable without installation:
 
 ```sh
-inspector="$(bash scripts/dev/install-rust-tools.sh --consumer "$PWD" \
+inspector="$(bash vendor/toko-tooling/scripts/dev/install-rust-tools.sh --consumer "$PWD" \
     --package ic-host-wasm-inspect --version "$INSPECTOR_VERSION" \
     --bin ic-host-wasm-inspect --profile release --check)"
 "$inspector" input.wasm 1048576 1000 1000 1000

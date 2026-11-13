@@ -113,7 +113,7 @@ The `cli` feature builds the server command; library-only consumers omit it.
 For Shared Tooling's lockfile-selected installer, also pass `--features cli`:
 
 ```bash
-bash scripts/dev/install-rust-tools.sh --consumer "$PWD" \
+bash vendor/toko-tooling/scripts/dev/install-rust-tools.sh --consumer "$PWD" \
   --package ic-testkit --lockfile Cargo.lock --bin ic-testkit-server \
   --profile release --features cli
 ```

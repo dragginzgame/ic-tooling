@@ -3,7 +3,7 @@ set -euo pipefail
 # Product-owned source/configuration closure for metadata-only release fixtures.
 [[ ( $# == 2 || ( $# == 3 && $3 == --compact ) ) && $1 == /* && -d $2 && ! -L $2 ]] || exit 2
 root=$1 destination=$2
-cp -R "$root/ci" "$root/make" "$root/scripts" "$destination/"
+cp -R "$root/ci" "$root/make" "$root/scripts" "$root/vendor" "$destination/"
 cp "$root/Makefile" "$root/rust-toolchain.toml" "$root/.toko-tooling.snapshot" "$root/.gitignore" "$destination/"
 # The invariant workflow matrix observes its real workflow and admitted prose
 # inventory even inside the disposable release-adapter fixture.

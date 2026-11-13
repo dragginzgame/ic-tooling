@@ -33,7 +33,7 @@ trap 'status=$?; [[ "$complete" == true || "$status" != 0 ]] || status=1; printf
     for path in "$optimizer" "$root/scripts/ci/qualify-wasm-opt.sh" \
         "$root/crates/ic-build/tests/wasm_optimizer.rs" \
         "$root/crates/ic-build/tests/fixtures/wasm-optimizer/"*; do
-        bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$path"
+        bash "$root/vendor/toko-tooling/scripts/ci/verify-file-checksum.sh" --print sha256 "$path"
         printf '%s\n' "$path"
     done
 } > "$evidence/source.txt"

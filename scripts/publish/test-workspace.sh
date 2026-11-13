@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/next-release-version.sh
+# Shared companions: vendor/toko-tooling/scripts/ci/next-release-version.sh
 set -euo pipefail
 selected_case=all
 if [[ $# != 0 ]]; then
@@ -371,7 +371,7 @@ cp original-metadata.json metadata.json
 # The shared consumer selection must match metadata before lint/package effects.
 policy="$FIXTURE_ROOT/policy"
 mkdir -p "$policy/scripts/publish" "$policy/ci"
-bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$policy" scripts/publish/workspace.sh
+bash "$root/vendor/toko-tooling/scripts/ci/prepare-script-fixture.sh" "$root" "$policy" scripts/publish/workspace.sh
 for scenario in missing extra private duplicate; do
     cp "$root/ci/public-packages.txt" "$policy/ci/public-packages.txt"
     case "$scenario" in
@@ -542,7 +542,7 @@ PUBLISH_DIRTY=1 refuse publish --packages ic-host-artifacts
 # Mixed package versions retain exact selectors and per-archive provenance.
 foundation_version="$(jq -er '.packages[] | select(.name == "ic-host-artifacts") | .version' original-metadata.json)"
 build_version="$(jq -er '.packages[] | select(.name == "ic-build") | .version' original-metadata.json)"
-integration_version="$(bash "$root/scripts/ci/next-release-version.sh" "$foundation_version" minor)"
+integration_version="$(bash "$root/vendor/toko-tooling/scripts/ci/next-release-version.sh" "$foundation_version" minor)"
 jq --arg version "$integration_version" '(.packages[] | select(.name == "ic-testkit" or .name == "ic-host-tools").version) = $version' \
     original-metadata.json > metadata.json
 for mode in check publish; do

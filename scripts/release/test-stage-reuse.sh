@@ -4,8 +4,8 @@ root="${BASH_SOURCE[0]}"
 [[ $root == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
+# shellcheck source=vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh
+source "$root/vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh"
 fixture=$(fixture_create "$root/target/release-stage-reuse.XXXXXX")
 fixture_complete=false
 finish() {
@@ -73,7 +73,7 @@ while IFS=$'\t' read -r stage _check; do
         mv "$fixture/original-output" "$original_log"
     fi
     jq -e --arg source "$source_a" '.origin.source == $source and .origin.group == "foundation"' "$first" >/dev/null
-    printf '\n# changed prefix input\n' >> scripts/ci/fixture-lifecycle.sh
+    printf '\n# changed prefix input\n' >> vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh
     run "$source_b" "$stage-changed" testkit
     jq -e '.mode == "executed"' "admissions/$stage-changed/$stage.json" >/dev/null
     printf '# new inventory input\n' > "scripts/ci/new-$stage-input.sh"

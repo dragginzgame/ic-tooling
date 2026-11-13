@@ -8,6 +8,22 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.103.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Select Wire 0.22.0 for the opt-in native adapter and private Wasm probe. Align
+  callers' direct Wire dependency when exchanging codec traits or typed failures;
+  request/reply bytes, schema limits and accepted payloads remain unchanged.
+
+### 🔧 Changed
+
+- Adopt Platform 0.32.1 and Types 0.20.1 in both workspaces, and the matching
+  Runtime/macros/guard 0.22.1 for the private probe. Preserve the native-only
+  PocketIC 16.1 dependency and portable Testkit's Types-only graph.
+  Deployment qualifies Wire 0.22.1, Platform 0.32.2, Types 0.20.2 and
+  Runtime/macros/guard 0.22.2 from the reviewed entry locks.
+
 ## [0.102.0] - 2026-11-13
 
 ### ⚠️ Breaking

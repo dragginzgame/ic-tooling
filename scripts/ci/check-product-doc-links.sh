@@ -15,4 +15,4 @@ while IFS= read -r -d '' document; do
     esac
 done < "$inventory"
 [[ ${#documents[@]} != 0 ]] || { echo 'No product documentation selected' >&2; exit 1; }
-perl scripts/ci/check-documentation-links.pl --root "$PWD" "${documents[@]}"
+perl vendor/toko-tooling/scripts/ci/check-documentation-links.pl --root "$PWD" "${documents[@]}"

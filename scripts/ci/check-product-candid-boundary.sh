@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/check-candid-boundary.pl ci/candid-boundary.json
+# Shared companions: vendor/toko-tooling/scripts/ci/check-candid-boundary.pl ci/candid-boundary.json
 set -euo pipefail
 [[ $# == 0 ]] || exit 2
 root="${BASH_SOURCE[0]}"
@@ -17,4 +17,4 @@ sources=(crates docs)
 script_input=$(find "$root/scripts" -type d \( -name target -o -name .git -o -name .tools -o -name node_modules \) -prune \
     -o \( -name '*.rs' -o -type l \) -print -quit)
 [[ -z "$script_input" ]] || sources+=(scripts)
-exec perl "$root/scripts/ci/check-candid-boundary.pl" "$root" ci/candid-boundary.json "${sources[@]}"
+exec perl "$root/vendor/toko-tooling/scripts/ci/check-candid-boundary.pl" "$root" ci/candid-boundary.json "${sources[@]}"

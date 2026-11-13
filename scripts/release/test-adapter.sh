@@ -168,8 +168,8 @@ for selected_group in "${groups[@]}"; do
     export ADAPTER_EDITOR_READY="$fixture/$selected_group.editor-ready"
     export RELEASE_PREVIOUS RELEASE_VERSION RELEASE_SOURCE
     RELEASE_PREVIOUS="$(invoke version)"
-    RELEASE_VERSION="$(bash "$root/scripts/ci/next-release-version.sh" "$RELEASE_PREVIOUS" minor)"
-    bash "$root/scripts/ci/cargo-release-group.sh" plan "$selected_group" > "$fixture/$selected_group.before.json"
+    RELEASE_VERSION="$(bash "$root/vendor/toko-tooling/scripts/ci/next-release-version.sh" "$RELEASE_PREVIOUS" minor)"
+    bash "$root/vendor/toko-tooling/scripts/ci/cargo-release-group.sh" plan "$selected_group" > "$fixture/$selected_group.before.json"
     ledger="$(jq -r .changelog "$fixture/$selected_group.before.json")"
     # Retain the consumer's real historical body, including imported undated
     # Testkit notes, while selecting this disposable attempt's next heading.
@@ -190,7 +190,7 @@ for selected_group in "${groups[@]}"; do
     fi
     [[ ! -s "$ADAPTER_EVENTS" ]]
     invoke files > "$fixture/$selected_group.files"
-    bash "$root/scripts/ci/cargo-release-group.sh" files "$selected_group" > "$fixture/$selected_group.expected-files"
+    bash "$root/vendor/toko-tooling/scripts/ci/cargo-release-group.sh" files "$selected_group" > "$fixture/$selected_group.expected-files"
     cmp "$fixture/$selected_group.files" "$fixture/$selected_group.expected-files"
     # Busy setup must not become an installation; refused source must precede it.
     if [[ $common_probes == true ]]; then
@@ -350,7 +350,7 @@ for selected_group in "${groups[@]}"; do
         grep 'Reused qualified workspace lint' "$fixture/lint-reused.log" >/dev/null
         export ADAPTER_LINT_GROUP="$selected_group" ADAPTER_LINT_VERSION="$RELEASE_VERSION" ADAPTER_LINT_COMMIT="$RELEASE_COMMIT"
         "$ADAPTER_REAL_MAKE" --no-print-directory -f - lint-context > "$fixture/lint-make-context.log" 2>&1 <<'MAKE'
-include make/tools.mk
+include vendor/toko-tooling/make/tools.mk
 .PHONY: lint-context
 lint-context:
 	@bash scripts/release/publication-lint.sh "$$ADAPTER_LINT_GROUP" "$$ADAPTER_LINT_VERSION" "$$ADAPTER_LINT_COMMIT"

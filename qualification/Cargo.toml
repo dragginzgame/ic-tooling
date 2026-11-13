@@ -17,18 +17,18 @@ ic-host-fs = { path = "../crates/ic-host-fs", version = "0.77.1", default-featur
 ic-host-process = { path = "../crates/ic-host-process", version = "0.77.1", default-features = false }
 ic-host-text = { path = "../crates/ic-host-text", version = "0.75.0", default-features = false }
 ic-host-tools = { path = "../crates/ic-host-tools", version = "0.92.0", default-features = false }
-ic-platform = { version = "0.32.0", default-features = false }
-ic-platform-runtime = { version = "0.22.0", default-features = false }
-ic-platform-types = { version = "0.20.0", default-features = false }
+ic-platform = { version = "0.32.1", default-features = false }
+ic-platform-runtime = { version = "0.22.1", default-features = false }
+ic-platform-types = { version = "0.20.1", default-features = false }
 ic-testkit = { path = "../crates/ic-testkit", version = "0.102.0", default-features = false }
 ic-testkit-perf-probe = { path = "ic-testkit-perf-probe", version = "0.96.0" }
-ic-wire = "0.21.0"
+ic-wire = "0.22.0"
 libc = "0.2.190"
 pocket-ic = "16.1.0"
 serde = { version = "1.0.228", default-features = false }
 serde_json = "1.0.150"
 tokio = { version = "1.52.3", default-features = false }
-toko-tooling = "=0.41.0"
+toko-tooling = "=0.42.5"
 
 [workspace.lints.cargo]
 unused_dependencies = "deny"

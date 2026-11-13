@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/release/select-validation.pl scripts/release/validation-baseline.sh scripts/release/validation-proof.pl scripts/release/validation-stage.sh scripts/release/validation-focus.sh ci/release-validation.json ci/release-validation-coverage.json make/release-validation-local.mk scripts/ci/run-validation-targets.sh scripts/ci/release-receipts.sh scripts/ci/validation-roster.sh scripts/ci/workspace-validation.sh
+# Shared companions: scripts/release/select-validation.pl scripts/release/validation-baseline.sh scripts/release/validation-proof.pl scripts/release/validation-stage.sh scripts/release/validation-focus.sh ci/release-validation.json ci/release-validation-coverage.json make/release-validation-local.mk vendor/toko-tooling/scripts/ci/run-validation-targets.sh vendor/toko-tooling/scripts/ci/release-receipts.sh scripts/ci/validation-roster.sh scripts/ci/workspace-validation.sh
 set -euo pipefail
 [[ $# == 2 || ( $# == 3 && $1 == fork ) ]] || { echo 'usage: validation.sh plan|fork|run|receipt|retained-receipt POINTER' >&2; exit 2; }
 operation=$1 pointer=$2
@@ -8,8 +8,8 @@ root="${BASH_SOURCE[0]}"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
 source_sha=${RELEASE_SOURCE:?} group=${RELEASE_GROUP:?}
-# shellcheck source=scripts/ci/release-receipts.sh
-source "$root/scripts/ci/release-receipts.sh"
+# shellcheck source=vendor/toko-tooling/scripts/ci/release-receipts.sh
+source "$root/vendor/toko-tooling/scripts/ci/release-receipts.sh"
 gate_directory() {
     local state
     state=$(git rev-parse --git-path release-state)
@@ -55,7 +55,8 @@ case $operation in
             "$directory/baseline.json" "$directory/plan.json" "$directory/context.json" --check
         CARGO_NET_OFFLINE=true VALIDATION_REPOSITORY_ROOT="$PWD" VALIDATION_LOG_DIR="$directory/logs" \
             TOOLING_STAGE_ADMISSIONS="$directory/stage-admissions" \
-            bash "$root/scripts/ci/run-validation-targets.sh" --plan "$directory/plan.json"
+            VALIDATION_REPOSITORY_ROOT="$root" \
+                bash "$root/vendor/toko-tooling/scripts/ci/run-validation-targets.sh" --plan "$directory/plan.json"
         release_receipt_write "$directory/shared-proof.json" \
             perl "$root/scripts/release/validation-proof.pl" verify "$source_sha" "$group" "$pointer"
         ;;

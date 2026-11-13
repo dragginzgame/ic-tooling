@@ -33,7 +33,7 @@ jobs:
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
       - name: Restore authenticated host-tool downloads
-        uses: ./.github/actions/cache-tool-downloads
+        uses: ./vendor/toko-tooling/.github/actions/cache-tool-downloads
       - name: Prepare and admit PocketIC
         shell: bash
         run: |
@@ -42,7 +42,7 @@ jobs:
           server="$(target/debug/ic-testkit-server check)"
           echo "POCKET_IC_BIN=$server" >> "$GITHUB_ENV"
       - name: Save authenticated host-tool downloads
-        uses: ./.github/actions/cache-tool-downloads
+        uses: ./vendor/toko-tooling/.github/actions/cache-tool-downloads
         with:
           mode: save
       - name: Qualify real owned sync and async instance lifetimes
@@ -65,7 +65,7 @@ jobs:
           if-no-files-found: warn
       - name: Retain runtime failure evidence
         if: ${{ failure() && !cancelled() }}
-        uses: ./.github/actions/retain-failure-evidence
+        uses: ./vendor/toko-tooling/.github/actions/retain-failure-evidence
         with:
           name: runtime-failure-${{ matrix.os }}-${{ github.run_attempt }}
           temp-root: ${{ runner.temp }}

@@ -1,5 +1,196 @@
 # Current handoff — 2026-11-13
 
+## Deployment preparing — Toko 0.42.5 and Wire 0.22
+
+The authorized roster is Foundation 0.77.2 and Tools 0.92.1 in one patch batch,
+then Testkit 0.103.0 in a minor batch. Each uses the managed checkout under this
+repository's `target/release-frozen/`, with durable journals under
+`.git/release-state/frozen/`. Reconcile the patch batch before capturing the minor;
+the adapter cannot mix increments in one batch. No sibling delivery or cleanup.
+
+Entry source, locks, supplier indexes and archive comparisons are preserved at
+`.git/release-state/preserve/deploy0425-20261113.clk428/`.
+Freeze the reviewed current locks, including Platform 0.32.2, Types 0.20.2,
+Runtime/macros/guard 0.22.2, Wire 0.22.1 and Mio 1.2.5. The compatible patches
+were already present at entry; no dependency update belongs in delivery. Their
+declared minimums remain the deliberately adopted compatible requirements.
+
+Foundation includes a changed packaged inspector setup README. Tools changes its
+normal Platform/Types minimums; Testkit changes the exposed Wire generation.
+Build 0.84.1 and Text 0.75.0 remain Git-only maintenance: every non-Cargo/provenance
+archive file is byte-identical to publication; normalized manifests differ only
+in development tooling/lints, with no new normal/build dependency contract or API.
+Compatible supplier projections during release preparation do not force their
+publication. Private qualification versions remain 0.96.0.
+
+Fresh registry review finds the selected Platform family, Wire, PocketIC and Mio
+current. Toko 0.42.6 is available but all 116 installed payloads match 0.42.5 in
+bytes and mode; defer its producer-only fixture update to the next tooling refresh.
+Retain the reviewed native catalog and Build 0.73.0 metadata editor; optional
+cargo-sort-derives 0.15.0, yq 4.54.3, cloc 2.12 and editor 0.84.1 updates belong
+to the next tool-maintenance batch. Cloc's selected source-counting flow does not
+expand archives. jq, ripgrep, Binaryen, ShellCheck, Actionlint and Gitleaks match
+their current releases. Required gates and final archive admission remain intact.
+Main is current and unprotected; planned registry versions are unoccupied.
+
+## Toko Tooling 0.42.5 — local refresh
+
+Both workspace pins and locks select published 0.42.5. The only installed payload
+change anchors fixture-retention helpers at their installed location while
+generated probes retain the consumer root. Native tool pins, the baseline,
+entrypoints, hooks and product release requirements stay unchanged. Preserve
+the pending vendor-layout, Wire/Platform and other local work.
+
+Evidence and entry source/locks are retained under
+`.git/release-state/preserve/toko0425-adoption.QStckC/`.
+Authenticated installation, both-workspace snapshot selection, existing pinned-tool
+admission, dependency pins, formatting and 665 local document links pass. Product
+retention checks pass for premature completion, success and retained failure
+through aliased scratch/cwd. A focused real consumer probe also verifies installed
+helper lookup after changing cwd while retaining the distinct consumer root and
+failure evidence. No producer-wide matrix or product rebuild was needed.
+Both locks preserve every non-tooling entry block byte-for-byte; entrypoints and
+hooks are unchanged. Native macOS and full release qualification were not run.
+No commit, push, publication or sibling change is included.
+
+## Toko Tooling 0.42.4 — local refresh
+
+Both workspace pins and locks select published 0.42.4. Three installed payloads
+change: vendor-aware release-command substitution, Cargo-tool setup maintenance
+recovery, and changed-tree diagnostics. The baseline, native tool pins, entrypoint
+roster, hook configuration and product release requirements stay unchanged.
+Pending Wire/Platform and vendor-migration work is preserved.
+
+Evidence and entry source/locks are retained under
+`.git/release-state/preserve/toko0424-adoption.nylSKP/`.
+Authenticated installation and normal tool setup/admission pass, reusing existing
+selected tools. Both-workspace snapshot admission, dependency pins, formatting
+and 665 local document links pass. Product frozen/captured release routing and
+delivery refusal pass with runner effects substituted. Both locks preserve every
+non-tooling entry block byte-for-byte; entrypoints and hooks are unchanged.
+Producer maintenance-failure matrices are not replayed against the live tool store.
+Native macOS and full product release qualification were not run.
+No commit, push, publication or sibling change is included.
+
+## Toko Tooling 0.42.3 — local refresh
+
+The requested crate is now published. Both workspaces select 0.42.3; its only
+installed payload change clarifies domain-library versus canister-endpoint
+ownership in the baseline. Existing Testkit codecs remain transport helpers,
+while the private Wasm probe owns its test endpoints. No Rust or caller migration
+is needed. Preserve the pending vendor-layout, Wire and Platform work.
+
+Evidence and resumed entry source/locks are retained under
+`.git/release-state/preserve/toko0423-adoption.PdH6Zq/`.
+Snapshot installation, both-workspace selection and existing pinned-tool admission
+pass. Dependency pins, formatting and 665 local document links pass. Every other
+installed payload hash/mode, all entrypoints and the hook configuration are
+unchanged; both locks preserve every non-tooling entry block byte-for-byte.
+Reused the 0.42.1/0.42.2 caller evidence because no executable changed. No product
+rebuild, runtime suite, native macOS qualification or full release gate was run.
+No commit, push, publication or sibling change is included.
+
+## Toko Tooling 0.42.2 — local refresh
+
+Both workspace pins/locks select published Toko 0.42.2. The authenticated preview
+changes only the installed package-admission checker; the vendor layout,
+entrypoint roster, native tool pins and product release requirements are unchanged.
+Pending Wire/Platform adoption and all other local work are preserved.
+
+Evidence and entry source/locks are retained under
+`.git/release-state/preserve/toko0422-adoption.76ydqT/`.
+Installation and pinned-tool admission pass. Both-workspace snapshot selection,
+repository-file admission, dependency pins, formatting and 665 local document
+links pass. The focused product source/archive acceptance and rejection fixture
+passes with Cargo/publication effects substituted. The unchanged vendor wiring
+retains its 0.42.1 caller evidence; no unrelated fixture or full product suite was
+replayed. All 116 installed files are admitted; entrypoints and hook configuration
+are unchanged. Both locks preserve every non-tooling entry block byte-for-byte.
+Native macOS qualification was not run. No commit, push, publication or sibling
+change is included.
+
+## Toko Tooling 0.42.1 — vendor migration
+
+Both workspaces select the published 0.42.1 crate. The authenticated exporter
+installed 116 managed files with the vendor layout, retaining root canonical
+files and the root snapshot receipt. The old managed executables/catalogs retired
+through source-ownership proof; product scripts, policy and workflows stay local.
+Release/publication entrypoints and shared actions are explicit selections.
+Make, script, action, fixture and documentation callers now use the vendor paths;
+there are no compatibility wrappers. Historical reports and release evidence keep
+their original paths. Pending Wire 0.22.0 and Platform family selections remain.
+
+Evidence, entry source and both locks are preserved at
+`.git/release-state/preserve/toko0421-adoption.4NCBXc/`.
+Standard tools are prepared/admitted, and the installed hook selects
+`vendor/toko-tooling/.githooks`. Snapshot admission, package inventory, formatting,
+local doc links, shell/workflow lint and the installed updater's unchanged preview
+pass. Product-owned Make/CI routing, hook preservation, Candid admission, scratch,
+evidence, retention and reuse checks pass. Vendor inputs now invalidate reuse;
+the CI runner has an explicit consumer root. Local EXIT tests cover premature
+completion, success and retained failure through aliased scratch/cwd; the generic
+lifecycle matrix stays upstream. The focused Build release adapter and publication
+admission checks pass with product/setup/delivery effects substituted. Group plan,
+full-roster, stage-failure, source-drift and receipt-recovery fixtures pass with
+Make effects substituted. Native macOS and complete product release qualification
+were not run. Both locks preserve all non-tooling entry blocks byte-for-byte.
+New vendor paths are intent-to-add for source-enumerating checks; no file contents
+are staged. No commit, push, publication or sibling change is included.
+
+## Platform and Wire — local adoption
+
+Both roots select Platform 0.32.1, Types 0.20.1 and Wire 0.22.0. The private probe
+selects Runtime/macros/guard 0.22.1. Registry metadata and authenticated published
+archives establish these current non-yanked versions. Platform patches were
+already resolved at task entry; the manifest minimums now describe that adoption.
+Targeted Cargo updates changed only Wire in the entry locks. Preserve the local
+Toko 0.41.1 adoption and unrelated dependency selections.
+
+Wire's minor requires caller alignment for shared trait/error identities; codec
+bytes, limits and payload admission remain unchanged. Platform's patch releases
+preserve the existing DTO/codec surfaces. PocketIC remains the external native
+16.1 client; optional Wire Types integration remains disabled.
+Pending Tools 0.92.1 and Testkit 0.103.0 ledgers do not change package versions.
+
+Evidence and entry source/lock preservation are under
+`.git/release-state/preserve/platform-wire-adoption.r7HEQw/`.
+The focused Linux `dependency-adoption-check` and `testkit-wasm-check` pass:
+isolated native/portable graphs, Host Tools codec/Agent/Registry/ledger adapters,
+snapshot DTO/refusal and Wire-only helper tests, installed PocketIC stable-memory
+restore, and the private Wire canister's state/typed-failure test. Strict Clippy
+passes for both affected public libraries with all features and for the private
+probe on Wasm. Pin checks, formatting and 665 local documentation links pass.
+Both entry locks preserve every non-Wire package block byte-for-byte. No caller
+source change or persisted-state migration was needed. Full release qualification
+and native macOS were not run.
+
+The previous ordinary `target/` tree, including Toko 0.41.1 raw logs, was removed externally before this task;
+source edits and the durable release records survived. No active build using
+this repository's target was observed before adoption. No delivery is included.
+
+## Toko Tooling 0.41.1 — local adoption
+
+Both roots now select published Toko 0.41.1. The authenticated snapshot retains
+all recorded entrypoints and changes only the baseline, package-inventory labels
+and tooling-selection verifier. Native tool pins and product release requirements
+remain unchanged. Both lockfiles update only the tooling package.
+
+The binary-only `ic-testkit-dev` package uses the newly admitted
+`target.'cfg(any())'.dev-dependencies` source marker, inherited from the same root
+pin with its existing cargo-machete exemption. Library packages retain their
+unconditional dev-dependencies; no dummy import or lint allowance was added.
+Bootstrap used the released installer located through locked Cargo metadata.
+
+Adoption evidence is under `target/toko0411.gXudiy/`. Standard tool setup/admission,
+115-file snapshot and both-workspace selection checks, eleven-package inventory,
+pin/inheritance checks, all five group graph admissions, formatting and 665 local
+documentation links pass. The private `check_packages` binary's unit-test target
+compiles with Cargo warnings denied; no package-qualification execution was run.
+Both locks preserve unrelated package blocks byte-for-byte and the entrypoint
+roster is unchanged. Native macOS and full release qualification were not run.
+No commit, push, tag, publication or sibling change is included.
+Foundation's pending 0.77.2 notes do not change package versions.
+
 ## Toko Tooling 0.41.0 — deployment delivered
 
 Both roots select published Toko 0.41.0; the authenticated 115-file snapshot and

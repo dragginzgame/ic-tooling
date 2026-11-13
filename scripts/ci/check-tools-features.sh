@@ -8,7 +8,7 @@ cd "$root"
 
 # Inspect all direct declarations (aliases, dev/build and target-specific edges)
 # before inspecting the selected transitive graphs below.
-bash scripts/ci/check-cargo-dependency-boundaries.sh --consumer "$root" --external-ic
+bash vendor/toko-tooling/scripts/ci/check-cargo-dependency-boundaries.sh --consumer "$root" --external-ic
 
 [[ $# -le 1 ]] || { echo 'usage: check-tools-features.sh [TARGET]' >&2; exit 2; }
 target="${1:-${CARGO_BUILD_TARGET:-$(rustc -vV | sed -n 's/^host: //p')}}"
@@ -22,19 +22,19 @@ esac
 # Product families and higher Tooling layers never belong below Host or Build.
 upper_layers='^(ic-wire(?:-|$)|ic-testkit(?:-|$)|ic-(auth|backup|blob-storage|jobs|metrics|persistence|query|relay|replica-watch|timers)(?:-|$)|canic(?:-|$)|icydb(?:-|$))'
 platform_family='^ic-platform(?:-|$)'
-perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http --forbid ic-build --forbid-pattern "$upper_layers" \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http --forbid ic-build --forbid-pattern "$upper_layers" \
     --forbid-pattern "$platform_family" \
     --target "$target" --require reqwest=1 --require ic-host-artifacts=1 \
     --forbid-pattern '^(ic-platform|ic-platform-types|candid|ic-agent|ic-host-(fs|process|tools)|rustls|native-tls|async-compression)$'
-perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http \
     --target wasm32-unknown-unknown --forbid-pattern '^(?!ic-host-http$)'
-perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-host-http \
     --features endpoint --target wasm32-unknown-unknown --require url=1 \
     --forbid-pattern "$upper_layers" --forbid-pattern "$platform_family" \
     --forbid-pattern '^(reqwest|ic-host-(artifacts|fs|process|tools)|rustls|native-tls|async-compression)$'
-perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid-pattern "$platform_family" --forbid-pattern "$upper_layers" \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid-pattern "$platform_family" --forbid-pattern "$upper_layers" \
     --target "$target" --forbid clap
-perl scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid-pattern "$platform_family" --forbid-pattern "$upper_layers" \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl --consumer "$root" --package ic-build --forbid-pattern "$platform_family" --forbid-pattern "$upper_layers" \
     --target "$target" --features cli --require clap=1
 # Each profile selects its parser exclusions explicitly; labels carry no policy.
 # Repeated dependency families remain local profile vocabulary.
@@ -54,7 +54,7 @@ observe_graph() {
     arguments+=(--forbid-pattern '^(ciborium|ciborium-io|ciborium-ll)$')
     arguments+=(--forbid-pattern '^(ic-cdk|ic-cdk-macros|ic-cdk-executor|ic-platform-macros|ic-platform-runtime|ic-platform-runtime-guard|ic-platform-pocket-ic|ic0)$')
     arguments+=(--forbid-pattern '^(serde_yaml|unsafe-libyaml|serde_yaml_ng|serde_yml|serde-saphyr|granit-parser)$')
-    perl "$root/scripts/ci/check-cargo-graph.pl" "${arguments[@]}" "$@"
+    perl "$root/vendor/toko-tooling/scripts/ci/check-cargo-graph.pl" "${arguments[@]}" "$@"
 }
 check_graph() {
     observe_graph "$@" > /dev/null

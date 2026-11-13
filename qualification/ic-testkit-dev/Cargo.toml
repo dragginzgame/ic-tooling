@@ -10,6 +10,9 @@ repository.workspace = true
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 pocket-ic.workspace = true
 
+[target.'cfg(any())'.dev-dependencies]
+toko-tooling.workspace = true
+
 [package.metadata.toko-tooling.loc]
 category = "build_tooling"
 
@@ -46,7 +49,6 @@ ic-testkit = { workspace = true, features = ["wire"] }
 ic-testkit-perf-probe.workspace = true
 ic-wire.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
-toko-tooling.workspace = true
 
 [lints]
 workspace = true

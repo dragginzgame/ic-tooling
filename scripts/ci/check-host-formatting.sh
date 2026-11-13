@@ -14,10 +14,10 @@ fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Host formatting input retained"' EXIT
 
 # Perturb adjacent used dependencies; display-only catalog aliases are retired.
-perl "$root/scripts/ci/prepare-cargo-formatting-fixture.pl" \
+perl "$root/vendor/toko-tooling/scripts/ci/prepare-cargo-formatting-fixture.pl" \
     "$root/Cargo.toml" workspace.dependencies ic-host-fs ic-host-process > "$fixture/unsorted.toml"
-bash "$root/scripts/ci/check-formatting-hooks.sh" "$root" \
+bash "$root/vendor/toko-tooling/scripts/ci/check-formatting-hooks.sh" "$root" \
     crates/ic-host-fs/src/durable/mod.rs Cargo.toml "$fixture/unsorted.toml" --rust-sources \
-    make/consumer.mk ci/tool-versions.env ci/release-delivery.txt \
-    scripts/ci/check-release-delivery.sh
+    vendor/toko-tooling/make/consumer.mk vendor/toko-tooling/ci/tool-versions.env ci/release-delivery.txt \
+    vendor/toko-tooling/scripts/ci/check-release-delivery.sh
 fixture_complete=true

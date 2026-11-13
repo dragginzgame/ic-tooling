@@ -48,17 +48,28 @@ export TMPDIR="${fixture%/*}"
 helper="${BASH_SOURCE[0]}"
 [[ "$helper" == /* ]] || helper="$PWD/$helper"
 bash "${helper%/*}/prepare-script-fixture.sh" "$root" "$fixture" Makefile "$@"
+# Resolve from the admitted payload, not an inherited Make variable. Consumer
+# overrides selecting the standard vendor directory must reach these substitutes.
+tooling_root="$fixture"
+stub_roots=("$fixture")
+if [[ -f "$fixture/vendor/toko-tooling/make/release.mk" ]]; then
+    tooling_root="$fixture/vendor/toko-tooling"
+    stub_roots+=("$tooling_root")
+fi
 # The copier never executes payloads. Replace the admitted runner before Make
 # can evaluate the selected consumer code, including parse-time expressions.
-mkdir -p "$fixture/scripts/ci"
-cat > "$fixture/scripts/ci/run-release.sh" <<'STUB'
+# Cover both conventional locations if a consumer selects a mixed migration
+# payload; a root copy must not escape substitution when vendor is selected.
+for stub_root in "${stub_roots[@]}"; do
+mkdir -p "$stub_root/scripts/ci"
+cat > "$stub_root/scripts/ci/run-release.sh" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\0' "$@" >> "$RELEASE_COMMAND_EVENTS"
 exit "$RELEASE_COMMAND_RESULT"
 STUB
-chmod +x "$fixture/scripts/ci/run-release.sh"
-cat > "$fixture/scripts/ci/run-release-batch.pl" <<'STUB'
+chmod +x "$stub_root/scripts/ci/run-release.sh"
+cat > "$stub_root/scripts/ci/run-release-batch.pl" <<'STUB'
 use strict;
 use warnings;
 open my $events, '>>', $ENV{RELEASE_COMMAND_EVENTS} or die $!;
@@ -68,20 +79,21 @@ exit $ENV{RELEASE_COMMAND_RESULT};
 STUB
 # This fixture proves dispatch only; production admission/cleanup have their own
 # contract fixtures. Never run those effects against a synthetic non-Git tree.
-mkdir -p "$fixture/scripts/dev"
-cat > "$fixture/scripts/dev/clean-empty-source-dirs.pl" <<'STUB'
+mkdir -p "$stub_root/scripts/dev"
+cat > "$stub_root/scripts/dev/clean-empty-source-dirs.pl" <<'STUB'
 print "Cleanup substituted for release dispatch qualification.\n";
 STUB
-cat > "$fixture/scripts/dev/toko-tooling.sh" <<'STUB'
+cat > "$stub_root/scripts/dev/toko-tooling.sh" <<'STUB'
 #!/usr/bin/env bash
 [[ "${1:-}" == check ]]
 STUB
+done
 export RELEASE_COMMAND_EVENTS="$fixture/events"
 cd "$fixture"
-# This checker supports a root snapshot only. Override reviewed Makefile
+# Support producer/root and installed vendor layouts. Override reviewed Makefile
 # defaults/assignments as well as the environment, so its include cannot route
 # to the original checkout. Consumer Make code remains reviewed executable input.
-fixture_make=(make --no-print-directory -f Makefile "TOKO_TOOLING_ROOT=$fixture")
+fixture_make=(make --no-print-directory -f Makefile "TOKO_TOOLING_ROOT=$tooling_root")
 cat > release-command-probe.mk <<'PROBE'
 .PHONY: shared-release-command-selection
 shared-release-command-selection:

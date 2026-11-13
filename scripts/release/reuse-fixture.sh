@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/run-validation-stage.pl scripts/release/observe-fixture-retention.pl scripts/ci/select-tooling-checks.sh ci/tooling-checks.tsv
+# Shared companions: vendor/toko-tooling/scripts/ci/run-validation-stage.pl scripts/release/observe-fixture-retention.pl scripts/ci/select-tooling-checks.sh ci/tooling-checks.tsv
 set -euo pipefail
 [[ $# -ge 1 && $# -le 2 ]] || exit 2
 group=$1
@@ -32,7 +32,7 @@ capture=$(mktemp "$state/execution.XXXXXX")
 jq -cnS --arg path "$PATH" --arg tmp "$root/$state/tmp" --arg stage "$stage" \
     --arg yq "${YQ:-$root/.tools/host/bin/yq}" \
     '{PATH:$path,TMPDIR:$tmp,LC_ALL:"C",TOOLING_FIXTURE_STAGE:$stage,YQ:$yq}' > "$environment"
-perl scripts/ci/run-validation-stage.pl --state "$state" --stage "$stage" \
+perl vendor/toko-tooling/scripts/ci/run-validation-stage.pl --state "$state" --stage "$stage" \
     --contract "tooling-$stage/1" --source "$source" --group "$group" \
     --observe scripts/release/observe-fixture-retention.pl --environment "$environment" \
     --max-bytes 33554432 -- bash "$check" | tee "$capture"

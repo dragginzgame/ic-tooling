@@ -49,4 +49,4 @@ if [[ ${#inputs[@]} == 0 ]]; then
     echo 'No product qualification evidence was produced.' >&2
     exit 0
 fi
-bash "$root/scripts/ci/archive-evidence.sh" "$output" "${inputs[@]}"
+bash "$root/vendor/toko-tooling/scripts/ci/archive-evidence.sh" "$output" "${inputs[@]}"

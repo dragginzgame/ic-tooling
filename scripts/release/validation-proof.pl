@@ -1,12 +1,12 @@
 #!/usr/bin/env perl
-# Shared companions: scripts/ci/validation-evidence.pl scripts/ci/ValidationPlan.pm
+# Shared companions: vendor/toko-tooling/scripts/ci/validation-evidence.pl vendor/toko-tooling/scripts/ci/ValidationPlan.pm
 use strict;
 use warnings;
 use JSON::PP;
 use File::Find;
 use Cwd qw(getcwd);
 use FindBin qw($RealBin);
-use lib "$RealBin/../ci";
+use lib "$RealBin/../../vendor/toko-tooling/scripts/ci";
 use ValidationPlan qw(document digest relative_path);
 
 # Shared owns execution evidence; Tooling owns the gate pointer and frozen
@@ -85,7 +85,7 @@ for my $path (@admissions) {
 if ($operation ne 'receipt') {
     my @args = ($operation, $root, "$gate/plan.json", $source, $group, $runs[0], "$gate/context.json");
     push @args, $proof_path if $operation eq 'check';
-    exec $^X, "$RealBin/../ci/validation-evidence.pl", @args;
+    exec $^X, "$RealBin/../../vendor/toko-tooling/scripts/ci/validation-evidence.pl", @args;
     die "start shared evidence verifier: $!\n";
 }
 my $proof = document($root, $proof_path);

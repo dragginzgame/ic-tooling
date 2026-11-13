@@ -24,13 +24,14 @@ find({no_chdir=>1,wanted=>sub {
     return unless $routing || /\.sh\z/;
     -f $_ && !-l $_ or die "nonregular fixture input: $_\n";
     $files{$_}=1;
-}}, $routing ? qw(scripts ci make .github docs) : ('scripts'));
+}}, $routing ? qw(scripts ci make .github docs vendor/toko-tooling)
+    : qw(scripts vendor/toko-tooling/scripts));
 if ($routing) {
     $files{$_}=1 for qw(Makefile rust-toolchain.toml .toko-tooling.snapshot TOKO-TOOLING.md LICENSE.md);
 }
 my %tools;
-for my $name (qw(awk bash cat cmp cp dirname env grep gzip jq ln mkdir mktemp mv perl rg rm sed tar tee),
-    $routing ? qw(chmod cut find git head make pwd sort touch tr uname wc) : ()) {
+for my $name (qw(awk bash cat cmp cp dirname env grep gzip jq ln mkdir mktemp mv perl rg rm sed sort tar tee),
+    $routing ? qw(chmod cut find git head make pwd touch tr uname wc) : ()) {
     my ($path) = grep { -f $_ && -x $_ } map { "$_/$name" } split /:/, $ENV{PATH};
     defined $path or die "fixture tool missing: $name\n";
     $tools{$name}=abs_path($path) // die "fixture tool unresolved: $name\n";

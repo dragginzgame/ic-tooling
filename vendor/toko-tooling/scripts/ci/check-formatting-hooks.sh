@@ -11,6 +11,11 @@ root="$1"
 [[ "$root" == /* ]] || root="$PWD/$root"
 root="$(cd -P "$root" && printf '%s/.' "$PWD")"
 root="${root%/.}"
+tooling_prefix=''
+[[ ! -d "$root/vendor/toko-tooling" ]] || tooling_prefix=vendor/toko-tooling/
+hook="${tooling_prefix}.githooks/pre-commit"
+installer="${tooling_prefix}scripts/dev/install-git-hooks.sh"
+execution="${tooling_prefix}scripts/ci/check-make-execution.sh"
 rust="$2"; manifest="$3"; unsorted="$4"
 shift 4
 rust_sources=false
@@ -22,7 +27,7 @@ else
     [[ "$unsorted" == /* ]] || unsorted="$PWD/$unsorted"
     [[ -f "$unsorted" && ! -L "$unsorted" ]] || exit 2
 fi
-for path in "$rust" "$manifest" Makefile README.md .githooks/pre-commit scripts/dev/install-git-hooks.sh scripts/ci/check-make-execution.sh "$@"; do
+for path in "$rust" "$manifest" Makefile README.md "$hook" "$installer" "$execution" "$@"; do
     case "$path" in
         ''|/*|..|../*|*/../*|*/..|./*|*/./*|*/.|.git|.git/*) echo "invalid relative input: $path" >&2; exit 2 ;;
     esac
@@ -82,7 +87,7 @@ if LC_ALL=C grep -Ev '^(100(644|755)|160000) ' "$fixture/entries" > "$fixture/un
 fi
 git checkout-index --all
 if [[ "$rust_sources" == true ]]; then
-    bash "$root/scripts/ci/select-rust-formatting-sources.sh" "$root" > "$fixture/rust-sources"
+    bash "$script_dir/select-rust-formatting-sources.sh" "$root" > "$fixture/rust-sources"
     while IFS= read -r -d '' path; do
         if [[ -e "$root/$path" ]]; then
             parent=.
@@ -96,8 +101,7 @@ if [[ "$rust_sources" == true ]]; then
     done < "$fixture/rust-sources"
 fi
 bash "$script_dir/prepare-script-fixture.sh" "$root" "$PWD" \
-    "$rust" "$manifest" Makefile .githooks/pre-commit \
-    scripts/dev/install-git-hooks.sh scripts/ci/check-make-execution.sh "$@"
+    "$rust" "$manifest" Makefile "$hook" "$installer" "$execution" "$@"
 # Stage the copied closure, including new companions. Opaque gitlinks from
 # HEAD have no worktree here and must not be staged as removals.
 git ls-files --modified --others --exclude-standard -z > "$fixture/stage-inputs"
@@ -122,7 +126,7 @@ preserved_locks() {
     while IFS= read -r -d '' path; do cmp "$fixture/base/$path" "$path"; done < "$fixture/locks"
 }
 reject_hook() {
-    if bash .githooks/pre-commit > .git/rejection.log 2>&1; then
+    if bash "$hook" > .git/rejection.log 2>&1; then
         echo 'hook accepted a failing case' >&2; exit 1
     fi
     [[ "$(git write-tree)" == "$tree" ]] || exit 1
@@ -137,7 +141,7 @@ printf '\nUnrelated working edit.\n' >> README.md
 cp README.md .git/readme
 printf 'untracked evidence\n' > shared-hook-untracked.txt
 tree="$(git write-tree)"
-bash .githooks/pre-commit > .git/formatting.log 2>&1
+bash "$hook" > .git/formatting.log 2>&1
 [[ "$(git write-tree)" != "$tree" ]] || exit 1
 git --literal-pathspecs diff --exit-code -- "$rust" "$manifest" > .git/working-diff
 cmp "$fixture/sorted-manifest" "$manifest"
@@ -148,7 +152,7 @@ git diff --cached --exit-code HEAD -- README.md > .git/readme-index
 preserved_locks
 make --no-print-directory fmt-check > .git/check.log 2>&1
 tree="$(git write-tree)"
-bash .githooks/pre-commit >> .git/formatting.log 2>&1
+bash "$hook" >> .git/formatting.log 2>&1
 [[ "$(git write-tree)" == "$tree" ]] || exit 1
 for selected in "$rust" "$manifest"; do
     new_case "partial-${selected##*/}"
@@ -168,12 +172,12 @@ tree="$(git write-tree)"
 reject_hook
 cmp "$fixture/sorted-manifest" "$manifest"
 new_case installer
-bash scripts/dev/install-git-hooks.sh --consumer "$PWD" > .git/install.log 2>&1
-[[ "$(git config --local --get core.hooksPath)" == .githooks ]] || exit 1
+bash "$installer" --consumer "$PWD" > .git/install.log 2>&1
+[[ "$(git config --local --get core.hooksPath)" == "${tooling_prefix}.githooks" ]] || exit 1
 ln -s "$PWD" "$fixture/alias"
-(cd "$fixture/alias"; bash scripts/dev/install-git-hooks.sh --consumer "$PWD") >> .git/install.log 2>&1
+(cd "$fixture/alias"; bash "$installer" --consumer "$PWD") >> .git/install.log 2>&1
 git config --local core.hooksPath existing-hooks
-if bash scripts/dev/install-git-hooks.sh --consumer "$PWD" > .git/conflict.log 2>&1; then exit 1; fi
+if bash "$installer" --consumer "$PWD" > .git/conflict.log 2>&1; then exit 1; fi
 [[ "$(git config --local --get core.hooksPath)" == existing-hooks ]] || exit 1
 echo 'Consumer formatting, preservation and hook installation checks passed'
 if [[ "$perturb_manifest" == true ]]; then echo 'Dependency sorting perturbation passed'; fi

@@ -26,14 +26,14 @@ if TMPDIR="$fixture/file" tooling_fixture_create "$checkout" file > "$fixture/fi
 [[ $(cat "$fixture/file") == caller-owned ]]
 
 # Actual Make/driver routing; substitute only the unrelated leaf check.
-bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$checkout" \
-    Makefile make/consumer.mk make/testkit.mk ci/tool-versions.env
+bash "$root/vendor/toko-tooling/scripts/ci/prepare-script-fixture.sh" "$root" "$checkout" \
+    Makefile vendor/toko-tooling/make/consumer.mk make/testkit.mk vendor/toko-tooling/ci/tool-versions.env
 printf 'scripts/ci/probe-scratch.sh\ttooling\n' > "$checkout/ci/tooling-checks.tsv"
 cat > "$checkout/scripts/ci/probe-scratch.sh" <<'PROBE'
 #!/usr/bin/env bash
 set -euo pipefail
 [[ $TMPDIR == "$PWD/target/tmp" ]]
-source scripts/ci/fixture-lifecycle.sh
+source vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh
 child=$(fixture_create "$TMPDIR/nested-shared.XXXXXX")
 printf '%s\n' "$child" > nested-path
 fixture_complete=true

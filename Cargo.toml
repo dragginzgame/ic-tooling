@@ -31,8 +31,8 @@ ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.77.1", def
 ic-host-fs = { path = "crates/ic-host-fs", version = "0.77.1", default-features = false }
 ic-host-process = { path = "crates/ic-host-process", version = "0.77.1", default-features = false }
 ic-host-text = { path = "crates/ic-host-text", version = "0.75.0", default-features = false }
-ic-platform = { version = "0.32.0", default-features = false }
-ic-platform-types = { version = "0.20.0", default-features = false }
+ic-platform = { version = "0.32.1", default-features = false }
+ic-platform-types = { version = "0.20.1", default-features = false }
 libc = "0.2.190"
 pocket-ic = "16.1.0"
 prost = "0.14.3"
@@ -50,7 +50,7 @@ wat = { version = "~1.263.0", default-features = false }
 yaml_serde = "0.10.7"
 
 clap = { version = "4.6.7", default-features = false, features = ["std", "help", "usage", "error-context"] }
-ic-wire = "0.21.0"
+ic-wire = "0.22.0"
 leb128 = "0.2.5"
 reqwest = { version = "0.13.5", default-features = false }
 serde = { version = "1.0.228", default-features = false }
@@ -58,7 +58,7 @@ serde_json = "1.0.150"
 tokio = { version = "1.52.3", default-features = false }
 wasmparser = { version = "0.263", default-features = false, features = ["std", "features"] }
 
-toko-tooling = "=0.41.0"
+toko-tooling = "=0.42.5"
 
 [workspace.lints.cargo]
 unused_dependencies = "deny"

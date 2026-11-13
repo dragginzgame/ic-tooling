@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/fixture-lifecycle.sh
+# Shared companions: vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh
 # Product defaults only; Shared retains creation, physical anchoring and cleanup.
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "${BASH_SOURCE[0]%/*}/fixture-lifecycle.sh"
+# shellcheck source=vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh
+source "${BASH_SOURCE[0]%/*}/../../vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh"
 
 tooling_fixture_parent() {
     [[ $# == 1 && "$1" == /* ]] || return 2

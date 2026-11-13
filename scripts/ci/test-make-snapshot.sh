@@ -24,16 +24,16 @@ unset RELEASE_SETUP_MODE PUBLICATION_RESULT
 export FORMAT_RUST_ARGS=--no-cache
 # shellcheck source=scripts/ci/product-fixture.sh
 source "$root/scripts/ci/product-fixture.sh"
-# shellcheck source=scripts/ci/make-adapter-probes.sh
-source "$root/scripts/ci/make-adapter-probes.sh"
+# shellcheck source=vendor/toko-tooling/scripts/ci/make-adapter-probes.sh
+source "$root/vendor/toko-tooling/scripts/ci/make-adapter-probes.sh"
 fixture="$(tooling_fixture_create "$root" host-make-snapshot)"
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Host Make evidence retained"' EXIT
 export TMPDIR="${fixture%/*}"
 mkdir -p "$fixture/local"
-bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/local" \
-    Makefile make/consumer.mk scripts/ci/check-pipe-jobserver.pl scripts/release/editor.sh
-for input in Makefile make/testkit.mk ci/tool-versions.env ci/release-delivery.txt scripts/ci/check-format-tools.sh \
+bash "$root/vendor/toko-tooling/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/local" \
+    Makefile vendor/toko-tooling/make/consumer.mk vendor/toko-tooling/scripts/ci/check-pipe-jobserver.pl scripts/release/editor.sh
+for input in Makefile make/testkit.mk vendor/toko-tooling/ci/tool-versions.env ci/release-delivery.txt vendor/toko-tooling/scripts/ci/check-format-tools.sh \
     ci/tooling-checks.tsv scripts/ci/select-tooling-checks.sh; do
     parent=.
     [[ "$input" != */* ]] || parent="${input%/*}"
@@ -68,7 +68,7 @@ qualification_format_packages=()
 while IFS= read -r package; do qualification_format_packages+=(--package "$package"); done \
     < <(jq -r '.packages[].name' "$HOST_MAKE_QUALIFICATION_METADATA")
 export HOST_MAKE_EVENTS="$fixture/events" HOST_MAKE_EXTERNAL="$fixture/external-events"
-export HOST_MAKE_JOBSERVER_PROBE="$fixture/local/scripts/ci/check-pipe-jobserver.pl"
+export HOST_MAKE_JOBSERVER_PROBE="$fixture/local/vendor/toko-tooling/scripts/ci/check-pipe-jobserver.pl"
 mkdir -p "$fixture/external/scripts/ci"
 for helper in check-make-execution.sh check-format-tools.sh run-release.sh; do
     cat > "$fixture/external/scripts/ci/$helper" <<'STUB'
@@ -108,7 +108,7 @@ case "$*" in
         ;;
 esac
 STUB
-cat > "$fixture/local/scripts/ci/run-release.sh" <<'STUB'
+cat > "$fixture/local/vendor/toko-tooling/scripts/ci/run-release.sh" <<'STUB'
 #!/usr/bin/env bash
 if [[ "${HOST_MAKE_ASSERT_RELEASE_GROUP:-0}" == 1 ]]; then [[ "${RELEASE_GROUP:-}" == testkit ]] || exit 94; fi
 printf '%s\n' "$*" >> "$HOST_MAKE_EVENTS"
@@ -116,7 +116,7 @@ exit "${HOST_MAKE_RELEASE_STATUS:-0}"
 STUB
 # Qualify only the consumer's dispatch here; actual hooks and lock isolation
 # have their own product fixture and installed release evidence.
-cat > "$fixture/local/scripts/ci/run-release-batch.pl" <<'STUB'
+cat > "$fixture/local/vendor/toko-tooling/scripts/ci/run-release-batch.pl" <<'STUB'
 use strict;
 use warnings;
 open my $out, '>>', $ENV{HOST_MAKE_EVENTS} or die $!;
@@ -124,14 +124,14 @@ print {$out} 'frozen ', join(' ', @ARGV), "\n" or die $!;
 close $out or die $!;
 exit($ENV{HOST_MAKE_RELEASE_STATUS} // 0);
 STUB
-mkdir -p "$fixture/local/scripts/dev"
-for helper in scripts/dev/install-git-hooks.sh scripts/dev/toko-tooling.sh; do
+mkdir -p "$fixture/local/vendor/toko-tooling/scripts/dev"
+for helper in vendor/toko-tooling/scripts/dev/install-git-hooks.sh vendor/toko-tooling/scripts/dev/toko-tooling.sh; do
     cat > "$fixture/local/$helper" <<'STUB'
 #!/usr/bin/env bash
 printf '%s %s\n' "${0##*/}" "$*" >> "$HOST_MAKE_EVENTS"
 STUB
 done
-cat > "$fixture/local/scripts/dev/clean-empty-source-dirs.pl" <<'STUB'
+cat > "$fixture/local/vendor/toko-tooling/scripts/dev/clean-empty-source-dirs.pl" <<'STUB'
 #!/usr/bin/env perl
 # Producer owns cleanup semantics; this fixture observes consumer dispatch.
 exit 0;
@@ -140,7 +140,7 @@ chmod +x "$fixture/local/cargo"
 mkdir -p "$fixture/local/.tools/host/bin"
 ln -s "$root/.tools/host/bin/yq" "$fixture/local/.tools/host/bin/yq"
 # shellcheck source=/dev/null
-. "$root/ci/tool-versions.env"
+. "$root/vendor/toko-tooling/ci/tool-versions.env"
 export HOST_MAKE_SORT_VERSION="$TOKO_TOOLING_CARGO_SORT_VERSION"
 cd "$fixture/local"
 
@@ -323,7 +323,7 @@ if [[ $selected_case == release-routing || $selected_case == all ]]; then
         [[ ! -s $HOST_MAKE_EVENTS ]]
     done
     # The captured checkout must use the existing single-group state machine.
-    cat > scripts/dev/install-host-tools.sh <<'STUB'
+    cat > vendor/toko-tooling/scripts/dev/install-host-tools.sh <<'STUB'
 #!/usr/bin/env bash
 if [[ " $* " == *' --check '* ]]; then
     printf 'host-check\n' >> "$HOST_MAKE_EVENTS"
@@ -381,9 +381,9 @@ STUB
 fi
 # Exercise the actual Host aggregate under parallel Make. Each stage must run
 # once in shared order, and a failure must prevent every later stage.
-mkdir -p "$fixture/local/scripts/dev"
+mkdir -p "$fixture/local/vendor/toko-tooling/scripts/dev"
 for tool in host ic rust; do
-    cat > "$fixture/local/scripts/dev/install-$tool-tools.sh" <<'STUB'
+    cat > "$fixture/local/vendor/toko-tooling/scripts/dev/install-$tool-tools.sh" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
 name="${0##*/}"
@@ -476,7 +476,7 @@ cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
 mv "$fixture/server cli" "$fixture/local/target/debug/ic-testkit-server"
 # Keep the actual Host LOC caller, argument selection and failure propagation
 # qualified without replaying Shared's synthetic workspace/parser matrix.
-cat > "$fixture/local/scripts/dev/cloc.sh" <<'STUB'
+cat > "$fixture/local/vendor/toko-tooling/scripts/dev/cloc.sh" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
 printf 'cloc' >> "$HOST_MAKE_EVENTS"
@@ -626,7 +626,8 @@ make --no-print-directory -n help > "$fixture/help-dry-run.log" 2>&1
 # Runtime companion docs can link to other Shared guides outside this fixture's
 # closure; the checkout's complete documentation has its own link check.
 rm -rf docs
-cp "$root/scripts/ci/check-product-doc-links.sh" "$root/scripts/ci/check-documentation-links.pl" scripts/ci/
+cp "$root/scripts/ci/check-product-doc-links.sh" scripts/ci/
+cp "$root/vendor/toko-tooling/scripts/ci/check-documentation-links.pl" vendor/toko-tooling/scripts/ci/
 git init -q
 mkdir -p docs/build docs/testkit docs/design testing/browser crates/example target
 printf 'target/\n' > .gitignore

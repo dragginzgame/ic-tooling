@@ -25,8 +25,8 @@ while IFS= read -r -d '' path; do
 done < "$fixture/consumer-deletions"
 # Adopted managed payloads may be pending delivery. Qualify those exact verified
 # bytes rather than accidentally testing the preceding committed supplier.
-bash "$root/scripts/ci/verify-toko-tooling-snapshot.sh" --consumer "$root"
-bash "$root/scripts/ci/verify-toko-tooling-snapshot.sh" --read-manifest "$root/.toko-tooling.snapshot" > "$fixture/snapshot-records"
+bash "$root/vendor/toko-tooling/scripts/ci/verify-toko-tooling-snapshot.sh" --consumer "$root"
+bash "$root/vendor/toko-tooling/scripts/ci/verify-toko-tooling-snapshot.sh" --read-manifest "$root/.toko-tooling.snapshot" > "$fixture/snapshot-records"
 while IFS=$'\t' read -r kind _digest _mode path; do
     [[ $kind == file ]] || continue
     mkdir -p "$normal/$(dirname "$path")"
@@ -84,7 +84,7 @@ MAKE
 for group in text testkit; do
     ledger="$normal/releases/$group/CHANGELOG.md"
     version=$(cd "$normal" && bash scripts/release/group.sh ci/cargo-release-groups.json "$group" version)
-    next=$(perl "$root/scripts/ci/validate-release-inputs.pl" next-version "$version" patch)
+    next=$(perl "$root/vendor/toko-tooling/scripts/ci/validate-release-inputs.pl" next-version "$version" patch)
     if ! grep -Fxq "## [$next] - Unreleased" "$ledger" && ! grep -Fxq "## [$next]" "$ledger"; then
         { printf '# Frozen consumer fixture\n\n## [%s] - Unreleased\n\n- Qualify captured hooks.\n\n' "$next"; cat "$ledger"; } > "$fixture/ledger"
         cp "$fixture/ledger" "$ledger"

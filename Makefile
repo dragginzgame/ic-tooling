@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml make/release-validation-local.mk make/cargo-dependencies.mk scripts/ci/workspace-validation.sh scripts/ci/run-tooling-checks.sh scripts/ci/check-product-candid-boundary.sh
+# Shared companions: scripts/release/group.sh ci/cargo-release-groups.json scripts/ci/check-rust-toolchain.sh Cargo.toml rust-toolchain.toml make/release-validation-local.mk vendor/toko-tooling/make/consumer.mk vendor/toko-tooling/make/release.mk vendor/toko-tooling/make/cargo-dependencies.mk scripts/ci/workspace-validation.sh scripts/ci/run-tooling-checks.sh scripts/ci/check-product-candid-boundary.sh
 PACKAGE ?= ic-host-artifacts
 RELEASE_DELIVERY ?= direct
 export RELEASE_GROUP
@@ -7,20 +7,20 @@ RELEASE_PUBLISH_TARGET ?= publish
 RELEASE_SETUP_TARGET ?= release-candidate-setup
 override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
 # Host commands use this checkout's reviewed snapshot, including parse-time probes.
-override TOKO_TOOLING_ROOT := $(CURDIR)
+override TOKO_TOOLING_ROOT := $(CURDIR)/vendor/toko-tooling
 export TOKO_TOOLING_ROOT
 LOCAL_TOOL_INSTALL_TARGETS += install-release-editor install-server
 LOCAL_TOOL_CHECK_TARGETS += release-editor-check server-check
 ifeq ($(filter qualification,$(FORMAT_RUST_ARGS)),)
 override FORMAT_RUST_ARGS += --extra-workspace qualification
 endif
-include ci/tool-versions.env
+include vendor/toko-tooling/ci/tool-versions.env
 IC_TOOLS := wasm-opt
 TOKO_TOOLING_RELEASE := 1
 # Admit execution before custom CI, publication and installer prerequisites.
 ci ci-publication lint check-secrets publish publish-check toko-tooling-check install-release-editor install-server install-validation-tools: toko-execution-check
-include make/consumer.mk
-include make/cargo-dependencies.mk
+include vendor/toko-tooling/make/consumer.mk
+include vendor/toko-tooling/make/cargo-dependencies.mk
 include make/testkit.mk
 include make/release-validation-local.mk
 export YQ := $(CURDIR)/.tools/host/bin/yq
@@ -29,8 +29,8 @@ export YQ := $(CURDIR)/.tools/host/bin/yq
 .PHONY: qualification-tooling-check
 toko-tooling-check: qualification-tooling-check
 qualification-tooling-check: toko-execution-check
-	+@product="$$(perl scripts/dev/tooling-lock.pl "$(CURDIR)")" && \
-		qualification="$$(perl scripts/dev/tooling-lock.pl "$(CURDIR)/qualification")" && \
+	+@product="$$(perl vendor/toko-tooling/scripts/dev/tooling-lock.pl "$(CURDIR)")" && \
+		qualification="$$(perl vendor/toko-tooling/scripts/dev/tooling-lock.pl "$(CURDIR)/qualification")" && \
 		{ test "$$product" = "$$qualification" || { echo 'Qualification and product tooling selections differ' >&2; exit 1; }; }
 
 .PHONY: release-candidate-setup
@@ -91,7 +91,7 @@ install-release-editor:
 release-editor-check:
 	+@bash scripts/release/editor.sh check
 check-no-symlinks:
-	perl scripts/ci/check-no-symlinks.pl --consumer "$(CURDIR)"
+	perl vendor/toko-tooling/scripts/ci/check-no-symlinks.pl --consumer "$(CURDIR)"
 formatting-hook-check:
 	+bash scripts/ci/check-host-formatting.sh
 check:
@@ -170,7 +170,7 @@ compiler-check:
 candid-boundary-check:
 	bash scripts/ci/check-product-candid-boundary.sh
 dependency-pins-check: candid-boundary-check
-	+bash scripts/ci/check-dependency-pins.sh --cargo-inheritance
+	+bash vendor/toko-tooling/scripts/ci/check-dependency-pins.sh --cargo-inheritance
 check-doc-links:
 	bash scripts/ci/check-product-doc-links.sh
 release-adapter-check:
@@ -220,18 +220,18 @@ GITLEAKS ?= $(CURDIR)/.tools/ci/bin/gitleaks
 .PHONY: install-validation-tools lint check-shell check-workflows check-secrets
 install-validation-tools:
 	@bash -ec 'test "$$(uname -s):$$(uname -m)" = Linux:x86_64; \
-		. ci/tool-versions.env; \
-		bash scripts/ci/install-ci-tool.sh shellcheck --version "$$TOKO_TOOLING_SHELLCHECK_VERSION" \
+		. vendor/toko-tooling/ci/tool-versions.env; \
+		bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh shellcheck --version "$$TOKO_TOOLING_SHELLCHECK_VERSION" \
 			--sha256 "$$TOKO_TOOLING_SHELLCHECK_SHA256_LINUX_X86_64" --install-dir "$(CURDIR)/.tools/ci/bin"; \
-		bash scripts/ci/install-ci-tool.sh actionlint --version "$$TOKO_TOOLING_ACTIONLINT_VERSION" \
+		bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh actionlint --version "$$TOKO_TOOLING_ACTIONLINT_VERSION" \
 			--sha256 "$$TOKO_TOOLING_ACTIONLINT_SHA256_LINUX_AMD64" --install-dir "$(CURDIR)/.tools/ci/bin"; \
-		bash scripts/ci/install-ci-tool.sh gitleaks --version "$$TOKO_TOOLING_GITLEAKS_VERSION" \
+		bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh gitleaks --version "$$TOKO_TOOLING_GITLEAKS_VERSION" \
 			--sha256 "$$TOKO_TOOLING_GITLEAKS_SHA256_LINUX_X64" --install-dir "$(CURDIR)/.tools/ci/bin"'
 
 lint: check-shell check-workflows
 
 check-shell:
-	"$(SHELLCHECK)" -x -P SCRIPTDIR -P . scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh scripts/publish/*.sh .githooks/pre-commit
+	"$(SHELLCHECK)" -x -P SCRIPTDIR -P . scripts/ci/*.sh scripts/release/*.sh scripts/publish/*.sh vendor/toko-tooling/.githooks/pre-commit
 
 check-workflows:
 	"$(ACTIONLINT)" .github/workflows/*.yml

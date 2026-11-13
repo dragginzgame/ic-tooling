@@ -1,5 +1,5 @@
 name: Prepare common tools
-# Shared companions: .github/actions/cache-tool-downloads/action.yml make/consumer.mk scripts/ci/cargo-tool-cache-key.sh
+# Shared companions: .github/actions/cache-tool-downloads/action.yml make/consumer.mk scripts/ci/cargo-tool-cache-key.sh scripts/ci/prepare-common-tools.sh
 description: Install and check the selected complete toolset, retaining logs and publishing PATH.
 inputs:
   cache:
@@ -28,7 +28,7 @@ runs:
         case "$CACHE_EXTRA" in *$'\r'*|*$'\n'*) echo 'Invalid cache extra key' >&2; exit 2 ;; esac
     - id: restore-downloads
       if: inputs.cache == 'true'
-      uses: ./.github/actions/cache-tool-downloads
+      uses: ./vendor/toko-tooling/.github/actions/cache-tool-downloads
       with:
         extra-key: ${{ inputs.cache-extra-key }}
     - id: tool-cache-key
@@ -56,16 +56,13 @@ runs:
         key: cargo-tools-${{ runner.os }}-${{ runner.arch }}-${{ steps.tool-cache-key.outputs.key }}-${{ inputs.cache-extra-key }}
     - id: prepare-tools
       shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+      env:
+        ACTION_ROOT: ${{ github.action_path }}
       run: |
-        make install-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
-        make tools-check 2>&1 | tee "$RUNNER_TEMP/tools-check.log"
-        {
-          echo "$GITHUB_WORKSPACE/.tools/host/bin"
-          echo "$GITHUB_WORKSPACE/.tools/rust/common/bin"
-        } >> "$GITHUB_PATH"
+        bash "$ACTION_ROOT/../../../scripts/ci/prepare-common-tools.sh"
     - id: save-downloads
       if: inputs.cache == 'true' && inputs.cache-save == 'true'
-      uses: ./.github/actions/cache-tool-downloads
+      uses: ./vendor/toko-tooling/.github/actions/cache-tool-downloads
       with:
         mode: save
         extra-key: ${{ inputs.cache-extra-key }}

@@ -32,14 +32,14 @@ jobs:
       - name: Prepare declared compiler
         run: rustup toolchain install --profile minimal --no-self-update
       - name: Restore authenticated optimizer-tool downloads
-        uses: ./.github/actions/cache-tool-downloads
+        uses: ./vendor/toko-tooling/.github/actions/cache-tool-downloads
       - name: Prepare and admit native optimizer tools
         run: |
           make install-host-tools 2>&1 | tee "$TMPDIR/host-tools-install.log"
           make install-ic-tools 2>&1 | tee "$TMPDIR/ic-tools-install.log"
           make host-tools-check ic-tools-check compiler-check
       - name: Save authenticated optimizer-tool downloads
-        uses: ./.github/actions/cache-tool-downloads
+        uses: ./vendor/toko-tooling/.github/actions/cache-tool-downloads
         with:
           mode: save
       - name: Prepare pinned Wasm execution runtime
@@ -50,11 +50,11 @@ jobs:
         run: cargo fetch --locked 2>&1 | tee "$TMPDIR/dependencies-fetch.log"
       - name: Qualify native artifact transforms
         run: |
-          optimizer="$(bash scripts/dev/install-ic-tools.sh --tool wasm-opt --check)"
+          optimizer="$(bash vendor/toko-tooling/scripts/dev/install-ic-tools.sh --tool wasm-opt --check)"
           bash scripts/ci/qualify-wasm-opt.sh "$optimizer/wasm-opt" "$RUNNER_TEMP/wasm-qualification/optimizer"
       - name: Retain failed native qualification
         if: ${{ failure() && !cancelled() }}
-        uses: ./.github/actions/retain-failure-evidence
+        uses: ./vendor/toko-tooling/.github/actions/retain-failure-evidence
         with:
           name: wasm-optimizer-${{ matrix.os }}-${{ github.run_attempt }}
           temp-root: ${{ runner.temp }}/wasm-qualification

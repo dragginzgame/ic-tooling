@@ -12,7 +12,7 @@ fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Candid consumer fixture retained"' EXIT
 # Exercise the actual Make routing, product policy and exported checker. Only
 # the unrelated metadata check is substituted; no Cargo, server or compiler runs.
-bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture" Makefile make/consumer.mk make/testkit.mk ci/tool-versions.env
+bash "$root/vendor/toko-tooling/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture" Makefile vendor/toko-tooling/make/consumer.mk make/testkit.mk vendor/toko-tooling/ci/tool-versions.env
 while IFS= read -r path; do
     mkdir -p "$fixture/${path%/*}"
     cp "$root/$path" "$fixture/$path"
@@ -24,7 +24,7 @@ mkdir -p "$fixture/apps" "$fixture/docs" "$fixture/scripts/fixtures/native-consu
 for path in apps/inventory.rs docs/inventory.rs; do
     printf '// Source-mask fixture data, never compiled.\n' > "$fixture/$path"
 done
-cat > "$fixture/scripts/ci/check-dependency-pins.sh" <<'STUB'
+cat > "$fixture/vendor/toko-tooling/scripts/ci/check-dependency-pins.sh" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
 [[ "$*" == --cargo-inheritance ]]

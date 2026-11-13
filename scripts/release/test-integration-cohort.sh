@@ -11,8 +11,8 @@ root="${root%/.}"
 cd "$root"
 parser="${YQ:-$root/.tools/host/bin/yq}"
 YQ="$parser" bash scripts/ci/check-rust-toolchain.sh "$root"
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source scripts/ci/fixture-lifecycle.sh
+# shellcheck source=vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh
+source vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh
 mkdir -p "$root/target"
 fixture="$(fixture_create "$root/target/published-integration.XXXXXX")"
 fixture_complete=false
@@ -80,7 +80,7 @@ jq -e --slurpfile selection "$fixture/selection.json" '
     and all($packages[]; .name == "integration-cohort-consumer" or (.source | startswith("registry+")))
 ' "$fixture/metadata.json" > /dev/null
 host="$(rustc -vV | sed -n 's/^host: //p')"
-perl scripts/ci/check-cargo-graph.pl --consumer "$fixture" \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl --consumer "$fixture" \
     --package integration-cohort-consumer --target "$host" \
     --require ic-platform-types=1 \
     --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \

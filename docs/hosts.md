@@ -1,10 +1,14 @@
 # IC Tooling qualification
 
-Toko Tooling is selected as `toko-tooling = "=0.41.0"` in each workspace's
+Toko Tooling is selected as `toko-tooling = "=0.42.5"` in each workspace's
 `[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
-Every real package inherits it unconditionally in
-`[dev-dependencies]` and lists it in `package.metadata.cargo-machete.ignored`;
-the virtual roots are not packages. Commit the declarations, both `Cargo.lock`
+Every real package inherits it in `[dev-dependencies]` and lists it in
+`package.metadata.cargo-machete.ignored`. The binary-only `ic-testkit-dev` instead
+uses `[target.'cfg(any())'.dev-dependencies]` to select the source bundle without
+compiling an unused crate into its binary tests. The pin and lock admission are
+unchanged; the [0.41.1 migration](https://github.com/dragginzgame/toko-tooling/blob/dde08cbbd2d412e4bdf595ec80b0dc23d9703a3f/docs/adoption/migrations.md#bootstrap-and-binary-test-fixes-in-0411)
+requires the released verifier before using this form.
+The virtual roots are not packages. Commit the declarations, both `Cargo.lock`
 files and `.toko-tooling.snapshot` together. To adopt another release, edit both
 pins and their documented exact-pin exceptions in
 `ci/dependency-pinning-exceptions.json`, run `cargo update -p toko-tooling` and
@@ -14,8 +18,17 @@ Use `make toko-tooling-install` to install the existing Cargo.lock selection
 and `make toko-tooling-check` for offline package/pin/lock/snapshot admission.
 That check admits both workspaces against the same installed snapshot.
 
+Executable tooling and catalogs are installed under `vendor/toko-tooling/`;
+the Makefile includes `vendor/toko-tooling/make/consumer.mk` and selects that vendor root.
+Product scripts, release policy, workflows and the two product evidence actions
+remain local. Shared actions use `./vendor/toko-tooling/.github/actions/...`.
+The [0.42 migration](https://github.com/dragginzgame/toko-tooling/blob/8eb734758129eef2d2190c4fd22e00b52525f41a/docs/adoption/migrations.md#vendor-installation-in-0420)
+requires an authenticated exporter move and updated callers, not manual relocation
+or old-path wrappers. Hook installation selects `vendor/toko-tooling/.githooks`.
+
 Read-only `make deps-list` reports all local packages, versions and release groups
-in the product and qualification workspaces offline. It changes no lockfile and
+in the product and qualification workspaces offline, with package names first.
+It changes no lockfile and
 queries no registry; it replaces display-only dependency catalog entries.
 
 Explicit `make deps-update` runs `cargo update -v` sequentially in the product
@@ -46,7 +59,7 @@ and installed tests select both roots. `make install-server` explicitly fetches
 both locked graphs; standalone checks remain offline.
 Installation remains explicit; Rust imports are unnecessary. Direct publication
 and release adapters check tooling before effects. See the
-[root selection guide](https://github.com/dragginzgame/toko-tooling/blob/b4e6308894c495169278b34ea7803973c125adb6/docs/adoption/consuming-snapshots.md#cargo-selection-and-installation).
+[root selection guide](https://github.com/dragginzgame/toko-tooling/blob/8eb734758129eef2d2190c4fd22e00b52525f41a/docs/adoption/consuming-snapshots.md#cargo-selection-and-installation).
 
 Local shell/browser fixture defaults and explicit outside-target selections are
 documented in [qualification scratch ownership](design/fixture-scratch.md).
@@ -69,23 +82,25 @@ do not require unrelated consumer releases.
 | Private Wasm probe | Runtime's `cdk`, its matching singleton guard and qualified upstream `ic0`, plus Types and Wire; not a second simulator or production adapter crate. |
 | Host Tools adapters | `candid` selects Platform's owned binary codec; `agent` and `ledger-evidence` select their explicit adapters; `registry` selects Types directly. Textual service inspection is removed. Default Tools has neither supplier. |
 
-The native Wire adapter and private probe select Wire 0.21. Decoding follows
+The native Wire adapter and private probe select Wire 0.22. Decoding follows
 upstream Postcard, including redundant varints within width bounds; successful
 decoding does not promise byte-identical re-encoding. Keep original frames for
 exact retries, signatures and hashes. This adoption preserves encoder bytes,
 method identities and explicit budgets; there are no browser Wire bindings here
 to regenerate.
 
-The current adoption selects Platform 0.32.0 and Types 0.20.0 in both roots,
-with Runtime/macros/guard 0.22.0 for the private probe. These supplier minors
-adopt Rust 1.100.0 and lint/must-use policy. Host Tools exposes Platform codec,
+The current local adoption selects Platform 0.32.1 and Types 0.20.1 in both roots,
+with Runtime/macros/guard 0.22.1 for the private probe. Rust 1.100.0 remains the
+compiler requirement. Host Tools exposes Platform codec,
 ledger and registry identities; Testkit's portable principal helper exposes Types.
 Align callers' direct Platform/Types selections when exchanging those values.
-Published Tools 0.92.0 and Testkit 0.102.0 cover this identity and
+Published Tools 0.92.0 and Testkit 0.102.0 cover the preceding identity and
 compiler transition. Native PocketIC identities remain upstream 16.1. The locked
-Wire 0.21.5 selection stays unchanged: its optional Platform Types integration is
-not selected here. Existing codec budgets, method identities and serialized data
-contracts remain; this adoption requires no caller source or storage migration.
+Wire 0.22.0 selection keeps its optional Platform Types integration disabled here.
+Pending Tools 0.92.1 and Testkit 0.103.0 notes do not change package versions;
+callers sharing Wire traits or typed failures must align to its 0.22 line after
+publication. Existing codec budgets, method identities and serialized data
+contracts remain; no persisted-state migration is needed.
 
 Foundation and Build's normal/build graphs forbid the entire Platform family
 and higher product layers; development fixtures may still use integration owners.
@@ -500,7 +515,7 @@ including package selection, provenance, Cargo/log failures, interruption and
 retained attempt locks. Toko Tooling owns the generic publication-runner
 regression matrix; this consumer does not replay it separately.
 Host's direct-dependency guard selects Toko Tooling's
-`ci/external-ic-dependencies.txt` inventory and composes it with stricter local
+`vendor/toko-tooling/ci/external-ic-dependencies.txt` inventory and composes it with stricter local
 `ci/cargo-dependency-boundaries.json` rules, including renamed, development, optional and
 target-specific declarations. The broader Platform boundary also requires review
 of new IC package identities and generated imports; the finite policy does not
@@ -512,7 +527,7 @@ Prepared/committed release checks sort-check the exact saved root manifest;
 unchanged member manifests belong to the previously qualified source.
 No release-only executable extends the aggregate common toolset.
 CI also owns native macOS execution; Linux qualification is not macOS evidence.
-The reviewed Toko Tooling snapshot owns `ci/tool-versions.env` and `ci/ic-tools.tsv`.
+The reviewed Toko Tooling snapshot owns `vendor/toko-tooling/ci/tool-versions.env` and `vendor/toko-tooling/ci/ic-tools.tsv`.
 Host uses these common defaults without catalog exceptions; Rust compiler policy
 remains local. Host, IC and Rust exceptions, if
 needed later, require independent explicit selection and native qualification.

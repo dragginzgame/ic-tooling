@@ -37,7 +37,7 @@ jobs:
           CHANGE_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           CHANGE_HEAD: ${{ github.sha }}
         run: |
-          scope="$(perl scripts/ci/classify-ci-change.pl --event "$CHANGE_EVENT" --ref "$CHANGE_REF" \
+          scope="$(perl vendor/toko-tooling/scripts/ci/classify-ci-change.pl --event "$CHANGE_EVENT" --ref "$CHANGE_REF" \
             --base "$CHANGE_BASE" --head "$CHANGE_HEAD" --policy ci/docs-only-paths.txt)"
           case "$scope" in docs|full) ;; *) exit 1 ;; esac
           if [[ "$scope" == docs ]]; then
@@ -54,11 +54,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Restore authenticated validation-tool downloads
-        uses: ./.github/actions/cache-tool-downloads
+        uses: ./vendor/toko-tooling/.github/actions/cache-tool-downloads
       - name: Prepare pinned validation tools
         run: make install-validation-tools
       - name: Save authenticated validation-tool downloads
-        uses: ./.github/actions/cache-tool-downloads
+        uses: ./vendor/toko-tooling/.github/actions/cache-tool-downloads
         with:
           mode: save
       - name: Check shell and workflow sources and scan history
@@ -108,7 +108,7 @@ jobs:
           if [[ "$EXPECTED_OS" == Darwin ]]; then
             host_arguments+=(15)
           fi
-          bash scripts/ci/check-native-host.sh "${host_arguments[@]}"
+          bash vendor/toko-tooling/scripts/ci/check-native-host.sh "${host_arguments[@]}"
           if [[ "$EXPECTED_OS" == Darwin ]]; then
             echo /bin >> "$GITHUB_PATH"
           fi
@@ -137,7 +137,7 @@ jobs:
         run: cargo fetch --locked
       - name: Prepare pinned local tools with the shared Cargo cache
         if: ${{ needs.change-scope.outputs.scope == 'full' }}
-        uses: ./.github/actions/prepare-common-tools
+        uses: ./vendor/toko-tooling/.github/actions/prepare-common-tools
         with:
           cache: 'true'
           cache-save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
@@ -163,7 +163,8 @@ jobs:
           bash scripts/ci/validation-roster.sh groups > "$RUNNER_TEMP/release-validation/groups"
           while IFS= read -r group; do
             RELEASE_GROUP="$group" VALIDATION_LOG_DIR="$RUNNER_TEMP/release-validation/$group" \
-              bash scripts/ci/run-validation-targets.sh "${targets[@]}"
+              VALIDATION_REPOSITORY_ROOT="$PWD" \
+                bash vendor/toko-tooling/scripts/ci/run-validation-targets.sh "${targets[@]}"
           done < "$RUNNER_TEMP/release-validation/groups"
           bash scripts/ci/archive-product-evidence.sh "$PWD" "$RUNNER_TEMP" \
             "$RUNNER_TEMP/release-validation/archives.tar.gz"
@@ -183,7 +184,7 @@ jobs:
           name: native-qualification-${{ matrix.runner }}-${{ github.run_attempt }}
       - name: Retain failure evidence
         if: ${{ failure() && needs.change-scope.outputs.scope == 'full' }}
-        uses: ./.github/actions/retain-failure-evidence
+        uses: ./vendor/toko-tooling/.github/actions/retain-failure-evidence
         with:
           name: native-failure-${{ matrix.runner }}-${{ github.run_attempt }}
           temp-root: ${{ runner.temp }}

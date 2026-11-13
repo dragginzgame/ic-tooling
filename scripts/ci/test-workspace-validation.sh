@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/fixture-lifecycle.sh scripts/ci/prepare-script-fixture.sh scripts/ci/check-pipe-jobserver.pl scripts/ci/workspace-validation.sh Makefile make/consumer.mk make/testkit.mk
+# Shared companions: vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh vendor/toko-tooling/scripts/ci/prepare-script-fixture.sh vendor/toko-tooling/scripts/ci/check-pipe-jobserver.pl scripts/ci/workspace-validation.sh Makefile vendor/toko-tooling/make/consumer.mk make/testkit.mk
 set -euo pipefail
 root="$(cd -P "${BASH_SOURCE[0]%/*}/../.." && pwd -P)"
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
+# shellcheck source=vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh
+source "$root/vendor/toko-tooling/scripts/ci/fixture-lifecycle.sh"
 mkdir -p "$root/target"
 fixture=$(fixture_create "$root/target/workspace-validation-test.XXXXXX")
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Workspace validation fixture retained"' EXIT
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES TOKO_TOOLING_ROOT
 mkdir "$fixture/checkout"
-bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/checkout" \
-    Makefile make/consumer.mk make/testkit.mk scripts/ci/check-pipe-jobserver.pl
+bash "$root/vendor/toko-tooling/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/checkout" \
+    Makefile vendor/toko-tooling/make/consumer.mk make/testkit.mk vendor/toko-tooling/scripts/ci/check-pipe-jobserver.pl
 cd "$fixture/checkout"
 # Independent observation of the 32-stage gate after fixture encoder retirement.
 # Production dispatch has one owner: ci/release-validation.json.
@@ -54,12 +54,12 @@ cat >> Makefile <<'MAKE'
 
 # Keep prerequisite routing, substituting its build/tool effects as well.
 format-tools-check build-server-cli candid-boundary-check qualification-tooling-check:
-	+@perl scripts/ci/check-pipe-jobserver.pl
+	+@perl vendor/toko-tooling/scripts/ci/check-pipe-jobserver.pl
 MAKE
 while IFS= read -r target; do
     {
         printf '\n%s:\n' "$target"
-        printf '\t+@perl scripts/ci/check-pipe-jobserver.pl\n'
+        printf '\t+@perl vendor/toko-tooling/scripts/ci/check-pipe-jobserver.pl\n'
         # shellcheck disable=SC2016 # Preserve recursive Make's exported variable.
         printf '\t+@printf '\''%%s\\n'\'' '\''%s'\'' >> "$$WORKSPACE_TEST_EVENTS"\n' "$target"
         # shellcheck disable=SC2016 # Preserve recursive Make's exported variable.

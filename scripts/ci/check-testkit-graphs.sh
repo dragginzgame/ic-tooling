@@ -9,7 +9,7 @@ root="${root%/.}"
 cd "$root"
 # Admit direct IC dependency owners in the independent qualification workspace
 # before allowing Runtime's transitive IC0 provider in its Wasm graph.
-bash scripts/ci/check-cargo-dependency-boundaries.sh --consumer "$root/qualification" --external-ic
+bash vendor/toko-tooling/scripts/ci/check-cargo-dependency-boundaries.sh --consumer "$root/qualification" --external-ic
 consumer="$root/"
 host="$(rustc -vV | sed -n 's/^host: //p')"
 test -n "$host"
@@ -29,7 +29,7 @@ native_policy=("${policy[@]}" --require pocket-ic=1 --require ic-management-cani
 native_graph() {
     local profile=$1 observation
     shift
-    observation=$(perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
+    observation=$(perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
         --package ic-testkit --target "$host" --forbid clap \
         --forbid wat --forbid wast --forbid wasm-encoder --json --observations "$@")
     jq -r --arg profile "$profile" '.observations[] |
@@ -38,29 +38,29 @@ native_graph() {
 }
 native_graph default --forbid ic-wire --require ic-platform=1
 native_graph wire --features wire --require ic-wire=1 --require ic-platform=1
-perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --features reply-fixtures \
     --require wasm-encoder=1 --forbid wat --forbid wast --require ic-platform=1
-perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --features held-reply-fixtures \
     --require wat=1 --require wast=1 --require wasm-encoder=1 --require ic-platform=1
-perl scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${native_policy[@]}" \
     --package ic-testkit --target "$host" --all-features \
     --require clap=1 --require ic-wire=1
-perl scripts/ci/check-cargo-graph.pl --consumer "$root/qualification" \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl --consumer "$root/qualification" \
     --package ic-testkit-dev --target "$host" --all-features \
     --require ic-build=1 --require ic-platform=1 --forbid ic-platform-pocket-ic \
     --forbid-feature ic-platform/pocket-ic \
     --require pocket-ic=1 --forbid ic-metrics --forbid ic-platform-runtime --forbid ic-platform-runtime-guard \
     --require ic-host-artifacts=1 --require ic-host-fs=1 \
     --require ic-host-process=1 --require ic-host-text=1
-perl scripts/ci/check-cargo-graph.pl "${policy[@]}" --package ic-testkit \
+perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${policy[@]}" --package ic-testkit \
     --target wasm32-unknown-unknown --all-features --forbid-pattern '^ic-host-' \
     --forbid reqwest --forbid tokio --forbid tempfile --forbid flate2 --forbid ic-certification --forbid ic-transport-types \
     --forbid pocket-ic --forbid candid --forbid candid_derive --forbid ic-platform-pocket-ic --forbid ic-wire --forbid clap \
     --forbid wat --forbid wast --forbid wasm-encoder --forbid wasmparser --forbid ic-management-canister-types \
     --forbid ic-platform --forbid ic-platform-macros --forbid ic-platform-runtime
-probe_wasm="$(perl scripts/ci/check-cargo-graph.pl "${runtime_policy[@]}" --package ic-testkit-perf-probe \
+probe_wasm="$(perl vendor/toko-tooling/scripts/ci/check-cargo-graph.pl "${runtime_policy[@]}" --package ic-testkit-perf-probe \
     --target wasm32-unknown-unknown --forbid-pattern '^ic-host-' \
     --forbid ic-testkit --forbid pocket-ic \
     --forbid candid --forbid candid_derive --forbid ic-platform-pocket-ic --forbid clap \

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/cargo-publication-selection.pl scripts/ci/check-license.pl scripts/release/group.sh scripts/release/publication-lint.sh
+# Shared companions: vendor/toko-tooling/scripts/ci/cargo-publication-selection.pl vendor/toko-tooling/scripts/ci/check-license.pl scripts/release/group.sh scripts/release/publication-lint.sh
 set -euo pipefail
 
 # Cargo workspace publication admission. Requires prepared Cargo 1.100, Git,
@@ -85,7 +85,7 @@ source="$(git rev-parse --verify HEAD)" || exit $?
 dirty="$(git status --porcelain --untracked-files=all)" || exit $?
 [[ "$mode" != publish || -z "$dirty" ]] || fail 'commit workspace changes before publishing'
 [[ -f LICENSE.md && ! -L LICENSE.md ]] || fail 'expected a regular root licence'
-perl "$tooling_root/scripts/ci/check-license.pl" --file "$root/LICENSE.md"
+perl "$tooling_root/vendor/toko-tooling/scripts/ci/check-license.pl" --file "$root/LICENSE.md"
 [[ ! -L target && ! -L target/publish && ! -L target/publish/admission ]] || fail 'symlinked publication evidence directory'
 umask 077
 mkdir -p target/publish/admission
@@ -115,7 +115,7 @@ jq -e '
       and ($packages | any(.name == "ic-host-wasm-inspect" and
           any(.targets[]; .name == "ic-host-wasm-inspect" and (.kind | index("bin")))))
 ' "$attempt/metadata.json" --args "${public_packages[@]}" > /dev/null || fail 'expected the complete public crates.io roster and root licence'
-perl "$tooling_root/scripts/ci/cargo-publication-selection.pl" "$attempt/metadata.json" \
+perl "$tooling_root/vendor/toko-tooling/scripts/ci/cargo-publication-selection.pl" "$attempt/metadata.json" \
     "${public_packages[*]}" "${packages[*]}" crates-io > "$attempt/selected-packages"
 selectors=()
 while IFS= read -r -d '' selector; do selectors+=("$selector"); done < "$attempt/selected-packages"
@@ -169,13 +169,13 @@ if [[ "$mode" == publish ]]; then
         directory="${package_directories[$index]}"
         provenance_arguments+=(--package "${selectors[$index]}" "$directory")
     done
-    bash "$tooling_root/scripts/ci/check-cargo-package-provenance.sh" \
+    bash "$tooling_root/vendor/toko-tooling/scripts/ci/check-cargo-package-provenance.sh" \
         "$attempt/provenance" "$root/target/package" "$repository" "$source" "${provenance_arguments[@]}"
     for index in "${!packages[@]}"; do
         package="${packages[$index]}"
         version="${selectors[$index]#*@}"
         archive="$root/target/package/$package-$version.crate"
-        perl "$tooling_root/scripts/ci/check-license.pl" --file "$root/LICENSE.md" \
+        perl "$tooling_root/vendor/toko-tooling/scripts/ci/check-license.pl" --file "$root/LICENSE.md" \
             --archive "$archive" --member "$package-$version/LICENSE.md"
     done
 fi
@@ -186,5 +186,5 @@ arguments=()
 for selector in "${selectors[@]}"; do arguments+=(--package "$selector"); done
 arguments+=(--manifest-path "$root/Cargo.toml" --target-dir "$root/target" --all-features)
 [[ "$mode" != check ]] || arguments+=(--allow-dirty)
-bash "$tooling_root/scripts/ci/run-cargo-publication.sh" "$mode" "$publication_attempt" \
+bash "$tooling_root/vendor/toko-tooling/scripts/ci/run-cargo-publication.sh" "$mode" "$publication_attempt" \
     "$source" crates-io "${arguments[@]}"

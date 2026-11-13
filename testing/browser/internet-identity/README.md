@@ -15,7 +15,7 @@ The backend Candid file is the release asset; the frontend interface comes from
 that exact source revision. No `latest` URL is resolved at setup or execution.
 Upstream owns the Apache-2.0 implementation and external initialization schemas;
 the fixture encodes only configuration data against those original `.did` files
-using the independently admitted `didc` 0.6.2 from `ci/ic-tools.tsv`.
+using the independently admitted `didc` 0.6.2 from `vendor/toko-tooling/ci/ic-tools.tsv`.
 
 This is the same matched II pair pinned by
 [PocketIC 16.1's build inputs](https://github.com/dfinity/ic/blob/e9e42a6dd74acb9049017863e944cd5799be5b2b/mainnet-canister-revisions.json).

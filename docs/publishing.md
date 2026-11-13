@@ -268,7 +268,7 @@ metadata admission and before package preparation or upload. The explicit packag
 allowlist remains separate from workspace membership. All package metadata must
 declare `https://github.com/dragginzgame/ic-tooling` as the repository.
 
-Toko Tooling's [canonical provenance helper](../scripts/ci/check-cargo-package-provenance.sh)
+Toko Tooling's [canonical provenance helper](../vendor/toko-tooling/scripts/ci/check-cargo-package-provenance.sh)
 checks the prepared archives and fetches that exact commit from the declared HTTPS repository
 into a fresh bare object store beneath the publication attempt. Failed fetches,
 mismatched commit identities, missing/dirty package provenance and source changes
@@ -279,7 +279,7 @@ directory. This guard is a remote-read effect of the
 explicit upload command; it never pushes a ref or creates a commit.
 
 The [reviewed Toko Tooling snapshot](../.toko-tooling.snapshot) supplies this helper and the
-[selected-source reader](../scripts/ci/read-cargo-source-context.sh), alongside
+[selected-source reader](../vendor/toko-tooling/scripts/ci/read-cargo-source-context.sh), alongside
 the existing release metadata/receipt custody. Host selects packages, manifests,
 versions and recovery; Toko Tooling owns exact commit retrieval, archive provenance
 and selected-source member observation. There are no local source-evidence copies.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: ci/release-editor.env scripts/dev/install-rust-tools.sh
+# Shared companions: ci/release-editor.env vendor/toko-tooling/scripts/dev/install-rust-tools.sh
 set -euo pipefail
 [[ $# == 1 && ( "$1" == install || "$1" == check ) ]] || {
     echo 'usage: editor.sh install|check' >&2; exit 2;
@@ -13,4 +13,4 @@ source "$root/ci/release-editor.env"
 arguments=(--consumer "$root" --package ic-build --version "$HOST_RELEASE_EDITOR_VERSION" \
     --bin ic-build-release-metadata --profile debug --features cli)
 [[ "$1" != check ]] || arguments+=(--check)
-exec bash "$root/scripts/dev/install-rust-tools.sh" "${arguments[@]}"
+exec bash "$root/vendor/toko-tooling/scripts/dev/install-rust-tools.sh" "${arguments[@]}"

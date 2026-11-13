@@ -86,7 +86,7 @@ ok(!exists $workflow->{jobs}{'lint-and-security'}{if}, 'lint and security remain
     my ($focused) = grep { ($_->{name} // '') eq 'Qualify focused release contracts' } @{$workflow->{jobs}{native}{steps}};
     my $checkout = "$fixture/matched inputs";
     make_path("$checkout/bin", "$checkout/ci", "$checkout/scripts/ci");
-    run('bash', "$root/scripts/ci/prepare-script-fixture.sh", $root, $checkout, 'scripts/ci/validation-roster.sh');
+    run('bash', "$root/vendor/toko-tooling/scripts/ci/prepare-script-fixture.sh", $root, $checkout, 'scripts/ci/validation-roster.sh');
     write_file("$checkout/bin/make", <<'SH');
 #!/usr/bin/env bash
 set -euo pipefail
@@ -94,7 +94,7 @@ set -euo pipefail
 printf 'workspace\n' >> "$WORKFLOW_EVENTS"
 [[ ${WORKFLOW_FAIL:-} != workspace ]] || exit 29
 SH
-    write_file("$checkout/scripts/ci/run-validation-targets.sh", <<'SH');
+    write_file("$checkout/vendor/toko-tooling/scripts/ci/run-validation-targets.sh", <<'SH');
 #!/usr/bin/env bash
 set -euo pipefail
 [[ $VALIDATION_LOG_DIR == "$RUNNER_TEMP/release-validation/$RELEASE_GROUP" ]]
@@ -144,11 +144,11 @@ for my $path (@paths) {
     make_path($parent);
     write_file("$repo/$path", "Product prose\n");
 }
-run('bash', "$root/scripts/ci/prepare-script-fixture.sh", $root, $repo,
-    'scripts/ci/classify-ci-change.pl');
-for my $file (qw(check-product-doc-links.sh check-documentation-links.pl)) {
-    copy("$root/scripts/ci/$file", "$repo/scripts/ci/$file") or die $!;
-}
+run('bash', "$root/vendor/toko-tooling/scripts/ci/prepare-script-fixture.sh", $root, $repo,
+    'vendor/toko-tooling/scripts/ci/classify-ci-change.pl');
+copy("$root/scripts/ci/check-product-doc-links.sh", "$repo/scripts/ci/check-product-doc-links.sh") or die $!;
+copy("$root/vendor/toko-tooling/scripts/ci/check-documentation-links.pl",
+    "$repo/vendor/toko-tooling/scripts/ci/check-documentation-links.pl") or die $!;
 write_file("$repo/ci/docs-only-paths.txt", $policy);
 write_file("$repo/src/lib.rs", "// code\n");
 chdir $repo or die $!;

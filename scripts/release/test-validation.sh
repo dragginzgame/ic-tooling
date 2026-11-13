@@ -419,7 +419,7 @@ refuse env RUSTFLAGS=--cfg=unreviewed bash scripts/release/validation.sh run "$p
 refuse env RUSTFLAGS=--cfg=unreviewed bash scripts/release/validation.sh fork "$pointer" "$fixture/changed.pointer" > "$fixture/fork-environment.log" 2>&1
 # A release-owned version-only edit preserves scope; another owner's source does not.
 fixture_version=$("$YQ" -p toml -o yaml '.package.version' crates/ic-host-text/Cargo.toml)
-fixture_next_version=$(bash scripts/ci/next-release-version.sh "$fixture_version" patch)
+fixture_next_version=$(bash vendor/toko-tooling/scripts/ci/next-release-version.sh "$fixture_version" patch)
 awk -v before="$fixture_version" -v after="$fixture_next_version" \
     '$0 == "version = \"" before "\"" { $0 = "version = \"" after "\"" } { print }' \
     crates/ic-host-text/Cargo.toml > "$fixture/version-manifest"

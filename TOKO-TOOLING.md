@@ -75,6 +75,29 @@ This supersedes the 0.39.3–0.39.4 managed-document namespace plan and older li
 instructions to vendor governance guides. It does not trigger unsolicited sibling
 refreshes or change the offline verification of installed executable bytes.
 
+## Installed tooling ownership
+
+From 0.42, keep installed executable tooling and its operational inputs under
+`vendor/toko-tooling/`, preserving their upstream relative paths inside that
+directory. Only `TOKO-TOOLING.md`, `LICENSE.md` and `CONTRIBUTING.md` are installed
+at root; `.toko-tooling.snapshot` remains the root ownership receipt. Do not put
+consumer edits in the vendor tree. Product scripts, Makefiles, CI workflows,
+release policies and `AGENTS.md` remain consumer-owned outside it.
+
+Select only used executable entrypoints. Release and publication are explicit
+selections, not companions of the default Make interface. Reference documentation
+stays online, and producer regression suites stay upstream; qualify actual local
+caller wiring instead of installing generic test scripts. Shared composite actions
+may live inside the vendor tree and be called by consumer-owned workflows.
+
+Migrate with the exporter and a complete retained entrypoint list. It must prove
+old bytes against their source before retiring them and refuse differing existing
+destinations without ownership proof, even when Git considers them clean. Review
+preview, update local paths and hook configuration, then qualify the installed
+callers. Do not manually move managed files or edit receipts. This replaces the
+previous same-path installation rule without relocating reference documentation
+or authorizing unsolicited sibling changes.
+
 ## Scope and authorization
 
 The [contribution rules](https://github.com/dragginzgame/toko-tooling/blob/626da7cd9626cc2e152594862a2d82ea82ef51da/rules/contributions.md) own detailed action authority;
@@ -186,7 +209,11 @@ when changing interfaces, persistence or installation/recovery behavior.
   suite. Name the changed behavior each selected check proves. Keep unchanged
   generic regression matrices with their producer.
 - Repository tooling uses one exact root Cargo dependency pin inherited as a
-  dev-dependency by every real workspace package. `cargo update -v` reports newer
+  dev-dependency by every real workspace package. The exact
+  `target.'cfg(any())'.dev-dependencies` form is also permitted for this
+  source-bundle marker: it preserves Cargo selection without compiling an unused
+  crate into binary tests. Other target selectors, dummy imports and lint
+  suppressions are not substitutes. `cargo update -v` reports newer
   releases; after changing the pin and Cargo.lock, run `make toko-tooling-update`.
   Offline admission checks every member, Cargo.lock and installed bytes together.
   See the
@@ -403,6 +430,14 @@ Read the
 when adding, changing or reviewing metrics and logging.
 
 ## IC application encoding
+
+Reusable libraries own domain operations, data contracts and retained-data codecs.
+Adapters or applications own public canister endpoint registration, caller guards,
+framework lifecycle composition and deployment policy. Canic owns those bindings
+for Canic-managed applications; independent services retain their own host adapter.
+Wire encoding, bounded types or schema generation alone do not make a dependency
+an endpoint-ownership violation. Keep native domain use independent of mounting
+an endpoint; do not move domain engines into Canic to remove a codec dependency.
 
 Hashing choices follow the [shared algorithm/purpose inventory](https://github.com/dragginzgame/toko-tooling/blob/626da7cd9626cc2e152594862a2d82ea82ef51da/rules/hashing.md).
 Review new algorithms and direct hashing packages explicitly; pure hashing may

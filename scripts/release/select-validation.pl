@@ -177,14 +177,14 @@ my @stages = map {
      reason => $selected{$target} ? $reason : $narrow ? $exclusions{$target} :
         'Focused alternative is covered by the complete workspace gate.'}
 } @{$policy->{stages}};
-my @inputs = ('Makefile','Cargo.toml','Cargo.lock','qualification/Cargo.toml','qualification/Cargo.lock','rust-toolchain.toml','.toko-tooling.snapshot','ci/tool-versions.env','ci/tooling-checks.tsv',
+my @inputs = ('Makefile','Cargo.toml','Cargo.lock','qualification/Cargo.toml','qualification/Cargo.lock','rust-toolchain.toml','.toko-tooling.snapshot','vendor/toko-tooling/ci/tool-versions.env','ci/tooling-checks.tsv',
     'ci/release-editor.env','ci/cargo-release-groups.json','ci/release-validation-coverage.json','ci/release-validation-baseline.jq',
     'make/release-validation-local.mk','make/testkit.mk','scripts/release/select-validation.pl',
     'scripts/release/validation-stage.sh','scripts/release/validation-focus.sh','scripts/release/validation-baseline.sh',
     'scripts/release/validation.sh','scripts/release/validation-proof.pl',
     'scripts/ci/validation-roster.sh','scripts/ci/workspace-validation.sh',
-    'scripts/ci/validation-evidence.pl','scripts/ci/ValidationPlan.pm',
-    'scripts/ci/check-release-source.sh',$context_path,$baseline_path);
+    'vendor/toko-tooling/scripts/ci/validation-evidence.pl','vendor/toko-tooling/scripts/ci/ValidationPlan.pm',
+    'vendor/toko-tooling/scripts/ci/check-release-source.sh',$context_path,$baseline_path);
 push @inputs, map { $_->{changelog} } @{$groups->{groups}};
 # Shared's tools.mk prepends this exact pair on every recursive Make entry.
 # Collapse only adjacent leading repetitions: lookup precedence and every

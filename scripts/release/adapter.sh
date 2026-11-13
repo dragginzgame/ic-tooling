@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: ci/release-delivery.txt ci/release-editor.env scripts/release/editor.sh scripts/release/group.sh scripts/release/validation.sh scripts/ci/check-release-delivery.sh scripts/ci/check-release-source.sh scripts/ci/next-release-version.sh scripts/ci/finalize-release-changelog.awk scripts/ci/release-receipts.sh scripts/ci/cargo-release-group.sh
+# Shared companions: ci/release-delivery.txt ci/release-editor.env scripts/release/editor.sh scripts/release/group.sh scripts/release/validation.sh vendor/toko-tooling/scripts/ci/check-release-delivery.sh vendor/toko-tooling/scripts/ci/check-release-source.sh vendor/toko-tooling/scripts/ci/next-release-version.sh vendor/toko-tooling/scripts/ci/finalize-release-changelog.awk vendor/toko-tooling/scripts/ci/release-receipts.sh vendor/toko-tooling/scripts/ci/cargo-release-group.sh
 set -euo pipefail
 export RUSTUP_AUTO_INSTALL=0
 
@@ -12,10 +12,10 @@ tooling_root="${BASH_SOURCE[0]}"
 tooling_root="$(cd -P "${tooling_root%/*}/../.." && printf '%s/.' "$PWD")"
 tooling_root="${tooling_root%/.}"
 bash "$tooling_root/scripts/release/group.sh" ci/cargo-release-groups.json "${RELEASE_GROUP:-}"
-bash "$tooling_root/scripts/ci/check-release-delivery.sh" \
+bash "$tooling_root/vendor/toko-tooling/scripts/ci/check-release-delivery.sh" \
     "$tooling_root/ci/release-delivery.txt" "${RELEASE_DELIVERY-direct}"
 fail() { echo "release metadata refused: $1" >&2; exit 1; }
-group() { bash "$tooling_root/scripts/ci/cargo-release-group.sh" "$1" "$RELEASE_GROUP" "${@:2}"; }
+group() { bash "$tooling_root/vendor/toko-tooling/scripts/ci/cargo-release-group.sh" "$1" "$RELEASE_GROUP" "${@:2}"; }
 case "$operation" in
     version) exec bash "$tooling_root/scripts/release/group.sh" ci/cargo-release-groups.json "$RELEASE_GROUP" version ;;
     files) group "$operation"; exit ;;
@@ -24,9 +24,9 @@ case "$operation" in
 esac
 make --no-print-directory toko-tooling-check
 [[ "${RELEASE_SOURCE:?}" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || fail 'invalid source identity'
-selected_version="$(bash "$tooling_root/scripts/ci/next-release-version.sh" "${RELEASE_PREVIOUS:?}" "${RELEASE_KIND:?}")"
+selected_version="$(bash "$tooling_root/vendor/toko-tooling/scripts/ci/next-release-version.sh" "${RELEASE_PREVIOUS:?}" "${RELEASE_KIND:?}")"
 [[ "$selected_version" == "${RELEASE_VERSION:?}" ]] || fail 'conflicting release selection'
-perl "$tooling_root/scripts/ci/validate-release-inputs.pl" date "${RELEASE_DATE:?}" > /dev/null
+perl "$tooling_root/vendor/toko-tooling/scripts/ci/validate-release-inputs.pl" date "${RELEASE_DATE:?}" > /dev/null
 state="$(git rev-parse --git-path release-state)"
 [[ ! -L "$state" ]] || fail 'symlinked release evidence directory'
 identity="$RELEASE_GROUP-$RELEASE_VERSION"
@@ -48,8 +48,8 @@ changelog="$(jq -er '.changelog' "$scratch/plan.json")"
 jq -jr '.files[] | . + "\u0000"' "$scratch/plan.json" > "$scratch/files"
 files=()
 while IFS= read -r -d '' file; do files+=("$file"); done < "$scratch/files"
-# shellcheck source=scripts/ci/release-receipts.sh
-source "$tooling_root/scripts/ci/release-receipts.sh"
+# shellcheck source=vendor/toko-tooling/scripts/ci/release-receipts.sh
+source "$tooling_root/vendor/toko-tooling/scripts/ci/release-receipts.sh"
 select_editor() {
     # shellcheck source=ci/release-editor.env
     source "$tooling_root/ci/release-editor.env" || return
@@ -64,7 +64,7 @@ admit_files() {
     if [[ "$operation" != preflight && "$operation" != verify && "$operation" != prepare ]]; then
         for path in "${files[@]}"; do allowed+=(--allow "$path"); done
     fi
-    bash "$tooling_root/scripts/ci/check-release-source.sh" "${allowed[@]}" ||
+    bash "$tooling_root/vendor/toko-tooling/scripts/ci/check-release-source.sh" "${allowed[@]}" ||
         fail 'commit refused source paths before releasing'
 }
 receipt_header() {
@@ -127,7 +127,7 @@ case "$operation" in
             fi
         else select_editor; fi
         awk -v version="$RELEASE_VERSION" -v previous="$RELEASE_PREVIOUS" -v date="$RELEASE_DATE" \
-            -f "$tooling_root/scripts/ci/finalize-release-changelog.awk" "$changelog" > /dev/null
+            -f "$tooling_root/vendor/toko-tooling/scripts/ci/finalize-release-changelog.awk" "$changelog" > /dev/null
         if [[ "$fresh_tool_setup" == true && "$editor_setup" == false ]]; then setup_tools; fi
         CARGO_NET_OFFLINE=true make --no-print-directory compiler-check
         if [[ "$scope" == focused ]]; then

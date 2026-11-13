@@ -6,6 +6,40 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.77.2] - Unreleased
+
+### 🔧 Changed
+
+- Adopt published Toko Tooling 0.42.5 in both workspaces. Move managed executables
+  and catalogs into `vendor/toko-tooling/` through the authenticated exporter;
+  migrate Make, scripts, CI actions, fixture closures and hooks without old-path
+  wrappers. Preserve product release gates and unrelated dependency selections.
+- Display package names first in `make deps-list`, with `(root)` and
+  `qualification/` workspace labels.
+- Adopt setup recovery that distinguishes an admitted Cargo tool from failed
+  post-activation maintenance, reusing the selected tool on retry instead of
+  rebuilding it. Retain vendor-aware release-command substitution.
+- Anchor consumer validation in the checkout and include vendored inputs in reuse
+  fingerprints. Keep product initialization/EXIT checks while leaving generic
+  lifecycle matrices with Toko Tooling.
+- Keep the private binary qualification package's tooling pin as an inherited
+  source-only dev-dependency, avoiding unused tooling compilation in Cargo 1.100
+  binary tests while retaining strict lint and snapshot admission.
+
+### 📝 Qualification
+
+- Freeze reviewed Platform 0.32.2, Types 0.20.2, Runtime/macros/guard 0.22.2,
+  Wire 0.22.1 and Mio 1.2.5 entry locks for deployment. No release-time dependency
+  upgrade is included. Native PocketIC remains upstream 16.1.0.
+- Retain Toko 0.42.5: available 0.42.6 changes producer fixtures and has identical
+  bytes/modes for all 116 installed payloads. Revisit on the next tooling refresh.
+  Keep catalog/editor maintenance separate: cargo-sort-derives 0.15.0, yq 4.54.3,
+  cloc 2.12 and Build editor 0.84.1 remain optional next-batch updates. The selected
+  LOC command counts source files without archive expansion.
+- Publish Foundation's packaged setup-documentation change, Tools' Platform/Types
+  minimums and Testkit's new Wire identity. Build/Text archive source is unchanged;
+  their tooling/lint maintenance is Git-only until the next product release.
+
 ## [0.77.1] - 2026-11-13
 
 ### 🔧 Changed
