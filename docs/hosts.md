@@ -1,6 +1,6 @@
 # IC Tooling qualification
 
-Toko Tooling is selected as `toko-tooling = "=0.43.0"` in each workspace's
+Toko Tooling is selected as `toko-tooling = "=0.43.1"` in each workspace's
 `[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
 Every real package inherits it in `[dev-dependencies]` and lists it in
 `package.metadata.cargo-machete.ignored`. The binary-only `ic-testkit-dev` instead

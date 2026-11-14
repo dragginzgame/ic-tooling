@@ -27,6 +27,8 @@
   execution, reuse and fallback timing observations across resumes; read them
   without repeating delivery. Cargo publication time includes packaging and
   registry waiting, so it is not reported as upload-only time.
+- Align both documented exact-pin exceptions with the 0.43.1 selection, retaining
+  dependency-policy admission in release preflight.
 
 ### 🧪 Verified
 
