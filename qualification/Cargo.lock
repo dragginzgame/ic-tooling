@@ -884,7 +884,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.77.2"
+version = "0.77.3"
 dependencies = [
  "flate2",
  "sha2 0.11.1",
@@ -893,7 +893,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.77.2"
+version = "0.77.3"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -902,7 +902,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.77.2"
+version = "0.77.3"
 dependencies = [
  "command-fds",
  "ic-host-artifacts",
