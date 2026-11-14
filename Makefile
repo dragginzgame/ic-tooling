@@ -75,7 +75,7 @@ help:
 	@echo 'Individual setup: install-host-tools, install-ic-tools, install-rust-tools'
 	@echo 'Focused Platform/Wire adoption: dependency-adoption-check (current source; prepared PocketIC required)'
 	@echo 'Dependencies: deps-list (offline package versions/groups), deps-update (sequential explicit Cargo updates in both workspaces)'
-	@echo 'Source reports: cloc (this workspace); fleet reports run in Toko Tooling'
+	@echo 'Source reports: toko-cloc (this repository), toko-cloc --manifest qualification/Cargo.toml'
 	@echo 'Full release validation: ci (pinned compiler, workspace Clippy, native/Wasm and isolated features); compiler-check admits identities'
 	@echo 'Native CI with publication dry run: ci-publication (one workspace lint gate, then offline checks)'
 	@echo 'Frozen Git + crates.io releases: release-patch/minor/major RELEASE_GROUP=<group from ci/cargo-release-groups.json>'

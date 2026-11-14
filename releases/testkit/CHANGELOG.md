@@ -31,6 +31,7 @@ Joint history through 0.76.1 remains there once, with its original scope.
 - Select Wire 0.22.0 for the opt-in native adapter and private Wasm probe. Align
   callers' direct Wire dependency when exchanging codec traits or typed failures;
   request/reply bytes, schema limits and accepted payloads remain unchanged.
+  Fix [#356](https://github.com/dragginzgame/ic-tooling/issues/356).
 
 ### 🔧 Changed
 

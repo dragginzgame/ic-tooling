@@ -6,6 +6,23 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.77.3] - Unreleased
+
+### 🔧 Changed
+
+- Adopt Toko Tooling 0.43.0 in both workspaces. Replace the retired `make cloc`
+  interface with the checkout-selecting `toko-cloc` launcher and direct CLI
+  arguments; preserve release qualification and unrelated dependency selections.
+  This development-tooling migration requires no product upload.
+
+### 🧪 Testing
+
+- Isolate the Make routing fixture from an inherited full-CI flag, preserving
+  its explicit full/release routing cases and first-failure checks. Reproduce
+  and fix the Linux CI failure without changing production qualification.
+  This test-only maintenance needs Git delivery, with no product upload.
+  See [#353](https://github.com/dragginzgame/ic-tooling/issues/353).
+
 ## [0.77.2] - 2026-11-13
 
 ### 🔧 Changed

@@ -1,6 +1,6 @@
 # IC Tooling qualification
 
-Toko Tooling is selected as `toko-tooling = "=0.42.5"` in each workspace's
+Toko Tooling is selected as `toko-tooling = "=0.43.0"` in each workspace's
 `[workspace.dependencies]`: the product root and `qualification/Cargo.toml`.
 Every real package inherits it in `[dev-dependencies]` and lists it in
 `package.metadata.cargo-machete.ignored`. The binary-only `ic-testkit-dev` instead
@@ -30,6 +30,23 @@ Read-only `make deps-list` reports all local packages, versions and release grou
 in the product and qualification workspaces offline, with package names first.
 It changes no lockfile and
 queries no registry; it replaces display-only dependency catalog entries.
+
+Source counts use `toko-cloc`, which selects this checkout's installed reporter
+and prepared tools. The launcher is installed once on the user's PATH:
+
+```sh
+install -m 755 vendor/toko-tooling/scripts/dev/toko-cloc "$HOME/.local/bin/toko-cloc"
+toko-cloc
+toko-cloc --manifest qualification/Cargo.toml
+toko-cloc -d 1 ic-testkit
+```
+
+Create `$HOME/.local/bin` and add it to PATH during explicit setup if needed.
+The former `make cloc` target and its `CLOC_*` settings are retired. Arguments
+now go directly to the launcher; `toko-cloc ..` selects sibling reporting only
+when explicitly requested. The focused consumer caller fixture is
+`bash scripts/ci/test-make-snapshot.sh --case loc-routing`; generic counting
+and parser regressions remain with Toko Tooling.
 
 Explicit `make deps-update` runs `cargo update -v` sequentially in the product
 and qualification workspaces, with Cargo's normal output and no separate

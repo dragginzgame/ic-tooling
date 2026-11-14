@@ -1,6 +1,6 @@
 # Testkit owns simulator setup and native/Wasm qualification.
 SERVER_CLI := $(CURDIR)/target/debug/ic-testkit-server
-.PHONY: build-server-cli install-server server-check testkit-graph-check testkit-wasm-check testkit-check testkit-browser-check testkit-package-check testkit-installed-check
+.PHONY: build-server-cli install-server server-check testkit-graph-check testkit-wasm-check testkit-check testkit-browser-check testkit-package-check testkit-installed-check testkit-wire-generations-check
 build-server-cli:
 	+cargo build -p ic-testkit --features cli --locked --offline --bin ic-testkit-server
 install-server:
@@ -11,6 +11,8 @@ install-server:
 server-check:
 	@test -x "$(SERVER_CLI)" || { echo 'Run make install-server during explicit setup.' >&2; exit 1; }
 	"$(SERVER_CLI)" check
+testkit-wire-generations-check:
+	+bash scripts/ci/test-wire-adapter-generations.sh
 testkit-wasm-check:
 	+cargo check -p ic-testkit --features ic-testkit/held-reply-fixtures --locked --offline --target wasm32-unknown-unknown
 	+cargo check -p ic-testkit-wire --locked --offline --target wasm32-unknown-unknown

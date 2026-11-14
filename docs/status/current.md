@@ -1,4 +1,62 @@
-# Current handoff — 2026-11-13
+# Current handoff — 2026-11-14
+
+## Git delivery scope
+
+The current batch delivers Toko 0.43.0, the Linux Make fixture repair, Wire
+generation qualification and issue reconciliation to `origin/main`. All changed
+surfaces are contributor tooling, private qualification or documentation;
+published library code/APIs are unchanged. No product version, release tag or
+registry upload is needed. Testkit 0.104.0 and adapter 0.1.0 were rechecked as
+non-yanked registry releases with matching existing remote tags. The frozen
+increment workflow remains the owner of future product releases.
+
+Focused snapshot/tool/pin admission, Make routing, four installed Wire-generation
+tests, ShellCheck and documentation links passed on Linux. Hosted CI follows the
+push asynchronously; no fresh native macOS result is claimed for this batch.
+
+## Toko Tooling 0.43.0 adoption
+
+Both workspace pins, locks and exact-pin exceptions now select authenticated,
+non-yanked crates.io 0.43.0 (source `bd24a0b7`, archive SHA-256
+`060d3507b66eb290ce12bc2572098f7e7cb1e12e9d6697a9b1a5d1552fcb2588`).
+The exporter preserved all entrypoints and prior local issue fixes. Its preview
+changed only managed `make/tools.mk`, the LOC reporter's help and the new launcher;
+the installed snapshot now admits 117 files. Baseline, native catalogs, compiler,
+release/publication runners and required product gates are byte-identical.
+Both locks differ from entry only in the tooling package block.
+
+Use `toko-cloc` rather than `make cloc` or `CLOC_*` settings. The existing PATH
+launcher already matches the reviewed payload byte-for-byte, so no user-global
+file was changed. Local help, setup documentation and the real launcher caller
+fixture migrate together. The focused fixture covers nested cwd, arguments with
+spaces, direct failure status and retirement of the old Make target. Snapshot
+and existing prepared host/Cargo/editor/PocketIC admission pass without tool
+reinstallation. Evidence and the entry patch/locks remain under
+`target/evidence/toko043-20261114/`. No publication, sibling source change or
+artifact cleanup is included.
+
+## Issue reconciliation and focused fixes
+
+The maintainer retired Canic's acceptance scope: #263 is closed as superseded,
+not as proof of its historical two-case regression. Snapshot/timer integrity,
+two-slot capture, caller funding and effect reconciliation remain unchanged.
+The Rust 1.100 policy (#354), structured warning matrix (#355) and published
+Wire alignment (#356) now have their missing acceptance evidence reconciled.
+The independent adapter's composition proof completes #357; these
+qualification/docs fixes belong to the same Git batch, with no new release or upload.
+
+The Linux CI fixture inherited `IC_TOOLING_FULL_CI=1` while expecting ordinary
+release routing. The fixture now unsets it before testing both explicit routes.
+The exact failure reproduced; the focused roster and complete Make fixture pass
+with the CI flag set. No production gate or refusal was weakened.
+
+The new explicit `make testkit-wire-generations-check` runs four existing
+installed query/update/error tests against real Wire 0.21.5/0.22.1 selections,
+one shared current Testkit/PocketIC, and byte-identical adapter/test source.
+The old adapter manifest is test-only; no old-codec product, alias or new release
+is introduced. Native Linux evidence: `target/tmp/wire-adapter-generations.WUBgPW/`.
+The sandbox-only attempt could not bind loopback; the native attempt passed.
+Keep both attempts and `target/evidence/issues-20261114/`.
 
 ## Deployment delivered — Toko 0.42.8 and independent Wire adapter
 
@@ -22,7 +80,7 @@ ownership cover ten products, two private members and six release groups.
 
 ## Qualified selection and tooling
 
-Both roots select published Toko 0.42.8. Authenticated export retains all 116
+The preceding deployment selected published Toko 0.42.8. Its authenticated export retained all 116
 managed files and entrypoints, changing only the hook and hook installer for
 CDPATH-independent resolution. The baseline, native pins, release/publication
 code and required gates are unchanged. Snapshot/tool/server admission and actual
@@ -36,7 +94,7 @@ Platform 0.32.2, Types 0.20.2, Runtime/macros/guard 0.22.2, Wire 0.22.1 and Mio
 Optional native-catalog/editor updates remain separate maintenance; selected
 cloc source counting does not expand archives. Never hand-edit managed catalogs.
 
-## #357 — shipped ownership cut and remaining acceptance
+## #357 — shipped ownership cut and completed local acceptance
 
 Testkit has no Wire/Serde adapter dependency, `wire` feature or compatibility
 exports. Lifecycle and raw transport retain the selected upstream client.
@@ -45,10 +103,14 @@ exports. Lifecycle and raw transport retain the selected upstream client.
 all limits, typed causes, panic behavior and one-shot updates are preserved.
 See [migration and publication ownership](../testkit/wire-adapter.md).
 
-Keep [#357](https://github.com/dragginzgame/ic-tooling/issues/357) open for Auth/Blob
-migrations and actual matching-adapter/multiple-Wire-generation acceptance.
-Those sibling edits/publications are excluded. Package publication here does
-not complete that consumer proof. Future Wire-only adoption selects the
+Auth and Blob independently migrated to published Testkit 0.104/adapter 0.1 with
+Wire 0.22.1; read-only inspection found passing qualification Clippy and focused
+installed checks. Auth retains five installed ingress/certification/upgrade and
+three persistent lifecycle cases in `target/upstream-1114/`; Blob retains seven
+ingress/typed-error/lost-ack/lifecycle cases in `target/testkit-refresh-20261114/`.
+These are local Linux results, not sibling delivery or macOS claims. Together
+with the new actual multi-generation composition probe, they complete
+[#357](https://github.com/dragginzgame/ic-tooling/issues/357). Future Wire-only adoption selects the
 `testkit-wire` group without a lifecycle release when its client API is unchanged.
 
 ## Validation and asynchronous hosts
@@ -73,10 +135,20 @@ Clippy, shell checks, formatting and document links pass too.
 Explicit [native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43502371156),
 [optimizer](https://github.com/dragginzgame/ic-tooling/actions/runs/43502379157) and
 [runtime](https://github.com/dragginzgame/ic-tooling/actions/runs/43502385864) runs
-were in progress; [browser qualification](https://github.com/dragginzgame/ic-tooling/actions/runs/43502393911)
-succeeded at readback. All four dispatches returned main at exact `edfedc6c`;
-their identities survive this documentation push. Native macOS 15 Intel and
-Apple Silicon passes are not yet claimed. Do not infer them from Linux evidence.
+were originally dispatched at exact `edfedc6c`; browser qualification succeeded.
+Native Intel macOS 15 passed completely in
+[job 132151267353](https://github.com/dragginzgame/ic-tooling/actions/runs/43502371156/job/132151267353).
+Apple Silicon initially failed before qualification: retained download stderr
+reports HTTP 403 (curl 56). A retry is asynchronous. Linux failed in the inherited
+Make-fixture flag described above. No current all-green matrix is claimed.
+
+For #354/#355, applicable Apple Silicon macOS 15 evidence already exists in
+[job 131916054060](https://github.com/dragginzgame/ic-tooling/actions/runs/43434488465/job/131916054060)
+at `4ea33bbf`, using actual Rust/Cargo 1.100. Both root lint tables, compiler floor
+and pin are unchanged. Build's Cargo source and warning tests are byte-identical
+to current `b608af88`; both Mac logs show the warning matrix and native executable
+tests passing, including archive qualification. This supports those scoped
+compiler/policy issues, not qualification of all subsequently changed suppliers.
 
 ## Retained evidence and failures
 
@@ -96,12 +168,14 @@ logs. No old receipts were relabelled or claimed as collector-only recovery.
 ## Outstanding work and preserved contracts
 
 - [#353](https://github.com/dragginzgame/ic-tooling/issues/353): phase timing and
-  collector recovery remain incomplete; no whole-gate reuse was added.
-- [#354](https://github.com/dragginzgame/ic-tooling/issues/354) and
-  [#355](https://github.com/dragginzgame/ic-tooling/issues/355): native macOS acceptance remains required.
-- [#263](https://github.com/dragginzgame/ic-tooling/issues/263): Canic owns exact
-  two-case snapshot/timer acceptance. Keep two slots and transfer cycles; sender,
-  funding, stop/drain/start and effect reconciliation stay caller-owned.
+  collector recovery remain incomplete; generic runner work is now owned by
+  [Toko Tooling #382](https://github.com/dragginzgame/toko-tooling/issues/382).
+  No sibling source was changed, whole-gate reuse added or benchmark release run.
+  Preserve explicit manual comparison qualification; avoid redundant routine
+  same-source dispatches operationally. Remaining timing must come from a real
+  independently authorized deployment, not reconstructed file timestamps.
+- #263 is superseded by the maintainer's Canic replacement decision. Keep
+  sender, funding, stop/drain/start and effect reconciliation caller-owned.
   [Timers #87](https://github.com/dragginzgame/ic-timers/issues/87) is separate.
 - Independent fixes: exact Build probe/archive paths, Cargo-config FS errors,
   malformed successful process observations. Consumer work remains in

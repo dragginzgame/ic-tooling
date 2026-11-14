@@ -72,7 +72,37 @@ implementation, not sibling edits or releases. The inspected consumers need:
   `tests/storage.rs`. Preserve endpoint catalogs, reply-byte tightening and
   original error downcasts. Qualify installed calls and malformed/oversized replies.
 
-Neither migration has been performed or qualified here. Multiple-generation
-consumer composition also needs actual matching released adapter lines; a graph
-without Wire in Testkit alone does not prove that acceptance. Keep #357 open
-until its consumer and generation-composition evidence is available.
+Both migrations were independently completed locally by their owners and
+inspected read-only on 2026-11-14. Auth's `target/upstream-1114/` records native
+and Wasm Clippy/graph checks, five installed upgrade/certification/ingress cases
+and three persistent lifecycle cases. Blob's `target/testkit-refresh-20261114/`
+records qualification Clippy and seven installed ingress, typed-error,
+lost-acknowledgement and repeated-upgrade cases. They use published Testkit
+0.104.0 and adapter 0.1.0 with Wire 0.22.1 directly. These are owners' local
+Linux checks, not claims of sibling delivery or native macOS qualification.
+
+## Multiple-generation composition proof
+
+`make testkit-wire-generations-check` is an explicit architecture probe, separate
+from normal deployment gates. It needs the prepared server and cached Cargo
+inputs for Wire 0.21.5 and 0.22.1. It never downloads or changes product locks;
+missing inputs refuse and retain the attempt for explicit setup.
+
+The probe copies the single current adapter implementation and its existing
+installed-call test into two disposable package selections. Only temporary
+manifest versions and Wire requirements differ. Both consumers coexist in one
+Cargo graph, each exchanging its own exact Wire `Limits` and errors through its
+matching adapter, with exactly one current Testkit and upstream PocketIC owner.
+Source comparisons refuse drift from the authoritative implementation/test.
+Both generations exercise live query/update decoding, malformed replies,
+original typed causes and upstream rejections: four installed tests passed on
+Linux under Rust 1.100. Evidence is retained under
+`target/tmp/wire-adapter-generations.WUBgPW/`.
+
+The old-generation package is an unpublished fixture, not a supported legacy
+product line. This proves that changing codec selection at the adapter owner
+does not require changing lifecycle source/version; it does not claim a second
+released adapter. The existing unit/canister tests separately retain all budgets,
+request frames, caller identity and no-retry update effects. Combined with the
+Auth/Blob evidence, this completes the local acceptance of
+[#357](https://github.com/dragginzgame/ic-tooling/issues/357).

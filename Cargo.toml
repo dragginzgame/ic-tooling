@@ -60,7 +60,7 @@ serde_json = "1.0.150"
 tokio = { version = "1.52.3", default-features = false }
 wasmparser = { version = "0.263", default-features = false, features = ["std", "features"] }
 
-toko-tooling = "=0.42.8"
+toko-tooling = "=0.43.0"
 
 [workspace.lints.cargo]
 unused_dependencies = "deny"

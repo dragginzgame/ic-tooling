@@ -185,6 +185,9 @@ recovery command, disclose that limitation and the selected rerun scope before a
 new gate. Only the four qualified fixture stages and the separately admitted full
 publication lint have the reuse contracts described below; native runtime results
 cannot be reconstructed as new stage proofs. This limitation remains in #353.
+The missing generic frozen-runner phase observations and collector-only recovery
+are tracked in [Toko Tooling #382](https://github.com/dragginzgame/toko-tooling/issues/382);
+do not add a parallel consumer runner or rerun a release just to measure it.
 
 ## Selected adapter cases and unchanged-stage reuse
 

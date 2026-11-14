@@ -3,8 +3,8 @@
 set -euo pipefail
 selected_case=all
 if [[ $# != 0 ]]; then
-    [[ $# == 2 && $1 == --case && ( $2 == tooling-roster || $2 == release-routing || $2 == command-routing ) ]] || {
-        echo 'usage: test-make-snapshot.sh [--case tooling-roster|release-routing|command-routing]' >&2; exit 2;
+    [[ $# == 2 && $1 == --case && ( $2 == tooling-roster || $2 == release-routing || $2 == command-routing || $2 == loc-routing ) ]] || {
+        echo 'usage: test-make-snapshot.sh [--case tooling-roster|release-routing|command-routing|loc-routing]' >&2; exit 2;
     }
     selected_case="$2"
 fi
@@ -18,6 +18,7 @@ root="${root%/.}"
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 unset TOKO_TOOLING_ROOT
 unset TOOLING_STAGE_ADMISSIONS IC_TOOLING_RELEASE_GROUP TOOLING_RELEASE_GROUP
+unset IC_TOOLING_FULL_CI
 unset RELEASE_GROUPS RELEASE_PUBLISH_TARGET RELEASE_SETUP_TARGET RELEASE_BATCH_ACTIVE
 unset RELEASE_SETUP_MODE PUBLICATION_RESULT
 # Exercise every formatter pass while Shared owns input-cache qualification.
@@ -227,6 +228,55 @@ STUB
     grep -Fx 'fixture scripts/ci/test-host-fixture-retention.sh' "$HOST_MAKE_EVENTS" >/dev/null
 }
 
+check_loc_routing() {
+    # The real PATH launcher selects this checkout's reporter. Shared owns the
+    # reporter/parser matrix; substitute only counting effects here.
+    git init -q
+    cat > vendor/toko-tooling/scripts/dev/cloc.sh <<'STUB'
+#!/usr/bin/env bash
+set -euo pipefail
+[[ $PWD == "$HOST_MAKE_LOC_CWD" ]]
+printf 'cloc' >> "$HOST_MAKE_EVENTS"
+for argument in "$@"; do printf ' <%s>' "$argument" >> "$HOST_MAKE_EVENTS"; done
+printf '\n' >> "$HOST_MAKE_EVENTS"
+exit "${HOST_MAKE_CLOC_STATUS:-0}"
+STUB
+    local selection result status options
+    # Include nested invocation, spaces and direct status propagation.
+    mkdir -p 'nested directory'
+    export HOST_MAKE_LOC_CWD="$PWD/nested directory"
+    for selection in default manifest directory; do
+        options=()
+        [[ $selection != manifest ]] || options+=(--manifest 'apps/selected app/Cargo.toml')
+        [[ $selection != directory ]] || options+=(-d 2 'selected directory')
+        for result in 0 23; do
+            : > "$HOST_MAKE_EVENTS"
+            status=0
+            (cd 'nested directory'; HOST_MAKE_CLOC_STATUS="$result" \
+                bash ../vendor/toko-tooling/scripts/dev/toko-cloc ${options[@]+"${options[@]}"}) \
+                > "$fixture/cloc-$selection-$result.log" 2>&1 || status=$?
+            [[ $status == "$result" ]] || exit 1
+            {
+                printf 'cloc'
+                if [[ $selection == manifest ]]; then printf ' <--manifest> <apps/selected app/Cargo.toml>'; fi
+                if [[ $selection == directory ]]; then printf ' <-d> <2> <selected directory>'; fi
+                printf '\n'
+            } > "$fixture/expected"
+            cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
+        done
+    done
+    # The old Make entrypoint must stay retired rather than silently forwarding.
+    : > "$HOST_MAKE_EVENTS"
+    if make --no-print-directory cloc > "$fixture/retired-cloc.log" 2>&1; then exit 1; fi
+    [[ ! -s $HOST_MAKE_EVENTS ]]
+}
+
+if [[ $selected_case == loc-routing ]]; then
+    check_loc_routing
+    fixture_complete=true
+    echo 'LOC launcher preserves checkout, cwd, arguments and failure status; Make entrypoint is retired'
+    exit 0
+fi
 if [[ $selected_case == tooling-roster ]]; then
     prepare_tooling_stubs
     check_tooling_roster
@@ -474,34 +524,7 @@ printf '%s\n' 'install-server-tools.sh check' \
     'test --workspace --all-targets --all-features --locked --offline' > "$fixture/expected"
 cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
 mv "$fixture/server cli" "$fixture/local/target/debug/ic-testkit-server"
-# Keep the actual Host LOC caller, argument selection and failure propagation
-# qualified without replaying Shared's synthetic workspace/parser matrix.
-cat > "$fixture/local/vendor/toko-tooling/scripts/dev/cloc.sh" <<'STUB'
-#!/usr/bin/env bash
-set -euo pipefail
-printf 'cloc' >> "$HOST_MAKE_EVENTS"
-printf ' <%s>' "$@" >> "$HOST_MAKE_EVENTS"
-printf '\n' >> "$HOST_MAKE_EVENTS"
-exit "${HOST_MAKE_CLOC_STATUS:-0}"
-STUB
-for selection in default manifest; do
-    options=(--no-print-directory -j4 cloc)
-    [[ "$selection" != manifest ]] || options+=(CLOC_MANIFEST='apps/selected app/Cargo.toml')
-    for result in 0 23; do
-        : > "$HOST_MAKE_EVENTS"
-        status=0
-        HOST_MAKE_CLOC_STATUS="$result" make "${options[@]}" \
-            > "$fixture/cloc-$selection-$result.log" 2>&1 || status=$?
-        if [[ "$result" == 0 ]]; then [[ "$status" == 0 ]] || exit 1;
-        else [[ "$status" == 2 ]] || exit 1; fi
-        if [[ "$selection" == default ]]; then
-            printf 'cloc <%s>\n' "$PWD" > "$fixture/expected"
-        else
-            printf 'cloc <--manifest> <apps/selected app/Cargo.toml> <%s>\n' "$PWD" > "$fixture/expected"
-        fi
-        cmp "$fixture/expected" "$HOST_MAKE_EVENTS"
-    done
-done
+check_loc_routing
 # Rust preflight must finish before either common installation stage may run.
 : > "$HOST_MAKE_EVENTS"
 status=0
