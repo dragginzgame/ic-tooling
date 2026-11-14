@@ -8,6 +8,16 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.104.1] - Unreleased
+
+### 🔧 Changed
+
+- Select Platform 0.33.0 privately for snapshot and held-reply management codecs,
+  Types 0.20.3 for portable identities, and Runtime/macros/guard 0.22.3 in the
+  private probe. Preserve native PocketIC 16.1 identity, codec budgets, lifecycle
+  recovery and the Types-only portable graph. Public Testkit APIs are unchanged;
+  the independent Wire adapter remains 0.1.0 with Wire 0.22.1.
+
 ## [0.104.0] - 2026-11-13
 
 ### ⚠️ Breaking

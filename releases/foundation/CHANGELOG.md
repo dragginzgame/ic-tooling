@@ -8,6 +8,13 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
 
 ## [0.77.3] - Unreleased
 
+### ✨ Added
+
+- Add `FileEntry::open_regular_file_for_update` for existing read/write files
+  beneath a held directory. Preserve no-follow/type/permission admission and
+  renamed-directory custody without creation, truncation or implicit writes;
+  callers retain locking, identity, append and synchronization policy.
+
 ### 🔧 Changed
 
 - Adopt Toko Tooling 0.43.0 in both workspaces. Replace the retired `make cloc`

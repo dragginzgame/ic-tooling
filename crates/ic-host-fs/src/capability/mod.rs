@@ -13,7 +13,9 @@ mod error;
 pub use entries::{DirectoryEntries, DirectoryEntry, EntryKind};
 pub use error::{CapabilityError, Operation, Refusal, RemovalError};
 
-use crate::read::{OpenEntryError, OpenedEntry, open_entry_beneath};
+use crate::read::{
+    FileAccess, OpenEntryError, OpenedEntry, open_entry_beneath, open_entry_for_update_beneath,
+};
 use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
 use cap_std::fs::{Dir, DirBuilder, DirBuilderExt, OpenOptions, OpenOptionsExt, PermissionsExt};
 use std::{
@@ -304,6 +306,41 @@ impl FileEntry {
         &self,
         forbidden_permissions: u32,
     ) -> Result<Option<File>, CapabilityError> {
+        self.open_regular_file_with_permissions_and_access(
+            forbidden_permissions,
+            FileAccess::ReadOnly,
+        )
+    }
+
+    /// Open an existing no-follow regular file for reading and writing.
+    ///
+    /// Selects the file relative to its held parent, including after directory
+    /// renames. Missing entries return `None`; this never creates, truncates,
+    /// appends, writes, synchronizes or repairs permissions. The returned file
+    /// starts at offset zero. Opening remains nonblocking for a raced-in FIFO.
+    ///
+    /// Checks the opened descriptor against the caller's forbidden permission
+    /// mask. Callers own identity/link-count admission, locking, writer/namespace
+    /// exclusion, seek/write/sync ordering and recovery from uncertain writes.
+    ///
+    /// # Errors
+    /// Refuses invalid permission masks, observed links/special files, opened
+    /// non-regular files and forbidden modes; native failures retain their cause.
+    pub fn open_regular_file_for_update(
+        &self,
+        forbidden_permissions: u32,
+    ) -> Result<Option<File>, CapabilityError> {
+        self.open_regular_file_with_permissions_and_access(
+            forbidden_permissions,
+            FileAccess::ReadWrite,
+        )
+    }
+
+    fn open_regular_file_with_permissions_and_access(
+        &self,
+        forbidden_permissions: u32,
+        access: FileAccess,
+    ) -> Result<Option<File>, CapabilityError> {
         let path = self.parent.display.join(&self.name);
         validate_options(
             &path,
@@ -312,7 +349,7 @@ impl FileEntry {
                 forbidden_permissions,
             },
         )?;
-        let Some(file) = self.open_regular_file()? else {
+        let Some(file) = self.open_regular_file_with_access(access)? else {
             return Ok(None);
         };
         let metadata = file
@@ -349,6 +386,13 @@ impl FileEntry {
     /// # Errors
     /// Rejects observed links/special files and retains native opening failures.
     pub fn open_regular_file(&self) -> Result<Option<File>, CapabilityError> {
+        self.open_regular_file_with_access(FileAccess::ReadOnly)
+    }
+
+    fn open_regular_file_with_access(
+        &self,
+        access: FileAccess,
+    ) -> Result<Option<File>, CapabilityError> {
         let path = self.parent.display.join(&self.name);
         match self.parent.inner.symlink_metadata(&self.name) {
             Ok(metadata) if metadata.is_symlink() => {
@@ -361,7 +405,13 @@ impl FileEntry {
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
             Err(error) => return Err(failure(Operation::Metadata, &path, error)),
         }
-        match open_entry_beneath(self.parent.as_fd(), Path::new(&self.name)) {
+        let opened = match access {
+            FileAccess::ReadOnly => open_entry_beneath(self.parent.as_fd(), Path::new(&self.name)),
+            FileAccess::ReadWrite => {
+                open_entry_for_update_beneath(self.parent.as_fd(), Path::new(&self.name))
+            }
+        };
+        match opened {
             Ok(OpenedEntry::RegularFile(file)) => Ok(Some(file)),
             Ok(OpenedEntry::Directory(_)) | Err(OpenEntryError::UnsupportedEntry { .. }) => {
                 Err(refused(&path, Refusal::NotRegularFile))

@@ -1,12 +1,57 @@
 # Current handoff — 2026-11-14
 
-## Git delivery scope
+## Platform 0.33 deployment preparation
 
-The current batch delivers Toko 0.43.0, the Linux Make fixture repair, Wire
+The current authorized batch adopts published Platform 0.33.0 (source
+`dd15c2c8`, archive SHA-256
+`1ff16542d2cb6c8307afced4b0b1dc10b31640ea49f26304de6ff94e02eeb8bf`).
+Its bounded Registry protobuf capability is opt-in and remains unselected;
+Tooling retains its existing protocol/transport and feature boundaries. Both
+roots require Types 0.20.3; the private probe requires Runtime/macros/guard
+0.22.3. Preserve the entry lock selections and the completed Host FS opener work.
+
+Deployment selects Foundation 0.77.3 for the compatible FS addition and Testkit
+0.104.1 for private Platform adoption in one supplier-first patch batch, followed
+by Tools 0.93.0 for its exposed Platform codec/ledger identity. Consumers sharing
+those Tools values select Platform 0.33. Testkit's public API, native PocketIC
+16.1 and the independent Wire adapter remain unchanged. Each batch uses the
+standard frozen release and publication owners; hosted CI remains asynchronous.
+The previous complete gates took about 429–583 seconds per group, including
+239–245 seconds of tooling fixtures. Fresh source/FS changes require fresh gates;
+only already qualified stage admissions can reuse unchanged inputs.
+
+Preserve `target/evidence/platform033-deploy/` (entry patch/locks, authenticated
+supplier source and qualification/deployment logs). No sibling source edits,
+release tags or publications have occurred in this preparation section yet.
+Focused `dependency-adoption-check` passed: isolated native/Wasm graphs, Tools
+codec/Agent/Registry/ledger adapters, snapshot refusals, nine adapter unit tests,
+installed upstream snapshot restoration and the actual Wire canister's state/error
+contract. Formatting and local document links pass. The preceding `d02fc37a`
+push has complete Linux and native macOS 15 Intel/Apple Silicon passes in
+[CI 43573475462](https://github.com/dragginzgame/ic-tooling/actions/runs/43573475462);
+that is prior-source evidence, not qualification of this new Platform/FS batch.
+
+## Local Host FS update opener
+
+The Backup maintainer approved this scoped supplier fix. The new
+`FileEntry::open_regular_file_for_update(forbidden_permissions)` reuses held-parent,
+no-follow/nonblocking descriptor admission without create/truncate or implicit
+writes. Caller identity/link-count checks, locking, append/sync and recovery stay
+explicit; read-only APIs remain read-only. See [Host IO](../hosts.md#configured-evidence-io-helpers).
+Linux passed 18 capability tests, 40 shared reader tests, strict package Clippy
+with/without capability and warning-denying Rustdoc. Native macOS and consumer
+append/recovery are not qualified. Both pre-existing dirty locks are unchanged.
+The API/source/docs are local and uncommitted; no version, commit, push or registry
+publication was performed. Backup adoption requires a published Foundation release.
+The following sections retain prior delivery context and recovery information.
+
+## Previous Git-only delivery
+
+The preceding batch delivered Toko 0.43.0, the Linux Make fixture repair, Wire
 generation qualification and issue reconciliation to `origin/main`. All changed
 surfaces are contributor tooling, private qualification or documentation;
-published library code/APIs are unchanged. No product version, release tag or
-registry upload is needed. Testkit 0.104.0 and adapter 0.1.0 were rechecked as
+published library code/APIs were unchanged in that batch. No product version, release tag or
+registry upload was needed. Testkit 0.104.0 and adapter 0.1.0 were rechecked as
 non-yanked registry releases with matching existing remote tags. The frozen
 increment workflow remains the owner of future product releases.
 

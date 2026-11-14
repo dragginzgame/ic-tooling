@@ -12,12 +12,35 @@ pub(super) fn entry_type(parent: impl AsFd, name: impl Arg) -> io::Result<FileTy
     Ok(FileType::from_raw_mode(metadata.st_mode))
 }
 
+#[derive(Clone, Copy)]
+pub(crate) enum FileAccess {
+    ReadOnly,
+    #[cfg(feature = "capability")]
+    ReadWrite,
+}
+
 pub(super) fn open_child(
     parent: impl AsFd,
     name: impl Arg,
     directory: bool,
 ) -> io::Result<OwnedFd> {
-    let mut flags = OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC;
+    open_child_with_access(parent, name, directory, FileAccess::ReadOnly)
+}
+
+pub(super) fn open_child_with_access(
+    parent: impl AsFd,
+    name: impl Arg,
+    directory: bool,
+    access: FileAccess,
+) -> io::Result<OwnedFd> {
+    let access = match access {
+        FileAccess::ReadOnly => OFlags::RDONLY,
+        #[cfg(feature = "capability")]
+        FileAccess::ReadWrite if !directory => OFlags::RDWR,
+        #[cfg(feature = "capability")]
+        FileAccess::ReadWrite => OFlags::RDONLY,
+    };
+    let mut flags = access | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC;
     if directory {
         flags |= OFlags::DIRECTORY;
     }

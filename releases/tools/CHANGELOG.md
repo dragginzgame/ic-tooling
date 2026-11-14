@@ -4,6 +4,16 @@ This ledger owns Host Tools. The published baseline at the split is 0.76.1,
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
+## [0.93.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Adopt Platform 0.33.0 for optional binary Candid, Agent and ledger adapters.
+  Consumers exchanging Platform codec traits, typed causes or ledger values must
+  align their direct Platform selection to 0.33; retain Types 0.20.3 identities.
+  Method bytes, decoder budgets, feature boundaries and transport policy are
+  unchanged. The new upstream Registry protobuf feature remains unselected.
+
 ## [0.92.1] - 2026-11-13
 
 ### 🔧 Changed

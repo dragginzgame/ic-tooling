@@ -2,7 +2,7 @@
 
 use super::{
     ArtifactError, admit_file,
-    entry::{entry_type, open_child, opened_type},
+    entry::{FileAccess, entry_type, open_child_with_access, opened_type},
 };
 use rustix::fs::{FileType, Mode, OFlags};
 use std::{
@@ -70,6 +70,22 @@ pub fn open_entry_beneath(
     root: BorrowedFd<'_>,
     relative: &Path,
 ) -> Result<OpenedEntry, OpenEntryError> {
+    open_entry_with_access(root, relative, FileAccess::ReadOnly)
+}
+
+#[cfg(feature = "capability")]
+pub(crate) fn open_entry_for_update_beneath(
+    root: BorrowedFd<'_>,
+    relative: &Path,
+) -> Result<OpenedEntry, OpenEntryError> {
+    open_entry_with_access(root, relative, FileAccess::ReadWrite)
+}
+
+fn open_entry_with_access(
+    root: BorrowedFd<'_>,
+    relative: &Path,
+    access: FileAccess,
+) -> Result<OpenedEntry, OpenEntryError> {
     let mut parts = relative.components().peekable();
     if parts.peek().is_none() || parts.clone().any(|p| !matches!(p, Component::Normal(_))) {
         return Err(io::Error::new(
@@ -91,10 +107,11 @@ pub fn open_entry_beneath(
         if final_component && !matches!(observed, FileType::RegularFile | FileType::Directory) {
             return Err(OpenEntryError::UnsupportedEntry { kind: observed });
         }
-        let opened = open_child(
+        let opened = open_child_with_access(
             directory,
             name,
             !final_component || observed == FileType::Directory,
+            access,
         )?;
         if final_component {
             let actual = opened_type(&opened)?;

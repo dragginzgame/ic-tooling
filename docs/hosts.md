@@ -106,18 +106,19 @@ exact retries, signatures and hashes. This adoption preserves encoder bytes,
 method identities and explicit budgets; there are no browser Wire bindings here
 to regenerate.
 
-The current local adoption selects Platform 0.32.1 and Types 0.20.1 in both roots,
-with Runtime/macros/guard 0.22.1 for the private probe. Rust 1.100.0 remains the
+The current adoption selects Platform 0.33.0 and Types 0.20.3 in both roots,
+with Runtime/macros/guard 0.22.3 for the private probe. Rust 1.100.0 remains the
 compiler requirement. Host Tools exposes Platform codec,
 ledger and registry identities; Testkit's portable principal helper exposes Types.
 Align callers' direct Platform/Types selections when exchanging those values.
-Published Tools 0.92.0 and Testkit 0.102.0 cover the preceding identity and
-compiler transition. Native PocketIC identities remain upstream 16.1. The locked
-Wire 0.22.0 selection keeps its optional Platform Types integration disabled here.
-Pending Tools 0.92.1 and Testkit 0.103.0 notes do not change package versions;
-callers sharing Wire traits or typed failures must align to its 0.22 line after
-publication. Existing codec budgets, method identities and serialized data
-contracts remain; no persisted-state migration is needed.
+Tools 0.93.0 advances its exposed Platform identity to 0.33; Testkit 0.104.1 keeps
+the new facade private and preserves its public contracts. Native PocketIC
+identities remain upstream 16.1. The locked Wire 0.22.1 selection keeps its
+optional Platform Types integration disabled here. Typed Wire calls remain in
+adapter 0.1.0, independently of lifecycle releases. Platform's newly added Registry
+protobuf codec is opt-in and unselected; this update does not migrate Tooling's
+existing partial Registry projections. Existing codec budgets, method identities
+and serialized data contracts remain; no persisted-state migration is needed.
 
 Foundation and Build's normal/build graphs forbid the entire Platform family
 and higher product layers; development fixtures may still use integration owners.
@@ -673,8 +674,15 @@ ceiling plus one. Structured errors distinguish file, aggregate and host-account
 limits. It does not open or freeze a file.
 
 Host FS capability entries expose `open_regular_file_with_permissions` for explicit
-forbidden mode-bit admission on the opened descriptor. This never repairs modes
-or follows observed links. `durable::ExclusiveFileLock` owns a nonblocking acquired
+forbidden mode-bit admission on a read-only descriptor. The companion
+`open_regular_file_for_update(forbidden_permissions)` opens an existing regular
+file read/write relative to its held parent, including after directory renames.
+Observed missing entries return `None`; no-follow/nonblocking opening and opened
+file-type admission remain shared. Neither opener creates, truncates, writes or
+repairs permissions. Update handles start at offset zero without append mode.
+Callers own identity/link-count admission, writer exclusion, locking, seek/write/
+sync ordering and uncertain-write recovery. Hard links remain caller policy.
+`durable::ExclusiveFileLock` owns a nonblocking acquired
 descriptor lock with explicit release and best-effort Drop, including duplicated
 descriptors; callers retain coordination-file contents and namespace custody.
 

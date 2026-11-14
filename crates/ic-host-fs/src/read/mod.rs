@@ -20,6 +20,11 @@ pub use beneath::{
     open_regular_file_beneath,
 };
 
+#[cfg(all(unix, feature = "capability"))]
+pub(crate) use beneath::open_entry_for_update_beneath;
+#[cfg(all(unix, feature = "capability"))]
+pub(crate) use entry::FileAccess;
+
 #[cfg(unix)]
 mod descriptor;
 #[cfg(unix)]

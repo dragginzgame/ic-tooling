@@ -472,3 +472,199 @@ fn configured_regular_file_admission_preserves_modes_and_absence() {
         })
     ));
 }
+
+#[test]
+fn update_open_preserves_absence_bytes_identity_and_caller_write_position() {
+    use crate::identity::FileIdentity;
+    use std::io::{Read as _, Seek as _, SeekFrom};
+
+    let fixture = FixtureDirectory::new(&std::env::temp_dir(), "capability-update").unwrap();
+    let root = Directory::open_root(fixture.path(), OBSERVE)
+        .unwrap()
+        .unwrap();
+    let entry = root
+        .resolve_parent(Path::new("ledger"), OBSERVE)
+        .unwrap()
+        .unwrap();
+    assert!(entry.open_regular_file_for_update(0o077).unwrap().is_none());
+    assert!(!fixture.path().join("ledger").exists());
+    write(&entry, b"intent");
+    let identity = FileIdentity::from_file(&entry.open_regular_file().unwrap().unwrap()).unwrap();
+    let mut file = entry.open_regular_file_for_update(0o077).unwrap().unwrap();
+    assert_eq!(FileIdentity::from_file(&file).unwrap(), identity);
+    assert_eq!(file.stream_position().unwrap(), 0);
+    assert_eq!(fs::read(fixture.path().join("ledger")).unwrap(), b"intent");
+    let flags = rustix::fs::fcntl_getfl(&file).unwrap();
+    assert!(flags.contains(rustix::fs::OFlags::RDWR));
+    assert!(flags.contains(rustix::fs::OFlags::NONBLOCK));
+    assert!(!flags.contains(rustix::fs::OFlags::APPEND));
+    assert!(
+        rustix::io::fcntl_getfd(&file)
+            .unwrap()
+            .contains(rustix::io::FdFlags::CLOEXEC)
+    );
+    file.seek(SeekFrom::End(0)).unwrap();
+    file.write_all(b"/next").unwrap();
+    file.sync_all().unwrap();
+    file.rewind().unwrap();
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes).unwrap();
+    assert_eq!(bytes, b"intent/next");
+    assert_eq!(FileIdentity::from_file(&file).unwrap(), identity);
+    // Reading APIs retain read-only access even with permission admission.
+    for mut read_only in [
+        entry.open_regular_file().unwrap().unwrap(),
+        entry
+            .open_regular_file_with_permissions(0o077)
+            .unwrap()
+            .unwrap(),
+    ] {
+        assert!(read_only.write_all(b"X").is_err());
+    }
+    assert_eq!(fs::read(fixture.path().join("ledger")).unwrap(), bytes);
+}
+
+#[test]
+fn update_open_keeps_held_parent_after_ancestor_and_root_replacement() {
+    let fixture =
+        FixtureDirectory::new(&std::env::temp_dir(), "capability-update-renamed").unwrap();
+    let root_path = fixture.path().join("root");
+    let root = Directory::open_root(&root_path, CREATE).unwrap().unwrap();
+    let entry = root
+        .resolve_parent(Path::new("child/ledger"), CREATE)
+        .unwrap()
+        .unwrap();
+    write(&entry, b"original");
+    fs::rename(root_path.join("child"), root_path.join("retained")).unwrap();
+    fs::create_dir(root_path.join("child")).unwrap();
+    fs::write(root_path.join("child/ledger"), b"child replacement").unwrap();
+    let moved = fixture.path().join("moved");
+    fs::rename(&root_path, &moved).unwrap();
+    fs::create_dir_all(root_path.join("child")).unwrap();
+    fs::write(root_path.join("child/ledger"), b"root replacement").unwrap();
+    let mut file = entry.open_regular_file_for_update(0o077).unwrap().unwrap();
+    file.write_all(b"updated!").unwrap();
+    file.sync_all().unwrap();
+    assert_eq!(
+        fs::read(moved.join("retained/ledger")).unwrap(),
+        b"updated!"
+    );
+    assert_eq!(
+        fs::read(moved.join("child/ledger")).unwrap(),
+        b"child replacement"
+    );
+    assert_eq!(
+        fs::read(root_path.join("child/ledger")).unwrap(),
+        b"root replacement"
+    );
+}
+
+#[test]
+fn update_open_refuses_permissions_without_repair_or_content_change() {
+    let fixture = FixtureDirectory::new(&std::env::temp_dir(), "capability-update-modes").unwrap();
+    let root = Directory::open_root(fixture.path(), OBSERVE)
+        .unwrap()
+        .unwrap();
+    let entry = root
+        .resolve_parent(Path::new("ledger"), OBSERVE)
+        .unwrap()
+        .unwrap();
+    write(&entry, b"intent");
+    fs::set_permissions(
+        fixture.path().join("ledger"),
+        fs::Permissions::from_mode(0o620),
+    )
+    .unwrap();
+    assert!(matches!(
+        entry.open_regular_file_for_update(0o022),
+        Err(CapabilityError::Permissions {
+            actual: 0o620,
+            forbidden: 0o022,
+            ..
+        })
+    ));
+    assert!(entry.open_regular_file_for_update(0).unwrap().is_some());
+    assert!(
+        matches!(entry.open_regular_file_for_update(0o1000), Err(CapabilityError::Io { operation: Operation::Open, source, .. }) if source.kind() == io::ErrorKind::InvalidInput)
+    );
+    assert_eq!(
+        fs::metadata(fixture.path().join("ledger"))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777,
+        0o620
+    );
+    assert_eq!(fs::read(fixture.path().join("ledger")).unwrap(), b"intent");
+}
+
+#[test]
+fn update_open_refuses_links_directories_fifos_and_sockets() {
+    use std::os::unix::net::UnixListener;
+
+    let fixture = FixtureDirectory::new(&std::env::temp_dir(), "capability-update-types").unwrap();
+    let root = Directory::open_root(fixture.path(), OBSERVE)
+        .unwrap()
+        .unwrap();
+    fs::write(fixture.path().join("original"), b"original").unwrap();
+    symlink("original", fixture.path().join("link")).unwrap();
+    symlink("missing", fixture.path().join("dangling")).unwrap();
+    fs::create_dir(fixture.path().join("directory")).unwrap();
+    crate::testing::create_fifo(&fixture.path().join("fifo"), None).unwrap();
+    let _socket = UnixListener::bind(fixture.path().join("socket")).unwrap();
+    for (name, expected) in [
+        ("link", Refusal::SymbolicLink),
+        ("dangling", Refusal::SymbolicLink),
+        ("directory", Refusal::NotRegularFile),
+        ("fifo", Refusal::NotRegularFile),
+        ("socket", Refusal::NotRegularFile),
+    ] {
+        let entry = root
+            .resolve_parent(Path::new(name), OBSERVE)
+            .unwrap()
+            .unwrap();
+        assert!(
+            matches!(entry.open_regular_file_for_update(0), Err(CapabilityError::Refused { reason, .. }) if reason == expected),
+            "{name}"
+        );
+    }
+    assert_eq!(
+        fs::read(fixture.path().join("original")).unwrap(),
+        b"original"
+    );
+}
+
+#[test]
+fn update_descriptor_does_not_retarget_and_link_policy_stays_with_caller() {
+    use std::os::unix::fs::MetadataExt as _;
+
+    let fixture =
+        FixtureDirectory::new(&std::env::temp_dir(), "capability-update-identity").unwrap();
+    let root = Directory::open_root(fixture.path(), OBSERVE)
+        .unwrap()
+        .unwrap();
+    let entry = root
+        .resolve_parent(Path::new("ledger"), OBSERVE)
+        .unwrap()
+        .unwrap();
+    write(&entry, b"original");
+    fs::hard_link(fixture.path().join("ledger"), fixture.path().join("alias")).unwrap();
+    let mut file = entry.open_regular_file_for_update(0o077).unwrap().unwrap();
+    assert_eq!(file.metadata().unwrap().nlink(), 2);
+    fs::rename(
+        fixture.path().join("ledger"),
+        fixture.path().join("retained"),
+    )
+    .unwrap();
+    fs::write(fixture.path().join("ledger"), b"replacement").unwrap();
+    file.write_all(b"updated!").unwrap();
+    assert_eq!(
+        fs::read(fixture.path().join("retained")).unwrap(),
+        b"updated!"
+    );
+    assert_eq!(fs::read(fixture.path().join("alias")).unwrap(), b"updated!");
+    assert_eq!(
+        fs::read(fixture.path().join("ledger")).unwrap(),
+        b"replacement"
+    );
+}
