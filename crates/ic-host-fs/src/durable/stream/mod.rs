@@ -75,56 +75,6 @@ pub fn write_with<T, E>(
     }
 }
 
-/// Stream through an existing parent, admitting the result after file sync.
-///
-/// Missing parents are never created. Opens the selected parent once as a
-/// directory, following parent aliases; all staging/publication then uses its held
-/// descriptor, even after a rename. This is pathname convenience, not root
-/// confinement or private-parent admission. The final entry uses the selected
-/// publication mode and is never followed.
-///
-/// Shares [`write_at_validated_with`]'s producer, permissions, custody, admission,
-/// cleanup and before/after-publication contracts. Admission runs after file sync
-/// and before publication. Use `|_| Ok(())` when no additional admission is needed.
-/// Callers retain concurrency, cancellation, validation and retry policy.
-///
-/// # Errors
-/// Missing/special-file parents and invalid paths/permissions refuse before
-/// production. Retains typed producer/admission and independent cleanup failures;
-/// filesystem syscall latency remains unbounded. Reconcile published failures.
-pub fn write_existing_parent_validated_with<T, E>(
-    path: &Path,
-    options: WriteOptions,
-    produce: impl FnOnce(&mut fs::File) -> Result<T, E>,
-    admit: impl FnOnce(&T) -> Result<(), E>,
-) -> Result<T, NamedWriteError<E>> {
-    #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
-    {
-        use rustix::fs::{Mode, OFlags, open};
-        use std::os::fd::AsFd as _;
-        // Preserve permission refusal before attempting to open the parent.
-        super::supported::native_permissions(options.permissions)
-            .map_err(NamedWriteError::before)?;
-        let (parent, name) =
-            super::supported::split_target(path).map_err(NamedWriteError::before)?;
-        let parent = open(
-            parent,
-            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NONBLOCK | OFlags::CLOEXEC,
-            Mode::empty(),
-        )
-        .map_err(|source| NamedWriteError::before(source.into()))?;
-        write_at_validated_with(parent.as_fd(), name, options, produce, admit)
-    }
-    #[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple")))]
-    {
-        let _ = (path, options, produce, admit);
-        Err(NamedWriteError::before(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "durable atomic file publication is unsupported",
-        )))
-    }
-}
-
 /// Stream beneath an admitted directory, then admit the result before publication.
 ///
 /// `name` is one nonempty filename component excluding dot, dot-dot, slash and

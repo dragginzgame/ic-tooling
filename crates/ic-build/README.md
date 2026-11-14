@@ -1,143 +1,74 @@
 # IC Build
 
-IC Build owns generic host-side Cargo/Wasm builds and retained artifact caches.
-Consumers supply recipes, tools, complete environments, output budgets, source
-custody and maintenance policy. Build never installs tools, starts PocketIC or
-admits an application release.
+IC Build owns Cargo execution and reported artifact selection, explicit input
+inventories, invocation-owned artifact capture, package qualification and the
+release-metadata editor. Consumers select recipes, tools, complete environments,
+source/target custody, budgets, retained-data formats and publication policy.
 
-The release-metadata binary is optional. Install it with
-`cargo install --locked --features cli ic-build`, or build it from this workspace
-with `cargo build -p ic-build --features cli --bin ic-build-release-metadata`.
+The pending 0.85 API removes persistent Wasm caches and generic transaction
+caches, their input resolver, batches, fingerprints, pruning and evidence wrappers.
+Cargo retains its ordinary incremental compilation. Build outputs are consumed
+under caller custody or copied into a `CapturedArtifact` for one invocation.
+Existing on-disk caches remain untouched. See the
+[migration and API guide](../../docs/build/artifacts.md).
 
-Explicit release groups can use `group-manifest SOURCE PREVIOUS NEXT SELECTION_JSON`
-with the existing positive `--max-input-bytes` allowance. Selection JSON has
-`version` (`workspace`, `package` or `unchanged`) and `dependencies` containing
-exact `alias`, `previous`, `next` workspace requirement projections. The editor
-preserves every unselected byte and infers no group membership, dependency
-ownership or release policy. Shared Tooling admits that policy and the complete
-locked workspace; the existing `lock` operation already selects exact packages.
-Library-only consumers do not enable `cli` and do not depend on Clap.
+| Owner | Supported surface |
+| --- | --- |
+| `cargo::execution` | `CargoInvocation`, `execute_cargo`, `CargoBuildFacts`, exact completed library/example Wasm selection |
+| `cargo` | Metadata/tree observations, feature-safe grouping, native executable builds, Cargo diagnostics/exports, package qualification and lock projections |
+| `artifacts` | Declared input evidence/depfiles, owned temporary captures, explicit output retention and native Candid extraction |
+| `tools` / `provenance` | Caller-selected installation/toolchain and Git observations |
 
-The optional `test-support` feature exposes `ic_build::testing` for Cargo fixture
-scaffolding and retained temporary directories. Tests opt in explicitly; callers
-own fixture recipes, selected environments and cleanup.
+Build uses Host Artifacts, FS and Process directly. It has no PocketIC, Platform
+or application-framework dependency. Testkit owns simulator lifecycle; consumers
+own source leases, transforms, optimizer policy and release admission.
 
-The public entry points are:
+## Build and capture
 
-- `ic_build::artifacts`: exact Cargo input resolution, Wasm acquisition,
-  transactional artifact publication, retained records, staging/capture,
-  independent batches, explicit maintenance and native Candid extraction.
-- `ic_build::cargo`: typed selections, configuration/metadata observations,
-  feature-safe package grouping, Cargo communication and exact artifact selection,
-  native executable builds, package qualification and lock projection.
+Construct one `CargoInvocation`, including a nonempty `RUSTC` environment entry.
+Admit `execution` and successful exit, then `messages`, then `facts`. Tool
+observations do not prove source freshness or retain mutable Cargo output paths.
+Pass the same recipe to `select_cdylib_wasm(messages, manifest, &invocation.recipe)`;
+it requires one successful completion and distinguishes libraries from examples.
+Hold target custody through reading/capture and keep captured owners alive through
+consumption. Declare source inventories explicitly when the consumer needs them.
 
-The dependency direction is consumer adapters → IC Build → Host Artifacts,
-FS and Process. Host owns byte/hash primitives, filesystem admission/durable
-writes/locks and child execution/framing/cleanup. Build composes those capabilities
-with build and cache policy. Canic owns recipes, transforms and complete-release
-admission; IcyDB owns optimizer/interface policy; Testkit owns testing and PocketIC
-lifecycle. Build depends on none of those consumers. Shared Tooling owns the
-reviewed development, installation and release helpers used by this checkout.
-
-Host FS owns fresh-directory allocation and `OwnedDirectory` staging custody.
-Capture records retain their artifact lifetime and explicit cleanup behavior.
-
-The [ownership design](../../docs/build/design/build-ownership.md) distinguishes current
-owners from the historical extraction audit. The [artifact API guide](../../docs/build/artifacts.md)
-owns detailed contracts and upgrade actions; the [current handoff](../../docs/status/current.md)
-records source-bound qualification and outstanding consumer acceptance.
-
-Batch label errors use `ic_host_artifacts::batch::BatchLabelError`.
-
-## Use
-
-IC Build requires Rust 1.100.0 or newer:
-
-```toml
-[dependencies]
-ic-build = "0.70"
-# Add matching direct Host dependencies when passing Host values through Build.
-ic-host-process = { version = "0.70", default-features = false }
-```
-
-The coordinated Build 0.70 selects Host 0.70. Consumers passing Host values
-through the execution/artifact APIs must align their direct Artifacts, FS and
-Process dependencies to 0.70. The command/byte observation interfaces do not
-exchange Host values. Defaults stay disabled; Build needs no Platform dependency.
-
-The examples use the current API and are compiled as Cargo example targets.
-Use typed `CargoInvocation` / `execute_cargo` for Cargo builds, with explicit compiler selection and
-execution-bound tool observations; see the
-[migration contract](../../docs/build/artifacts.md#cargo-observations).
-Wasm specifications require the complete environment at construction and an
-explicit spawner at acquisition. See the [artifact guide](../../docs/build/artifacts.md) for
-contracts and upgrade actions from earlier versions.
-
-With the toolchain prepared and source writers excluded for the whole invocation:
+The [compiled Wasm example](examples/wasm_build.rs) builds once, holds a target
+lock through capture and reads bounded bytes after releasing the target:
 
 ```text
-cargo run --locked --example wasm_build -- /checkout package
-cargo run --locked --example native_executable -- /checkout package example-name
+cargo run -p ic-build --locked --offline --example wasm_build -- /checkout package
 ```
 
-The [Wasm example](examples/wasm_build.rs) supplies an explicit
-consumer-selected environment and keeps the returned record through byte
-consumption. Paths alone do not retain cache entries. The
-[native example](examples/native_executable.rs) selects a package
-and example structurally, streams diagnostics and reports Cargo's executable path;
-mutable target custody remains with the caller. Both select their Host spawner
-explicitly and add no elapsed-time deadline. Applications supply their own
-cancellation, process-group custody and source admission where required.
+The [native example](examples/native_executable.rs) selects a binary/example from
+Cargo's canonical metadata/messages and retains caller-owned execution policy.
+[LTO evidence](../../docs/build/artifacts.md#deployable-wasm-lto) remains separate
+from artifact custody and product optimization defaults.
 
-Metadata/tree observations render commands through each specification's
-`command` method and exposes canonical decoding. Workspace discovery uses
-`workspace_root_command` and `decode_workspace_root`; feature-safe grouping
-accepts a tree observer. All these observations execute through the caller's
-selected runner, preserving its Host generation, budgets and typed failures.
-Admit successful, complete output before decoding.
-Grouping considers packages in input order and tries only the latest group,
-requiring at most `2n - 1` tree observations for `n > 0` packages. Each proposed
-group must preserve every isolated normal/build dependency tree. Earlier groups
-are not retried, so the result can contain more groups than a packing search.
-Malformed forests or mismatched selected roots return `cargo::CargoTreeError`;
-the observer's original typed execution failures remain unchanged.
-Build uses neither Host FS's `capability` nor `temporary-file` features; both
-remain disabled. Consumers using those optional APIs select them explicitly.
-`cargo::discovery::declared_workspace_root_from` finds the nearest explicit
-`[workspace]` from an existing file or directory without invoking Cargo. It follows
-file symlinks and refuses invalid manifests, non-file markers and dangling links.
-This is distinct from Cargo membership or `package.workspace` resolution through
-`cargo::observation::workspace_root_command`; consumers retain no-match fallback.
+## Release metadata
 
-Cargo owns compiler freshness; Build admits exact artifacts from Cargo messages
-without filename inference. Native Candid extraction uses an admitted tool and
-retains raw bounded evidence; consumers own normalization, grammar and publication.
-The [deployable-Wasm LTO guidance](../../docs/build/artifacts.md#deployable-wasm-lto) records
-measurements without imposing a shared application optimization profile.
+The optional `cli` feature builds `ic-build-release-metadata`. Library-only
+consumers omit it and do not select Clap. Install a published editor with
+`cargo install --locked --features cli ic-build`, or build this checkout with
+`cargo build -p ic-build --features cli --bin ic-build-release-metadata`.
 
-The [effective recipe guide](../../docs/build/effective-recipes.md) describes opt-in
-target cfg requirements applied after Cargo resolves flags, retained compiler
-arguments and separate post-link provenance. Callers select qualified policies,
-wrapper tools and evidence bounds; ordinary builds retain their selected flags.
+`group-manifest SOURCE PREVIOUS NEXT SELECTION_JSON` uses an explicit
+`--max-input-bytes` allowance. Selection declares `version` (`workspace`, `package`
+or `unchanged`) and exact dependency `alias`/`previous`/`next` projections. The
+editor preserves unselected bytes and infers no group or release policy.
 
 ## Development
 
-Build shares IC Tooling's [host qualification](../../docs/hosts.md) and
-[release/publication flow](../../docs/publishing.md). For focused work use
-`make check PACKAGE=ic-build`, `make test PACKAGE=ic-build`,
-`make clippy PACKAGE=ic-build` and `make compiler-check`.
-The separate optimizer workflow retains real Wasm transformation qualification.
+Rust 1.100.0 is required. Select `PACKAGE=ic-build` for ordinary Make checks.
+The `test-support` feature supplies Cargo fixture scaffolding and retained
+temporary directories; integration targets declare that requirement explicitly.
+For Cargo execution/output contracts, run
+`cargo test -p ic-build --features test-support --test cargo_execution --locked --offline`.
+Default unit tests need no feature. Native optimizer qualification remains an
+independent explicit workflow with real transforms and execution.
 
-Integration tests using shared Build helpers require `test-support`; Make and CI
-already enable it through `--all-features`. For one fixture, use
-`cargo test -p ic-build --features test-support --test artifact_helpers --locked --offline`.
-The CLI integration target requires only `cli`. Default unit tests need no feature.
-Declare integration targets that use Build helpers with `required-features = ["test-support"]`.
-
-Use `make testkit-package-check` for coordinated archive qualification.
-Consumer recipes, tool selections, budgets and lifecycle stay with their owners.
-The [source inventory](../../docs/design/tooling-consolidation.md) records original
-histories and the remaining external issues.
+See [host qualification](../../docs/hosts.md), [publication](../../docs/publishing.md),
+[ownership](../../docs/extraction.md) and [source provenance](../../docs/design/tooling-consolidation.md).
 
 ### Consumer-owned archive checks
 

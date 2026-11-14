@@ -1,5 +1,4 @@
 use super::*;
-mod existing_parent;
 use crate::{
     durable::supported::{FileCommitStep, commit_at_with_hook, native_permissions},
     tests::fixture,
@@ -269,16 +268,6 @@ fn filename_and_descriptor_admission_precedes_any_producer_or_stage() {
             matches!(error, NamedWriteError::BeforePublication { source, cleanup_error: None } if source.kind() == io::ErrorKind::InvalidInput)
         );
         let error = crate::durable::write_bytes(&path, options, b"must not publish").unwrap_err();
-        assert!(
-            matches!(error, NamedWriteError::BeforePublication { source, cleanup_error: None } if source.kind() == io::ErrorKind::InvalidInput)
-        );
-        let error = write_existing_parent_validated_with(
-            &path,
-            options,
-            |_| -> io::Result<()> { panic!("invalid existing-parent mode dispatched") },
-            |()| Ok(()),
-        )
-        .unwrap_err();
         assert!(
             matches!(error, NamedWriteError::BeforePublication { source, cleanup_error: None } if source.kind() == io::ErrorKind::InvalidInput)
         );
@@ -605,12 +594,12 @@ fn link_fallback_cleanup_failure_reports_already_published_output() {
 
 #[test]
 fn pathname_writers_reject_nul_before_creating_parents() {
-    use crate::durable::{write_bytes, write_named_with};
+    use crate::durable::write_bytes;
 
     let fixture = fixture();
     for name in ["invalid\0name", "invalid\0parent/output", "invalid/child\0"] {
         let path = fixture.path().join("missing/nested").join(name);
-        for writer in 0..7 {
+        for writer in 0..6 {
             let error = match writer {
                 0 => write_bytes(&path, REPLACE, b"contents"),
                 1 => write_bytes(
@@ -626,9 +615,6 @@ fn pathname_writers_reject_nul_before_creating_parents() {
                     panic!("producer ran")
                 }),
                 4 => write_with(&path, CREATE, |_| -> io::Result<()> {
-                    panic!("producer ran")
-                }),
-                5 => write_named_with(&path, REPLACE, |_| -> io::Result<()> {
                     panic!("producer ran")
                 }),
                 _ => write_validated_with(
@@ -650,7 +636,7 @@ fn pathname_writers_reject_nul_before_creating_parents() {
 
 #[test]
 fn pathname_writers_reject_directory_suffixes_before_any_effect() {
-    use crate::durable::{write_bytes, write_named_with};
+    use crate::durable::write_bytes;
     use std::path::PathBuf;
 
     let fixture = fixture();
@@ -669,7 +655,7 @@ fn pathname_writers_reject_directory_suffixes_before_any_effect() {
                 let mut raw = root.join(name).into_os_string();
                 raw.push(suffix);
                 let path = PathBuf::from(raw);
-                for writer in 0..7 {
+                for writer in 0..6 {
                     let error = match writer {
                         0 => write_bytes(&path, REPLACE, b"replacement"),
                         1 => write_bytes(
@@ -685,9 +671,6 @@ fn pathname_writers_reject_directory_suffixes_before_any_effect() {
                             panic!("producer ran")
                         }),
                         4 => write_with(&path, CREATE, |_| -> io::Result<()> {
-                            panic!("producer ran")
-                        }),
-                        5 => write_named_with(&path, REPLACE, |_| -> io::Result<()> {
                             panic!("producer ran")
                         }),
                         _ => write_validated_with(

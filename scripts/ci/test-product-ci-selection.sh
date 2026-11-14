@@ -114,15 +114,20 @@ SH
     local $ENV{RUNNER_TEMP} = "$checkout/runner";
     local $ENV{TMPDIR} = "$checkout/temporary";
     my $targets = join ' ', map { "release-scope-$_" } qw(tools-check lint graphs tests docs archives);
-    my @expected = ('workspace', (map { "$_\t$targets" } qw(text tools build)), 'archives');
+    my @profiles = @{decode_json(read_file("$root/ci/release-validation-coverage.json"))->{focused}};
+    my @groups = map { $_->{name} } @{decode_json(read_file("$root/ci/cargo-release-groups.json"))->{groups}};
+    is_deeply([sort @profiles], [sort @groups], 'every release group has a comparison profile');
+    my @expected = ('workspace', (map { "$_\t$targets" } @profiles), 'archives');
+    my %stops = (workspace => 1);
+    my $position = 2;
+    $stops{$_} = $position++ for @profiles;
     chdir $checkout or die $!;
-    for my $failure ('', qw(workspace text tools build)) {
+    for my $failure ('', 'workspace', @profiles) {
         local $ENV{WORKFLOW_FAIL} = $failure;
         write_file($ENV{WORKFLOW_EVENTS}, '');
         my $status = system('bash', '-e', '-o', 'pipefail', "$checkout/qualify.sh");
         is($status >> 8, $failure ? 29 : 0, "matched-input workflow propagates $failure status");
         my @events = split /\n/, read_file($ENV{WORKFLOW_EVENTS});
-        my %stops = (workspace => 1, text => 2, tools => 3, build => 4);
         my $count = $stops{$failure} // scalar @expected;
         is_deeply(\@events, [@expected[0 .. $count-1]], "matched-input workflow stops at $failure boundary");
     }

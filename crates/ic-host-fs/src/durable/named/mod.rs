@@ -1,7 +1,6 @@
-//! Named producer access to the existing durable publication engine.
+//! Shared durable publication errors, retaining producer and cleanup causes.
 
-use super::WriteOptions;
-use std::{fmt, io, path::Path};
+use std::{fmt, io};
 
 /// Failure from a named or streamed producer and durable publication, retaining cleanup evidence.
 #[derive(Debug, thiserror::Error)]
@@ -61,64 +60,6 @@ impl<E: fmt::Display> fmt::Display for NamedWriteError<E> {
             write!(formatter, "; staging cleanup failed: {cleanup}")?;
         }
         Ok(())
-    }
-}
-
-/// Produce and validate at an owned absolute sibling path, then durably publish it.
-///
-/// Uses the same creation, synchronization and publication engine as [`super::write_with`].
-/// `options` selects replace/create-only publication and staging permissions;
-/// permissions are reduced by the process umask. Missing parents use ordinary
-/// directory creation, without establishing private parent custody.
-/// The callback receives an exclusively created, empty regular file. An external
-/// tool must write/truncate that inode, not unlink it or replace it by rename.
-/// The callback owns executable admission, arguments, environment, output byte
-/// limits and content validation. A precreated empty file is not proof of output:
-/// validate it before returning `Ok`, even when the process exits successfully.
-/// Its value is returned only after complete durable publication.
-///
-/// The caller must control the parent hierarchy and exclude concurrent namespace
-/// mutation throughout the call. Identity checks reject observed staging/parent
-/// replacement, symlinks, special files and additional hard links; they cannot
-/// make pathname comparison and rename atomic against a hostile directory writer.
-/// All producers and writable handles must finish before `Ok`. This is neither a
-/// child sandbox nor a process-tree supervisor. No retries occur.
-///
-/// Ordinary failures attempt to unlink only the still-owned staging entry and
-/// retain any cleanup error. Foreign replacements and files moved elsewhere are
-/// never removed. Panics, interruption and uncooperative surviving children can
-/// leave staging or other effects; caller-owned reconciliation remains necessary.
-///
-/// # Errors
-/// Returns the original producer error or a filesystem failure with explicit
-/// before/after-publication state. After-publication failures must be reconciled
-/// before retrying. Invalid permissions refuse before staging or production;
-/// create-only mode atomically refuses an existing final entry. Unsupported
-/// hosts return a before-publication error.
-pub fn write_named_with<T, E>(
-    path: &Path,
-    options: WriteOptions,
-    produce: impl FnOnce(&Path) -> Result<T, E>,
-) -> Result<T, NamedWriteError<E>> {
-    #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple"))]
-    {
-        super::supported::validate_target_path(path).map_err(NamedWriteError::before)?;
-        let absolute = std::path::absolute(path).map_err(NamedWriteError::before)?;
-        super::supported::commit_path_with_options(
-            &absolute,
-            options,
-            |stage, _| produce(stage),
-            (super::supported::WriterCustody::Writable, |_, _| Ok(())),
-            |_, _| Ok(()),
-        )
-    }
-    #[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple")))]
-    {
-        let _ = (path, options, produce);
-        Err(NamedWriteError::before(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "durable atomic file publication is unsupported",
-        )))
     }
 }
 

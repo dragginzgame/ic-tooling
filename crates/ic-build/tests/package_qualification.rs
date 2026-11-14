@@ -1,8 +1,6 @@
 //! Actual Cargo packaging, extracted graph admission and retained source evidence.
 #![cfg(unix)]
 
-mod support;
-
 use ic_build::cargo::packages::{
     PackageArchiveSpec, PackageQualificationLimits, qualify_existing_package_archives,
     qualify_package_archives,

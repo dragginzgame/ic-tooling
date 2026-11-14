@@ -37,7 +37,7 @@ ic-host-process = { workspace = true }
 # Native snapshots and held fixtures adapt external management protocols.
 ic-platform = { workspace = true, features = ["candid-codec", "management-canister-types"] }
 pocket-ic.workspace = true
-tokio = { workspace = true, features = ["rt", "sync", "time", "net"] }
+tokio = { workspace = true, features = ["rt", "time", "net"] }
 url.workspace = true
 wasm-encoder = { workspace = true, optional = true }
 

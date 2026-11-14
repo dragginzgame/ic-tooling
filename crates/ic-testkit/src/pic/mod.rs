@@ -24,23 +24,14 @@ pub use server::{
 pub mod server_assets;
 
 mod baseline;
-mod baseline_pool;
-mod bounded_pool;
 mod diagnostics;
 mod lifecycle;
 mod snapshot;
 mod standalone;
-mod standalone_recipe;
 mod startup;
 mod time;
 
 pub use baseline::CachedPocketIcBaseline;
-pub use baseline_pool::{
-    BaselinePoolDisposition, BaselinePoolError, BaselinePoolOutcome, BaselinePoolPreparationError,
-    BaselinePoolTimings, BaselinePreparationStage, CachedPocketIcBaselinePool,
-    CachedPocketIcBaselinePoolGuard, FailureDisposition, PocketIcBaselineRecipe, PreparedBaseline,
-    RebuildReason,
-};
 pub use diagnostics::{
     CanisterDiagnosticLogRecord, CanisterDiagnosticLogs, CanisterDiagnosticsBatchEntry,
     CanisterDiagnosticsBatchReport, CanisterDiagnosticsReport, CanisterDiagnosticsRequest,
@@ -57,7 +48,6 @@ pub use snapshot::{
     SnapshotPreparationError, SnapshotRestoreFunding, capture_snapshots, restore_snapshots,
 };
 pub use standalone::StandaloneCanisterFixture;
-pub use standalone_recipe::{StandaloneCanisterLifecycleError, StandaloneCanisterRecipe};
 pub use startup::{
     PocketIcInstance, PocketIcManagedServer, PocketIcManagedServerOutput, PocketIcStartupConfig,
     PocketIcStartupError, PocketIcStartupFailure,

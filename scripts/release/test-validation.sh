@@ -2,9 +2,10 @@
 set -euo pipefail
 # Consumer scope, whole-source custody and receipt tests; Cargo/Make effects substituted.
 selection_only=false
+collector_only=false
 if [[ $# != 0 ]]; then
-    [[ $# == 2 && $1 == --case && $2 == selection ]] || exit 2
-    selection_only=true
+    [[ $# == 2 && $1 == --case && ( $2 == selection || $2 == collector ) ]] || exit 2
+    if [[ $2 == selection ]]; then selection_only=true; else collector_only=true; fi
 fi
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 unset TOOLING_STAGE_ADMISSIONS
@@ -138,33 +139,50 @@ STUB
 printf '/fixture/admitted-pocket-ic\n'
 STUB
     chmod +x "$fixture/routing-bin/"* target/debug/ic-testkit-server
-    for selected in tools build; do
+    for selected in tools build foundation testkit testkit-wire; do
         : > "$ROUTING_EVENTS"
         for stage in tools lint graphs tests docs archives; do
             PATH="$fixture/routing-bin:$PATH" RELEASE_GROUP="$selected" \
                 "$real_bash" "$root/scripts/release/validation-focus.sh" "$stage"
         done
         grep -Fx graphs "$ROUTING_EVENTS" >/dev/null
-        grep -F -- '--test public_contracts' "$ROUTING_EVENTS" >/dev/null
-        if [[ $selected == tools ]]; then
-            grep -F -- '--package ic-host-tools' "$ROUTING_EVENTS" >/dev/null
-            grep -F 'test-tools-ledger-evidence' "$ROUTING_EVENTS" >/dev/null
-            absent grep -F -- '--test canister_wire' "$ROUTING_EVENTS"
-            : > "$ROUTING_EVENTS"
-            refuse env PATH="$fixture/routing-bin:$PATH" RELEASE_GROUP=tools ROUTING_FAIL=profiles \
-                "$real_bash" "$root/scripts/release/validation-focus.sh" tests
-            absent grep -F -- '--test public_contracts' "$ROUTING_EVENTS"
-        else
-            grep -Fx 'make --no-print-directory tools-check' "$ROUTING_EVENTS" >/dev/null
-            grep -F -- '--package ic-build' "$ROUTING_EVENTS" >/dev/null
-            grep -F -- '--test canister_wire' "$ROUTING_EVENTS" >/dev/null
-            absent grep -F 'test-tools-ledger-evidence' "$ROUTING_EVENTS"
-        fi
+        absent grep -F -- --workspace "$ROUTING_EVENTS"
+        case "$selected" in
+            tools)
+                grep -F -- "--package ic-host-tools" "$ROUTING_EVENTS" >/dev/null
+                grep -F test-tools-ledger-evidence "$ROUTING_EVENTS" >/dev/null
+                absent grep -F -- "--test canister_wire" "$ROUTING_EVENTS"
+                : > "$ROUTING_EVENTS"
+                refuse env PATH="$fixture/routing-bin:$PATH" RELEASE_GROUP=tools ROUTING_FAIL=profiles \
+                    "$real_bash" "$root/scripts/release/validation-focus.sh" tests
+                absent grep -F -- "--test public_contracts" "$ROUTING_EVENTS" ;;
+            build)
+                grep -Fx "make --no-print-directory tools-check" "$ROUTING_EVENTS" >/dev/null
+                grep -F -- "--package ic-build" "$ROUTING_EVENTS" >/dev/null
+                grep -F -- "--test canister_wire" "$ROUTING_EVENTS" >/dev/null
+                absent grep -F test-tools-ledger-evidence "$ROUTING_EVENTS" ;;
+            foundation)
+                grep -Fx -- "cargo run --manifest-path qualification/Cargo.toml -p ic-testkit-dev --bin check_packages --locked --offline -- --package ic-host-artifacts --package ic-host-fs --package ic-host-http --package ic-host-process --package ic-host-wasm-inspect --package ic-build --package ic-host-tools --package ic-testkit --package ic-testkit-wire" "$ROUTING_EVENTS" >/dev/null
+                grep -F -- "-p ic-build -p ic-host-tools -p ic-testkit -p ic-testkit-wire" "$ROUTING_EVENTS" >/dev/null
+                grep -F test-fs-capability "$ROUTING_EVENTS" >/dev/null
+                grep -F testkit-installed-check "$ROUTING_EVENTS" >/dev/null ;;
+            testkit)
+                grep -F -- "--package ic-testkit --package ic-testkit-wire" "$ROUTING_EVENTS" >/dev/null
+                grep -F -- "test -p ic-testkit -p ic-testkit-wire" "$ROUTING_EVENTS" >/dev/null
+                grep -F testkit-installed-check "$ROUTING_EVENTS" >/dev/null
+                absent grep -F test-tools-ledger-evidence "$ROUTING_EVENTS" ;;
+            testkit-wire)
+                grep -F -- "--package ic-testkit-wire" "$ROUTING_EVENTS" >/dev/null
+                absent grep -F -- "--package ic-testkit " "$ROUTING_EVENTS"
+                grep -F -- "--test public_contracts --test canister_wire" "$ROUTING_EVENTS" >/dev/null
+                absent grep -F test-fs-capability "$ROUTING_EVENTS"
+                absent grep -F testkit-installed-check "$ROUTING_EVENTS" ;;
+        esac
     done
 }
 check_new_scopes() {
     local selected package
-    for selected in tools build; do
+    for selected in tools build foundation testkit testkit-wire; do
         git checkout -q "$baseline"
         package=$(jq -er --arg group "$selected" '.groups[] | select(.name == $group) | .primary' ci/cargo-release-groups.json)
         printf '\npub const QUALIFICATION_FIXTURE: u8 = 1;\n' >> "crates/$package/src/lib.rs"
@@ -205,7 +223,11 @@ check_new_scopes() {
         cp "$fixture/baseline.json" "$fixture/qualified-baseline"
         cp "$fixture/consumer-baseline" "$fixture/baseline.json"
         make_plan "$selected-new-surface"
-        jq -e '.selection == "full"' "$directory/context.json" >/dev/null
+        if [[ $selected == foundation || $selected == testkit ]]; then
+            jq -e '.selection == "focused"' "$directory/context.json" >/dev/null
+        else
+            jq -e '.selection == "full"' "$directory/context.json" >/dev/null
+        fi
         mv "$fixture/qualified-baseline" "$fixture/baseline.json"
         git checkout -q "$baseline"
         jq '.exclusions[0].reason += " Revised mapping."' ci/release-validation-coverage.json > "$fixture/new-mapping"
@@ -240,13 +262,71 @@ check_new_scopes() {
         > "$fixture/incomplete-consumers.log" 2>&1
     git restore -- ci/release-validation-coverage.json
 }
+check_collector() {
+    printf '\npub const COLLECTOR_FIXTURE: u8 = 1;\n' >> crates/ic-host-text/src/lib.rs
+    git add crates/ic-host-text/src/lib.rs
+    git commit -qm collector-fixture
+    RELEASE_SOURCE=$(git rev-parse HEAD) RELEASE_GROUP=text
+    make_plan collector-success
+    : > "$VALIDATION_TEST_EVENTS"
+    # Refuse only proof publication, after every actual substituted stage ran.
+    mkdir "$directory/shared-proof.json"
+    refuse bash scripts/release/validation.sh run "$pointer" > "$fixture/collector-run.log" 2>&1
+    grep -Fx release-scope-archives "$VALIDATION_TEST_EVENTS" >/dev/null
+    cp "$VALIDATION_TEST_EVENTS" "$fixture/executed-events"
+    rmdir "$directory/shared-proof.json"
+    bash scripts/release/validation.sh collect "$pointer" > "$fixture/collector.log" 2>&1
+    bash scripts/release/validation.sh receipt "$pointer" > "$fixture/collected.receipt"
+    cmp "$fixture/executed-events" "$VALIDATION_TEST_EVENTS"
+    cp "$directory/shared-proof.json" "$fixture/collected.proof"
+    bash scripts/release/validation.sh collect "$pointer"
+    cmp "$fixture/collected.proof" "$directory/shared-proof.json"
+    run_directory=$(echo "$directory"/logs/validation.*)
+    cp "$run_directory/0.log" "$fixture/collector-original.log"
+    printf 'changed log\n' >> "$run_directory/0.log"
+    refuse bash scripts/release/validation.sh collect "$pointer" > "$fixture/collector-changed.log" 2>&1
+    cp "$fixture/collector-original.log" "$run_directory/0.log"
+    # A missing proof must not turn failed, incomplete or changed execution into
+    # successful evidence. Retain the original proof outside the gate meanwhile.
+    mv "$directory/shared-proof.json" "$fixture/saved-collected.proof"
+    cp "$run_directory/timings.tsv" "$fixture/collector-timings"
+    : > "$run_directory/timings.tsv"
+    refuse bash scripts/release/validation.sh collect "$pointer" > "$fixture/collector-incomplete.log" 2>&1
+    cp "$fixture/collector-timings" "$run_directory/timings.tsv"
+    cp "$directory/host.txt" "$fixture/collector-host"
+    printf 'different host\n' > "$directory/host.txt"
+    refuse bash scripts/release/validation.sh collect "$pointer" > "$fixture/collector-host.log" 2>&1
+    cp "$fixture/collector-host" "$directory/host.txt"
+    refuse env RELEASE_GROUP=build bash scripts/release/validation.sh collect "$pointer" > "$fixture/collector-group.log" 2>&1
+    refuse env RUSTFLAGS=--cfg=unreviewed bash scripts/release/validation.sh collect "$pointer" > "$fixture/collector-environment.log" 2>&1
+    printf '\nchanged input\n' >> crates/ic-host-text/src/lib.rs
+    refuse bash scripts/release/validation.sh collect "$pointer" > "$fixture/collector-input.log" 2>&1
+    git restore -- crates/ic-host-text/src/lib.rs
+    git checkout -q "$baseline"
+    refuse bash scripts/release/validation.sh collect "$pointer" > "$fixture/collector-source.log" 2>&1
+    git checkout -q "$RELEASE_SOURCE"
+    cmp "$fixture/executed-events" "$VALIDATION_TEST_EVENTS"
+    make_plan collector-failed-stage
+    refuse env VALIDATION_TEST_FAIL=release-scope-lint bash scripts/release/validation.sh run "$pointer" > "$fixture/collector-failed-run.log" 2>&1
+    cp "$VALIDATION_TEST_EVENTS" "$fixture/failed-events"
+    refuse bash scripts/release/validation.sh collect "$pointer" > "$fixture/collector-failed-collect.log" 2>&1
+    cmp "$fixture/failed-events" "$VALIDATION_TEST_EVENTS"
+    git checkout -q "$baseline"
+}
+if [[ $collector_only == true ]]; then
+    check_collector
+    fixture_complete=true
+    echo 'Collector-only recovery re-admits original successful execution without reruns; drift and incomplete evidence refuse.'
+    exit 0
+fi
 check_focus_routing
 check_new_scopes
 if [[ $selection_only == true ]]; then
     fixture_complete=true
-    echo 'Tools/Build focused plans, owner exclusions, missing evidence and consumer/mixed-source fallback passed (Make effects substituted).'
+    echo 'Six-group selection, owner exclusions, missing evidence and consumer/mixed-source fallback passed (Make effects substituted).'
     exit 0
 fi
+check_collector
 # Exercise read-only discovery itself, including green docs-only/incomplete runs.
 cat > "$fixture/bin/gh" <<'STUB'
 #!/usr/bin/env bash

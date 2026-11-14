@@ -1,265 +1,148 @@
 # Current handoff — 2026-11-14
 
-## Platform 0.33 deployment in progress
+## Authorized simplification and deployment
 
-The current authorized batch adopts published Platform 0.33.0 (source
-`dd15c2c8`, archive SHA-256
-`1ff16542d2cb6c8307afced4b0b1dc10b31640ea49f26304de6ff94e02eeb8bf`).
-Its bounded Registry protobuf capability is opt-in and remains unselected;
-Tooling retains its existing protocol/transport and feature boundaries. Both
-roots require Types 0.20.3; the private probe requires Runtime/macros/guard
-0.22.3. Preserve the entry lock selections and the completed Host FS opener work.
+The maintainer approved large breaking cuts: artifact transaction caching,
+persistent Wasm caching, reusable baseline pools/reset recipes and unused Host
+capabilities/writer wrappers. IcyDB is retiring; Canic Legacy is being replaced.
+Read-only inspection at IC DB `14a2810b` and new Canic `ec7fc3de`
+found ordinary Cargo builds and fresh PocketIC instances, with neither framework.
+IC DB still uses the Build release-metadata editor.
 
-Deployment selects Testkit 0.104.1 for private Platform adoption, Foundation
-0.77.3 for the compatible Host FS opener, and Tools 0.93.0 for its exposed
-Platform codec/ledger identity. The maintainer explicitly clarified that Tooling
-is to publish normally on crates.io for downstream consumers, superseding the
-brief FS push-only restriction relayed by Backup. Consumers sharing
-those Tools values select Platform 0.33. Testkit's public API, native PocketIC
-16.1 and the independent Wire adapter remain unchanged. Each batch uses the
-standard frozen release and publication owners; hosted CI remains asynchronous.
-The previous complete gates took about 429–583 seconds per group, including
-239–245 seconds of tooling fixtures. Fresh source/FS changes require fresh gates;
-only already qualified stage admissions can reuse unchanged inputs.
+Build removes both cache frameworks, automatic input resolution, batches,
+fingerprint/evidence wrappers, progress and maintenance/pruning. Local callers
+compose the existing Cargo executor, exact recipe selection and invocation-owned
+capture/read under caller custody. Selection requires one successful completion
+and distinguishes library/example outputs. `CargoBuildFacts` moves to
+`cargo::execution`. Declared input evidence, depfiles, package qualification and
+metadata editing remain. Existing disk caches are untouched.
 
-Preserve `target/evidence/platform033-deploy/` (entry patch/locks, authenticated
-supplier source and qualification/deployment logs). No sibling source edits or
-publications are included.
-Initial patch `batch-4cjJjMme` selected Foundation/Testkit before that narrower
-instruction arrived. It was stopped during preflight tool/server-CLI setup,
-before version preparation, tagging or upload (exit 143; 43.65 seconds).
-Preserve its journal and managed checkout; do not resume its excluded roster or
-reinterpret setup compilation as completed product validation. The new releases
-need their own correctly scoped captures. That original roster stays interrupted;
-the subsequent clarification authorizes a fresh Foundation capture.
-Focused `dependency-adoption-check` passed: isolated native/Wasm graphs, Tools
-codec/Agent/Registry/ledger adapters, snapshot refusals, nine adapter unit tests,
-installed upstream snapshot restoration and the actual Wire canister's state/error
-contract. Formatting and local document links pass. The preceding `d02fc37a`
-push has complete Linux and native macOS 15 Intel/Apple Silicon passes in
-[CI 43573475462](https://github.com/dragginzgame/ic-tooling/actions/runs/43573475462);
-that is prior-source evidence, not qualification of this new Platform/FS batch.
+Testkit removes pools, leases, reset recipes, automatic rebuild and associated
+outcome/timing/failure types. Fresh-instance concurrency and caller-configured
+fixtures remain. Explicit snapshots and `CachedPocketIcBaseline` preserve
+controller/funding policy and timer/heap/stable-memory/hook/chunk restoration.
+Callers own stop/drain, non-snapshot reset, readiness and explicit close.
 
-Testkit 0.104.1 is delivered at `df10ff25f37bf2de0edfa3a594e2ad0bddfaa33a`,
-tag `testkit-v0.104.1`, through completed frozen `batch-bz31zGgk`. All 32 Linux
-stages passed, publication reused only admitted lint and freshly verified the
-archive, and crates.io confirmed availability. Whole command time was 845.09
-seconds. The ordinary checkout was reconciled through the standard operation.
-Foundation and Tools remain next, using fresh frozen captures.
+FS/Process remove command-sidecar custody/quiescence, the separate bounded
+process/lock inspector, symlink publication, cache-tag maintenance and directory
+size observation. The custody-only existing-sidecar opener also retires, removing
+`command-fds` and its sole `nix` dependency from both lockfiles. The writer pass
+removes `write_named_with`, `write_existing_parent_validated_with` and
+`write_retained_at_with`. Their found external callers are in IcyDB or legacy
+repositories and retain their older published selections. Current Backup's
+capabilities/retained-file creation/publication, Build's executable admission,
+Profiler's observations/gate, ordinary locks and shared publication engines remain.
+This Host round removes 2,310 net Rust lines, including dedicated tests.
 
-Asynchronous source CI exposed two qualification defects: optimizer admission
-defaulted to the vendor root instead of the checkout, and an ignored baseline
-cleanup test used an unroutable ID that upstream panics on before management
-admission. The repaired workflow passes the consumer explicitly; the test uses a
-routed empty canister to retain returned-failure/server-reaping coverage. These
-are caller/test fixes, not another runtime/client implementation. Apple Silicon's
-native setup separately failed downloading PocketIC; do not claim a current
-complete three-host pass from these Linux results.
+The [extraction contract](../extraction.md), current guides and migrations
+describe this smaller surface. Historical designs/provenance stay retained.
+Foundation 0.78.0, Build 0.85.0 and Testkit 0.105.0 have pending minor-release notes;
+package versions are unchanged. All batches remove 22,511 net physical Rust lines,
+including tests, leaving 58,740 across product and qualification packages versus
+81,251 at the preceding delivered HEAD. The maintainer has now authorized
+deployment of Foundation 0.78.0, Build 0.85.0, Tools 0.93.0 and Testkit 0.105.0
+from this normal checkout through frozen delivery to main/crates.io. Text and
+Wire have no product release in this batch. Sibling delivery and artifact cleanup
+remain outside scope. Existing artifacts/tags remain retained.
 
-## Local Host FS update opener
+## Focused validation
 
-The Backup maintainer approved this scoped supplier fix. The new
-`FileEntry::open_regular_file_for_update(forbidden_permissions)` reuses held-parent,
-no-follow/nonblocking descriptor admission without create/truncate or implicit
-writes. Caller identity/link-count checks, locking, append/sync and recovery stay
-explicit; read-only APIs remain read-only. See [Host IO](../hosts.md#configured-evidence-io-helpers).
-Linux passed 18 capability tests, 40 shared reader tests, strict package Clippy
-with/without capability and warning-denying Rustdoc. Native macOS and consumer
-append/recovery are not qualified. Both pre-existing dirty locks are unchanged.
-The API/source/docs were committed with the Platform source in `c30c0f92`.
-The brief Backup push-only instruction was superseded by the Tooling maintainer's
-explicit crates.io clarification. Foundation 0.77.3 publication is now included;
-downstream adoption uses its registry package after confirmed availability.
-The following sections retain prior delivery context and recovery information.
+The final Host batch passed on Linux x86-64:
 
-## Previous Git-only delivery
+- FS 174 and Process 139 unit tests, plus 17 integration tests, using
+  `cargo test -p ic-host-fs -p ic-host-process --all-features --all-targets --locked --offline`.
+- Strict all-target/all-feature Clippy for FS, Process and their Build/Testkit
+  callers; both workspaces resolve with their locked offline selections.
+- FS's Wasm library/CLI/unsupported-lock compile contract, warning-denying
+  FS/Process Rustdoc, scoped formatting, documentation links and diff checks.
 
-The preceding batch delivered Toko 0.43.0, the Linux Make fixture repair, Wire
-generation qualification and issue reconciliation to `origin/main`. All changed
-surfaces are contributor tooling, private qualification or documentation;
-published library code/APIs were unchanged in that batch. No product version, release tag or
-registry upload was needed. Testkit 0.104.0 and adapter 0.1.0 were rechecked as
-non-yanked registry releases with matching existing remote tags. The frozen
-increment workflow remains the owner of future product releases.
+Earlier Build/Testkit batches passed on Linux before these Host API removals;
+their exact archived evidence remains retained:
 
-Focused snapshot/tool/pin admission, Make routing, four installed Wire-generation
-tests, ShellCheck and documentation links passed on Linux. Hosted CI follows the
-push asynchronously; no fresh native macOS result is claimed for this batch.
+- Final exact Build archive: 152 unit tests, retained capture and real Cargo
+  library/example, output-collision, warning-policy, native-executable, input/
+  depfile and package-engine regressions. Evidence:
+  `target/package-qualification-2-0/` (only Build selected).
+- Installed private Wire probe preserves state, caller identity and typed errors
+  using direct Cargo execution and bounded byte reading under its target lock.
+- 3 PocketIC concurrency and 7 snapshot regressions, including explicit timer,
+  memory, hook and chunk-store restoration without a pool.
+- Real native optimizer/Wasm execution; final evidence is
+  `target/evidence/large-cuts-20261114/optimizer-final/`.
+- First-batch exact Testkit and Wire adapter archive qualification through the
+  existing engine: `target/package-qualification-783704-0/`.
+- Strict all-target/all-feature Clippy for Build/Testkit/adapter, warning-denying
+  Build/Testkit Rustdoc, native/Wasm Testkit graph checks, scoped Rust formatting,
+  ShellCheck, documentation links and diff checks. The changed private Wire
+  caller also passes strict all-target/all-feature Clippy.
 
-## Toko Tooling 0.43.0 adoption
+`bash scripts/release/test-validation.sh` passes all group selection, full-roster
+equivalence, required/excluded failure, source/environment drift and receipt
+custody fixtures with product effects substituted. The CI-selection caller
+fixture now derives all comparison groups from policy instead of assuming three.
+Native macOS and full repository CI were not executed for these changes.
 
-Both workspace pins, locks and exact-pin exceptions now select authenticated,
-non-yanked crates.io 0.43.0 (source `bd24a0b7`, archive SHA-256
-`060d3507b66eb290ce12bc2572098f7e7cb1e12e9d6697a9b1a5d1552fcb2588`).
-The exporter preserved all entrypoints and prior local issue fixes. Its preview
-changed only managed `make/tools.mk`, the LOC reporter's help and the new launcher;
-the installed snapshot now admits 117 files. Baseline, native catalogs, compiler,
-release/publication runners and required product gates are byte-identical.
-Both locks differ from entry only in the tooling package block.
+## Release selection and remaining work
 
-Use `toko-cloc` rather than `make cloc` or `CLOC_*` settings. The existing PATH
-launcher already matches the reviewed payload byte-for-byte, so no user-global
-file was changed. Local help, setup documentation and the real launcher caller
-fixture migrate together. The focused fixture covers nested cwd, arguments with
-spaces, direct failure status and retirement of the old Make target. Snapshot
-and existing prepared host/Cargo/editor/PocketIC admission pass without tool
-reinstallation. Evidence and the entry patch/locks remain under
-`target/evidence/toko043-20261114/`. No publication, sibling source change or
-artifact cleanup is included.
+The existing selector now maps all six groups. Foundation selects every member
+and declared reverse consumer; Testkit includes its Wire/private consumers;
+the Wire adapter retains real typed calls and its exact archive. Leaf commands
+select explicit packages. Shared, dependency, manifest-feature, unknown-consumer
+or unqualified input changes retain the complete gate.
 
-## Issue reconciliation and focused fixes
+The new map still requires its matched Linux/macOS Intel/Apple Silicon comparison
+through the existing explicit CI workflow before narrowing is admitted. Earlier
+baseline configuration cannot qualify it. No deployment-time saving is claimed.
+[#353](https://github.com/dragginzgame/ic-tooling/issues/353) retains deployment
+phase timing and collector-recovery acceptance; generic runner ownership is at
+[Toko Tooling #382](https://github.com/dragginzgame/toko-tooling/issues/382).
 
-The maintainer retired Canic's acceptance scope: #263 is closed as superseded,
-not as proof of its historical two-case regression. Snapshot/timer integrity,
-two-slot capture, caller funding and effect reconciliation remain unchanged.
-The Rust 1.100 policy (#354), structured warning matrix (#355) and published
-Wire alignment (#356) now have their missing acceptance evidence reconciled.
-The independent adapter's composition proof completes #357; these
-qualification/docs fixes belong to the same Git batch, with no new release or upload.
+The local #353 follow-up adds explicit collector-only recovery through
+`scripts/release/adapter.sh collect GROUP VERSION`. It re-admits original execution
+and binds the normal retry to its exact receipt; source/context/evidence drift or
+prepared versions refuse. Foundation's focused archives now also select Build,
+Tools, Testkit and Wire reverse consumers. Linux selection and collector fixtures,
+ShellCheck and document links pass; these substitute product execution and do not
+qualify the new map on native hosts. Evidence lives under
+`target/evidence/issue353-followup/`. The Toko session delivered #382's timing
+implementation in published 0.43.1. Both workspaces now select that patch; the
+authenticated 120-file snapshot preserves recorded entrypoints and local edits.
+Only Toko's version/checksum changed relative to the saved dirty lockfiles. No
+executable tools were installed. Real next-deployment timing and three-host
+comparison remain required before #353 can close.
 
-The Linux CI fixture inherited `IC_TOOLING_FULL_CI=1` while expecting ordinary
-release routing. The fixture now unsets it before testing both explicit routes.
-The exact failure reproduced; the focused roster and complete Make fixture pass
-with the CI flag set. No production gate or refusal was weakened.
+Relay/Scheduling and a Toko harness were found using older cache APIs. They retain
+their published Build selections until their own explicit adoption; this checkout
+contains no compatibility layer. Toko remains outside automatic contribution
+scope. Scheduling also has a snapshot-restoration regression to preserve during
+its own adoption. The current [Build guide](../build/artifacts.md) describes the
+smaller execution/capture contract and links the historical API evidence.
 
-The new explicit `make testkit-wire-generations-check` runs four existing
-installed query/update/error tests against real Wire 0.21.5/0.22.1 selections,
-one shared current Testkit/PocketIC, and byte-identical adapter/test source.
-The old adapter manifest is test-only; no old-codec product, alias or new release
-is introduced. Native Linux evidence: `target/tmp/wire-adapter-generations.WUBgPW/`.
-The sandbox-only attempt could not bind loopback; the native attempt passed.
-Keep both attempts and `target/evidence/issues-20261114/`.
+## Concurrent release and preservation
 
-## Deployment delivered — Toko 0.42.8 and independent Wire adapter
+The separate Platform 0.33 deployment was stopped at the maintainer's request.
+Testkit 0.104.1 was already published at `df10ff25`, frozen `batch-bz31zGgk`.
+Foundation 0.77.3 completed while that session stopped, at
+`3e9aa1e08fa3b8baaac2732e6f456337f87ac63b`, tag `foundation-v0.77.3`,
+frozen `batch-duIPtf2a`. Its complete Linux gate and publication succeeded.
+Tools 0.93.0 was not started. Do not restart completed publication as a new batch.
 
-The authorized current-repository batch is published to GitHub and crates.io.
-Frozen `batch-aVh51g1i` captured corrected source `a4818cd8`, then delivered:
+After ownership handoff, the standard reconciliation fast-forwarded the ordinary
+checkout to Foundation's delivered commit. The simplification work was restored
+byte-exactly and continued there. The compact interruption recovery patch and
+postimage/deletion manifest remain at
+`.git/release-state/preserve/large-cuts-20261114.skOe7e/`; this is an earlier
+partial checkpoint, not the final working diff. No release artifacts were removed.
 
-| Group | Version | Release commit | Tag |
-| --- | --- | --- | --- |
-| Testkit | 0.104.0 | `79804eb4f304e1ff41b1a90198d81117f3297831` | `testkit-v0.104.0` |
-| Testkit Wire | 0.1.0 | `fbbbde7c9fac8b4b4f7b44aafea6b1eae795a57a` | `testkit-wire-v0.1.0` |
+Both workspaces retain the Platform 0.33 dependency family (existing lockfiles
+select 0.33.2), Types 0.20.3 and qualification Runtime 0.22.3;
+Toko Tooling is now 0.43.1; private qualification versions remain unchanged. The
+bounded Registry capability stays unselected. Native PocketIC remains upstream
+16.1 with the caller's runtime and unchanged native identities/panic behavior.
 
-Both non-yanked registry archives match index checksums and exact clean VCS
-commits. Remote annotated tags/main were verified; the ordinary checkout
-reconciled cleanly to `fbbbde7c`. Git-only qualification corrections followed
-in `edfedc6c`; this handoff is subsequent documentation. No sibling source,
-release, cleanup or artifact retirement was included.
-
-Foundation 0.77.2, Build 0.84.1, Text 0.75.0 and Tools 0.92.1 remain current;
-private qualification packages retain 0.96.0. Source selection and release
-ownership cover ten products, two private members and six release groups.
-
-## Qualified selection and tooling
-
-The preceding deployment selected published Toko 0.42.8. Its authenticated export retained all 116
-managed files and entrypoints, changing only the hook and hook installer for
-CDPATH-independent resolution. The baseline, native pins, release/publication
-code and required gates are unchanged. Snapshot/tool/server admission and actual
-consumer formatting/preservation/hook installation pass with `CDPATH=/tmp`.
-
-The Toko refresh preserved all non-tooling package blocks byte-for-byte. Final
-locks differ from entry only in Toko and the two owned product versions. Entry
-already selected Bumpalo 3.20.4, whose published multithreaded ZST fix was reviewed.
-Platform 0.32.2, Types 0.20.2, Runtime/macros/guard 0.22.2, Wire 0.22.1 and Mio
-1.2.5 remain selected. Do not reapply older preservation locks over these inputs.
-Optional native-catalog/editor updates remain separate maintenance; selected
-cloc source counting does not expand archives. Never hand-edit managed catalogs.
-
-## #357 — shipped ownership cut and completed local acceptance
-
-Testkit has no Wire/Serde adapter dependency, `wire` feature or compatibility
-exports. Lifecycle and raw transport retain the selected upstream client.
-`ic-testkit-wire` alone owns typed native calls, independently aligned to Wire
-0.22. Wire remains sole framing/validation owner. Exact method/caller identity,
-all limits, typed causes, panic behavior and one-shot updates are preserved.
-See [migration and publication ownership](../testkit/wire-adapter.md).
-
-Auth and Blob independently migrated to published Testkit 0.104/adapter 0.1 with
-Wire 0.22.1; read-only inspection found passing qualification Clippy and focused
-installed checks. Auth retains five installed ingress/certification/upgrade and
-three persistent lifecycle cases in `target/upstream-1114/`; Blob retains seven
-ingress/typed-error/lost-ack/lifecycle cases in `target/testkit-refresh-20261114/`.
-These are local Linux results, not sibling delivery or macOS claims. Together
-with the new actual multi-generation composition probe, they complete
-[#357](https://github.com/dragginzgame/ic-tooling/issues/357). Future Wire-only adoption selects the
-`testkit-wire` group without a lifecycle release when its client API is unchanged.
-
-## Validation and asynchronous hosts
-
-Both complete Linux gates passed all 32 stages: strict Clippy/Rustdoc, feature
-and native/Wasm boundaries, installed PocketIC, extracted archive tests and
-installed workspace tests. Rounded stage sums were 583/429 seconds, including
-245/239 seconds of tooling fixtures. Only four admitted unchanged fixture proofs
-were reused across groups. Both publications freshly admitted source/archives
-and reused only their qualified lint receipts. Whole batch wall time was
-1,498.37 seconds, excluding planning, focused qualification, the failed attempt,
-reconciliation and registry readback. Individual delivery phase timings remain
-unavailable; these are observations, not controlled speedups.
-
-The registry-only caller proof passed all three public-contract tests against
-exact published packages, with no source overrides or normal-lock edits.
-`edfedc6c` corrects its selected-client import and explicit ledger features.
-The adapter ledger's pending 0.1.1 note describes this private-only maintenance;
-it requires no product version increment or additional upload. Focused caller
-Clippy, shell checks, formatting and document links pass too.
-
-Explicit [native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43502371156),
-[optimizer](https://github.com/dragginzgame/ic-tooling/actions/runs/43502379157) and
-[runtime](https://github.com/dragginzgame/ic-tooling/actions/runs/43502385864) runs
-were originally dispatched at exact `edfedc6c`; browser qualification succeeded.
-Native Intel macOS 15 passed completely in
-[job 132151267353](https://github.com/dragginzgame/ic-tooling/actions/runs/43502371156/job/132151267353).
-Apple Silicon initially failed before qualification: retained download stderr
-reports HTTP 403 (curl 56). A retry is asynchronous. Linux failed in the inherited
-Make-fixture flag described above. No current all-green matrix is claimed.
-
-For #354/#355, applicable Apple Silicon macOS 15 evidence already exists in
-[job 131916054060](https://github.com/dragginzgame/ic-tooling/actions/runs/43434488465/job/131916054060)
-at `4ea33bbf`, using actual Rust/Cargo 1.100. Both root lint tables, compiler floor
-and pin are unchanged. Build's Cargo source and warning tests are byte-identical
-to current `b608af88`; both Mac logs show the warning matrix and native executable
-tests passing, including archive qualification. This supports those scoped
-compiler/policy issues, not qualification of all subsequently changed suppliers.
-
-## Retained evidence and failures
-
-Preserve `.git/release-state/preserve/deploy0428-20261113.au1Irv/`: entry patch,
-locks, handoff, authenticated supplier archives/indexes, logs, `registry/`,
-`registry-cohort/` and `deployment-records/` (receipts and gate logs). Current raw
-consumer evidence is `target/published-integration.a5ZH8P/`; #357's focused
-checks remain under `target/evidence/issue357/`. Retain the completed journal,
-candidate Git and managed checkout for `batch-aVh51g1i`; cleanup is not authorized.
-
-First capture `batch-g7FKs6lB` stopped after eight passing stages before version
-preparation/delivery: the Make fixture omitted the new adapter Wasm check from
-its expected command roster. The corrected fixture passed before recapture;
-the new source ran both complete gates. Keep the failed journal, checkout and
-logs. No old receipts were relabelled or claimed as collector-only recovery.
-
-## Outstanding work and preserved contracts
-
-- [#353](https://github.com/dragginzgame/ic-tooling/issues/353): phase timing and
-  collector recovery remain incomplete; generic runner work is now owned by
-  [Toko Tooling #382](https://github.com/dragginzgame/toko-tooling/issues/382).
-  No sibling source was changed, whole-gate reuse added or benchmark release run.
-  Preserve explicit manual comparison qualification; avoid redundant routine
-  same-source dispatches operationally. Remaining timing must come from a real
-  independently authorized deployment, not reconstructed file timestamps.
-- #263 is superseded by the maintainer's Canic replacement decision. Keep
-  sender, funding, stop/drain/start and effect reconciliation caller-owned.
-  [Timers #87](https://github.com/dragginzgame/ic-timers/issues/87) is separate.
-- Independent fixes: exact Build probe/archive paths, Cargo-config FS errors,
-  malformed successful process observations. Consumer work remains in
-  [Canic #247](https://github.com/dragginzgame/canic/issues/247) and
-  [#762](https://github.com/dragginzgame/canic/issues/762).
-
-The [preceding handoff](https://github.com/dragginzgame/ic-tooling/blob/5c6961f4120b6c500efe767dd37b3730291b059a/docs/status/current.md)
-records prior verified releases and recovery paths. Preserve all original
-journals/adapters, `preserve/*` refs and durable records, including
-`deploy0425-20261113.clk428/`, `batch-4szjd3du` and `batch-_HKWam5i`.
-Earlier target losses were external, cause unknown; only surviving logs/copies
-are evidence. Retired client archive remains
-`/tmp/ic-tooling-upstream-migration/retired-client.tar.gz`, source
-`0c17900090f0c2d2ebf3182598b49e651223845e`. Keep two-pass generated-root discovery,
-Darwin sync durability, error downcasts and the snapshot callback's Send-safe future.
+The [preceding handoff](https://github.com/dragginzgame/ic-tooling/blob/3e9aa1e08fa3b8baaac2732e6f456337f87ac63b/docs/status/current.md)
+retains exact supplier provenance, prior host evidence, interrupted attempts,
+registry observations and unresolved acceptance. Preserve
+`target/evidence/platform033-deploy/`, all original frozen journals/checkouts,
+`.git/release-state/preserve/*` and original recovery refs. Historical target
+losses had an external, unestablished cause; only surviving evidence is proof.

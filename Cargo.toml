@@ -25,7 +25,6 @@ authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
 cap-fs-ext = "4.0.2"
 cap-std = "4.0.2"
 cargo_metadata = "0.23.1"
-command-fds = "0.3.3"
 flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
 hmac = "0.13.0"
 ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.77.3", default-features = false }
@@ -60,7 +59,7 @@ serde_json = "1.0.150"
 tokio = { version = "1.52.3", default-features = false }
 wasmparser = { version = "0.263", default-features = false, features = ["std", "features"] }
 
-toko-tooling = "=0.43.0"
+toko-tooling = "=0.43.1"
 
 [workspace.lints.cargo]
 unused_dependencies = "deny"

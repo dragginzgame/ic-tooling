@@ -3,7 +3,10 @@
 //! Callers select recipes, environment, source custody, process spawning,
 //! budgets, cancellation, build-script interpretation and release admission.
 
-use super::{messages::MessageDecoder, observation::schema};
+use super::{
+    messages::{BuildCompletion, MessageDecoder},
+    observation::schema,
+};
 use ic_host_process::{
     child::OwnedChild,
     tool::{
@@ -20,10 +23,10 @@ use std::{
 mod invocation;
 #[cfg(test)]
 mod tests;
+pub use crate::cargo::observation::facts::CargoBuildFacts;
 pub use invocation::{
     CargoExecution, CargoExecutionPolicy, CargoInvocation, CargoRecipe, execute_cargo,
 };
-pub(crate) use invocation::{CargoTool, TOOL_IDENTITY_BYTES};
 
 /// Independent execution and Cargo protocol evidence from one drained child.
 ///
@@ -87,8 +90,8 @@ pub(crate) fn communicate_cargo(
 /// Cargo's nonempty set of outputs cannot identify one exact cdylib Wasm.
 #[derive(Debug, thiserror::Error)]
 pub enum CargoArtifactError {
-    /// Preserve the original manifest-resolution failure.
-    #[error("Cargo artifact manifest cannot be resolved: {0}")]
+    /// Preserve manifest-resolution or build-completion refusal.
+    #[error("Cargo artifact admission failed: {0}")]
     Io(#[from] io::Error),
     /// Preserve the admitted manifest and number of distinct reported outputs.
     #[error(
@@ -102,32 +105,45 @@ pub enum CargoArtifactError {
     },
 }
 
-/// Select one reported cdylib Wasm for an exact admitted manifest.
+/// Select one completed cdylib Wasm for an exact admitted manifest and recipe.
 ///
 /// No filename inference, stale-file fallback or artifact lifetime is provided.
 /// Callers must retain/capture the selected bytes before another build can replace them.
 ///
 /// # Errors
-/// Returns original path-resolution failures or a missing/ambiguous selection.
+/// Returns path-resolution failures, missing/failed/duplicate completion, or a
+/// missing/ambiguous selection. Library and named-example targets stay distinct.
 pub fn select_cdylib_wasm(
     messages: &[schema::Message],
     manifest: &Path,
+    recipe: &CargoRecipe,
 ) -> Result<PathBuf, CargoArtifactError> {
     let manifest = manifest.canonicalize()?;
     let mut outputs = BTreeSet::new();
+    let mut completion = BuildCompletion::default();
     for message in messages {
+        if let schema::Message::BuildFinished(finished) = message {
+            completion.record(finished.success);
+        }
         let schema::Message::CompilerArtifact(artifact) = message else {
             continue;
+        };
+        let example = artifact.target.kind.contains(&schema::TargetKind::Example);
+        let matches_recipe = match recipe {
+            CargoRecipe::Example(name) => example && artifact.target.name == *name,
+            CargoRecipe::Library | CargoRecipe::RustcLibrary(_) => !example,
         };
         if artifact
             .target
             .crate_types
             .contains(&schema::CrateType::CDyLib)
+            && matches_recipe
             && artifact.manifest_path.canonicalize()? == manifest
         {
             outputs.extend(wasm_artifact_paths(artifact).map(Path::to_path_buf));
         }
     }
+    completion.require_success()?;
     let count = outputs.len();
     match outputs.pop_first() {
         Some(path) if count == 1 => Ok(path),

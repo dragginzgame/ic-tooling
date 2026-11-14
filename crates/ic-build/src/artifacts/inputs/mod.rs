@@ -1,21 +1,19 @@
 //! Standalone filesystem evidence for caller-owned build inventories.
 
-pub(super) mod boundaries;
 mod depfiles;
 #[cfg(test)]
 mod tests;
+mod tree;
 
 pub use depfiles::{parse_cargo_depfile, read_cargo_depfile_inputs};
 
-use crate::artifacts::{
-    cache_fs::canonicalize_allow_missing,
-    digest::{InputDigest, InputPathError, InputTreeEntry, InputTreeWalk},
-};
+use self::tree::{InputPathError, InputTreeEntry, InputTreeWalk};
+use crate::artifacts::InputDigest;
 use crate::cargo::selection::is_normal_component;
 use ic_host_artifacts::artifact::Sha256Digest;
 use sha2::{Digest as _, Sha256};
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeMap,
     ffi::OsString,
     io,
     path::{Component, Path, PathBuf},
@@ -199,9 +197,7 @@ impl InputEvidence {
     // Roots are sorted and unique; exclusions are already resolved and admitted.
     fn capture_normalized(spec: InputEvidenceSpec) -> Result<Self, InputEvidenceError> {
         let mut entries = BTreeMap::new();
-        let mut visited = BTreeSet::new();
-        let mut walk =
-            InputTreeWalk::evidence(&spec.excluded_roots, &spec.excluded_names, &mut visited);
+        let walk = InputTreeWalk::new(&spec.excluded_roots, &spec.excluded_names);
         for root in &spec.roots {
             // A previously traversed root or child already has complete facts under
             // the same exclusions. Explicit roots beneath skipped names remain absent
@@ -209,9 +205,9 @@ impl InputEvidence {
             if entries.contains_key(root) {
                 continue;
             }
-            walk.visit(root, root, true, &mut |entry| {
+            walk.visit(root, true, &mut |entry| {
                 let (path, value) = match entry {
-                    InputTreeEntry::File { path, .. } => {
+                    InputTreeEntry::File { path } => {
                         let hash = ic_host_fs::read::hash_file_no_follow(path, u64::MAX)
                             .map_err(io::Error::from)?;
                         (
@@ -221,7 +217,7 @@ impl InputEvidence {
                             },
                         )
                     }
-                    InputTreeEntry::Directory { path, .. } => (path, InputEvidenceValue::Directory),
+                    InputTreeEntry::Directory { path } => (path, InputEvidenceValue::Directory),
                     InputTreeEntry::Missing { path } => (path, InputEvidenceValue::Missing),
                 };
                 if entries
@@ -470,4 +466,13 @@ fn input_io(path: &Path, source: io::Error) -> InputEvidenceError {
         path: context_path,
         source,
     }
+}
+
+fn canonicalize_allow_missing(path: &Path) -> io::Result<PathBuf> {
+    let base = if path.is_absolute() {
+        PathBuf::new()
+    } else {
+        std::env::current_dir()?
+    };
+    ic_host_fs::path::canonicalize_allow_missing(path, &base, usize::MAX)
 }

@@ -495,46 +495,6 @@ fn private_lock_refuses_missing_parents_and_unsafe_entries_without_changes() {
 
 #[cfg(unix)]
 #[test]
-fn existing_sidecar_open_never_creates_and_one_try_reports_contention() {
-    use std::os::unix::fs::{MetadataExt, symlink};
-
-    let fixture = crate::tests::fixture();
-    let path = fixture.path().join("original.lock");
-    assert!(matches!(
-        open_existing_regular_lock_file(&path),
-        Err(RegularFileLockError::Io(error)) if error.kind() == io::ErrorKind::NotFound
-    ));
-    assert!(!path.exists());
-    fs::write(&path, b"retained evidence").unwrap();
-    let before = fs::metadata(&path).unwrap();
-    let first = open_existing_regular_lock_file(&path).unwrap();
-    let second = open_existing_regular_lock_file(&path).unwrap();
-    try_lock_exclusive(&first).unwrap();
-    assert_eq!(
-        try_lock_exclusive(&second).unwrap_err().kind(),
-        io::ErrorKind::WouldBlock
-    );
-    unlock(&first).unwrap();
-    try_lock_exclusive(&second).unwrap();
-    unlock(&second).unwrap();
-    assert_eq!(fs::read(&path).unwrap(), b"retained evidence");
-    let after = fs::metadata(&path).unwrap();
-    assert_eq!((before.dev(), before.ino()), (after.dev(), after.ino()));
-
-    let link = fixture.path().join("link.lock");
-    symlink(&path, &link).unwrap();
-    assert!(matches!(
-        open_existing_regular_lock_file(&link),
-        Err(RegularFileLockError::NotRegular)
-    ));
-    assert!(matches!(
-        open_existing_regular_lock_file(fixture.path()),
-        Err(RegularFileLockError::NotRegular)
-    ));
-}
-
-#[cfg(unix)]
-#[test]
 fn lock_errors_preserve_admission_and_original_io_causes() {
     use std::error::Error as _;
     let fixture = crate::tests::fixture();

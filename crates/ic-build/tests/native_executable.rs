@@ -3,8 +3,6 @@
 
 use ic_build::cargo::selection::CargoSelection;
 
-mod support;
-
 use ic_build::cargo::native::{NativeExecutableSpec, NativeTargetKind, build_native_executable};
 use ic_host_process::{child::OwnedChild, tool::ToolError};
 use std::{cell::Cell, ffi::OsString, fs, process::Command};

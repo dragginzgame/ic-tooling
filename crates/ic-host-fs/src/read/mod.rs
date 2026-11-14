@@ -7,9 +7,6 @@ use std::{
     path::Path,
 };
 
-mod size;
-pub use size::directory_logical_size;
-
 #[cfg(unix)]
 mod beneath;
 #[cfg(unix)]

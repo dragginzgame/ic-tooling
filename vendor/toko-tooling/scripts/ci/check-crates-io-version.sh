@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/ci/release-timing.sh
 set -euo pipefail
 
 # Read-only exact stable-version observation: 0 present, 1 absent, 2 unknown/invalid.
 absent=false
+# shellcheck source=scripts/ci/release-timing.sh
+source "${BASH_SOURCE[0]%/*}/release-timing.sh"
 # Filesystem/prerequisite failures must never escape as the "absent" status.
-trap 'if [[ $? != 0 && "$absent" != true ]]; then exit 2; fi' EXIT
+# shellcheck disable=SC2329 # Registered as the EXIT trap.
+registry_finish() {
+    local status=$?
+    if [[ "$status" != 0 && "$absent" != true ]]; then status=2; fi
+    release_timing_end "$status" || status=2
+    exit "$status"
+}
+trap registry_finish EXIT
 evidence=''
 if [[ "${1:-}" == --metadata ]]; then
     [[ $# == 4 && -n "$2" ]] || {
@@ -45,6 +55,7 @@ if [[ -n "$evidence" ]]; then
     printf 'Registry observation evidence retained: %s\n' "$evidence" >&2
 fi
 # Disable implicit curl configuration; do not retry, poll or select credentials.
+release_timing_begin "registry-observation:$crate@$version"
 transport=0
 status="$(curl --disable --silent --show-error --location \
     --proto '=https' --proto-redir '=https' --tlsv1.2 \

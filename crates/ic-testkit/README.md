@@ -28,7 +28,6 @@ probe selects Runtime's entrypoints directly. Native simulator operations use
 `ic_testkit::pocket_ic::PocketIcBuilder`; `pic` supplies
 host-only lifecycle and fixture helpers. Platform owns the native snapshot and
 held-fixture management codecs.
-Standalone recipe builders return `std::io::Result<StandaloneCanisterFixture>`.
 
 Upstream owns builder configuration, native Principal/management identities and
 client behavior. The native-only re-export preserves those exact upstream types;
@@ -56,7 +55,7 @@ This is the PocketIC package in the IC Tooling workspace. It provides:
 - explicit authenticated `ic-testkit-server setup`, offline `check`, and a shared
   environment startup contract with `ic-testkit-server run -- COMMAND`
   for suites spanning several test processes
-- one recipe baseline pool for single- and multi-canister PocketIC reuse
+- fresh standalone fixtures and explicit controller-aware snapshots
 - deterministic fake principals
 - controller-aware, caller-labeled collect-all diagnostics
 - explicit diagnostic reporting to a caller-selected writer; status/log failures
@@ -76,7 +75,7 @@ The client and managed server remain privately paired. Use `server()` for shared
 server inspection, await `close()` for explicit instance deletion, and use
 `into_parts()` only when taking over teardown ordering. The client and network
 helpers are async-only; the caller owns the runtime. Rust Drop performs no client
-network I/O. Close and pool shutdown return `()` and await upstream best-effort
+network I/O. Explicit close returns `()` and awaits upstream best-effort
 deletion; they provide no borrowed-server deletion acknowledgement.
 Wrap a client on an externally owned server with
 `PocketIcInstance::from_borrowed_server(client)`.
@@ -149,28 +148,19 @@ or incomplete data refuses capture and rolls back known snapshots. Cancellation
 or upstream panics can leave unknown outcomes requiring caller reconciliation.
 No shared server filesystem, client fork or timer-reset shim is introduced.
 
-Custom recipes must stop/drain the whole captured set before capture and in
-`prepare_restore`, then restart only after complete capture or successful
-restore/reset in `drive_to_readiness`. Keep automatic progress disabled and
-exclude concurrent instance operations. The standalone recipe handles its
-single canister's stop/start lifecycle. Simulated time and external effects are
-not rewound. Returned rejections retain known cleanup IDs; upstream panic or
-cancellation can leave partial captures requiring caller reconciliation.
+Callers stop/drain the whole captured set before capture and restoration, then
+restart after successful restoration and their own non-snapshot reset. Keep
+automatic progress disabled and exclude concurrent instance operations. Simulated
+time and external effects are not rewound. Returned rejections retain known
+cleanup IDs; upstream panic or cancellation can leave partial captures requiring
+caller reconciliation.
 
-The repository also includes a complete
-[multi-canister baseline recipe](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-testkit/examples/multi_canister_baseline_pool.rs)
-compiled by the crate's normal all-target checks. The
-[transactional external-artifact example](https://github.com/dragginzgame/ic-tooling/blob/main/crates/ic-build/examples/transactional_artifact_cache.rs)
-is compiled and maintained by IC Build.
+Baseline pools and reset recipes are retired. Create a fresh instance for each
+independent test. For tests of restoration itself, use explicit snapshots or
+`CachedPocketIcBaseline`; the caller owns the sequence and instance lifetime.
+See the [migration](../../docs/testkit/client-migration.md#baseline-pool-retirement).
 
-Baseline recipes select `snapshot_funding()` and validate their own non-snapshot
-reset evidence before returning `Ok(())` from `reset_non_snapshot_state`.
-The pool restores captured snapshots with that funding, then runs reset,
-readiness and final validation before exposing a lease. Consumer recipes own
-reset-policy schemas and mismatched/missing evidence failures. See the
-[client migration](../../docs/testkit/client-migration.md#snapshot-boundary).
-
-Generic Cargo/Wasm builds, retained artifact caches and freshness APIs belong to
+Generic Cargo execution, declared input evidence and artifact capture belong to
 [IC Build](https://github.com/dragginzgame/ic-build). Depend on it directly and use
 `ic_build::artifacts`; Testkit keeps PocketIC lifecycle helpers.
 

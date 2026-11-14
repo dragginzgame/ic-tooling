@@ -3,7 +3,6 @@
 //! Consumers own workload selection, cadence, PID-identity admission, aggregation
 //! and interpretation of unavailable counters. These observations are not atomic.
 
-pub mod bounded;
 mod clock;
 #[cfg(target_os = "macos")]
 mod macos;

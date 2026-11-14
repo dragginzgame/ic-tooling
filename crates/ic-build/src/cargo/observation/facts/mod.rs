@@ -16,8 +16,8 @@ pub struct CargoBuildFacts {
     pub selection: CargoSelection,
     /// Selected compilation target.
     pub target: String,
-    /// Complete selected environment. Cache resolution excludes Build's owned
-    /// target-directory override; custom execution retains its exact environment.
+    /// Complete environment used by this execution, including the caller's
+    /// selected target directory. These values may contain secrets.
     pub environment: BTreeMap<OsString, OsString>,
     /// Exact successful Cargo probe stdout followed by stderr, as fingerprinted.
     pub cargo_identity: Vec<u8>,

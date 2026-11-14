@@ -8,9 +8,21 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
-## [0.104.2] - Unreleased
+## [0.105.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Retire reusable baseline pools, reset recipes, leases, automatic rebuild and
+  their outcome/failure/timing types. Independent tests use fresh instances;
+  explicit snapshot operations and `CachedPocketIcBaseline` remain supported.
+  Keep caller-owned stop/drain, funding, reset/readiness and close. This API cut
+  requires a minor release.
 
 ### 🧪 Testing
+
+- Exercise timer, heap, stable-memory, hook and chunk-store restoration through
+  explicit snapshot operations without a pooling framework. Preserve independent
+  instance concurrency and caller-configured fixture ownership.
 
 - Exercise failed baseline capture with a routed empty canister, retaining
   returned management failure and owned-server reaping. The unroutable anonymous

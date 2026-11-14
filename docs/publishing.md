@@ -134,11 +134,11 @@ workspace checks, isolated feature profiles, Testkit Wasm and unsupported-filesy
 compilation. `make compiler-check` admits the actual compiler; `make ci` retains
 the complete gate without the retired `msrv-qualification` target.
 Release verification uses Tooling's [source-bound group plans](design/release-validation.md)
-through Toko Tooling's [plan runner](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/release-group-validation.md). Foundation and Testkit
-retain the complete gate. Text, Tools and Build may narrow only from
-an admitted complete three-host baseline with unchanged shared inputs and bounded
-consumer relationships. Tools/Build need a fresh comparison that executes their
-new focused contracts on all three hosts; older Text qualification is
+through Toko Tooling's [plan runner](https://github.com/dragginzgame/toko-tooling/blob/5806e6e4943f6be600cd53385498ce08a5f804c4/docs/releases/release-group-validation.md).
+All six groups have explicit focused mappings. Narrowing requires an admitted
+complete three-host baseline with the same coverage map, unchanged shared inputs
+and bounded consumer relationships. The expanded map needs a fresh comparison
+that executes every focused contract on all three hosts; older qualification is
 insufficient. Missing evidence, shared changes or uncertain scope select the
 complete gate; selecting a group alone never omits qualification. Ordinary CI
 and publication qualification keep their complete workspace gates.
@@ -165,8 +165,8 @@ For the next deployment, follow the reviewed
 [sequencing checklist](https://github.com/dragginzgame/toko-tooling/blob/dcc51b5cab3d9993f0668bc0902252364d7dc316/docs/releases/releases.md#plan-once-recover-the-failed-phase).
 Use the [focused consumer wiring checks](hosts.md) before the selected
 product gate when their inputs changed. The [local recovery boundary](design/release-validation.md#collector-failure-boundary)
-identifies which existing operations can reuse evidence and which require a new
-gate; a snapshot update does not add collector recovery. State the selected scope,
+identifies which existing operations can reuse evidence, when explicit collector
+recovery is admitted and which failures require a new gate. State the selected scope,
 known stage costs and invalidation reason before starting a costly retry.
 
 Toko 0.41 clarifies dependency isolation, rather than removing required tests.

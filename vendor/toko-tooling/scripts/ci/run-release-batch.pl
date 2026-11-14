@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# Shared companions: scripts/ci/validate-release-inputs.pl scripts/ci/check-make-execution.sh scripts/ci/check-retained-state.pl
+# Shared companions: scripts/ci/validate-release-inputs.pl scripts/ci/check-make-execution.sh scripts/ci/check-retained-state.pl scripts/ci/ReleaseTiming.pm
 use strict;
 use warnings;
 use Cwd qw(abs_path);
@@ -9,20 +9,22 @@ use Fcntl qw(:flock);
 use JSON::PP;
 use Getopt::Long qw(GetOptions);
 use FindBin qw($RealBin);
+use lib $RealBin;
+use ReleaseTiming;
 
-my ($root,$groups,$resume,$publish,$publication_result,$setup,$status,$reconcile,$retire);
+my ($root,$groups,$resume,$publish,$publication_result,$setup,$status,$reconcile,$retire,$timings);
 my $delivery=$ENV{RELEASE_DELIVERY}//'direct';
 my ($kind,$remote,$branch)=('patch','origin','main');
 GetOptions('root=s'=>\$root,'groups=s'=>\$groups,'resume=s'=>\$resume,
     'kind=s'=>\$kind,'remote=s'=>\$remote,'branch=s'=>\$branch,
     'publish-target=s'=>\$publish,'delivery=s'=>\$delivery,
     'publication-result=s'=>\$publication_result,'setup-target=s'=>\$setup,
-    'status=s'=>\$status,'reconcile=s'=>\$reconcile,'retire=s'=>\$retire) && !@ARGV
-    or die "usage: run-release-batch.pl --root DIR --groups GROUP[,GROUP...] [--kind patch|minor|major] [--setup-target TARGET] [--publish-target TARGET] | --root DIR --resume|--status|--reconcile|--retire ID\n";
+    'status=s'=>\$status,'timings=s'=>\$timings,'reconcile=s'=>\$reconcile,'retire=s'=>\$retire) && !@ARGV
+    or die "usage: run-release-batch.pl --root DIR --groups GROUP[,GROUP...] [--kind patch|minor|major] [--setup-target TARGET] [--publish-target TARGET] | --root DIR --resume|--status|--timings|--reconcile|--retire ID\n";
 $root=abs_path($root//'') // die "missing repository root\n";
-my @operations=grep {defined} ($resume,$status,$reconcile,$retire);
+my @operations=grep {defined} ($resume,$status,$reconcile,$retire,$timings);
 @operations<=1 or die "select one batch operation\n";
-my $operation=defined($status)?'status':defined($reconcile)?'reconcile':defined($retire)?'retire':'resume';
+my $operation=defined($timings)?'timings':defined($status)?'status':defined($reconcile)?'reconcile':defined($retire)?'retire':'resume';
 $resume=$operations[0] if @operations;
 (!defined($publication_result) || $operation eq 'resume') or die "publication reconciliation belongs to resume\n";
 $delivery eq 'direct' or die "release batches currently require direct delivery; PR policy is not overridden\n";
@@ -44,7 +46,7 @@ sub output {
     return $text;
 }
 sub run { system @_ ; $? == 0 or die "command failed ($?): @_\n"; }
-run('bash',"$RealBin/check-make-execution.sh",'make');
+run('bash',"$RealBin/check-make-execution.sh",'make') if $operation eq 'resume';
 sub regular_route {
     my ($path)=@_;
     $path =~ m{\A/} && $path !~ /[\r\n\0]/ or die "invalid absolute route\n";
@@ -72,7 +74,7 @@ regular_route($state); make_path($state);
 # unrelated Cargo writes never need to acquire this lock.
 regular_route("$state/lock");
 open my $lock,'>>',"$state/lock" or die $!;
-print "Waiting for release batch queue: $state\n";
+print "Waiting for release batch queue: $state\n" unless $operation eq 'timings';
 flock($lock,LOCK_EX) or die $!;
 run($^X,"$RealBin/check-retained-state.pl",'--root',$state) if $operation eq 'resume';
 my ($record,$id);
@@ -138,9 +140,13 @@ my $dir="$state/$id";
 my $work="$root/target/release-frozen/$id";
 my $gitdir="$dir/repository.git";
 regular_route($_) for ($dir,$work,$gitdir);
+sub save { write_json("$dir/intent.json",$record); }
+if ($operation eq 'timings') {
+    print JSON::PP->new->canonical->pretty->encode(ReleaseTiming::report("$dir/timings.jsonl"));
+    exit 0;
+}
 print "Release batch $id: $record->{source}; groups: ",join(', ',@{$record->{groups}}),"\n";
 print "Delivery checkout: $work; durable recovery: $dir\n";
-sub save { write_json("$dir/intent.json",$record); }
 if ($operation eq 'status') {
     print JSON::PP->new->canonical->pretty->encode($record);
     exit 0;
@@ -187,6 +193,20 @@ if ($operation eq 'reconcile' || $operation eq 'retire') {
     print "Retired $id; release commits and tags are retained in the normal repository.\n";
     exit 0;
 }
+$ENV{RELEASE_TIMING_JOURNAL}="$dir/timings.jsonl";
+delete @ENV{qw(RELEASE_TIMING_ATTEMPT RELEASE_TIMING_PARENT)};
+$ENV{RELEASE_SOURCE}=$record->{source};
+my $batch_span=ReleaseTiming::begin('batch-attempt','executed',$id);
+$ENV{RELEASE_TIMING_ATTEMPT}=$batch_span->{id};
+$ENV{RELEASE_TIMING_PARENT}=$batch_span->{id};
+END {
+    my $status=$?;
+    if ($batch_span) {
+        eval {ReleaseTiming::finish($batch_span,$status)};
+        if ($@) {warn $@; $status ||= 1;}
+    }
+    $?=$status;
+}
 if (defined $publication_result) {
     $record->{phase} eq 'publishing' or die "publication reconciliation requires uncertain publication\n";
     # Explicit caller assertion after consulting the consumer's registry receipts.
@@ -197,6 +217,7 @@ if (defined $publication_result) {
     $record->{publication_reconciliation}=$publication_result; save();
 }
 if ($record->{phase} eq 'initialize') {
+    ReleaseTiming::measure('capture','executed',$record->{source},sub {
     !-e $gitdir && !-e $work or die "interrupted initialization retained; inspect before retrying\n";
     make_path("$root/target/release-frozen");
     run('git','clone','--shared','--no-checkout','--separate-git-dir',$gitdir,$root,$work);
@@ -208,6 +229,7 @@ if ($record->{phase} eq 'initialize') {
         run('git','-C',$work,'config',$key,$value);
     }
     $record->{phase}='release'; save();
+    });
 }
 -d $work && -f "$work/.git" or die "candidate checkout missing; recover from $gitdir before resume (do not replace its durable Git state)\n";
 output('git','-C',$work,'rev-parse','--absolute-git-dir') eq $gitdir or die "candidate Git directory changed\n";
@@ -238,16 +260,22 @@ sub candidate_source_state {
 }
 while ($record->{index}<@{$record->{groups}}) {
     my $group=$record->{groups}[$record->{index}];
+    $ENV{RELEASE_GROUP}=$group;
+    $ENV{RELEASE_SOURCE}=$record->{group_source}//$record->{source};
     if ($record->{phase} eq 'release') {
         delete @{$record}{qw(candidate release_commit)};
         $record->{group_source}=output('git','-C',$work,'rev-parse','HEAD');
     }
+    $ENV{RELEASE_SOURCE}=$record->{group_source}//$record->{source};
+    $ENV{RELEASE_VERSION}=$record->{candidate}//'';
     if (defined($record->{setup}) && $record->{phase} ne 'publishing') {
         my $setup_mode=$record->{phase} eq 'release'?'prepare':'check';
+        ReleaseTiming::measure("setup-$setup_mode",'executed',$record->{setup},sub {
         my $inputs=candidate_source_state();
         run('make','-C',$work,'--no-print-directory',$record->{setup},hook_context($group),
             "RELEASE_SETUP_MODE=$setup_mode");
         candidate_source_state() eq $inputs or die "candidate setup changed release source or lock inputs\n";
+        });
     }
     if ($record->{phase} eq 'release' || $record->{phase} eq 'releasing') {
         my $target="release-$record->{kind}";
@@ -269,7 +297,11 @@ while ($record->{index}<@{$record->{groups}}) {
                     or die "missing release plan after candidate mutation; reconcile retained state before resume\n";
             }
         }
-        run('make','-C',$work,'--no-print-directory',$target,@version,hook_context($group));
+        $ENV{RELEASE_SOURCE}=$record->{group_source};
+        $ENV{RELEASE_VERSION}=$record->{candidate};
+        ReleaseTiming::measure('release','executed',$target,sub {
+            run('make','-C',$work,'--no-print-directory',$target,@version,hook_context($group));
+        });
         $record->{release_commit}=output('git','-C',$work,'rev-parse','HEAD');
         $record->{phase}='publish'; save();
     }
@@ -278,7 +310,9 @@ while ($record->{index}<@{$record->{groups}}) {
             output('git','-C',$work,'rev-parse','HEAD') eq $record->{release_commit}
                 or die "candidate changed before publication; reconcile release identity\n";
             $record->{phase}='publishing'; save();
-            run('make','-C',$work,'--no-print-directory',$record->{publish},hook_context($group));
+            ReleaseTiming::measure('publication','executed',$record->{publish},sub {
+                run('make','-C',$work,'--no-print-directory',$record->{publish},hook_context($group));
+            });
         }
         $record->{index}++; $record->{phase}='release'; save();
     } elsif ($record->{phase} eq 'publishing') {

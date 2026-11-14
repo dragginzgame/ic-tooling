@@ -7,8 +7,8 @@ use pocket_ic::nonblocking::PocketIc;
 
 /// One owned `PocketIC` instance/server record with snapshots and caller metadata.
 ///
-/// The value contains no synchronization. A [`super::PocketIcBaselineRecipe`]
-/// can own it as its fixture in a [`super::CachedPocketIcBaselinePool`].
+/// The caller owns capture, stop/drain, restoration and instance lifetime.
+/// This value supplies no pooling, reset recipe or automatic rebuild.
 pub struct CachedPocketIcBaseline<T> {
     instance: PocketIcInstance,
     snapshots: ControllerSnapshots,

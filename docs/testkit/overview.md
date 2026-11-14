@@ -100,7 +100,7 @@ See [server ownership](POCKET-IC.md#server-selection-and-provisioning).
 - Harness functions over the upstream async PocketIC client and its native DTOs.
 - Explicit server startup/custody, installation, snapshots and bounded readiness.
 - Optional typed Wire calls and raw/held reply fixtures.
-- Recipe-owned baseline reuse with bounded concurrent capacity.
+- Fresh instance isolation and explicit controller-aware snapshot operations.
 - Controller-aware diagnostics.
 - Deterministic fixture principals.
 
@@ -108,18 +108,9 @@ See [server ownership](POCKET-IC.md#server-selection-and-provisioning).
 
 Build Wasm through IC Build. Admit/start a server, construct an instance and install
 the declared topology. Stop/drain captured canisters before snapshot capture.
-For reuse, implement the recipe's non-snapshot reset, readiness and invariant
-validation. Lease a baseline, exercise it, then return the lease. Close the pool
-before releasing a borrowed server. Keep application assertions and recovery
-policy in the consuming test suite.
-
-### Choose the right isolation level
-
-| Requirement | Owner |
-| --- | --- |
-| Completely independent state/topology | Fresh instance |
-| Repeated tests over a resettable topology | Caller-owned baseline recipe/pool |
-| Several Cargo/test processes sharing infrastructure | Externally retained server or CLI `run -- COMMAND` |
+Create a fresh instance for each independent test. Tests of restoration explicitly
+restore their captured state and validate readiness. Keep application assertions
+and recovery policy in the consuming test suite.
 
 Snapshots cover captured canister state. They do not automatically reset simulator
 time, extra canisters, pending work, subnet state or external resources. Declare
@@ -134,7 +125,6 @@ and independently verify the domains relevant to each recipe.
 | Installation | `pic::create_and_install`, `InstallSpec`, `StandaloneCanisterFixture` |
 | Typed calls | Independent [`ic-testkit-wire`](wire-adapter.md): `query_wire`, `update_wire`, `WireCallSpec` |
 | Snapshots | `pic::capture_snapshots`, `ControllerSnapshots`, `CachedPocketIcBaseline` |
-| Reuse | `PocketIcBaselineRecipe`, `CachedPocketIcBaselinePool`, `StandaloneCanisterRecipe` |
 | Reporting/readiness | `pic::collect_canister_diagnostics`, `advance_and_tick`, `tick_until` |
 
 Harness functions take `&PocketIc`; import policy types explicitly. Pure parsing,
@@ -153,17 +143,13 @@ I/O; an owned server's Drop still terminates/reaps its process group and stops a
 its instances. Borrowed servers must outlive their clients' explicit deletion.
 
 Independent instances can overlap. There is no global client/runtime lock.
-Keep one caller-owned runtime alive through pool reuse and explicit close. Reused
+Keep the caller-owned runtime alive through instance operations and explicit close. Reused
 HTTP connections must not outlive their runtime. Blocking coordinators require a
 multithread runtime whose network drivers can continue while they wait.
-Queued pool acquisitions yield through Tokio's FIFO semaphore. Cancellation of
-preparation marks the slot for rebuild, preserving its value for teardown; a
-partially reset baseline is never handed out as reusable.
-
 ## Typed Wire calls
 
-Enable `wire` and align the consumer's Wire minor identity with Testkit's selected
-version. Pass the exact target, caller, exported method, method ID, request/response
+Select the independent `ic-testkit-wire` adapter and align the consumer's Wire
+minor identity with that adapter. Pass the exact target, caller, exported method, method ID, request/response
 limits and borrowed request to `query_wire` or `update_wire`, then await the result.
 Responses require `DeserializeOwned`; request and response budgets are independent.
 
@@ -240,26 +226,9 @@ snapshots and caller metadata. Stop/drain the complete set before capture/restor
 then reach readiness only after the full restore and non-snapshot reset succeed.
 Automatic progression must stay disabled while those invariants matter.
 
-A `PocketIcBaselineRecipe` implements async build, pre-restore, non-snapshot reset,
-readiness and validation. It selects `snapshot_funding()` and validates its own
-required/achieved reset evidence before returning `Ok(())` from reset. Missing
-or mismatched coverage is a typed recipe failure. Recipe futures are Send and
-metadata is Send + Sync. The
-[compiled multi-canister example](../../crates/ic-testkit/examples/multi_canister_baseline_pool.rs)
-shows the lifecycle and typed failure classification.
-
-`StandaloneCanisterRecipe` accepts a builder returning a Send future. Await
-`pool.acquire()` to obtain its lease and structured timing/outcome. A permitted
-warm failure gets at most one recovery build; failures retain both causes. Fatal
-failures, explicit invalidation, panic and cancelled preparation remain distinct.
-Dropping the lease returns its slot. Await `pool.close()` after every lease ends,
-before stopping a borrowed server. Close returns `()`; deletion is best effort.
-For a shared or `static` pool use `pool.shutdown().await`: it closes admission,
-awaits lease return, and awaits upstream deletion without an acknowledgement. Future/queued
-acquisitions return `BaselinePoolError::Closed`. Do not hold a lease in the task
-awaiting shutdown; keep the caller's runtime and borrowed servers alive until
-shutdown completes. Cancellation and no-replay custody are described in the
-[client migration](client-migration.md).
+Baseline pools and reset recipes are retired. Use fresh instances for independent
+tests; explicit snapshot tests retain their own stop/drain, funding, reset and
+readiness sequence. See the [migration](client-migration.md#baseline-pool-retirement).
 
 ## Diagnostics and time
 
@@ -277,8 +246,9 @@ network time. Zero budgets still permit the initial check; failures stop immedia
 
 ## Building test artifacts
 
-Depend on `ic-build` directly for Cargo/Wasm recipes, exact inputs, retained caches
-and artifact transactions. Testkit owns simulator integration. The private probe
+Depend on `ic-build` directly for Cargo execution, declared inputs and invocation-
+owned captures. Persistent Wasm and generic transaction caching are retired.
+Testkit owns simulator integration. The private probe
 and installed Wire test demonstrate this dependency direction without a re-export.
 
 ## Installed Wire qualification

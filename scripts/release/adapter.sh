@@ -6,11 +6,26 @@ export RUSTUP_AUTO_INSTALL=0
 # Shared owns group admission, literal rendering and transactional installation.
 # This consumer owns source custody, complete qualification and release receipts.
 operation="${1:-}"
-[[ $# == 1 ]] || exit 2
+[[ $# == 1 || ( $# == 3 && $operation == collect ) ]] || exit 2
 tooling_root="${BASH_SOURCE[0]}"
 [[ "$tooling_root" == /* ]] || tooling_root="$PWD/$tooling_root"
 tooling_root="$(cd -P "${tooling_root%/*}/../.." && printf '%s/.' "$PWD")"
 tooling_root="${tooling_root%/.}"
+if [[ $operation == collect ]]; then
+    [[ $# == 3 && $2 =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ && $3 =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 2
+    export RELEASE_GROUP=$2 RELEASE_VERSION=$3
+    unset RELEASE_COMMIT
+    saved_selection="$(git rev-parse --git-path release-state)/$2-$3.validation.selection"
+    [[ -f $saved_selection && ! -L $saved_selection ]] || exit 1
+    RELEASE_SOURCE=$(jq -er --arg group "$2" --arg version "$3" \
+        'select(.schema == 1 and .group == $group and .release.version == $version) | .source' "$saved_selection")
+    RELEASE_KIND=$(jq -er '.release.kind' "$saved_selection")
+    RELEASE_PREVIOUS=$(jq -er '.release.previous' "$saved_selection")
+    RELEASE_DATE=$(jq -er '.release.date' "$saved_selection")
+    RELEASE_REMOTE=$(jq -er '.release.remote' "$saved_selection")
+    RELEASE_BRANCH=$(jq -er '.release.branch' "$saved_selection")
+    export RELEASE_SOURCE RELEASE_KIND RELEASE_PREVIOUS RELEASE_DATE RELEASE_REMOTE RELEASE_BRANCH
+fi
 bash "$tooling_root/scripts/release/group.sh" ci/cargo-release-groups.json "${RELEASE_GROUP:-}"
 bash "$tooling_root/vendor/toko-tooling/scripts/ci/check-release-delivery.sh" \
     "$tooling_root/ci/release-delivery.txt" "${RELEASE_DELIVERY-direct}"
@@ -19,8 +34,8 @@ group() { bash "$tooling_root/vendor/toko-tooling/scripts/ci/cargo-release-group
 case "$operation" in
     version) exec bash "$tooling_root/scripts/release/group.sh" ci/cargo-release-groups.json "$RELEASE_GROUP" version ;;
     files) group "$operation"; exit ;;
-    preflight|verify|prepare|check|commit-check|committed-check) ;;
-    *) echo 'usage: adapter.sh version|files|preflight|verify|prepare|check|commit-check|committed-check' >&2; exit 2 ;;
+    preflight|verify|collect|prepare|check|commit-check|committed-check) ;;
+    *) echo 'usage: adapter.sh version|files|preflight|verify|prepare|check|commit-check|committed-check; adapter.sh collect GROUP VERSION' >&2; exit 2 ;;
 esac
 make --no-print-directory toko-tooling-check
 [[ "${RELEASE_SOURCE:?}" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || fail 'invalid source identity'
@@ -29,6 +44,9 @@ selected_version="$(bash "$tooling_root/vendor/toko-tooling/scripts/ci/next-rele
 perl "$tooling_root/vendor/toko-tooling/scripts/ci/validate-release-inputs.pl" date "${RELEASE_DATE:?}" > /dev/null
 state="$(git rev-parse --git-path release-state)"
 [[ ! -L "$state" ]] || fail 'symlinked release evidence directory'
+if [[ $operation == collect ]]; then
+    [[ ! -e "$state/lock" && ! -L "$state/lock" ]] || fail 'stop the release runner before collecting its evidence'
+fi
 identity="$RELEASE_GROUP-$RELEASE_VERSION"
 receipt="$state/$identity.validation"
 notes="$receipt.notes"
@@ -61,7 +79,7 @@ select_editor() {
 }
 admit_files() {
     local allowed=(--allow "$changelog") path
-    if [[ "$operation" != preflight && "$operation" != verify && "$operation" != prepare ]]; then
+    if [[ "$operation" != preflight && "$operation" != verify && "$operation" != collect && "$operation" != prepare ]]; then
         for path in "${files[@]}"; do allowed+=(--allow "$path"); done
     fi
     bash "$tooling_root/vendor/toko-tooling/scripts/ci/check-release-source.sh" "${allowed[@]}" ||
@@ -90,13 +108,43 @@ unchanged_outside_release() {
     git diff "$@" -- "${pathspecs[@]}" > /dev/null || fail 'changes outside the selected release files'
 }
 case "$operation" in
+    collect)
+        observed_source=$(git rev-parse HEAD)
+        observed_version=$(jq -er '.previous' "$scratch/plan.json")
+        [[ $observed_source == "$RELEASE_SOURCE" && $observed_version == "$RELEASE_PREVIOUS" ]] || fail 'collection requires the original unprepared source'
+        admit_files
+        bash "$tooling_root/scripts/release/validation.sh" collect "$gate"
+        if [[ -e "$receipt" || -L "$receipt" ]]; then
+            release_receipt_check "$receipt" receipt_header receipt
+            cmp "$notes" "$changelog"
+        else
+            # The verifier re-observed the original ledger and every successful
+            # stage. Seal through the same receipt owner used by fresh execution.
+            release_receipt_write "$notes" cat "$changelog"
+            release_receipt_write "$receipt" receipt_header receipt
+        fi
+        # Explicit recovery is bound to this exact receipt, rather than a skip
+        # flag. Normal preflight/verify must re-admit it before doing anything.
+        observed_receipt=$(git hash-object -- "$receipt")
+        # shellcheck disable=SC2016 # jq binds the receipt field.
+        release_receipt_write "$selection" jq -cS --arg receipt "$observed_receipt" \
+            '.collector_receipt = $receipt' "$selection"
+        ;;
     preflight|verify)
         observed_source="$(git rev-parse HEAD)"
         observed_version="$(jq -er '.previous' "$scratch/plan.json")"
         [[ "$observed_source" == "$RELEASE_SOURCE" ]] || fail 'source changed'
         [[ "$observed_version" == "$RELEASE_PREVIOUS" ]] || fail 'selected group version changed'
         admit_files
-        if [[ "$operation" == preflight ]]; then
+        collected=false
+        if [[ -f "$selection" && ! -L "$selection" ]] && jq -e 'has("collector_receipt")' "$selection" >/dev/null; then
+            observed_receipt=$(git hash-object -- "$receipt")
+            [[ $(jq -er '.collector_receipt' "$selection") == "$observed_receipt" ]] || fail 'collected receipt changed'
+            release_receipt_check "$receipt" receipt_header receipt || fail 'collected execution no longer admits this source/context'
+            cmp "$notes" "$changelog"
+            collected=true
+        fi
+        if [[ "$operation" == preflight && $collected == false ]]; then
             bash "$tooling_root/scripts/release/validation.sh" plan "$scratch/selection"
             current_selection="$scratch/selection"
         else
@@ -112,7 +160,7 @@ case "$operation" in
             else make --no-print-directory install-tools; fi
         }
         fresh_tool_setup=false
-        if [[ "$operation" == preflight && ! -e "$state/$identity.plan" && ! -L "$state/$identity.plan" ]]; then
+        if [[ "$operation" == preflight && $collected == false && ! -e "$state/$identity.plan" && ! -L "$state/$identity.plan" ]]; then
             fresh_tool_setup=true
         fi
         editor_setup=false
@@ -137,6 +185,14 @@ case "$operation" in
         CARGO_NET_OFFLINE=true make --no-print-directory dependency-pins-check
         if [[ "$fresh_tool_setup" == true ]]; then cargo fetch --locked
         else cargo fetch --locked --offline; fi
+        if [[ $collected == true ]]; then
+            # Keep ordinary tool/metadata admission above; only successful
+            # product execution is recovered. Reobserve after those callers.
+            admit_files
+            release_receipt_check "$receipt" receipt_header receipt
+            cmp "$notes" "$changelog"
+            exit 0
+        fi
         if [[ "$operation" == preflight ]]; then
             # Tooling owns this preflight record. Carry its release context so
             # publication never interprets Shared's private journal format.

@@ -1,6 +1,8 @@
 //! Installed Wire calls, state, caller identity and typed failure qualification.
 use ic_build::{
-    artifacts::{WasmBuildSpec, build_wasm_canisters_cached},
+    cargo::execution::{
+        CargoExecutionPolicy, CargoInvocation, CargoRecipe, execute_cargo, select_cdylib_wasm,
+    },
     cargo::{
         observation::{decode_workspace_root, workspace_root_command},
         selection::CargoSelection,
@@ -9,7 +11,7 @@ use ic_build::{
 use ic_host_fs::read::read_file;
 use ic_host_process::{
     child::{CleanupPolicy, OwnedChild},
-    tool::{CompletedExecution, OutputLimit, OutputLimits, capture_command},
+    tool::{CompletedExecution, OutputLimit, OutputLimits, OutputStream, capture_command},
 };
 use ic_testkit::pic::{InstallSpec, StandaloneCanisterFixture};
 use ic_testkit_perf_probe::protocol::{
@@ -19,7 +21,7 @@ use ic_testkit_perf_probe::protocol::{
 use ic_testkit_wire::{WireCallError, query_wire, update_wire};
 use pocket_ic::CanisterId as Principal;
 
-use std::process::Command;
+use std::{io::Write as _, process::Command};
 const PERF_PROBE_PACKAGE: &str = "ic-testkit-perf-probe";
 
 async fn install_probe() -> StandaloneCanisterFixture {
@@ -44,39 +46,87 @@ async fn install_probe() -> StandaloneCanisterFixture {
         workspace.join("ic-testkit-perf-probe/Cargo.toml").is_file(),
         "Wire qualification requires the workspace control canister"
     );
-    let target_dir = ic_host_fs::owned_directory::OwnedDirectory::new(
-        ic_host_fs::directory::create_unique_directory(
-            &workspace.join("target"),
-            "ic-testkit-perf-probe-target",
-            0o700,
-            None,
-        )
-        .expect("create private test directory"),
-    );
-
-    let env = std::env::vars_os();
-    let spec = WasmBuildSpec::new(
-        &workspace,
-        target_dir.path(),
-        &[PERF_PROBE_PACKAGE],
-        env,
-        CONFIGURATION_LIMITS,
+    // This test owns the shared incremental target through byte consumption.
+    let target = workspace.join("target/pic-wasm");
+    let lock = ic_host_fs::durable::open_regular_lock_file_with_parents(
+        &workspace.join("target/pic-wasm.lock"),
     )
-    .with_cargo_selection(CargoSelection {
-        locked: true,
-        ..CargoSelection::default()
-    })
-    .with_shared_incremental_target(workspace.join("target/pic-wasm"));
-    let outcome = build_wasm_canisters_cached(&spec, |command| {
-        OwnedChild::spawn(command, CleanupPolicy::KillAndWait)
-    })
-    .expect("build perf probe Wasm");
-    let wasm_path = outcome
-        .record()
-        .artifacts()
-        .first()
-        .expect("perf probe build returns its retained Wasm");
-    let wasm = read_file(wasm_path, 128 * 1024 * 1024).expect("read retained bounded Wasm");
+    .expect("open probe target lock");
+    ic_host_fs::durable::lock_exclusive(&lock).expect("lock probe target");
+    let mut environment: std::collections::BTreeMap<_, _> = std::env::vars_os().collect();
+    environment
+        .entry("RUSTC".into())
+        .or_insert_with(|| "rustc".into());
+    environment.insert("CARGO_TARGET_DIR".into(), target.into_os_string());
+    let invocation = CargoInvocation {
+        cargo_program: std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()),
+        working_directory: workspace.clone(),
+        environment,
+        target: "wasm32-unknown-unknown".into(),
+        selection: CargoSelection {
+            locked: true,
+            offline: true,
+            ..CargoSelection::default()
+        },
+        packages: vec![PERF_PROBE_PACKAGE.into()],
+        manifest_path: Some(workspace.join("Cargo.toml")),
+        recipe: CargoRecipe::Library,
+        configurations: Vec::new(),
+        render_diagnostics: true,
+        keep_going: false,
+    };
+    let mut messages = Vec::new();
+    let observed = execute_cargo(
+        &invocation,
+        CargoExecutionPolicy {
+            output: OutputLimits {
+                stdout: OutputLimit::Truncate(0),
+                stderr: OutputLimit::Truncate(1024 * 1024),
+                timeout: None,
+            },
+            message_bytes: 16 * 1024 * 1024,
+            probe_cleanup: CleanupPolicy::KillAndWait,
+        },
+        |command| OwnedChild::spawn(command, CleanupPolicy::KillAndWait),
+        || false,
+        |stream, bytes| {
+            if stream == OutputStream::Stderr {
+                std::io::stderr().write_all(bytes)
+            } else {
+                Ok(())
+            }
+        },
+        |message| {
+            if let ic_build::cargo::observation::schema::Message::CompilerMessage(diagnostic) =
+                &message
+                && let Some(rendered) = &diagnostic.message.rendered
+            {
+                std::io::stderr().write_all(rendered.as_bytes())?;
+            }
+            messages.push(message);
+            Ok(())
+        },
+    )
+    .expect("execute probe Cargo build");
+    observed
+        .execution
+        .expect("capture build process")
+        .require_success()
+        .expect("build perf probe Wasm");
+    observed.messages.expect("complete Cargo protocol");
+    observed
+        .facts
+        .expect("unchanged recipe and tools")
+        .expect("successful build facts");
+    let wasm_path = select_cdylib_wasm(
+        &messages,
+        &workspace.join("ic-testkit-perf-probe/Cargo.toml"),
+        &invocation.recipe,
+    )
+    .expect("select exact probe Wasm from Cargo messages");
+    let wasm = read_file(&wasm_path, 128 * 1024 * 1024)
+        .expect("read bounded Wasm while holding target custody");
+    drop(lock);
     StandaloneCanisterFixture::install(
         ic_testkit::pic::PocketIcStartupConfig::from_env(std::time::Duration::from_secs(30))
             .expect("configure prepared PocketIC")
@@ -301,15 +351,6 @@ async fn assert_callers(fixture: &StandaloneCanisterFixture) {
         assert_eq!(update.as_slice(), caller.as_slice());
     }
 }
-
-// This caller admits small configuration trees; libraries do not select this policy.
-const CONFIGURATION_LIMITS: ic_build::cargo::environment::ConfigurationLimits =
-    ic_build::cargo::environment::ConfigurationLimits {
-        file_bytes: 1024 * 1024,
-        total_bytes: 16 * 1024 * 1024,
-        files: 128,
-        depth: 32,
-    };
 
 // The fixture owns the native control frame for this installed Wire contract.
 const fn probe_wire_spec(

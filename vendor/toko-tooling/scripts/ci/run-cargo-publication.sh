@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/check-make-execution.sh scripts/ci/cargo-publication-paths.sh
+# Shared companions: scripts/ci/check-make-execution.sh scripts/ci/cargo-publication-paths.sh scripts/ci/release-timing.sh
 set -euo pipefail
 
 # Execute one caller-admitted Cargo publication, retaining intent and results.
@@ -22,6 +22,8 @@ self="${self%/.}"
 path_ok "$self"
 # shellcheck source=scripts/ci/cargo-publication-paths.sh
 source "$self/cargo-publication-paths.sh"
+# shellcheck source=scripts/ci/release-timing.sh
+source "$self/release-timing.sh"
 bash "$self/check-make-execution.sh"
 cwd="$(CDPATH='' cd -P -- . && printf '%s/.' "$PWD")"
 cwd="${cwd%/.}"
@@ -81,6 +83,7 @@ finished=false
 # shellcheck disable=SC2329 # Registered as the EXIT trap below.
 finish() {
     local status=$?
+    release_timing_end "$status" || { [[ "$status" != 0 ]] || status=1; }
     if [[ "$finished" == true ]]; then
         if ! { rm -f -- "$lock/owner" && rmdir -- "$lock"; }; then
             [[ "$status" != 0 ]] || status=1
@@ -106,6 +109,7 @@ observed_dirty="$(git status --porcelain --untracked-files=all)"
 [[ "$observed" == "$source" && "$observed_dirty" == "$dirty" ]] || fail 'source changed before Cargo dispatch'
 printf 'Publication evidence: %s\n' "$attempt"
 printf 'started\n' > "$attempt/dispatch"
+release_timing_begin "cargo-$mode"
 set +e
 cargo "${arguments[@]}" 2>&1 | tee "$attempt/cargo.log"
 statuses=("${PIPESTATUS[@]}")
@@ -117,6 +121,7 @@ printf '%s\n' "${statuses[0]}" > "$attempt/cargo-status"
 printf '%s\n' "${statuses[1]}" > "$attempt/log-status"
 printf '%s\n' "$status" > "$attempt/status"
 finished=true
+release_timing_end "$status"
 if [[ "$status" != 0 ]]; then
     printf 'Attempt failed; retain %s and reconcile before another upload.\n' "$attempt" >&2 || :
 fi

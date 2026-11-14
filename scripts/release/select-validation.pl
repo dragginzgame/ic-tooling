@@ -78,6 +78,7 @@ sub version_only {
     if ($path eq 'Cargo.toml') {
         for my $root ($before, $after) {
             for my $name (keys %owned) {
+                next unless exists $root->{workspace}{dependencies}{$name};
                 ref($root->{workspace}{dependencies}{$name}) eq 'HASH' or die "missing owned catalog entry\n";
                 delete $root->{workspace}{dependencies}{$name}{version};
             }
@@ -122,10 +123,11 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
     if ($baseline && qualified_baseline($baseline) && supported_environment()) {
         @changes = grep { length } split /\0/, git('diff', '--name-only', '--no-renames', '-z', $baseline->{source}, $source, '--');
         my ($selected_group) = grep { $_->{name} eq $group } @{$groups->{groups}};
-        my $package = $selected_group->{primary};
-        my $safe = join(',', @{$selected_group->{members}}) eq $package;
+        my @members = @{$selected_group->{members}};
+        my %members = map { $_ => 1 } @members;
+        my $safe = 1;
         for my $path (@changes) {
-            next if $path =~ m{\Acrates/\Q$package\E/(?:src/|tests/|README\.md\z)};
+            next if $path =~ m{\Acrates/([^/]+)/(?:src/|tests/|examples/|README\.md\z)} && $members{$1};
             next if $path =~ m{\Areleases/[^/]+/CHANGELOG\.md\z} || $path eq 'docs/status/current.md';
             if ($path eq 'Cargo.toml' || $path eq 'Cargo.lock' || $path =~ m{\A(?:crates|apps)/[^/]+/Cargo\.toml\z}) {
                 $safe &&= version_only($path, toml($baseline->{source}, $path), toml($source, $path));
@@ -135,15 +137,18 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
             my $metadata = $json->decode(command('cargo', 'metadata', '--no-deps', '--locked', '--offline', '--format-version', '1'));
             my $qualification = $json->decode(command('cargo', 'metadata', '--manifest-path', 'qualification/Cargo.toml', '--no-deps', '--locked', '--offline', '--format-version', '1'));
             push @{$metadata->{packages}}, @{$qualification->{packages}};
-            my @parents = sort map {
-                my $parent = $_;
-                map { "$parent->{name}:" . ($_->{kind} // 'normal') }
-                    grep { $_->{name} eq $package } @{$parent->{dependencies}}
-            } @{$metadata->{packages}};
+            my @parents;
+            for my $member (@members) {
+                push @parents, map {
+                    my $parent = $_;
+                    map { (@members > 1 ? "$member:" : '') . "$parent->{name}:" . ($_->{kind} // 'normal') }
+                        grep { $_->{name} eq $member } @{$parent->{dependencies}}
+                } @{$metadata->{packages}};
+            }
+            @parents = sort @parents;
             my @expected = sort @{$coverage->{consumers}{$group}};
             $safe &&= join(',', @parents) eq join(',', @expected);
-            my ($owner) = grep { $_->{name} eq $package } @{$metadata->{packages}};
-            $safe &&= defined($owner);
+            $safe &&= (grep { $members{$_->{name}} } @{$metadata->{packages}}) == @members;
             # Text's runtime callers are bounded to these tested owners. A new
             # call surface needs an explicit mapping before it can be omitted.
             if ($group eq 'text') {
@@ -162,6 +167,13 @@ if (grep($_ eq $group, @{$coverage->{focused}})) {
                     my $public = $path eq 'qualification/ic-testkit-dev/tests/public_contracts.rs';
                     my $build = $path =~ m{\Aqualification/ic-testkit-dev/(?:src/(?:bin/(?:tests/|check_packages\.rs\z))|tests/canister_wire\.rs\z)};
                     $safe &&= $public || ($group eq 'build' && $build);
+                }
+            }
+            if ($group eq 'testkit-wire') {
+                my $references = git('grep', '-l', 'ic_testkit_wire', $source, '--', 'qualification/ic-testkit-dev');
+                for my $path (grep { length } split /\n/, $references) {
+                    $path =~ s/^\Q$source\E://;
+                    $safe &&= $path =~ m{\Aqualification/ic-testkit-dev/tests/(?:public_contracts|canister_wire)\.rs\z};
                 }
             }
         }

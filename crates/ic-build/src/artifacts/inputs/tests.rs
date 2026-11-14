@@ -1,7 +1,6 @@
 use crate::artifacts::{
-    InputEvidence, InputEvidenceError, InputEvidenceSpec, InputEvidenceValue,
-    digest::{InputHasher, digest_labeled_paths},
-    parse_cargo_depfile, read_cargo_depfile_inputs,
+    InputEvidence, InputEvidenceError, InputEvidenceSpec, InputEvidenceValue, parse_cargo_depfile,
+    read_cargo_depfile_inputs,
 };
 use crate::testing::fs::unique_temp_directory;
 use sha2::{Digest as _, Sha256};
@@ -305,22 +304,8 @@ fn exclusions_cannot_prove_absence_and_policy_identity_is_retained() {
 }
 
 #[test]
-fn existing_tree_fingerprint_keeps_its_original_field_encoding() {
-    let root = unique_temp_directory("input-evidence-existing-hash");
-    let source = root.join("a");
-    fs::write(&source, b"abc").unwrap();
-    let actual = digest_labeled_paths("existing-v1", [(Path::new("logical"), &root)], &[]).unwrap();
-    let mut expected = InputHasher::new("existing-v1");
-    expected.field("directory", b"logical");
-    expected.field("file-path", b"logical/a");
-    expected.field("file-content", b"abc");
-    assert_eq!(actual, expected.finish());
-    fs::remove_dir_all(root).unwrap();
-}
-
-#[test]
 #[cfg(unix)]
-fn evidence_rejects_links_while_existing_hashing_still_follows_them() {
+fn evidence_rejects_links_before_observing_file_contents() {
     let root = unique_temp_directory("input-evidence-links");
     let source = root.join("source");
     fs::write(&source, b"abc").unwrap();
@@ -328,10 +313,6 @@ fn evidence_rejects_links_while_existing_hashing_still_follows_them() {
     std::os::unix::fs::symlink(&source, &link).unwrap();
     assert!(
         matches!(InputEvidence::capture(&InputEvidenceSpec::new(Vec::new()).with_input(&link)), Err(InputEvidenceError::Io { path, source }) if path == link && source.kind() == io::ErrorKind::InvalidInput)
-    );
-    assert_eq!(
-        digest_labeled_paths("existing-v1", [(Path::new("logical"), &source)], &[]).unwrap(),
-        digest_labeled_paths("existing-v1", [(Path::new("logical"), &link)], &[]).unwrap(),
     );
     fs::remove_dir_all(root).unwrap();
 }

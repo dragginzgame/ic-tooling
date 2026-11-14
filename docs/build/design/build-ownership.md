@@ -1,5 +1,11 @@
 # Build ownership and extraction
 
+The current [extraction contract](../../extraction.md) retires generic artifact
+transaction and persistent Wasm caching. The record below preserves the original extraction decisions;
+it does not restore removed APIs or the retiring Canic/IcyDB requirements. Native
+optimizer qualification now uses fresh caller-owned outputs and the same execution
+oracle. See the [migration](../artifacts.md#artifact-transaction-retirement).
+
 IC Build owns the extracted reusable Cargo/Wasm and artifact-cache engine used
 directly by Canic, IC Testkit and IcyDB. Canic remains responsible for Canic release
 orchestration; Testkit remains responsible for testing and PocketIC lifecycle.

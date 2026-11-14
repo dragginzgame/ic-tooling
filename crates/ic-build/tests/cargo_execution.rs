@@ -1,6 +1,4 @@
 //! Real Cargo messages bind exact outputs and build-script exports before capture.
-mod support;
-
 use ic_build::{
     artifacts::CapturedArtifact,
     cargo::{
@@ -97,7 +95,7 @@ fn reported_custom_libraries_and_exports_survive_shared_target_collisions() {
                 .iter()
                 .any(|(name, value)| name == "CONSUMER_INPUT" && Path::new(value) == directory)
         );
-        let path = select_cdylib_wasm(&messages, &manifest).unwrap();
+        let path = select_cdylib_wasm(&messages, &manifest, &invocation.recipe).unwrap();
         assert_eq!(path.file_name().unwrap(), "custom_library.wasm");
         let bytes = fs::read(&path).unwrap();
         let capture =
@@ -216,20 +214,6 @@ fn warning_policy_preserves_artifacts_and_refuses_fresh_and_cached_rendered_warn
                     }
                     let artifact = artifact.unwrap();
                     assert_eq!(artifact.fresh, warm);
-                    let path = select_cdylib_wasm(&messages, &manifest).unwrap();
-                    let selected = (
-                        artifact.package_id.clone(),
-                        artifact.target.clone(),
-                        path.clone(),
-                        fs::read(path).unwrap(),
-                    );
-                    if let Some(original) = &original {
-                        assert_eq!(&selected, original);
-                    } else {
-                        original = Some(selected);
-                    }
-                    assert!(messages.iter().any(|message| matches!(message,
-                        Message::BuildScriptExecuted(script) if script.env.iter().any(|(name, value)| name == "CONSUMER_INPUT" && Path::new(value) == directory))));
                     if warning {
                         if rendered {
                             assert!(
@@ -240,6 +224,27 @@ fn warning_policy_preserves_artifacts_and_refuses_fresh_and_cached_rendered_warn
                             assert!(messages.iter().any(|message| matches!(message,
                                 Message::CompilerMessage(diagnostic) if diagnostic.message.message.contains("warning_marker"))));
                         }
+                    }
+                    assert!(messages.iter().any(|message| matches!(message,
+                        Message::BuildScriptExecuted(script) if script.env.iter().any(|(name, value)| name == "CONSUMER_INPUT" && Path::new(value) == directory))));
+                    let selected = select_cdylib_wasm(&messages, &manifest, &invocation.recipe);
+                    if !succeeds {
+                        // Cargo can emit artifacts before warning policy fails.
+                        // Preserve the evidence without admitting those outputs.
+                        assert!(selected.is_err());
+                        continue;
+                    }
+                    let path = selected.unwrap();
+                    let selected = (
+                        artifact.package_id.clone(),
+                        artifact.target.clone(),
+                        path.clone(),
+                        fs::read(path).unwrap(),
+                    );
+                    if let Some(original) = &original {
+                        assert_eq!(&selected, original);
+                    } else {
+                        original = Some(selected);
                     }
                 }
             }

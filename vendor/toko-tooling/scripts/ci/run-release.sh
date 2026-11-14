@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared companions: scripts/ci/release-plan.pl scripts/ci/check-make-execution.sh scripts/ci/check-release-tag.sh scripts/ci/validate-release-inputs.pl scripts/ci/cargo-release-group.sh scripts/ci/check-retained-state.pl
+# Shared companions: scripts/ci/release-plan.pl scripts/ci/check-make-execution.sh scripts/ci/check-release-tag.sh scripts/ci/validate-release-inputs.pl scripts/ci/cargo-release-group.sh scripts/ci/check-retained-state.pl scripts/ci/release-timing.sh
 set -euo pipefail
 
 # Canonical ordering and Git effects; consumer targets own metadata and gates.
@@ -15,6 +15,8 @@ runner_dir="${BASH_SOURCE[0]}"
 [[ "$runner_dir" == /* ]] || runner_dir="$PWD/$runner_dir"
 runner_dir="$(cd -P "${runner_dir%/*}" && printf '%s/.' "$PWD")"
 runner_dir="${runner_dir%/.}"
+# shellcheck source=scripts/ci/release-timing.sh
+source "$runner_dir/release-timing.sh"
 release_group="${RELEASE_GROUP:-}"
 version_mode="${RELEASE_VERSION_MODE:-released}"
 case "$version_mode" in released|pending) ;; *) fail 'invalid RELEASE_VERSION_MODE' ;; esac
@@ -84,7 +86,16 @@ trap 'rmdir "$state_root/lock"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 printf '%s\n' "$$" > "$state_root/lock/owner"
-trap 'rm -f "$state_root/lock/owner"; rmdir "$state_root/lock"' EXIT
+# shellcheck disable=SC2329 # EXIT trap owns final timing and existing lock cleanup.
+release_finish() {
+    local status=$?
+    release_timing_end "$status" || { [[ "$status" != 0 ]] || status=1; }
+    if ! { rm -f "$state_root/lock/owner" && rmdir "$state_root/lock"; }; then
+        [[ "$status" != 0 ]] || status=1
+    fi
+    exit "$status"
+}
+trap release_finish EXIT
 
 hook() (
     check_retention || exit 1
@@ -318,6 +329,7 @@ else
     printf 'Release %s -> %s on %s via %s: validate, prepare, stage, commit/tag, atomic push\n' "$previous" "$candidate" "$branch" "$remote"
 fi
 while [[ "$phase" != complete ]]; do
+    release_timing_begin "release-$phase"
     case "$phase" in
         preflight)
             assert_source
@@ -449,6 +461,7 @@ while [[ "$phase" != complete ]]; do
             ;;
         *) fail 'release plan phase is invalid' ;;
     esac
+    release_timing_end 0
 done
 if [[ "$delivery" == pr ]]; then
     pr_assert_merged

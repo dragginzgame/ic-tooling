@@ -91,19 +91,15 @@ values; consumers own access control, redaction and evidence publication.
 
 ## Keep post-link optimization separate
 
-Compiler optimization and post-link transformation are separate recipes. Reuse
-`ArtifactCacheSpec`, `AdmittedTool` and the retained Wasm input. Key the admitted
-optimizer's bytes/version, exact ordered argument template, complete execution
-environment and working directory, pipeline source, compiler recipe directory
-and Cargo input snapshot. Bind template input/output placeholders to the retained
-input and transaction output, and execute the same ordered flags. Keep both
-records alive while consuming results. There is no optimizer dependency or
-application optimization profile in Build.
+Compiler optimization and post-link transformation are separate recipes. Use
+`AdmittedTool` against a retained Wasm input and write to a separate caller-owned
+output. Run the selected transform once per invocation, require successful exit,
+admit its output, and keep the input record alive until consumption completes.
+There is no generic transaction cache or imposed optimizer/profile in Build.
 
-The [qualification driver](https://github.com/dragginzgame/ic-tooling/blob/efb49a5981d4082bfa5e780b4c4323621871d754/scripts/fixtures/wasm-recipe/main.rs) demonstrates
-this using `wasm-opt` 132 with `-Oz`, debug stripping and explicit admitted Wasm
-feature switches. Those are fixture choices, not deployment defaults. The
-existing post-link cache tests cover ordered-argument and tool-byte invalidation.
+The [native qualifier](../../scripts/ci/qualify-wasm-opt.sh) executes real `-O3`,
+`-Os` and `-Oz` transforms and runs the resulting Wasm through the execution oracle.
+These qualification settings are not deployment defaults.
 
 ## Downstream adoption
 

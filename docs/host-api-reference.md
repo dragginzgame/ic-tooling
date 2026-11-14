@@ -5,6 +5,16 @@
 Callers retain product policy and resource budgets. The sections below describe
 the reusable operations provided by the Host crates.
 
+Pending Foundation 0.78 removes unused command-sidecar custody, the separate
+bounded process/lock inspector, symlink publication, cache-tag maintenance and
+directory-size observation. Their public APIs retire without replacement;
+existing files and tags remain untouched. Process observations, launch gates,
+ordinary locks and durable file/directory publication retain their owners.
+The unused `write_named_with`, `write_existing_parent_validated_with` and
+`write_retained_at_with` wrappers also retire. Streamed pathname writes,
+held-directory result admission, closed-writer executable admission and explicit
+retained-file creation/publication remain distinct supported operations.
+
 ## Artifact and host primitives
 
 `ic_host_artifacts::artifact::visit_reader` visits bounded chunks using nonempty
@@ -17,10 +27,6 @@ it preserves parent aliases and existing entries, and supplies no cleanup or syn
 lock on a caller-opened regular file. Drop explicitly unlocks before close,
 preventing duplicates from extending the guard's lock; independent acquisitions
 remain separate. Paths, shared lifetimes, maintenance and cleanup stay with callers.
-`ic_host_fs::cache_tag::ensure(directory, suffix, permissions)` preserves valid
-regular `CACHEDIR.TAG` files or durably replaces invalid entries with the standard
-signature and exact suffix. It uses ordinary durable parent creation. Callers
-retain root admission, namespace custody, suffix budgets and cache maintenance.
 `ic_host_fs::owned_directory::OwnedDirectory` holds caller-asserted cleanup
 custody without creating an entry. Explicit preservation/disarming transfers
 recovery; armed Drop attempts removal. Consuming `cleanup()` makes one attempt,
@@ -292,18 +298,6 @@ completeness. Procfs operations accept an explicitly selected mount; no workload
 read allowance, cadence, aggregation or report policy is selected. These richer
 observations preserve opaque creation identities and optional Linux I/O/PSS.
 
-Unix `custody::CommandCustody` instead retains a caller-selected sidecar lock
-through one command's inherited descriptor and cooperating descendants. Persist
-its `ic_host_fs::identity::FileIdentity` with original intent before `spawn`,
-selecting the descriptor environment name explicitly. `finish` closes owner
-custody and probes exact existing-sidecar quiescence using caller-selected grace
-and polling. A missing or
-replaced sidecar never proves quiescence. `QuiescenceGuard` cannot spawn and
-explicitly unlocks on drop. Callers own namespace stability, descendant descriptor
-preservation, output/reaping, records, remote effects and recovery; no sidecar is
-deleted and a failed spawn consumes the local allowance. Group cleanup and
-inherited custody are distinct contracts.
-
 For `OwnedChild::spawn`, select `CleanupPolicy::KillAndWait` for immediate KILL
 with synchronous reaping, or `CleanupPolicy::TermThenKill` for caller-owned TERM
 grace and bounded reaping.
@@ -377,10 +371,6 @@ no-follow reads and typed private-file admission. Durable publication and locks
 remain under `durable`. Upgrading from 0.3 requires the
 [0.4 consumer changes](../docs/changelog/0.4.md).
 
-`read::directory_logical_size` sums metadata lengths without reading file content
-or following final symlinks. Sparse files count logical bytes; callers retain
-namespace custody, traversal resources and cache policy.
-
 On Unix, `read::open_directory_no_follow` opens an explicit root capability;
 `read::open_regular_file_beneath` selects a regular file relative to that borrowed
 descriptor without following symlink components. `read::open_entry_beneath`
@@ -412,12 +402,6 @@ owner-only permissions in an existing parent. It preserves existing bytes, inode
 and permissions, returns an unlocked close-on-exec descriptor, and performs no
 durability syncs. Callers retain locking, trusted ancestors and descriptor custody.
 
-`durable::write_named_with` lets an external tool write to an owned absolute
-staging path with explicit `WriteOptions`, then shares the normal durable
-publication engine. Callers validate bounded output before success and retain
-typed producer/cleanup errors. See the
-[current publication contract](../docs/changelog/0.20.md#named-publication) before adopting it.
-
 On Unix, `durable::write_non_aliasing(path, bytes, protected, symlink_limit)`
 checks protected path/inode aliases before in-place truncation, then writes and
 syncs the output. Existing inode/permissions and unrelated symlinks are preserved.
@@ -440,17 +424,16 @@ failures. Select mode and permissions explicitly; see the
 expected digest admission before publication. Callers select paths, the byte
 allowance and `WriteOptions`; source symlinks are followed. Existing destination
 bytes survive digest, source and limit failures.
-`durable::write_retained_at_with` creates and syncs a caller-named entry before
-production, then syncs its file and directory on success. Errors and panics retain
-partial evidence; callers own schemas, byte bounds and recovery decisions.
+`durable::create_retained_at` exclusively creates a caller-named stage and syncs
+its parent before returning the writable file. `publish_retained_at` syncs and
+publishes an admitted stage without replacing a destination. Failure retains
+evidence; callers own production, verification, byte bounds and recovery.
 `durable::copy_from` consumes an already-selected reader from its current
 position. Callers retain input admission, byte/time bounds and choose `WriteOptions`.
 Optional exact permissions are applied after copying; otherwise the creation
 mode and umask apply. Failed reads preserve prior output through the same engine.
-`durable::write_existing_parent_validated_with` refuses missing parents and opens
-the selected parent once as a directory. Parent aliases are followed and the held
-directory stays selected across renames. `durable::write_at_validated_with` borrows
-an admitted directory descriptor without reopening its path. Both require an
+`durable::write_at_validated_with` borrows an admitted directory descriptor
+without reopening its path, preserving the selected parent across renames. It requires an
 explicit result-admission callback after file sync and before publication; use
 `|()| Ok(())` for a unit result needing no further checks. Consumers retain
 namespace custody, budgets and recovery. See the [0.25 migration](../docs/changelog/0.25.md).

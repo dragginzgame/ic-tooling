@@ -21,6 +21,11 @@ fn artifact(manifest: &Path, paths: &[PathBuf]) -> schema::Message {
     serde_json::from_value(artifact).unwrap()
 }
 
+fn finished(success: bool) -> schema::Message {
+    serde_json::from_value(serde_json::json!({"reason":"build-finished","success":success}))
+        .unwrap()
+}
+
 #[test]
 fn exact_manifest_selection_refuses_stale_foreign_and_ambiguous_outputs() {
     let root = unique_temp_directory("cargo-execution-selection");
@@ -31,23 +36,96 @@ fn exact_manifest_selection_refuses_stale_foreign_and_ambiguous_outputs() {
     let wasm = root.join("custom_library.wasm");
     fs::write(&wasm, b"stale").unwrap();
     for messages in [
-        vec![],
-        vec![artifact(&foreign, std::slice::from_ref(&wasm))],
+        vec![finished(true)],
+        vec![
+            artifact(&foreign, std::slice::from_ref(&wasm)),
+            finished(true),
+        ],
     ] {
         assert!(matches!(
-            select_cdylib_wasm(&messages, &manifest),
+            select_cdylib_wasm(&messages, &manifest, &CargoRecipe::Library),
             Err(CargoArtifactError::Selection { count: 0, .. })
         ));
     }
     let selected = artifact(&manifest, std::slice::from_ref(&wasm));
     assert_eq!(
-        select_cdylib_wasm(&[selected.clone(), selected], &manifest).unwrap(),
+        select_cdylib_wasm(
+            &[selected.clone(), selected, finished(true)],
+            &manifest,
+            &CargoRecipe::Library
+        )
+        .unwrap(),
         wasm
     );
     let ambiguous = artifact(&manifest, &[wasm, root.join("second.wasm")]);
     assert!(matches!(
-        select_cdylib_wasm(&[ambiguous], &manifest),
+        select_cdylib_wasm(
+            &[ambiguous, finished(true)],
+            &manifest,
+            &CargoRecipe::Library
+        ),
         Err(CargoArtifactError::Selection { count: 2, .. })
+    ));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn artifact_selection_requires_one_successful_completion() {
+    let root = unique_temp_directory("cargo-artifact-completion");
+    let manifest = root.join("Cargo.toml");
+    fs::write(&manifest, "").unwrap();
+    let stale = root.join("stale.wasm");
+    fs::write(&stale, b"previous output").unwrap();
+    let selected = artifact(&manifest, &[stale]);
+    for terminal in [
+        vec![],
+        vec![finished(false)],
+        vec![finished(true), finished(true)],
+        vec![finished(false), finished(true)],
+    ] {
+        let messages: Vec<_> = std::iter::once(selected.clone()).chain(terminal).collect();
+        let error = select_cdylib_wasm(&messages, &manifest, &CargoRecipe::Library).unwrap_err();
+        assert!(
+            matches!(error, CargoArtifactError::Io(source) if source.kind() == io::ErrorKind::InvalidData)
+        );
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn library_and_named_example_select_their_own_reported_outputs() {
+    let root = unique_temp_directory("cargo-artifact-recipe");
+    let manifest = root.join("Cargo.toml");
+    fs::write(&manifest, "").unwrap();
+    let library = root.join("library.wasm");
+    let example = root.join("example.wasm");
+    let mut example_message = artifact(&manifest, std::slice::from_ref(&example));
+    let schema::Message::CompilerArtifact(artifact) = &mut example_message else {
+        unreachable!()
+    };
+    artifact.target.name = "custom_library".into();
+    artifact.target.kind = vec![schema::TargetKind::Example];
+    let messages = [
+        self::artifact(&manifest, std::slice::from_ref(&library)),
+        example_message,
+        finished(true),
+    ];
+    assert_eq!(
+        select_cdylib_wasm(&messages, &manifest, &CargoRecipe::Library).unwrap(),
+        library
+    );
+    assert_eq!(
+        select_cdylib_wasm(
+            &messages,
+            &manifest,
+            &CargoRecipe::Example("custom_library".into())
+        )
+        .unwrap(),
+        example
+    );
+    assert!(matches!(
+        select_cdylib_wasm(&messages, &manifest, &CargoRecipe::Example("absent".into())),
+        Err(CargoArtifactError::Selection { count: 0, .. })
     ));
     fs::remove_dir_all(root).unwrap();
 }

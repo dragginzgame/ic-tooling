@@ -7,7 +7,6 @@ mod capture;
 mod communicate;
 mod evidence;
 mod group;
-mod named;
 mod version;
 
 #[test]

@@ -5,7 +5,10 @@
 The Host primitives retain the existing boundaries below, plus the explicitly
 approved optional HTTP boundary described here. `ic-build` now shares
 this repository and owns generic Cargo execution, build input evidence and
-retained artifact caches. `ic-testkit` owns simulator integration. The unused
+invocation-owned artifact capture, package qualification and release-metadata editing.
+Persistent Wasm caching and generic artifact transactions are retired. `ic-testkit` owns simulator integration,
+server custody and explicit snapshot operations; reusable pools/reset recipes are
+retired. Fresh instances are the normal test isolation boundary. The unused
 native allocator package is retired; it was not folded into Testkit.
 IC Storage owns backing-memory IO metering in its test-support API. `ic-testkit-dev` and
 `ic-testkit-perf-probe` are private qualification packages. Build and Testkit
@@ -98,7 +101,7 @@ Candid/CDK consolidation. It does not describe today's split package graph.
 
 The authorized Host extraction from Profiler commit
 `70907ffa3b1a61c89929b02ff8d8e40509de9f8e` owns raw procfs/libproc/Mach
-observations and Unix workload gate/custody mechanics in `ic-host-process`.
+observations and Unix workload launch-gate mechanics in `ic-host-process`.
 Profiler retains its serialized capture DTOs, pinned-process admission, selected
 roots, cadence, aggregation and diagnostics. Platform retains native IC adapters
 and matching build inputs. This introduces no upward Host dependency. Native
@@ -108,6 +111,9 @@ implementation transfer.
 ## Current implementation
 
 The [source inventory](../ci/extraction-sources.json) retains original extraction identities.
+Historical extraction records below do not restore retired APIs. See the current
+[Build cut](build/artifacts.md#artifact-transaction-retirement) and
+[Testkit cut](testkit/client-migration.md#baseline-pool-retirement).
 
 Dependencies point down from ic-host-process to ic-host-fs and from each to
 ic-host-artifacts. Tools selects Artifacts only for explicit Wasm profiles;
@@ -135,8 +141,6 @@ no longer owns an `ic-limits` profile or a reference-policy CLI example.
   over caller-held descriptors,
   held directory capabilities with private cap-* traversal and bounded enumeration,
   fresh child-directory allocation with explicit permissions and collision bounds,
-  standard cache-directory tag recognition and durable replacement with explicit
-  suffix bytes and permissions,
   pathname/descriptor reads, explicit invocation-directory
   cleanup custody and the durable module's replace,
   create-new, private-file, parent synchronization and descriptor-lock operations.
@@ -157,10 +161,6 @@ no longer owns an `ic-limits` profile or a reference-policy CLI example.
   Its `framing` module owns bounded newline admission for buffered readers and
   incremental output chunks. Schemas, EOF-tail policy, deadlines, diagnostics and
   recovery remain with each process consumer.
-  Its Unix `custody` module also owns inherited regular-sidecar descriptors and
-  exact existing-sidecar quiescence. Callers retain paths, environment names,
-  durable identity records, wait settings, command/effect admission and recovery;
-  custody neither kills processes nor implies a remote effect outcome.
 - ic-host-text owns bounded UTF-8 line normalization, pure terminal-safe escaping,
   and optional typed YAML decoding with input-byte and tag/merge admission.
   The private YAML backend is owned here; schemas, filesystem/includes and
@@ -360,9 +360,10 @@ clean, hash or traverse that tree. The verification callback owns complete
 child/root synchronization and exact retained-byte comparison before the rename;
 the consumer owns namespace exclusion, recovery meaning and retry authority.
 Post-rename failures are explicitly distinct from before-publication failures.
-`durable::write_retained_at_with` completes create/produce/sync for a caller-named
-entry without unlink, rename or retry. Typed phase failures and panics preserve
-the original entry, including partial evidence whose durability is unconfirmed.
+`durable::create_retained_at` exclusively creates a caller-named stage and syncs
+its parent. `publish_retained_at` syncs and publishes an admitted held stage
+without replacing a destination. Callers own production, verification and
+recovery; dropping a failed stage does not unlink its retained evidence.
 `try_lock_exclusive` makes one nonblocking attempt on a caller-owned regular
 descriptor; contention retains native `WouldBlock`. Blocking callers use
 `lock_exclusive` on that descriptor. Observed waits compose the opener with
@@ -388,25 +389,12 @@ writer. `write_bytes(path, options, bytes)` uses it with explicit publication mo
 and permissions, returning `NamedWriteError<io::Error>` rather than discarding
 publication state or cleanup evidence. Consumers retain error projection
 and recovery decisions; an after-publication failure requires reconciliation.
-`write_existing_parent_validated_with` reuses descriptor publication after
-directory-only opening of an existing selected parent. It refuses missing or
-special-file parents without creating them, follows parent aliases and selects
-the directory once across renames. `write_at_validated_with` accepts the held
-parent directly. Both require explicit result admission after file sync and
-before publication; no-op admission is caller-selected. The forwarding variants
-retire without aliases. Neither supplies root confinement or lifecycle policy.
+`write_at_validated_with` accepts a held parent directly, preserving that directory
+across renames. It requires explicit result admission after file sync and before
+publication; no-op admission is caller-selected. It supplies no root confinement
+or lifecycle policy.
 The [0.10 migration](changelog/0.10.md) replaces the old two-argument writer and
 removes the `write_typed_with` name without a compatibility alias.
-
-`durable::write_named_with` exposes an absolute owned staging pathname to external
-producers through the existing publication engine. Callers supply `WriteOptions`
-for publication mode and staging permissions. Filesystem code owns exclusive
-creation, descriptor lifetime, identity checks, cleanup and sync/rename outcomes.
-The callback owns executable admission, process completion, bounded output
-validation and any domain interpretation. Its original error and cleanup evidence
-remain distinct, as does a final sync failure after publication. Parent hierarchy
-control and exclusion of concurrent namespace mutation are caller prerequisites;
-this is neither arbitrary-file adoption nor a child sandbox.
 
 `durable::write_validated_with` adds a closed-writer admission phase to that same
 engine. Read-only descriptor custody preserves inode identity while permitting
@@ -597,7 +585,7 @@ Additional reusable mechanics are extracted from committed sibling source:
   The [0.13 migration](changelog/0.13.md) removes the fixed-cadence pathname wrapper.
 
 Unix native device/inode observations belong to `ic_host_fs::identity`, shared
-by filesystem publication and Process custody. File-kind admission, locks,
+by filesystem publication and caller-held capabilities. File-kind admission, locks,
 namespace stability, retention formats and lifetime authority stay with callers;
 the identity neither freezes content nor prevents inode reuse after close.
 
@@ -655,13 +643,16 @@ HTTP fixtures are portable; executable fixtures and crash barriers remain Unix-o
 
 ## Logical directory sizes from IC Build
 
+This capability and its dedicated tests retire in pending Foundation 0.78 after
+the Build cache removals eliminate their callers. The provenance below records
+the original import; it does not describe a current public API.
+
 The metadata-only walker and its two filesystem regressions come from
 [IC Build 0.12.0](https://github.com/dragginzgame/ic-build/blob/2598a417a96834d3139751adf549126add666c4b/crates/ic-build/src/artifacts/cache_fs.rs),
 through [PR #173 — Extract logical directory-size observation](https://github.com/dragginzgame/ic-host-tooling/pull/173).
 The algorithm retains iterative traversal, metadata lengths, saturating sums
-and original I/O failures. Host owns this pathname observation; callers retain
-namespace custody, resource admission, cache policy and cleanup. Build caller
-replacement requires published APIs and its own qualification.
+and original I/O failures. The original API left namespace custody, resource
+admission, cache policy and cleanup with the caller.
 
 ## Canic machinery extraction
 

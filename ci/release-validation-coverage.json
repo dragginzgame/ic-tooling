@@ -11,7 +11,10 @@
   "focused": [
     "text",
     "tools",
-    "build"
+    "build",
+    "foundation",
+    "testkit",
+    "testkit-wire"
   ],
   "consumers": {
     "text": [
@@ -23,13 +26,48 @@
     ],
     "build": [
       "ic-testkit-dev:normal"
+    ],
+    "foundation": [
+      "ic-host-artifacts:ic-build:normal",
+      "ic-host-artifacts:ic-host-fs:dev",
+      "ic-host-artifacts:ic-host-fs:normal",
+      "ic-host-artifacts:ic-host-http:dev",
+      "ic-host-artifacts:ic-host-http:normal",
+      "ic-host-artifacts:ic-host-process:normal",
+      "ic-host-artifacts:ic-host-tools:dev",
+      "ic-host-artifacts:ic-host-tools:normal",
+      "ic-host-artifacts:ic-host-wasm-inspect:normal",
+      "ic-host-artifacts:ic-testkit-dev:normal",
+      "ic-host-artifacts:ic-testkit:dev",
+      "ic-host-artifacts:ic-testkit:normal",
+      "ic-host-fs:ic-build:dev",
+      "ic-host-fs:ic-build:normal",
+      "ic-host-fs:ic-host-process:dev",
+      "ic-host-fs:ic-host-process:normal",
+      "ic-host-fs:ic-host-tools:dev",
+      "ic-host-fs:ic-host-wasm-inspect:dev",
+      "ic-host-fs:ic-host-wasm-inspect:normal",
+      "ic-host-fs:ic-testkit-dev:dev",
+      "ic-host-fs:ic-testkit-dev:normal",
+      "ic-host-fs:ic-testkit:dev",
+      "ic-host-fs:ic-testkit:normal",
+      "ic-host-process:ic-build:dev",
+      "ic-host-process:ic-build:normal",
+      "ic-host-process:ic-host-tools:dev",
+      "ic-host-process:ic-testkit-dev:normal",
+      "ic-host-process:ic-testkit:dev",
+      "ic-host-process:ic-testkit:normal"
+    ],
+    "testkit": [
+      "ic-testkit-dev:normal",
+      "ic-testkit-wire:dev",
+      "ic-testkit-wire:normal"
+    ],
+    "testkit-wire": [
+      "ic-testkit-dev:dev"
     ]
   },
-  "fallback": {
-    "foundation": "Foundation primitives have Build, Tools and Testkit reverse consumers, including installed and Wasm contracts.",
-    "testkit": "Testkit owns simulator lifecycle, Wasm/probe singletons and installed/server contracts.",
-    "testkit-wire": "The native Wire adapter owns codec/client composition and installed typed-call contracts."
-  },
+  "fallback": {},
   "exclusions": [
     {
       "targets": [
@@ -200,6 +238,112 @@
         "test-wasm-inspection"
       ],
       "reason": "The Wasm inspector is an unchanged Foundation application with no dependency on Tools or Build; its source, graph and public identities are unchanged."
+    },
+    {
+      "targets": [
+        "tools-check"
+      ],
+      "groups": [
+        "foundation",
+        "testkit",
+        "testkit-wire"
+      ],
+      "reason": "Focused tool admission retains the release editor and the prepared native server required by selected runtime and archive checks."
+    },
+    {
+      "targets": [
+        "clippy-workspace",
+        "docs-workspace",
+        "test-workspace-installed"
+      ],
+      "groups": [
+        "foundation",
+        "testkit",
+        "testkit-wire"
+      ],
+      "reason": "Focused leaf commands select the owner, its declared reverse consumers and required private tests. Foundation retains all primitive consumers; Testkit retains its Wire adapter; the Wire adapter retains its real typed-call consumer."
+    },
+    {
+      "targets": [
+        "formatting-hook-check",
+        "tooling-command-check"
+      ],
+      "groups": [
+        "foundation",
+        "testkit",
+        "testkit-wire"
+      ],
+      "reason": "The admitted three-host comparison covers unchanged hooks, release tooling and their fixtures. Changes to these shared inputs select the complete gate."
+    },
+    {
+      "targets": [
+        "test-artifacts-minimal",
+        "test-fs-minimal",
+        "test-fs-capability",
+        "test-fs-temporary-file",
+        "test-artifacts-wasm",
+        "test-artifacts-text",
+        "check-fs-non-unix",
+        "test-wasm-inspection"
+      ],
+      "groups": [
+        "foundation",
+        "testkit",
+        "testkit-wire"
+      ],
+      "reason": "Foundation explicitly retains these profiles in focused tests/graphs. Testkit and its Wire adapter consume unchanged Foundation implementations; changed suppliers or features select the complete gate."
+    },
+    {
+      "targets": [
+        "tools-features-check",
+        "isolated-features-check"
+      ],
+      "groups": [
+        "foundation",
+        "testkit",
+        "testkit-wire"
+      ],
+      "reason": "Focused graphs retain isolated product features. Foundation retains HTTP endpoint native/Wasm checks; unrelated Text/YAML tests have no dependency on the changed groups."
+    },
+    {
+      "targets": [
+        "testkit-graph-check",
+        "testkit-wasm-check",
+        "testkit-installed-check"
+      ],
+      "groups": [
+        "foundation",
+        "testkit",
+        "testkit-wire"
+      ],
+      "reason": "Focused graphs retain Testkit native/Wasm composition. Foundation and Testkit retain installed-client/server tests; the Wire adapter retains real typed calls through its source and private canister tests with unchanged lifecycle."
+    },
+    {
+      "targets": [
+        "testkit-package-check"
+      ],
+      "groups": [
+        "foundation",
+        "testkit",
+        "testkit-wire"
+      ],
+      "reason": "Focused archives verify exact selected owner and required reverse-consumer package archives through the existing IC Build engine."
+    },
+    {
+      "targets": [
+        "test-tools-default",
+        "test-tools-interface",
+        "test-tools-candid",
+        "test-tools-agent",
+        "test-tools-encoding",
+        "test-tools-registry"
+      ],
+      "groups": [
+        "foundation",
+        "testkit",
+        "testkit-wire"
+      ],
+      "reason": "Foundation retains the Tools feature profiles as primitive consumer checks. Testkit and its Wire adapter have no production edge to Host Tools; those unchanged adapters are outside their selected contracts."
     }
   ],
   "focused_stages": [

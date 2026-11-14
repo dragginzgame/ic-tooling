@@ -15,7 +15,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-pub const TOOL_IDENTITY_BYTES: usize = 64 * 1024;
+const TOOL_IDENTITY_BYTES: usize = 64 * 1024;
 
 /// Supported Cargo recipes. Consumers retain profile overrides and compiler flags.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -64,12 +64,6 @@ pub struct CargoInvocation {
     pub render_diagnostics: bool,
     /// Continue independent compilation jobs after a build error.
     pub keep_going: bool,
-}
-
-#[derive(Clone, Copy)]
-pub enum CargoTool {
-    Cargo,
-    Rustc,
 }
 
 impl CargoInvocation {
@@ -136,28 +130,27 @@ impl CargoInvocation {
         Ok(command)
     }
 
-    pub(crate) fn observe<E>(
+    fn observe<E>(
         &self,
-        rustc_fallback: &OsStr,
-        mut capture: impl FnMut(CargoTool, &mut Command) -> Result<CompletedExecution, E>,
+        mut capture: impl FnMut(&mut Command) -> Result<CompletedExecution, E>,
     ) -> Result<CargoBuildFacts, E> {
         let cargo_identity = command_identity(
             &self.cargo_program,
             &self.working_directory,
             &self.environment,
             &["--version", "--verbose"],
-            |command| capture(CargoTool::Cargo, command),
+            &mut capture,
         )?;
         let rustc = self
             .environment
             .get(OsStr::new("RUSTC"))
-            .map_or(rustc_fallback, OsString::as_os_str);
+            .map_or(OsStr::new("rustc"), OsString::as_os_str);
         let rustc_identity = command_identity(
             rustc,
             &self.working_directory,
             &self.environment,
             &["-vV"],
-            |command| capture(CargoTool::Rustc, command),
+            capture,
         )?;
         Ok(self.facts(cargo_identity, rustc_identity))
     }
@@ -259,7 +252,7 @@ pub fn execute_cargo(
         ));
     }
     let observe = |cancelled: &mut (dyn FnMut() -> bool + Send)| {
-        invocation.observe(OsStr::new("rustc"), |_, probe| {
+        invocation.observe(|probe| {
             capture_group_command_with_cancellation(
                 probe,
                 OutputLimits {

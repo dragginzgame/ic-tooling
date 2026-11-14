@@ -1,5 +1,59 @@
 # IC Tooling release notes
 
+## Foundation 0.78.0 / Build 0.85.0 / Tools 0.93.0 / Testkit 0.105.0
+
+### ⚠️ Breaking
+
+- [Foundation](releases/foundation/CHANGELOG.md): remove unused Process custody,
+  bounded inspection and FS cache-tag, size and writer-wrapper APIs.
+- [Build](releases/build/CHANGELOG.md): retire persistent artifact/Wasm caches,
+  transactions and batches. Compose Cargo execution and invocation-owned capture;
+  select Wasm using the exact build recipe and one successful completion.
+- [Tools](releases/tools/CHANGELOG.md): align optional adapters with Platform 0.33.
+- [Testkit](releases/testkit/CHANGELOG.md): retire pools, leases and reset recipes.
+  Use fresh instances or explicit snapshots with caller-owned lifecycle policy.
+
+## Deployment recovery — Unreleased
+
+### 🩹 Fixed
+
+- Re-admit successful gate execution after a collector-only failure without
+  rerunning product stages. Preserve original logs and attempts; reject source,
+  context or evidence drift. Foundation's proposed focused archive set includes
+  its Build, Tools, Testkit and Wire reverse consumers
+  ([#353](https://github.com/dragginzgame/ic-tooling/issues/353)). The expanded
+  focused mapping still requires matched qualification on all three hosts.
+- Adopt published Toko Tooling 0.43.1 in both workspaces. Frozen batches retain
+  execution, reuse and fallback timing observations across resumes; read them
+  without repeating delivery. Cargo publication time includes packaging and
+  registry waiting, so it is not reported as upload-only time.
+
+### 🧪 Verified
+
+- Confirm the published Host FS 0.77.3 archive contains the held-directory
+  writable opener and its regression tests, matching the release commit
+  ([#358](https://github.com/dragginzgame/ic-tooling/issues/358)). No new
+  implementation or publication is required.
+
+### ▶️ Try it
+
+For a stopped batch captured with this adapter, inspect its saved status, then
+select its existing group and exact candidate. Collection writes proof/receipt evidence;
+normal resume retains all preparation, delivery and publication gates:
+
+```sh
+make release-batch-status BATCH="$BATCH"
+make release-batch-timings BATCH="$BATCH"
+cd "target/release-frozen/$BATCH"
+bash scripts/release/adapter.sh collect "$GROUP" "$VERSION"
+cd ../../..
+make release-batch-resume BATCH="$BATCH"
+```
+
+Timing readback is local and read-only. Batches created before instrumentation
+return `[]`; their missing measurements are not reconstructed. Resume can push
+Git refs and publish the batch's originally selected crates to crates.io.
+
 ## Shared Tooling 0.31.4 adoption
 
 ### 🩹 Fixed

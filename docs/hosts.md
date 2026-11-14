@@ -202,9 +202,8 @@ members inherit their owner's tables. Reviewed pedantic API/style checks remain;
 blanket nursery/restriction groups are removed and function length is non-blocking.
 Safe library/CLI roots forbid unsafe code. FFI and qualification targets inherit
 deny; the existing reviewed process/signal exceptions stay scoped. Generated
-exports are checked by the Wasm probe. Only the baseline-pool module selects
-`future_not_send`: its recipe contract promises Send futures, unlike local adapters
-and caller-owned writers.
+exports are checked by the Wasm probe. Pool recipe futures are retired; local
+adapters and caller-owned writers retain their existing executor contracts.
 Strict Clippy and Rustdoc commands retain `-D warnings`; no documentation gate or
 runtime ownership boundary is relaxed by this adoption.
 
@@ -299,10 +298,10 @@ warning-denied lint gate. CI/release validation runs it before expensive tests
 and builds after prerequisite admission. Publication and its dry run use that
 same gate before packaging or registry dispatch; ordinary package checks keep
 their selected scope. These entrypoint rules do not authorize a full local gate.
-Text, Tools and Build release plans can select package/consumer lint and the
-[focused contracts](design/release-validation.md) after baseline admission;
-Foundation, Testkit and uncertain/shared changes retain the full gate. Tools/Build
-need a new matched three-host comparison before they can narrow. CI and
+All six release groups have package/consumer
+[focused contracts](design/release-validation.md). The extended mapping requires
+a new matched three-host comparison before it can narrow; unknown/shared inputs
+and missing qualification retain the full gate. CI and
 publication keep their complete gates. The `release-scope-*` targets in that
 guide expose the selected owner checks without executing a release.
 Independent group versions are literal in every member; root Cargo metadata has

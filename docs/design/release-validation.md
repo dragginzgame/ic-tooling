@@ -8,7 +8,7 @@ publication gates retain their complete workspace coverage.
 
 ## Selection and conservative rollout
 
-The [policy](../../ci/release-validation.json) accounts for all 35 targets in the
+The [policy](../../ci/release-validation.json) accounts for all full-gate targets in the
 existing full CI gate and six focused alternatives. The
 [coverage map](../../ci/release-validation-coverage.json) owns common checks,
 explicit exclusion contracts, focused alternatives and full-gate fallback reasons.
@@ -22,11 +22,12 @@ Fresh discovery and saved-baseline recovery share one
 
 | Group | Release qualification |
 |---|---|
-| Foundation | Full gate: primitive feature profiles, Build/Tools/Testkit reverse consumers, native/Wasm graphs and installed archives. |
-| Build | Focused only when admitted below: artifact/cache and release-editor tests, normal/CLI graphs, private driver/archive checks, real Wasm-probe consumer and exact Build archive. Hosted optimizer qualification remains an independent CI obligation. Otherwise full gate. |
+| Foundation | Focused primitive profiles, all Build/Tools/Testkit/adapter reverse consumers, native/Wasm graphs and all five Foundation archives; otherwise full gate. |
+| Build | Focused only when admitted below: Cargo execution/capture and release-editor tests, normal/CLI graphs, private driver/archive checks, real Wasm-probe consumer and exact Build archive. Hosted optimizer qualification remains an independent CI obligation. Otherwise full gate. |
 | Text | Focused only when admitted below: default/all-feature/YAML rendering, dependency graphs, Tools' `icp-project` consumer, private driver/report tests and installed Text archive. Otherwise full gate. |
 | Tools | Focused only when admitted below: every isolated IC adapter profile, external identities, the private public-contract consumer, native/Wasm graphs and exact Tools archive. Otherwise full gate. |
-| Testkit | Full gate: simulator/server lifecycle, public identities, feature boundaries, Wasm/probe singleton graphs and installed archives. |
+| Testkit | Focused lifecycle/server tests, Wire adapter and private driver consumers, native/Wasm graphs, installed behavior and Testkit/adapter archives; otherwise full gate. |
+| Testkit Wire | Focused adapter tests, real private typed-call canister, native/Wasm graphs and the adapter archive; otherwise full gate. |
 
 Focused admission requires a completed, successful main-branch CI run at an
 ancestor of the selected source. Each of Linux x86-64, macOS 15 Intel and macOS
@@ -37,7 +38,7 @@ All three jobs must also execute every group listed by `validation-roster.sh gro
 and retain their
 matched-input comparison. Earlier full-CI runs without those proofs keep the
 full release gate. Routine native CI runs the existing complete gate once.
-Explicit qualification dispatches additionally run the Text, Tools and Build focused profiles on that
+Explicit qualification dispatches additionally run all six group profiles on that
 same source, lock, compiler and host. Their comparison artifact retains full-gate
 elapsed time, focused commands/logs/timings and exact
 installed-archive evidence; cache targets are excluded.
@@ -89,8 +90,8 @@ ancestor remains useful after a later push; current source changes still broaden
 the release plan as below. Do not require a moving branch tip to stay unchanged
 solely to recognize completed issue evidence.
 
-Relative to that baseline, narrowing allows only the selected package's source,
-tests and README, group ledgers/handoff, and release-owned version-only manifest
+Relative to that baseline, narrowing allows only the selected group members' source,
+tests, examples and README, group ledgers/handoff, and release-owned version-only manifest
 or lock changes. Changes to shared scripts, dependency selections, feature
 contracts, compiler, public dependency identities or other package source select
 the full gate. Unknown Cargo configuration/overrides also retain the full gate.
@@ -108,7 +109,7 @@ selects the full gate. Per-group exclusion annotations explain every omitted
 full stage; Tools/Build do not inherit Text's unrelated exclusion claims.
 The new plans cannot use historical comparisons with a different group/coverage
 mapping: dispatcher and workflow changes force full validation until a new three-host
-comparison includes all three profiles. Mixed-group changes and Shared Tooling
+comparison includes every focused group. Mixed-group changes and Shared Tooling
 refreshes still select the full gate.
 
 Every focused plan retains snapshot/symlink/compiler/pin/format/document checks.
@@ -174,20 +175,43 @@ Tooling's `validation.sh run` executes a selected plan and then seals its Shared
 proof. It is not a post-processing-only resume operation. `receipt` checks an
 already complete proof; `retained-receipt` produces an inventory for comparison
 with a trusted receipt.
-The adapter does not currently expose a qualified operation to finish a failed
-collector against an earlier successful run. Direct verifier invocation or a
-PASS line cannot substitute for that missing admission.
+
+For a collector-only failure, the adapter exposes an explicit recovery operation
+in batches captured with this source. Stop the batch first and preserve its
+original journals; collection refuses an occupied release lock:
+
+```sh
+# Select the existing batch, group and exact candidate from its saved status.
+cd "target/release-frozen/$BATCH"
+bash scripts/release/adapter.sh collect "$GROUP" "$VERSION"
+cd ../../..
+make release-batch-resume BATCH="$BATCH"
+```
+
+Collection re-admits the original source, pending ledger, selected plan, host,
+compiler and environment, then asks the same Shared verifier to check original
+successful stage events, checkpoints, fixture admissions and logs. It seals the
+normal proof/receipt without executing Make stages. Existing proofs and receipts
+are checked rather than overwritten. An exact receipt binding in the existing
+selection permits normal preflight/verify to re-admit that recovered execution;
+their ordinary offline tool/metadata admission still runs. It is not a general
+skip switch. Changed source, missing/failed/ambiguous runs,
+altered logs or prepared versions refuse. Older captured adapters retain their
+original recovery limits; never copy these scripts into an active candidate.
 
 Use the shared [failure-specific recovery decision](https://github.com/dragginzgame/toko-tooling/blob/dcc51b5cab3d9993f0668bc0902252364d7dc316/docs/releases/release-validation-reuse.md#failure-specific-recovery)
 with the original gate, logs and receipts. Identify successful execution separately
 from proof-publication failure. If the saved state cannot be admitted by an existing
 recovery command, disclose that limitation and the selected rerun scope before a
-new gate. Only the four qualified fixture stages and the separately admitted full
-publication lint have the reuse contracts described below; native runtime results
-cannot be reconstructed as new stage proofs. This limitation remains in #353.
-The missing generic frozen-runner phase observations and collector-only recovery
-are tracked in [Toko Tooling #382](https://github.com/dragginzgame/toko-tooling/issues/382);
-do not add a parallel consumer runner or rerun a release just to measure it.
+new gate. Collection retains the original execution identity; it creates no
+replacement runtime result or reusable stage proof. Only the four qualified
+fixture stages and separately admitted full publication lint have the general
+reuse contracts described below. Generic frozen-runner phase observations remain
+owned by Toko Tooling. Installed 0.43.1 adds `make release-batch-timings BATCH=...`;
+the [phase timing contract](https://github.com/dragginzgame/toko-tooling/blob/566da74ba81d65c30388e2d03f50596903e76c27/docs/releases/release-batches.md#phase-timings)
+distinguishes executed/reused/fallback attempts, incomplete spans and combined
+Cargo publication time. Older batches return no invented observations. Do not
+add a parallel consumer runner or rerun a release just to measure it.
 
 ## Selected adapter cases and unchanged-stage reuse
 
@@ -328,6 +352,16 @@ stopped in the detached adapter before preparation: a duplicate consumer-root
 assignment selected the helper directory. The corrected normal source passed
 focused recovery checks, then recaptured and reran complete qualification.
 
+## Current mapping qualification
+
+The cache/pool retirement extends the proposed map to Foundation, Testkit and
+Testkit Wire. Source inspection and substituted six-group selection/leaf-argv
+fixtures are local development evidence. This new map is not yet qualified on
+native macOS. The existing admission requires a matched successful comparison
+on Linux, macOS Intel and Apple Silicon with this mapping before it can narrow
+a release. Older baseline source lacks these configuration bytes and keeps the
+full gate. No runtime or deployment saving is claimed from fixture results.
+
 ## Qualification and limits
 
 `make release-validation-plan-check` exercises every group fallback against
@@ -357,10 +391,12 @@ effects prove the 34-stage order after certificate owner extraction, one lint pa
 and failure stopping before later checks. The default Make fixture includes this
 focused case for complete tooling qualification.
 
-Actual focused commands select `RELEASE_GROUP=text`, `tools` or `build` with
+Actual focused commands select any of the six admitted `RELEASE_GROUP` values with
 `make release-scope-lint`, `release-scope-graphs`, `release-scope-tests`,
 `release-scope-docs` and `release-scope-archives`. These are owner-specific checks;
-Foundation and Testkit intentionally refuse those focused targets. Linux and both
+Foundation includes its complete primitive/reverse-consumer contracts. Testkit
+includes its adapter; the independent adapter excludes unrelated Host profiles.
+Linux and both
 native macOS hosts remain required; report their evidence separately. Preserve
 matched-input comparison and command/timing observations before claiming savings.
 Shared-input changes retain full release qualification until their own complete

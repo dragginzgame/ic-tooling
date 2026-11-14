@@ -10,6 +10,20 @@ Testkit 0.100.2 adds this export. Releases 0.98 through 0.100.1 require a direct
 identity and API behavior, not the retired fork's API.
 The server remains an explicitly admitted external PocketIC 16.1 binary.
 
+## Baseline pool retirement
+
+Remove `CachedPocketIcBaselinePool`, `PocketIcBaselineRecipe`,
+`StandaloneCanisterRecipe`, pool guards, outcome/timing types and failure classifiers.
+Create a fresh `PocketIcInstance` for each independent test, install through the
+upstream client or `StandaloneCanisterFixture`, and await explicit close.
+
+Tests of restore semantics can keep `CachedPocketIcBaseline` and explicit snapshot
+helpers. Stop/drain before capture or restoration, select restore funding, reset
+non-snapshot state and establish readiness at the caller. There is no automatic
+reuse, reset, lease return or rebuild. Cancellation does not produce a reusable
+fixture. Upstream snapshot and client identities are unchanged. Publishing this
+API cut requires a Testkit minor release.
+
 ## Construction and server custody
 
 ```rust,no_run
@@ -52,15 +66,11 @@ not a `std::error::Error`. Testkit does not catch or translate transport panics,
 recreate typed client errors, or expose the removed accepted-operation contexts.
 There is no Testkit response ceiling or snapshot-transfer budget on upstream calls.
 
-`PocketIcInstance::close`, baseline close and pool shutdown now return `()`.
-They await upstream best-effort deletion while retaining their managed server.
-Upstream logs deletion failures instead of returning them; completion does not
-acknowledge deletion on a borrowed server. Borrowed-server recovery belongs to
-its caller. Pool shutdown still closes admission, wakes queued callers, waits
-for existing leases and does not repeat completed cleanup attempts. A panic or
-cancelled preparation still forces a fresh build before another lease is exposed.
-The standalone recipe treats returned management rejections as fatal; the removed
-typed dead-transport classifier and automatic same-acquisition recovery are gone.
+`PocketIcInstance::close` and baseline close return `()`. They await upstream
+best-effort deletion while retaining their managed server. Upstream logs deletion
+failures instead of returning them; completion does not acknowledge deletion on
+a borrowed server. Borrowed-server recovery belongs to its caller. Pools, reset
+recipes and their cleanup/rebuild classifiers are retired.
 
 Upstream owns its tracing/environment behavior and dependency feature set.
 Testkit no longer promises that raw client construction ignores logging variables
@@ -153,7 +163,7 @@ baseline qualification, not production backup or cross-version recovery proof.
 
 The installed dependency proof covers module installation/status, certified subnet
 metrics and repeated stable-memory snapshot restoration. Harness tests retain
-startup/cancellation/server custody, panic propagation, pool closure, exact senders,
+startup/cancellation/server custody, panic propagation, explicit close, exact senders,
 ordinary snapshot refusal/rollback, diagnostics, Wire and held-reply behavior.
 Original imported sources, notices and reconstruction guards retire together;
 upstream retains its own licensing. Package metadata selects the repository's

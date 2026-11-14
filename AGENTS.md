@@ -48,6 +48,7 @@ Testkit owns server admission/custody and harness policy. Its helpers use the
 upstream native `CanisterId`; portable helpers retain Platform Types Principal.
 Keep all client dependencies native, use the caller's runtime, and do not add
 blocking wrappers or a second transport to recreate removed fork guarantees.
-Cancelled pool preparations must still rebuild before reuse. Qualify actual
-16.1 behavior and report native macOS evidence separately. See
+Pool/reset recipes are retired. Snapshot callers retain stop/drain, explicit
+funding and readiness policy. Qualify actual 16.1 behavior and report native
+macOS evidence separately. See
 [the migration](docs/testkit/client-migration.md).

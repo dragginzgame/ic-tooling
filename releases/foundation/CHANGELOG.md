@@ -6,6 +6,24 @@ Artifacts owns its version. Build and Text now have their own
 History through 0.73.6 below retains the original seven-package Foundation scope;
 earlier coordinated releases remain in [shared history](../history.md#0730---2026-10-31).
 
+## [0.78.0] - Unreleased
+
+### ⚠️ Breaking
+
+- Retire unused Process command-sidecar custody/quiescence and the separate
+  bounded process-tree/kernel-lock inspector, including their dedicated tests.
+  Remove the custody-only existing-sidecar opener from FS and the unused
+  `command-fds`/`nix` dependency chain. Native process observations, workload
+  launch gates and ordinary descriptor locks remain supported.
+- Retire FS symlink publication, cache-directory tag maintenance and logical
+  directory-size observation, including their dedicated tests. No replacement
+  lifecycle or compatibility APIs are added; existing files/tags remain untouched.
+  These public API removals require a minor release.
+- Retire unused named-output, existing-parent pathname and retained-producer
+  writer wrappers and their dedicated tests. Keep the shared publication engine,
+  streamed writes, held-directory admission, closed-writer executable admission,
+  and explicit retained-file creation/publication used by current callers.
+
 ## [0.77.3] - 2026-11-14
 
 ### ✨ Added

@@ -4,7 +4,7 @@ edition.workspace = true
 rust-version.workspace = true
 version = "0.84.1"
 repository.workspace = true
-description = "Cargo and Wasm builds, exact inputs and retained artifact caches"
+description = "Cargo execution, artifact capture, input evidence and package qualification"
 readme = "README.md"
 license-file.workspace = true
 exclude = ["target/"]
@@ -53,14 +53,6 @@ ic-host-fs = { workspace = true, features = ["test-support"] }
 toko-tooling.workspace = true
 
 [[test]]
-name = "artifact_cache_process"
-required-features = ["test-support"]
-
-[[test]]
-name = "artifact_handoff"
-required-features = ["test-support"]
-
-[[test]]
 name = "artifact_helpers"
 required-features = ["test-support"]
 
@@ -87,14 +79,6 @@ required-features = ["test-support"]
 [[test]]
 name = "release_metadata_cli"
 required-features = ["cli"]
-
-[[test]]
-name = "wasm_build"
-required-features = ["test-support"]
-
-[[test]]
-name = "wasm_cache_process"
-required-features = ["test-support"]
 
 [lints]
 workspace = true

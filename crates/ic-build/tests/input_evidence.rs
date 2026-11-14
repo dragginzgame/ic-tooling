@@ -1,7 +1,5 @@
 //! Actual Cargo depfile qualification for standalone input evidence.
 
-mod support;
-
 use ic_build::artifacts::{
     InputEvidence, InputEvidenceError, InputEvidenceSpec, read_cargo_depfile_inputs,
 };

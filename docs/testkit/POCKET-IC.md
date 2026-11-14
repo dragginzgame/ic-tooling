@@ -23,7 +23,7 @@ dependency retains its own license.
 
 Testkit owns explicit server provisioning and fixture lifecycle policy. It adds
 bounded startup, server/instance custody, contextual calls, installation policy,
-controller-aware snapshots, reusable baseline contracts, diagnostics and benchmark
+controller-aware snapshots, fresh-instance fixtures, diagnostics and benchmark
 markers. Application topology, reset coverage, funding amounts, byte/work budgets,
 readiness predicates and performance thresholds remain caller-owned.
 
@@ -98,8 +98,8 @@ use the caller's Tokio runtime. Await `owned.close().await` to delete an instanc
 while retaining its managed server, or await `client.drop().await` before releasing
 a separately held server. Rust Drop performs no client network I/O. Dropping a
 managed server still stops its instances and terminates/reaps its process group.
-Borrowed servers and uncertain deletion outcomes remain caller-owned. Close and
-shared pool shutdown return `()` and await upstream best-effort deletion; this
+Borrowed servers and uncertain deletion outcomes remain caller-owned. Explicit
+close returns `()` and awaits upstream best-effort deletion; this
 does not acknowledge deletion on borrowed servers. Upstream logs network failures.
 The installed `pocket_ic_install` tests check panic propagation, continued borrowed
 instance usability and managed-server custody on installation unwind.
@@ -144,17 +144,15 @@ set and retains returned rejections. Native capture prepares metadata-upload
 snapshots through upstream management calls so timer/hook state restores with
 the heap. Platform owns DTOs/codec; no client fork or public transfer API returns.
 Capture needs two free snapshot slots and transfer cycles per target; warm loads
-reuse the prepared snapshot. A baseline pool owns the
-recipe and canonical restoration; recipes own non-snapshot reset work, readiness
-and invariant checks. Reuse is admitted only when achieved reset coverage matches
-requirements. Canister snapshots do not automatically restore PocketIC time,
+reuse the prepared snapshot. Callers own non-snapshot reset work, readiness and
+invariant checks. Canister snapshots do not automatically restore PocketIC time,
 extra canisters, pending work or external resources.
 
-Each pool bounds its own leases and resource use. Independent PocketIC instances
-are not serialized through a host-wide guard. Failed reuse disposes of the stale
-slot and may rebuild once under the recipe's failure policy; caller panics still
-unwind. These are test-fixture guarantees, separate from IC Build's persisted
-artifact caches and application deployment recovery.
+Pools, leases and automatic rebuild recipes are retired. Independent tests create
+fresh instances; explicit restoration tests may retain a `CachedPocketIcBaseline`.
+Its caller owns stop/drain, restore funding, reset, readiness and final close.
+Independent instances are not serialized through a host-wide guard. See the
+[migration](client-migration.md#baseline-pool-retirement).
 
 ## Benchmarking and provenance
 

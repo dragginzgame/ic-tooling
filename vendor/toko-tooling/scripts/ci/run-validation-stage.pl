@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# Shared companions:
+# Shared companions: scripts/ci/ReleaseTiming.pm
 use strict;
 use warnings;
 use Cwd qw(abs_path getcwd);
@@ -14,6 +14,18 @@ use Getopt::Long qw(GetOptions);
 use JSON::PP;
 use POSIX qw(uname);
 use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
+use FindBin qw($RealBin);
+use lib $RealBin;
+use ReleaseTiming;
+my $timing_span;
+END {
+    my $status=$?;
+    if ($timing_span) {
+        eval {ReleaseTiming::finish($timing_span,$status)};
+        if ($@) {warn $@; $status ||= 1;}
+    }
+    $?=$status;
+}
 
 Getopt::Long::Configure(qw(no_auto_abbrev no_ignore_case require_order));
 my ($state, $stage, $contract, $source, $group, $observer, $environment, $limit, $admission_output);
@@ -195,6 +207,11 @@ for my $candidate (@candidates) {
     if ($admitted) { $proof_path=$candidate; $mode='reused'; last; }
     print STDERR "Prior proof retained; executing ordinarily if no valid match remains: $@";
 }
+local $ENV{RELEASE_GROUP}=$group;
+local $ENV{RELEASE_SOURCE}=$source;
+$timing_span=ReleaseTiming::begin("validation-stage:$stage",
+    defined($proof_path)?'reused':@candidates?'fallback':'executed',
+    defined($proof_path)?$proof->{origin}{attempt}:$attempt);
 if (!defined $proof_path) {
     my $execution_start = clock_gettime(CLOCK_MONOTONIC);
     my $status = run_child("$attempt/command.stdout", "$attempt/command.stderr", @command);

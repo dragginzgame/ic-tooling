@@ -22,28 +22,19 @@ pub use lock_wait::{
 #[cfg(unix)]
 mod retained;
 #[cfg(unix)]
-pub use retained::{
-    RetainedWriteError, create_retained_at, publish_retained_at, write_retained_at_with,
-};
+pub use retained::{create_retained_at, publish_retained_at};
 mod named;
-pub use named::{NamedWriteError, write_named_with};
+pub use named::NamedWriteError;
 #[cfg(unix)]
 mod export;
 #[cfg(unix)]
 pub use export::{NonAliasingWriteError, validate_non_aliasing, write_non_aliasing};
-#[cfg(unix)]
-mod symlink;
-#[cfg(unix)]
-pub use symlink::publish_symlink_with;
 mod verified_copy;
 pub use verified_copy::copy_verified;
 mod stream;
 #[cfg(unix)]
 pub use stream::write_at_validated_with;
-pub use stream::{
-    PublicationMode, WriteOptions, write_existing_parent_validated_with, write_validated_with,
-    write_with,
-};
+pub use stream::{PublicationMode, WriteOptions, write_validated_with, write_with};
 
 #[cfg(test)]
 mod tests;
@@ -244,31 +235,6 @@ pub fn open_private_regular_lock_file(path: &Path) -> Result<fs::File, RegularFi
             Err(source) => return Err(RegularFileLockError::Io(source)),
         }
         open_regular_lock_descriptor(path, Some(rustix::fs::Mode::RUSR | rustix::fs::Mode::WUSR))
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = path;
-        Err(RegularFileLockError::UnsupportedPlatform)
-    }
-}
-
-/// Open an existing regular no-follow sidecar without creating it or its parents.
-///
-/// The returned read/write descriptor is close-on-exec and unlocked. Existing
-/// bytes, permissions and inode are preserved. A missing entry returns the
-/// native not-found error; a known special entry returns `NotRegular`.
-/// The caller owns trusted parents, stable namespace and lock acquisition.
-///
-/// # Errors
-/// Returns typed entry admission, native open/metadata or unsupported-host errors.
-pub fn open_existing_regular_lock_file(path: &Path) -> Result<fs::File, RegularFileLockError> {
-    #[cfg(unix)]
-    {
-        let metadata = fs::symlink_metadata(path).map_err(RegularFileLockError::Io)?;
-        if !metadata.file_type().is_file() {
-            return Err(RegularFileLockError::NotRegular);
-        }
-        open_regular_lock_descriptor(path, None)
     }
     #[cfg(not(unix))]
     {

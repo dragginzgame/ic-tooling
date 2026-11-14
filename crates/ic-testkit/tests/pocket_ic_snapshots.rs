@@ -165,34 +165,39 @@ async fn build_timer_fixture() -> std::io::Result<ic_testkit::pic::StandaloneCan
 }
 
 #[tokio::test]
-async fn mutated_pool_restores_heap_timer_hook_and_memory_before_rearming() {
-    use ic_testkit::pic::{
-        BaselinePoolDisposition, CachedPocketIcBaselinePool, StandaloneCanisterRecipe,
-    };
-    use std::{num::NonZeroUsize, time::Duration};
-    let pool = CachedPocketIcBaselinePool::new(
-        NonZeroUsize::new(1).unwrap(),
-        StandaloneCanisterRecipe::new(SnapshotRestoreFunding::Preserve, build_timer_fixture),
-    );
-    let (lease, _) = pool.acquire().await.unwrap();
-    let id = *lease.metadata();
-    let instance = lease.pocket_ic().instance_id;
-    let initial = timer_state(lease.pocket_ic(), id).await;
-    let chunks = lease.pocket_ic().stored_chunks(id, None).await.unwrap();
+async fn explicit_baseline_restores_heap_timer_hook_and_memory_before_rearming() {
+    use ic_testkit::pic::CachedPocketIcBaseline;
+    use std::time::Duration;
+    let fixture = build_timer_fixture().await.unwrap();
+    let (owned, id) = fixture.into_parts();
+    owned.instance().stop_canister(id, None).await.unwrap();
+    let captured = CachedPocketIcBaseline::capture(
+        owned,
+        [CanisterSnapshotTarget {
+            canister_id: id,
+            sender: None,
+        }],
+        id,
+    )
+    .await
+    .unwrap();
+    let pic = captured.pocket_ic();
+    let instance = pic.instance_id;
+    pic.start_canister(id, None).await.unwrap();
+    let initial = timer_state(pic, id).await;
+    let chunks = pic.stored_chunks(id, None).await.unwrap();
     assert_eq!(chunks.len(), 1);
     assert_eq!(initial[16], 77);
     assert_eq!(initial[24], 77);
-    lease.pocket_ic().stop_canister(id, None).await.unwrap();
-    let baseline = snapshot_metadata(lease.pocket_ic(), id).await;
+    pic.stop_canister(id, None).await.unwrap();
+    let baseline = snapshot_metadata(pic, id).await;
     assert_eq!(baseline.certified_data, [77]);
     assert!(matches!(
         baseline.global_timer,
         Some(ic_platform::management_canister_types::CanisterTimer::Active(_))
     ));
-    lease.pocket_ic().start_canister(id, None).await.unwrap();
-    let mut lease = lease;
+    pic.start_canister(id, None).await.unwrap();
     for iteration in 0..3 {
-        let pic = lease.pocket_ic();
         mutate_timer_fixture(pic, id).await;
         pic.stop_canister(id, None).await.unwrap();
         let changed = snapshot_metadata(pic, id).await;
@@ -209,26 +214,18 @@ async fn mutated_pool_restores_heap_timer_hook_and_memory_before_rearming() {
             format!("{:?}", changed.on_low_wasm_memory_hook_status),
             format!("{:?}", baseline.on_low_wasm_memory_hook_status)
         );
-        drop(lease);
-        let (next, outcome) = pool.acquire().await.unwrap();
-        assert!(matches!(
-            outcome.disposition,
-            BaselinePoolDisposition::Restored
-        ));
-        assert_eq!(
-            next.pocket_ic().instance_id,
-            instance,
-            "restore, never rebuild"
-        );
-        assert_eq!(*next.metadata(), id);
-        assert_eq!(timer_state(next.pocket_ic(), id).await, initial);
-        next.pocket_ic().stop_canister(id, None).await.unwrap();
-        let restored = snapshot_metadata(next.pocket_ic(), id).await;
+        captured
+            .restore(SnapshotRestoreFunding::Preserve)
+            .await
+            .unwrap();
+        pic.start_canister(id, None).await.unwrap();
+        assert_eq!(pic.instance_id, instance, "restore, never rebuild");
+        assert_eq!(*captured.metadata(), id);
+        assert_eq!(timer_state(pic, id).await, initial);
+        pic.stop_canister(id, None).await.unwrap();
+        let restored = snapshot_metadata(pic, id).await;
         assert_eq!(restored.certified_data, baseline.certified_data);
-        assert_eq!(
-            next.pocket_ic().stored_chunks(id, None).await.unwrap(),
-            chunks
-        );
+        assert_eq!(pic.stored_chunks(id, None).await.unwrap(), chunks);
         assert_eq!(
             format!("{:?}", restored.global_timer),
             format!("{:?}", baseline.global_timer)
@@ -237,23 +234,18 @@ async fn mutated_pool_restores_heap_timer_hook_and_memory_before_rearming() {
             format!("{:?}", restored.on_low_wasm_memory_hook_status),
             format!("{:?}", baseline.on_low_wasm_memory_hook_status)
         );
-        next.pocket_ic().start_canister(id, None).await.unwrap();
-        lease = next;
+        pic.start_canister(id, None).await.unwrap();
         if iteration == 2 {
-            lease
-                .pocket_ic()
-                .advance_time(Duration::from_secs(70))
-                .await;
+            pic.advance_time(Duration::from_secs(70)).await;
             for _ in 0..4 {
-                lease.pocket_ic().tick().await;
+                pic.tick().await;
             }
-            let fired = timer_state(lease.pocket_ic(), id).await;
+            let fired = timer_state(pic, id).await;
             assert!(u64::from_le_bytes(fired[8..16].try_into().unwrap()) > 0);
-            mutate_timer_fixture(lease.pocket_ic(), id).await;
+            mutate_timer_fixture(pic, id).await;
         }
     }
-    drop(lease);
-    pool.close().await;
+    captured.close().await;
 }
 
 #[tokio::test]

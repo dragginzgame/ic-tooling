@@ -2,10 +2,15 @@
 set -euo pipefail
 
 requested_group=''
-if [[ $# != 0 ]]; then
-    [[ $# == 2 && $1 == --group && -n $2 ]] || { echo 'usage: test-adapter.sh [--group GROUP]' >&2; exit 2; }
-    requested_group=$2
-fi
+collector_only=false
+while [[ $# != 0 ]]; do
+    case $1 in
+        --group) [[ $# -ge 2 && -n $2 ]] || exit 2; requested_group=$2; shift 2 ;;
+        --case) [[ $# -ge 2 && $2 == collector ]] || exit 2; collector_only=true; shift 2 ;;
+        *) echo 'usage: test-adapter.sh [--group GROUP] [--case collector]' >&2; exit 2 ;;
+    esac
+done
+if [[ $collector_only == true && -z $requested_group ]]; then requested_group=text; fi
 
 # Real group policy, Cargo metadata, Git, rendering and receipts. A compact
 # fixture gate retains actual lint ordering, Shared proofs and stage admission;
@@ -217,6 +222,47 @@ for selected_group in "${groups[@]}"; do
     shared_proof="$gate_directory/shared-proof.json"
     jq -e --arg source "$RELEASE_SOURCE" --arg group "$selected_group" \
         '.kind == "group-validation-evidence" and .source == $source and .group == $group' "$shared_proof" >/dev/null
+    if [[ $common_probes == true ]]; then
+        ADAPTER_GIT_CONTROL='diff' refuse invoke verify > "$fixture/$selected_group.failed-diff.log" 2>&1
+        # Simulate failure after successful execution but before proof/receipt
+        # publication. Recovery seals the original run; normal retry re-admits
+        # that receipt without setup or product stages.
+        mv "$shared_proof" "$fixture/$selected_group.before-collection.proof"
+        mv "$state" "$fixture/$selected_group.before-collection.receipt"
+        cp "$ADAPTER_EVENTS" "$fixture/$selected_group.before-collection.events"
+        ADAPTER_GIT_CONTROL='head' refuse invoke collect "$selected_group" "$RELEASE_VERSION" > "$fixture/$selected_group.collect-head.log" 2>&1
+        mkdir .git/release-state/lock
+        refuse invoke collect "$selected_group" "$RELEASE_VERSION" > "$fixture/$selected_group.collect-locked.log" 2>&1
+        rmdir .git/release-state/lock
+        [[ ! -e "$state" && ! -e "$shared_proof" ]]
+        invoke collect "$selected_group" "$RELEASE_VERSION" > "$fixture/$selected_group.collect.log" 2>&1
+        cmp "$fixture/$selected_group.before-collection.proof" "$shared_proof"
+        cmp "$fixture/$selected_group.before-collection.receipt" "$state"
+        invoke collect "$selected_group" "$RELEASE_VERSION" > "$fixture/$selected_group.collect-again.log" 2>&1
+        cmp "$fixture/$selected_group.before-collection.events" "$ADAPTER_EVENTS"
+        status=0
+        ADAPTER_EDITOR_BUSY=1 invoke preflight > "$fixture/$selected_group.collected-busy.log" 2>&1 || status=$?
+        [[ $status == 75 ]]
+        invoke preflight > "$fixture/$selected_group.collected-preflight.log" 2>&1
+        invoke verify > "$fixture/$selected_group.collected-verify.log" 2>&1
+        grep release-stage- "$fixture/$selected_group.before-collection.events" > "$fixture/$selected_group.original-stages"
+        grep release-stage- "$ADAPTER_EVENTS" > "$fixture/$selected_group.collected-stages"
+        cmp "$fixture/$selected_group.original-stages" "$fixture/$selected_group.collected-stages"
+        [[ $(grep -c '^make --no-print-directory install-tools$' "$ADAPTER_EVENTS") == 1 ]]
+        # A recovered receipt never admits a changed ledger or original log.
+        cp "$ledger" "$fixture/$selected_group.collected-ledger"
+        printf '\nchanged notes\n' >> "$ledger"
+        refuse invoke verify > "$fixture/$selected_group.collected-ledger.log" 2>&1
+        cp "$fixture/$selected_group.collected-ledger" "$ledger"
+    fi
+    if [[ $collector_only == true ]]; then
+        invoke prepare > "$fixture/$selected_group.collect-prepare.log" 2>&1
+        refuse invoke collect "$selected_group" "$RELEASE_VERSION" > "$fixture/$selected_group.prepared-collect.log" 2>&1
+        invoke check > "$fixture/$selected_group.collect-prepared-check.log" 2>&1
+        fixture_complete=true
+        echo 'Collector recovery seals original execution; ordinary retry avoids reruns and prepared versions refuse.'
+        exit 0
+    fi
     # Shared corruption/source failures are group-independent. Run them once;
     # a selected --group run still includes the entire common recovery suite.
     if [[ $common_probes == true ]]; then
@@ -232,7 +278,6 @@ for selected_group in "${groups[@]}"; do
         cp "$fixture/$selected_group.execution-log" "$execution_log"
         # Valid-looking output from a failed Git observation grants no custody.
         ADAPTER_GIT_CONTROL='head' refuse invoke prepare > "$fixture/$selected_group.failed-head.log" 2>&1
-        ADAPTER_GIT_CONTROL='diff' refuse invoke verify > "$fixture/$selected_group.failed-diff.log" 2>&1
         printf '\n# Unvalidated source edit\n' >> Cargo.toml
         refuse invoke prepare > "$fixture/$selected_group.source-before-prepare.log" 2>&1
         git restore -- Cargo.toml
@@ -248,6 +293,7 @@ for selected_group in "${groups[@]}"; do
     # Prepared versions differ from the original input checkpoint. Recovery
     # admits the already sealed inventory and exact payload, never a new proof.
     if [[ $common_probes == true ]]; then
+        refuse invoke collect "$selected_group" "$RELEASE_VERSION" > "$fixture/$selected_group.prepared-collect.log" 2>&1
         refuse bash "$tooling/scripts/release/validation.sh" receipt "$gate_pointer" \
             > "$fixture/$selected_group.prepared-live-proof.log" 2>&1
         cp "$state" "$fixture/$selected_group.receipt"

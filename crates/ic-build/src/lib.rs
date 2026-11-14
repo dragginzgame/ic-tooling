@@ -1,9 +1,9 @@
-//! Shared host-side Cargo/Wasm build and retained artifact-cache mechanics.
+//! Shared host-side Cargo execution, input evidence and artifact capture.
 //!
-//! Callers select recipes, tools, output budgets, source custody and maintenance.
+//! Callers select recipes, tools, output budgets, source custody and target lifetime.
 //! The engine never owns a `PocketIC` lifecycle or a consumer's release identity.
-//! Retain returned records through artifact consumption; paths alone carry no
-//! cache-entry ownership. Builds have no default elapsed-time deadline.
+//! Retain capture owners through artifact consumption. Cargo owns incremental
+//! compilation; no persistent artifact cache or default elapsed-time deadline is added.
 #![forbid(unsafe_code)]
 
 pub mod artifacts;

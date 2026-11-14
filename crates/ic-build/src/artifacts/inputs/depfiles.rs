@@ -1,6 +1,6 @@
 //! Strict file-dependency reads; callers select records and output policy.
 
-use crate::artifacts::cache_fs::canonicalize_allow_missing;
+use super::canonicalize_allow_missing;
 use std::{
     collections::BTreeSet,
     io,

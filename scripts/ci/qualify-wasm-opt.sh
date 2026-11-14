@@ -49,5 +49,5 @@ cargo test --locked --offline -p ic-build --test wasm_optimizer -- --ignored --n
 cat "$evidence/qualification.log" || :
 [[ "$status" == 0 ]] || exit "$status"
 cat "$evidence/execution.log"
-echo 'Native Wasm optimization, retained publication, reuse and execution passed'
+echo 'Native Wasm optimization and execution passed'
 complete=true
