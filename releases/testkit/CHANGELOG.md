@@ -8,7 +8,7 @@ through 0.79.0 retains its original scope below. The published baseline at the s
 from the [original joint integration release](../integration/CHANGELOG.md#0761---2026-11-01).
 Joint history through 0.76.1 remains there once, with its original scope.
 
-## [0.104.1] - Unreleased
+## [0.104.1] - 2026-11-14
 
 ### 🔧 Changed
 
