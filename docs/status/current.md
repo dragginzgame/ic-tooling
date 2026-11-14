@@ -1,6 +1,6 @@
 # Current handoff — 2026-11-14
 
-## Platform 0.33 deployment preparation
+## Platform 0.33 deployment in progress
 
 The current authorized batch adopts published Platform 0.33.0 (source
 `dd15c2c8`, archive SHA-256
@@ -10,10 +10,11 @@ Tooling retains its existing protocol/transport and feature boundaries. Both
 roots require Types 0.20.3; the private probe requires Runtime/macros/guard
 0.22.3. Preserve the entry lock selections and the completed Host FS opener work.
 
-Deployment selects Testkit 0.104.1 for private Platform adoption, followed
-by Tools 0.93.0 for its exposed Platform codec/ledger identity. Foundation 0.77.3
-remains pending: the concurrent Backup maintainer explicitly limited the FS
-addition to GitHub push, with no publication. Consumers sharing
+Deployment selects Testkit 0.104.1 for private Platform adoption, Foundation
+0.77.3 for the compatible Host FS opener, and Tools 0.93.0 for its exposed
+Platform codec/ledger identity. The maintainer explicitly clarified that Tooling
+is to publish normally on crates.io for downstream consumers, superseding the
+brief FS push-only restriction relayed by Backup. Consumers sharing
 those Tools values select Platform 0.33. Testkit's public API, native PocketIC
 16.1 and the independent Wire adapter remain unchanged. Each batch uses the
 standard frozen release and publication owners; hosted CI remains asynchronous.
@@ -22,14 +23,15 @@ The previous complete gates took about 429–583 seconds per group, including
 only already qualified stage admissions can reuse unchanged inputs.
 
 Preserve `target/evidence/platform033-deploy/` (entry patch/locks, authenticated
-supplier source and qualification/deployment logs). No sibling source edits,
-release tags or publications have occurred in this preparation section yet.
+supplier source and qualification/deployment logs). No sibling source edits or
+publications are included.
 Initial patch `batch-4cjJjMme` selected Foundation/Testkit before that narrower
 instruction arrived. It was stopped during preflight tool/server-CLI setup,
 before version preparation, tagging or upload (exit 143; 43.65 seconds).
 Preserve its journal and managed checkout; do not resume its excluded roster or
 reinterpret setup compilation as completed product validation. The new releases
-need their own correctly scoped captures. No Foundation artifact will be uploaded.
+need their own correctly scoped captures. That original roster stays interrupted;
+the subsequent clarification authorizes a fresh Foundation capture.
 Focused `dependency-adoption-check` passed: isolated native/Wasm graphs, Tools
 codec/Agent/Registry/ledger adapters, snapshot refusals, nine adapter unit tests,
 installed upstream snapshot restoration and the actual Wire canister's state/error
@@ -37,6 +39,22 @@ contract. Formatting and local document links pass. The preceding `d02fc37a`
 push has complete Linux and native macOS 15 Intel/Apple Silicon passes in
 [CI 43573475462](https://github.com/dragginzgame/ic-tooling/actions/runs/43573475462);
 that is prior-source evidence, not qualification of this new Platform/FS batch.
+
+Testkit 0.104.1 is delivered at `df10ff25f37bf2de0edfa3a594e2ad0bddfaa33a`,
+tag `testkit-v0.104.1`, through completed frozen `batch-bz31zGgk`. All 32 Linux
+stages passed, publication reused only admitted lint and freshly verified the
+archive, and crates.io confirmed availability. Whole command time was 845.09
+seconds. The ordinary checkout was reconciled through the standard operation.
+Foundation and Tools remain next, using fresh frozen captures.
+
+Asynchronous source CI exposed two qualification defects: optimizer admission
+defaulted to the vendor root instead of the checkout, and an ignored baseline
+cleanup test used an unroutable ID that upstream panics on before management
+admission. The repaired workflow passes the consumer explicitly; the test uses a
+routed empty canister to retain returned-failure/server-reaping coverage. These
+are caller/test fixes, not another runtime/client implementation. Apple Silicon's
+native setup separately failed downloading PocketIC; do not claim a current
+complete three-host pass from these Linux results.
 
 ## Local Host FS update opener
 
@@ -49,9 +67,9 @@ Linux passed 18 capability tests, 40 shared reader tests, strict package Clippy
 with/without capability and warning-denying Rustdoc. Native macOS and consumer
 append/recovery are not qualified. Both pre-existing dirty locks are unchanged.
 The API/source/docs were committed with the Platform source in `c30c0f92`.
-The Backup maintainer now authorizes GitHub push only; no Foundation version,
-tag or registry publication is included. Backup adoption still needs a later
-explicitly authorized Foundation release.
+The brief Backup push-only instruction was superseded by the Tooling maintainer's
+explicit crates.io clarification. Foundation 0.77.3 publication is now included;
+downstream adoption uses its registry package after confirmed availability.
 The following sections retain prior delivery context and recovery information.
 
 ## Previous Git-only delivery

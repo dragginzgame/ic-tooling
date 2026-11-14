@@ -499,7 +499,6 @@ async fn fixtures_and_baselines_retain_the_owned_server() {
 #[ignore = "requires POCKET_IC_BIN=<caller-provided PocketIC server binary>"]
 async fn failed_baseline_capture_reaps_the_owned_server() {
     use crate::pic::CachedPocketIcBaseline;
-    use pocket_ic::CanisterId as Principal;
 
     let binary = PathBuf::from(std::env::var_os("POCKET_IC_BIN").unwrap());
     let owned = PocketIcStartupConfig::Spawn {
@@ -517,10 +516,14 @@ async fn failed_baseline_capture_reaps_the_owned_server() {
     .await
     .unwrap();
     let pid = owned.server().unwrap().process_id();
+    // A real, routed canister without installed Wasm exercises the returned
+    // capture failure. An unroutable Principal instead panics in upstream HTTP
+    // routing before management admission, which is a different contract.
+    let empty_canister = owned.instance().create_canister().await;
     let capture = CachedPocketIcBaseline::capture(
         owned,
         [crate::pic::CanisterSnapshotTarget {
-            canister_id: Principal::anonymous(),
+            canister_id: empty_canister,
             sender: None,
         }],
         (),
@@ -528,7 +531,7 @@ async fn failed_baseline_capture_reaps_the_owned_server() {
     .await;
     assert!(
         capture.is_err(),
-        "missing canister must refuse snapshot capture"
+        "empty canister must refuse snapshot capture"
     );
     assert_eq!(
         process_state(pid),

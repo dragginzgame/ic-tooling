@@ -24,6 +24,9 @@ earlier coordinated releases remain in [shared history](../history.md#0730---202
 
 ### 🧪 Testing
 
+- Admit optimizer tools against the consumer checkout in hosted qualification,
+  rather than the installed vendor root. Check that exact caller binding in
+  the existing workflow/Make fixture while preserving status propagation.
 - Isolate the Make routing fixture from an inherited full-CI flag, preserving
   its explicit full/release routing cases and first-failure checks. Reproduce
   and fix the Linux CI failure without changing production qualification.

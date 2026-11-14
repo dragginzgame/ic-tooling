@@ -447,6 +447,7 @@ if [[ "$*" == *'--package ic-build'* ]]; then
     name=install-editor-tools.sh
 fi
 if [[ "$name" == install-ic-tools.sh ]]; then
+    [[ "$1" == --consumer && "$2" == "$PWD" ]] || exit 94
     [[ "$*" == *'--tool wasm-opt'* && "$*" != *'--tool ic-wasm'* ]] || exit 93
     if [[ "${HOST_MAKE_OPTIMIZER_PATH:-}" != '' ]]; then printf '%s\n' "$HOST_MAKE_OPTIMIZER_PATH"; fi
 fi
