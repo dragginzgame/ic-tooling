@@ -10,9 +10,10 @@ Tooling retains its existing protocol/transport and feature boundaries. Both
 roots require Types 0.20.3; the private probe requires Runtime/macros/guard
 0.22.3. Preserve the entry lock selections and the completed Host FS opener work.
 
-Deployment selects Foundation 0.77.3 for the compatible FS addition and Testkit
-0.104.1 for private Platform adoption in one supplier-first patch batch, followed
-by Tools 0.93.0 for its exposed Platform codec/ledger identity. Consumers sharing
+Deployment selects Testkit 0.104.1 for private Platform adoption, followed
+by Tools 0.93.0 for its exposed Platform codec/ledger identity. Foundation 0.77.3
+remains pending: the concurrent Backup maintainer explicitly limited the FS
+addition to GitHub push, with no publication. Consumers sharing
 those Tools values select Platform 0.33. Testkit's public API, native PocketIC
 16.1 and the independent Wire adapter remain unchanged. Each batch uses the
 standard frozen release and publication owners; hosted CI remains asynchronous.
@@ -23,6 +24,12 @@ only already qualified stage admissions can reuse unchanged inputs.
 Preserve `target/evidence/platform033-deploy/` (entry patch/locks, authenticated
 supplier source and qualification/deployment logs). No sibling source edits,
 release tags or publications have occurred in this preparation section yet.
+Initial patch `batch-4cjJjMme` selected Foundation/Testkit before that narrower
+instruction arrived. It was stopped during preflight tool/server-CLI setup,
+before version preparation, tagging or upload (exit 143; 43.65 seconds).
+Preserve its journal and managed checkout; do not resume its excluded roster or
+reinterpret setup compilation as completed product validation. The new releases
+need their own correctly scoped captures. No Foundation artifact will be uploaded.
 Focused `dependency-adoption-check` passed: isolated native/Wasm graphs, Tools
 codec/Agent/Registry/ledger adapters, snapshot refusals, nine adapter unit tests,
 installed upstream snapshot restoration and the actual Wire canister's state/error
@@ -41,8 +48,10 @@ explicit; read-only APIs remain read-only. See [Host IO](../hosts.md#configured-
 Linux passed 18 capability tests, 40 shared reader tests, strict package Clippy
 with/without capability and warning-denying Rustdoc. Native macOS and consumer
 append/recovery are not qualified. Both pre-existing dirty locks are unchanged.
-The API/source/docs are local and uncommitted; no version, commit, push or registry
-publication was performed. Backup adoption requires a published Foundation release.
+The API/source/docs were committed with the Platform source in `c30c0f92`.
+The Backup maintainer now authorizes GitHub push only; no Foundation version,
+tag or registry publication is included. Backup adoption still needs a later
+explicitly authorized Foundation release.
 The following sections retain prior delivery context and recovery information.
 
 ## Previous Git-only delivery
