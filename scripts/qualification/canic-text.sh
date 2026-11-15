@@ -22,7 +22,7 @@ jq -e --arg root "$repo" '
   any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_host_text" and .pkg == $text)
 ' "$scratch/metadata.json" >/dev/null
 cargo test -p canic-cli --bin canic --locked --offline -- --list > "$scratch/tests.txt"
-for scope in status::tests:: fleet::terminal::tests::; do
+for scope in status::tests:: fleet::terminal::tests:: placements::tests::; do
   rg -q "^$scope.*: test$" "$scratch/tests.txt"
   cargo test -p canic-cli --bin canic --locked --offline "$scope"
 done

@@ -29,6 +29,10 @@ remains tied to its recorded inputs.
 
 ### 🧪 Testing
 
+- Combine current Canic Build 0.87.3 and Text 0.77.2 in one app-workflow graph;
+  qualify app partial effects and thirteen fleet/placements display cases. Refresh
+  new display callers using the existing Text API and retain external selections.
+
 - Qualify current Query presentation/output with unchanged evidence and JSON.
 - Qualify DB's installed console schema/query/cursor and rejection behavior with
   the same two operations; independently observe cleanup of its instances.

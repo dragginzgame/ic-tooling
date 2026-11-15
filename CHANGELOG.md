@@ -9,6 +9,7 @@ version. All replacement packages remain unpublished.
 | [build](releases/build/CHANGELOG.md) | `ic-build` |
 | [http](releases/http/CHANGELOG.md) | `ic-host-http` |
 | [text](releases/text/CHANGELOG.md) | `ic-host-text` |
+| [testkit](releases/testkit/CHANGELOG.md) | `ic-testkit` |
 | [tools](releases/tools/CHANGELOG.md) | `ic-cargo-qualification` |
 
 [Earlier unpublished checkpoints](releases/history.md) preserve pre-group history.

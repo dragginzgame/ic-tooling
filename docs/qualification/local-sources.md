@@ -1,7 +1,9 @@
 # Current local consumer sources
 
 Active Canic, Backup, Scheduling and DB qualification uses current local sibling
-working trees. Historical pinned exports remain historical evidence, not the
+working trees. Scheduling selects `../ic-scheduling-new` specifically; the older
+`../ic-scheduling` experiments do not qualify the rewrite. Historical pinned exports
+remain historical evidence, not the
 source selection for new runs. Auth remains on hold; Storage, Observability and
 Wire remain frozen. Reading a current consumer's existing supplier selection does
 not authorize modifying those suppliers.
@@ -25,7 +27,9 @@ an obsolete consumer mechanism. Current consumer contracts must justify new APIs
 
 Changing a runner to current-source selection does not qualify all current source.
 Canic's six selected host tests passed against its current snapshot. Scheduling's
-unchanged local source still admits its patch. Backup’s refreshed patch preserves current metadata/transfer additions and passes
+rewrite target admits its Testkit graph and host-driver compilation without old
+migration patches; installed replacement acceptance remains open. Backup’s refreshed
+patch preserves current metadata/transfer additions and passes
 65 selected tests with the new filesystem supplier; see its
 [qualification evidence](../../qualification/backup/README.md). Future source changes
 still require patch admission and relevant qualification.

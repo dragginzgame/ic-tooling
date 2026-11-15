@@ -66,3 +66,22 @@ producer-byte and runtime rejection/cleanup/cancellation checks. This removes
 managed-server custody only from those fixtures; the other Platform drivers and
 Query workload remain unqualified. No shared lifecycle type follows from these
 successful borrowed-server workflows.
+
+## Scheduling rewrite: Testkit is a demonstrated owner
+
+The active consumer is `../ic-scheduling-new`. It explicitly selects Testkit's
+PocketIC re-export and held-reply fixtures. These serve shared type identity,
+bounded fixture construction and deterministic pending/release control for Once,
+Jobs, watchdog and held-upgrade tests. Removing that dependency is not a goal.
+The [replacement contract](testkit-held-replies.md) is grounded in these
+[current requirements](../qualification/scheduling/README.md). Its focused baseline
+passes pressure and held-upgrade scenarios using released Testkit. Runtime, topology, funding, simulated time and
+consumer assertions remain caller-owned; shared mechanisms belong in Testkit.
+
+The earlier direct-client and snapshot experiments used `../ic-scheduling` and
+remain [historical evidence](../qualification/scheduling/historical.md). Their
+native-snapshot failure and local upload workaround do not establish a snapshot
+requirement for the rewrite. No legacy snapshot or held-reply subsystem is admitted
+for wholesale import. The new Testkit catalog, generator and exclusive controller
+have independent acceptance evidence in the replacement contract; Scheduling's
+replacement-supplier qualification remains separate.

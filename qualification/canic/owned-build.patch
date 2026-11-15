@@ -18,8 +18,8 @@
 + "ic-host-fs 0.79.0",
   "ic-host-process",
   "ic-host-text",
-  "serde_json",
-@@ -408,7 +408,8 @@
+  "ic-topology",
+@@ -409,7 +409,8 @@
   "canic",
   "canic-management-protocol",
   "canic-wasm-store-protocol",
@@ -29,7 +29,7 @@
   "ic-host-process",
   "ic-platform",
   "ic-topology",
-@@ -457,7 +458,7 @@
+@@ -458,7 +459,7 @@
   "canic-management-protocol",
   "canic-profile-protocol",
   "clap",
@@ -38,7 +38,7 @@
   "ic-host-process",
   "ic-wire",
   "serde_json",
-@@ -1404,6 +1405,18 @@
+@@ -1405,6 +1406,18 @@
  ]
  
  [[package]]
@@ -57,7 +57,7 @@
  name = "ic-certification"
  version = "3.2.0"
  source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -1442,12 +1455,29 @@
+@@ -1443,12 +1456,29 @@
  ]
  
  [[package]]
@@ -88,7 +88,7 @@
   "rustix",
   "thiserror 2.0.21",
  ]
-@@ -1458,8 +1488,8 @@
+@@ -1459,8 +1489,8 @@
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "3bfc02220bee55d050f8ebedce5f5ff71764028afcef8b58c1ae2bceb945e650"
  dependencies = [
@@ -99,7 +99,7 @@
   "libc",
   "rustix",
  ]
-@@ -2851,6 +2881,19 @@
+@@ -2852,6 +2882,19 @@
  ]
  
  [[package]]

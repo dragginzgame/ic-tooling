@@ -1,0 +1,47 @@
+--- a/qualification/once-driver/src/main.rs
++++ b/qualification/once-driver/src/main.rs
+@@ -12,25 +12,37 @@
+     let mut args = std::env::args().skip(1);
+     let first = args.next().expect("probe wasm path or --metrics-cost");
+     let paired = first == "--metrics-cost";
+-    let wasm = std::fs::read(if paired {
++    let held_only = first == "--held-replies";
++    let wasm = std::fs::read(if paired || held_only {
+         args.next().expect("disabled probe path")
+     } else {
+         first
+     })
+     .unwrap();
+     let enabled = paired.then(|| std::fs::read(args.next().expect("enabled probe path")).unwrap());
+-    let server = std::env::var_os("POCKET_IC_BIN").expect("prepared PocketIC 16.0.0 server");
+-    let pic = PocketIcBuilder::new()
+-        .with_server_binary(server.into())
+-        .with_application_subnet()
+-        .build_async()
+-        .await;
++    let builder = PocketIcBuilder::new().with_application_subnet();
++    let builder = if held_only {
++        let endpoint = std::env::var("IC_TESTKIT_POCKET_IC_URL")
++            .expect("held-replies requires an externally owned server endpoint");
++        builder.with_server_url(endpoint.parse().expect("valid server URL"))
++    } else {
++        let server = std::env::var_os("POCKET_IC_BIN").expect("prepared PocketIC 16.0.0 server");
++        builder.with_server_binary(server.into())
++    };
++    let pic = builder.build_async().await;
+     if let Some(enabled) = enabled {
+         metrics_cost::check(&pic, &wasm, &enabled).await;
+         pic.drop().await;
+         return;
+     }
+     let external = pic.create_canister().await;
++    if held_only {
++        pressure::check(&pic, &wasm, external).await;
++        held_upgrade::check(&pic, &wasm, external).await;
++        pic.drop().await;
++        println!("held-replies: pressure and held-upgrade checks passed");
++        return;
++    }
+     for (mode, expected) in [
+         (0, vec![0, 1, 1]),
+         (1, vec![3, 0, 0]),

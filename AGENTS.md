@@ -19,8 +19,8 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   to satisfy obsolete commands or instructions. Preserve unrelated pending work.
 - The Stage 1 architecture checkpoint is complete; Stage 2 introduces shared byte
   admission and filesystem custody for the pinned Backup qualification. Stage 3
-  has a pinned Scheduling build/installed-test migration with no legacy Build;
-  consumer-owned observations stay private and Host/Testkit uses remain explicit. Continue
+  records a historical old-Scheduling build/installed-test migration; it does not
+  qualify the Scheduling rewrite. Consumer-owned observations stay private. Continue
   through the design's staged workflows. Every increment must name a removed caller obligation
   or mechanism as well as its focused acceptance evidence.
 - Auth is on hold; Storage, Observability and Wire are frozen by maintainer
@@ -33,6 +33,9 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   owning repository; local patches are qualification adapters, not product code.
   Canic is being rewritten: current requirements, not its older implementation,
   determine whether further Tooling capabilities are needed.
+- Scheduling qualification targets `../ic-scheduling-new`, not `../ic-scheduling`.
+  Preserve its Testkit client/held-reply-fixture boundary; dependency removal alone
+  is not an architecture improvement. Old Scheduling experiments are historical.
 - Product packages belong under `crates/`; exclude `qualification/` from the
   root workspace. Separate qualification packages get their own workspace when
   introduced. Packaging follows demonstrated ownership and dependency isolation.
@@ -49,6 +52,10 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   portable bytes. Its contract is `docs/http-body.md`.
 - `ic-host-text` 0.77.2 owns escaping and bordered/plain tables for Query, DB and Canic;
   its contract is `docs/text-presentation.md`. Other Text operations remain open.
+- `ic-testkit` 0.107.0 admits the shared PocketIC re-export and bounded owned reply
+  catalogs and generated modules behind `held-reply-fixtures`. Follow
+  `docs/testkit-held-replies.md`; exclusive request control passes independent
+  tests, but the replacement is not yet consumer-qualified.
 - Release ownership is declared in `ci/cargo-release-groups.json`; group ledgers
   live under `releases/`. See `docs/release-ownership.md`. Root changelog is an index;
   qualification fixtures remain outside product groups.

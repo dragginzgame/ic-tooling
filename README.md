@@ -22,8 +22,15 @@ presentation/output callers without network reports. `make test-db-text` exercis
 the current local DB console against its installed records fixture.
 `make test-canic-text` checks current Canic status, terminal and declaration output.
 
+`ic-testkit` 0.107.0 starts the [shared Testkit contract](docs/testkit-held-replies.md)
+with the original PocketIC type boundary, an owned bounded reply catalog and Wasm
+generation. `make test-testkit-catalog` checks admission and module validity;
+`make test-testkit-module` checks installed behavior on an externally owned server.
+`make test-testkit-control` checks exclusive release and identity/progress refusals.
+Scheduling still selects the released supplier pending replacement qualification.
+
 The [release ownership map](docs/release-ownership.md) declares foundation, build,
-HTTP, Text and tools groups. [Changelogs](CHANGELOG.md) live under `releases/`;
+HTTP, Text, tools and Testkit groups. [Changelogs](CHANGELOG.md) live under `releases/`;
 `make deps-list` reports each package’s group and version.
 
 The production owner remains the read-only `../ic-tooling` reference. All new
@@ -36,15 +43,20 @@ The [first-slice contract](docs/build-owned-artifact.md) defines acceptance and
 The [filesystem contract](docs/filesystem-custody.md) defines Stage 2. Run
 `make test-custody` for its focused tests and `make test-backup-custody` for the
 [local Backup migration](qualification/backup/README.md) in an isolated export.
-`make test-scheduling-consumer` qualifies the [local Scheduling migration](qualification/scheduling/README.md)
-through the owned build, Jobs capture/optimization and selected installed PocketIC
-subjects; prepared server/Binaryen tools and loopback access are required.
+`make test-scheduling-consumer` admits the current `../ic-scheduling-new` source,
+its retained Testkit dependency graph, and focused host-driver compilation.
+See [current requirements](qualification/scheduling/README.md); this does not
+claim installed-runtime or replacement Testkit acceptance.
+`make test-scheduling-held` selects two installed held-reply scenarios with the
+released supplier and an explicitly prepared server. The [Testkit contract](docs/testkit-held-replies.md)
+defines the next shared implementation slice.
 The frozen `make test-auth-consumer` recipe reproduces historical [Auth's pinned package admission](qualification/auth/README.md)
 and checks exact archives on native and Wasm targets.
 
 `make test-canic-build` qualifies current Canic’s owned build and destination
 publication/refusal path using a real Wasm probe. `make test-canic-app-build`
-selects app recipe preflight, lock setup and serial partial-failure behavior.
+combines Build and Text for app recipe preflight, lock setup, serial partial
+failure and the fleet/placements display tests.
 `make test-canic-build-metadata` checks workspace/target selection, prepared-tool
 admission and compiler-wrapper refusal before compilation or output replacement.
 
@@ -53,9 +65,10 @@ and selected original retained-plan and signed-recovery tests.
 
 `make test-db-consumer` qualifies [current DB rollback](qualification/db/README.md)
 using an explicitly prepared external server and the upstream async client.
-`make test-jobs-snapshots` checks current Scheduling controller recovery using the
-same direct-client ownership boundary and prepared Scheduling tools.
-It adds no simulator facade; see [ownership](docs/simulator-ownership.md).
+Scheduling’s earlier Jobs/Timers experiments are [historical](qualification/scheduling/historical.md).
+The rewrite uses Testkit client types and held-reply fixtures; their replacement
+replacement passes independent fixture tests; consumer qualification remains open.
+See [simulator ownership](docs/simulator-ownership.md).
 
 `make test-platform-consumer` qualifies [Platform’s current raw_rand fixture](qualification/platform/README.md)
 with direct PocketIC and externally owned server lifetime.

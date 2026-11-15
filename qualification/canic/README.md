@@ -70,7 +70,7 @@ Wire remain frozen and are not migration targets for this slice.
 ## Current CLI Text
 
 `make test-canic-text` snapshots the current local Canic working tree and applies
-`text.patch` independently of the record-admission recipe. It selects Text 0.77.0,
+`text.patch` independently of the record-admission recipe. The initial run selected Text 0.77.0,
 migrates escapes and plain tables, and removes the repeated two-space/header-rule
 options from the callers. Canic retains its own report selection, configuration,
 colours, topology, shell quoting, status meanings and raw JSON. No Canic
@@ -198,3 +198,50 @@ export `target/canic-build.XkJGhV6C`. The real-build control, ten metadata refus
 and six tool-setting refusals passed (`target/canic-tool-admission.log`). Host/CLI
 warning-denied Clippy passed (`target/canic-tool-admission-clippy.log`). No sibling
 source was edited; earlier app/Text/record results retain their own scope.
+
+### Output aliases
+
+`make test-canic-build` also selects output names that are a symlink, a hard
+link to a foreign sentinel file, and a dangling symlink. An intentional compile
+failure first preserves each link (including the hard-link identity), leaves the
+foreign bytes unchanged and creates no missing referent. Private scratch is empty
+after each failure. Successful publication replaces each selected
+entry with a regular file containing the exact built Wasm and matching reported
+SHA-256. Neither result aliases the foreign file, whose bytes remain unchanged.
+This captures a required publication outcome for a future filesystem migration;
+publication still uses Canic's retained Host FS supplier. It does not establish
+parent confinement or safety against concurrent namespace writers.
+
+Linux evidence on 2026-11-15: Canic 0.210.0 source HEAD
+`e3e7be86301c377db8b064d2ef914f5cde936265` plus edits; source tar SHA-256
+`5b0865deb906589c5d2d94c8cbabdae8349733af69d49a47c98408c46fc63c29`,
+export `target/canic-build.hdUc3Qm5`, log `target/canic-alias-failure.log`.
+Default/explicit output, all three aliases before/after compilation failure, exact identity,
+occupied-directory refusal and empty private scratch all passed with Build 0.87.3.
+This script-only extension changes no Rust source or product API; other slices
+retain their separately recorded evidence.
+
+### Combined Build and Text app workflow
+
+`make test-canic-app-build` now applies both `owned-build.patch` and `text.patch`
+to one current-source snapshot. Metadata must prove the Host -> local Build 0.87.3
+and CLI -> local Text 0.77.2 edges, with exactly one Text supplier. Artifact and
+metadata-only targets retain their independent Build selection; record admission
+is not implicitly combined.
+
+Current source added placements presentation and Store observation strings. The
+refreshed Text patch migrates those callers to existing `escape`/`bordered_table`
+operations; no new API or consumer implementation enters product crates. The
+standalone Text runner also selects placements tests. The app target checks its
+existing preflight, config-relative paths, lock preservation and serial partial
+failure, then selects fleet-terminal and placements tests in the same graph.
+
+Linux evidence on 2026-11-15: HEAD
+`5b8d5e91ac601da13ec9d50e8d7a4f4f5efa16bb` plus local edits, source tar SHA-256
+`400621e522327fde8c78380e21b2f8f701f92bc5c44ead845052b6997ebf1381`, export
+`target/canic-build.ITw236vM`. App checks passed (`target/canic-combined-app.log`),
+as did nine fleet-terminal and four placements tests (`target/canic-combined-display.log`)
+and Host/CLI/test warning-denied Clippy (`target/canic-combined-clippy.log`). The
+initial stale Build lock delta and newly unmigrated Text callers refused before
+this refresh. Existing external selections are retained. No sibling was edited;
+this does not refresh other independent slices or their native-host evidence.

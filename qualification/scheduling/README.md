@@ -1,114 +1,105 @@
-# Scheduling owned-build qualification
+# Scheduling rewrite: current consumer requirements
 
-Current recipes select the next unpublished Build 0.87.3 / Text 0.77.2 where
-used. Their patches and locked graphs admit current local sources; historical
-runtime evidence below remains bound to its recorded checkpoint inputs.
+The maintainer selected `../ic-scheduling-new` as the active Scheduling consumer.
+`make test-scheduling-consumer` snapshots that working tree, including tracked edits
+and non-ignored source, with the shared read-only capture helper. It applies no
+old Scheduling migration patch and does not modify the sibling. An explicit
+`SCHEDULING_SOURCE` override must satisfy the same rewrite package/graph checks.
 
+The current target admits the locked dependency graph and checks only the host
+`once-driver` and `executor-driver` targets offline. Both must select Testkit
+0.106.0, with the same supplier package ID; Once enables `held-reply-fixtures`.
+Neither driver may depend directly on PocketIC. This is source/graph and caller
+compilation evidence, not installed-runtime proof or acceptance of a replacement
+Testkit implementation. The new Testkit 0.107.0 package currently admits client
+types and reply catalogs only; it cannot yet replace these runtime fixtures.
 
-`make test-scheduling-consumer` snapshots the current local `SCHEDULING_SOURCE`
-(default `../ic-scheduling`) without modifying it, including local edits and
-non-ignored additions, then applies
-[the migration](owned-build.patch), and verifies that the Timers driver resolves
-its build dependency to local `ic-build` 0.87.1, with no legacy Build anywhere in
-the graph. No sibling edits are made. Sixteen Timers host tests (including three new
-observation tests) and two exact installed subjects run in that export:
-watchdog survival through trap/upgrade, and Wire rejection before timer mutation.
-Jobs adds five capture tests and installed management/upgrade/watchdog qualification
-of the original Wasm and real Binaryen `-O3`, `-Os`, `-Oz` captures.
-This is focused installed evidence, not the complete watchdog/cohort release roster.
+## Requirements from the actual callers
 
-See [source selection](../../docs/qualification/local-sources.md). The current
-checkout is clean at `0e5e09ed24e88d6d62a6d2dc923afbb53dc8619e`; its patch
-still applies, so the prior installed evidence remains relevant to unchanged
-inputs. No new installed run was performed for this source-selection change.
+The rewrite's `AGENTS.md` and `qualification/README.md` explicitly require
+`ic-testkit::pocket_ic` rather than a direct PocketIC dependency. Preserve that
+consumer boundary while designing the replacement; removing Testkit is not a goal.
 
-Prepare Rust 1.100.0, its Wasm target and the consumer's locked dependencies first.
-The selected source checkout also needs its prepared Binaryen tool bundle; the
-local export's Toko admission script checks it offline without installing anything.
-Select an already prepared `ic-testkit-server` 0.106.0 CLI and its asset directory:
+| Current caller | Demonstrated requirement | Ownership |
+| --- | --- | --- |
+| `executor-driver/src/main.rs` | Synchronous PocketIC builder/client and shared IC identifier/error types; prepared server binary | Shared Testkit client boundary; caller chooses topology, funding and assertions |
+| `once-driver/src/main.rs` | Async client with explicit instance deletion and caller-owned Tokio runtime | Same client supplier/type identity; caller owns scheduling and runtime |
+| `once-driver/src/pressure.rs` and `jobs_pressure.rs` | Bounded generated reply fixture, eight held flights, exact pending requests and deliberate release order | Reusable Testkit held-reply mechanism; consumer owns pressure/admission expectations |
+| `once-driver/src/held_upgrade.rs` | Hold a real reply through upgrade refusal, then release and observe original settlement | Testkit reply control; consumer owns upgrade authority and recovery assertions |
+| `once-driver/src/watchdog.rs` | Held request admission, cadence/coalescing while flights remain pending, explicit release | Same shared fixture; consumer owns simulated-time/tick policy |
 
-```sh
-SCHEDULING_TESTKIT_CLI=/absolute/path/to/ic-testkit-server \
-SCHEDULING_SERVER_DIRECTORY=/absolute/path/to/ic-testkit-server-assets \
-make test-scheduling-consumer
-```
+The fixtures use `RawReplyMethod`, `RawReplyLimits`, `ReplyMode` and
+`HeldReplyFixture::{new, wasm, pending, release}`. Limits, funding and request
+budgets are selected by the consumer. Do not replace this with copied per-driver
+fixture machinery. Preserve exact request selection, type identity, bounds and
+failure behavior before admitting a new shared Testkit contract.
 
-The CLI checks the server bytes offline before use. PocketIC requires local
-loopback access. `SCHEDULING_SOURCE` may select another current local checkout;
-its snapshot must admit the migration patch. Scratch, original diagnostics, captured Wasm and runtime
-receipts remain under the printed `target/scheduling-consumer.*` export; Cargo's
-host cache is under `target/scheduling-consumer-build`. No implicit tool download,
-registry publication or protected release artifact is involved.
+This rewrite builds its probes using Cargo commands in its Makefile. It does not
+have the old `ic-timers-pocketic` driver, Jobs capture executable, or cached-baseline
+snapshot workflow. There is no current evidence that it needs the old snapshot
+migration or an `ic-build` adapter. Its Once command runs a broad installed roster;
+the focused `--held-replies` selection below now supplies the first retained-supplier
+baseline for replacement work.
 
-The consumer now calls one owned build instead of creating/locking a shared target,
-collecting every Cargo message, separately checking execution/protocol, selecting a
-mutable path and capturing it afterward. The complete owned bytes are published
-into the invocation's diagnostic directory for the existing installed harness.
-Source/configuration drift checks, before/after tool identities, exact installed
-artifact hashes, subject admission and receipt validation remain in that driver.
-No original test bodies or supplier implementation are copied into new products.
+## Historical evidence boundary
 
-The dependency uses its canonical `ic-build` name. Timers owns its private bounded
-configuration admission and receipt evidence; the old generic observation/selection
-types and supplier are removed. See the [observation contract](observations.md),
-including the explicit recipe-identity migration and conservative comparison rules.
-Jobs capture uses held filesystem staging, exact byte admission and explicit
-producer cleanup. Registry Host and Testkit remain unmigrated.
-There is one Timers compile/capture path, with no fallback
-to the old execution API. This does not establish complete Scheduling supplier
-cutover, cohort comparability, native macOS acceptance or shared-target performance.
+[Earlier Scheduling experiments](historical.md) used `../ic-scheduling`. They
+retain their source IDs, logs and patches, but do not qualify this rewrite or
+justify its architecture. Their direct-client migration is not the accepted target.
+The active Makefile no longer exposes the old Jobs snapshots/Timers session/native
+snapshot commands. `scheduling-historical.sh` retains reproduction only with
+`HISTORICAL_SCHEDULING_EVIDENCE=1` and an explicit old `SCHEDULING_SOURCE`; it is not
+called by an active target. Existing prepared binaries in the old checkout can
+remain tool assets for other consumers; that does not select its source for this
+rewrite's qualification.
 
-PocketIC 16.1.0 pins `thiserror` to 2.0.18. Product requirements now admit that
-compatible version; the product lock still selects 2.0.21. The consumer lock keeps
-retained registry versions/checksums, adds the local suppliers plus `const-oid`,
-and removes the unused old Build graph. The private parser uses the already locked
-TOML library directly. Full Stage 3 still includes Auth/Storage and Canic workflows;
-remaining Host/Testkit responsibilities stay explicit. Shared incremental targets
-need measured justification first.
+## Initial corrected-source evidence
 
-Jobs retains complete `.capture.pending` bytes when destination publication fails;
-its error identifies staging versus visible-but-unconfirmed destination outcomes.
-Successful capture retires only the observed producer identity and keeps the log.
-Existing recovery staging refuses further capture until the caller reconciles it.
-The CLI and optimizer flags are unchanged. Source/destination parents passed to
-external tools remain stable caller-owned paths. The migration declares explicit
-product workspace roots in the export to disambiguate Cargo inheritance with
-local suppliers from another workspace; sibling manifests are untouched.
+On 2026-11-15 the runner captured HEAD
+`7715fc81d533bbd9bed613a62c80f6f9d18a4a37` plus local edits, source tar SHA-256
+`229d27dd3a9cbaa07b8bc21bef7d575223abeb6dd581cfea79e6571411ac521f` in
+`target/scheduling-new.qz5U96ZW`. Testkit graph admission and both host-driver
+checks passed (`target/scheduling-new-admission.log`). An explicit override to
+old `../ic-scheduling` refused the rewrite source contract before driver compilation
+(`target/scheduling-old-source-refusal.log`); the historical runner refuses an
+unqualified invocation (`target/scheduling-history-guard.log`). This did not run
+PocketIC, deploy canisters, modify sibling files, or qualify any new Testkit API.
 
-## Direct Jobs session and controller recovery
+## Focused held-reply baseline and next contract
 
-Apply `jobs-session.patch` after `owned-build.patch`. Jobs selects upstream
-PocketIC 16.1.0 directly and requires `IC_TESTKIT_POCKET_IC_URL`; it cannot select
-or spawn a server. Timers still uses released Testkit. The runner checks the
-Jobs reachable dependency graph separately, since workspace metadata includes
-Timers. No shared simulator crate or snapshot manager was introduced.
+The [first Testkit contract](../../docs/testkit-held-replies.md) defines shared
+ownership, bounded catalog/module admission, opaque request identity, exclusive
+release authority and uncertain-effect handling. It is an implementation contract,
+not a claim that the replacement runtime fixtures or all their failure tests exist.
 
-With the same prepared `SCHEDULING_TESTKIT_CLI` and
-`SCHEDULING_SERVER_DIRECTORY`, run `make test-jobs-snapshots`. This focused mode
-skips Timers and optimization variants, builds current Jobs Wasm privately, and
-runs exactly the existing watchdog-delivery, synchronous-trap and controller
-snapshot-recovery subjects. Missing named tests fail before execution. It
-independently checks that all three instances report deletion while the external
-server stays reachable. The released CLI remains an explicit development server
-owner, not a migrated product implementation.
+Run `make test-scheduling-held` with `SCHEDULING_POCKET_IC_BIN` set to an
+absolute executable path for a prepared local server. The optional
+`SCHEDULING_TESTKIT_CLI` selects the released 0.106.0 launcher; otherwise the
+installed Toko checker selects its already-prepared Scheduling tool receipt.
+That old checkout supplies only a tool asset, never consumer source. No tool is
+installed. This recorded run uses server 16.1.0; the rewrite's earlier 16.0.0
+observations remain separate.
 
-The consumer retains initial-predicate/30-tick bounded progress, explicit simulated
-time changes and a four-attempt recovery upgrade budget. Only install-rate-limit
-rejection permits the existing 600-second/two-tick cooldown. Snapshot stop, take,
-restore and start select the default anonymous controller explicitly. The recovery
-subject additionally refuses a non-controller for capture and restore, preserves
-raw stable memory after those refusals, and compares restored bytes exactly with
-the original independent snapshot. It then upgrades and checks pending job state.
-These are single-canister observations, not multi-canister atomicity or cleanup
-promises after cancellation; upstream limitations are in
-[simulator ownership](../../docs/simulator-ownership.md).
+`held-selection.patch` adds a private `--held-replies` driver selection in the
+export. It preserves Testkit imports and calls only the existing pressure and
+held-upgrade subjects. For this mode the outer launcher owns server process/TTL
+and logs; the driver requires its endpoint, creates one instance and explicitly
+closes it. The runner checks missing-endpoint refusal and independently observes
+one deleted instance before the outer server stops. This removes reliance on
+waiting for an implicitly spawned server to expire while holding an output pipe.
+It does not strengthen upstream panic/cancellation cleanup or bound HTTP inventory
+allocation. Other driver modes retain their original source semantics.
 
-Linux evidence on 2026-11-15: snapshot HEAD
-`0e5e09ed24e88d6d62a6d2dc923afbb53dc8619e`, source tar SHA-256
-`87a57d0902d16180c5fb358485953130ac96f08519087be2f20f20924779f146`,
-export `target/scheduling-consumer.APxGwn5w`. All three live subjects and inventory
-checks passed (`target/jobs-snapshot-live.log`). Harness all-target Clippy with
-warnings denied passed (`target/jobs-session-clippy.log`); the same source and
-patch were used. The first sandbox run built/captured Wasm but could not bind
-loopback; only the live step was repeated with loopback permission. Product APIs,
-frozen siblings and production Scheduling were not modified.
+Linux evidence on 2026-11-15: the same source HEAD/tar hash as initial admission,
+export `target/scheduling-new.KVxhWPge`. Both subjects pass
+(`target/scheduling-held-final.log`), covering eight held flights, reverse release,
+queued cancellation/rearm and live-reply upgrade refusal followed by settlement.
+The endpoint refusal, deleted-instance observation and before/after server/launcher
+hash checks pass. Focused driver Clippy passes
+(`target/scheduling-held-final-clippy.log`). All runtime checks use released
+Testkit 0.106.0; no replacement Testkit acceptance, supplier-wide failure coverage,
+performance result or sibling modification is claimed.
+
+Next: implement the small shared owner and its independent failure cases, then
+run this same consumer selection against the replacement. Do not copy the old
+fixture or test tree wholesale, or expand into the full installed roster.

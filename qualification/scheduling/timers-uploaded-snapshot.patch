@@ -1,0 +1,51 @@
+--- a/qualification/ic-timers-pocketic/tests/runtime/tests/lifecycle.rs
++++ b/qualification/ic-timers-pocketic/tests/runtime/tests/lifecycle.rs
+@@ -413,6 +413,30 @@
+         .take_canister_snapshot(canister_id, None, None)
+         .await
+         .expect("capture native timer snapshot");
++    // The local server shares this private diagnostics directory. Uploading the
++    // downloaded metadata preserves the system timer together with the heap.
++    let diagnostics = PathBuf::from(env::var_os("IC_TIMERS_DIAGNOSTICS").unwrap());
++    let directory = ic_host_fs::directory::create_unique_directory(
++        &diagnostics,
++        "timer-snapshot",
++        0o700,
++        std::num::NonZeroUsize::new(128),
++    )
++    .unwrap();
++    pic.canister_snapshot_download(
++        canister_id,
++        Principal::anonymous(),
++        baseline.id.clone(),
++        directory.clone(),
++    )
++    .await;
++    let uploaded = pic
++        .canister_snapshot_upload(canister_id, Principal::anonymous(), None, directory.clone())
++        .await;
++    pic.delete_canister_snapshot(canister_id, None, baseline.id)
++        .await
++        .expect("delete the native source snapshot");
++    fs::remove_dir_all(&directory).expect("remove local snapshot transfer files");
+ 
+     // First exercise the complete unchanged-restore/callback control; then
+     // repeat after mutation, without replacing this baseline or its instance.
+@@ -435,7 +459,7 @@
+             assert!(now_ns(pic).await < baseline_deadline);
+             pic.stop_canister(canister_id, None).await.unwrap();
+         }
+-        pic.load_canister_snapshot(canister_id, None, baseline.id.clone())
++        pic.load_canister_snapshot(canister_id, None, uploaded.clone())
+             .await
+             .unwrap();
+         pic.start_canister(canister_id, None).await.unwrap();
+@@ -469,5 +493,8 @@
+         assert_eq!(snapshot(pic, canister_id).await.completed_work, 1);
+     }
+ 
++    pic.delete_canister_snapshot(canister_id, None, uploaded)
++        .await
++        .expect("delete the uploaded baseline");
+     owned.drop().await;
+ }

@@ -32,6 +32,49 @@ remains tied to its recorded inputs.
 
 ### 🧪 Testing
 
+- Add a focused Scheduling rewrite held-reply selection using retained Testkit:
+  pressure/reverse release and held-upgrade refusal/settlement pass. The outer
+  launcher owns server teardown; endpoint refusal and independent instance deletion
+  are checked. Define the bounded shared Testkit contract and remaining failure
+  gates without importing a replacement implementation.
+
+- Correct active Scheduling source to `ic-scheduling-new`; admit retained Testkit
+  types and held-reply fixtures and check its actual host drivers. Retire active
+  old-Scheduling Jobs/Timers commands. The older Scheduling experiments recorded
+  below are historical only and do not qualify the rewrite or justify removing
+  Testkit. Preserve current-source requirements before new shared API design.
+
+- Remove the Timers Testkit library dependency in the current qualification patch.
+  Direct PocketIC creation/deletion, funding/install and caller-budgeted ticks
+  preserve the uploaded-snapshot fix. Four focused subjects pass with five deleted
+  instances; the native-snapshot negative control still reproduces its timer trap.
+  Retained external-lock tuples are unchanged; no public simulator API is added.
+
+- Fix local Timers snapshot restoration through PocketIC download/upload, preserving
+  timer metadata with the heap. Unchanged and repeated mutated restores pass without
+  timer resets or instance replacement; transfer files and both snapshot IDs are
+  removed on success. Retain the plain take/load negative control and shared-local-
+  filesystem boundary, without importing a generic snapshot implementation.
+
+- Retain a focused negative Timers snapshot probe: native take/load snapshots trap
+  on the first mutated timer rearm despite matching heap observations. Preserve the
+  passing uploaded-snapshot adapter and record the remote-transport obligation;
+  no Testkit snapshot implementation is imported into product crates.
+
+- Add a focused Timers borrowed-server selection. Remove per-subject server/log
+  setup in the qualification patch, retain explicit instance ownership, and verify
+  watchdog/ingress/cached restores, missing-endpoint refusal and three deleted
+  instances while the outer server remains reachable.
+
+- Combine current Canic Build 0.87.3 and Text 0.77.2 in one app-workflow graph;
+  qualify app partial effects and thirteen fleet/placements display cases. Refresh
+  new display callers using the existing Text API and retain external selections.
+
+- Verify Canic compilation failure preserves symlink/hardlink/dangling entries
+  and foreign bytes; later success replaces each entry with exact built bytes
+  without creating a missing referent. Publication remains owned
+  by the consumer and its retained Host FS supplier.
+
 - Qualify current Canic with Build 0.87.3: missing/unavailable prepared tools and
   compiler wrappers refuse before compilation, preserve output, and leave scratch
   empty. Controlled wrappers are never executed; no new tool-install policy is added.

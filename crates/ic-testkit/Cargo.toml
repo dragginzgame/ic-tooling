@@ -1,0 +1,30 @@
+[package]
+name = "ic-testkit"
+version = "0.107.0"
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[target.'cfg(any())'.dev-dependencies]
+toko-tooling.workspace = true
+
+[features]
+default = []
+held-reply-fixtures = ["dep:thiserror", "dep:ic-platform", "dep:ic-platform-types", "dep:wat"]
+
+[dependencies]
+ic-platform = { workspace = true, optional = true, features = ["management-canister-types"] }
+ic-platform-types = { workspace = true, optional = true }
+pocket-ic.workspace = true
+thiserror = { workspace = true, optional = true }
+wat = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "net", "time"] }
+wasmparser.workspace = true
+
+[lints]
+workspace = true

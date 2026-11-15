@@ -55,6 +55,16 @@
       ],
       "changelog": "releases/tools/CHANGELOG.md",
       "dependencies": []
+    },
+    {
+      "name": "testkit",
+      "primary": "ic-testkit",
+      "version": "package",
+      "members": [
+        "ic-testkit"
+      ],
+      "changelog": "releases/testkit/CHANGELOG.md",
+      "dependencies": []
     }
   ]
 }

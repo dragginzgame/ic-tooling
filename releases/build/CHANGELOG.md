@@ -28,6 +28,15 @@ remains tied to its recorded inputs.
 
 ### 🧪 Testing
 
+- Combine current Canic Build 0.87.3 and Text 0.77.2 in one app-workflow graph;
+  qualify app partial effects and thirteen fleet/placements display cases. Refresh
+  new display callers using the existing Text API and retain external selections.
+
+- Verify Canic compilation failure preserves symlink/hardlink/dangling entries
+  and foreign bytes; later success replaces each entry with exact built bytes
+  without creating a missing referent. Publication remains owned
+  by the consumer and its retained Host FS supplier.
+
 - Qualify current Canic with Build 0.87.3: missing/unavailable prepared tools and
   compiler wrappers refuse before compilation, preserve output, and leave scratch
   empty. Controlled wrappers are never executed; no new tool-install policy is added.

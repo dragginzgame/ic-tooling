@@ -1,0 +1,739 @@
+--- a/qualification/Cargo.toml
++++ b/qualification/Cargo.toml
+@@ -36,7 +36,6 @@
+ ic-host-process = { version = "0.79.0", default-features = false }
+ ic-platform-types = { version = "0.20.1", default-features = false }
+ ic-storage = "0.74.0"
+-ic-testkit = "0.106.0"
+ pocket-ic = "=16.1.0"
+ ic-wire = "0.22.0"
+ serde_json = "1.0"
+--- a/qualification/Cargo.lock
++++ b/qualification/Cargo.lock
+@@ -190,7 +190,7 @@
+  "hex",
+  "ic_principal",
+  "leb128",
+- "num-bigint 0.4.8",
++ "num-bigint",
+  "num-traits",
+  "paste",
+  "pretty",
+@@ -821,7 +821,6 @@
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "80c115b14974a670676e62940473886a1b2b289ee1ca1258aae89534f1fddb22"
+ dependencies = [
+- "flate2",
+  "sha2 0.11.1",
+ ]
+ 
+@@ -925,18 +924,6 @@
+ checksum = "e169441b0ee18cfe2825c18474a90ababa65059096c75ce5b732ce1924862b52"
+ 
+ [[package]]
+-name = "ic-platform"
+-version = "0.33.6"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "24586654cc055365afd1c4bfb8dcd8f26f389bedba5cbee3dc722d99fce4a00a"
+-dependencies = [
+- "ic-platform-types",
+- "num-bigint 0.5.1",
+- "serde",
+- "serde_bytes",
+-]
+-
+-[[package]]
+ name = "ic-platform-macros"
+ version = "0.22.5"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -995,24 +982,6 @@
+ ]
+ 
+ [[package]]
+-name = "ic-testkit"
+-version = "0.106.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "090cea21af2208dad7a359e99fe803b356fe8daa27cdc52d545df7de3b32c43e"
+-dependencies = [
+- "ic-host-artifacts 0.79.0",
+- "ic-host-fs 0.79.0",
+- "ic-host-process",
+- "ic-platform",
+- "ic-platform-types",
+- "libc",
+- "pocket-ic",
+- "thiserror 2.0.18",
+- "tokio",
+- "url",
+-]
+-
+-[[package]]
+ name = "ic-timers"
+ version = "0.44.3"
+ dependencies = [
+@@ -1034,9 +1003,9 @@
+  "ic-host-process",
+  "ic-jobs-canister-tests",
+  "ic-platform-types",
+- "ic-testkit",
+  "ic-timers-test-protocol",
+  "ic-wire",
++ "pocket-ic",
+  "serde",
+  "serde_json",
+  "tokio",
+@@ -1440,17 +1409,6 @@
+ dependencies = [
+  "num-integer",
+  "num-traits",
+- "serde",
+-]
+-
+-[[package]]
+-name = "num-bigint"
+-version = "0.5.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "93e7820bc0a80a0238e650327316f929ba18d5be054b647490a3a6a339f3e7c0"
+-dependencies = [
+- "num-integer",
+- "num-traits",
+  "serde",
+ ]
+ 
+--- a/qualification/ic-timers-pocketic/Cargo.toml
++++ b/qualification/ic-timers-pocketic/Cargo.toml
+@@ -34,10 +34,10 @@
+ ic-host-fs = { workspace = true, features = ["test-support"] }
+ ic-jobs-canister-tests = { workspace = true, features = ["harness"] }
+ ic-platform-types.workspace = true
+-ic-testkit.workspace = true
++pocket-ic.workspace = true
+ ic-timers-test-protocol.workspace = true
+ ic-wire.workspace = true
+-tokio = { workspace = true, features = ["macros", "rt"] }
++tokio = { workspace = true, features = ["macros", "rt", "time"] }
+ toko-tooling.workspace = true
+ 
+ [lints]
+--- a/qualification/ic-timers-pocketic/tests/runtime/cohorts.rs
++++ b/qualification/ic-timers-pocketic/tests/runtime/cohorts.rs
+@@ -1,10 +1,10 @@
+ use super::harness::{advance, fresh_pocket_ic, install_probe, update_unit};
+ use super::harness::{query_observation, update_wire};
+-use ic_testkit::pocket_ic::{CanisterId as Principal, nonblocking::PocketIc};
+ use ic_timers_pocketic::{BuildContext, Cohort};
+ use ic_timers_pocketic::{CalibrationMetrics, Measurements, PolicyMetrics};
+ use ic_timers_test_protocol::rpc::Method;
+ use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
++use pocket_ic::{CanisterId as Principal, nonblocking::PocketIc};
+ use std::{env, fs, path::PathBuf, time::Duration};
+ 
+ #[tokio::test]
+@@ -32,7 +32,7 @@
+ 
+ async fn run_cohort(cohort: Cohort) -> PolicyMetrics {
+     let owned = fresh_pocket_ic().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     let wasm = cohort_wasm(cohort);
+     let wasm_bytes = wasm.len();
+     let canister_id = install_probe(pic, wasm).await;
+@@ -154,13 +154,13 @@
+         dispatch_cycles,
+         wasm_bytes: wasm_bytes as u128,
+     };
+-    owned.close().await;
++    owned.drop().await;
+     metrics
+ }
+ 
+ async fn run_watchdog_calibration(representative_work: bool) -> CalibrationMetrics {
+     let owned = fresh_pocket_ic().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister_id = install_probe(pic, cohort_wasm(Cohort::Watchdog)).await;
+     if representative_work {
+         update_unit(pic, canister_id, Method::UseRepresentativeWatchdogWork).await;
+@@ -183,7 +183,7 @@
+         work_instructions: completed.work_instruction_total,
+         dispatch_cycles,
+     };
+-    owned.close().await;
++    owned.drop().await;
+     metrics
+ }
+ 
+--- a/qualification/ic-timers-pocketic/tests/runtime/harness/mod.rs
++++ b/qualification/ic-timers-pocketic/tests/runtime/harness/mod.rs
+@@ -1,91 +1,66 @@
+-//! Fresh, caller-owned testkit servers and IC instances from the verified binary.
++//! Fresh IC instances borrowing an explicitly supplied external server.
+ 
+ use ic_jobs_canister_tests::wire::{WireCallError, WireCallSpec};
+ 
+-use ic_testkit::pic::{InstallSpec, PocketIcInstance, PocketIcStartupConfig, tick_until};
+-use ic_testkit::pocket_ic::{CanisterId as Principal, PocketIcBuilder, nonblocking::PocketIc};
+ use ic_timers_test_protocol::rpc::{Method, REQUEST_LIMITS, RESPONSE_LIMITS};
++use pocket_ic::{CanisterId as Principal, PocketIcBuilder, nonblocking::PocketIc};
+ use serde::{Serialize, de::DeserializeOwned};
+-use std::{convert::Infallible, env, fmt::Debug, path::PathBuf, task::Poll, time::Duration};
++use std::{env, fmt::Debug, time::Duration};
+ 
+ const STARTUP_TIMEOUT: Duration = Duration::from_secs(60);
+ const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
+ pub const INIT_CYCLES: u128 = 2_000_000_000_000;
+ 
+-/// Preserve tick-before-observation boundaries while Testkit owns bounded progress.
++/// Preserve exactly one tick before each observation within the caller round budget.
+ pub async fn wait_for_probe<T: Debug>(
+     pic: &PocketIc,
+     rounds: u32,
+     mut observe: impl AsyncFnMut(&PocketIc) -> T,
+     ready: impl Fn(&T) -> bool,
+ ) -> T {
+-    let remaining = rounds.checked_sub(1).expect("positive probe round budget");
++    assert!(rounds > 0, "positive probe round budget");
+     let mut last = None;
+-    pic.tick().await;
+-    tick_until(pic, remaining, Duration::ZERO, async |pic| {
++    for _ in 0..rounds {
++        pic.tick().await;
+         let observation = observe(pic).await;
+         if ready(&observation) {
+-            Poll::Ready(Ok::<_, Infallible>(observation))
+-        } else {
+-            last = Some(observation);
+-            Poll::Pending
++            return observation;
+         }
+-    })
+-    .await
+-    .unwrap_or_else(|error| panic!("{error}; last probe observation: {last:?}"))
++        last = Some(observation);
++    }
++    panic!("probe round budget exhausted; last probe observation: {last:?}");
+ }
+ 
+ /// Install one probe with the fixtures' explicit funding and empty init payload.
+ pub async fn install_probe(pic: &PocketIc, wasm: Vec<u8>) -> Principal {
+-    ic_testkit::pic::create_and_install(
+-        pic,
+-        InstallSpec {
+-            wasm,
+-            init_bytes: Vec::new(),
+-            cycles: INIT_CYCLES,
+-            install_sender: None,
+-        },
+-    )
+-    .await
++    let canister = pic.create_canister().await;
++    pic.add_cycles(canister, INIT_CYCLES).await;
++    pic.install_canister(canister, wasm, Vec::new(), None).await;
++    canister
+ }
+ 
+-/// The caller awaits explicit instance deletion before the managed server stops.
+-/// Startup has its own deadline. A five-minute hard TTL also covers each server
+-/// while the driver bounds the worker, including asynchronous instance deletion.
+-pub async fn fresh_pocket_ic() -> PocketIcInstance {
+-    let binary = env::var_os("POCKET_IC_BIN")
+-        .filter(|path| !path.is_empty())
+-        .map(PathBuf::from)
+-        .expect("run the Testkit pocketic-check gate and supply its admitted POCKET_IC_BIN");
+-    let diagnostics = env::var_os("IC_TIMERS_DIAGNOSTICS")
+-        .map(PathBuf::from)
+-        .expect("qualification diagnostics directory");
+-    let logs = ic_host_fs::directory::create_unique_directory(
+-        &diagnostics,
+-        "pocketic",
+-        0o700,
+-        std::num::NonZeroUsize::new(128),
+-    )
+-    .expect("allocate per-instance server logs");
+-    PocketIcStartupConfig::Spawn {
+-        server_binary: binary,
+-        timeout: STARTUP_TIMEOUT,
+-        server_hard_ttl: Some(Duration::from_secs(5 * 60)),
+-        server_idle_ttl: None,
+-        server_output_files: Some((logs.join("stdout.log"), logs.join("stderr.log"))),
+-    }
+-    .build_instance(
++/// The caller deletes its instance; the outer command retains server lifetime.
++/// Missing endpoints refuse without starting a server or allocating server logs.
++pub async fn fresh_pocket_ic() -> PocketIc {
++    let server_url = env::var("IC_TESTKIT_POCKET_IC_URL")
++        .ok()
++        .filter(|url| !url.is_empty())
++        .expect("external server owner must supply IC_TESTKIT_POCKET_IC_URL");
++    tokio::time::timeout(
++        STARTUP_TIMEOUT,
+         PocketIcBuilder::new()
++            .with_server_url(server_url.parse().expect("valid external server URL"))
+             .with_max_request_time_ms(Some(REQUEST_TIMEOUT.as_millis().try_into().unwrap()))
+-            .with_application_subnet(),
++            .with_application_subnet()
++            .build_async(),
+     )
+     .await
+-    .expect("construct a fresh owned PocketIC instance through ic-testkit")
++    .expect("external instance creation deadline")
+ }
+ 
+-/// Await upstream best-effort deletion while the managed server is alive.
+-pub async fn close_instance(owned: PocketIcInstance) {
+-    owned.close().await;
++/// Await upstream best-effort deletion while the external server is alive.
++pub async fn close_instance(owned: PocketIc) {
++    owned.drop().await;
+ }
+ 
+ /// Invoke an anonymous update with no arguments or return values.
+@@ -165,7 +140,12 @@
+ 
+ /// Advance the selected duration and rounds at the caller's observation boundary.
+ pub async fn advance(pic: &PocketIc, duration: Duration, rounds: u32) {
+-    ic_testkit::pic::advance_and_tick(pic, duration, rounds).await;
++    if !duration.is_zero() {
++        pic.advance_time(duration).await;
++    }
++    for _ in 0..rounds {
++        pic.tick().await;
++    }
+ }
+ 
+ /// Read the IC clock afresh at the caller's observation boundary.
+--- a/qualification/ic-timers-pocketic/tests/runtime/tests/ingress.rs
++++ b/qualification/ic-timers-pocketic/tests/runtime/tests/ingress.rs
+@@ -5,7 +5,7 @@
+ #[tokio::test]
+ async fn competing_global_timer_writes_trap_and_roll_back_timer_control() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     let caller = Principal::anonymous();
+     let now = now_ns(pic).await;
+     let foreign = now + 100_000_000_000;
+@@ -98,7 +98,7 @@
+ #[tokio::test]
+ async fn host_inspection_refuses_timer_ingress_but_foreign_calls_still_authenticate() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     let relay_id = install_probe(pic, probe_wasm()).await;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+     let before = snapshot(pic, canister_id).await;
+@@ -180,7 +180,7 @@
+     use ic_timers_test_protocol::rpc::{REQUEST_LIMITS, RESPONSE_LIMITS};
+     use ic_wire::native::{decode_request, decode_response, encode_request, encode_response};
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     let id = Method::StartOrdinary as u64;
+     let valid = encode_request(
+         id,
+@@ -335,7 +335,7 @@
+ #[tokio::test]
+ async fn backend_rejects_malformed_self_calls_and_ignores_unknown_deliveries() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+     let before = snapshot(pic, canister_id).await;
+     for payload in [vec![], vec![0_u8; 7], vec![0_u8; 9]] {
+--- a/qualification/ic-timers-pocketic/tests/runtime/tests/lifecycle.rs
++++ b/qualification/ic-timers-pocketic/tests/runtime/tests/lifecycle.rs
+@@ -8,7 +8,7 @@
+ async fn runtime_composition_preserves_calls_cleanup_and_lifecycle() {
+     for prepared in [false, true] {
+         let (owned, canister_id) = installed_probe().await;
+-        let pic = owned.instance();
++        let pic = &owned;
+         assert!(update_bool(pic, canister_id, Method::ReinitializeRuntime).await);
+         update_wire::<(), _>(
+             pic,
+@@ -145,7 +145,7 @@
+ #[tokio::test]
+ async fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     let before = churn_observation(pic, canister_id).await;
+     update_wire::<(), _>(
+         pic,
+@@ -197,7 +197,7 @@
+ async fn armed_callback_removal_releases_captures_with_registry_access() {
+     for policy in ProbePolicy::ALL {
+         let (owned, canister_id) = installed_probe().await;
+-        let pic = owned.instance();
++        let pic = &owned;
+         update_wire::<(), _>(
+             pic,
+             canister_id,
+@@ -225,7 +225,7 @@
+ #[tokio::test]
+ async fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     for policy in ProbePolicy::ALL {
+         for lifetime in ProbeLifetime::ALL {
+             let result: (bool, u64, bool) = update_wire(
+@@ -252,7 +252,7 @@
+ #[tokio::test]
+ async fn rejected_initial_reconciliation_preserves_ic_inventory_and_releases_captures() {
+     let owned = fresh_pocket_ic().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     // A positive time makes now + u64::MAX overflow; never move IC time backwards.
+     pic.advance_time(Duration::from_secs(1)).await;
+     let canister_id = install_probe(pic, probe_wasm()).await;
+@@ -316,7 +316,7 @@
+ #[tokio::test]
+ async fn shared_watchdog_survives_instruction_exhaustion() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::StartVolatilePair).await);
+     let exhaust_at = update_u64(pic, canister_id, Method::ArmExhaustion).await;
+     assert_pair_fault_recovers(pic, canister_id, exhaust_at, true).await;
+@@ -327,7 +327,7 @@
+ #[tokio::test]
+ async fn shared_watchdog_survives_trap_and_upgrade() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::StartVolatilePair).await);
+     assert!(!update_bool(pic, canister_id, Method::StartVolatilePair).await);
+     let before_external = snapshot(pic, canister_id).await;
+@@ -370,7 +370,7 @@
+ #[tokio::test]
+ async fn overdue_shared_timers_coalesce_to_bounded_work() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::StartVolatilePair).await);
+     advance(pic, Duration::from_secs(300), 2).await;
+     let overdue = snapshot(pic, canister_id).await;
+@@ -391,10 +391,8 @@
+ 
+ #[tokio::test]
+ async fn cached_baseline_restoration_preserves_timer_ownership_after_mutation() {
+-    use ic_testkit::pic::{CachedPocketIcBaseline, CanisterSnapshotTarget, SnapshotRestoreFunding};
+-
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     let instance_id = pic.instance_id;
+     let baseline_deadline = now_ns(pic).await + 600_000_000_000;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+@@ -411,17 +409,10 @@
+     assert_eq!(captured.next_deadline_ns, Some(baseline_deadline));
+     assert_eq!(captured.completed_work, 0);
+     pic.stop_canister(canister_id, None).await.unwrap();
+-    let baseline = CachedPocketIcBaseline::capture(
+-        owned,
+-        [CanisterSnapshotTarget {
+-            canister_id,
+-            sender: None,
+-        }],
+-        captured,
+-    )
+-    .await
+-    .expect("capture the stopped timer baseline");
+-    let pic = baseline.pocket_ic();
++    let baseline = pic
++        .take_canister_snapshot(canister_id, None, None)
++        .await
++        .expect("capture native timer snapshot");
+ 
+     // First exercise the complete unchanged-restore/callback control; then
+     // repeat after mutation, without replacing this baseline or its instance.
+@@ -444,13 +435,12 @@
+             assert!(now_ns(pic).await < baseline_deadline);
+             pic.stop_canister(canister_id, None).await.unwrap();
+         }
+-        baseline
+-            .restore(SnapshotRestoreFunding::Preserve)
++        pic.load_canister_snapshot(canister_id, None, baseline.id.clone())
+             .await
+             .unwrap();
+         pic.start_canister(canister_id, None).await.unwrap();
+         assert_eq!(pic.instance_id, instance_id, "reuse the same IC instance");
+-        assert_eq!(baseline.metadata(), &snapshot(pic, canister_id).await);
++        assert_eq!(&captured, &snapshot(pic, canister_id).await);
+ 
+         // A real rearm checks restored heap authority against the system timer.
+         // Do not reset the timer or rebuild the instance before this operation.
+@@ -469,10 +459,7 @@
+         set_work_decision(pic, canister_id, WorkDecision::Stop).await;
+         advance(pic, Duration::from_secs(1), 16).await;
+         let completed = snapshot(pic, canister_id).await;
+-        assert_eq!(
+-            completed.registration_id,
+-            baseline.metadata().registration_id
+-        );
++        assert_eq!(completed.registration_id, captured.registration_id);
+         assert_eq!(completed.completed_work, 1);
+         assert_eq!(completed.scheduler_started.total, 1);
+         assert_eq!(completed.work_completed.total, 1);
+@@ -482,5 +469,5 @@
+         assert_eq!(snapshot(pic, canister_id).await.completed_work, 1);
+     }
+ 
+-    baseline.close().await;
++    owned.drop().await;
+ }
+--- a/qualification/ic-timers-pocketic/tests/runtime/tests/mod.rs
++++ b/qualification/ic-timers-pocketic/tests/runtime/tests/mod.rs
+@@ -5,10 +5,6 @@
+     wait_for_probe,
+ };
+ use super::harness::{query_observation, query_wire, update_wire};
+-use ic_testkit::pic::PocketIcInstance;
+-use ic_testkit::pocket_ic::{
+-    CanisterId as Principal, CanisterSettings, ErrorCode, RejectCode, nonblocking::PocketIc,
+-};
+ use ic_timers_test_protocol::rpc::{
+     Method, OrdinaryPolicy, ProbeLifetime, ProbePolicy, SchedulerReconcileMode, WorkDecision,
+ };
+@@ -16,6 +12,9 @@
+     ChurnObservation, DispatchBatchObservation, OrdinaryObservation, OrdinaryTermination,
+     ProbeMemorySummary, ProbeSnapshot,
+ };
++use pocket_ic::{
++    CanisterId as Principal, CanisterSettings, ErrorCode, RejectCode, nonblocking::PocketIc,
++};
+ use std::{env, fs, path::PathBuf, time::Duration};
+ 
+ const TIMER_EXECUTOR_METHOD: &str = "<ic-timers internal> dispatch";
+@@ -26,11 +25,11 @@
+ mod scheduling;
+ mod watchdog;
+ 
+-// Each invocation owns a fresh server, IC instance and funded canister.
++// Each invocation owns an IC instance and funded canister on the external server.
+ // Returning the owner keeps it alive until the caller finishes its assertions.
+-async fn installed_probe() -> (PocketIcInstance, Principal) {
++async fn installed_probe() -> (PocketIc, Principal) {
+     let owned = fresh_pocket_ic().await;
+-    let canister_id = install_probe(owned.instance(), probe_wasm()).await;
++    let canister_id = install_probe(&owned, probe_wasm()).await;
+     (owned, canister_id)
+ }
+ 
+--- a/qualification/ic-timers-pocketic/tests/runtime/tests/ordinary.rs
++++ b/qualification/ic-timers-pocketic/tests/runtime/tests/ordinary.rs
+@@ -37,7 +37,7 @@
+ 
+ async fn assert_frozen_await_failure_retires(policy: OrdinaryPolicy) {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     let started_at = now_ns(pic).await;
+     let budget = freezing_budget(pic, canister_id).await;
+     start_ordinary(pic, canister_id, policy, ProbeLifetime::Retained).await;
+@@ -181,7 +181,7 @@
+ async fn absent_ordinary_demand_is_idle_and_explicit_cancellation_stays_distinct() {
+     for policy in OrdinaryPolicy::ALL {
+         let (owned, canister_id) = installed_probe().await;
+-        let pic = owned.instance();
++        let pic = &owned;
+         start_ordinary(pic, canister_id, policy, ProbeLifetime::Retained).await;
+         let running = wait_for_probe(
+             pic,
+@@ -275,7 +275,7 @@
+                 continue;
+             }
+             let (owned, canister_id) = installed_probe().await;
+-            let pic = owned.instance();
++            let pic = &owned;
+             let lifetime = if command == OrdinaryCommand::Cancel {
+                 ProbeLifetime::RemoveWhenStopped
+             } else {
+@@ -344,9 +344,9 @@
+     policy: OrdinaryPolicy,
+     lifetime: ProbeLifetime,
+     before_await: bool,
+-) -> (PocketIcInstance, Principal) {
++) -> (PocketIc, Principal) {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     update_wire::<(), _>(
+         pic,
+         canister_id,
+@@ -385,7 +385,7 @@
+ async fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
+     for policy in OrdinaryPolicy::ALL {
+         let (owned, canister_id) = installed_probe().await;
+-        let pic = owned.instance();
++        let pic = &owned;
+         update_wire::<(), _>(
+             pic,
+             canister_id,
+@@ -440,7 +440,7 @@
+     for policy in OrdinaryPolicy::ALL {
+         for lifetime in ProbeLifetime::ALL {
+             let (owned, canister_id) = trapping_ordinary_probe(policy, lifetime, true).await;
+-            let pic = owned.instance();
++            let pic = &owned;
+             advance(pic, Duration::ZERO, 32).await;
+             let observed = ordinary_observation(pic, canister_id).await;
+             assert_ordinary_abandonment(&observed, lifetime == ProbeLifetime::RemoveWhenStopped);
+@@ -469,7 +469,7 @@
+         for lifetime in ProbeLifetime::ALL {
+             for command in OrdinaryCommand::ALL {
+                 let (owned, canister_id) = trapping_ordinary_probe(policy, lifetime, false).await;
+-                let pic = owned.instance();
++                let pic = &owned;
+                 wait_for_probe(
+                     pic,
+                     32,
+@@ -524,7 +524,7 @@
+ #[tokio::test]
+ async fn accepted_ordinary_work_survives_dispatch_timeout_without_replay() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     start_ordinary(
+         pic,
+         canister_id,
+--- a/qualification/ic-timers-pocketic/tests/runtime/tests/scheduling.rs
++++ b/qualification/ic-timers-pocketic/tests/runtime/tests/scheduling.rs
+@@ -5,7 +5,7 @@
+ #[tokio::test]
+ async fn self_call_queue_pressure_defers_timer_submission_without_losing_work() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     update_unit(pic, canister_id, Method::PressureAndStart).await;
+     advance(pic, Duration::ZERO, 8).await;
+     let (failed, replies): (u64, u64) =
+@@ -32,7 +32,7 @@
+ async fn deferred_submission_cancellation_and_replacement_do_not_revive_old_work() {
+     for replace in [false, true] {
+         let (owned, canister_id) = installed_probe().await;
+-        let pic = owned.instance();
++        let pic = &owned;
+         update_unit(pic, canister_id, Method::PressureAndStart).await;
+         advance(pic, Duration::ZERO, 8).await;
+         let original = snapshot(pic, canister_id).await;
+@@ -96,7 +96,7 @@
+ #[tokio::test]
+ async fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+ 
+     assert!(update_bool(pic, canister_id, Method::StartImmediately).await);
+     let initial = snapshot(pic, canister_id).await;
+@@ -122,7 +122,7 @@
+ #[tokio::test]
+ async fn successful_immediate_continuation_runs_again_without_waiting_for_cadence() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+     set_work_decision(pic, canister_id, WorkDecision::ContinueImmediately).await;
+ 
+@@ -176,7 +176,7 @@
+ #[tokio::test]
+ async fn commit_window_ensure_stop_resume_and_large_overdue_time_remain_bounded() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+ 
+     update_unit(pic, canister_id, Method::Stop).await;
+@@ -222,7 +222,7 @@
+ #[tokio::test]
+ async fn full_inventory_is_bounded_deterministic_and_measured() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+     update_unit(pic, canister_id, Method::Stop).await;
+     assert_eq!(
+@@ -247,7 +247,7 @@
+ #[tokio::test]
+ async fn cancellation_between_scheduler_and_work_makes_late_provider_delivery_harmless() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+     pic.advance_time(Duration::from_secs(1)).await;
+ 
+@@ -275,7 +275,7 @@
+ #[tokio::test]
+ async fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+     let initial = snapshot(pic, canister_id).await;
+     let first_deadline = initial.next_deadline_ns.expect("scheduled");
+@@ -339,7 +339,7 @@
+ #[tokio::test]
+ async fn maximum_capacity_dispatch_preserves_every_survivor_under_pressure_and_await() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     update_unit(pic, canister_id, Method::StartDispatchBatch).await;
+     advance(pic, Duration::ZERO, 8).await;
+     let (failures, replies): (u64, u64) =
+@@ -434,7 +434,7 @@
+ async fn deadline_trace_covers_nested_registration_and_self_cancellation() {
+     for overdue in [false, true] {
+         let (owned, canister_id) = installed_probe().await;
+-        let pic = owned.instance();
++        let pic = &owned;
+         update_unit(pic, canister_id, Method::StartSchedulingTrace).await;
+         advance(pic, Duration::ZERO, 8).await;
+         assert!(scheduling_trace(pic, canister_id).await.is_empty());
+--- a/qualification/ic-timers-pocketic/tests/runtime/tests/watchdog.rs
++++ b/qualification/ic-timers-pocketic/tests/runtime/tests/watchdog.rs
+@@ -5,7 +5,7 @@
+ #[tokio::test]
+ async fn trapped_work_keeps_committed_successor_and_executor_is_private() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+ 
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+     assert!(!update_bool(pic, canister_id, Method::Start).await);
+@@ -131,7 +131,7 @@
+ #[tokio::test]
+ async fn instruction_exhaustion_leaves_successor_for_later_progress() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+ 
+     let exhaust_at = update_u64(pic, canister_id, Method::ArmExhaustion).await;
+@@ -158,7 +158,7 @@
+     for successor in [false, true] {
+         for mode in SchedulerReconcileMode::ALL {
+             let (owned, canister_id) = installed_probe().await;
+-            let pic = owned.instance();
++            let pic = &owned;
+             if successor {
+                 assert!(update_bool(pic, canister_id, Method::Start).await);
+                 pic.advance_time(Duration::from_secs(1)).await;
+@@ -265,7 +265,7 @@
+ #[tokio::test]
+ async fn insufficient_cycles_defer_due_work_until_top_up() {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+     let (_burned, call_cost): (u128, u128) = update_wire(
+         pic,
+@@ -306,7 +306,7 @@
+ 
+ async fn assert_frozen_watchdog_resumes_after_top_up(after_scheduler: bool) {
+     let (owned, canister_id) = installed_probe().await;
+-    let pic = owned.instance();
++    let pic = &owned;
+     let budget = freezing_budget(pic, canister_id).await;
+     assert!(update_bool(pic, canister_id, Method::Start).await);
+     let armed = snapshot(pic, canister_id).await;

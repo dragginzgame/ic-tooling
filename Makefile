@@ -9,9 +9,12 @@ help:
 	@printf '%s\n' \
 	  'Development (offline; prepare tools and wasm32-unknown-unknown first):' \
 	  '  make check             Admit Cargo tooling selection and installed snapshot' \
+	  '  make test-testkit-catalog Reply catalog and generated module admission' \
+	  '  make test-testkit-module Installed module test (externally owned server)' \
+	  '  make test-testkit-control Installed controller refusals (externally owned server)' \
 	  '  make test-text         Terminal escaping and Unicode table contracts' \
 	  '  make test-canic-build-metadata Current Canic metadata admission/refusal' \
-	  '  make test-canic-app-build Current Canic app recipes and partial failure' \
+	  '  make test-canic-app-build Combined Canic Build/Text app and display contracts' \
 	  '  make test-canic-build  Current Canic owned Wasm build and publication refusal' \
 	  '  make test-canic-text   Current Canic CLI presentation qualification' \
 	  '  make test-query-text   Current Query presentation and output qualification' \
@@ -19,8 +22,8 @@ help:
 	  '  make test-backup-http  Current Backup HTTP policy and body qualification' \
 	  '  make test-custody      Byte and publication/custody failure acceptance' \
 	  '  make test-backup-custody Local Backup filesystem and metadata custody (loopback required)' \
-	  '  make test-scheduling-consumer Local Scheduling owned build and installed tests' \
-	  '  make test-jobs-snapshots Current Jobs controller recovery and external ownership' \
+	  '  make test-scheduling-held Focused rewrite held-reply baseline (prepared server)' \
+	  '  make test-scheduling-consumer Scheduling rewrite source/graph admission and driver checks' \
 	  '  make test-platform-agent Current Platform Agent ingress and identity boundary' \
 	  '  make test-platform-consumer Current Platform raw_rand installed behavior' \
 	  '  make test-db-text       Current DB installed console with new Text' \
@@ -77,9 +80,6 @@ test-backup-http: toko-tooling-check
 test-db-consumer: toko-tooling-check
 	bash scripts/qualification/db-consumer.sh
 
-.PHONY: test-jobs-snapshots
-test-jobs-snapshots: toko-tooling-check
-	bash scripts/qualification/scheduling-consumer.sh snapshots
 
 .PHONY: test-platform-consumer
 test-platform-consumer: toko-tooling-check
@@ -115,3 +115,21 @@ test-canic-app-build: toko-tooling-check
 .PHONY: test-canic-build-metadata
 test-canic-build-metadata: toko-tooling-check
 	bash scripts/qualification/canic-build.sh metadata
+
+.PHONY: test-scheduling-held
+test-scheduling-held: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh held
+
+.PHONY: test-testkit-catalog
+test-testkit-catalog: toko-tooling-check
+	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline
+
+.PHONY: test-testkit-module
+test-testkit-module: toko-tooling-check
+	@test -n "$${IC_TESTKIT_POCKET_IC_URL:-}" || { echo 'IC_TESTKIT_POCKET_IC_URL must select an externally owned server' >&2; exit 1; }
+	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline held::tests::installed_modules_keep_replies_bound_to_slots_and_reject_failures -- --ignored --exact
+
+.PHONY: test-testkit-control
+test-testkit-control: toko-tooling-check
+	@test -n "$${IC_TESTKIT_POCKET_IC_URL:-}" || { echo 'IC_TESTKIT_POCKET_IC_URL must select an externally owned server' >&2; exit 1; }
+	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline held::control::tests::installed_control_refuses_foreign_consumed_expired_and_automatic_releases -- --ignored --exact

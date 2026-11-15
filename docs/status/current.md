@@ -17,14 +17,16 @@ current requirements must justify further APIs.
 retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
 historical evidence. No old product source/test tree was admitted wholesale.
 
-GitHub checkpoint `aaebfa4db99593c3709a0ee92f71bc691f6ac4b6` is on `origin/main`.
-Post-push review found no new actionable issue in its Canic qualification, Query
-refresh and version wiring. This checkpoint contains Build 0.87.3, Text 0.77.2
-and Tools 0.1.2 drafts plus current Canic tool-admission qualification. Foundation
-and HTTP are unchanged. Version advances alone do not refresh consumer
-runtime evidence, which remains tied to the versions and snapshots recorded below.
-Five [release groups](../release-ownership.md) own their ledgers; root changelog is
-an index. All six packages remain unpublished. Consumer migration, registry
+GitHub checkpoint `1f288290269b7ca063e81f80f508856d9fe3aa00` is on `origin/main`.
+Post-push review found no new actionable issue in version wiring and tool-admission
+qualification. The working tree was clean after delivery. Build 0.87.3, Text 0.77.2
+and Tools 0.1.2 remain unpublished drafts; local follow-up adds output-alias
+qualification and a combined Canic Build/Text app workflow. Scheduling source
+selection is corrected to the rewrite; old Timers experiments are historical.
+Foundation and HTTP are unchanged. Runtime evidence remains tied
+to the versions and snapshots recorded below.
+Six [release groups](../release-ownership.md) own their ledgers; root changelog is
+an index. All seven packages remain unpublished. Consumer migration, registry
 publication and canonical cutover are separate; recheck registry identities first.
 Toko 0.44.3 is pinned in both workspaces; its 48-file snapshot is verified.
 
@@ -48,6 +50,12 @@ Toko 0.44.3 is pinned in both workspaces; its 48-file snapshot is verified.
 - `ic-cargo-qualification` 0.1.2 is an external-lock subset admission executable,
   outside Build's graph. It is not an archive runner or metadata editor.
 
+- `ic-testkit` 0.107.0 starts the [shared Testkit contract](../testkit-held-replies.md):
+  original PocketIC types and an owned update-reply catalog with complete admission.
+  Bounded module generation and exclusive pending/release control pass focused
+  installed tests; consumer replacement qualification remains open. The new
+  dependency selects thiserror 2.0.18; prior external tuples otherwise remain intact.
+
 ## Latest scoped evidence
 
 Source heads, tar hashes, logs and exact commands remain in the linked recipes.
@@ -59,11 +67,16 @@ The next-version changes alone do not refresh earlier runtime evidence.
   passes a real-build control and ten pre-compilation refusals, including workspace
   membership and relative target paths. A newer Canic 0.210.0 snapshot with Build
   0.87.3 also passes six prepared-tool/wrapper refusals without executing wrappers
-  or replacing output. Host/CLI Clippy passes for that snapshot.
+  or replacing output. Host/CLI Clippy passes for that snapshot. A later artifact
+  run preserves symlink/hardlink/dangling outputs on compilation failure, then
+  replaces them on success without mutating foreign bytes or creating missing
+  referents. Exact identity, publication refusal and scratch cleanup pass.
   Earlier independent slices cover artifact default/explicit publication and
   refusal, 19 display tests, and six record-admission/recovery tests. Other Host
   publication, parent creation and lock setup remain unmigrated. Recipes are not
-  implicitly combined; changed sibling contexts can invalidate individual patches.
+  implicitly combined except the app target: a fresh Build 0.87.3/Text 0.77.2
+  graph passes app checks, thirteen fleet/placements tests and Host/CLI Clippy.
+  Changed sibling contexts can invalidate individual patches.
 - [Query](../../qualification/query/README.md): refreshed current source passes
   20 presentation/output tests with Text 0.77.1, including placements partial JSON
   and rejection escaping. CLI/test Clippy and retained external-lock admission pass.
@@ -75,12 +88,15 @@ The next-version changes alone do not refresh earlier runtime evidence.
   PocketIC. Codec rejection/cleanup/cancellation and four identity/certificate
   cases pass, including Principal mismatch refusal and observed instance deletion.
   Other Platform drivers remain unqualified; no new simulator product exists.
-- [Scheduling](../../qualification/scheduling/README.md): owned build, capture,
-  original/optimized installed workflows and three Jobs watchdog/trap/snapshot
-  subjects pass on their recorded inputs. Jobs uses direct PocketIC; Timers still
-  uses Testkit. Controller refusal and exact stable-memory restoration pass.
-  [Recipe identities](../../qualification/scheduling/observations.md) refuse silent
-  legacy/new comparison. PocketIC's thiserror 2.0.18 pin is admitted; root keeps 2.0.21.
+- [Scheduling](../../qualification/scheduling/README.md): active source is now
+  `../ic-scheduling-new`. Its executor/Once drivers require the Testkit client
+  boundary and held-reply fixtures. Do not remove that dependency as a design goal.
+  Old Build/Jobs/Timers migrations and native-snapshot experiments target the old
+  repository and are historical only. The [Testkit contract](../testkit-held-replies.md)
+  is defined. Focused pressure/held-upgrade tests pass with released Testkit, as do
+  endpoint refusal, observed instance deletion and driver Clippy. Replacement
+  controller passes independent identity, expiry, repeated release and progress
+  refusals. The replacement is present but not selected here yet.
 - [Backup](../../qualification/backup/README.md): current-source byte/filesystem
   and HTTP migrations preserve metadata, transfer binding, budgets and evidence.
   The 65 custody/payload cases and 13 HTTP cases have separate recorded runs.
@@ -88,7 +104,9 @@ The next-version changes alone do not refresh earlier runtime evidence.
 - [Auth](../../qualification/auth/README.md): pinned archive/external-lock evidence
   is historical at `e52a40be75dd9809d0528189d84b43fe96952ad9`; do not continue it.
 
-Product evidence: 19 Build tests; two byte tests and Wasm Clippy; ten filesystem
+Product evidence: six Testkit unit tests and two installed fixture/controller
+tests pass, plus default/feature Clippy and docs; see the Testkit contract for scope.
+19 Build tests; two byte tests and Wasm Clippy; ten filesystem
 failure tests; two HTTP body tests; three Text escaping/layout tests. Relevant
 Clippy, Rustdoc, formatting and Toko admission pass as recorded by their slices.
 HTTP/Tokio stay outside Build and portable bytes. No full release gate is claimed.
