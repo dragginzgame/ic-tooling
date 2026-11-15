@@ -1,5 +1,10 @@
 # Current DB external-session qualification
 
+Current recipes select the next unpublished Build 0.87.2 / Text 0.77.1 where
+used. Their patches and locked graphs admit current local sources; historical
+runtime evidence below remains bound to its recorded checkpoint inputs.
+
+
 `make test-db-consumer` snapshots current `DB_SOURCE` (default `../ic-db`), including
 uncommitted source and unignored additions, without modifying the sibling. It
 applies [the migration](external-session.patch) and requires a graph with PocketIC

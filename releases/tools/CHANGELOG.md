@@ -6,7 +6,12 @@ This group starts with the replacement implementation. All entries are pending;
 no replacement package has been published. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
-## [0.1.0] - Unreleased
+## [0.1.1] - Unreleased
+
+Continues the unpublished development line after GitHub checkpoint
+[0352b4e](https://github.com/dragginzgame/ic-tooling-new/commit/0352b4e6fb1996e329e9ebf837ea38e40348e1bf).
+This version advance changes no public behavior; prior qualification evidence
+remains tied to its recorded inputs.
 
 ### ➕ Added
 
@@ -17,12 +22,22 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Advance Build/Text recipe selections for the next development versions. Refresh
+  Query only after its stale patch refuses the changed current source.
+
 - Active consumer runners capture current local sibling working trees, preserve
   edits and refuse capture drift or stale patches. They never modify the sibling.
 - Platform and DB targets select prepared local Scheduling CLI tools by default,
   retaining explicit overrides and offline asset checks.
 
 ### 🧪 Testing
+
+- Qualify Canic metadata admission with a real-build control and ten refusals
+  before compilation, retaining destination bytes and empty scratch. The adapter
+  checks workspace membership and an absolute target directory.
+
+- Add a focused Canic app-build selection, reusing the existing export/build runner
+  without repeating the artifact-command suite.
 
 - Qualify DB rollback with direct upstream PocketIC and explicit external-server
   ownership, preserving raw stable-memory oracles, deletion and server survival.

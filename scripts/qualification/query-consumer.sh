@@ -17,7 +17,7 @@ cd "$scratch/source"
 cargo metadata --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '
   [.packages[] | select(.name == "ic-host-text")] as $text |
-  ($text | length == 1) and $text[0].version == "0.77.0" and
+  ($text | length == 1) and $text[0].version == "0.77.1" and
   $text[0].manifest_path == ($root + "/crates/ic-host-text/Cargo.toml")
 ' "$scratch/metadata.json" >/dev/null
 cargo test -p ic-query-cli --bin icq --locked --offline -- --list > "$scratch/tests.txt"

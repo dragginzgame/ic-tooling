@@ -1,5 +1,10 @@
 # Scheduling owned-build qualification
 
+Current recipes select the next unpublished Build 0.87.2 / Text 0.77.1 where
+used. Their patches and locked graphs admit current local sources; historical
+runtime evidence below remains bound to its recorded checkpoint inputs.
+
+
 `make test-scheduling-consumer` snapshots the current local `SCHEDULING_SOURCE`
 (default `../ic-scheduling`) without modifying it, including local edits and
 non-ignored additions, then applies

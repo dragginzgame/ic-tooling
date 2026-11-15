@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Real current Canic CLI build/publication proof; no deployments or sibling edits.
 set -euo pipefail
+mode="${1:-artifact}"
+case "$mode" in artifact|app|metadata) ;; *) exit 2 ;; esac
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${CANIC_SOURCE:-$repo/../canic}"
 mkdir -p "$repo/target"
@@ -21,7 +23,7 @@ export CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 TMPDIR="$scratch/runtime"
 cargo metadata --manifest-path "$scratch/source/Cargo.toml" --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-host") | .id) as $host |
-  (.packages[] | select(.name == "ic-build" and .version == "0.87.1" and
+  (.packages[] | select(.name == "ic-build" and .version == "0.87.2" and
     .manifest_path == ($root + "/crates/ic-build/Cargo.toml")) | .id) as $build |
   any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_build" and .pkg == $build)
 ' "$scratch/metadata.json" >/dev/null
@@ -29,6 +31,14 @@ CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo build --manifest-path
 cli="$repo/target/canic-consumer-build/debug/canic"
 # Deliberately occupied shared output: the build must capture its private output.
 export CARGO_TARGET_DIR="$scratch/published"
+if [[ "$mode" == metadata ]]; then
+  bash "$repo/scripts/qualification/canic-build-metadata.sh" "$cli" "$scratch"
+  exit 0
+fi
+if [[ "$mode" == app ]]; then
+  bash "$repo/scripts/qualification/canic-app-build.sh" "$cli" "$scratch"
+  exit 0
+fi
 default="$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/owned_wasm_probe.wasm"
 mkdir -p "$(dirname "$default")"
 printf 'stale output' > "$default"

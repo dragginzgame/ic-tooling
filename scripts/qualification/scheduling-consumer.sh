@@ -43,7 +43,7 @@ jq -e --arg root "$repo" '
   ($packages[] | select(.name == "ic-timers-pocketic")) as $consumer |
   any(.resolve.nodes[] | select(.id == $consumer.id) | .deps[];
     .name == "ic_build" and
-    (.pkg as $id | any($packages[]; .id == $id and .version == "0.87.1" and
+    (.pkg as $id | any($packages[]; .id == $id and .version == "0.87.2" and
       .manifest_path == ($root + "/crates/ic-build/Cargo.toml")))))
 ' "$scratch/metadata.json" >/dev/null
 jq -e --arg root "$repo" '

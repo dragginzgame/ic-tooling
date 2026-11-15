@@ -10,6 +10,8 @@ help:
 	  'Development (offline; prepare tools and wasm32-unknown-unknown first):' \
 	  '  make check             Admit Cargo tooling selection and installed snapshot' \
 	  '  make test-text         Terminal escaping and Unicode table contracts' \
+	  '  make test-canic-build-metadata Current Canic metadata admission/refusal' \
+	  '  make test-canic-app-build Current Canic app recipes and partial failure' \
 	  '  make test-canic-build  Current Canic owned Wasm build and publication refusal' \
 	  '  make test-canic-text   Current Canic CLI presentation qualification' \
 	  '  make test-query-text   Current Query presentation and output qualification' \
@@ -105,3 +107,11 @@ test-canic-text: toko-tooling-check
 .PHONY: test-canic-build
 test-canic-build: toko-tooling-check
 	bash scripts/qualification/canic-build.sh
+
+.PHONY: test-canic-app-build
+test-canic-app-build: toko-tooling-check
+	bash scripts/qualification/canic-build.sh app
+
+.PHONY: test-canic-build-metadata
+test-canic-build-metadata: toko-tooling-check
+	bash scripts/qualification/canic-build.sh metadata

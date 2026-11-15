@@ -5,7 +5,7 @@
  ic-host-fs = { version = "0.79.0", default-features = false }
  ic-host-process = { version = "0.79.0", default-features = false }
 -ic-host-text = { version = "0.76.0", default-features = false }
-+ic-host-text = { path = "/home/adam/projects/ic-tooling-new/crates/ic-host-text", version = "0.77.0" }
++ic-host-text = { path = "/home/adam/projects/ic-tooling-new/crates/ic-host-text", version = "0.77.1" }
  ic-platform = { version = "0.33.0", default-features = false }
  ic-platform-runtime = { version = "0.22.1", default-features = false }
  ic-storage = "0.74.0"
@@ -18,7 +18,7 @@
 -version = "0.76.0"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "7e4ca740ecd5342a449b401fca5ce2521e34ea3ab482dc67d989de3862b75c4a"
-+version = "0.77.0"
++version = "0.77.1"
  dependencies = [
   "unicode-width",
  ]

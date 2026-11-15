@@ -5,10 +5,10 @@
  [workspace.dependencies]
  clap = "4.6.7"
 -ic-host-text = "0.76.0"
-+ic-host-text = { path = "/home/adam/projects/ic-tooling-new/crates/ic-host-text", version = "0.77.0" }
++ic-host-text = { path = "/home/adam/projects/ic-tooling-new/crates/ic-host-text", version = "0.77.1" }
  ic-platform = { version = "0.33.7", default-features = false }
+ ic-platform-protocol = { git = "https://github.com/dragginzgame/ic-platform-new", rev = "08c72219ad6f261067c00eece9c8c71852e6b561", version = "0.1.0", default-features = false, features = ["cloud-engine-response"] }
  ic-platform-types = { version = "0.20.4", default-features = false }
- ic-topology = { path = "crates/ic-topology", version = "0.105.5" }
 --- a/Cargo.lock
 +++ b/Cargo.lock
 @@ -1121,9 +1121,7 @@
@@ -18,22 +18,22 @@
 -version = "0.76.0"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "7e4ca740ecd5342a449b401fca5ce2521e34ea3ab482dc67d989de3862b75c4a"
-+version = "0.77.0"
++version = "0.77.1"
  dependencies = [
   "unicode-width",
  ]
 --- a/crates/ic-query-cli/src/presentation/mod.rs
 +++ b/crates/ic-query-cli/src/presentation/mod.rs
-@@ -1,7 +1,7 @@
- //! Pure human-facing projections; process output remains in the entrypoint.
+@@ -2,7 +2,7 @@
  pub(crate) mod compare;
+ pub(crate) mod placements;
  
 -use ic_host_text::table::render_bordered;
 +use ic_host_text::bordered_table;
  use std::collections::BTreeSet;
  use std::fmt::Write;
  
-@@ -189,7 +189,7 @@
+@@ -190,7 +190,7 @@
          })
          .collect();
      text.push('\n');
@@ -224,3 +224,21 @@
          &["NET / NODE / DAY", "GROSS / NODE / DAY", "MARKETPLACE KEY"],
          &rows,
      ));
+--- a/crates/ic-query-cli/src/presentation/placements.rs
++++ b/crates/ic-query-cli/src/presentation/placements.rs
+@@ -1,5 +1,5 @@
+ //! Selected placement rows; no inferred fleet ownership or subnet suitability.
+-use ic_host_text::table::render_bordered;
++use ic_host_text::bordered_table;
+ use ic_topology::placement::collection::{PlacementCollectionReport, PlacementOutcome};
+ 
+ pub(crate) fn render(report: &PlacementCollectionReport) -> String {
+@@ -40,7 +40,7 @@
+         },
+         report.canisters.len(),
+         report.elapsed.as_secs_f64(),
+-        render_bordered(
++        bordered_table(
+             &["CANISTER", "SUBNET", "OUTCOME", "OBSERVED (UNIX S)"],
+             &rows
+         )

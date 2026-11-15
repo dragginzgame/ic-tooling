@@ -42,7 +42,7 @@ if [[ "$mode" == text ]]; then
   package=ic-db-m1-records-canister
   artifact=ic_db_m1_records_canister
   jq -e --arg root "$repo" '[.packages[] | select(.name == "ic-host-text")] as $t |
-    ($t | length == 1) and $t[0].version == "0.77.0" and
+    ($t | length == 1) and $t[0].version == "0.77.1" and
     $t[0].manifest_path == ($root + "/crates/ic-host-text/Cargo.toml")' "$scratch/metadata.json" >/dev/null
 fi
 CARGO_TARGET_DIR="$scratch/wasm-target" cargo build --manifest-path qualification/Cargo.toml -p "$package" --target wasm32-unknown-unknown --release --locked --offline --message-format=json-render-diagnostics > "$scratch/wasm.jsonl"

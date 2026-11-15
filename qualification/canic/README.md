@@ -1,5 +1,10 @@
 # Canic retained-record admission
 
+Current recipes select the next unpublished Build 0.87.2 / Text 0.77.1 where
+used. Their patches and locked graphs admit current local sources; historical
+runtime evidence below remains bound to its recorded checkpoint inputs.
+
+
 `make test-canic-consumer` snapshots the current `CANIC_SOURCE` working tree
 (default `../canic`), including local edits and non-ignored additions, without
 modifying it. [Source selection](../../docs/qualification/local-sources.md) records
@@ -126,3 +131,51 @@ The strict external-subset checker correctly refuses that addition; existing
 external selections were retained. Older Host FS/Process remain for consumer-owned
 metadata, lock setup and publication. The separate Text/record recipes are not
 implicitly combined or requalified by this run.
+
+### App recipes on the next Build version
+
+`make test-canic-app-build` selects the app workflow without rerunning the
+artifact-command roster. It uses a fresh current-source export and Build 0.87.2.
+The maintained Wasm probe supplies two app recipes; generated JSON is fixture data,
+not copied Canic implementation. The commands make no deployment or network effects.
+
+The check refuses duplicate outputs before initializing a missing lock or replacing
+existing bytes. Valid recipes resolve relative to their config from a different
+working directory, initialize the absent lock offline, and report exact artifacts
+for both canisters. A repeated human-output build preserves lock bytes and says
+nothing was deployed. A missing package in the second recipe then refuses after
+the first has published: first output survives, second output is retained, and
+private scratch is empty. This deliberately establishes serial partial effects,
+not atomic app-wide publication or rollback. Existing lock generation/publication
+remain Canic-owned operations using its retained Host suppliers.
+
+The earlier lock delta refused current source after Canic added dependencies; the
+refreshed patch preserves those selections. Linux evidence on 2026-11-15: HEAD
+`e3e7be86301c377db8b064d2ef914f5cde936265` plus edits, source tar SHA-256
+`911ee3ab140c43d447003a2678fd078f845be1c7f5925aa8e5c198b380e8249d`,
+export `target/canic-build.nPFSGE6H`. All app checks passed
+(`target/canic-app-build.log`); host/CLI warning-denied Clippy passed
+(`target/canic-app-build-clippy.log`). Other qualification recipes keep their own
+source boundaries and may refuse newer siblings rather than falling back.
+
+### Metadata admission
+
+`make test-canic-build-metadata` selects the adapter's metadata boundary. A
+controlled Cargo executable returns captured probe metadata and delegates builds
+to the prepared real Cargo. Valid metadata builds the probe with exact reported
+SHA-256. Ten negative cases cover missing/foreign/malformed workspace membership,
+absent/ambiguous packages and cdylibs, absent/relative target directories and invalid
+JSON. Each refuses before invoking compilation, preserves a sentinel destination
+and leaves private scratch empty. Structured errors distinguish invalid selection
+from JSON parsing failure. The adapter now explicitly verifies workspace membership
+and absolute Cargo target directories; no new product API or consumer code enters
+product crates. This removes reliance on an unchecked workspace-selection assumption.
+
+Linux evidence on 2026-11-15: current Canic HEAD
+`e3e7be86301c377db8b064d2ef914f5cde936265` plus edits, source tar SHA-256
+`6209e570067f188d2cb98a2de2d5d2530331b6cba09a5a712a1a92b3b5dc80e5`,
+export `target/canic-build.3Y1dMnXE`. Metadata checks passed
+(`target/canic-build-metadata.log`, structured-error assertions additionally in
+`target/canic-build-metadata-errors.log`); Host/CLI warning-denied Clippy passed
+(`target/canic-build-metadata-clippy.log`). Existing app/artifact evidence remains
+scoped to the snapshots above; this check does not rerun those rosters.

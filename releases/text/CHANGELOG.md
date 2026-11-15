@@ -6,7 +6,12 @@ This group starts with the replacement implementation. All entries are pending;
 no replacement package has been published. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
-## [0.77.0] - Unreleased
+## [0.77.1] - Unreleased
+
+Continues the unpublished development line after GitHub checkpoint
+[0352b4e](https://github.com/dragginzgame/ic-tooling-new/commit/0352b4e6fb1996e329e9ebf837ea38e40348e1bf).
+This version advance changes no public behavior; prior qualification evidence
+remains tied to its recorded inputs.
 
 ### ⚠️ Breaking
 
@@ -29,3 +34,5 @@ in [checkpoint history](../history.md), not a prior release of this group.
   the same two operations; independently observe cleanup of its instances.
 - Qualify current Canic retained-status, terminal-view and declaration output,
   preserving raw evidence, unknown states and separation from effect authority.
+- Refresh current Query qualification for its placements presenter, preserving
+  partial JSON and rejection escaping while retaining its selected protocol owner.

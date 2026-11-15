@@ -4,7 +4,7 @@
  publish = false
  
  [workspace.dependencies]
-+ic-build = { path = "/home/adam/projects/ic-tooling-new/crates/ic-build", version = "0.87.1" }
++ic-build = { path = "/home/adam/projects/ic-tooling-new/crates/ic-build", version = "0.87.2" }
  base64 = "0.23.1"
  canic = { path = "crates/canic" }
  canic-host = { path = "crates/canic-host" }
@@ -28,8 +28,8 @@
 + "ic-host-fs 0.79.0",
   "ic-host-process",
   "ic-platform",
-  "ic-wire",
-@@ -456,7 +457,7 @@
+  "ic-topology",
+@@ -457,7 +458,7 @@
   "canic-management-protocol",
   "canic-profile-protocol",
   "clap",
@@ -38,12 +38,12 @@
   "ic-host-process",
   "ic-wire",
   "serde_json",
-@@ -1403,6 +1404,18 @@
+@@ -1404,6 +1405,18 @@
  ]
  
  [[package]]
 +name = "ic-build"
-+version = "0.87.1"
++version = "0.87.2"
 +dependencies = [
 + "ic-host-artifacts 0.80.1",
 + "ic-host-fs 0.80.1",
@@ -57,7 +57,7 @@
  name = "ic-certification"
  version = "3.2.0"
  source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -1441,12 +1454,29 @@
+@@ -1442,12 +1455,29 @@
  ]
  
  [[package]]
@@ -88,7 +88,7 @@
   "rustix",
   "thiserror 2.0.21",
  ]
-@@ -1457,8 +1487,8 @@
+@@ -1458,8 +1488,8 @@
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "3bfc02220bee55d050f8ebedce5f5ff71764028afcef8b58c1ae2bceb945e650"
  dependencies = [
@@ -99,7 +99,7 @@
   "libc",
   "rustix",
  ]
-@@ -2828,6 +2858,19 @@
+@@ -2851,6 +2881,19 @@
  ]
  
  [[package]]
@@ -202,7 +202,7 @@
          },
      )
      .map_err(supplier)?
-@@ -102,55 +105,77 @@
+@@ -102,55 +105,90 @@
      .map_err(supplier)?
      .require_complete()
      .map_err(supplier)?;
@@ -211,10 +211,6 @@
 -        .stdout
 -        .split(|b| *b == b'\n')
 -        .filter(|line| !line.is_empty())
--    {
--        let value: serde_json::Value = serde_json::from_slice(line).map_err(supplier)?;
--        if value["reason"] == "compiler-artifact" {
--            let files = value["filenames"]
 +    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout).map_err(supplier)?;
 +    let invalid = || Error::Invalid("expected one workspace package and cdylib target".into());
 +    let packages = metadata["packages"].as_array().ok_or_else(invalid)?;
@@ -226,13 +222,16 @@
 +        return Err(invalid());
 +    };
 +    let package_id = selected["id"].as_str().ok_or_else(invalid)?;
-+    let targets: Vec<_> = selected["targets"]
++    let members = metadata["workspace_members"]
 +        .as_array()
-+        .ok_or_else(invalid)?
-+        .iter()
-+        .filter(|t| {
-+            t["crate_types"]
-                 .as_array()
++        .ok_or_else(invalid)?;
++    if !members.iter().all(|id| id.is_string())
++        || !members.iter().any(|id| id.as_str() == Some(package_id))
+     {
+-        let value: serde_json::Value = serde_json::from_slice(line).map_err(supplier)?;
+-        if value["reason"] == "compiler-artifact" {
+-            let files = value["filenames"]
+-                .as_array()
 -                .ok_or_else(|| Error::Invalid("Cargo artifact missing filenames".into()))?;
 -            for file in files {
 -                let file = file
@@ -243,14 +242,33 @@
 -                }
 -            }
 -        }
--    }
++        return Err(invalid());
+     }
 -    paths.sort();
 -    paths.dedup();
 -    if paths.len() != 1 {
 -        return Err(Error::Invalid(
 -            "build must produce exactly one Wasm artifact".into(),
 -        ));
--    }
++    let targets: Vec<_> = selected["targets"]
++        .as_array()
++        .ok_or_else(invalid)?
++        .iter()
++        .filter(|t| {
++            t["crate_types"]
++                .as_array()
++                .is_some_and(|k| k.iter().any(|k| k == "cdylib"))
++        })
++        .collect();
++    let [target] = targets.as_slice() else {
++        return Err(invalid());
++    };
++    let library = target["name"].as_str().ok_or_else(invalid)?;
++    let target_directory =
++        PathBuf::from(metadata["target_directory"].as_str().ok_or_else(invalid)?);
++    if !target_directory.is_absolute() {
++        return Err(invalid());
+     }
 -    let path = paths.remove(0);
 -    inspect(&path)?;
 -    if let Some(output) = destination {
@@ -267,14 +285,7 @@
 -            ic_host_fs::durable::WriteOptions {
 -                mode: ic_host_fs::durable::PublicationMode::Replace,
 -                permissions: 0o600,
-+                .is_some_and(|k| k.iter().any(|k| k == "cdylib"))
-+        })
-+        .collect();
-+    let [target] = targets.as_slice() else {
-+        return Err(invalid());
-+    };
-+    let library = target["name"].as_str().ok_or_else(invalid)?;
-+    let default_output = PathBuf::from(metadata["target_directory"].as_str().ok_or_else(invalid)?)
++    let default_output = target_directory
 +        .join("wasm32-unknown-unknown/release")
 +        .join(format!("{}.wasm", library.replace('-', "_")));
 +    let destination = destination.unwrap_or(&default_output);
