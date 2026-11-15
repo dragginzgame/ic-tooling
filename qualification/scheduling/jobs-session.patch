@@ -1,0 +1,556 @@
+--- a/qualification/Cargo.toml
++++ b/qualification/Cargo.toml
+@@ -37,6 +37,7 @@
+ ic-platform-types = { version = "0.20.1", default-features = false }
+ ic-storage = "0.74.0"
+ ic-testkit = "0.106.0"
++pocket-ic = "=16.1.0"
+ ic-wire = "0.22.0"
+ serde_json = "1.0"
+ toml = "1.2.1"
+--- a/qualification/Cargo.lock
++++ b/qualification/Cargo.lock
+@@ -883,8 +883,8 @@
+  "ic-host-process",
+  "ic-jobs-test-consumer",
+  "ic-platform-types",
+- "ic-testkit",
+  "ic-wire",
++ "pocket-ic",
+  "serde",
+  "serde_json",
+  "tokio",
+--- a/qualification/ic-jobs-canister-tests/Cargo.toml
++++ b/qualification/ic-jobs-canister-tests/Cargo.toml
+@@ -25,7 +25,7 @@
+ harness = [
+     "dep:ic-jobs-test-consumer",
+     "dep:ic-platform-types",
+-    "dep:ic-testkit",
++    "dep:pocket-ic",
+     "dep:ic-wire",
+     "dep:serde",
+ ]
+@@ -38,7 +38,7 @@
+ # Disabled for ordinary artifact-capture builds.
+ ic-jobs-test-consumer = { workspace = true, optional = true }
+ ic-platform-types = { workspace = true, optional = true }
+-ic-testkit = { workspace = true, optional = true }
++pocket-ic = { workspace = true, optional = true }
+ ic-wire = { workspace = true, optional = true }
+ serde = { workspace = true, optional = true }
+ 
+--- a/qualification/ic-jobs-canister-tests/src/harness.rs
++++ b/qualification/ic-jobs-canister-tests/src/harness.rs
+@@ -9,8 +9,7 @@
+     management_wire::{Method, REQUEST_LIMITS, RESPONSE_LIMITS},
+ };
+ use ic_platform_types::Principal;
+-use ic_testkit::pic::InstallSpec;
+-use ic_testkit::pocket_ic::nonblocking::PocketIc;
++use pocket_ic::nonblocking::PocketIc;
+ use serde::{Serialize, de::DeserializeOwned};
+ 
+ // Transport and the management contract converge here. Each caller still owns
+@@ -61,20 +60,6 @@
+     ic_wire::native::encode_request(Method::Init as u64, config, REQUEST_LIMITS)
+ }
+ 
+-/// Standard qualification-consumer installation with caller-owned errors.
+-///
+-/// # Errors
+-/// Returns [`ic_wire::Error`] if the initialization request cannot be encoded
+-/// within the consumer's limits. This function does not create a canister.
+-pub fn install_spec(wasm: Vec<u8>, config: &Init) -> Result<InstallSpec, ic_wire::Error> {
+-    Ok(InstallSpec {
+-        wasm,
+-        init_bytes: init_bytes(config)?,
+-        cycles: 10_000_000_000_000,
+-        install_sender: None,
+-    })
+-}
+-
+ /// Project one consumer-owned management method into the host transport spec.
+ #[must_use]
+ pub const fn control(method: Method) -> WireCallSpec {
+--- a/qualification/ic-jobs-canister-tests/src/wire.rs
++++ b/qualification/ic-jobs-canister-tests/src/wire.rs
+@@ -1,8 +1,8 @@
+-//! Qualification framing with the selected Wire codec and raw Testkit transport.
++//! Qualification framing with the selected Wire codec and raw upstream PocketIC transport.
+ 
+ use ic_platform_types::Principal;
+-use ic_testkit::pocket_ic::{CanisterId, RejectResponse, nonblocking::PocketIc};
+ use ic_wire::{Limits, native};
++use pocket_ic::{CanisterId, RejectResponse, nonblocking::PocketIc};
+ use serde::{Serialize, de::DeserializeOwned};
+ 
+ /// Consumer-owned method identity and directional budgets.
+--- a/qualification/ic-jobs-canister-tests/tests/recovery.rs
++++ b/qualification/ic-jobs-canister-tests/tests/recovery.rs
+@@ -10,20 +10,15 @@
+     management_wire::{self as control, Method},
+ };
+ use ic_platform_types::Principal;
+-use ic_testkit::pic::{
+-    PocketIcInstance, PocketIcStartupConfig, RetryPolicy, advance_and_tick, tick_until,
+-};
+-use ic_testkit::pocket_ic::{
+-    CanisterId, ErrorCode, PocketIcBuilder, RejectResponse, nonblocking::PocketIc,
+-};
+ use ic_wire::native;
++use pocket_ic::{CanisterId, ErrorCode, PocketIcBuilder, RejectResponse, nonblocking::PocketIc};
+ use serde::{Serialize, de::DeserializeOwned};
+-use std::{convert::Infallible, path::PathBuf, task::Poll, time::Duration};
++use std::{path::PathBuf, time::Duration};
+ 
+ const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
+ 
+ struct Fixture {
+-    pic: PocketIcInstance,
++    pic: PocketIc,
+     wasm: Vec<u8>,
+     manager: Principal,
+     sender: Principal,
+@@ -31,15 +26,11 @@
+ 
+ impl Fixture {
+     async fn now_ns(&self) -> u64 {
+-        self.pic
+-            .instance()
+-            .get_time()
+-            .await
+-            .as_nanos_since_unix_epoch()
++        self.pic.get_time().await.as_nanos_since_unix_epoch()
+     }
+ 
+     async fn close(self) {
+-        self.pic.close().await;
++        self.pic.drop().await;
+     }
+ 
+     async fn install(
+@@ -48,29 +39,20 @@
+         manager: Principal,
+         delivery_sender: Option<Principal>,
+     ) -> Principal {
+-        let canister = ic_testkit::pic::create_and_install(
+-            pic,
+-            harness::install_spec(
+-                wasm.to_vec(),
+-                &Init {
+-                    manager,
+-                    delivery_sender,
+-                },
+-            )
+-            .unwrap(),
+-        )
+-        .await;
++        let args = harness::init_bytes(&Init {
++            manager,
++            delivery_sender,
++        })
++        .unwrap();
++        let canister = pic.create_canister().await;
++        pic.add_cycles(canister, 10_000_000_000_000).await;
++        pic.install_canister(canister, wasm.to_vec(), args, None)
++            .await;
+         Principal::from_slice(canister.as_slice())
+     }
+ 
+     async fn install_receiver(&self) -> Principal {
+-        Self::install(
+-            self.pic.instance(),
+-            &self.wasm,
+-            self.manager,
+-            Some(self.sender),
+-        )
+-        .await
++        Self::install(&self.pic, &self.wasm, self.manager, Some(self.sender)).await
+     }
+ 
+     async fn new() -> Self {
+@@ -79,18 +61,20 @@
+                 .expect("build-consumer must select IC_JOBS_CONSUMER_WASM"),
+         );
+         let wasm = std::fs::read(path).expect("read selected consumer Wasm");
+-        let config = PocketIcStartupConfig::from_env(Duration::from_secs(30))
+-            .expect("use ic-testkit-server run after explicit setup/check");
+-        let pic = config
+-            .build_instance(
+-                PocketIcBuilder::new()
+-                    .with_max_request_time_ms(Some(REQUEST_TIMEOUT.as_millis().try_into().unwrap()))
+-                    .with_application_subnet(),
+-            )
+-            .await
+-            .expect("bounded PocketIC startup");
++        let endpoint = std::env::var("IC_TESTKIT_POCKET_IC_URL")
++            .expect("run through the explicitly prepared server owner");
++        let pic = tokio::time::timeout(
++            Duration::from_secs(30),
++            PocketIcBuilder::new()
++                .with_server_url(endpoint.parse().unwrap())
++                .with_max_request_time_ms(Some(REQUEST_TIMEOUT.as_millis().try_into().unwrap()))
++                .with_application_subnet()
++                .build_async(),
++        )
++        .await
++        .expect("creation timed out; remote instance may remain");
+         let manager = Principal::self_authenticating(b"jobs-manager");
+-        let sender = Self::install(pic.instance(), &wasm, manager, None).await;
++        let sender = Self::install(&pic, &wasm, manager, None).await;
+         Self {
+             pic,
+             wasm,
+@@ -133,7 +117,7 @@
+     }
+     fn client(&self, canister: Principal, caller: Principal) -> harness::Client<'_> {
+         harness::Client {
+-            pic: self.pic.instance(),
++            pic: &self.pic,
+             canister,
+             caller,
+         }
+@@ -147,7 +131,6 @@
+         bytes: Vec<u8>,
+     ) -> Result<Vec<u8>, RejectResponse> {
+         self.pic
+-            .instance()
+             .update_call(
+                 native_principal(canister),
+                 native_principal(caller),
+@@ -165,7 +148,7 @@
+         delivery: &Delivery,
+     ) -> T {
+         ic_jobs_canister_tests::wire::update_wire(
+-            self.pic.instance(),
++            &self.pic,
+             canister,
+             caller,
+             WireCallSpec {
+@@ -185,30 +168,38 @@
+         canister: Principal,
+         operation: impl AsyncFnOnce(&PocketIc) -> T,
+     ) -> T {
+-        let pic = self.pic.instance();
+-        pic.stop_canister(native_principal(canister), None)
++        let pic = &self.pic;
++        pic.stop_canister(native_principal(canister), Some(CanisterId::anonymous()))
+             .await
+             .unwrap();
+         let result = operation(pic).await;
+-        pic.start_canister(native_principal(canister), None)
++        pic.start_canister(native_principal(canister), Some(CanisterId::anonymous()))
+             .await
+             .unwrap();
+         result
+     }
+     async fn snapshot(&self, canister: Principal) -> Vec<u8> {
+         self.stopped(canister, async |pic| {
+-            pic.take_canister_snapshot(native_principal(canister), None, None)
+-                .await
+-                .unwrap()
+-                .id
++            pic.take_canister_snapshot(
++                native_principal(canister),
++                Some(CanisterId::anonymous()),
++                None,
++            )
++            .await
++            .unwrap()
++            .id
+         })
+         .await
+     }
+     async fn restore_snapshot(&self, canister: Principal, snapshot: Vec<u8>) {
+         self.stopped(canister, async |pic| {
+-            pic.load_canister_snapshot(native_principal(canister), None, snapshot)
+-                .await
+-                .unwrap()
++            pic.load_canister_snapshot(
++                native_principal(canister),
++                Some(CanisterId::anonymous()),
++                snapshot,
++            )
++            .await
++            .unwrap()
+         })
+         .await;
+     }
+@@ -222,20 +213,17 @@
+     }
+     async fn upgrade(&self, id: Principal) -> Result<(), RejectResponse> {
+         self.pic
+-            .instance()
+             .upgrade_canister(native_principal(id), self.wasm.clone(), Vec::new(), None)
+             .await
+     }
+     async fn until(&self, predicate: impl AsyncFn() -> bool) {
+-        tick_until(self.pic.instance(), 30, Duration::ZERO, async |_| {
++        for round in 0..=30 {
+             if predicate().await {
+-                Poll::Ready(Ok::<_, Infallible>(()))
+-            } else {
+-                Poll::Pending
++                return;
+             }
+-        })
+-        .await
+-        .expect("bounded canister progress did not complete");
++            assert!(round < 30, "bounded canister progress did not complete");
++            self.pic.tick().await;
++        }
+     }
+ }
+ 
+@@ -300,7 +288,7 @@
+             .to_vec(),
+         vec![0; control::REQUEST_LIMITS.bytes + 1],
+     ] {
+-        let pic = fixture.pic.instance();
++        let pic = &fixture.pic;
+         let canister = pic.create_canister().await;
+         pic.add_cycles(canister, 10_000_000_000_000).await;
+         // Reinstall a fresh empty canister to observe the original init rejection
+@@ -458,11 +446,7 @@
+         .await
+         .unwrap();
+     assert_eq!(page, vec![before]);
+-    fixture
+-        .pic
+-        .instance()
+-        .advance_time(Duration::from_secs(40))
+-        .await;
++    fixture.pic.advance_time(Duration::from_secs(40)).await;
+     fixture
+         .until(async || fixture.view(second).await.status == Status::Completed)
+         .await;
+@@ -483,18 +467,16 @@
+         .await
+         .unwrap();
+     fixture.upgrade(fixture.sender).await.unwrap();
+-    fixture
+-        .pic
+-        .instance()
+-        .advance_time(Duration::from_secs(15))
+-        .await;
++    fixture.pic.advance_time(Duration::from_secs(15)).await;
+     fixture
+         .until(async || fixture.view(third).await.status == Status::Completed)
+         .await;
+     assert_eq!(fixture.summary(receiver).await.receipts, 1);
+     fixture.upgrade(fixture.sender).await.unwrap();
+     fixture.upgrade(receiver).await.unwrap();
+-    advance_and_tick(fixture.pic.instance(), Duration::ZERO, 3).await;
++    for _ in 0..3 {
++        fixture.pic.tick().await;
++    }
+     assert_eq!(fixture.summary(receiver).await.receipts, 1);
+ 
+     fixture.close().await;
+@@ -564,18 +546,13 @@
+         .update::<(), _>(Method::TrapWatchdogBatch, (true,))
+         .await
+         .unwrap();
+-    fixture
+-        .pic
+-        .instance()
+-        .advance_time(Duration::from_secs(10))
+-        .await;
++    fixture.pic.advance_time(Duration::from_secs(10)).await;
+     // Observe a real trap, not merely a dispatched callback awaiting execution.
+     let marker = b"fixture: watchdog trap after stable batch write";
+     fixture
+         .until(async || {
+             fixture
+                 .pic
+-                .instance()
+                 .fetch_canister_logs(native_principal(fixture.sender), CanisterId::anonymous())
+                 .await
+                 .unwrap()
+@@ -607,11 +584,7 @@
+         .update::<(), _>(Method::TrapWatchdogBatch, (false,))
+         .await
+         .unwrap();
+-    fixture
+-        .pic
+-        .instance()
+-        .advance_time(Duration::from_secs(2))
+-        .await;
++    fixture.pic.advance_time(Duration::from_secs(2)).await;
+     fixture
+         .until(async || fixture.view(healthy).await.status == Status::Completed)
+         .await;
+@@ -627,18 +600,17 @@
+         Status::Pending { due_ns: later_due }
+     );
+ 
+-    fixture
+-        .pic
+-        .instance()
+-        .advance_time(Duration::from_secs(40))
+-        .await;
++    fixture.pic.advance_time(Duration::from_secs(40)).await;
+     fixture
+         .until(async || fixture.view(later).await.status == Status::Completed)
+         .await;
+     assert_eq!(fixture.summary(fixture.sender).await.counter, 5);
+     assert!(!fixture.summary(fixture.sender).await.armed);
+     fixture.upgrade(fixture.sender).await.unwrap();
+-    advance_and_tick(fixture.pic.instance(), Duration::from_secs(3), 12).await;
++    fixture.pic.advance_time(Duration::from_secs(3)).await;
++    for _ in 0..12 {
++        fixture.pic.tick().await;
++    }
+     assert_eq!(fixture.summary(fixture.sender).await.counter, 5);
+     assert_eq!(fixture.view(failed).await.status, Status::Failed);
+     assert!(!fixture.summary(fixture.sender).await.armed);
+@@ -772,7 +744,7 @@
+         }
+     }
+     let fixture = Fixture::new().await;
+-    let pic = fixture.pic.instance();
++    let pic = &fixture.pic;
+     let canister = native_principal(fixture.sender);
+     pic.stop_canister(canister, None).await.unwrap();
+     // Seed the exact prior-format backing in a stopped qualification canister.
+@@ -780,7 +752,7 @@
+     pic.set_stable_memory(
+         canister,
+         bytes.clone(),
+-        ic_testkit::pocket_ic::common::rest::BlobCompression::NoCompression,
++        pocket_ic::common::rest::BlobCompression::NoCompression,
+     )
+     .await;
+     assert_eq!(pic.get_stable_memory(canister).await, bytes);
+@@ -801,8 +773,29 @@
+         .await
+         .unwrap();
+     // The controller's independent snapshot remains the explicit recovery owner.
++    let original = fixture
++        .pic
++        .get_stable_memory(native_principal(fixture.sender))
++        .await;
+     let backup = fixture.snapshot(fixture.sender).await;
+     fixture
++        .stopped(fixture.sender, async |pic| {
++            let canister = native_principal(fixture.sender);
++            let stranger = CanisterId::self_authenticating(b"not-the-controller");
++            let rejected = pic
++                .take_canister_snapshot(canister, Some(stranger), None)
++                .await
++                .unwrap_err();
++            assert_eq!(rejected.error_code, ErrorCode::CanisterInvalidController);
++            let rejected = pic
++                .load_canister_snapshot(canister, Some(stranger), backup.clone())
++                .await
++                .unwrap_err();
++            assert_eq!(rejected.error_code, ErrorCode::CanisterInvalidController);
++            assert_eq!(pic.get_stable_memory(canister).await, original);
++        })
++        .await;
++    fixture
+         .update::<(), _>(Method::CorruptRecord, (id,))
+         .await
+         .unwrap();
+@@ -818,19 +811,28 @@
+     let rejected = fixture.upgrade(fixture.sender).await.unwrap_err();
+     assert_canister_trap(&rejected);
+     fixture.restore_snapshot(fixture.sender, backup).await;
+-    // Snapshot loading consumes installation resources too. Testkit owns the
+-    // bounded rate-limit retry; every other rejection must fail immediately.
+-    // The job's one-hour deadline exceeds the maximum thirty-minute cooldown.
+-    ic_testkit::pic::retry_install_code(
+-        fixture.pic.instance(),
+-        RetryPolicy {
+-            max_attempts: std::num::NonZeroUsize::new(4).unwrap(),
+-            cooldown: Duration::from_secs(600),
+-        },
+-        async || fixture.upgrade(fixture.sender).await,
+-    )
+-    .await
+-    .unwrap();
++    assert_eq!(
++        fixture
++            .pic
++            .get_stable_memory(native_principal(fixture.sender))
++            .await,
++        original
++    );
++    // This test owns its finite retry budget. Only the install-rate-limit rejection
++    // permits a cooldown; every other refusal fails immediately.
++    for attempt in 0..4 {
++        match fixture.upgrade(fixture.sender).await {
++            Ok(()) => break,
++            Err(error)
++                if error.error_code == ErrorCode::CanisterInstallCodeRateLimited && attempt < 3 =>
++            {
++                fixture.pic.advance_time(Duration::from_secs(600)).await;
++                fixture.pic.tick().await;
++                fixture.pic.tick().await;
++            }
++            Err(error) => panic!("snapshot recovery upgrade refused: {error:?}"),
++        }
++    }
+     assert!(matches!(
+         fixture.view(id).await.status,
+         Status::Pending { .. }
+@@ -865,11 +867,7 @@
+         fixture.update::<(), _>(Method::Pause, (id,)).await.unwrap();
+     }
+     fixture.upgrade(fixture.sender).await.unwrap();
+-    fixture
+-        .pic
+-        .instance()
+-        .advance_time(Duration::from_secs(13))
+-        .await;
++    fixture.pic.advance_time(Duration::from_secs(13)).await;
+     for id in &ids {
+         assert_eq!(fixture.view(*id).await.status, Status::Paused);
+         assert_eq!(fixture.view(*id).await.occurrence, 0);
+@@ -900,7 +898,10 @@
+     }
+     assert!(!fixture.summary(fixture.sender).await.armed);
+     let before = fixture.summary(fixture.sender).await.counter;
+-    advance_and_tick(fixture.pic.instance(), Duration::from_secs(30), 3).await;
++    fixture.pic.advance_time(Duration::from_secs(30)).await;
++    for _ in 0..3 {
++        fixture.pic.tick().await;
++    }
+     assert_eq!(fixture.summary(fixture.sender).await.counter, before);
+ 
+     fixture.close().await;
+@@ -938,7 +939,10 @@
+     assert_eq!(fixture.summary(fixture.sender).await.next_due_ns, None);
+     assert!(!fixture.summary(fixture.sender).await.armed);
+     fixture.upgrade(fixture.sender).await.unwrap();
+-    advance_and_tick(fixture.pic.instance(), Duration::from_secs(40), 3).await;
++    fixture.pic.advance_time(Duration::from_secs(40)).await;
++    for _ in 0..3 {
++        fixture.pic.tick().await;
++    }
+     assert_eq!(fixture.summary(fixture.sender).await.counter, 0);
+     let later = fixture.now_ns().await + 100_000_000_000;
+     fixture
+@@ -983,11 +987,7 @@
+     assert_eq!(fixture.view(id).await, before);
+     assert_eq!(fixture.summary(fixture.sender).await, summary);
+     fixture.upgrade(fixture.sender).await.unwrap();
+-    fixture
+-        .pic
+-        .instance()
+-        .advance_time(Duration::from_secs(20))
+-        .await;
++    fixture.pic.advance_time(Duration::from_secs(20)).await;
+     fixture
+         .until(async || fixture.view(id).await.status == Status::Completed)
+         .await;
+@@ -1010,7 +1010,7 @@
+     assert_eq!(initial.dispatched.total, 0);
+     assert_eq!(initial.reset_sequence, Some(0));
+     let unauthorized: Result<JobMetrics, Error> = query_wire(
+-        fixture.pic.instance(),
++        &fixture.pic,
+         fixture.sender,
+         Principal::anonymous(),
+         harness::control(Method::JobMetrics),

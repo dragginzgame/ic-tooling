@@ -1,0 +1,125 @@
+--- a/qualification/Cargo.toml
++++ b/qualification/Cargo.toml
+@@ -26,7 +26,7 @@
+ ic-db-m1-records-schema = { path = "records-schema" }
+ ic-db-qualification-transport = { path = "transport" }
+ ic-host-artifacts = "0.79.0"
+-ic-host-text = "0.76.0"
++ic-host-text = { path = "/home/adam/projects/ic-tooling-new/crates/ic-host-text", version = "0.77.0" }
+ ic-platform-runtime = { version = "0.22.4", default-features = false }
+ ic-storage = "0.74.1"
+ pocket-ic = "=16.1.0"
+--- a/qualification/Cargo.lock
++++ b/qualification/Cargo.lock
+@@ -1094,9 +1094,7 @@
+ 
+ [[package]]
+ name = "ic-host-text"
+-version = "0.76.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "7e4ca740ecd5342a449b401fca5ce2521e34ea3ab482dc67d989de3862b75c4a"
++version = "0.77.0"
+ dependencies = [
+  "unicode-width",
+ ]
+--- a/qualification/rollback-driver/src/bin/db.rs
++++ b/qualification/rollback-driver/src/bin/db.rs
+@@ -3,7 +3,7 @@
+ 
+ use clap::{CommandFactory, Parser, Subcommand};
+ use ic_db_m0_rollback_driver::{LIMITS, instance};
+-use ic_host_text::{escape::terminal_text, table::render_bordered};
++use ic_host_text::{escape, bordered_table};
+ use ic_wire::native;
+ use std::io::{self, BufRead, IsTerminal, Write};
+ 
+@@ -128,10 +128,10 @@
+         }
+     );
+     for (name, _, primary, mut fields, indexes) in entities {
+-        println!("{}", terminal_text(&name));
++        println!("{}", escape(&name));
+         println!(
+             "Primary key: {} (supplied by the application)\n",
+-            terminal_text(&primary)
++            escape(&primary)
+         );
+         fields.sort_by_key(|field| field.0 != primary); // primary first, otherwise canonical order
+         let references = fields.iter().any(|field| field.4.is_some());
+@@ -159,7 +159,7 @@
+         if references {
+             columns.push("References");
+         }
+-        println!("{}", render_bordered(&columns, &rows));
++        println!("{}", bordered_table(&columns, &rows));
+         if indexes.is_empty() {
+             println!("Indexes: none\n");
+         } else {
+@@ -181,7 +181,7 @@
+                 .collect();
+             println!(
+                 "\nIndexes\n{}\n",
+-                render_bordered(
++                bordered_table(
+                     &["Name", "Fields (in order)", "Unique", "Membership"],
+                     &rows
+                 )
+@@ -189,13 +189,13 @@
+         }
+     }
+     for (name, kind, members) in types {
+-        println!("{}: {}", terminal_text(&kind), terminal_text(&name));
++        println!("{}: {}", escape(&kind), escape(&name));
+         let rows: Vec<Vec<String>> = members
+             .into_iter()
+             .map(|(name, ty, optional, info)| {
+                 vec![
+-                    terminal_text(&name).into_owned(),
+-                    terminal_text(&ty).into_owned(),
++                    escape(&name).into_owned(),
++                    escape(&ty).into_owned(),
+                     if optional { "Yes" } else { "No" }.into(),
+                     if info.is_empty() { "-".into() } else { info },
+                 ]
+@@ -203,7 +203,7 @@
+             .collect();
+         println!(
+             "{}\n",
+-            render_bordered(
++            bordered_table(
+                 &[
+                     match kind.as_str() {
+                         "Enum" => "Variant",
+@@ -239,7 +239,7 @@
+             format!("{pages} pages (64 KiB each)"),
+         ],
+     ];
+-    println!("\n{}", render_bordered(&["Property", "Value"], &rows));
++    println!("\n{}", bordered_table(&["Property", "Value"], &rows));
+ }
+ 
+ #[tokio::main]
+@@ -314,7 +314,7 @@
+                     {
+                         return Err(format!(
+                             "Unknown entity '{}'. Use db schema to list entities.",
+-                            terminal_text(&name)
++                            escape(&name)
+                         ));
+                     }
+                     print_schema(entities, types);
+@@ -383,12 +383,12 @@
+                     .into_iter()
+                     .map(|row| {
+                         row.into_iter()
+-                            .map(|v| terminal_text(&v).into_owned())
++                            .map(|v| escape(&v).into_owned())
+                             .collect()
+                     })
+                     .collect();
+                 let columns: Vec<_> = columns.iter().map(String::as_str).collect();
+-                println!("\n{entity}\n{}", render_bordered(&columns, &rows));
++                println!("\n{entity}\n{}", bordered_table(&columns, &rows));
+                 let noun = if count == 1 { "row" } else { "rows" };
+                 println!(
+                     "{count} {noun}; {examined} examined; {fetched} fetched; {bytes} encoded bytes."

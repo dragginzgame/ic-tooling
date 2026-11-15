@@ -1,0 +1,330 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -25,6 +25,7 @@
+ publish = false
+ 
+ [workspace.dependencies]
++ic-build = { path = "/home/adam/projects/ic-tooling-new/crates/ic-build", version = "0.87.1" }
+ base64 = "0.23.1"
+ canic = { path = "crates/canic" }
+ canic-host = { path = "crates/canic-host" }
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -380,7 +380,7 @@
+  "canic-host",
+  "canic-management-protocol",
+  "clap",
+- "ic-host-fs",
++ "ic-host-fs 0.79.0",
+  "ic-host-process",
+  "ic-host-text",
+  "serde_json",
+@@ -408,7 +408,8 @@
+  "canic",
+  "canic-management-protocol",
+  "canic-wasm-store-protocol",
+- "ic-host-fs",
++ "ic-build",
++ "ic-host-fs 0.79.0",
+  "ic-host-process",
+  "ic-platform",
+  "ic-wire",
+@@ -456,7 +457,7 @@
+  "canic-management-protocol",
+  "canic-profile-protocol",
+  "clap",
+- "ic-host-fs",
++ "ic-host-fs 0.79.0",
+  "ic-host-process",
+  "ic-wire",
+  "serde_json",
+@@ -1403,6 +1404,18 @@
+ ]
+ 
+ [[package]]
++name = "ic-build"
++version = "0.87.1"
++dependencies = [
++ "ic-host-artifacts 0.80.1",
++ "ic-host-fs 0.80.1",
++ "rustix",
++ "serde_json",
++ "tempfile",
++ "thiserror 2.0.21",
++]
++
++[[package]]
+ name = "ic-certification"
+ version = "3.2.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -1441,12 +1454,29 @@
+ ]
+ 
+ [[package]]
++name = "ic-host-artifacts"
++version = "0.80.1"
++dependencies = [
++ "sha2 0.11.1",
++ "thiserror 2.0.21",
++]
++
++[[package]]
+ name = "ic-host-fs"
+ version = "0.79.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9ef7770c178efe33ca0d9fcb54e78ad45f0c9c3d499f2e1bac70fb1ba5bba182"
+ dependencies = [
+- "ic-host-artifacts",
++ "ic-host-artifacts 0.79.0",
++ "rustix",
++ "thiserror 2.0.21",
++]
++
++[[package]]
++name = "ic-host-fs"
++version = "0.80.1"
++dependencies = [
++ "ic-host-artifacts 0.80.1",
+  "rustix",
+  "thiserror 2.0.21",
+ ]
+@@ -1457,8 +1487,8 @@
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "3bfc02220bee55d050f8ebedce5f5ff71764028afcef8b58c1ae2bceb945e650"
+ dependencies = [
+- "ic-host-artifacts",
+- "ic-host-fs",
++ "ic-host-artifacts 0.79.0",
++ "ic-host-fs 0.79.0",
+  "libc",
+  "rustix",
+ ]
+@@ -2828,6 +2858,19 @@
+ ]
+ 
+ [[package]]
++name = "tempfile"
++version = "3.27.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
++dependencies = [
++ "fastrand",
++ "getrandom 0.4.3",
++ "once_cell",
++ "rustix",
++ "windows-sys 0.61.2",
++]
++
++[[package]]
+ name = "thiserror"
+ version = "1.0.69"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+--- a/crates/canic-host/Cargo.toml
++++ b/crates/canic-host/Cargo.toml
+@@ -10,6 +10,7 @@
+ toko-tooling.workspace = true
+ 
+ [dependencies]
++ic-build.workspace = true
+ base64.workspace = true
+ canic.workspace = true
+ canic-management-protocol.workspace = true
+--- a/crates/canic-host/src/artifact.rs
++++ b/crates/canic-host/src/artifact.rs
+@@ -59,7 +59,9 @@
+ /// An output path atomically receives a copy, replacing a prior build input.
+ ///
+ /// # Errors
+-/// Refuses build failure, output overflow, timeout or ambiguous artifacts. Installs no tools.
++/// Requires prepared IC_OWNED_CARGO/IC_OWNED_RUSTC and cached dependencies.
++/// Selects one workspace package by name and one cdylib target; refuses ambiguity,
++/// build failure, overflow, timeout or publication failure. Installs no tools.
+ pub fn build(
+     manifest: &Path,
+     package: &str,
+@@ -67,34 +69,35 @@
+     destination: Option<&Path>,
+ ) -> Result<PathBuf> {
+     let manifest = manifest.canonicalize().map_err(supplier)?;
+-    let mut command = Command::new("cargo");
+-    command
+-        .current_dir(
+-            manifest
+-                .parent()
+-                .ok_or_else(|| Error::Invalid("manifest has no parent".into()))?,
+-        )
+-        .args([
+-            "build",
+-            "--lib",
+-            "--locked",
+-            "--release",
+-            "--target",
+-            "wasm32-unknown-unknown",
+-            "--message-format=json-render-diagnostics",
+-            "--manifest-path",
+-        ])
+-        .arg(manifest)
+-        .args(["-p", package]);
+-    if !features.is_empty() {
+-        command.arg("--features").arg(features.join(","));
+-    }
++    let prepared = |key| -> Result<PathBuf> {
++        let path = std::env::var_os(key)
++            .ok_or_else(|| Error::Invalid(format!("set {key} to the prepared executable")))?;
++        PathBuf::from(path).canonicalize().map_err(supplier)
++    };
++    let cargo = prepared("IC_OWNED_CARGO")?;
++    let rustc = prepared("IC_OWNED_RUSTC")?;
+     let output = capture_group_command(
+-        &mut command,
++        Command::new(&cargo)
++            .current_dir(
++                manifest
++                    .parent()
++                    .ok_or_else(|| Error::Invalid("manifest has no parent".into()))?,
++            )
++            .env("RUSTC", &rustc)
++            .args([
++                "metadata",
++                "--no-deps",
++                "--format-version",
++                "1",
++                "--locked",
++                "--offline",
++                "--manifest-path",
++            ])
++            .arg(&manifest),
+         OutputLimits {
+             stdout: OutputLimit::Terminate(8 * 1024 * 1024),
+             stderr: OutputLimit::Terminate(1024 * 1024),
+-            timeout: Some(Duration::from_secs(600)),
++            timeout: Some(Duration::from_secs(120)),
+         },
+     )
+     .map_err(supplier)?
+@@ -102,55 +105,77 @@
+     .map_err(supplier)?
+     .require_complete()
+     .map_err(supplier)?;
+-    let mut paths = Vec::new();
+-    for line in output
+-        .stdout
+-        .split(|b| *b == b'\n')
+-        .filter(|line| !line.is_empty())
+-    {
+-        let value: serde_json::Value = serde_json::from_slice(line).map_err(supplier)?;
+-        if value["reason"] == "compiler-artifact" {
+-            let files = value["filenames"]
++    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout).map_err(supplier)?;
++    let invalid = || Error::Invalid("expected one workspace package and cdylib target".into());
++    let packages = metadata["packages"].as_array().ok_or_else(invalid)?;
++    let selected: Vec<_> = packages
++        .iter()
++        .filter(|p| p["name"].as_str() == Some(package))
++        .collect();
++    let [selected] = selected.as_slice() else {
++        return Err(invalid());
++    };
++    let package_id = selected["id"].as_str().ok_or_else(invalid)?;
++    let targets: Vec<_> = selected["targets"]
++        .as_array()
++        .ok_or_else(invalid)?
++        .iter()
++        .filter(|t| {
++            t["crate_types"]
+                 .as_array()
+-                .ok_or_else(|| Error::Invalid("Cargo artifact missing filenames".into()))?;
+-            for file in files {
+-                let file = file
+-                    .as_str()
+-                    .ok_or_else(|| Error::Invalid("Cargo filename is not text".into()))?;
+-                if file.ends_with(".wasm") {
+-                    paths.push(PathBuf::from(file));
+-                }
+-            }
+-        }
+-    }
+-    paths.sort();
+-    paths.dedup();
+-    if paths.len() != 1 {
+-        return Err(Error::Invalid(
+-            "build must produce exactly one Wasm artifact".into(),
+-        ));
+-    }
+-    let path = paths.remove(0);
+-    inspect(&path)?;
+-    if let Some(output) = destination {
+-        let bytes = ic_host_fs::read::read_file(&path, MAX_ARTIFACT_BYTES).map_err(supplier)?;
+-        admit_bounded(&bytes, MAX_ARTIFACT_BYTES)?;
+-        if let Some(parent) = output
+-            .parent()
+-            .filter(|parent| !parent.as_os_str().is_empty())
+-        {
+-            ic_host_fs::durable::prepare_private_parents(parent).map_err(supplier)?;
+-        }
+-        ic_host_fs::durable::write_bytes(
+-            output,
+-            ic_host_fs::durable::WriteOptions {
+-                mode: ic_host_fs::durable::PublicationMode::Replace,
+-                permissions: 0o600,
++                .is_some_and(|k| k.iter().any(|k| k == "cdylib"))
++        })
++        .collect();
++    let [target] = targets.as_slice() else {
++        return Err(invalid());
++    };
++    let library = target["name"].as_str().ok_or_else(invalid)?;
++    let default_output = PathBuf::from(metadata["target_directory"].as_str().ok_or_else(invalid)?)
++        .join("wasm32-unknown-unknown/release")
++        .join(format!("{}.wasm", library.replace('-', "_")));
++    let destination = destination.unwrap_or(&default_output);
++    let mut environment: std::collections::BTreeMap<_, _> = std::env::vars_os().collect();
++    // Target and compiler are supplied by the operation; wrappers must not bypass them.
++    environment.remove(std::ffi::OsStr::new("RUSTC"));
++    environment.remove(std::ffi::OsStr::new("CARGO_TARGET_DIR"));
++    let artifact = ic_build::build(
++        &ic_build::BuildRequest {
++            manifest,
++            package: package.into(),
++            package_id: package_id.into(),
++            library: library.into(),
++            cargo,
++            rustc,
++            scratch_parent: std::env::temp_dir(),
++            profile: "release".into(),
++            features: features.to_vec(),
++            default_features: true,
++            environment: environment.into_iter().collect(),
++            limits: ic_build::Limits {
++                stdout_bytes: 8 * 1024 * 1024,
++                stderr_bytes: 1024 * 1024,
++                record_bytes: 1024 * 1024,
++                candidates: 2,
++                artifact_bytes: MAX_ARTIFACT_BYTES,
++                elapsed: Duration::from_secs(600),
+             },
+-            &bytes,
+-        )
+-        .map_err(supplier)?;
+-        return Ok(output.into());
++        },
++        &std::sync::atomic::AtomicBool::new(false),
++        &mut std::io::sink(),
++    )
++    .map_err(supplier)?;
++    admit_bounded(artifact.bytes(), MAX_ARTIFACT_BYTES)?;
++    if let Some(parent) = destination.parent().filter(|p| !p.as_os_str().is_empty()) {
++        ic_host_fs::durable::prepare_private_parents(parent).map_err(supplier)?;
+     }
+-    Ok(path)
++    ic_host_fs::durable::write_bytes(
++        destination,
++        ic_host_fs::durable::WriteOptions {
++            mode: ic_host_fs::durable::PublicationMode::Replace,
++            permissions: 0o600,
++        },
++        artifact.bytes(),
++    )
++    .map_err(supplier)?;
++    Ok(destination.into())
+ }

@@ -1,0 +1,1170 @@
+diff --git a/Makefile b/Makefile
+index ae17e4f..8f44d7e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -68,7 +68,7 @@ qualification-tooling-check:
+ 	  printf '%s\n' 'Qualification tooling declarations and lock match the product selection.'
+ 
+ m0-setup:
+-	cargo test --manifest-path qualification/Cargo.toml --locked -p ic-db-m0-rollback-driver --test rollback prepare_server -- --ignored --nocapture
++	ic-testkit-server setup --directory .tools/m0-pocketic
+ 
+ m0-contracts:
+ 	cargo test --manifest-path qualification/Cargo.toml --locked -p ic-db-m0-rollback-driver --test numeric_contract --test schema_identity --test row_codec --test nested_row_codec --test query_composition -- --nocapture
+diff --git a/qualification/Cargo.lock b/qualification/Cargo.lock
+index 5c53a7a..89e44f0 100644
+--- a/qualification/Cargo.lock
++++ b/qualification/Cargo.lock
+@@ -253,7 +253,7 @@ dependencies = [
+  "hex",
+  "ic_principal",
+  "leb128",
+- "num-bigint 0.4.8",
++ "num-bigint",
+  "num-traits",
+  "paste",
+  "pretty",
+@@ -1013,8 +1013,8 @@ dependencies = [
+  "clap",
+  "ic-host-artifacts",
+  "ic-host-text",
+- "ic-testkit",
+  "ic-wire",
++ "pocket-ic",
+  "serde",
+  "sha2 0.11.1",
+  "tokio",
+@@ -1087,35 +1087,11 @@ version = "0.79.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "80c115b14974a670676e62940473886a1b2b289ee1ca1258aae89534f1fddb22"
+ dependencies = [
+- "flate2",
+  "leb128",
+  "sha2 0.11.1",
+  "wasmparser",
+ ]
+ 
+-[[package]]
+-name = "ic-host-fs"
+-version = "0.79.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "9ef7770c178efe33ca0d9fcb54e78ad45f0c9c3d499f2e1bac70fb1ba5bba182"
+-dependencies = [
+- "ic-host-artifacts",
+- "rustix",
+- "thiserror 2.0.18",
+-]
+-
+-[[package]]
+-name = "ic-host-process"
+-version = "0.79.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "3bfc02220bee55d050f8ebedce5f5ff71764028afcef8b58c1ae2bceb945e650"
+-dependencies = [
+- "ic-host-artifacts",
+- "ic-host-fs",
+- "libc",
+- "rustix",
+-]
+-
+ [[package]]
+ name = "ic-host-text"
+ version = "0.76.0"
+@@ -1136,18 +1112,6 @@ dependencies = [
+  "serde_bytes",
+ ]
+ 
+-[[package]]
+-name = "ic-platform"
+-version = "0.33.7"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "3e07e0565c70df9222016e93d6f488312176ef5e7036ded60db8b4bc3f61c05f"
+-dependencies = [
+- "ic-platform-types",
+- "num-bigint 0.5.1",
+- "serde",
+- "serde_bytes",
+-]
+-
+ [[package]]
+ name = "ic-platform-macros"
+ version = "0.22.5"
+@@ -1205,24 +1169,6 @@ dependencies = [
+  "thiserror 2.0.18",
+ ]
+ 
+-[[package]]
+-name = "ic-testkit"
+-version = "0.106.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "090cea21af2208dad7a359e99fe803b356fe8daa27cdc52d545df7de3b32c43e"
+-dependencies = [
+- "ic-host-artifacts",
+- "ic-host-fs",
+- "ic-host-process",
+- "ic-platform",
+- "ic-platform-types",
+- "libc",
+- "pocket-ic",
+- "thiserror 2.0.18",
+- "tokio",
+- "url",
+-]
+-
+ [[package]]
+ name = "ic-transport-types"
+ version = "0.49.3"
+@@ -1713,17 +1659,6 @@ dependencies = [
+  "serde",
+ ]
+ 
+-[[package]]
+-name = "num-bigint"
+-version = "0.5.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "93e7820bc0a80a0238e650327316f929ba18d5be054b647490a3a6a339f3e7c0"
+-dependencies = [
+- "num-integer",
+- "num-traits",
+- "serde",
+-]
+-
+ [[package]]
+ name = "num-conv"
+ version = "0.2.2"
+diff --git a/qualification/Cargo.toml b/qualification/Cargo.toml
+index b844b0a..76d8e83 100644
+--- a/qualification/Cargo.toml
++++ b/qualification/Cargo.toml
+@@ -29,7 +29,7 @@ ic-host-artifacts = "0.79.0"
+ ic-host-text = "0.76.0"
+ ic-platform-runtime = { version = "0.22.4", default-features = false }
+ ic-storage = "0.74.1"
+-ic-testkit = "0.106.0"
++pocket-ic = "=16.1.0"
+ ic-wire = "0.22.1"
+ icydb = { git = "https://github.com/dragginzgame/icydb", rev = "6d421e3601a3d71e42af23ea5fe6b168cb6ef2ac", default-features = false }
+ serde = "1.0.229"
+diff --git a/qualification/rollback-driver/Cargo.toml b/qualification/rollback-driver/Cargo.toml
+index 1049c60..e60f3f6 100644
+--- a/qualification/rollback-driver/Cargo.toml
++++ b/qualification/rollback-driver/Cargo.toml
+@@ -17,7 +17,7 @@ category = "tests"
+ [dependencies]
+ clap.workspace = true
+ ic-host-text.workspace = true
+-ic-testkit.workspace = true
++pocket-ic.workspace = true
+ ic-wire.workspace = true
+ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+ 
+diff --git a/qualification/rollback-driver/src/bin/db.rs b/qualification/rollback-driver/src/bin/db.rs
+index 22ff980..ca080cc 100644
+--- a/qualification/rollback-driver/src/bin/db.rs
++++ b/qualification/rollback-driver/src/bin/db.rs
+@@ -259,7 +259,7 @@ async fn main() -> Result<(), String> {
+     let wasm = std::fs::read(&fixture)
+         .map_err(|e| format!("{}: {e}; reinstall with make db", fixture.display()))?;
+     let owned = instance().await?;
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 2_000_000_000_000).await;
+     pic.install_canister(canister, wasm, vec![], None).await;
+@@ -449,6 +449,6 @@ async fn main() -> Result<(), String> {
+             }
+         }
+     };
+-    owned.close().await;
++    owned.drop().await;
+     outcome
+ }
+diff --git a/qualification/rollback-driver/src/lib.rs b/qualification/rollback-driver/src/lib.rs
+index 2ec0231..194fe7e 100644
+--- a/qualification/rollback-driver/src/lib.rs
++++ b/qualification/rollback-driver/src/lib.rs
+@@ -1,14 +1,9 @@
+ #![forbid(unsafe_code)]
+ 
+-//! Local M0 harness shared by executable probes and the development console.
+-//! Testkit owns server provisioning and lifecycle.
+-
+-use ic_testkit::{
+-    pic::{PocketIcInstance, PocketIcStartupConfig, server_assets},
+-    pocket_ic::PocketIcBuilder,
+-};
++//! Caller-runtime qualification against an explicitly provisioned external server.
+ use ic_wire::Limits;
+-use std::{path::PathBuf, time::Duration};
++use pocket_ic::{PocketIcBuilder, nonblocking::PocketIc};
++use std::time::Duration;
+ 
+ /// Transport bounds for the fixed probe controls.
+ pub const LIMITS: Limits = Limits {
+@@ -18,34 +13,41 @@ pub const LIMITS: Limits = Limits {
+     depth: 32,
+ };
+ 
+-/// The explicitly prepared server selection for this checkout.
++/// Create an instance on the caller's explicitly selected external server.
++/// No binary discovery, provisioning, server spawn or background runtime occurs.
++/// Call the upstream async drop method explicitly; it attempts deletion without
++/// reporting transport/status success. The external owner retains server custody.
+ ///
++/// # Errors
++/// Refuses an absent/invalid URL or elapsed creation timeout. A timed-out or
++/// cancelled creation may leave an instance on the external server.
+ /// # Panics
+-/// Panics if the compiled package path does not have its workspace ancestors.
+-#[must_use]
+-pub fn server_directory() -> PathBuf {
+-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+-        .parent()
+-        .unwrap()
+-        .parent()
+-        .unwrap()
+-        .join(".tools/m0-pocketic")
++/// Requires the caller's Tokio runtime; upstream construction panics propagate.
++pub async fn instance() -> Result<PocketIc, String> {
++    let endpoint = std::env::var("IC_TESTKIT_POCKET_IC_URL")
++        .map_err(|_| "select an externally owned PocketIC endpoint".to_owned())?;
++    let url = endpoint
++        .parse()
++        .map_err(|_| "invalid PocketIC endpoint".to_owned())?;
++    tokio::time::timeout(
++        Duration::from_secs(30),
++        PocketIcBuilder::new()
++            .with_application_subnet()
++            .with_server_url(url)
++            .with_max_request_time_ms(Some(30_000))
++            .build_async(),
++    )
++    .await
++    .map_err(|_| "instance creation timed out; remote effects may remain".to_owned())
+ }
+ 
+-/// Open a local instance with the already prepared, authenticated server.
+-///
+-/// # Errors
+-/// Returns setup or startup failures without provisioning a server implicitly.
+-pub async fn instance() -> Result<PocketIcInstance, String> {
+-    PocketIcStartupConfig::Spawn {
+-        server_binary: server_assets::check(&server_directory())
+-            .map_err(|error| format!("run make m0-setup: {error}"))?,
+-        timeout: Duration::from_secs(30),
+-        server_hard_ttl: None,
+-        server_idle_ttl: None,
+-        server_output_files: None,
++#[cfg(test)]
++mod tests {
++    #[tokio::test]
++    async fn requires_external_endpoint() {
++        assert!(std::env::var_os("IC_TESTKIT_POCKET_IC_URL").is_none());
++        assert!(
++            matches!(super::instance().await, Err(message) if message == "select an externally owned PocketIC endpoint")
++        );
+     }
+-    .build_instance(PocketIcBuilder::new().with_application_subnet())
+-    .await
+-    .map_err(|error| error.to_string())
+ }
+diff --git a/qualification/rollback-driver/tests/account_keys.rs b/qualification/rollback-driver/tests/account_keys.rs
+index 3f3f960..72ae868 100644
+--- a/qualification/rollback-driver/tests/account_keys.rs
++++ b/qualification/rollback-driver/tests/account_keys.rs
+@@ -1,6 +1,6 @@
+ //! Canonical Account/Subaccount keys across cross-entity batches and IC messages.
+ use ic_db_m0_rollback_driver::{LIMITS, instance};
+-use ic_testkit::pocket_ic::ErrorCode;
++use pocket_ic::ErrorCode;
+ use ic_wire::native;
+ type Identity = (Vec<u8>, Option<[u8; 32]>);
+ type AccountRow = (Identity, Option<[u8; 32]>, u64);
+@@ -20,7 +20,7 @@ async fn account_aliases_and_mixed_references_survive_rollback_and_upgrade() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records-wasm"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 10_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -168,5 +168,5 @@ async fn account_aliases_and_mixed_references_survive_rollback_and_upgrade() {
+         page(None, None, 32, 0).await,
+         (vec![], None, vec![], None, (3, 2), vec![])
+     );
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/aggregation.rs b/qualification/rollback-driver/tests/aggregation.rs
+index 00645c2..15d9100 100644
+--- a/qualification/rollback-driver/tests/aggregation.rs
++++ b/qualification/rollback-driver/tests/aggregation.rs
+@@ -13,7 +13,7 @@ async fn revision_aggregation() {
+     )
+     .unwrap();
+     let owned = support::instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 2_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -202,5 +202,5 @@ async fn revision_aggregation() {
+     println!(
+         "exact sums={expected:?}; quiet completion=4 advances; contention=5 explicit invalidations/5 attempts; empty completion=1 advance"
+     );
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/batch.rs b/qualification/rollback-driver/tests/batch.rs
+index 03eb9b8..d66e3c3 100644
+--- a/qualification/rollback-driver/tests/batch.rs
++++ b/qualification/rollback-driver/tests/batch.rs
+@@ -12,7 +12,7 @@ async fn final_state_batches() {
+     let wasm =
+         std::fs::read(std::env::var_os("IC_DB_M0_WASM").expect("run make m0-batch")).unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -187,5 +187,5 @@ async fn final_state_batches() {
+     println!(
+         "batch constraints: unique exchange/release, present-only optional uniqueness, final-state references, indexed restricted deletion, pre-write refusals and five commit trap boundaries passed"
+     );
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/commit_failures.rs b/qualification/rollback-driver/tests/commit_failures.rs
+index f14bdd9..3913c4f 100644
+--- a/qualification/rollback-driver/tests/commit_failures.rs
++++ b/qualification/rollback-driver/tests/commit_failures.rs
+@@ -1,6 +1,6 @@
+ //! Failures inside the delivered commit path, using the real IC rollback boundary.
+ use ic_db_m0_rollback_driver::{LIMITS, instance};
+-use ic_testkit::pocket_ic::ErrorCode;
++use pocket_ic::ErrorCode;
+ use ic_wire::native;
+ 
+ type Status = ([u8; 32], [u8; 16], u64, u64);
+@@ -12,7 +12,7 @@ async fn backing_writes_and_growth_failures_roll_back() {
+     )
+     .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 10_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -220,5 +220,5 @@ async fn backing_writes_and_growth_failures_roll_back() {
+     assert_eq!(status().await, prior);
+     assert_eq!(reference().await, Some(2));
+     assert_eq!(&category(9).await[..2], &[(1, 901), (2, 902)]);
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/defaults.rs b/qualification/rollback-driver/tests/defaults.rs
+index bc35a3f..f46931d 100644
+--- a/qualification/rollback-driver/tests/defaults.rs
++++ b/qualification/rollback-driver/tests/defaults.rs
+@@ -10,7 +10,7 @@ async fn literal_defaults_remain_insert_only_across_real_message_boundaries() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records-wasm"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 10_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -72,5 +72,5 @@ async fn literal_defaults_remain_insert_only_across_real_message_boundaries() {
+         .await
+         .unwrap();
+     assert_eq!(state().await, before);
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/entity_growth.rs b/qualification/rollback-driver/tests/entity_growth.rs
+index 0f0a99c..4a832f5 100644
+--- a/qualification/rollback-driver/tests/entity_growth.rs
++++ b/qualification/rollback-driver/tests/entity_growth.rs
+@@ -1,7 +1,7 @@
+ //! Entity growth with independently checked reachability, isolation and upgrade.
+ use ic_db_m0_rollback_driver::{LIMITS, instance};
+ use ic_host_artifacts::wasm::{InspectionLimits, inspect};
+-use ic_testkit::pocket_ic::ErrorCode;
++use pocket_ic::ErrorCode;
+ use ic_wire::native;
+ use sha2::{Digest, Sha256};
+ 
+@@ -49,7 +49,7 @@ async fn typed_entity_growth() {
+                 .collect::<String>()
+         );
+         let owned = instance().await.unwrap();
+-        let pic = owned.instance();
++        let pic = &owned;
+         let canister = pic.create_canister().await;
+         pic.add_cycles(canister, 10_000_000_000_000).await;
+         let before_install = pic.cycle_balance(canister).await;
+@@ -161,6 +161,6 @@ async fn typed_entity_growth() {
+             );
+         }
+         eprintln!("host={variant} entities={count} delete_opening_stages_work_cycles={deletes:?}");
+-        owned.close().await;
++        owned.drop().await;
+     }
+ }
+diff --git a/qualification/rollback-driver/tests/entrypoints.rs b/qualification/rollback-driver/tests/entrypoints.rs
+index 2a15f03..7c000ba 100644
+--- a/qualification/rollback-driver/tests/entrypoints.rs
++++ b/qualification/rollback-driver/tests/entrypoints.rs
+@@ -1,7 +1,7 @@
+ //! Standalone installed hooks: raw refusals and reply failures across IC boundaries.
+ 
+ use ic_db_m0_rollback_driver::{LIMITS, instance};
+-use ic_testkit::pocket_ic::ErrorCode;
++use pocket_ic::ErrorCode;
+ use ic_wire::{ByteBuf, native};
+ 
+ type Entries = Vec<(u64, u64)>;
+@@ -14,7 +14,7 @@ fn wasm() -> Vec<u8> {
+ #[tokio::test]
+ async fn admission_and_decode_refuse_before_dispatch() {
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 2_000_000_000_000).await;
+     pic.install_canister(canister, wasm(), vec![], None).await;
+@@ -89,14 +89,14 @@ async fn admission_and_decode_refuse_before_dispatch() {
+     assert_eq!(snapshot.0, vec![(7, 11)]);
+     assert_eq!(snapshot.1, vec![(11, 7)]);
+     assert_eq!(snapshot.2, vec![(7, 11)]);
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+ async fn reply_failure_rolls_back_only_the_current_execution() {
+     let wasm = wasm();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     for (method, id, asynchronous) in [("endpoint_sync", 8, false), ("endpoint_async", 10, true)] {
+         for oversized in [false, true] {
+             let canister = pic.create_canister().await;
+@@ -159,5 +159,5 @@ async fn reply_failure_rolls_back_only_the_current_execution() {
+             assert_eq!(snapshot.2, expected);
+         }
+     }
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/enum_collections.rs b/qualification/rollback-driver/tests/enum_collections.rs
+index 9a63042..8c52458 100644
+--- a/qualification/rollback-driver/tests/enum_collections.rs
++++ b/qualification/rollback-driver/tests/enum_collections.rs
+@@ -8,7 +8,7 @@ async fn enum_collections_preserve_bytes_and_atomicity() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -58,5 +58,5 @@ async fn enum_collections_preserve_bytes_and_atomicity() {
+         Ok((empty, 2))
+     );
+     assert_eq!(decode(&call(4, vec![]).await.unwrap()), Ok((vec![], 3)));
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/envelope_comparison.rs b/qualification/rollback-driver/tests/envelope_comparison.rs
+index bd76f1f..9beb3a4 100644
+--- a/qualification/rollback-driver/tests/envelope_comparison.rs
++++ b/qualification/rollback-driver/tests/envelope_comparison.rs
+@@ -17,7 +17,7 @@ async fn matched_high_fanout_writes() {
+             .collect();
+         eprintln!("{label} sha256={hash}");
+         let owned = instance().await.unwrap();
+-        let pic = owned.instance();
++        let pic = &owned;
+         let canister = pic.create_canister().await;
+         pic.add_cycles(canister, 100_000_000_000_000).await;
+         pic.install_canister(canister, wasm, vec![], None).await;
+@@ -136,6 +136,6 @@ async fn matched_high_fanout_writes() {
+                 assert_eq!(ids, expected);
+             }
+         }
+-        owned.close().await;
++        owned.drop().await;
+     }
+ }
+diff --git a/qualification/rollback-driver/tests/generation.rs b/qualification/rollback-driver/tests/generation.rs
+index ebf157a..72d4a77 100644
+--- a/qualification/rollback-driver/tests/generation.rs
++++ b/qualification/rollback-driver/tests/generation.rs
+@@ -11,7 +11,7 @@ async fn issued_keys_follow_message_boundaries_and_explicit_restore() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records-wasm"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 10_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -122,5 +122,5 @@ async fn issued_keys_follow_message_boundaries_and_explicit_restore() {
+         .unwrap();
+     let lookup: (Option<Row>, Vec<Row>) = native::decode_response(72, &reply, LIMITS).unwrap();
+     assert_eq!(lookup, (Some((resumed, None, 3)), vec![(resumed, None, 3)]));
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/maintenance.rs b/qualification/rollback-driver/tests/maintenance.rs
+index bba3db0..58b892b 100644
+--- a/qualification/rollback-driver/tests/maintenance.rs
++++ b/qualification/rollback-driver/tests/maintenance.rs
+@@ -19,7 +19,7 @@ async fn identified_maintenance() {
+     let bprime = std::fs::read(root.join("maintenance-bprime.wasm")).unwrap();
+     let bad = std::fs::read(root.join("maintenance-bad.wasm")).unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     for scenario in ["success", "cancel", "collision", "missing", "unsupported"] {
+         let canister = pic.create_canister().await;
+         pic.add_cycles(canister, 3_000_000_000_000).await;
+@@ -332,5 +332,5 @@ async fn identified_maintenance() {
+             published[8], cleaned[8]
+         );
+     }
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/managed.rs b/qualification/rollback-driver/tests/managed.rs
+index 58e7fc8..b40d799 100644
+--- a/qualification/rollback-driver/tests/managed.rs
++++ b/qualification/rollback-driver/tests/managed.rs
+@@ -9,7 +9,7 @@ async fn managed_times_follow_batch_change_and_message_boundaries() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records-wasm"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 10_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -98,5 +98,5 @@ async fn managed_times_follow_batch_change_and_message_boundaries() {
+         .await
+         .unwrap();
+     assert_eq!(state(200).await, before);
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/principal_keys.rs b/qualification/rollback-driver/tests/principal_keys.rs
+index f5223d7..e427260 100644
+--- a/qualification/rollback-driver/tests/principal_keys.rs
++++ b/qualification/rollback-driver/tests/principal_keys.rs
+@@ -1,6 +1,6 @@
+ //! Length-framed Principal identity through the real product and IC rollback.
+ use ic_db_m0_rollback_driver::{LIMITS, instance};
+-use ic_testkit::pocket_ic::ErrorCode;
++use pocket_ic::ErrorCode;
+ use ic_wire::native;
+ type Row = (Vec<u8>, Option<Vec<u8>>, u64);
+ type Page = (Vec<Row>, Option<Vec<u8>>, u64, Vec<Vec<u8>>);
+@@ -11,7 +11,7 @@ async fn principal_identity_pages_references_and_upgrade() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records-wasm"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 10_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -105,5 +105,5 @@ async fn principal_identity_pages_references_and_upgrade() {
+     assert_eq!(page(None, 32, 0).await, expected);
+     decode(write(2, rows, false).await.unwrap()).unwrap();
+     assert_eq!(page(None, 32, 0).await, (vec![], None, 3, vec![]));
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/queries.rs b/qualification/rollback-driver/tests/queries.rs
+index 42c0a36..76c0233 100644
+--- a/qualification/rollback-driver/tests/queries.rs
++++ b/qualification/rollback-driver/tests/queries.rs
+@@ -32,7 +32,7 @@ async fn sparse_fluent_pages_retry_and_reopen() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -567,7 +567,7 @@ async fn sparse_fluent_pages_retry_and_reopen() {
+         ]
+     );
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -576,7 +576,7 @@ async fn decimal_aggregates_preserve_scale_rounding_and_upgrade_behavior() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -706,5 +706,5 @@ async fn decimal_aggregates_preserve_scale_rounding_and_upgrade_behavior() {
+         );
+         assert_eq!(pic.get_stable_memory(canister).await, before);
+     }
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/reads.rs b/qualification/rollback-driver/tests/reads.rs
+index 3842706..97f54ae 100644
+--- a/qualification/rollback-driver/tests/reads.rs
++++ b/qualification/rollback-driver/tests/reads.rs
+@@ -13,7 +13,7 @@ async fn bounded_reads() {
+     let wasm =
+         std::fs::read(std::env::var_os("IC_DB_M0_WASM").expect("run make m0-reads")).unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -294,5 +294,5 @@ async fn bounded_reads() {
+     println!(
+         "read contracts: order refusal, sparse progress, Wire-byte retry/refusal, null DISTINCT, cursor binding and live update/insert/delete cases passed"
+     );
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/records.rs b/qualification/rollback-driver/tests/records.rs
+index b28cd3a..2efd6b9 100644
+--- a/qualification/rollback-driver/tests/records.rs
++++ b/qualification/rollback-driver/tests/records.rs
+@@ -354,7 +354,7 @@ async fn references_follow_final_batch_state_in_wasm() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -403,7 +403,7 @@ async fn references_follow_final_batch_state_in_wasm() {
+         .unwrap();
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     assert_eq!(reference(1).await, Some(2));
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -412,7 +412,7 @@ async fn product_records_and_message_boundary() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -877,7 +877,7 @@ async fn product_records_and_message_boundary() {
+     assert_eq!(replace_document(next.clone()).await, Ok(()));
+     assert_eq!(document().await, (next, 6));
+     assert_eq!(status().await.2, 2);
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -887,7 +887,7 @@ async fn wide_numbers_are_exact_in_wasm_and_rollback_with_the_message() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -949,7 +949,7 @@ async fn wide_numbers_are_exact_in_wasm_and_rollback_with_the_message() {
+         .unwrap();
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     assert_eq!(read().await, (final_value, 6));
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -960,7 +960,7 @@ async fn binary_values_preserve_bounds_and_bytes_in_wasm() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1057,7 +1057,7 @@ async fn binary_values_preserve_bounds_and_bytes_in_wasm() {
+         .unwrap();
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     assert_eq!(read().await, (full, 3));
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1076,7 +1076,7 @@ async fn narrow_numbers_preserve_widths_absence_and_message_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1141,7 +1141,7 @@ async fn narrow_numbers_preserve_widths_absence_and_message_rollback() {
+         .unwrap();
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     assert_eq!(read().await, (final_value, revision));
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1152,7 +1152,7 @@ async fn principal_identity_bytes_survive_wasm_reopen_and_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1249,7 +1249,7 @@ async fn principal_identity_bytes_survive_wasm_reopen_and_rollback() {
+         .unwrap();
+     assert_eq!(read().await, (final_value, revision));
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1261,7 +1261,7 @@ async fn typed_index_order_uniqueness_and_rollback_survive_wasm_reopen() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1340,7 +1340,7 @@ async fn typed_index_order_uniqueness_and_rollback_survive_wasm_reopen() {
+         .unwrap();
+     assert_eq!(read(vec![4]).await, (vec![2], expected));
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1351,7 +1351,7 @@ async fn text_index_boundaries_and_boolean_prefixes_survive_wasm_updates() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1438,7 +1438,7 @@ async fn text_index_boundaries_and_boolean_prefixes_survive_wasm_updates() {
+         Ok(vec![("a".into(), 7)])
+     );
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1450,7 +1450,7 @@ async fn optional_membership_and_unique_transfer_survive_wasm_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1538,7 +1538,7 @@ async fn optional_membership_and_unique_transfer_survive_wasm_rollback() {
+         .unwrap();
+     assert_eq!(read(Some(ByteBuf::new())).await, expected);
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1548,7 +1548,7 @@ async fn optional_references_preserve_final_state_rollback_and_upgrade() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1629,7 +1629,7 @@ async fn optional_references_preserve_final_state_rollback_and_upgrade() {
+         )
+     );
+     assert_eq!(write(vec![], vec![u64::MAX]).await, Ok(()));
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1638,7 +1638,7 @@ async fn named_enums_preserve_ordinals_indexes_and_message_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1700,7 +1700,7 @@ async fn named_enums_preserve_ordinals_indexes_and_message_rollback() {
+         decode(&write(2, 0, None).await.unwrap()),
+         Ok((vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2))
+     );
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1709,7 +1709,7 @@ async fn nested_records_payloads_and_shared_bounds_survive_wasm_reopen() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1771,7 +1771,7 @@ async fn nested_records_payloads_and_shared_bounds_survive_wasm_reopen() {
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     let (_, revision) = decode(&write(0, 0, 0).await.unwrap()).unwrap();
+     assert_eq!(revision, 2);
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1780,7 +1780,7 @@ async fn ordered_lists_preserve_bounds_and_message_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1849,7 +1849,7 @@ async fn ordered_lists_preserve_bounds_and_message_rollback() {
+         .unwrap();
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     assert_eq!(decode(&write(0, 0, 0).await.unwrap()), saved);
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1858,7 +1858,7 @@ async fn canonical_sets_preserve_order_and_message_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -1925,7 +1925,7 @@ async fn canonical_sets_preserve_order_and_message_rollback() {
+         .unwrap();
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     assert_eq!(decode(&write(0, false, 0).await.unwrap()), saved);
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -1934,7 +1934,7 @@ async fn canonical_maps_preserve_entries_and_message_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -2051,7 +2051,7 @@ async fn canonical_maps_preserve_entries_and_message_rollback() {
+             valid
+         );
+     }
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -2060,7 +2060,7 @@ async fn u256_exact_order_uniqueness_and_message_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -2193,7 +2193,7 @@ async fn u256_exact_order_uniqueness_and_message_rollback() {
+         .unwrap();
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     assert_eq!(read().await, (expected(&swapped), 2));
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -2202,7 +2202,7 @@ async fn finite_floats_preserve_domain_zero_uniqueness_and_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -2404,7 +2404,7 @@ async fn finite_floats_preserve_domain_zero_uniqueness_and_rollback() {
+     for small in [false, true] {
+         assert_eq!(read(small).await, (expected(&swapped), 2));
+     }
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -2413,7 +2413,7 @@ async fn accounts_preserve_default_identity_order_and_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -2593,7 +2593,7 @@ async fn accounts_preserve_default_identity_order_and_rollback() {
+     for sub in [false, true] {
+         assert_eq!(read(sub).await, (expected(&swapped), 2));
+     }
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -2602,7 +2602,7 @@ async fn ulid_exact_order_uniqueness_and_message_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -2765,7 +2765,7 @@ async fn ulid_exact_order_uniqueness_and_message_rollback() {
+         .unwrap();
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     assert_eq!(read().await, (expected(&swapped), 2));
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -2774,7 +2774,7 @@ async fn dates_preserve_domain_order_and_message_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -2910,7 +2910,7 @@ async fn dates_preserve_domain_order_and_message_rollback() {
+         .unwrap();
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     assert_eq!(read().await, (expected(&swapped), 2));
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -2919,7 +2919,7 @@ async fn time_values_preserve_units_order_and_message_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -3095,7 +3095,7 @@ async fn time_values_preserve_units_order_and_message_rollback() {
+     for duration in [false, true] {
+         assert_eq!(read(duration).await, (expected(&swapped, duration), 2));
+     }
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -3104,7 +3104,7 @@ async fn decimals_preserve_exact_scale_uniqueness_and_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -3249,7 +3249,7 @@ async fn decimals_preserve_exact_scale_uniqueness_and_rollback() {
+         .unwrap();
+     assert_eq!(pic.get_stable_memory(canister).await, before);
+     assert_eq!(read().await, (expected(true), 2));
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -3258,7 +3258,7 @@ async fn ulid_primary_keys_keep_paging_references_and_message_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -3403,7 +3403,7 @@ async fn ulid_primary_keys_keep_paging_references_and_message_rollback() {
+     );
+     assert_eq!(page(None, 32).await, (rows[1..].to_vec(), None, 3));
+     assert_eq!(lookup([0; 16], 6).await, (None, vec![]));
+-    owned.close().await;
++    owned.drop().await;
+ }
+ 
+ #[tokio::test]
+@@ -3412,7 +3412,7 @@ async fn integer_primary_keys_preserve_signed_order_full_width_and_rollback() {
+         std::fs::read(std::env::var_os("IC_DB_M1_RECORDS_WASM").expect("run make m1-records"))
+             .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 3_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -3602,5 +3602,5 @@ async fn integer_primary_keys_preserve_signed_order_full_width_and_rollback() {
+     );
+     assert_eq!(signed_page(None, 32).await, (signed[1..].to_vec(), None, 3));
+     assert_eq!(wide_page(None, 32).await, (wide[1..].to_vec(), None, 3));
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/rollback.rs b/qualification/rollback-driver/tests/rollback.rs
+index c7008f7..808ffd6 100644
+--- a/qualification/rollback-driver/tests/rollback.rs
++++ b/qualification/rollback-driver/tests/rollback.rs
+@@ -1,25 +1,17 @@
+ //! Actual Wasm rollback checks; raw stable bytes provide an oracle independent of row lookup.
+ 
+ use ic_db_m0_rollback_driver as support;
+-use ic_testkit::pic::server_assets;
+ use ic_wire::native;
+-use support::{LIMITS, server_directory};
++use support::LIMITS;
+ type Entries = Vec<(u64, u64)>;
+ type Snapshot = (Entries, Entries, Entries, [u64; 4]);
+ 
+-#[test]
+-#[ignore = "explicit provisioning only: make m0-setup"]
+-fn prepare_server() {
+-    let path = server_assets::setup(&server_directory(), || false).unwrap();
+-    println!("Prepared {}", path.display());
+-}
+-
+ #[tokio::test]
+ async fn message_rollback() {
+     let wasm =
+         std::fs::read(std::env::var_os("IC_DB_M0_WASM").expect("run make m0-rollback")).unwrap();
+     let owned = support::instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     for mode in 0_u8..=8 {
+         let canister = pic.create_canister().await;
+         pic.add_cycles(canister, 2_000_000_000_000).await;
+@@ -130,5 +122,5 @@ async fn message_rollback() {
+             assert!(after == pic.get_stable_memory(canister).await);
+         }
+     }
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/support/scalar_workload.rs b/qualification/rollback-driver/tests/support/scalar_workload.rs
+index fa47594..a1a7cb9 100644
+--- a/qualification/rollback-driver/tests/support/scalar_workload.rs
++++ b/qualification/rollback-driver/tests/support/scalar_workload.rs
+@@ -51,7 +51,7 @@ pub async fn run(label: &str, wasm_path: &std::ffi::OsStr, needs_settling: bool)
+     );
+ 
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 10_000_000_000_000).await;
+     let before_install = pic.cycle_balance(canister).await;
+@@ -245,5 +245,5 @@ pub async fn run(label: &str, wasm_path: &std::ffi::OsStr, needs_settling: bool)
+         "{label} stable_memory_bytes={}",
+         pic.get_stable_memory(canister).await.len()
+     );
+-    owned.close().await;
++    owned.drop().await;
+ }
+diff --git a/qualification/rollback-driver/tests/write_envelope.rs b/qualification/rollback-driver/tests/write_envelope.rs
+index bddb099..f4e2e62 100644
+--- a/qualification/rollback-driver/tests/write_envelope.rs
++++ b/qualification/rollback-driver/tests/write_envelope.rs
+@@ -1,6 +1,6 @@
+ //! Real Wasm envelope witness with independent row/index byte expectations.
+ use ic_db_m0_rollback_driver::{LIMITS, instance};
+-use ic_testkit::pocket_ic::ErrorCode;
++use pocket_ic::ErrorCode;
+ use ic_wire::native;
+ use std::collections::BTreeMap;
+ 
+@@ -72,7 +72,7 @@ async fn maximum_rows_batch_and_fanout_complete_or_refuse_atomically() {
+     )
+     .unwrap();
+     let owned = instance().await.unwrap();
+-    let pic = owned.instance();
++    let pic = &owned;
+     let canister = pic.create_canister().await;
+     pic.add_cycles(canister, 10_000_000_000_000).await;
+     pic.install_canister(canister, wasm.clone(), vec![], None)
+@@ -219,5 +219,5 @@ async fn maximum_rows_batch_and_fanout_complete_or_refuse_atomically() {
+         pic.get_stable_memory(canister).await.len()
+     );
+     audit(None).await;
+-    owned.close().await;
++    owned.drop().await;
+ }

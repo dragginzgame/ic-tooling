@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Qualify current local sibling inputs without modifying the sibling.
 set -euo pipefail
+mode="${1:-build}"
+case "$mode" in build|snapshots) ;; *) exit 2 ;; esac
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${SCHEDULING_SOURCE:-$repo/../ic-scheduling}"
 source_checkout="$(cd "$source_checkout" && pwd -P)"
@@ -22,6 +24,8 @@ export_local_source
 export GIT_CEILING_DIRECTORIES="$repo/target"
 git -C "$scratch/source" apply --check "$repo/qualification/scheduling/owned-build.patch"
 git -C "$scratch/source" apply "$repo/qualification/scheduling/owned-build.patch"
+git -C "$scratch/source" apply --check "$repo/qualification/scheduling/jobs-session.patch"
+git -C "$scratch/source" apply "$repo/qualification/scheduling/jobs-session.patch"
 # The original source-inventory check includes tracked and unignored files.
 # This disposable fixture repository makes it inspect exactly this export.
 git -C "$scratch/source" init -q
@@ -51,17 +55,25 @@ jq -e --arg root "$repo" '
     (.pkg as $id | any($packages[]; .id == $id and .version == "0.80.1" and
       .manifest_path == ($root + "/crates/ic-host-fs/Cargo.toml"))))
 ' "$scratch/metadata.json" >/dev/null
-cargo test --manifest-path "$manifest" -p ic-timers-pocketic --lib --bin ic-timers-pocketic --locked --offline
-cargo run --manifest-path "$manifest" -p ic-timers-pocketic --locked --offline -- focused \
-  tests::lifecycle::shared_watchdog_survives_trap_and_upgrade \
-  tests::ingress::typed_entrypoints_reject_invalid_wire_before_mutating_timer_state
+if [[ "$mode" == build ]]; then
+  cargo test --manifest-path "$manifest" -p ic-timers-pocketic --lib --bin ic-timers-pocketic --locked --offline
+  cargo run --manifest-path "$manifest" -p ic-timers-pocketic --locked --offline -- focused \
+    tests::lifecycle::shared_watchdog_survives_trap_and_upgrade \
+    tests::ingress::typed_entrypoints_reject_invalid_wire_before_mutating_timer_state
 
-# Jobs owns external optimization and its retained evidence. Use the current
-# consumer's admission script to check already-prepared tools without installation.
-bash vendor/toko-tooling/scripts/dev/install-ic-tools.sh --consumer "$source_checkout" --tool wasm-opt --check
-optimizer="$source_checkout/.tools/ic/bin/wasm-opt"
-"$optimizer" --version > "$scratch/optimizer-version.txt"
-cargo test --manifest-path "$manifest" -p ic-jobs-canister-tests --bin jobs-capture-artifact --locked --offline
+  # Jobs owns external optimization and its retained evidence. Use the current
+  # consumer's admission script to check already-prepared tools without installation.
+  bash vendor/toko-tooling/scripts/dev/install-ic-tools.sh --consumer "$source_checkout" --tool wasm-opt --check
+  optimizer="$source_checkout/.tools/ic/bin/wasm-opt"
+  "$optimizer" --version > "$scratch/optimizer-version.txt"
+  cargo test --manifest-path "$manifest" -p ic-jobs-canister-tests --bin jobs-capture-artifact --locked --offline
+fi
+cargo tree --manifest-path "$manifest" -p ic-jobs-canister-tests --features harness --edges normal,build --prefix none --locked --offline > "$scratch/jobs-graph.txt"
+awk '
+  $1 == "ic-testkit" { legacy = 1 }
+  $1 == "pocket-ic" && $2 == "v16.1.0" { upstream = 1 }
+  END { exit (legacy || !upstream) }
+' "$scratch/jobs-graph.txt"
 cargo build --manifest-path "$manifest" -p ic-jobs-test-consumer --release --target wasm32-unknown-unknown \
   --target-dir "$scratch/jobs-build" --message-format=json --locked --offline > "$scratch/jobs-build.jsonl"
 input="$(jq -ser '
@@ -73,6 +85,11 @@ mkdir "$scratch/jobs"
 original="$scratch/jobs/original.wasm"
 cargo run --manifest-path "$manifest" -p ic-jobs-canister-tests --bin jobs-capture-artifact --locked --offline -- "$input" "$original"
 cmp "$input" "$original"
+if [[ "$mode" == snapshots ]]; then
+  JOBS_QUALIFICATION_EXPORT="$scratch" IC_JOBS_CONSUMER_WASM="$original" \
+    "$SCHEDULING_TESTKIT_CLI" run --ttl 900 -- bash "$repo/scripts/qualification/jobs-session.sh"
+  exit 0
+fi
 for variant in original O3 Os Oz; do
   artifact="$original"
   if [[ "$variant" != original ]]; then

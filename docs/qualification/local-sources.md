@@ -1,12 +1,12 @@
 # Current local consumer sources
 
-Active Canic, Backup and Scheduling qualification uses current local sibling
+Active Canic, Backup, Scheduling and DB qualification uses current local sibling
 working trees. Historical pinned exports remain historical evidence, not the
 source selection for new runs. Auth remains on hold; Storage, Observability and
 Wire remain frozen. Reading a current consumer's existing supplier selection does
 not authorize modifying those suppliers.
 
-`scripts/qualification/local-source.sh` owns capture for the three active runners.
+`scripts/qualification/local-source.sh` owns capture for the active runners.
 It copies tracked files as they currently exist plus non-ignored untracked files,
 omits tracked deletions, and preserves file modes and symlink entries. Ignored
 build outputs, tool caches and Git metadata are excluded. Submodule directories

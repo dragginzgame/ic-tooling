@@ -9,11 +9,20 @@ help:
 	@printf '%s\n' \
 	  'Development (offline; prepare tools and wasm32-unknown-unknown first):' \
 	  '  make check             Admit Cargo tooling selection and installed snapshot' \
+	  '  make test-text         Terminal escaping and Unicode table contracts' \
+	  '  make test-canic-build  Current Canic owned Wasm build and publication refusal' \
+	  '  make test-canic-text   Current Canic CLI presentation qualification' \
+	  '  make test-query-text   Current Query presentation and output qualification' \
 	  '  make test-http-body    Bounded HTTP body fixtures (loopback required)' \
 	  '  make test-backup-http  Current Backup HTTP policy and body qualification' \
 	  '  make test-custody      Byte and publication/custody failure acceptance' \
 	  '  make test-backup-custody Local Backup filesystem and metadata custody (loopback required)' \
 	  '  make test-scheduling-consumer Local Scheduling owned build and installed tests' \
+	  '  make test-jobs-snapshots Current Jobs controller recovery and external ownership' \
+	  '  make test-platform-agent Current Platform Agent ingress and identity boundary' \
+	  '  make test-platform-consumer Current Platform raw_rand installed behavior' \
+	  '  make test-db-text       Current DB installed console with new Text' \
+	  '  make test-db-consumer   Current DB rollback and external-server ownership' \
 	  '  make test-canic-consumer Local Canic retained-record admission' \
 	  '  make test-auth-consumer Historical Auth recipe (on hold)' \
 	  '  make test-owned-build  Stage 1 byte/custody/process/protocol and real Wasm acceptance' \
@@ -61,3 +70,38 @@ test-http-body: toko-tooling-check
 
 test-backup-http: toko-tooling-check
 	bash scripts/qualification/backup-consumer.sh http
+
+.PHONY: test-db-consumer
+test-db-consumer: toko-tooling-check
+	bash scripts/qualification/db-consumer.sh
+
+.PHONY: test-jobs-snapshots
+test-jobs-snapshots: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh snapshots
+
+.PHONY: test-platform-consumer
+test-platform-consumer: toko-tooling-check
+	bash scripts/qualification/platform-consumer.sh
+
+.PHONY: test-platform-agent
+test-platform-agent: toko-tooling-check
+	bash scripts/qualification/platform-consumer.sh agent
+
+.PHONY: test-text test-query-text
+test-text: toko-tooling-check
+	cargo test -p ic-host-text --lib --locked --offline
+
+test-query-text: toko-tooling-check
+	bash scripts/qualification/query-consumer.sh
+
+.PHONY: test-db-text
+test-db-text: toko-tooling-check
+	bash scripts/qualification/db-consumer.sh text
+
+.PHONY: test-canic-text
+test-canic-text: toko-tooling-check
+	bash scripts/qualification/canic-text.sh
+
+.PHONY: test-canic-build
+test-canic-build: toko-tooling-check
+	bash scripts/qualification/canic-build.sh

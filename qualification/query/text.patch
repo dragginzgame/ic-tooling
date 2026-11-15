@@ -1,0 +1,226 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -11,7 +11,7 @@
+ 
+ [workspace.dependencies]
+ clap = "4.6.7"
+-ic-host-text = "0.76.0"
++ic-host-text = { path = "/home/adam/projects/ic-tooling-new/crates/ic-host-text", version = "0.77.0" }
+ ic-platform = { version = "0.33.7", default-features = false }
+ ic-platform-types = { version = "0.20.4", default-features = false }
+ ic-topology = { path = "crates/ic-topology", version = "0.105.5" }
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1121,9 +1121,7 @@
+ 
+ [[package]]
+ name = "ic-host-text"
+-version = "0.76.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "7e4ca740ecd5342a449b401fca5ce2521e34ea3ab482dc67d989de3862b75c4a"
++version = "0.77.0"
+ dependencies = [
+  "unicode-width",
+ ]
+--- a/crates/ic-query-cli/src/presentation/mod.rs
++++ b/crates/ic-query-cli/src/presentation/mod.rs
+@@ -1,7 +1,7 @@
+ //! Pure human-facing projections; process output remains in the entrypoint.
+ pub(crate) mod compare;
+ 
+-use ic_host_text::table::render_bordered;
++use ic_host_text::bordered_table;
+ use std::collections::BTreeSet;
+ use std::fmt::Write;
+ 
+@@ -189,7 +189,7 @@
+         })
+         .collect();
+     text.push('\n');
+-    text.push_str(&render_bordered(
++    text.push_str(&bordered_table(
+         &["NODE", "OPERATOR", "HOSTOS", "CHIP ID", "READ"],
+         &rows,
+     ));
+--- a/crates/ic-query-cli/src/presentation/available.rs
++++ b/crates/ic-query-cli/src/presentation/available.rs
+@@ -1,6 +1,6 @@
+ //! Compact availability summaries; full page/node evidence stays in JSON.
+ 
+-use ic_host_text::table::render_bordered;
++use ic_host_text::bordered_table;
+ use ic_topology::cloud_engine::available::{AvailableNodesReport, TraversalStop};
+ use std::{
+     collections::{BTreeMap, BTreeSet},
+@@ -61,7 +61,7 @@
+         })
+         .collect();
+     text.push('\n');
+-    text.push_str(&render_bordered(
++    text.push_str(&bordered_table(
+         &["RAW CLASS", "NODES", "PROVIDERS", "CHIP ID", "DATA CENTER"],
+         &rows,
+     ));
+--- a/crates/ic-query-cli/src/presentation/candidates.rs
++++ b/crates/ic-query-cli/src/presentation/candidates.rs
+@@ -1,6 +1,6 @@
+ //! Compact declaration coverage, without a selected or computed deployment price.
+ 
+-use ic_host_text::table::render_bordered;
++use ic_host_text::bordered_table;
+ use ic_topology::cloud_engine::{
+     candidates::{CandidatePricing, CandidatesReport},
+     prices::FeeOutcome,
+@@ -70,7 +70,7 @@
+                 })
+                 .collect();
+             text.push('\n');
+-            text.push_str(&render_bordered(
++            text.push_str(&bordered_table(
+                 &[
+                     "DECLARATION",
+                     "MATCHING NODES",
+--- a/crates/ic-query-cli/src/presentation/compare.rs
++++ b/crates/ic-query-cli/src/presentation/compare.rs
+@@ -1,5 +1,5 @@
+ //! Side-by-side placement evidence without scoring candidates.
+-use ic_host_text::table::render_bordered;
++use ic_host_text::bordered_table;
+ use ic_topology::subnet::compare::{Candidate, SharedGroup, SubnetComparisonReport};
+ use std::fmt::Write;
+ 
+@@ -85,7 +85,7 @@
+             "partial"
+         },
+         report.elapsed.as_secs_f64(),
+-        render_bordered(&["OBSERVATION", "LEFT", "RIGHT"], &rows)
++        bordered_table(&["OBSERVATION", "LEFT", "RIGHT"], &rows)
+     );
+     if let Some(overlap) = report.infrastructure_overlap() {
+         let coverage = |complete| if complete { "complete" } else { "partial" };
+@@ -116,7 +116,7 @@
+         writeln!(
+             text,
+             "\nObserved infrastructure overlap\n\n{}\n",
+-            render_bordered(
++            bordered_table(
+                 &[
+                     "RELATIONSHIP",
+                     "SHARED IDENTITIES",
+@@ -206,7 +206,7 @@
+     writeln!(
+         text,
+         "\n{}\n",
+-        render_bordered(&["IDENTITY", "LEFT NODES", "RIGHT NODES"], &rows)
++        bordered_table(&["IDENTITY", "LEFT NODES", "RIGHT NODES"], &rows)
+     )
+     .expect("String write");
+ }
+--- a/crates/ic-query-cli/src/presentation/distribution.rs
++++ b/crates/ic-query-cli/src/presentation/distribution.rs
+@@ -1,6 +1,6 @@
+ //! Compact human presentation of selected membership concentration.
+ 
+-use ic_host_text::table::render_bordered;
++use ic_host_text::bordered_table;
+ use std::fmt::Write;
+ 
+ use ic_topology::subnet::distribution::{RecordOutcome, SubnetDistributionReport};
+@@ -33,7 +33,7 @@
+         .iter()
+         .map(|group| vec![group.value.to_text(), group.nodes.to_string()])
+         .collect();
+-    text.push_str(&render_bordered(&["PROVIDER", "NODES"], &providers));
++    text.push_str(&bordered_table(&["PROVIDER", "NODES"], &providers));
+     text.push('\n');
+     if summary.providers.is_empty() {
+         text.push_str("  (none resolved)\n");
+@@ -58,7 +58,7 @@
+             ]);
+         }
+     }
+-    text.push_str(&render_bordered(
++    text.push_str(&bordered_table(
+         &["NODES", "ID", "REGION", "OWNER"],
+         &locations,
+     ));
+--- a/crates/ic-query-cli/src/presentation/engine.rs
++++ b/crates/ic-query-cli/src/presentation/engine.rs
+@@ -1,13 +1,13 @@
+ //! Selected-engine relationships with compact source and membership evidence.
+ 
+-use ic_host_text::{escape::terminal_text, table::render_bordered};
++use ic_host_text::{escape, bordered_table};
+ use ic_topology::cloud_engine::engine::{EngineOutcome, EngineReport, MembershipComparison};
+ use std::{collections::BTreeSet, fmt::Write};
+ 
+ pub(crate) fn cloud_engine(report: &EngineReport) -> String {
+     let mut text = format!(
+         "Cloud-engine topology\n\nEngine: {}\n",
+-        terminal_text(&format!("{:?}", report.requested_engine_id.as_str()))
++        escape(&format!("{:?}", report.requested_engine_id.as_str()))
+     );
+     match &report.outcome {
+         EngineOutcome::NotReturned => {
+@@ -51,7 +51,7 @@
+             }
+             if let Some(subnet) = copy {
+                 let version =
+-                    terminal_text(&format!("{:?}", subnet.configured_replica_version)).into_owned();
++                    escape(&format!("{:?}", subnet.configured_replica_version)).into_owned();
+                 writeln!(text, "Configured replica version: {version}{}\nRegistered halt flag: {}\nMaximum state size: {}",
+                     if subnet.configured_replica_version.is_empty() { " (standard engine version)" } else { "" },
+                     subnet.halted,
+@@ -76,7 +76,7 @@
+                 })
+                 .collect();
+             text.push('\n');
+-            text.push_str(&render_bordered(
++            text.push_str(&bordered_table(
+                 &["NODE", "ENGINE RECORD", "REGISTRY COPY"],
+                 &rows,
+             ));
+--- a/crates/ic-query-cli/src/presentation/maintenance.rs
++++ b/crates/ic-query-cli/src/presentation/maintenance.rs
+@@ -1,5 +1,5 @@
+ //! Compact maintenance evidence; never a completion verdict.
+-use ic_host_text::{escape::terminal_text, table::render_bordered};
++use ic_host_text::{escape, bordered_table};
+ use ic_topology::subnet::{
+     configuration::SubnetConfigurationReport,
+     maintenance::{ConfigurationOutcome, MaintenanceReport, VersionMatch},
+@@ -58,13 +58,13 @@
+         } else {
+             "partial"
+         },
+-        render_bordered(&["OBSERVATION", "BEFORE", "AFTER"], &rows)
++        bordered_table(&["OBSERVATION", "BEFORE", "AFTER"], &rows)
+     );
+     if let Some(expected) = &report.expected_version {
+         writeln!(
+             text,
+             "Requested configured version: {}",
+-            terminal_text(&format!("{expected:?}"))
++            escape(&format!("{expected:?}"))
+         )
+         .expect("String write");
+     }
+--- a/crates/ic-query-cli/src/presentation/prices.rs
++++ b/crates/ic-query-cli/src/presentation/prices.rs
+@@ -1,6 +1,6 @@
+ //! Compact daily prices; raw report values remain available through JSON.
+ 
+-use ic_host_text::table::render_bordered;
++use ic_host_text::bordered_table;
+ use ic_topology::cloud_engine::prices::{CloudEnginePricesReport, FeeOutcome};
+ use std::fmt::Write;
+ 
+@@ -38,7 +38,7 @@
+         })
+         .collect();
+     text.push('\n');
+-    text.push_str(&render_bordered(
++    text.push_str(&bordered_table(
+         &["NET / NODE / DAY", "GROSS / NODE / DAY", "MARKETPLACE KEY"],
+         &rows,
+     ));

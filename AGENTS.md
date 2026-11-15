@@ -47,6 +47,11 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
 - `ic-host-http` 0.80.0 owns complete bounded response bodies only. Consumers
   depend directly on Reqwest for client/TLS policy; keep HTTP outside Build and
   portable bytes. Its contract is `docs/http-body.md`.
+- `ic-host-text` 0.77.0 owns escaping and bordered/plain tables for Query, DB and Canic;
+  its contract is `docs/text-presentation.md`. Other Text operations remain open.
+- Release ownership is declared in `ci/cargo-release-groups.json`; group ledgers
+  live under `releases/`. See `docs/release-ownership.md`. Root changelog is an index;
+  qualification fixtures remain outside product groups.
 - Keep all replacement packages unpublished. Production consumer migration,
   registry publication and canonical cutover are separate delivery work.
 - Keep product documentation under `docs/`. Do not claim performance improvements

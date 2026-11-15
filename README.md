@@ -16,6 +16,16 @@ Consumers select Reqwest directly and own TLS/request policy.
 `make test-http-body` and `make test-backup-http` check the adapter and current
 Backup HTTP behavior using local loopback fixtures.
 
+`ic-host-text` 0.77.0 supplies pure [escaping and table layouts](docs/text-presentation.md).
+`make test-text` and `make test-query-text` qualify the leaf and current Query’s
+presentation/output callers without network reports. `make test-db-text` exercises
+the current local DB console against its installed records fixture.
+`make test-canic-text` checks current Canic status, terminal and declaration output.
+
+The [release ownership map](docs/release-ownership.md) declares foundation, build,
+HTTP, Text and tools groups. [Changelogs](CHANGELOG.md) live under `releases/`;
+`make deps-list` reports each package’s group and version.
+
 The production owner remains the read-only `../ic-tooling` reference. All new
 packages remain unpublished; no production consumer has migrated.
 
@@ -32,8 +42,22 @@ subjects; prepared server/Binaryen tools and loopback access are required.
 The frozen `make test-auth-consumer` recipe reproduces historical [Auth's pinned package admission](qualification/auth/README.md)
 and checks exact archives on native and Wasm targets.
 
+`make test-canic-build` qualifies current Canic’s owned build and destination
+publication/refusal path using a real Wasm probe.
+
 `make test-canic-consumer` runs [Canic’s local record admission](qualification/canic/README.md)
 and selected original retained-plan and signed-recovery tests.
+
+`make test-db-consumer` qualifies [current DB rollback](qualification/db/README.md)
+using an explicitly prepared external server and the upstream async client.
+`make test-jobs-snapshots` checks current Scheduling controller recovery using the
+same direct-client ownership boundary and prepared Scheduling tools.
+It adds no simulator facade; see [ownership](docs/simulator-ownership.md).
+
+`make test-platform-consumer` qualifies [Platform’s current raw_rand fixture](qualification/platform/README.md)
+with direct PocketIC and externally owned server lifetime.
+`make test-platform-agent` selects Agent ingress, certificates and upstream type identity. Other Platform drivers
+and Query remain open qualification work.
 
 Active consumer runners snapshot current local sibling inputs without modifying
 them; see [source selection](docs/qualification/local-sources.md). Old pinned runs

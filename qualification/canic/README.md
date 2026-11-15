@@ -61,3 +61,68 @@ CLI presentation also remains unmigrated. Their presence is not a fallback for t
 new record reader. No full Canic migration, archive/native macOS qualification or
 performance improvement is claimed. Auth is on hold; Storage, Observability and
 Wire remain frozen and are not migration targets for this slice.
+
+## Current CLI Text
+
+`make test-canic-text` snapshots the current local Canic working tree and applies
+`text.patch` independently of the record-admission recipe. It selects Text 0.77.0,
+migrates escapes and plain tables, and removes the repeated two-space/header-rule
+options from the callers. Canic retains its own report selection, configuration,
+colours, topology, shell quoting, status meanings and raw JSON. No Canic
+implementation is admitted into product crates. The patch does not migrate other
+Host/Build dependencies or import old Canic source.
+
+The focused runner checks the CLI's actual Text dependency edge and requires
+nonempty named test selections: eight status tests, eight fleet terminal tests and
+three local declaration/output cases. These cover unknown/uncertain effects,
+retained evidence, terminal controls, roles, partial inventories and raw JSON.
+They do not deploy canisters, start a browser or contact a live IC network.
+
+Linux evidence on 2026-11-15: local HEAD
+`e3e7be86301c377db8b064d2ef914f5cde936265` plus edits, source tar SHA-256
+`67f2b4b6cfb2b4ec0df7b0cf37f62e2482fe7a7c197ed55ea6bc227a580b5bb5`.
+Export `target/canic-text.XBgmkNQb`, log `target/canic-text-run.log`: all 19 selected
+cases passed. Equivalent source export `target/canic-text.JhcjASOF` supplies
+warning-denied CLI/test Clippy (`target/canic-text-clippy.log`) and retained
+external-lock identity admission. Three Text contract tests and product Clippy
+pass; existing bordered-table/escaping tests remain unchanged. No performance or
+production migration claim is made.
+
+## Current owned build
+
+`make test-canic-build` applies `owned-build.patch` independently to a current
+local Canic snapshot. Canic keeps recipe/lockfile setup, manifest and package
+selection, Wasm admission, default/explicit destination choice and publication.
+The new Build owner replaces full Cargo-output retention, manual artifact-path
+selection and the later mutable-file read with private execution and owned bytes.
+No Canic implementation is copied into product crates and no new Build API is added.
+
+The exported builder requires prepared `IC_OWNED_CARGO` and `IC_OWNED_RUSTC` and
+cached dependencies. The runner selects Rust 1.100.0 explicitly. A bounded offline
+metadata probe selects one workspace package by name and one cdylib target;
+ambiguous or absent selections refuse. Compiler/manifest metadata runs from the
+manifest directory. The default destination remains the selected Cargo target's
+`wasm32-unknown-unknown/release/<library>.wasm`, but it receives separately captured
+bytes after private build cleanup. Explicit destinations preserve their existing
+publication behavior. This is an ordinary build, not a source-frozen release proof.
+
+The runner uses this repository's maintained Wasm probe in a private export. It
+seeds stale default output, runs the real Canic CLI for default and explicit
+publication, checks returned SHA-256 against the resulting bytes and verifies
+the probe marker. Compilation refusal preserves existing output; publication
+onto an occupied directory refuses without removing its sentinel. All invocations
+leave the selected private scratch empty. The CLI's actual Build dependency edge
+is checked. No deployments, shared-target performance claim or automatic tool
+installation is involved.
+
+Linux evidence on 2026-11-15: source HEAD
+`e3e7be86301c377db8b064d2ef914f5cde936265` plus current edits; final source tar SHA-256
+`7950b7391ef6d8ded6d2258319b91853c3af0f68dea22c83b30f855127f1544b`,
+export `target/canic-build.tnvbBh2y`, log `target/canic-build-final.log`.
+The focused build/publication/refusal checks and final-snapshot host Clippy passed
+(`target/canic-build-final-clippy.log`). The dependency diff adds Build and its
+local byte/filesystem suppliers, plus `tempfile` 3.27.0 already selected by Build.
+The strict external-subset checker correctly refuses that addition; existing
+external selections were retained. Older Host FS/Process remain for consumer-owned
+metadata, lock setup and publication. The separate Text/record recipes are not
+implicitly combined or requalified by this run.

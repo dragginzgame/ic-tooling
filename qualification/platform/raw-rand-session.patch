@@ -1,0 +1,100 @@
+--- a/scripts/ci/check-platform-raw-rand.sh
++++ b/scripts/ci/check-platform-raw-rand.sh
+@@ -6,8 +6,8 @@
+ mode="${1:-run}"
+ [[ $# -le 1 ]] || exit 2
+ case "$mode" in run|--check-graph|--build-only) ;; *) echo 'Expected [--check-graph|--build-only]' >&2; exit 2 ;; esac
+-if [[ "$mode" == run && -z "${POCKET_IC_BIN:-}" && -z "${IC_TESTKIT_POCKET_IC_URL:-}" ]]; then
+-    echo 'Set an explicitly prepared POCKET_IC_BIN or IC_TESTKIT_POCKET_IC_URL first' >&2
++if [[ "$mode" == run && -z "${IC_TESTKIT_POCKET_IC_URL:-}" ]]; then
++    echo 'Set the externally owned IC_TESTKIT_POCKET_IC_URL first' >&2
+     exit 1
+ fi
+ mkdir -p target/evidence
+@@ -29,12 +29,10 @@
+ # shellcheck source=scripts/ci/workspace-dependencies.sh
+ source "$input_root/scripts/ci/workspace-dependencies.sh"
+ platform_dependencies_read "$input_root"
+-testkit="$(platform_dependency ic-testkit)"
+ tokio="$(platform_dependency tokio)"
+ mkdir -p "$output/consumer/canister/src" "$output/consumer/driver/src"
+ cp "$input_root/scripts/fixtures/raw-rand/canister/mod.rs" "$output/consumer/canister/src/lib.rs"
+ cp "$input_root/scripts/fixtures/cdk-runtime/raw_rand_driver.rs" "$output/consumer/driver/src/main.rs"
+-cp -R "$input_root/scripts/fixtures/cdk-runtime/pocketic_support" "$output/consumer/driver/src/"
+ cp "$input_root/Cargo.lock" "$output/consumer/Cargo.lock"
+ cat > "$output/consumer/Cargo.toml" <<MANIFEST
+ [workspace]
+@@ -46,7 +44,7 @@
+ [workspace.dependencies]
+ ic-platform = { path = "$input_root/crates/ic-platform", default-features = false }
+ ic-platform-runtime = { path = "$input_root/crates/ic-platform-runtime", default-features = false }
+-ic-testkit = { $testkit }
++pocket-ic = "=16.1.0"
+ tokio = { $tokio }
+ MANIFEST
+ cat > "$output/consumer/canister/Cargo.toml" <<'MANIFEST'
+@@ -75,14 +73,14 @@
+ category = "tests"
+ [dependencies]
+ ic-platform = { workspace = true, features = ["raw-rand", "candid-codec", "principal"] }
+-ic-testkit.workspace = true
++pocket-ic.workspace = true
+ tokio.workspace = true
+ MANIFEST
+ platform_fixture_policy "$input_root" "$output/consumer"
+ cargo +"$compiler" metadata --manifest-path "$output/consumer/Cargo.toml" --offline --format-version 1 > "$output/metadata.json" 2> "$output/metadata.log"
+ for package in platform-raw-rand-canister platform-raw-rand-driver; do
+     required=ic-platform,ic-platform-runtime
+-    if [[ "$package" == platform-raw-rand-driver ]]; then required=ic-platform,ic-testkit; fi
++    if [[ "$package" == platform-raw-rand-driver ]]; then required=ic-platform,pocket-ic; fi
+     bash "$input_root/scripts/ci/check-qualification-identities.sh" "$output/metadata.json" "$input_root" \
+         "$package" "$required" > "$output/$package.identities.json"
+ done
+--- a/scripts/fixtures/cdk-runtime/raw_rand_driver.rs
++++ b/scripts/fixtures/cdk-runtime/raw_rand_driver.rs
+@@ -1,16 +1,34 @@
+ //! Focused raw_rand interoperability and unchanged Runtime behavior.
+-mod pocketic_support;
+ use ic_platform::{candid_codec, raw_rand};
+-use ic_testkit::pocket_ic::CanisterId as Principal;
++use pocket_ic::{CanisterId as Principal, PocketIcBuilder};
+ use std::time::Duration;
+ 
+ fn main() {
+-    pocketic_support::runtime().block_on(run());
++    tokio::runtime::Builder::new_current_thread()
++        .enable_all()
++        .build()
++        .unwrap()
++        .block_on(run());
+ }
+ 
+ async fn run() {
+-    let (server, builder) = pocketic_support::builder(Duration::from_secs(60));
+-    let pic = builder.with_application_subnet().build_async().await;
++    assert_eq!(
++        std::env::args().skip(1).count(),
++        2,
++        "select both codec artifacts"
++    );
++    let endpoint = std::env::var("IC_TESTKIT_POCKET_IC_URL")
++        .expect("external server owner must supply IC_TESTKIT_POCKET_IC_URL");
++    let pic = tokio::time::timeout(
++        Duration::from_secs(30),
++        PocketIcBuilder::new()
++            .with_server_url(endpoint.parse().unwrap())
++            .with_max_request_time_ms(Some(60_000))
++            .with_application_subnet()
++            .build_async(),
++    )
++    .await
++    .expect("instance creation timed out; remote effects may remain");
+     for path in std::env::args().skip(1) {
+         let id = pic.create_canister().await;
+         pic.add_cycles(id, 10_000_000_000_000).await;
+@@ -69,5 +87,4 @@
+         );
+     }
+     pic.drop().await;
+-    drop(server);
+ }

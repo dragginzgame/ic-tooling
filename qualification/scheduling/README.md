@@ -69,3 +69,41 @@ The CLI and optimizer flags are unchanged. Source/destination parents passed to
 external tools remain stable caller-owned paths. The migration declares explicit
 product workspace roots in the export to disambiguate Cargo inheritance with
 local suppliers from another workspace; sibling manifests are untouched.
+
+## Direct Jobs session and controller recovery
+
+Apply `jobs-session.patch` after `owned-build.patch`. Jobs selects upstream
+PocketIC 16.1.0 directly and requires `IC_TESTKIT_POCKET_IC_URL`; it cannot select
+or spawn a server. Timers still uses released Testkit. The runner checks the
+Jobs reachable dependency graph separately, since workspace metadata includes
+Timers. No shared simulator crate or snapshot manager was introduced.
+
+With the same prepared `SCHEDULING_TESTKIT_CLI` and
+`SCHEDULING_SERVER_DIRECTORY`, run `make test-jobs-snapshots`. This focused mode
+skips Timers and optimization variants, builds current Jobs Wasm privately, and
+runs exactly the existing watchdog-delivery, synchronous-trap and controller
+snapshot-recovery subjects. Missing named tests fail before execution. It
+independently checks that all three instances report deletion while the external
+server stays reachable. The released CLI remains an explicit development server
+owner, not a migrated product implementation.
+
+The consumer retains initial-predicate/30-tick bounded progress, explicit simulated
+time changes and a four-attempt recovery upgrade budget. Only install-rate-limit
+rejection permits the existing 600-second/two-tick cooldown. Snapshot stop, take,
+restore and start select the default anonymous controller explicitly. The recovery
+subject additionally refuses a non-controller for capture and restore, preserves
+raw stable memory after those refusals, and compares restored bytes exactly with
+the original independent snapshot. It then upgrades and checks pending job state.
+These are single-canister observations, not multi-canister atomicity or cleanup
+promises after cancellation; upstream limitations are in
+[simulator ownership](../../docs/simulator-ownership.md).
+
+Linux evidence on 2026-11-15: snapshot HEAD
+`0e5e09ed24e88d6d62a6d2dc923afbb53dc8619e`, source tar SHA-256
+`87a57d0902d16180c5fb358485953130ac96f08519087be2f20f20924779f146`,
+export `target/scheduling-consumer.APxGwn5w`. All three live subjects and inventory
+checks passed (`target/jobs-snapshot-live.log`). Harness all-target Clippy with
+warnings denied passed (`target/jobs-session-clippy.log`); the same source and
+patch were used. The first sandbox run built/captured Wasm but could not bind
+loopback; only the live step was repeated with loopback permission. Product APIs,
+frozen siblings and production Scheduling were not modified.
