@@ -17,7 +17,7 @@ cd "$scratch/source"
 cargo metadata --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '
   . as $m | (.packages[] | select(.name == "canic-cli") | .id) as $cli |
-  (.packages[] | select(.name == "ic-host-text" and .version == "0.77.1" and
+  (.packages[] | select(.name == "ic-host-text" and .version == "0.77.2" and
     .manifest_path == ($root + "/crates/ic-host-text/Cargo.toml")) | .id) as $text |
   any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_host_text" and .pkg == $text)
 ' "$scratch/metadata.json" >/dev/null

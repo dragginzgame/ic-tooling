@@ -1,6 +1,6 @@
 # Current DB external-session qualification
 
-Current recipes select the next unpublished Build 0.87.2 / Text 0.77.1 where
+Current recipes select the next unpublished Build 0.87.3 / Text 0.77.2 where
 used. Their patches and locked graphs admit current local sources; historical
 runtime evidence below remains bound to its recorded checkpoint inputs.
 

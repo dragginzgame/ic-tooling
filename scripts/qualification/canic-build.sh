@@ -23,7 +23,7 @@ export CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 TMPDIR="$scratch/runtime"
 cargo metadata --manifest-path "$scratch/source/Cargo.toml" --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-host") | .id) as $host |
-  (.packages[] | select(.name == "ic-build" and .version == "0.87.2" and
+  (.packages[] | select(.name == "ic-build" and .version == "0.87.3" and
     .manifest_path == ($root + "/crates/ic-build/Cargo.toml")) | .id) as $build |
   any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_build" and .pkg == $build)
 ' "$scratch/metadata.json" >/dev/null

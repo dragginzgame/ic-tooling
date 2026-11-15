@@ -3,7 +3,7 @@
 `make test-query-text` snapshots the current local `../ic-query` working tree,
 including dirty and new source, without modifying it. `QUERY_SOURCE` can select
 another local checkout. Capture drift and stale patches refuse. `text.patch`
-selects unpublished `ic-host-text` 0.77.1 and changes the nine presentation
+selects unpublished `ic-host-text` 0.77.2 and changes the nine presentation
 callers to `escape` / `bordered_table`; it preserves report implementation, raw
 values and JSON. This replaces the legacy Text supplier for this consumer, not
 Query's report logic or Platform dependencies. There are no live network queries.

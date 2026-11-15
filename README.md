@@ -4,11 +4,11 @@ A ground-up replacement of IC Tooling, governed by [design revision 2](docs/DESI
 The first milestone is one real build-to-owned-artifact workflow with newly
 selected interfaces. Existing crates.io names may be reused with incremented
 versions; retaining a name does not require retaining its old Rust API. The first
-package is `ic-build` 0.87.2. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
+package is `ic-build` 0.87.3. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
 0.80.1 for shared byte admission and held-directory publication. Toko Tooling is
 pinned to 0.44.3 in both workspaces.
 
-`ic-cargo-qualification` 0.1.1 is a separate unpublished development executable
+`ic-cargo-qualification` 0.1.2 is a separate unpublished development executable
 for external-lock admission; it adds no dependencies to the ordinary Build API.
 
 `ic-host-http` 0.80.0 is a native [complete-body adapter](docs/http-body.md).
@@ -16,7 +16,7 @@ Consumers select Reqwest directly and own TLS/request policy.
 `make test-http-body` and `make test-backup-http` check the adapter and current
 Backup HTTP behavior using local loopback fixtures.
 
-`ic-host-text` 0.77.1 supplies pure [escaping and table layouts](docs/text-presentation.md).
+`ic-host-text` 0.77.2 supplies pure [escaping and table layouts](docs/text-presentation.md).
 `make test-text` and `make test-query-text` qualify the leaf and current Query’s
 presentation/output callers without network reports. `make test-db-text` exercises
 the current local DB console against its installed records fixture.
@@ -45,8 +45,8 @@ and checks exact archives on native and Wasm targets.
 `make test-canic-build` qualifies current Canic’s owned build and destination
 publication/refusal path using a real Wasm probe. `make test-canic-app-build`
 selects app recipe preflight, lock setup and serial partial-failure behavior.
-`make test-canic-build-metadata` checks workspace/target selection and refusal
-before compilation or output replacement.
+`make test-canic-build-metadata` checks workspace/target selection, prepared-tool
+admission and compiler-wrapper refusal before compilation or output replacement.
 
 `make test-canic-consumer` runs [Canic’s local record admission](qualification/canic/README.md)
 and selected original retained-plan and signed-recovery tests.

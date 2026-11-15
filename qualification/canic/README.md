@@ -1,6 +1,6 @@
 # Canic retained-record admission
 
-Current recipes select the next unpublished Build 0.87.2 / Text 0.77.1 where
+Current recipes select the next unpublished Build 0.87.3 / Text 0.77.2 where
 used. Their patches and locked graphs admit current local sources; historical
 runtime evidence below remains bound to its recorded checkpoint inputs.
 
@@ -179,3 +179,22 @@ export `target/canic-build.3Y1dMnXE`. Metadata checks passed
 `target/canic-build-metadata-errors.log`); Host/CLI warning-denied Clippy passed
 (`target/canic-build-metadata-clippy.log`). Existing app/artifact evidence remains
 scoped to the snapshots above; this check does not rerun those rosters.
+
+### Prepared-tool admission on Build 0.87.3
+
+The metadata selection also checks missing and unavailable `IC_OWNED_CARGO` and
+`IC_OWNED_RUSTC`, and executable `RUSTC_WRAPPER` / `RUSTC_WORKSPACE_WRAPPER`
+settings. All six refuse before compilation and retain destination bytes and empty
+scratch; marker files prove neither the build nor either wrapper ran. The wrapper
+cases retain valid controlled metadata, isolating Build's environment admission
+from Cargo's own metadata behavior. This qualifies the adapter's forwarding of
+wrapper settings to the existing Build refusal; it adds no product API or tool
+installer and does not promise a hostile-tool sandbox.
+
+Linux evidence on 2026-11-15: current Canic 0.210.0 source, HEAD
+`e3e7be86301c377db8b064d2ef914f5cde936265` plus edits; source tar SHA-256
+`686a1722cc1f95a253b531bea1bcb60a811efec24491b0e50ab986c1aca2301a`,
+export `target/canic-build.XkJGhV6C`. The real-build control, ten metadata refusals
+and six tool-setting refusals passed (`target/canic-tool-admission.log`). Host/CLI
+warning-denied Clippy passed (`target/canic-tool-admission-clippy.log`). No sibling
+source was edited; earlier app/Text/record results retain their own scope.

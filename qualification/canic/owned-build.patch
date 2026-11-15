@@ -4,7 +4,7 @@
  publish = false
  
  [workspace.dependencies]
-+ic-build = { path = "/home/adam/projects/ic-tooling-new/crates/ic-build", version = "0.87.2" }
++ic-build = { path = "/home/adam/projects/ic-tooling-new/crates/ic-build", version = "0.87.3" }
  base64 = "0.23.1"
  canic = { path = "crates/canic" }
  canic-host = { path = "crates/canic-host" }
@@ -43,7 +43,7 @@
  
  [[package]]
 +name = "ic-build"
-+version = "0.87.2"
++version = "0.87.3"
 +dependencies = [
 + "ic-host-artifacts 0.80.1",
 + "ic-host-fs 0.80.1",

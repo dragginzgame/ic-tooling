@@ -17,11 +17,12 @@ current requirements must justify further APIs.
 retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
 historical evidence. No old product source/test tree was admitted wholesale.
 
-GitHub checkpoint `0352b4e6fb1996e329e9ebf837ea38e40348e1bf` is on `origin/main`.
-Post-push review found no new actionable issue in that delivered scope. This
-checkpoint adds Build 0.87.2, Text 0.77.1 and Tools 0.1.1 drafts, the current Query
-refresh, and Canic app-build/metadata qualification. Foundation and HTTP versions
-are unchanged.
+GitHub checkpoint `aaebfa4db99593c3709a0ee92f71bc691f6ac4b6` is on `origin/main`.
+Post-push review found no new actionable issue in its Canic qualification, Query
+refresh and version wiring. This checkpoint contains Build 0.87.3, Text 0.77.2
+and Tools 0.1.2 drafts plus current Canic tool-admission qualification. Foundation
+and HTTP are unchanged. Version advances alone do not refresh consumer
+runtime evidence, which remains tied to the versions and snapshots recorded below.
 Five [release groups](../release-ownership.md) own their ledgers; root changelog is
 an index. All six packages remain unpublished. Consumer migration, registry
 publication and canonical cutover are separate; recheck registry identities first.
@@ -29,7 +30,7 @@ Toko 0.44.3 is pinned in both workspaces; its 48-file snapshot is verified.
 
 ## Implemented owners
 
-- `ic-build` 0.87.2 owns bounded Cargo execution/decoding, exact selection, owned
+- `ic-build` 0.87.3 owns bounded Cargo execution/decoding, exact selection, owned
   Wasm bytes and explicit cleanup. Private targets are mode 0700. No mutable
   Cargo path escapes. See [owned builds](../build-owned-artifact.md).
 - `ic-host-artifacts` 0.80.1 owns bounded complete-stream read/copy and identity,
@@ -41,10 +42,10 @@ Toko 0.44.3 is pinned in both workspaces; its 48-file snapshot is verified.
 - `ic-host-http` 0.80.0 owns complete bounded response bodies, typed original
   transport/allocation causes and capped fallible growth. Reqwest/TLS/request
   policy stays consumer-owned. See [HTTP](../http-body.md).
-- `ic-host-text` 0.77.1 owns escaping and bordered/plain tables with scalar Unicode
+- `ic-host-text` 0.77.2 owns escaping and bordered/plain tables with scalar Unicode
   widths. Query/DB use borders; Canic adds plain alignment. No progress, clipping
   or terminal policy. See [Text](../text-presentation.md).
-- `ic-cargo-qualification` 0.1.1 is an external-lock subset admission executable,
+- `ic-cargo-qualification` 0.1.2 is an external-lock subset admission executable,
   outside Build's graph. It is not an archive runner or metadata editor.
 
 ## Latest scoped evidence
@@ -56,7 +57,9 @@ The next-version changes alone do not refresh earlier runtime evidence.
   duplicate-output preflight, config-relative recipes, lock initialization and
   preservation, exact output and serial partial failure. A fresh metadata slice
   passes a real-build control and ten pre-compilation refusals, including workspace
-  membership and relative target paths. Host/CLI Clippy passes.
+  membership and relative target paths. A newer Canic 0.210.0 snapshot with Build
+  0.87.3 also passes six prepared-tool/wrapper refusals without executing wrappers
+  or replacing output. Host/CLI Clippy passes for that snapshot.
   Earlier independent slices cover artifact default/explicit publication and
   refusal, 19 display tests, and six record-admission/recovery tests. Other Host
   publication, parent creation and lock setup remain unmigrated. Recipes are not

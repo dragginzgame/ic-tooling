@@ -24,7 +24,7 @@
 -ic-build = "0.86.0"
 +ic-byte-admission = { package = "ic-host-artifacts", path = "../../../../crates/ic-host-artifacts", version = "0.80.1" }
 +ic-custody = { package = "ic-host-fs", path = "../../../../crates/ic-host-fs", version = "0.80.1" }
-+ic-build = { package = "ic-build", path = "../../../../crates/ic-build", version = "0.87.2" }
++ic-build = { package = "ic-build", path = "../../../../crates/ic-build", version = "0.87.3" }
  ic-host-artifacts = "0.79.0"
  ic-host-fs = { version = "0.79.0", default-features = false }
  ic-host-process = { version = "0.79.0", default-features = false }
@@ -113,7 +113,7 @@
 -version = "0.86.0"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "e5502affb4030d7268148a201f15e5d3ed6cb943cba4a35430801740833090e6"
-+version = "0.87.2"
++version = "0.87.3"
  dependencies = [
 - "cargo_metadata",
 - "ic-host-artifacts",

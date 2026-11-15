@@ -60,3 +60,40 @@ jq -e '.error == "supplier"' "$scratch/metadata-json.stderr" >/dev/null
 [[ "$(cat "$scratch/metadata.wasm")" == 'retained destination' ]]
 [[ -z "$(ls -A "$scratch/runtime")" ]]
 printf 'Valid metadata builds; ten metadata refusals precede compilation and preserve destination/scratch.\n'
+# Prepared tools and compiler wrappers remain explicit at the consumer boundary.
+cp "$scratch/probe-metadata.json" "$QUALIFICATION_METADATA"
+export QUALIFICATION_WRAPPER_MARKER="$scratch/wrapper-invoked"
+cat > "$scratch/compiler-wrapper" <<'WRAPPER'
+#!/usr/bin/env bash
+set -euo pipefail
+touch "$QUALIFICATION_WRAPPER_MARKER"
+exit 97
+WRAPPER
+chmod +x "$scratch/compiler-wrapper"
+for key in IC_OWNED_CARGO IC_OWNED_RUSTC; do
+  for state in missing unavailable; do
+    selection=(-u "$key")
+    expected=invalid
+    if [[ "$state" == unavailable ]]; then
+      selection=("$key=$scratch/unavailable-tool")
+      expected=supplier
+    fi
+    if env "${selection[@]}" "$cli" "${args[@]}" > "$scratch/$key-$state.stdout" 2> "$scratch/$key-$state.stderr"; then
+      echo "Expected prepared tool refusal: $key $state" >&2; exit 1
+    fi
+    jq -e --arg expected "$expected" '.error == $expected' "$scratch/$key-$state.stderr" >/dev/null
+    [[ ! -e "$QUALIFICATION_BUILD_MARKER" ]]
+    [[ "$(cat "$scratch/metadata.wasm")" == 'retained destination' ]]
+    [[ -z "$(ls -A "$scratch/runtime")" ]]
+  done
+done
+for key in RUSTC_WRAPPER RUSTC_WORKSPACE_WRAPPER; do
+  if env "$key=$scratch/compiler-wrapper" "$cli" "${args[@]}" > "$scratch/$key.stdout" 2> "$scratch/$key.stderr"; then
+    echo "Expected compiler wrapper refusal: $key" >&2; exit 1
+  fi
+  jq -e '.error == "supplier" and (.message | contains("operation-owned environment entry"))' "$scratch/$key.stderr" >/dev/null
+  [[ ! -e "$QUALIFICATION_BUILD_MARKER" && ! -e "$QUALIFICATION_WRAPPER_MARKER" ]]
+  [[ "$(cat "$scratch/metadata.wasm")" == 'retained destination' ]]
+  [[ -z "$(ls -A "$scratch/runtime")" ]]
+done
+printf 'Four prepared-tool and two wrapper refusals preserve destination/scratch without compilation or wrapper execution.\n'
