@@ -1,0 +1,72 @@
+# Stage 2: Backup filesystem custody
+
+The consumer oracle is committed Backup `d8955cf1e34f24934027f448ef16ee6841eafbb0`.
+Its dirty working tree is not an input. Qualification exports that exact commit
+under this repository's target directory and applies a durable reviewed patch.
+Original store/payload/capture tests remain in that export, not copied into products.
+
+## Required behavior and selected boundary
+
+Backup stores `ic-backup/local-store/1\n` at `format`, with private `bundles`,
+`operations` and `targets` children. `format.pending` claims initialization before
+children are created. Interrupted initialization remains occupied; it must never
+be silently reset. Payload manifest bytes, exact member hashes and ledger frame
+bytes remain unchanged. Held roots survive rename; changed child identities,
+symlinks, public permissions, hard-linked files and oversized enumerations refuse.
+
+Two effects are deliberately separate:
+
+- Completed named publication: `Directory::stage(staging, destination, policy)` →
+  consuming `write_from(reader, length)` → `seal()` → `commit()`. A failed write
+  cannot produce a sealed value. There is no public writable staging handle.
+- Retained recovery records: explicit create-new or open-existing-update file
+  access, then caller-controlled ordered writes and synchronization. Backup owns
+  ledger replay and durable spending. These are not publication-stage aliases.
+
+`CreateNew` uses an atomic create-only hard link followed by stage removal and
+parent sync. `Replace` uses descriptor-relative rename without following the final
+symlink. Commit returns Committed, NotPublished (with sealed attempt ownership),
+or PublishedUnconfirmed (receipt, failed phase and original cause). No retry.
+Sealing syncs bytes first. Publication receipts include directory and content
+identity, but grant no future immutability. Explicit stage abort reports cleanup
+failure. Failure retention is selected before effects: discard owned staging or
+retain it for recovery; Backup selects retention for `format.pending`.
+
+Directory creation is explicit and separate from opening. Only single-component
+child names are admitted. Root resolution permits normal ancestor aliases but
+refuses a final symlink; child operations remain relative to held descriptors.
+Every enumeration is bounded and completes before returning entries. A directory
+identity comparison replaces callers opening extra synchronization descriptors.
+Advisory locks have one owner, nonblocking acquisition and explicit release;
+cooperating callers must not infer that locks fence hostile writers.
+
+As in Backup's existing contract, callers exclude concurrent namespace/content
+writers while operating on admitted state. Identity checks refuse observed foreign
+stage replacements, including cleanup. Unix lacks atomic compare-identity-and-unlink:
+checks do not protect against hostile mutation between observation and mutation.
+No stronger guarantee is claimed. Required create-only races remain safe atomically.
+
+## Byte and package ownership
+
+Build and filesystem publication now share the independently useful byte owner,
+`ic-host-artifacts` 0.80.0: length policy, bounded read/copy and exact SHA-256
+identity. No paths, processes, codecs, HTTP or legacy digest wrapper family enters.
+`ic-host-fs` 0.80.0 owns native custody/publication. Both version lines follow registry
+0.79.0 observed on 2026-11-15 and remain unpublished. Build remains 0.87.0.
+Rustix and standard File own native primitives; no legacy subsystem is imported.
+
+The isolated Backup migration switches its filesystem supplier completely. Its
+existing 0.79 byte/digest and HTTP suppliers remain explicit, unmigrated dependencies
+because persisted digest representations and HTTP are outside this filesystem slice.
+They are not dependencies of the new filesystem/build products. This qualification
+is not full Backup supplier cutover or archive/host acceptance.
+
+## Acceptance
+
+New tests independently inspect disk effects for parent rename, create-only races,
+foreign stage substitution, partial/short/growing writes, before-publication refusal,
+and visible-but-unconfirmed publication. File-sync and parent-sync failures are
+injected only at the owning private syscall seam; no public mock backend is added.
+Actual Backup store/payload and capture tests qualify retained recovery behavior,
+file/child identity, permissions, exact persisted bytes and cooperative locking.
+Native Linux evidence is distinct from pending native macOS and packaged consumers.

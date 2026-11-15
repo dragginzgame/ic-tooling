@@ -1,0 +1,22 @@
+[package]
+name = "owned-wasm-probe"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+publish = false
+
+[target.'cfg(any())'.dev-dependencies]
+toko-tooling.workspace = true
+
+[package.metadata.toko-tooling.loc]
+category = "tests"
+
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+refuse = []
+
+[lints]
+workspace = true

@@ -1,0 +1,871 @@
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -3,12 +3,6 @@
+ version = 4
+ 
+ [[package]]
+-name = "ambient-authority"
+-version = "0.0.2"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "e9d4ee0d472d1cd2e28c97dfa124b3d8d992e10eb0a035f33f5d12e3a177ba3b"
+-
+-[[package]]
+ name = "anyhow"
+ version = "1.0.104"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -189,48 +183,6 @@
+ ]
+ 
+ [[package]]
+-name = "cap-fs-ext"
+-version = "4.0.3"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "56ff379b70af8e08307a8f65e7040c7301cb4a572538ade16b4984f0da77847f"
+-dependencies = [
+- "cap-primitives",
+- "cap-std",
+- "io-lifetimes 3.0.1",
+- "windows-sys 0.61.2",
+-]
+-
+-[[package]]
+-name = "cap-primitives"
+-version = "4.0.3"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "8b5f74729fd2f44701d1a8eb47e906cdb3ccd9ec0f02baad85a744b791940b18"
+-dependencies = [
+- "ambient-authority",
+- "fs-set-times",
+- "io-extras",
+- "io-lifetimes 3.0.1",
+- "ipnet",
+- "maybe-owned",
+- "rustix",
+- "rustix-linux-procfs",
+- "windows-sys 0.61.2",
+- "winx",
+-]
+-
+-[[package]]
+-name = "cap-std"
+-version = "4.0.3"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "c1ec78e242cfa2cfe276807ac2ecc00315a6c97786977414bcd1c3963b6c91b8"
+-dependencies = [
+- "cap-primitives",
+- "io-extras",
+- "io-lifetimes 3.0.1",
+- "rustix",
+-]
+-
+-[[package]]
+ name = "cc"
+ version = "1.11.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -583,17 +535,6 @@
+ ]
+ 
+ [[package]]
+-name = "fs-set-times"
+-version = "0.20.3"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "94e7099f6313ecacbe1256e8ff9d617b75d1bcb16a6fddef94866d225a01a14a"
+-dependencies = [
+- "io-lifetimes 2.0.4",
+- "rustix",
+- "windows-sys 0.59.0",
+-]
+-
+-[[package]]
+ name = "fs_extra"
+ version = "1.3.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -824,7 +765,8 @@
+ name = "ic-backup"
+ version = "0.101.3"
+ dependencies = [
+- "ic-host-artifacts",
++ "ic-host-artifacts 0.79.0",
++ "ic-host-artifacts 0.80.0",
+  "ic-host-fs",
+  "ic-host-http",
+  "ic-platform",
+@@ -857,14 +799,18 @@
+ ]
+ 
+ [[package]]
++name = "ic-host-artifacts"
++version = "0.80.0"
++dependencies = [
++ "sha2 0.11.1",
++ "thiserror 2.0.21",
++]
++
++[[package]]
+ name = "ic-host-fs"
+-version = "0.79.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "9ef7770c178efe33ca0d9fcb54e78ad45f0c9c3d499f2e1bac70fb1ba5bba182"
++version = "0.80.0"
+ dependencies = [
+- "cap-fs-ext",
+- "cap-std",
+- "ic-host-artifacts",
++ "ic-host-artifacts 0.80.0",
+  "rustix",
+  "thiserror 2.0.21",
+ ]
+@@ -875,7 +821,7 @@
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "d33de424aa5afc596c0dace915e50c7b03057ff52cad64bd3451f9ee2380c3cc"
+ dependencies = [
+- "ic-host-artifacts",
++ "ic-host-artifacts 0.79.0",
+  "reqwest",
+ ]
+ 
+@@ -1066,28 +1012,6 @@
+ ]
+ 
+ [[package]]
+-name = "io-extras"
+-version = "0.19.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "20fd6de4ccfcc187e38bc21cfa543cb5a302cb86a8b114eb7f0bf0dc9f8ac00f"
+-dependencies = [
+- "io-lifetimes 3.0.1",
+- "windows-sys 0.60.2",
+-]
+-
+-[[package]]
+-name = "io-lifetimes"
+-version = "2.0.4"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "06432fb54d3be7964ecd3649233cddf80db2832f47fec34c01f65b3d9d774983"
+-
+-[[package]]
+-name = "io-lifetimes"
+-version = "3.0.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "2f0fb0570afe1fed943c5c3d4102d5358592d8625fda6a0007fdbe65a92fba96"
+-
+-[[package]]
+ name = "ipnet"
+ version = "2.12.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -1226,12 +1150,6 @@
+ checksum = "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f"
+ 
+ [[package]]
+-name = "maybe-owned"
+-version = "0.3.4"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "4facc753ae494aeb6e3c22f839b158aebd4f9270f55cd3c79906c45476c47ab4"
+-
+-[[package]]
+ name = "memchr"
+ version = "2.8.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -1598,16 +1516,6 @@
+ ]
+ 
+ [[package]]
+-name = "rustix-linux-procfs"
+-version = "0.1.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "2fc84bf7e9aa16c4f2c758f27412dc9841341e16aa682d9c7ac308fe3ee12056"
+-dependencies = [
+- "once_cell",
+- "rustix",
+-]
+-
+-[[package]]
+ name = "rustls"
+ version = "0.23.46"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -2315,25 +2223,7 @@
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
+ dependencies = [
+- "windows-targets 0.52.6",
+-]
+-
+-[[package]]
+-name = "windows-sys"
+-version = "0.59.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
+-dependencies = [
+- "windows-targets 0.52.6",
+-]
+-
+-[[package]]
+-name = "windows-sys"
+-version = "0.60.2"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "f2f500e4d28234f72040990ec9d39e3a6b950f9f22d3dba18416c35882612bcb"
+-dependencies = [
+- "windows-targets 0.53.5",
++ "windows-targets",
+ ]
+ 
+ [[package]]
+@@ -2351,31 +2241,14 @@
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973"
+ dependencies = [
+- "windows_aarch64_gnullvm 0.52.6",
+- "windows_aarch64_msvc 0.52.6",
+- "windows_i686_gnu 0.52.6",
+- "windows_i686_gnullvm 0.52.6",
+- "windows_i686_msvc 0.52.6",
+- "windows_x86_64_gnu 0.52.6",
+- "windows_x86_64_gnullvm 0.52.6",
+- "windows_x86_64_msvc 0.52.6",
+-]
+-
+-[[package]]
+-name = "windows-targets"
+-version = "0.53.5"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "4945f9f551b88e0d65f3db0bc25c33b8acea4d9e41163edf90dcd0b19f9069f3"
+-dependencies = [
+- "windows-link",
+- "windows_aarch64_gnullvm 0.53.1",
+- "windows_aarch64_msvc 0.53.1",
+- "windows_i686_gnu 0.53.1",
+- "windows_i686_gnullvm 0.53.1",
+- "windows_i686_msvc 0.53.1",
+- "windows_x86_64_gnu 0.53.1",
+- "windows_x86_64_gnullvm 0.53.1",
+- "windows_x86_64_msvc 0.53.1",
++ "windows_aarch64_gnullvm",
++ "windows_aarch64_msvc",
++ "windows_i686_gnu",
++ "windows_i686_gnullvm",
++ "windows_i686_msvc",
++ "windows_x86_64_gnu",
++ "windows_x86_64_gnullvm",
++ "windows_x86_64_msvc",
+ ]
+ 
+ [[package]]
+@@ -2385,106 +2258,48 @@
+ checksum = "32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3"
+ 
+ [[package]]
+-name = "windows_aarch64_gnullvm"
+-version = "0.53.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "a9d8416fa8b42f5c947f8482c43e7d89e73a173cead56d044f6a56104a6d1b53"
+-
+-[[package]]
+ name = "windows_aarch64_msvc"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469"
+ 
+ [[package]]
+-name = "windows_aarch64_msvc"
+-version = "0.53.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "b9d782e804c2f632e395708e99a94275910eb9100b2114651e04744e9b125006"
+-
+-[[package]]
+ name = "windows_i686_gnu"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "8e9b5ad5ab802e97eb8e295ac6720e509ee4c243f69d781394014ebfe8bbfa0b"
+ 
+ [[package]]
+-name = "windows_i686_gnu"
+-version = "0.53.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "960e6da069d81e09becb0ca57a65220ddff016ff2d6af6a223cf372a506593a3"
+-
+-[[package]]
+ name = "windows_i686_gnullvm"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "0eee52d38c090b3caa76c563b86c3a4bd71ef1a819287c19d586d7334ae8ed66"
+ 
+ [[package]]
+-name = "windows_i686_gnullvm"
+-version = "0.53.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "fa7359d10048f68ab8b09fa71c3daccfb0e9b559aed648a8f95469c27057180c"
+-
+-[[package]]
+ name = "windows_i686_msvc"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66"
+ 
+ [[package]]
+-name = "windows_i686_msvc"
+-version = "0.53.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "1e7ac75179f18232fe9c285163565a57ef8d3c89254a30685b57d83a38d326c2"
+-
+-[[package]]
+ name = "windows_x86_64_gnu"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "147a5c80aabfbf0c7d901cb5895d1de30ef2907eb21fbbab29ca94c5b08b1a78"
+ 
+ [[package]]
+-name = "windows_x86_64_gnu"
+-version = "0.53.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "9c3842cdd74a865a8066ab39c8a7a473c0778a3f29370b5fd6b4b9aa7df4a499"
+-
+-[[package]]
+ name = "windows_x86_64_gnullvm"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d"
+ 
+ [[package]]
+-name = "windows_x86_64_gnullvm"
+-version = "0.53.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "0ffa179e2d07eee8ad8f57493436566c7cc30ac536a3379fdf008f47f6bb7ae1"
+-
+-[[package]]
+ name = "windows_x86_64_msvc"
+ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+ 
+ [[package]]
+-name = "windows_x86_64_msvc"
+-version = "0.53.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
+-
+-[[package]]
+-name = "winx"
+-version = "0.36.4"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "3f3fd376f71958b862e7afb20cfe5a22830e1963462f3a17f49d82a6c1d1f42d"
+-dependencies = [
+- "bitflags",
+- "windows-sys 0.59.0",
+-]
+-
+-[[package]]
+ name = "wnaf"
+ version = "0.14.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -11,8 +11,9 @@
+ publish = false
+ 
+ [workspace.dependencies]
++ic-byte-admission = { package = "ic-host-artifacts", path = "../../../crates/ic-host-artifacts", version = "0.80.0" }
+ ic-host-artifacts = "0.79.0"
+-ic-host-fs = { version = "0.79.0", features = ["capability"] }
++ic-host-fs = { path = "../../../crates/ic-host-fs", version = "0.80.0" }
+ ic-host-http = { version = "0.79.0", default-features = false, features = ["rustls"] }
+ ic-platform = { version = "0.33.7", default-features = false, features = ["certification-verify", "ecdsa", "ed25519", "ic-protocol", "management-canister-types", "principal-self-authenticating"] }
+ serde = { version = "1.0.229", features = ["derive"] }
+--- a/crates/ic-backup/Cargo.toml
++++ b/crates/ic-backup/Cargo.toml
+@@ -9,6 +9,7 @@
+ publish.workspace = true
+ 
+ [target.'cfg(unix)'.dependencies]
++ic-byte-admission.workspace = true
+ ic-host-artifacts.workspace = true
+ ic-host-fs.workspace = true
+ ic-host-http.workspace = true
+--- a/crates/ic-backup/src/store/capture/ledger/mod.rs
++++ b/crates/ic-backup/src/store/capture/ledger/mod.rs
+@@ -6,7 +6,7 @@
+ };
+ use super::{CaptureError, CapturePlan, open_optional};
+ use ic_host_artifacts::artifact::Sha256Digest;
+-use ic_host_fs::{capability::Directory, identity::FileIdentity};
++use ic_host_fs::{Directory, FileId as FileIdentity};
+ use serde::{Deserialize, Serialize};
+ use std::{
+     fs::File,
+--- a/crates/ic-backup/src/store/capture/mod.rs
++++ b/crates/ic-backup/src/store/capture/mod.rs
+@@ -27,21 +27,16 @@
+     TransferMetadataError, UploadedSnapshotReadback,
+ };
+ 
+-use super::{
+-    BackupStore, CREATE, PRIVATE, StoreError, manifest::lower_hex, open_optional, read_optional,
+-};
++use super::{BackupStore, PRIVATE, StoreError, manifest::lower_hex, open_optional, read_optional};
+ use ic_host_artifacts::artifact::Sha256Digest;
+ use ic_host_fs::{
+-    capability::Directory,
+-    durable::{ExclusiveFileLock, create_retained_at},
+-    identity::FileIdentity,
++    Access, Directory, FileId as FileIdentity, FilePolicy, Lock as ExclusiveFileLock,
+ };
+ use serde::Serialize;
+ use std::{
+     ffi::OsStr,
+     io::{self, Seek, SeekFrom, Write},
+-    os::{fd::AsFd, unix::fs::MetadataExt},
+-    path::Path,
++    os::unix::fs::MetadataExt,
+ };
+ use thiserror::Error;
+ 
+@@ -92,7 +87,7 @@
+         }
+         exact(&self.target, "lock", b"", 0)?;
+         for entry in self.target.entries(2)? {
+-            if !matches!(entry?.name.to_str(), Some("lock" | "owner.json")) {
++            if !matches!(entry.name.to_str(), Some("lock" | "owner.json")) {
+                 return Err(CaptureError::Changed);
+             }
+         }
+@@ -122,7 +117,6 @@
+         }
+         exact(&self.target, "owner.json", &owner(&self.plan)?, 1024)?;
+         for entry in self.directory.entries(9)? {
+-            let entry = entry?;
+             let admitted = match entry.name.to_str() {
+                 Some("lock" | "plan.json" | "ledger.bin") => true,
+                 Some("status-request.bin") => state.request.is_some(),
+@@ -183,14 +177,13 @@
+         }
+         exact(&target, "lock", b"", 0)?;
+         for entry in target.entries(1)? {
+-            if entry?.name != OsStr::new("lock") {
++            if entry.name != OsStr::new("lock") {
+                 return Err(CaptureError::Changed);
+             }
+         }
+         retain(&target, "owner.json", &owner_bytes)?;
+         let directory = child(&operations, id, true)?;
+-        let parent = directory.open_syncable()?;
+-        let file = create_retained_at(parent.as_fd(), OsStr::new("lock"), 0o600)?;
++        let file = directory.create_file(OsStr::new("lock"), 0o600)?;
+         file.sync_all()?;
+         let lock = acquire(file)?;
+         retain(&directory, "plan.json", plan.encoded())?;
+@@ -200,7 +193,7 @@
+         let ledger_file =
+             open_optional(&directory, "ledger.bin")?.ok_or(CaptureError::Incomplete)?;
+         let operation = CaptureOperation {
+-            store: self.root.try_clone()?,
++            store: self.root.clone(),
+             operations,
+             directory,
+             target,
+@@ -211,7 +204,7 @@
+             usable: true,
+         };
+         operation.check()?;
+-        drop(target_lock);
++        target_lock.release()?;
+         Ok(operation)
+     }
+ 
+@@ -245,7 +238,7 @@
+         let ledger_file =
+             open_optional(&directory, "ledger.bin")?.ok_or(CaptureError::Incomplete)?;
+         let operation = CaptureOperation {
+-            store: self.root.try_clone()?,
++            store: self.root.clone(),
+             operations,
+             directory,
+             target,
+@@ -261,9 +254,13 @@
+ }
+ 
+ fn child(parent: &Directory, name: &str, create: bool) -> Result<Directory, CaptureError> {
+-    parent
+-        .open_directory(OsStr::new(name), if create { CREATE } else { PRIVATE })?
+-        .ok_or(CaptureError::Incomplete)
++    if let Some(directory) = parent.open_directory(OsStr::new(name), PRIVATE)? {
++        return Ok(directory);
++    }
++    if !create {
++        return Err(CaptureError::Incomplete);
++    }
++    Ok(parent.create_directory(OsStr::new(name), 0o700, PRIVATE)?)
+ }
+ fn target_directory(
+     root: &Directory,
+@@ -275,7 +272,7 @@
+     child(&network, &plan.request().target.canister.to_text(), create)
+ }
+ fn acquire(file: std::fs::File) -> Result<ExclusiveFileLock, CaptureError> {
+-    ExclusiveFileLock::try_acquire(file).map_err(|error| {
++    ExclusiveFileLock::acquire(file).map_err(|error| {
+         if error.kind() == io::ErrorKind::WouldBlock {
+             CaptureError::Locked
+         } else {
+@@ -288,17 +285,15 @@
+         return Ok((acquire(file)?, false));
+     }
+     // A missing established lock must never be recreated alongside retained authority.
+-    if target.entries(1)?.next().transpose()?.is_some() {
++    if !target.entries(1)?.is_empty() {
+         return Err(CaptureError::Incomplete);
+     }
+-    let parent = target.open_syncable()?;
+-    let file = create_retained_at(parent.as_fd(), OsStr::new("lock"), 0o600)?;
++    let file = target.create_file(OsStr::new("lock"), 0o600)?;
+     file.sync_all()?;
+     Ok((acquire(file)?, true))
+ }
+ fn retain(directory: &Directory, name: &str, bytes: &[u8]) -> Result<(), CaptureError> {
+-    let parent = directory.open_syncable()?;
+-    let mut file = create_retained_at(parent.as_fd(), OsStr::new(name), 0o600)?;
++    let mut file = directory.create_file(OsStr::new(name), 0o600)?;
+     file.write_all(bytes)?;
+     file.sync_all()?;
+     Ok(())
+@@ -316,9 +311,7 @@
+     Ok(())
+ }
+ fn same_identity(first: &Directory, second: &Directory) -> Result<(), CaptureError> {
+-    if FileIdentity::from_metadata(&first.open_syncable()?.metadata()?)
+-        != FileIdentity::from_metadata(&second.open_syncable()?.metadata()?)
+-    {
++    if first.identity()? != second.identity()? {
+         return Err(CaptureError::Changed);
+     }
+     Ok(())
+@@ -378,7 +371,7 @@
+     Store(#[from] StoreError),
+     /// Held-directory admission failure.
+     #[error(transparent)]
+-    Filesystem(#[from] ic_host_fs::capability::CapabilityError),
++    Filesystem(#[from] ic_host_fs::Error),
+     /// Original native IO failure; all partial files remain retained.
+     #[error(transparent)]
+     Io(#[from] io::Error),
+@@ -448,9 +441,14 @@
+         }
+         let mut file = self
+             .directory
+-            .resolve_parent(Path::new("ledger.bin"), PRIVATE)?
+-            .ok_or(CaptureError::Incomplete)?
+-            .open_regular_file_for_update(0o177)?
++            .open_file(
++                OsStr::new("ledger.bin"),
++                Access::Update,
++                FilePolicy {
++                    forbidden: 0o177,
++                    single_link: true,
++                },
++            )?
+             .ok_or(CaptureError::Incomplete)?;
+         if file.metadata()?.nlink() != 1
+             || FileIdentity::from_file(&file)? != FileIdentity::from_file(&self.ledger_file)?
+--- a/crates/ic-backup/src/store/mod.rs
++++ b/crates/ic-backup/src/store/mod.rs
+@@ -55,31 +55,16 @@
+ 
+ use ic_host_artifacts::artifact::{ArtifactError, Sha256Digest};
+ use ic_host_fs::{
+-    capability::{CapabilityError, Directory, DirectoryOptions, EntryKind},
+-    durable::{NamedWriteError, create_retained_at, publish_retained_at},
+-    read::read_opened_file,
++    Access, AttemptFailure, Commit, Destination, Directory, Error as CapabilityError, FilePolicy,
++    Kind as EntryKind, Policy, Retention,
+ };
++
+ use ic_platform::Principal;
+-use std::{
+-    convert::Infallible,
+-    ffi::OsStr,
+-    fs::File,
+-    io::{self, Write},
+-    num::NonZeroUsize,
+-    os::{fd::AsFd, unix::fs::MetadataExt},
+-    path::Path,
+-};
++use std::{ffi::OsStr, fs::File, io, num::NonZeroUsize, path::Path};
+ use thiserror::Error;
+ 
+ const FORMAT: &[u8] = b"ic-backup/local-store/1\n";
+-const PRIVATE: DirectoryOptions = DirectoryOptions {
+-    create_permissions: None,
+-    forbidden_permissions: 0o077,
+-};
+-const CREATE: DirectoryOptions = DirectoryOptions {
+-    create_permissions: Some(0o700),
+-    forbidden_permissions: 0o077,
+-};
++const PRIVATE: u32 = 0o077;
+ const MANIFEST_LIMIT: usize = 1024 * 1024;
+ 
+ /// An exact network instance and canister, independent of display names.
+@@ -148,25 +133,34 @@
+     /// Refuses missing/unsafe/nonprivate directories, occupied roots and IO failures.
+     /// Publication errors preserve whether the final format name became visible.
+     pub fn initialize(path: &Path) -> Result<Self, StoreError> {
+-        let root = Directory::open_root(path, PRIVATE)?.ok_or(StoreError::MissingStore)?;
+-        if let Some(entry) = root.entries(1)?.next() {
+-            entry?;
+-            return Err(StoreError::Occupied);
+-        }
+-        let parent = root.open_syncable()?;
+-        let mut stage = create_retained_at(parent.as_fd(), OsStr::new("format.pending"), 0o600)?;
+-        stage.write_all(FORMAT)?;
+-        stage.sync_all()?;
+-        for name in ["bundles", "operations", "targets"] {
+-            root.open_directory(OsStr::new(name), CREATE)?
+-                .ok_or(StoreError::IncompleteStore)?;
++        let root = Directory::open(path, PRIVATE)?.ok_or(StoreError::MissingStore)?;
++        match root.entries(1) {
++            Ok(entries) if entries.is_empty() => {}
++            Ok(_) | Err(CapabilityError::EntryLimit) => return Err(StoreError::Occupied),
++            Err(error) => return Err(error.into()),
+         }
+-        publish_retained_at(
+-            parent.as_fd(),
++        let stage = root.stage(
+             OsStr::new("format.pending"),
+             OsStr::new("format"),
+-            stage,
++            Policy {
++                destination: Destination::CreateNew,
++                permissions: 0o600,
++                retention: Retention::Retain,
++            },
+         )?;
++        let sealed = stage
++            .write_from(
++                FORMAT,
++                ic_byte_admission::Length::Exactly(FORMAT.len() as u64),
++            )?
++            .seal()?;
++        for name in ["bundles", "operations", "targets"] {
++            root.create_directory(OsStr::new(name), 0o700, PRIVATE)?;
++        }
++        match sealed.commit() {
++            Commit::Committed(_) => {}
++            outcome => return Err(StoreError::Publication(Box::new(outcome))),
++        }
+         Ok(Self { root })
+     }
+ 
+@@ -179,7 +173,7 @@
+     /// Refuses missing, partial, unsupported or unsafe roots. An empty directory
+     /// is not interpreted as an empty initialized store.
+     pub fn open(path: &Path) -> Result<Self, StoreError> {
+-        let root = Directory::open_root(path, PRIVATE)?.ok_or(StoreError::MissingStore)?;
++        let root = Directory::open(path, PRIVATE)?.ok_or(StoreError::MissingStore)?;
+         let Some(format) = read_optional(&root, "format", 128)? else {
+             return Err(StoreError::IncompleteStore);
+         };
+@@ -188,7 +182,6 @@
+         }
+         let mut count = 0;
+         for entry in root.entries(4)? {
+-            let entry = entry?;
+             let expected = match entry.name.to_str() {
+                 Some("format") => EntryKind::File,
+                 Some("bundles" | "operations" | "targets") => EntryKind::Directory,
+@@ -273,7 +266,6 @@
+             .ok_or(StoreError::IncompleteStore)?;
+         let mut remaining = limits.bytes.get();
+         for entry in bundles.entries(limits.entries.get())? {
+-            let entry = entry?;
+             let id = entry
+                 .name
+                 .to_str()
+@@ -311,21 +303,23 @@
+     limit: usize,
+ ) -> Result<Option<Vec<u8>>, StoreError> {
+     open_optional(root, name)?
+-        .map(|file| read_opened_file(file, limit).map_err(StoreError::Read))
++        .map(|file| ic_host_artifacts::artifact::read_reader(file, limit).map_err(StoreError::Read))
+         .transpose()
+ }
+ 
+ fn open_optional(root: &Directory, name: &str) -> Result<Option<File>, StoreError> {
+-    let entry = root
+-        .resolve_parent(Path::new(name), PRIVATE)?
+-        .ok_or(StoreError::InvalidLayout)?;
+-    let Some(file) = entry.open_regular_file_with_permissions(0o177)? else {
+-        return Ok(None);
+-    };
+-    if file.metadata()?.nlink() != 1 {
+-        return Err(StoreError::InvalidLayout);
+-    }
+-    Ok(Some(file))
++    root.open_file(
++        OsStr::new(name),
++        Access::Read,
++        FilePolicy {
++            forbidden: 0o177,
++            single_link: true,
++        },
++    )
++    .map_err(|error| match error {
++        CapabilityError::Aliased => StoreError::InvalidLayout,
++        error => StoreError::Filesystem(error),
++    })
+ }
+ 
+ /// A local refusal, preserving original IO/publication errors and retained files.
+@@ -388,6 +382,9 @@
+     #[error(transparent)]
+     Io(#[from] io::Error),
+     /// Original publication phase, including visibility before failed durability.
++    #[error("store marker publication was not confirmed")]
++    Publication(Box<Commit>),
++    /// Stage preparation/write/seal refusal including original cleanup evidence.
+     #[error(transparent)]
+-    Publication(#[from] NamedWriteError<Infallible>),
++    Attempt(#[from] AttemptFailure),
+ }
+--- a/crates/ic-backup/src/store/payload/mod.rs
++++ b/crates/ic-backup/src/store/payload/mod.rs
+@@ -6,11 +6,7 @@
+     BackupStore, BackupSummary, MANIFEST_LIMIT, PRIVATE, StoreError, manifest, open_optional,
+ };
+ use ic_host_artifacts::artifact::{ArtifactIdentity, Sha256Digest, hash_exact_reader};
+-use ic_host_fs::{
+-    capability::{Directory, EntryKind},
+-    identity::FileIdentity,
+-    read::read_opened_file,
+-};
++use ic_host_fs::{Directory, FileId as FileIdentity, Kind as EntryKind};
+ use std::{
+     collections::BTreeSet,
+     ffi::OsStr,
+@@ -128,7 +124,8 @@
+         let manifest_file =
+             open_optional(&bundle, "manifest.json")?.ok_or(StoreError::InvalidLayout)?;
+         let original_manifest = manifest_file.metadata()?;
+-        let bytes = read_opened_file(manifest_file.try_clone()?, MANIFEST_LIMIT)?;
++        let bytes =
++            ic_host_artifacts::artifact::read_reader(manifest_file.try_clone()?, MANIFEST_LIMIT)?;
+         ArtifactIdentity {
+             bytes: bytes.len() as u64,
+             sha256: Sha256Digest::compute(&bytes),
+@@ -209,7 +206,6 @@
+ ) -> Result<(), StoreError> {
+     let mut names: BTreeSet<_> = members.iter().map(|m| m.name.as_str()).collect();
+     for entry in directory.entries(names.len())? {
+-        let entry = entry?;
+         if entry.kind != EntryKind::File
+             || !entry.name.to_str().is_some_and(|name| names.remove(name))
+         {
+@@ -245,9 +241,7 @@
+     let current = parent
+         .open_directory(OsStr::new(name), PRIVATE)?
+         .ok_or(StoreError::CustodyChanged)?;
+-    if FileIdentity::from_metadata(&held.open_syncable()?.metadata()?)
+-        != FileIdentity::from_metadata(&current.open_syncable()?.metadata()?)
+-    {
++    if held.identity()? != current.identity()? {
+         return Err(StoreError::CustodyChanged);
+     }
+     Ok(())
+--- a/crates/ic-backup/src/store/tests/mod.rs
++++ b/crates/ic-backup/src/store/tests/mod.rs
+@@ -1,3 +1,5 @@
++use std::io::Write;
++use std::os::unix::fs::MetadataExt;
+ mod capture;
+ mod payload;
+ 
+@@ -253,7 +255,7 @@
+     tiny.entries = NonZeroUsize::new(1).unwrap();
+     assert!(matches!(
+         store.latest_completed_backup(&target(), tiny),
+-        Err(StoreError::Filesystem(CapabilityError::EntryLimit { .. }))
++        Err(StoreError::Filesystem(CapabilityError::EntryLimit))
+     ));
+     tiny = limits();
+     tiny.bytes = NonZeroUsize::new(1).unwrap();
+@@ -279,7 +281,7 @@
+     symlink(&path, &alias).unwrap();
+     assert!(matches!(
+         BackupStore::open(&alias),
+-        Err(StoreError::Filesystem(CapabilityError::Refused { .. }))
++        Err(StoreError::Filesystem(CapabilityError::Refused(_)))
+     ));
+     let outside = root("outside");
+     symlink(
+@@ -301,7 +303,7 @@
+     symlink(&source, folder.join("manifest.json")).unwrap();
+     assert!(matches!(
+         store.list_backups(None, limits()),
+-        Err(StoreError::Filesystem(CapabilityError::Refused { .. }))
++        Err(StoreError::Filesystem(CapabilityError::Refused(_)))
+     ));
+     assert_eq!(fs::read(source).unwrap(), GOLDEN);
+ }
+--- a/crates/ic-backup/src/store/tests/payload/mod.rs
++++ b/crates/ic-backup/src/store/tests/payload/mod.rs
+@@ -1,4 +1,5 @@
+ use super::*;
++use std::io::Write;
+ use std::num::NonZeroU64;
+ mod source_tests;
+ 
+@@ -217,8 +218,7 @@
+             )),
+             "extra" => assert!(matches!(
+                 error,
+-                StoreError::InvalidLayout
+-                    | StoreError::Filesystem(CapabilityError::EntryLimit { .. })
++                StoreError::InvalidLayout | StoreError::Filesystem(CapabilityError::EntryLimit)
+             )),
+             _ => assert!(matches!(error, StoreError::InvalidLayout)),
+         }
+@@ -237,7 +237,7 @@
+     symlink(&original, &payload).unwrap();
+     assert!(matches!(
+         fixture.verify(),
+-        Err(StoreError::Filesystem(CapabilityError::Refused { .. }))
++        Err(StoreError::Filesystem(CapabilityError::Refused(_)))
+     ));
+     for id in [
+         "../escape",
+@@ -354,8 +354,7 @@
+     assert!(
+         matches!(
+             result,
+-            Err(StoreError::InvalidLayout
+-                | StoreError::Filesystem(CapabilityError::EntryLimit { .. }))
++            Err(StoreError::InvalidLayout | StoreError::Filesystem(CapabilityError::EntryLimit))
+         ),
+         "{result:?}"
+     );
+@@ -532,10 +531,7 @@
+         },
+     );
+     assert!(
+-        matches!(
+-            result,
+-            Err(StoreError::Filesystem(CapabilityError::Refused { .. }))
+-        ),
++        matches!(result, Err(StoreError::Filesystem(CapabilityError::Kind))),
+         "{result:?}"
+     );
+     assert!(fs::symlink_metadata(path).unwrap().file_type().is_fifo());
+--- a/crates/ic-backup/src/store/tests/payload/source_tests.rs
++++ b/crates/ic-backup/src/store/tests/payload/source_tests.rs
+@@ -188,12 +188,11 @@
+     let fixture = Fixture::new("source-inplace-corruption");
+     let mut source = fixture.source();
+     let path = fixture.folder.join("payload/module.wasm");
+-    let original_identity =
+-        ic_host_fs::identity::FileIdentity::from_metadata(&fs::metadata(&path).unwrap());
++    let original_identity = ic_host_fs::FileId::from_metadata(&fs::metadata(&path).unwrap());
+     fs::write(&path, b"bad wasm").unwrap();
+     assert_eq!(
+         original_identity,
+-        ic_host_fs::identity::FileIdentity::from_metadata(&fs::metadata(&path).unwrap())
++        ic_host_fs::FileId::from_metadata(&fs::metadata(&path).unwrap())
+     );
+     let request = fixture.request(SnapshotDataKind::WasmModule { offset: 0, size: 8 });
+     assert!(matches!(

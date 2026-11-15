@@ -1,86 +1,300 @@
-//! Fresh directory allocation without retention, cleanup or durability policy.
+//! Descriptor-relative admission; no application formats or implicit hierarchy creation.
+use std::ffi::{OsStr, OsString};
+use std::fs::{File, Metadata};
+use std::io;
+use std::os::unix::{ffi::OsStrExt, fs::MetadataExt};
+use std::path::Path;
+use std::sync::Arc;
 
-use std::{
-    fs, io,
-    num::NonZeroUsize,
-    path::{Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
-};
+use rustix::fs::{self, AtFlags, FileType, Mode, OFlags};
+use thiserror::Error;
 
-static SEQUENCE: AtomicU64 = AtomicU64::new(0);
-
-/// Create a distinct child beneath an existing caller-owned parent.
-///
-/// `prefix` must be one normal filename component without CR/LF. Names append
-/// the process ID and a sequence. Existing entries are skipped, never reused or
-/// removed. Parent aliases remain in the returned path; no parent is created.
-/// Unix permissions are reduced by umask; other hosts use native permissions.
-/// `attempts` bounds collision attempts; `None` explicitly permits unlimited
-/// collisions. Other errors return immediately. This is not an elapsed deadline.
-/// Callers retain namespace custody, retention and cleanup. Allocation does not
-/// establish hostile-directory confinement or synchronize directory contents.
-///
-/// # Errors
-/// Returns invalid prefix/permissions, directory creation errors, or
-/// `AlreadyExists` after exhausting the caller-selected collision allowance.
-pub fn create_unique_directory(
-    parent: &Path,
-    prefix: &str,
-    permissions: u32,
-    attempts: Option<NonZeroUsize>,
-) -> io::Result<PathBuf> {
-    create_unique_directory_with_sequence(parent, prefix, permissions, attempts, &SEQUENCE)
+/// Original native cause or explicit filesystem admission refusal.
+#[derive(Debug, Error)]
+pub enum Error {
+    /// Native I/O cause, preserved without string conversion.
+    #[error("filesystem I/O refused: {0}")]
+    Io(#[from] io::Error),
+    /// A symlink or non-directory component was refused by no-follow admission.
+    #[error("filesystem link/type refused: {0}")]
+    Refused(#[source] io::Error),
+    /// A child name was not one normal component.
+    #[error("name must be one normal component")]
+    Name,
+    /// Observed permissions violated caller policy.
+    #[error("mode {mode:o} contains forbidden permissions {forbidden:o}")]
+    Permissions {
+        /// Observed permission bits.
+        mode: u32,
+        /// Caller-forbidden bits.
+        forbidden: u32,
+    },
+    /// Expected a regular file or directory.
+    #[error("unexpected entry kind")]
+    Kind,
+    /// A single-link file policy was violated.
+    #[error("file has multiple hard links")]
+    Aliased,
+    /// Complete enumeration exceeded its caller-supplied ceiling.
+    #[error("directory entry limit exceeded")]
+    EntryLimit,
+    /// An original staged entry was replaced or disappeared.
+    #[error("staging identity changed")]
+    Changed,
+    /// Byte admission refused; no completed content identity exists.
+    #[error(transparent)]
+    Bytes(#[from] ic_host_artifacts::Error),
 }
-
-fn create_unique_directory_with_sequence(
-    parent: &Path,
-    prefix: &str,
-    permissions: u32,
-    attempts: Option<NonZeroUsize>,
-    sequence: &AtomicU64,
-) -> io::Result<PathBuf> {
-    validate_options(prefix, permissions)?;
-    let builder = fs::DirBuilder::new();
-    #[cfg(unix)]
-    let builder = {
-        use std::os::unix::fs::DirBuilderExt as _;
-        let mut builder = builder;
-        builder.mode(permissions);
-        builder
-    };
-    let mut remaining = attempts.map(NonZeroUsize::get);
-    while remaining.is_none_or(|count| count > 0) {
-        if let Some(count) = &mut remaining {
-            *count -= 1;
-        }
-        let candidate = parent.join(format!(
-            "{prefix}-{}-{}",
-            std::process::id(),
-            sequence.fetch_add(1, Ordering::Relaxed),
-        ));
-        match builder.create(&candidate) {
-            Ok(()) => return Ok(candidate),
-            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
-            Err(error) => return Err(error),
+impl From<rustix::io::Errno> for Error {
+    fn from(error: rustix::io::Errno) -> Self {
+        if matches!(error, rustix::io::Errno::LOOP | rustix::io::Errno::NOTDIR) {
+            Self::Refused(error.into())
+        } else {
+            Self::Io(error.into())
         }
     }
-    Err(io::Error::new(
-        io::ErrorKind::AlreadyExists,
-        format!("failed to allocate directory beneath {}", parent.display()),
-    ))
 }
 
-pub(crate) fn validate_options(prefix: &str, permissions: u32) -> io::Result<()> {
-    if prefix.contains(['\r', '\n'])
-        || !crate::path::is_exact_normal_component(std::ffi::OsStr::new(prefix))
-        || permissions & !0o777 != 0
+/// Native object identity; keep its original descriptor alive when comparing it.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FileId {
+    device: u64,
+    inode: u64,
+}
+impl FileId {
+    /// Project identity from an already admitted metadata observation.
+    #[must_use]
+    pub fn from_metadata(metadata: &Metadata) -> Self {
+        Self {
+            device: metadata.dev(),
+            inode: metadata.ino(),
+        }
+    }
+    /// Observe identity through a held file.
+    /// # Errors
+    /// Preserves the original metadata I/O cause.
+    pub fn from_file(file: &File) -> io::Result<Self> {
+        Ok(Self::from_metadata(&file.metadata()?))
+    }
+}
+
+/// Existing-file authority; update never creates or truncates a file.
+#[derive(Clone, Copy, Debug)]
+pub enum Access {
+    /// Read-only access.
+    Read,
+    /// Read/write access for an explicitly retained recovery protocol.
+    Update,
+}
+/// Admission policy for existing regular files.
+#[derive(Clone, Copy, Debug)]
+pub struct FilePolicy {
+    /// Forbidden Unix permission bits.
+    pub forbidden: u32,
+    /// Require exactly one hard link.
+    pub single_link: bool,
+}
+/// Observed entry kind; links are never interpreted as their targets.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Kind {
+    /// Regular file.
+    File,
+    /// Directory.
+    Directory,
+    /// Link or other native entry.
+    Other,
+}
+/// One observed directory entry, not a held file admission.
+#[derive(Debug)]
+pub struct Entry {
+    /// Single-component native filename.
+    pub name: OsString,
+    /// No-follow observed kind.
+    pub kind: Kind,
+}
+/// Held directory identity. Clones share custody without reopening its pathname.
+#[derive(Clone, Debug)]
+pub struct Directory {
+    pub(crate) file: Arc<File>,
+}
+
+impl Directory {
+    /// Open an existing root, refusing a final symlink and forbidden permissions.
+    /// Ancestors are resolved once by the OS; later operations use this held identity.
+    /// # Errors
+    /// Refuses unsafe types/permissions and original I/O errors. Missing is `None`.
+    pub fn open(path: &Path, forbidden: u32) -> Result<Option<Self>, Error> {
+        let descriptor = optional(fs::open(path, directory_flags(), Mode::empty()))?;
+        descriptor
+            .map(|fd| Self::admit(File::from(fd), forbidden))
+            .transpose()
+    }
+    fn admit(file: File, forbidden: u32) -> Result<Self, Error> {
+        permissions(&file.metadata()?, forbidden)?;
+        Ok(Self {
+            file: Arc::new(file),
+        })
+    }
+    /// Open one existing child directory, without creation or symlink traversal.
+    /// # Errors
+    /// Refuses names, types, permissions and original I/O. Missing is `None`.
+    pub fn open_directory(&self, child: &OsStr, forbidden: u32) -> Result<Option<Self>, Error> {
+        name(child)?;
+        let descriptor = optional(fs::openat(
+            &*self.file,
+            child,
+            directory_flags(),
+            Mode::empty(),
+        ))?;
+        descriptor
+            .map(|fd| Self::admit(File::from(fd), forbidden))
+            .transpose()
+    }
+    /// Create one new child, sync its parent and admit it. Existing entries refuse.
+    /// On later failure the created child is retained, never implicitly removed.
+    /// # Errors
+    /// Refuses invalid names/modes, occupied names, sync or admission failures.
+    pub fn create_directory(
+        &self,
+        child: &OsStr,
+        mode: u32,
+        forbidden: u32,
+    ) -> Result<Self, Error> {
+        name(child)?;
+        valid_mode(mode)?;
+        if mode & forbidden != 0 {
+            return Err(Error::Permissions { mode, forbidden });
+        }
+        fs::mkdirat(&*self.file, child, Mode::from_bits_truncate(mode))?;
+        self.sync()?;
+        self.open_directory(child, forbidden)?.ok_or(Error::Changed)
+    }
+    /// Admit an existing regular file under explicit access and permission policy.
+    /// # Errors
+    /// Refuses links, special files, permission/alias violations and original I/O.
+    pub fn open_file(
+        &self,
+        child: &OsStr,
+        access: Access,
+        policy: FilePolicy,
+    ) -> Result<Option<File>, Error> {
+        name(child)?;
+        let flags = match access {
+            Access::Read => OFlags::RDONLY,
+            Access::Update => OFlags::RDWR,
+        } | OFlags::NOFOLLOW
+            | OFlags::CLOEXEC
+            | OFlags::NONBLOCK;
+        let Some(fd) = optional(fs::openat(&*self.file, child, flags, Mode::empty()))? else {
+            return Ok(None);
+        };
+        let file = File::from(fd);
+        let metadata = file.metadata()?;
+        if !metadata.is_file() {
+            return Err(Error::Kind);
+        }
+        permissions(&metadata, policy.forbidden)?;
+        if policy.single_link && metadata.nlink() != 1 {
+            return Err(Error::Aliased);
+        }
+        Ok(Some(file))
+    }
+    /// Create a retained recovery file, never replace it. No automatic deletion.
+    /// The caller owns ordered writes, sync and recovery of partial effects. This
+    /// writable handle is deliberately separate from publication staging.
+    /// # Errors
+    /// Refuses invalid names/modes, occupied names and native creation failures.
+    pub fn create_file(&self, child: &OsStr, mode: u32) -> Result<File, Error> {
+        name(child)?;
+        valid_mode(mode)?;
+        Ok(File::from(fs::openat(
+            &*self.file,
+            child,
+            OFlags::RDWR | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+            Mode::from_bits_truncate(mode),
+        )?))
+    }
+    /// Enumerate a complete bounded set; metadata checks do not follow symlinks.
+    /// # Errors
+    /// Refuses the whole scan on overflow, allocation, enumeration or metadata error.
+    pub fn entries(&self, limit: usize) -> Result<Vec<Entry>, Error> {
+        let mut entries = Vec::new();
+        for entry in fs::Dir::read_from(&*self.file)? {
+            let entry = entry?;
+            let bytes = entry.file_name().to_bytes();
+            if bytes == b"." || bytes == b".." {
+                continue;
+            }
+            if entries.len() == limit {
+                return Err(Error::EntryLimit);
+            }
+            let name = OsStr::from_bytes(bytes).to_owned();
+            let stat = fs::statat(&*self.file, &name, AtFlags::SYMLINK_NOFOLLOW)?;
+            let kind = match FileType::from_raw_mode(stat.st_mode) {
+                FileType::RegularFile => Kind::File,
+                FileType::Directory => Kind::Directory,
+                _ => Kind::Other,
+            };
+            entries
+                .try_reserve(1)
+                .map_err(|_| Error::Io(io::Error::other("directory allocation refused")))?;
+            entries.push(Entry { name, kind });
+        }
+        Ok(entries)
+    }
+    /// Observe the held directory identity without reopening a mutable path.
+    /// # Errors
+    /// Preserves original descriptor metadata failure.
+    pub fn identity(&self) -> io::Result<FileId> {
+        FileId::from_file(&self.file)
+    }
+    /// Sync this held directory; success is the platform filesystem's guarantee.
+    /// # Errors
+    /// Preserves the original synchronization cause.
+    pub fn sync(&self) -> io::Result<()> {
+        self.file.sync_all()
+    }
+}
+
+pub(crate) fn name(value: &OsStr) -> Result<(), Error> {
+    let bytes = value.as_bytes();
+    if bytes.is_empty()
+        || matches!(bytes, b"." | b"..")
+        || bytes.contains(&b'/')
+        || bytes.contains(&0)
     {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "invalid directory prefix or permissions",
-        ));
+        Err(Error::Name)
+    } else {
+        Ok(())
     }
-    Ok(())
+}
+fn valid_mode(mode: u32) -> Result<(), Error> {
+    if mode & !0o777 != 0 {
+        Err(Error::Permissions {
+            mode,
+            forbidden: !0o777,
+        })
+    } else {
+        Ok(())
+    }
+}
+fn directory_flags() -> OFlags {
+    OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC
+}
+fn permissions(metadata: &Metadata, forbidden: u32) -> Result<(), Error> {
+    let mode = metadata.mode() & 0o7777;
+    if mode & forbidden != 0 {
+        Err(Error::Permissions { mode, forbidden })
+    } else {
+        Ok(())
+    }
+}
+fn optional<T>(result: Result<T, rustix::io::Errno>) -> Result<Option<T>, Error> {
+    match result {
+        Ok(value) => Ok(Some(value)),
+        Err(rustix::io::Errno::NOENT) => Ok(None),
+        Err(error) => Err(error.into()),
+    }
 }
 
 #[cfg(test)]

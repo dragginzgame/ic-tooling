@@ -1,63 +1,23 @@
 [package]
 name = "ic-host-fs"
+version = "0.80.0"
 edition.workspace = true
 rust-version.workspace = true
-version = "0.79.0"
 license-file.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Local host filesystem reads, durable publication, file locking and a bounded file CLI"
-readme = "../../README.md"
 publish = false
 
-[package.metadata.cargo-machete]
-ignored = ["toko-tooling"]
-
-[[bin]]
-name = "ic-host-file"
-path = "src/bin/ic-host-file/main.rs"
-required-features = ["cli"]
-
-[features]
-default = []
-capability = ["dep:cap-fs-ext", "dep:cap-std"]
-cli = ["dep:clap"]
-temporary-file = ["dep:tempfile"]
-test-support = []
-
-[target.'cfg(unix)'.dependencies]
-cap-fs-ext = { workspace = true, optional = true }
-cap-std = { workspace = true, optional = true }
-rustix.workspace = true
-tempfile = { workspace = true, optional = true }
+[target.'cfg(any())'.dev-dependencies]
+toko-tooling.workspace = true
 
 [dependencies]
-clap = { workspace = true, features = ["derive"], optional = true }
 ic-host-artifacts.workspace = true
+rustix.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-clap = { workspace = true, features = ["derive"] }
-ic-host-artifacts = { workspace = true, features = ["gzip"] }
-serde = { workspace = true, features = ["std"] }
-serde_json.workspace = true
-toko-tooling.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true
-
-[[test]]
-name = "file_cli"
-required-features = ["cli"]
-
-[[test]]
-name = "isolated_descriptor_lock"
-required-features = ["test-support"]
-
-[[test]]
-name = "isolated_executable_admission"
-required-features = ["test-support"]
-
-[[test]]
-name = "isolated_private_lock"
-required-features = ["test-support"]

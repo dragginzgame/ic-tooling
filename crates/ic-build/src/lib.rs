@@ -1,13 +1,16 @@
-//! Shared host-side Cargo execution, package qualification and artifact capture.
+//! Build one Wasm library into owned bytes with complete process and Cargo evidence.
 //!
-//! Callers select recipes, tools, output budgets, source custody and target lifetime.
-//! The engine never owns a `PocketIC` lifecycle or a consumer's release identity.
-//! Retain capture owners through artifact consumption. Cargo owns incremental
-//! compilation; no persistent artifact cache or default elapsed-time deadline is added.
-#![forbid(unsafe_code)]
+//! This is an ordinary, offline developer-build operation, not a release proof or
+//! sandbox for hostile build scripts. The caller owns source/tool stability and
+//! the scratch parent. See `build` for the cleanup and cancellation contract.
 
-pub mod artifacts;
-pub mod cargo;
+mod bytes;
+mod custody;
+mod operation;
+mod process;
+mod protocol;
 
-#[cfg(any(test, feature = "test-support"))]
-pub mod testing;
+pub use operation::{Artifact, BuildFailure, BuildRequest, Failure, Limits, build};
+
+#[cfg(test)]
+mod tests;

@@ -1,78 +1,23 @@
 [package]
 name = "ic-build"
+version = "0.87.0"
 edition.workspace = true
 rust-version.workspace = true
-version = "0.86.1"
-repository.workspace = true
-description = "Cargo execution, artifact capture and package qualification"
-readme = "README.md"
 license-file.workspace = true
-exclude = ["target/"]
+repository.workspace = true
+authors.workspace = true
 publish = false
 
-[package.metadata.cargo-machete]
-ignored = ["toko-tooling"]
-
-[[bin]]
-name = "ic-build-release-metadata"
-path = "src/bin/ic-build-release-metadata.rs"
-required-features = ["cli"]
-
-[features]
-default = []
-cli = ["dep:clap", "clap/derive", "serde/derive"]
-test-support = ["ic-host-fs/test-support"]
-
-[target.'cfg(unix)'.dependencies]
-# Production dependencies
-rustix = { workspace = true, features = ["process"] }
-
-[dependencies]
-# Production dependencies
-cargo_metadata.workspace = true
-clap = { workspace = true, optional = true }
-ic-host-artifacts.workspace = true
-ic-host-fs.workspace = true
-ic-host-process.workspace = true
-serde = { workspace = true, features = ["std", "derive"] }
-serde_json.workspace = true
-thiserror.workspace = true
-toml.workspace = true
-toml_edit.workspace = true
-
-[target.'cfg(unix)'.dev-dependencies]
-# Tests and tooling only
-ic-host-process = { workspace = true, features = ["test-support"] }
-
-[dev-dependencies]
-# Tests and tooling only
-clap.workspace = true
-ic-host-fs = { workspace = true, features = ["test-support"] }
+[target.'cfg(any())'.dev-dependencies]
 toko-tooling.workspace = true
 
-[[test]]
-name = "artifact_helpers"
-required-features = ["test-support"]
-
-[[test]]
-name = "cargo_examples"
-required-features = ["test-support"]
-
-[[test]]
-name = "cargo_execution"
-required-features = ["test-support"]
-
-[[test]]
-name = "native_executable"
-required-features = ["test-support"]
-
-[[test]]
-name = "package_qualification"
-required-features = ["test-support"]
-
-[[test]]
-name = "release_metadata_cli"
-required-features = ["cli"]
+[dependencies]
+ic-host-artifacts.workspace = true
+ic-host-fs.workspace = true
+rustix = { workspace = true, features = ["process"] }
+serde_json.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true
