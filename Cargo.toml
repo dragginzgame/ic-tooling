@@ -22,7 +22,7 @@ authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
 [workspace.dependencies]
 ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.80.1" }
 ic-host-fs = { path = "crates/ic-host-fs", version = "0.80.1" }
-ic-host-process = { path = "crates/ic-host-process", version = "0.80.0" }
+ic-host-process = { path = "crates/ic-host-process", version = "0.80.1" }
 ic-platform = { version = "=0.33.7", default-features = false }
 ic-platform-types = { version = "=0.20.4", default-features = false }
 pocket-ic = "=16.1.0"

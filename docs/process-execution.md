@@ -1,8 +1,8 @@
 # Native execution: next owner admission
 
-Status: partial implementation in unpublished `ic-host-process` 0.80.0, adopted
-by Build, with current Canic artifact/metadata and foreground-client qualification.
-Signer group-capture migration and native macOS acceptance remain open.
+Status: partial implementation in unpublished `ic-host-process` 0.80.1, adopted
+by Build, with current Canic artifact/metadata, foreground-client and signer
+version/principal capture qualification. Native macOS acceptance remains open.
 The existing [design](DESIGN.md#process-session) names the execution ownership
 boundary. This review checks it against current local callers rather than copying
 `ic-host-process` or exposing Build's private implementation unchanged.
@@ -94,7 +94,7 @@ native execution or simulator requirement.
 ## Admitted implementation and reuse review
 
 The crates.io sparse index was queried on 2026-11-15 and selected the non-yanked
-0.79.0 line (`target/ic-host-process-registry.ndjson`). The replacement uses 0.80.0
+0.79.0 line (`target/ic-host-process-registry.ndjson`). The replacement uses 0.80.1
 for the incompatible contract and remains unpublished. Its only normal suppliers
 are the existing Rustix and thiserror selections; no external lock tuples changed.
 The independent Process release group owns this package.
@@ -186,3 +186,168 @@ exact/over bounds, nonzero/invalid replies, single invocation and real PTY input
 Source identity and Linux evidence are recorded in the
 [Canic qualification](../qualification/canic/README.md#foreground-client-migration).
 This does not migrate Canic's group-capture signer checks or qualify macOS.
+
+## Process 0.80.1: signer capture
+
+After GitHub checkpoint `f086547`, the public API and core remain unchanged.
+Current Canic's `admit_signer` and `signing_principal` use a private export-only
+adapter over `run(Group, Null, Capture)`. It owns fallible stdout/stderr retention
+and rejects any communication failure, cleanup error or unsuccessful/missing
+status before decoding. It retains all report fields and captured bytes on error;
+formatting reports byte counts without dumping signer output. This removes the
+legacy capture/success/completeness chain without moving ICP version selection,
+principal decoding, identity arguments or retry policy into Tooling.
+
+Two focused consumer tests cover exact version admission, version refusal before
+identity invocation, literal argument handling, malformed UTF-8/principal replies,
+nonzero status, stdout/stderr overflow, exact capture boundaries and group deadline.
+Each caller attempt has exactly the expected invocations. Fixtures are prepared
+before concurrent tests start; preparing executables inside tests produced an
+`ETXTBSY` fixture failure and was corrected without adding invocation retries.
+Consumer Clippy and external-lock subset checks pass; no new external selection.
+See the source identity and command in [Canic qualification](../qualification/canic/README.md).
+The actual signing/submission path, other legacy Process callers and native macOS
+are outside this slice. Prior 0.80.0 runtime records remain version-bound.
+
+### Follow-up: exact signer failure evidence and remaining callers
+
+The current Canic 0.213.0 working-tree export passes four focused tests. Replace
+broad `is_err()` capture checks with independent observations of `Limit(Stdout)`,
+`Limit(Stderr)`, `Deadline` and `Io(NotFound)`. Check original exit code 7 with both
+retained streams, known status after cleanup and absent status on spawn refusal.
+These assertions prevent an unrelated spawn or decoding failure from falsely
+qualifying a timeout/overflow scenario. They live inside the exported private
+adapter's test module; no public test hooks or new product API are added.
+
+Two remaining callers need separate admission before further migration:
+
+- `app_build::build_app` initializes a missing Cargo lock with 1 MiB per stream
+  and a 120-second deadline. It formats bounded escaped Cargo diagnostics through
+  `artifact::cargo_failure`. A migration must preserve that diagnostic contract,
+  existing-lock custody and serial partial-build behavior; signer error formatting
+  deliberately does not expose captured bytes and is not a drop-in substitute.
+- Actual `signed::sign` uses `Command::status`, inherited stdin/stderr and stdout
+  redirected to stderr, then admits a retained signing file. It does not currently
+  use the legacy Process supplier. The new owner always pipes stdout, so routing
+  this caller through it would change terminal behavior and impose new deadline
+  policy. Leave it unchanged until those requirements are explicitly admitted.
+
+These findings do not require a public API expansion or migration merely to remove
+remaining lexical references. Current source identity and results are recorded in
+[Canic qualification](../qualification/canic/README.md).
+
+### Process 0.80.1: Cargo lock initialization
+
+`make test-canic-lock` now qualifies `app_build::build_app` lock initialization in
+an independent current Canic export. A private caller adapter replaces the legacy
+capture/success/completeness chain with one `Group` run, null stdin, 1 MiB stream
+budgets and a 120-second deadline. It retains both buffers, status, primary failure
+and cleanup evidence on refusal; no Process API or execution core change is needed.
+Unlike signer presentation, this caller must render Cargo diagnostics. Extracting
+Canic's existing diagnostic formatter into a byte-slice helper lets both its
+retained legacy artifact caller and the new lock caller use identical escaping,
+4096-character bounds and truncation markers. No Canic formatter enters Tooling.
+
+Current Canic 0.213.0 passes two focused status/byte/diagnostic tests and all-target
+Host Clippy. Real app builds check duplicate-destination preflight, an injected
+single-attempt lock failure with escaped diagnostics and unchanged destinations,
+initial creation, preservation of an existing lock (with a refusing initializer
+still on PATH), exact Wasm identity and serial partial failure. Only the local
+Process edge is added; the external lock subset remains unchanged.
+
+This export retains Canic's other Build/Text suppliers, so it does not claim the
+combined Build + Text + Process migration. That composition, with current-source
+patch admission, is the next qualification step. Actual interactive signing is
+unchanged. Source identity is in [Canic qualification](../qualification/canic/README.md).
+
+### Combined caller follow-up
+
+Current Canic 0.213.0 passes `make test-canic-app-build` with Build 0.87.3,
+Text 0.77.2 and Process 0.80.1 selected together. The runner checks both Process
+edges (Build execution and Host lock initialization) and Text selection, admits
+external tuples against the reviewed Build lock, and runs Host/CLI Clippy, two
+lock diagnostic tests, app build/refusal fixtures and 34 display tests. Stale
+patches were refreshed against captured current source, including new Text
+callers, without importing consumer code into product crates or expanding APIs.
+See [combined source evidence](../qualification/canic/README.md).
+
+### Same-capture signer integration
+
+The combined app target now qualifies signer version/principal capture alongside
+Build, Text and lock initialization on one current Canic export. It shares the
+standalone signer's fixture setup and invocation helper, removing duplicated test
+wiring. Four signer tests pass together with two lock tests, app-build behavior,
+34 display tests, all-target Host/CLI Clippy and dependency admission. The local
+Process alias is already selected by the lock patch; the signer migration applies
+only its implementation hunks and relies on the combined graph's exact supplier
+check. No product source or public API changed. Actual interactive signing and the
+separate foreground-client PTY qualification remain distinct boundaries.
+
+### Same-capture foreground integration
+
+Linux `make test-canic-process` adds the direct-child profile client to the combined
+Build/Text/lock/signer export. It reuses the selected Process alias and checks the
+client's exact local edge and absence of its old direct dependency. A shared
+foreground fixture runner keeps standalone and combined test wiring consistent.
+The current package-directory rename is reflected only in qualification paths;
+no new Process API or consumer policy is introduced. Forty-four tests pass,
+including inherited terminal input/stderr through a real PTY, together with real
+app builds/refusals and Host/CLI/client Clippy. Ordinary app qualification keeps
+its existing platform scope. See the current source evidence in
+[Canic qualification](../qualification/canic/README.md).
+
+### Remaining metadata capture boundary
+
+The combined export still uses the retained Process supplier for prepared Cargo
+metadata execution. Its next migration must retain null input, owned-group
+cleanup, 8 MiB stdout, 1 MiB stderr, a 120-second deadline, Cargo diagnostic
+formatting, selection refusal before compilation and destination preservation.
+The current combined recipe now proves nonzero exit after valid JSON, both stream
+overflows and invalid UTF-8 cannot proceed to compilation. Together with ten
+selection and six prepared-tool/wrapper cases, this gives 20 refusal checks before
+changing that caller. Existing group/direct-child and display acceptance still
+passes on the same captured tree; see [source evidence](../qualification/canic/README.md).
+
+### Metadata execution migration completed in the combined export
+
+The combined Process recipe now migrates the remaining Host metadata capture to
+Process 0.80.1. Reuse is limited to the reviewed private lock capture adapter,
+relocated into Canic's `cargo_process` module and parameterized by stdout budget.
+Lock setup and metadata share capture/refusal handling; Cargo diagnostics remain
+consumer-owned. The old ToolError/evidence bridge and synthetic diagnostic evidence
+are removed, and Host no longer directly depends on legacy Process in this export.
+The existing artifact diagnostic tests retain their assertions with byte inputs.
+
+Forty-seven selected tests and all 20 metadata/tool refusal cases pass on current
+Canic, including real app builds, terminal interaction and Clippy. No public Process
+API or implementation change was needed. Source identity and exact boundaries are
+in [Canic qualification](../qualification/canic/README.md). Ordinary app/standalone
+recipes have not been silently promoted to this broader migration; remaining
+workspace callers, native macOS and actual signing/submission stay separate.
+
+## Remaining desktop-opener boundary
+
+Current Canic CLI `view::launch` is the remaining direct legacy Process caller
+outside the migrated Host/profile-client slices. It appends one URL argument,
+uses null stdin/stdout and inherited stderr, spawns a direct child, then relinquishes
+cleanup. The viewer continues serving while the opener may run. It reports a
+nonzero exit only when already observed; launch return is neither readiness nor
+successful browser startup. Actual signing's direct `Command::status` is separate.
+
+`make test-canic-viewer` now qualifies this retained caller against current source.
+A harmless shell fixture waits for a gate opened only after `launch` returns,
+then records the exact literal URL. It has bounded self-expiry and performs no
+browser/network action. A missing executable retains `NotFound`; the two original
+loopback-viewer tests verify report-only serving and polling updates. CLI Clippy
+and all four tests pass. Socket denial in the sandbox was resolved by running the
+local-loopback qualification with the required access, not by skipping tests.
+
+The replacement's synchronous `run` always closes its child, so it cannot be
+substituted here. The read-only production reference documents `relinquish` as a
+single nonblocking observation followed by loss of signal/wait custody; it explicitly
+leaves subsequent lifetime/reaping to the caller. This fixture proves continued
+execution, not eventual reaping. Before adding a handoff mode, define who retains
+reaping custody, failures before/after transfer, caller shutdown behavior and the
+limits of any completion observation. Do not import the old child/session API or
+infer readiness/retry authority merely to remove a dependency. Native macOS and
+actual desktop-opener integration remain separate qualification.

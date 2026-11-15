@@ -15,24 +15,17 @@ sed "s|@IC_TOOLING_NEW@|$repo|g" "$repo/qualification/canic/foreground-process.p
 export GIT_CEILING_DIRECTORIES="$repo/target"
 git -C "$scratch/source" apply --check "$scratch/migration.patch"
 git -C "$scratch/source" apply "$scratch/migration.patch"
-cp "$repo/qualification/canic/foreground-tests.rs" "$scratch/source/apps/profile/client/src/foreground_process.rs"
-printf '\n#[cfg(test)]\nmod foreground_process;\n' >> "$scratch/source/apps/profile/client/src/main.rs"
-cp "$repo/qualification/canic/foreground-tool.sh" "$scratch/tool"
-chmod 700 "$scratch/tool"
-export CANIC_FOREGROUND_EVIDENCE="$scratch/evidence" CANIC_FOREGROUND_TOOL="$scratch/tool"
+source "$repo/scripts/qualification/canic-foreground-fixture.sh"
+prepare_foreground_fixture "$scratch/source" "$scratch/evidence"
 export CARGO_TARGET_DIR="$repo/target/canic-consumer-build" CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
 manifest="$scratch/source/Cargo.toml"
 cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-profile-client") | .id) as $client |
-  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.0" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.1" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
   any($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
   all($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name != "ic_host_process")
 ' "$scratch/metadata.json" >/dev/null
 cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- verify-external-lock "$scratch/original.lock" "$scratch/source/Cargo.lock" 1048576
-cargo clippy --manifest-path "$manifest" -p canic-profile-client --all-targets --locked --offline -- -D warnings
-cargo test --manifest-path "$manifest" -p canic-profile-client --bin canic-profile --locked --offline foreground_process::
-# Command path is fixed; the environment carries paths without shell interpolation.
-export CANIC_FOREGROUND_MANIFEST="$manifest"
-printf 'fixture-answer\n' | script -q -e -c 'cargo test --manifest-path "$CANIC_FOREGROUND_MANIFEST" -p canic-profile-client --bin canic-profile --locked --offline foreground_process::inherited_terminal_input_and_stderr_remain_interactive -- --ignored --exact' /dev/null
+test_foreground_fixture "$scratch/source" "$scratch/evidence"
 printf 'Foreground consumer arguments, exact/over limits, reply refusal, no retry and terminal interaction passed.\n'

@@ -1,0 +1,338 @@
+--- a/crates/canic-host/Cargo.toml
++++ b/crates/canic-host/Cargo.toml
+@@ -16,7 +16,6 @@
+ canic-management-protocol.workspace = true
+ canic-wasm-store-protocol.workspace = true
+ ic-host-fs.workspace = true
+-ic-host-process.workspace = true
+ ic-host-process-next.workspace = true
+ ic-host-text.workspace = true
+ ic-platform = { workspace = true, features = ["agent", "ic-protocol", "management-canister-types", "cycles-ledger-types", "icp-ledger-types", "icrc-ledger-types"] }
+--- a/crates/canic-host/src/lib.rs
++++ b/crates/canic-host/src/lib.rs
+@@ -2,6 +2,7 @@
+ 
+ mod app_build;
+ mod artifact;
++mod cargo_process;
+ mod config;
+ mod fleet;
+ mod fleet_plan;
+--- a/crates/canic-host/src/app_build.rs
++++ b/crates/canic-host/src/app_build.rs
+@@ -4,7 +4,6 @@
+ use std::{
+     path::{Path, PathBuf},
+     process::Command,
+-    time::Duration,
+ };
+ 
+ /// A replaceable build output, not retained deployment evidence.
+@@ -83,76 +82,8 @@
+     Ok(built)
+ }
+ 
+-#[derive(Debug)]
+-struct LockFailure {
+-    report: ic_host_process_next::Report,
+-    stdout: Vec<u8>,
+-    stderr: Vec<u8>,
+-}
+-
+-impl std::fmt::Display for LockFailure {
+-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+-        write!(
+-            f,
+-            "Cargo lock initialization failed: status={:?}, failure={:?}, cleanup={:?}",
+-            self.report.status, self.report.failure, self.report.cleanup
+-        )?;
+-        let partial = matches!(
+-            self.report.failure,
+-            Some(ic_host_process_next::Failure::Limit(_))
+-        );
+-        if let Some(diagnostic) =
+-            crate::artifact::cargo_diagnostic_bytes(&self.stdout, &self.stderr, partial)
+-        {
+-            write!(f, "\n{diagnostic}")?;
+-        }
+-        Ok(())
+-    }
+-}
+-
+-impl std::error::Error for LockFailure {
+-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+-        self.report.failure.as_ref().map(|error| error as _)
+-    }
+-}
+-
+ fn initialize_lock(command: &mut Command) -> Result<()> {
+-    use ic_host_process_next::{Input, Ownership, Policy, Stderr, Stream};
+-    let mut stdout = Vec::new();
+-    let mut stderr = Vec::new();
+-    let report = ic_host_process_next::run(
+-        command,
+-        Policy {
+-            ownership: Ownership::Group,
+-            input: Input::Null,
+-            stdout_bytes: 1024 * 1024,
+-            stderr: Stderr::Capture(1024 * 1024),
+-            elapsed: Duration::from_secs(120),
+-        },
+-        &std::sync::atomic::AtomicBool::new(false),
+-        |stream, bytes| {
+-            let buffer = match stream {
+-                Stream::Stdout => &mut stdout,
+-                Stream::Stderr => &mut stderr,
+-            };
+-            buffer
+-                .try_reserve(bytes.len())
+-                .map_err(std::io::Error::other)?;
+-            buffer.extend_from_slice(bytes);
+-            Ok(())
+-        },
+-    );
+-    if report.failure.is_some()
+-        || !report.cleanup.is_empty()
+-        || !report.status.is_some_and(|status| status.success())
+-    {
+-        return Err(supplier(LockFailure {
+-            report,
+-            stdout,
+-            stderr,
+-        }));
+-    }
+-    Ok(())
++    crate::cargo_process::capture(command, 1024 * 1024).map(|_| ())
+ }
+ 
+ #[cfg(test)]
+--- a/crates/canic-host/src/artifact/mod.rs
++++ b/crates/canic-host/src/artifact/mod.rs
+@@ -1,8 +1,4 @@
+ use crate::{Error, Result, hex, supplier};
+-use ic_host_process::tool::{
+-    CompletedExecution, ExecutionEvidence, OutputLimit, OutputLimits, ToolError,
+-    capture_group_command,
+-};
+ use serde::{Deserialize, Serialize};
+ use sha2::{Digest, Sha256};
+ use std::{
+@@ -34,23 +30,6 @@
+     diagnostic: String,
+ }
+ 
+-// Only Cargo callers expose captured diagnostics. Signer/provider evidence keeps
+-// its existing disclosure policy; the process supplier owns capture and cleanup.
+-pub(crate) fn cargo_failure(source: ToolError) -> Error {
+-    match source.evidence().and_then(cargo_diagnostic) {
+-        Some(diagnostic) => supplier(CargoFailure { source, diagnostic }),
+-        None => supplier(source),
+-    }
+-}
+-
+-fn cargo_diagnostic(evidence: &ExecutionEvidence) -> Option<String> {
+-    cargo_diagnostic_bytes(
+-        &evidence.stdout,
+-        &evidence.stderr,
+-        evidence.stdout_truncated || evidence.stderr_truncated,
+-    )
+-}
+-
+ pub(crate) fn cargo_diagnostic_bytes(
+     stdout: &[u8],
+     stderr: &[u8],
+@@ -134,7 +113,7 @@
+     };
+     let cargo = prepared("IC_OWNED_CARGO")?;
+     let rustc = prepared("IC_OWNED_RUSTC")?;
+-    let output = capture_group_command(
++    let output = crate::cargo_process::capture(
+         Command::new(&cargo)
+             .current_dir(
+                 manifest
+@@ -152,16 +131,9 @@
+                 "--manifest-path",
+             ])
+             .arg(&manifest),
+-        OutputLimits {
+-            stdout: OutputLimit::Terminate(8 * 1024 * 1024),
+-            stderr: OutputLimit::Terminate(1024 * 1024),
+-            timeout: Some(Duration::from_secs(120)),
+-        },
+-    )
+-    .and_then(CompletedExecution::require_success)
+-    .and_then(CompletedExecution::require_complete)
+-    .map_err(cargo_failure)?;
+-    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout).map_err(supplier)?;
++        8 * 1024 * 1024,
++    )?;
++    let metadata: serde_json::Value = serde_json::from_slice(&output).map_err(supplier)?;
+     let invalid = || Error::Invalid("expected one workspace package and cdylib target".into());
+     let packages = metadata["packages"].as_array().ok_or_else(invalid)?;
+     let selected: Vec<_> = packages
+@@ -238,12 +210,11 @@
+         &mut std::io::sink(),
+     )
+     .map_err(|source| {
+-        let evidence = ExecutionEvidence {
+-            stderr: source.diagnostics.clone(),
+-            stderr_truncated: matches!(source.primary, ic_build::Failure::DiagnosticLimit),
+-            ..Default::default()
+-        };
+-        match cargo_diagnostic(&evidence) {
++        match cargo_diagnostic_bytes(
++            &[],
++            &source.diagnostics,
++            matches!(source.primary, ic_build::Failure::DiagnosticLimit),
++        ) {
+             Some(diagnostic) => supplier(CargoFailure { source, diagnostic }),
+             None => supplier(source),
+         }
+--- a/crates/canic-host/src/artifact/tests.rs
++++ b/crates/canic-host/src/artifact/tests.rs
+@@ -2,42 +2,36 @@
+ 
+ #[test]
+ fn cargo_diagnostics_select_compiler_errors_and_escape_controls() {
+-    let mut evidence = ExecutionEvidence {
+-        stdout: serde_json::to_vec(&serde_json::json!({
++    let mut stdout = serde_json::to_vec(&serde_json::json!({
+             "reason": "compiler-message", "message": {
+                 "level": "error", "rendered": "error[E0425]: missing name\n --> app.rs:4\n\u{1b}[31m\u{202e}"
+             }
+-        })).unwrap(),
+-        stderr: b"Compiling app\nerror: could not compile app".to_vec(),
+-        ..Default::default()
+-    };
+-    let diagnostic = cargo_diagnostic(&evidence).unwrap();
++        })).unwrap();
++    let stderr = b"Compiling app\nerror: could not compile app".to_vec();
++    let diagnostic = cargo_diagnostic_bytes(&stdout, &stderr, false).unwrap();
+     assert!(diagnostic.contains("error[E0425]: missing name\n --> app.rs:4"));
+     assert!(!diagnostic.contains("could not compile"));
+     assert!(!diagnostic.contains(['\u{1b}', '\u{202e}']));
+-    evidence.stdout = b"not a compiler record".to_vec();
++    stdout = b"not a compiler record".to_vec();
+     assert!(
+-        cargo_diagnostic(&evidence)
++        cargo_diagnostic_bytes(&stdout, &stderr, false)
+             .unwrap()
+             .contains("could not compile")
+     );
+-    assert!(cargo_diagnostic(&ExecutionEvidence::default()).is_none());
++    assert!(cargo_diagnostic_bytes(&[], &[], false).is_none());
+ }
+ 
+ #[test]
+ fn cargo_diagnostics_bound_unicode_and_mark_incomplete_capture() {
+-    let mut evidence = ExecutionEvidence {
+-        stderr: "é".repeat(5000).into_bytes(),
+-        ..Default::default()
+-    };
+-    let diagnostic = cargo_diagnostic(&evidence).unwrap();
++    let mut stderr = "é".repeat(5000).into_bytes();
++    let stdout = Vec::new();
++    let diagnostic = cargo_diagnostic_bytes(&stdout, &stderr, false).unwrap();
+     assert!(diagnostic.starts_with(&"é".repeat(4096)));
+     assert!(diagnostic.ends_with("[Cargo diagnostic truncated]"));
+     assert!(diagnostic.len() < 8300);
+-    evidence.stderr = b"short error".to_vec();
+-    evidence.stderr_truncated = true;
++    stderr = b"short error".to_vec();
+     assert!(
+-        cargo_diagnostic(&evidence)
++        cargo_diagnostic_bytes(&stdout, &stderr, true)
+             .unwrap()
+             .ends_with("[Cargo diagnostic truncated]")
+     );
+--- a/crates/canic-host/src/lock_process_tests.rs
++++ b/crates/canic-host/src/lock_process_tests.rs
+@@ -10,7 +10,9 @@
+     let crate::Error::Supplier(source) = error else {
+         panic!("wrong error owner")
+     };
+-    let failure = source.downcast_ref::<LockFailure>().unwrap();
++    let failure = source
++        .downcast_ref::<crate::cargo_process::CaptureFailure>()
++        .unwrap();
+     assert_eq!(failure.report.status.unwrap().code(), Some(7));
+     assert!(failure.report.failure.is_none() && failure.report.cleanup.is_empty());
+     assert_eq!(failure.stdout, b"out");
+--- /dev/null
++++ b/crates/canic-host/src/cargo_process.rs
+@@ -0,0 +1,75 @@
++//! Private Cargo capture policy shared by lock initialization and metadata.
++use crate::{Result, supplier};
++use std::{process::Command, time::Duration};
++
++#[derive(Debug)]
++pub(crate) struct CaptureFailure {
++    pub(crate) report: ic_host_process_next::Report,
++    pub(crate) stdout: Vec<u8>,
++    pub(crate) stderr: Vec<u8>,
++}
++
++impl std::fmt::Display for CaptureFailure {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        write!(
++            f,
++            "Cargo execution failed: status={:?}, failure={:?}, cleanup={:?}",
++            self.report.status, self.report.failure, self.report.cleanup
++        )?;
++        let partial = matches!(
++            self.report.failure,
++            Some(ic_host_process_next::Failure::Limit(_))
++        );
++        if let Some(diagnostic) =
++            crate::artifact::cargo_diagnostic_bytes(&self.stdout, &self.stderr, partial)
++        {
++            write!(f, "\n{diagnostic}")?;
++        }
++        Ok(())
++    }
++}
++
++impl std::error::Error for CaptureFailure {
++    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
++        self.report.failure.as_ref().map(|error| error as _)
++    }
++}
++
++pub(crate) fn capture(command: &mut Command, stdout_bytes: usize) -> Result<Vec<u8>> {
++    use ic_host_process_next::{Input, Ownership, Policy, Stderr, Stream};
++    let mut stdout = Vec::new();
++    let mut stderr = Vec::new();
++    let report = ic_host_process_next::run(
++        command,
++        Policy {
++            ownership: Ownership::Group,
++            input: Input::Null,
++            stdout_bytes,
++            stderr: Stderr::Capture(1024 * 1024),
++            elapsed: Duration::from_secs(120),
++        },
++        &std::sync::atomic::AtomicBool::new(false),
++        |stream, bytes| {
++            let buffer = match stream {
++                Stream::Stdout => &mut stdout,
++                Stream::Stderr => &mut stderr,
++            };
++            buffer
++                .try_reserve(bytes.len())
++                .map_err(std::io::Error::other)?;
++            buffer.extend_from_slice(bytes);
++            Ok(())
++        },
++    );
++    if report.failure.is_some()
++        || !report.cleanup.is_empty()
++        || !report.status.is_some_and(|status| status.success())
++    {
++        return Err(supplier(CaptureFailure {
++            report,
++            stdout,
++            stderr,
++        }));
++    }
++    Ok(stdout)
++}

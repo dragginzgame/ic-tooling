@@ -52,11 +52,11 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   portable bytes. Its contract is `docs/http-body.md`.
 - `ic-host-text` 0.77.2 owns escaping and bordered/plain tables for Query, DB and Canic;
   its contract is `docs/text-presentation.md`. Other Text operations remain open.
-- `ic-host-process` 0.80.0 owns synchronous group/direct-child execution and
+- `ic-host-process` 0.80.1 owns synchronous group/direct-child execution and
   bounded stream delivery. Build uses this shared core; caller decoding and
   terminal policy stay outside it. Follow `docs/process-execution.md`; Canic
-  signer group-capture migration and native macOS acceptance remain open. The
-  foreground client passes export-only fixture/PTY qualification. Injected
+  signer capture and foreground client pass export-only fixture qualification;
+  the foreground client also passes Linux PTY checks. Native macOS remains open. Injected
   cleanup failures, Linux descendant lifetime and current Canic Build checks pass.
 - `ic-testkit` 0.107.1 admits the shared PocketIC re-export and bounded owned reply
   catalogs and generated modules behind `held-reply-fixtures`. Follow

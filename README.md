@@ -16,11 +16,21 @@ Consumers select Reqwest directly and own TLS/request policy.
 `make test-http-body` and `make test-backup-http` check the adapter and current
 Backup HTTP behavior using local loopback fixtures.
 
-`ic-host-process` 0.80.0 owns [bounded native execution](docs/process-execution.md).
+`ic-host-process` 0.80.1 owns [bounded native execution](docs/process-execution.md).
 Build uses its group lifecycle and stream delivery. `make test-process` checks
 the core and Build failures; `make test-process-terminal` runs the Linux PTY case.
 `make test-canic-foreground` qualifies the current foreground client with a harmless
 tool fixture, including terminal interaction and refusal without retry.
+`make test-canic-signer` checks version/principal admission and bounded group
+capture in a current Canic export, using harmless local signer fixtures.
+`make test-canic-lock` checks Cargo lock initialization, diagnostic refusal and
+existing-lock preservation with Process 0.80.1 in a current Canic export.
+On Linux, `make test-canic-process` combines Build, Text, lock initialization,
+signer capture and the foreground client's real PTY fixture on one current export.
+It also migrates metadata capture and checks subprocess, selection and prepared-tool
+refusals before compilation; Host and foreground-client direct legacy Process edges are absent.
+`make test-canic-viewer` checks the remaining retained desktop-opener boundary
+with a harmless child fixture and local loopback viewer tests; it launches no browser.
 
 `ic-host-text` 0.77.2 supplies pure [escaping and table layouts](docs/text-presentation.md).
 `make test-text` and `make test-query-text` qualify the leaf and current Query’s
@@ -69,7 +79,8 @@ and checks exact archives on native and Wasm targets.
 `make test-canic-build` qualifies current Canic’s owned build and destination
 publication/refusal path using a real Wasm probe. `make test-canic-app-build`
 combines Build and Text for app recipe preflight, lock setup, serial partial
-failure and the fleet/placements display tests.
+failure and display tests, plus Process 0.80.1 for lock initialization and signer
+version/principal capture. Signer fixtures make no live calls and use no keys.
 `make test-canic-build-metadata` checks workspace/target selection, prepared-tool
 admission and compiler-wrapper refusal before compilation or output replacement.
 

@@ -2,7 +2,16 @@
 # Real current Canic CLI build/publication proof; no deployments or sibling edits.
 set -euo pipefail
 mode="${1:-artifact}"
-case "$mode" in artifact|app|metadata) ;; *) exit 2 ;; esac
+foreground=false
+case "$mode" in
+  artifact|app|metadata) ;;
+  process)
+    [[ "$(uname -s)" == Linux ]] || { echo 'Combined foreground PTY qualification requires Linux; macOS remains separate.' >&2; exit 1; }
+    mode=app
+    foreground=true
+    ;;
+  *) exit 2 ;;
+esac
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${CANIC_SOURCE:-$repo/../canic}"
 mkdir -p "$repo/target"
@@ -15,8 +24,33 @@ export GIT_CEILING_DIRECTORIES="$repo/target"
 git -C "$scratch/source" apply --check "$repo/qualification/canic/owned-build.patch"
 git -C "$scratch/source" apply "$repo/qualification/canic/owned-build.patch"
 if [[ "$mode" == app ]]; then
+  cp "$scratch/source/Cargo.lock" "$scratch/admitted-build.lock"
   git -C "$scratch/source" apply --check "$repo/qualification/canic/text.patch"
   git -C "$scratch/source" apply "$repo/qualification/canic/text.patch"
+  sed "s|@IC_TOOLING_NEW@|$repo|g" "$repo/qualification/canic/lock-process.patch" > "$scratch/lock-process.patch"
+  git -C "$scratch/source" apply --check "$scratch/lock-process.patch"
+  git -C "$scratch/source" apply "$scratch/lock-process.patch"
+  # The lock migration already selects the identical local Process dependency.
+  # Apply only signer implementation hunks; graph admission below proves selection.
+  git -C "$scratch/source" apply --check --exclude=Cargo.toml --exclude=crates/canic-host/Cargo.toml "$repo/qualification/canic/signer-process.patch"
+  git -C "$scratch/source" apply --exclude=Cargo.toml --exclude=crates/canic-host/Cargo.toml "$repo/qualification/canic/signer-process.patch"
+  source "$repo/scripts/qualification/canic-signer-fixture.sh"
+  prepare_signer_fixture "$scratch/source" "$scratch/signer-evidence"
+  if [[ "$foreground" == true ]]; then
+    # The existing local alias is shared; retain the client's dependency hunk.
+    git -C "$scratch/source" apply --check --exclude=Cargo.toml "$repo/qualification/canic/foreground-process.patch"
+    git -C "$scratch/source" apply --exclude=Cargo.toml "$repo/qualification/canic/foreground-process.patch"
+    source "$repo/scripts/qualification/canic-foreground-fixture.sh"
+    prepare_foreground_fixture "$scratch/source" "$scratch/foreground-evidence"
+  fi
+  cp "$repo/qualification/canic/lock-process-tests.rs" "$scratch/source/crates/canic-host/src/lock_process_tests.rs"
+  printf '\n#[cfg(test)]\n#[path = "lock_process_tests.rs"]\nmod lock_process_tests;\n' >> "$scratch/source/crates/canic-host/src/app_build.rs"
+  if [[ "$foreground" == true ]]; then
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/metadata-process.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/metadata-process.patch"
+  fi
+  cargo metadata --manifest-path "$scratch/source/Cargo.toml" --format-version 1 --offline > "$scratch/composed-metadata.json"
+  cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- verify-external-lock "$scratch/admitted-build.lock" "$scratch/source/Cargo.lock" 1048576
 fi
 cp "$repo/qualification/"{Cargo.toml,Cargo.lock} "$scratch/probe/"
 cp -R "$repo/qualification/owned-wasm-probe" "$scratch/probe/"
@@ -29,12 +63,29 @@ jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-host") | .id) as $host |
   (.packages[] | select(.name == "ic-build" and .version == "0.87.3" and
     .manifest_path == ($root + "/crates/ic-build/Cargo.toml")) | .id) as $build |
-  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.0" and
+  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.1" and
     .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
   any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_build" and .pkg == $build) and
   any($m.resolve.nodes[] | select(.id == $build) | .deps[]; .name == "ic_host_process" and .pkg == $process)
 ' "$scratch/metadata.json" >/dev/null
 if [[ "$mode" == app ]]; then
+  if [[ "$foreground" == true ]]; then
+    jq -e '. as $m |
+      (.packages[] | select(.name == "canic-host") | .id) as $host |
+      all($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name != "ic_host_process")
+    ' "$scratch/metadata.json" >/dev/null
+    jq -e --arg root "$repo" '. as $m |
+      (.packages[] | select(.name == "canic-profile-client") | .id) as $client |
+      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.1" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+      any($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
+      all($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name != "ic_host_process")
+    ' "$scratch/metadata.json" >/dev/null
+  fi
+  jq -e '. as $m |
+    (.packages[] | select(.name == "canic-host") | .id) as $host |
+    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.1") | .id) as $process |
+    any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_host_process_next" and .pkg == $process)
+  ' "$scratch/metadata.json" >/dev/null
   jq -e --arg root "$repo" '. as $m |
     (.packages[] | select(.name == "canic-cli") | .id) as $cli |
     [.packages[] | select(.name == "ic-host-text")] as $text |
@@ -53,13 +104,24 @@ if [[ "$mode" == metadata ]]; then
   exit 0
 fi
 if [[ "$mode" == app ]]; then
+  CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo clippy --manifest-path "$scratch/source/Cargo.toml" -p canic-host -p canic-cli --all-targets --locked --offline -- -D warnings
+  CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline lock_process_tests::
+  CARGO_TARGET_DIR="$repo/target/canic-consumer-build" test_signer_fixture "$scratch/source" "$scratch/signer-evidence"
+  if [[ "$foreground" == true ]]; then
+    CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline artifact::tests::
+    CARGO_TARGET_DIR="$repo/target/canic-consumer-build" test_foreground_fixture "$scratch/source" "$scratch/foreground-evidence"
+  fi
   bash "$repo/scripts/qualification/canic-app-build.sh" "$cli" "$scratch"
+  if [[ "$foreground" == true ]]; then
+    # Qualify metadata execution without changing the app fixture's prepared tools.
+    (bash "$repo/scripts/qualification/canic-build-metadata.sh" "$cli" "$scratch")
+  fi
   # Newly migrated display callers must work in the same Build + Text graph.
   (
     cd "$scratch/source"
     export CARGO_TARGET_DIR="$repo/target/canic-consumer-build"
     cargo test -p canic-cli --bin canic --locked --offline -- --list > "$scratch/display-tests.txt"
-    for scope in fleet::terminal::tests:: placements::tests::; do
+    for scope in fleet::terminal::tests:: placements::tests:: status::tests:: subnet_comparison::tests:: artifacts::tests::; do
       rg -q "^$scope.*: test$" "$scratch/display-tests.txt"
       cargo test -p canic-cli --bin canic --locked --offline "$scope"
     done

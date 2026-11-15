@@ -29,6 +29,11 @@ remains tied to its recorded inputs.
 
 ### 🧪 Testing
 
+- Refresh current Canic caller migrations without replacing new presentation
+  behavior. Include Cargo diagnostic escaping, subnet comparison and artifact
+  listing; focused display tests and all-target Clippy pass in the combined
+  Build/Text/Process export. No new Text API is introduced.
+
 - Combine current Canic Build 0.87.3 and Text 0.77.2 in one app-workflow graph;
   qualify app partial effects and thirteen fleet/placements display cases. Refresh
   new display callers using the existing Text API and retain external selections.

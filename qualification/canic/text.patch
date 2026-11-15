@@ -11,7 +11,7 @@
  ic-storage = "0.74.0"
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -1467,9 +1467,7 @@
+@@ -1468,9 +1468,7 @@
  
  [[package]]
  name = "ic-host-text"
@@ -24,7 +24,7 @@
  ]
 --- a/crates/canic-cli/src/main.rs
 +++ b/crates/canic-cli/src/main.rs
-@@ -77,7 +77,7 @@
+@@ -79,7 +79,7 @@
                      return Ok(Output::Text(format!(
                          "Defined app canister {name}\nApp: {}\nConfig: {}\nShared by all app fleets. Local files only; nothing deployed.\n",
                          app,
@@ -33,16 +33,16 @@
                      )));
                  }
                  Ok(serde_json::json!({"config_path":path,"configuration":config,"deployed":false}))
-@@ -107,7 +107,7 @@
+@@ -109,7 +109,7 @@
                  if !cli.json {
                      return Ok(Output::Text(format!(
-                         "Initialized app {name}\nFleet: {fleet}\nConfig: {}\n\nRoot\n└─ Application\n\nSource created; nothing built or deployed. See the generated README for build steps.\n",
+                         "Initialized app {name}\nFleet: {fleet}\nConfig: {}\n\nRoot\n├─ Wasm Store\n└─ Application\n\nSource created; nothing built or deployed. See the generated README for build steps.\n",
 -                        ic_host_text::escape::terminal_text(&path.to_string_lossy()),
 +                        ic_host_text::escape(&path.to_string_lossy()),
                      )));
                  }
                  return Ok(Output::Json(
-@@ -123,7 +123,7 @@
+@@ -125,7 +125,7 @@
              if !cli.json {
                  return Ok(Output::Text(format!(
                      "Initialized app {name}\nFleet: {fleet}\nConfig: {}\nNo canisters defined yet. Use app canister add.\nLocal files only; nothing deployed or funded.\n",
@@ -51,7 +51,7 @@
                  )));
              }
              Ok(serde_json::json!({"config_path":path,"configuration":declaration,"deployed":false}))
-@@ -243,7 +243,7 @@
+@@ -275,7 +275,7 @@
                          "Bound canister slot {name}\nApp: {}\nFleet: {}\nConfig: {}\nConfigured ID: {}\nObservation declaration only; no canister or journal created. Existence and control are not verified.\n",
                          selected.app,
                          selected.fleet,
@@ -60,7 +60,7 @@
                          selected.config.canisters[name]
                              .id
                              .as_deref()
-@@ -277,7 +277,7 @@
+@@ -309,7 +309,7 @@
              if !cli.json {
                  return Ok(Output::Text(format!(
                      "Initialized fleet {name}\nApp: {app}\nConfig: {}\nUsing shared app definitions with no existing ID bindings. Nothing deployed or funded.\n",
@@ -141,8 +141,8 @@
                  ),
              )
          };
---- a/crates/canic-cli/src/progress.rs
-+++ b/crates/canic-cli/src/progress.rs
+--- a/crates/canic-cli/src/progress/mod.rs
++++ b/crates/canic-cli/src/progress/mod.rs
 @@ -1,10 +1,7 @@
  //! Human command outcomes and explicit, shell-safe continuations.
  use crate::args::FleetCommand;
@@ -152,10 +152,10 @@
 -    table::{self, Alignment, Options},
 -};
 +use ic_host_text::{Alignment, escape, plain_table};
+ use std::time::{SystemTime, UNIX_EPOCH};
  
  fn quote(value: &str) -> String {
-     if !value.is_empty()
-@@ -56,7 +53,7 @@
+@@ -57,7 +54,7 @@
              parts.extend(["--icp-bin".into(), quote(&signer.icp_bin.to_string_lossy())]);
          }
      }
@@ -164,7 +164,7 @@
  }
  
  pub(crate) fn built(built: &[BuiltCanister]) -> String {
-@@ -72,14 +69,10 @@
+@@ -73,14 +70,10 @@
          .collect();
      format!(
          "Built app canisters\n\n{}\n\nNothing deployed.\n",
@@ -180,7 +180,16 @@
          )
      )
  }
-@@ -90,7 +83,7 @@
+@@ -92,7 +85,7 @@
+             store_maintenance,
+             ..
+         } => {
+-            text.push_str(&format!("Root: {}\n", terminal_text(root),));
++            text.push_str(&format!("Root: {}\n", escape(root),));
+             text.push_str(&crate::status::store::render(store_maintenance, now, false));
+             false
+         }
+@@ -100,7 +93,7 @@
              let published = publication.status.as_ref().is_some_and(|s| s.published);
              text.push_str(&format!(
                  "Store: {}\nPublication: {}\n",
@@ -189,7 +198,7 @@
                  if published {
                      "published; receipt retained"
                  } else {
-@@ -105,19 +98,16 @@
+@@ -115,19 +108,16 @@
              children,
              ..
          } => {
@@ -209,10 +218,10 @@
              for child in children {
 -                text.push_str(&format!("Application: {}\n", terminal_text(&child.name)));
 +                text.push_str(&format!("Application: {}\n", escape(&child.name)));
-                 complete &= outcome(&child.outcome, text);
+                 complete &= outcome(&child.outcome, text, now);
              }
              complete
-@@ -125,18 +115,18 @@
+@@ -135,18 +125,18 @@
          ApplyOutcome::Complete(receipt) => {
              text.push_str(&format!(
                  "Canister installed: {}\nVerified completion receipt retained.\n",
@@ -233,13 +242,13 @@
 +                escape(root),
                  upgrade.phase
              ));
-             false
+             text.push_str(crate::status::management::upgrade_continuation(upgrade, false).1);
 --- a/crates/canic-cli/src/status/mod.rs
 +++ b/crates/canic-cli/src/status/mod.rs
-@@ -1,10 +1,7 @@
- //! Human projection of retained operation evidence; never a live status check.
- 
- use canic_host::{Error, Network, Plan, Receipt, Result};
+@@ -3,10 +3,7 @@
+ use canic_host::{
+     CanisterStatus, Error, ManagementStatus, Network, OperationStatus, Result, StatusDetail,
+ };
 -use ic_host_text::{
 -    escape::terminal_text,
 -    table::{self, Alignment, Options},
@@ -248,32 +257,7 @@
  use std::{
      collections::BTreeMap,
      fmt::Write as _,
-@@ -66,14 +63,10 @@
-                 evidence(&child["state"]),
-             ]);
-         }
--        output.push_str(&table::render(
-+        output.push_str(&plain_table(
-             &["STEP", "RETAINED EVIDENCE"],
-             &rows,
-             &[Alignment::Left; 2],
--            Options {
--                column_gap: 2,
--                header_separator: true,
--            },
-         ));
-         output.push_str(
-             "\n\nLocal evidence only. Resume this same fleet operation with fleet apply.\n",
-@@ -84,7 +77,7 @@
-                 let name = child["name"]
-                     .as_str()
-                     .ok_or_else(|| Error::Invalid("missing fleet child name".into()))?;
--                writeln!(output, "\nChild: {}", terminal_text(name)).expect("String write");
-+                writeln!(output, "\nChild: {}", escape(name)).expect("String write");
-                 output.push_str(&management::render(
-                     &state["management"],
-                     false,
-@@ -109,16 +102,16 @@
+@@ -34,16 +31,16 @@
          .as_nanos();
      let mut output = format!(
          "CANIC OPERATION\nOperation: {}\nJournal: {}\nLocal evidence only; no network observation.\n",
@@ -295,10 +279,10 @@
          )
          .expect("writing to String");
      }
-@@ -130,10 +123,10 @@
+@@ -55,10 +52,10 @@
          output,
          "\nPlanned action: {}\nNetwork: {}\nNetwork binding: {}\nController: {}\nModule: {} ({} bytes)\nCreation debit ceiling: {} cycles\nNew-effect deadline: {} Unix seconds ({})",
-         match plan.action { canic_host::PlanAction::CreateStore { .. } => "create Store, hand control to Root and verify readiness", canic_host::PlanAction::Publish(_) => "publish artifact to Store (no deployment)", canic_host::PlanAction::MaintainRoot {..} => "upgrade Root, preserving child custody", canic_host::PlanAction::UpgradeChild {..} => "Root upgrades its existing child", canic_host::PlanAction::CreateChild(_) => "Root creates and installs its child", canic_host::PlanAction::Upgrade(_) => "upgrade existing canister", canic_host::PlanAction::Create {..} => "create and install canister" },
+         match plan.action { canic_host::PlanAction::UpgradeStore { .. } => "Root upgrades Store, preserving its closed catalog and pins", canic_host::PlanAction::CreateStore { .. } => "create Store, hand control to Root and verify readiness", canic_host::PlanAction::Publish(_) => "publish artifact to Store (no deployment)", canic_host::PlanAction::MaintainRoot {..} => "upgrade Root, preserving child custody", canic_host::PlanAction::UpgradeChild {..} => "Root upgrades its existing child", canic_host::PlanAction::CreateChild(_) => "Root creates and installs its child", canic_host::PlanAction::Upgrade(_) => "upgrade existing canister", canic_host::PlanAction::Create {..} => "create and install canister" },
 -        terminal_text(&network),
 +        escape(&network),
          plan.network.binding_id()?,
@@ -309,7 +293,7 @@
          plan.artifact.bytes,
          plan.creation_cycles(),
          plan.expires_at_ns / 1_000_000_000,
-@@ -144,22 +137,22 @@
+@@ -69,8 +66,8 @@
          writeln!(
              output,
              "Root: {}\nRoot module: {}",
@@ -320,14 +304,16 @@
          )
          .expect("String write");
      }
+@@ -86,15 +83,15 @@
+     }
      if let Some(publication) = plan.publication() {
          writeln!(output, "Root: {}\nRoot module: {}\nStore: {}\nStore module: {}\nRelease: {} / {}\nPublished receipt retained: {}",
 -            terminal_text(&publication.root.canister), terminal_text(&publication.root.module),
 -            terminal_text(&publication.store.canister), terminal_text(&publication.store.module),
--            terminal_text(&publication.release.name), terminal_text(&publication.release.version), !state["publication"].is_null()).expect("String write");
+-            terminal_text(&publication.release.name), terminal_text(&publication.release.version), matches!(&state.detail, StatusDetail::Publication { publication: Some(_) })).expect("String write");
 +            escape(&publication.root.canister), escape(&publication.root.module),
 +            escape(&publication.store.canister), escape(&publication.store.module),
-+            escape(&publication.release.name), escape(&publication.release.version), !state["publication"].is_null()).expect("String write");
++            escape(&publication.release.name), escape(&publication.release.version), matches!(&state.detail, StatusDetail::Publication { publication: Some(_) })).expect("String write");
      }
      for custody in plan.maintenance().into_iter().flatten() {
          writeln!(
@@ -338,7 +324,7 @@
              custody.upgrades.len()
          )
          .expect("writing to String");
-@@ -168,8 +161,8 @@
+@@ -103,8 +100,8 @@
          writeln!(
              output,
              "Preserved Store: {}\nStore module: {}\nRetained artifact pins: {}",
@@ -349,20 +335,20 @@
              store
                  .sources
                  .iter()
-@@ -183,9 +176,9 @@
+@@ -118,9 +115,9 @@
          writeln!(
              output,
-             "Root: {}\nRoot module: {}\nOperator: {}\nAutonomous dispatch: {} Unix seconds",
+             "Root: {}\nRoot module: {}\nOperator: {}\nAutonomous dispatch: {}",
 -            terminal_text(&owner.root),
 -            terminal_text(&owner.root_module),
 -            terminal_text(&plan.controller),
 +            escape(&owner.root),
 +            escape(&owner.root_module),
 +            escape(&plan.controller),
-             owner.execute_at_ns / 1_000_000_000
+             dispatch(plan.created_at_ns, owner.execute_at_ns)
          )
          .expect("writing to String");
-@@ -193,10 +186,10 @@
+@@ -128,10 +125,10 @@
              writeln!(
                  output,
                  "Artifact source: Store {}\nStore module: {}\nRelease: {} / {}",
@@ -377,8 +363,8 @@
              )
              .expect("String write");
          }
-@@ -207,15 +200,11 @@
-         )?);
+@@ -141,15 +138,11 @@
+         ));
      }
      if let Some(target) = plan.target() {
 -        writeln!(output, "Upgrade target: {}", terminal_text(target)).expect("writing to String");
@@ -394,17 +380,21 @@
 +        writeln!(output, "Required previous module: {}", escape(module))
 +            .expect("writing to String");
      }
-     let rows: Vec<_> = effects
-         .iter()
-@@ -239,14 +228,10 @@
+     let store_upgrade = plan.store_upgrade_root().is_some();
+     let rows: Vec<_> = if store_upgrade {
+@@ -186,7 +179,7 @@
      writeln!(
          output,
          "\n{}",
 -        table::render(
 +        plain_table(
-             &["EFFECT", "RETAINED EVIDENCE"],
-             &rows,
-             &[Alignment::Left, Alignment::Left],
+             if store_upgrade {
+                 &["RETAINED EVIDENCE", "ATTEMPTS"]
+             } else {
+@@ -201,10 +194,6 @@
+                     Alignment::Left
+                 }
+             ],
 -            Options {
 -                column_gap: 2,
 -                header_separator: true
@@ -412,7 +402,7 @@
          )
      )
      .expect("writing to String");
-@@ -254,10 +239,10 @@
+@@ -212,10 +201,10 @@
          writeln!(
              output,
              "Receipt: retained (historical deployment evidence)\n  Operation: {}\n  Canister: {}\n  Module: {}\n  Controller: {}",
@@ -427,7 +417,32 @@
          )
          .expect("writing to String");
      } else if plan.publication().is_none() {
-@@ -301,7 +286,7 @@
+@@ -273,14 +262,10 @@
+         }
+         rows.push([child.name.clone(), evidence(child.state.as_ref())]);
+     }
+-    output.push_str(&table::render(
++    output.push_str(&plain_table(
+         &["STEP", "RETAINED EVIDENCE"],
+         &rows,
+         &[Alignment::Left; 2],
+-        Options {
+-            column_gap: 2,
+-            header_separator: true,
+-        },
+     ));
+     output
+         .push_str("\n\nLocal evidence only. Resume this same fleet operation with fleet apply.\n");
+@@ -288,7 +273,7 @@
+         if let Some(step) = &child.state
+             && step.management.is_some()
+         {
+-            writeln!(output, "\nChild: {}", terminal_text(&child.name)).expect("String write");
++            writeln!(output, "\nChild: {}", escape(&child.name)).expect("String write");
+             output.push_str(&management::render(
+                 step.management.as_ref(),
+                 step.receipt.is_some(),
+@@ -340,7 +325,7 @@
          writeln!(
              modules,
              "{} module: {}",
@@ -436,7 +451,7 @@
              store.artifact.sha256
          )
          .expect("String write");
-@@ -326,7 +311,7 @@
+@@ -365,7 +350,7 @@
          writeln!(
              modules,
              "{} module: {}",
@@ -445,7 +460,7 @@
              child.artifact.sha256
          )
          .expect("String write");
-@@ -334,31 +319,27 @@
+@@ -373,31 +358,27 @@
              writeln!(
                  modules,
                  "  Store release: {} / {} (publication before child admission)",
@@ -458,7 +473,7 @@
          }
      }
      Ok(format!(
-         "CANIC FLEET PLAN\nOperation: {}\nApp: {}\nFleet: {}\nNetwork: {}\nOperator: {}\nJournal: {}\n\n{}\n\n{}Admission before: {}\nChild effect deadline: {}\n\n",
+         "CANIC FLEET PLAN\nOperation: {}\nApp: {}\nFleet: {}\nNetwork: {}\nOperator: {}\nJournal: {}\n\n{}\n\n{}Child dispatch: {}\nChild effect deadline: {}\n\n",
 -        terminal_text(id),
 -        terminal_text(&root.app),
 -        terminal_text(&root.fleet),
@@ -485,13 +500,13 @@
 -            }
          ),
          modules,
-         deadline(plan.children[0].execute_at_ns),
+         dispatch(plan.root.created_at_ns, plan.children[0].execute_at_ns),
 --- a/crates/canic-cli/src/status/management.rs
 +++ b/crates/canic-cli/src/status/management.rs
 @@ -1,10 +1,7 @@
  //! Explain retained Root evidence without granting recovery or replay authority.
- use canic_host::{Error, Result};
- use canic_management_protocol::{Failure, Phase, Status, upgrade};
+ use canic_host::ManagementStatus;
+ use canic_management_protocol::{Failure, Phase, upgrade};
 -use ic_host_text::{
 -    escape::terminal_text,
 -    table::{self, Alignment, Options},
@@ -499,8 +514,8 @@
 +use ic_host_text::{Alignment, escape, plain_table};
  use std::fmt::Write as _;
  
- pub(super) fn render(value: &serde_json::Value, is_upgrade: bool, receipt: bool) -> Result<String> {
-@@ -52,7 +49,7 @@
+ pub(super) fn render(value: Option<&ManagementStatus>, receipt: bool) -> String {
+@@ -39,7 +36,7 @@
          writeln!(
              output,
              "Retained child: {}\nCreation refund: {}",
@@ -509,7 +524,7 @@
              status
                  .creation_refund
                  .map_or_else(|| "unknown".into(), |cycles| format!("{cycles} cycles"))
-@@ -130,14 +127,10 @@
+@@ -137,14 +134,10 @@
          .collect();
      format!(
          "\n{}\n",
@@ -807,8 +822,8 @@
          }
      }
      output
---- a/crates/canic-cli/src/placements.rs
-+++ b/crates/canic-cli/src/placements.rs
+--- a/crates/canic-cli/src/placements/mod.rs
++++ b/crates/canic-cli/src/placements/mod.rs
 @@ -1,7 +1,7 @@
  //! Pure presentation of configured slots and Query's independent observations.
  use crate::Output;
@@ -838,3 +853,100 @@
              &["SLOT", "ROLE", "PARENT", "CANISTER", "SUBNET", "OUTCOME"],
              &rows
          )
+--- a/crates/canic-host/src/artifact/mod.rs
++++ b/crates/canic-host/src/artifact/mod.rs
+@@ -63,7 +63,7 @@
+     }
+     let mut diagnostic = prefix
+         .split('\n')
+-        .map(ic_host_text::escape::terminal_text)
++        .map(ic_host_text::escape)
+         .collect::<Vec<_>>()
+         .join("\n");
+     if characters.next().is_some() || evidence.stdout_truncated || evidence.stderr_truncated {
+--- a/crates/canic-cli/src/subnet_comparison/mod.rs
++++ b/crates/canic-cli/src/subnet_comparison/mod.rs
+@@ -1,7 +1,7 @@
+ //! Fleet-context projection of Query evidence; no ranking or deployment decision.
+ use crate::Output;
+ use canic_host::subnet_comparison::FleetSubnetComparison;
+-use ic_host_text::{escape::terminal_text, table::render_bordered};
++use ic_host_text::{bordered_table, escape};
+ 
+ pub(crate) fn output(report: &FleetSubnetComparison, json: bool) -> Output {
+     let output = if json {
+@@ -81,8 +81,8 @@
+         .collect();
+     let mut text = format!(
+         "App: {}\nFleet: {}\nNetwork: ic / mainnet\nLeft: {}\nRight: {}\nCollection: {} | elapsed: {:.2}s\nCandidates explicitly selected; no fleet ownership or placement approval inferred.\n\n{}\n",
+-        terminal_text(&report.app),
+-        terminal_text(&report.fleet),
++        escape(&report.app),
++        escape(&report.fleet),
+         observation.left.subnet_id,
+         observation.right.subnet_id,
+         if observation.collection_complete {
+@@ -91,7 +91,7 @@
+             "partial"
+         },
+         observation.elapsed.as_secs_f64(),
+-        render_bordered(&["OBSERVATION", "LEFT", "RIGHT"], &rows)
++        bordered_table(&["OBSERVATION", "LEFT", "RIGHT"], &rows)
+     );
+     if let Some(overlap) = observation.infrastructure_overlap() {
+         let rows = vec![
+@@ -121,7 +121,7 @@
+             ],
+         ];
+         text.push_str("\nObserved infrastructure overlap\n\n");
+-        text.push_str(&render_bordered(
++        text.push_str(&bordered_table(
+             &[
+                 "RELATIONSHIP",
+                 "SHARED IDENTITIES",
+--- a/crates/canic-cli/src/artifacts/mod.rs
++++ b/crates/canic-cli/src/artifacts/mod.rs
+@@ -1,7 +1,7 @@
+ //! Local publication evidence; no live availability or installed-version inference.
+ use crate::Output;
+ use canic_host::FleetArtifacts;
+-use ic_host_text::{escape::terminal_text, table::render_bordered};
++use ic_host_text::{bordered_table, escape};
+ use std::fmt::Write as _;
+ 
+ pub(crate) fn output(report: &FleetArtifacts, json: bool) -> Output {
+@@ -20,8 +20,8 @@
+ fn render(report: &FleetArtifacts) -> String {
+     let mut output = format!(
+         "App: {} · Fleet: {}\nLocal publication evidence\n\n",
+-        terminal_text(&report.app),
+-        terminal_text(&report.fleet),
++        escape(&report.app),
++        escape(&report.fleet),
+     );
+     if report.publications.is_empty() {
+         output.push_str("No publication evidence found.\n\n");
+@@ -33,7 +33,7 @@
+         writeln!(
+             output,
+             "Store: {}",
+-            terminal_text(&group[0].publication.store.canister)
++            escape(&group[0].publication.store.canister)
+         )
+         .expect("String write");
+         let rows: Vec<_> = group
+@@ -55,12 +55,12 @@
+         writeln!(
+             output,
+             "{}\n",
+-            render_bordered(&["ARTIFACT", "VERSION", "BYTES", "EVIDENCE"], &rows)
++            bordered_table(&["ARTIFACT", "VERSION", "BYTES", "EVIDENCE"], &rows)
+         )
+         .expect("String write");
+     }
+     for issue in &report.issues {
+-        writeln!(output, "Journal issue: {}", terminal_text(issue)).expect("String write");
++        writeln!(output, "Journal issue: {}", escape(issue)).expect("String write");
+     }
+     output
+ }

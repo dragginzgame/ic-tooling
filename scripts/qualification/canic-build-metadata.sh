@@ -12,6 +12,16 @@ cat > "$scratch/cargo-fixture" <<'CARGO'
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "${1:-}" == metadata ]]; then
+  case "${QUALIFICATION_METADATA_MODE:-valid}" in
+    nonzero)
+      cat "$QUALIFICATION_METADATA"
+      printf 'metadata process oracle\033[31m\n' >&2
+      exit 7
+      ;;
+    stdout-over) head -c 8388609 /dev/zero; exit 0 ;;
+    stderr-over) head -c 1048577 /dev/zero >&2; exit 0 ;;
+    invalid-utf8) printf '\377'; exit 0 ;;
+  esac
   cat "$QUALIFICATION_METADATA"
 else
   touch "$QUALIFICATION_BUILD_MARKER"
@@ -28,6 +38,22 @@ rg -a -q 'owned-wasm-probe!' "$scratch/metadata.wasm"
 hash="$(sha256sum "$scratch/metadata.wasm" | cut -d ' ' -f1)"
 jq -e --arg hash "$hash" '.artifact.sha256 == $hash' "$scratch/metadata-valid.json" >/dev/null
 rm "$QUALIFICATION_BUILD_MARKER"
+# Supplier refusal must precede package selection and every build effect, even
+# when a failing command emitted otherwise valid metadata.
+for mode in nonzero stdout-over stderr-over invalid-utf8; do
+  printf 'retained destination' > "$scratch/metadata.wasm"
+  if QUALIFICATION_METADATA_MODE="$mode" "$cli" "${args[@]}" > "$scratch/metadata-process-$mode.stdout" 2> "$scratch/metadata-process-$mode.stderr"; then
+    echo "Expected metadata process refusal: $mode" >&2; exit 1
+  fi
+  jq -e '.error == "supplier"' "$scratch/metadata-process-$mode.stderr" >/dev/null
+  if [[ "$mode" == nonzero ]]; then
+    jq -e '(.message | contains("metadata process oracle")) and (.message | contains("\u001b") | not)' "$scratch/metadata-process-$mode.stderr" >/dev/null
+  fi
+  [[ ! -e "$QUALIFICATION_BUILD_MARKER" ]]
+  [[ "$(cat "$scratch/metadata.wasm")" == 'retained destination' ]]
+  [[ -z "$(ls -A "$scratch/runtime")" ]]
+done
+printf 'Four metadata subprocess/encoding refusals precede compilation and preserve destination.\n'
 # Each mutation must be refused before any build and preserve destination bytes.
 filters=(
   'del(.workspace_members)'

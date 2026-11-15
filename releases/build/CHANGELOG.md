@@ -28,6 +28,18 @@ remains tied to its recorded inputs.
 
 ### 🧪 Testing
 
+- Extend combined metadata acceptance with nonzero exit after valid JSON, stdout
+  and stderr overflow, and invalid UTF-8. All four refuse before compilation and
+  preserve the destination; ten selection and six tool/wrapper refusals also pass.
+  Metadata capture still uses the retained supplier pending its migration.
+- Follow up by moving metadata execution to local Process in the combined
+  Process recipe; preserve the preceding refusal cases and original diagnostic
+  assertions. The ordinary standalone Build recipe remains separate evidence.
+
+- Refresh current Canic Build lock admission and qualify the combined Build,
+  Text and Process graph for app preflight, lock initialization/refusal,
+  existing-lock preservation, exact outputs and serial partial failure.
+
 - Combine current Canic Build 0.87.3 and Text 0.77.2 in one app-workflow graph;
   qualify app partial effects and thirteen fleet/placements display cases. Refresh
   new display callers using the existing Text API and retain external selections.

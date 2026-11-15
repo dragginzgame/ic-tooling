@@ -1,0 +1,155 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -56,4 +56,5 @@
+ toml = "1.2.1"
+ url = "2.5.8"
++ic-host-process-next = { package = "ic-host-process", path = "@IC_TOOLING_NEW@/crates/ic-host-process", version = "=0.80.1" }
+ 
+ [workspace.lints.cargo]
+--- a/crates/canic-host/Cargo.toml
++++ b/crates/canic-host/Cargo.toml
+@@ -17,4 +17,5 @@
+ ic-host-fs.workspace = true
+ ic-host-process.workspace = true
++ic-host-process-next.workspace = true
+ ic-host-text.workspace = true
+ ic-platform = { workspace = true, features = ["agent", "ic-protocol", "management-canister-types", "cycles-ledger-types", "icp-ledger-types", "icrc-ledger-types"] }
+--- a/crates/canic-host/src/app_build.rs
++++ b/crates/canic-host/src/app_build.rs
+@@ -1,5 +1,4 @@
+ //! App recipes reuse the artifact builder; Cargo owns dependency resolution and locking.
+ use crate::{Artifact, Error, Result, supplier};
+-use ic_host_process::tool::{CompletedExecution, OutputLimit, OutputLimits, capture_group_command};
+ use serde::Serialize;
+ use std::{
+@@ -68,18 +67,10 @@
+             .map_err(supplier)?
+         {
+-            capture_group_command(
++            initialize_lock(
+                 Command::new("cargo")
+                     .current_dir(workspace)
+                     .args(["generate-lockfile", "--manifest-path"])
+                     .arg(&manifest),
+-                OutputLimits {
+-                    stdout: OutputLimit::Terminate(1024 * 1024),
+-                    stderr: OutputLimit::Terminate(1024 * 1024),
+-                    timeout: Some(Duration::from_secs(120)),
+-                },
+-            )
+-            .and_then(CompletedExecution::require_success)
+-            .and_then(CompletedExecution::require_complete)
+-            .map_err(crate::artifact::cargo_failure)?;
++            )?;
+         }
+         let wasm = crate::artifact::build(&manifest, &recipe.package, &[], Some(&output))?;
+@@ -92,2 +83,74 @@
+     Ok(built)
+ }
++
++#[derive(Debug)]
++struct LockFailure {
++    report: ic_host_process_next::Report,
++    stdout: Vec<u8>,
++    stderr: Vec<u8>,
++}
++
++impl std::fmt::Display for LockFailure {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        write!(
++            f,
++            "Cargo lock initialization failed: status={:?}, failure={:?}, cleanup={:?}",
++            self.report.status, self.report.failure, self.report.cleanup
++        )?;
++        let partial = matches!(
++            self.report.failure,
++            Some(ic_host_process_next::Failure::Limit(_))
++        );
++        if let Some(diagnostic) =
++            crate::artifact::cargo_diagnostic_bytes(&self.stdout, &self.stderr, partial)
++        {
++            write!(f, "\n{diagnostic}")?;
++        }
++        Ok(())
++    }
++}
++
++impl std::error::Error for LockFailure {
++    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
++        self.report.failure.as_ref().map(|error| error as _)
++    }
++}
++
++fn initialize_lock(command: &mut Command) -> Result<()> {
++    use ic_host_process_next::{Input, Ownership, Policy, Stderr, Stream};
++    let mut stdout = Vec::new();
++    let mut stderr = Vec::new();
++    let report = ic_host_process_next::run(
++        command,
++        Policy {
++            ownership: Ownership::Group,
++            input: Input::Null,
++            stdout_bytes: 1024 * 1024,
++            stderr: Stderr::Capture(1024 * 1024),
++            elapsed: Duration::from_secs(120),
++        },
++        &std::sync::atomic::AtomicBool::new(false),
++        |stream, bytes| {
++            let buffer = match stream {
++                Stream::Stdout => &mut stdout,
++                Stream::Stderr => &mut stderr,
++            };
++            buffer
++                .try_reserve(bytes.len())
++                .map_err(std::io::Error::other)?;
++            buffer.extend_from_slice(bytes);
++            Ok(())
++        },
++    );
++    if report.failure.is_some()
++        || !report.cleanup.is_empty()
++        || !report.status.is_some_and(|status| status.success())
++    {
++        return Err(supplier(LockFailure {
++            report,
++            stdout,
++            stderr,
++        }));
++    }
++    Ok(())
++}
+--- a/crates/canic-host/src/artifact/mod.rs
++++ b/crates/canic-host/src/artifact/mod.rs
+@@ -45,5 +45,17 @@
+ 
+ fn cargo_diagnostic(evidence: &ExecutionEvidence) -> Option<String> {
+-    let compiler = evidence.stdout.split(|b| *b == b'\n').find_map(|line| {
++    cargo_diagnostic_bytes(
++        &evidence.stdout,
++        &evidence.stderr,
++        evidence.stdout_truncated || evidence.stderr_truncated,
++    )
++}
++
++pub(crate) fn cargo_diagnostic_bytes(
++    stdout: &[u8],
++    stderr: &[u8],
++    partial: bool,
++) -> Option<String> {
++    let compiler = stdout.split(|b| *b == b'\n').find_map(|line| {
+         let value: serde_json::Value = serde_json::from_slice(line).ok()?;
+         if value["reason"] != "compiler-message" || value["message"]["level"] != "error" {
+@@ -56,5 +68,5 @@
+             .map(str::to_owned)
+     });
+-    let text = compiler.unwrap_or_else(|| String::from_utf8_lossy(&evidence.stderr).into_owned());
++    let text = compiler.unwrap_or_else(|| String::from_utf8_lossy(stderr).into_owned());
+     let mut characters = text.trim().chars();
+     let prefix: String = characters.by_ref().take(4096).collect();
+@@ -67,5 +79,5 @@
+         .collect::<Vec<_>>()
+         .join("\n");
+-    if characters.next().is_some() || evidence.stdout_truncated || evidence.stderr_truncated {
++    if characters.next().is_some() || partial {
+         diagnostic.push_str("\n[Cargo diagnostic truncated]");
+     }

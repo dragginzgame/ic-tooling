@@ -1,0 +1,158 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -25,6 +25,7 @@
+ publish = false
+ 
+ [workspace.dependencies]
++ic-host-process-next = { package = "ic-host-process", path = "@IC_TOOLING_NEW@/crates/ic-host-process", version = "=0.80.1" }
+ base64 = "0.23.1"
+ canic = { path = "crates/canic" }
+ canic-host = { path = "crates/canic-host" }
+--- a/crates/canic-host/Cargo.toml
++++ b/crates/canic-host/Cargo.toml
+@@ -16,6 +16,7 @@
+ canic-wasm-store-protocol.workspace = true
+ ic-host-fs.workspace = true
+ ic-host-process.workspace = true
++ic-host-process-next.workspace = true
+ ic-host-text.workspace = true
+ ic-platform = { workspace = true, features = ["agent", "ic-protocol", "management-canister-types", "cycles-ledger-types", "icp-ledger-types", "icrc-ledger-types"] }
+ ic-topology.workspace = true
+--- a/crates/canic-host/src/signed/mod.rs
++++ b/crates/canic-host/src/signed/mod.rs
+@@ -1,5 +1,7 @@
+ //! ICP CLI owns keys and signing; Canic owns exact-attempt custody and submission.
+ 
++mod process;
++
+ #[cfg(test)]
+ mod tests;
+ 
+@@ -508,18 +510,14 @@
+ }
+ 
+ fn admit_signer(icp: &Path) -> Result<()> {
+-    let version = ic_host_process::tool::capture_group_command(
++    let version = process::capture(
+         Command::new(icp).arg("--version"),
+-        ic_host_process::tool::OutputLimits {
+-            stdout: ic_host_process::tool::OutputLimit::Terminate(1024),
+-            stderr: ic_host_process::tool::OutputLimit::Terminate(1024),
+-            timeout: Some(Duration::from_secs(5)),
+-        },
++        1024,
++        1024,
++        Duration::from_secs(5),
+     )
+-    .map_err(supplier)?
+-    .require_success()
+     .map_err(supplier)?;
+-    if version.stdout != b"icp 1.7.0\n" {
++    if version != b"icp 1.7.0\n" {
+         return Err(Error::Invalid(
+             "signer must be repository-qualified ICP CLI 1.7.0; run make install-ic-tools".into(),
+         ));
+@@ -532,23 +530,13 @@
+ /// Refuses an unavailable/unqualified signer, missing identity or invalid principal output.
+ pub fn signing_principal(identity: &str, icp: &Path) -> Result<String> {
+     admit_signer(icp)?;
+-    let output = ic_host_process::tool::capture_group_command(
++    let output = process::capture(
+         Command::new(icp).args(["identity", "principal", "--identity", identity]),
+-        ic_host_process::tool::OutputLimits {
+-            stdout: ic_host_process::tool::OutputLimit::Terminate(1024),
+-            stderr: ic_host_process::tool::OutputLimit::Terminate(4096),
+-            timeout: Some(Duration::from_secs(30)),
+-        },
++        1024,
++        4096,
++        Duration::from_secs(30),
+     )
+-    .map_err(supplier)?
+-    .require_success()
+-    .map_err(supplier)?
+-    .require_complete()
+     .map_err(supplier)?;
+-    crate::network::principal(
+-        std::str::from_utf8(&output.stdout)
+-            .map_err(supplier)?
+-            .trim(),
+-    )
+-    .map(|principal| principal.to_text())
++    crate::network::principal(std::str::from_utf8(&output).map_err(supplier)?.trim())
++        .map(|principal| principal.to_text())
+ }
+--- /dev/null
++++ b/crates/canic-host/src/signed/process.rs
+@@ -0,0 +1,71 @@
++//! Private bounded signer capture; key and reply policy remain with the caller.
++use ic_host_process_next::{Input, Ownership, Policy, Report, Stderr, Stream};
++use std::{io, process::Command, sync::atomic::AtomicBool, time::Duration};
++
++#[derive(Debug)]
++pub(super) struct CaptureFailure {
++    report: Report,
++    stdout: Vec<u8>,
++    stderr: Vec<u8>,
++}
++
++impl std::fmt::Display for CaptureFailure {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        write!(
++            f,
++            "signer execution refused: status={:?}, failure={:?}, cleanup={}, retained stdout={} stderr={} bytes",
++            self.report.status,
++            self.report.failure,
++            self.report.cleanup.len(),
++            self.stdout.len(),
++            self.stderr.len()
++        )
++    }
++}
++
++impl std::error::Error for CaptureFailure {
++    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
++        self.report.failure.as_ref().map(|error| error as _)
++    }
++}
++
++pub(super) fn capture(
++    command: &mut Command,
++    stdout_limit: usize,
++    stderr_limit: usize,
++    elapsed: Duration,
++) -> Result<Vec<u8>, CaptureFailure> {
++    let mut stdout = Vec::new();
++    let mut stderr = Vec::new();
++    let report = ic_host_process_next::run(
++        command,
++        Policy {
++            ownership: Ownership::Group,
++            input: Input::Null,
++            stdout_bytes: stdout_limit,
++            stderr: Stderr::Capture(stderr_limit),
++            elapsed,
++        },
++        &AtomicBool::new(false),
++        |stream, bytes| {
++            let buffer = match stream {
++                Stream::Stdout => &mut stdout,
++                Stream::Stderr => &mut stderr,
++            };
++            buffer.try_reserve(bytes.len()).map_err(io::Error::other)?;
++            buffer.extend_from_slice(bytes);
++            Ok(())
++        },
++    );
++    if report.failure.is_some()
++        || !report.cleanup.is_empty()
++        || !report.status.is_some_and(|status| status.success())
++    {
++        return Err(CaptureFailure {
++            report,
++            stdout,
++            stderr,
++        });
++    }
++    Ok(stdout)
++}

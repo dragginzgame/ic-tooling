@@ -17,14 +17,12 @@ current requirements must justify further APIs.
 retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
 historical evidence. No old product source/test tree was admitted wholesale.
 
-GitHub checkpoint `03efc892248a3d354cf0d5a757b1f3a2d88a2fee` is on `origin/main`.
-The working tree was clean after delivery. The pushed Testkit/controller and
-qualification review found no implementation defect; stale ownership/qualification
-summaries are corrected in the next draft. Testkit 0.107.1 now qualifies the current
-Scheduling rewrite export. Build 0.87.3 now uses Process 0.80.0; Text 0.77.2 and Tools 0.1.2 are unchanged
-unpublished drafts. Old Timers experiments remain historical.
-Foundation and HTTP are unchanged. Runtime evidence remains tied
-to the versions and snapshots recorded below.
+GitHub checkpoint `f086547ffb7df6bb5f40df16b13ccda01f23f69c` is on `origin/main`.
+Post-push review of Process, its Build adapter and qualification wiring found no
+actionable defect. Process 0.80.1 starts the next local unpublished draft: current
+Canic signer version/principal capture passes export-only qualification without
+a public API change. Other groups are unchanged. Runtime evidence remains tied
+to the versions and snapshots recorded below; old Timers experiments are historical.
 Seven [release groups](../release-ownership.md) own their ledgers; root changelog is
 an index. All eight packages remain unpublished. Consumer migration, registry
 publication and canonical cutover are separate; recheck registry identities first.
@@ -49,10 +47,11 @@ Toko 0.44.4 is pinned in both workspaces; snapshot/tools admission and 19 Build 
   or terminal policy. See [Text](../text-presentation.md).
 - `ic-cargo-qualification` 0.1.2 is an external-lock subset admission executable,
   outside Build's graph. It is not an archive runner or metadata editor.
-- `ic-host-process` 0.80.0 owns synchronous group/direct-child execution and bounded
+- `ic-host-process` 0.80.1 owns synchronous group/direct-child execution and bounded
   observer delivery. Build uses its core; eight native tests, the 19 existing Build
   tests and Linux terminal fixtures pass, including current Canic's foreground
-  client with a harmless tool. See [execution](../process-execution.md).
+  client with a harmless tool. Signer capture passes four tests; lock initialization
+  passes diagnostic and app-build/refusal checks. See [execution](../process-execution.md).
 - `ic-testkit` 0.107.1 implements the [shared Testkit contract](../testkit-held-replies.md):
   original PocketIC types and an owned update-reply catalog with complete admission.
   Bounded module generation and exclusive pending/release control pass focused
@@ -75,11 +74,11 @@ The next-version changes alone do not refresh earlier runtime evidence.
   replaces them on success without mutating foreign bytes or creating missing
   referents. Exact identity, publication refusal and scratch cleanup pass.
   Earlier independent slices cover artifact default/explicit publication and
-  refusal, 19 display tests, and six record-admission/recovery tests. Other Host
-  publication, parent creation and lock setup remain unmigrated. Recipes are not
-  implicitly combined except the app target: a fresh Build 0.87.3/Text 0.77.2
-  graph passes app checks, thirteen fleet/placements tests and Host/CLI Clippy.
-  Changed sibling contexts can invalidate individual patches.
+  refusal, 19 display tests, and six record-admission/recovery tests. Current Canic
+  0.213.0 passes combined Build/Text/Process lock, signer, foreground/PTY and app checks:
+  47 tests, 20 metadata/tool refusals and Clippy pass with metadata on local Process. Host publication
+  and parent creation still use retained suppliers outside this migration.
+  Retained desktop opener/viewer passes four tests; handoff/reaping design remains open.
 - [Query](../../qualification/query/README.md): refreshed current source passes
   20 presentation/output tests with Text 0.77.1, including placements partial JSON
   and rejection escaping. CLI/test Clippy and retained external-lock admission pass.

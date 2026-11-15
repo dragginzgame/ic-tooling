@@ -2,6 +2,48 @@
 
 Package: `ic-host-process`. Unpublished replacement; no registry release.
 
+## [0.80.1] - Unreleased
+
+- Start the next unpublished line after GitHub checkpoint `f086547`; the public
+  Process API and implementation are unchanged.
+- Migrate current Canic signer version/principal capture in a read-only export.
+  Replace legacy capture/success/completeness calls with one bounded group run
+  and a private consumer adapter retaining status, failure, cleanup and bytes.
+  Preserve exact version admission, principal parsing, limits and no retry.
+- `make test-canic-signer` uses harmless local fixtures for arguments, version
+  refusal, invalid replies, output limits, nonzero exit and deadline. It checks
+  the local supplier edge and external lock, then runs consumer Clippy and tests.
+  No keys, network calls, sibling edits or native macOS acceptance are implied.
+- Strengthen signer capture qualification on current Canic 0.213.0: distinguish
+  exact stdout/stderr limit failures, deadline and missing-executable failures;
+  verify original nonzero status, retained bytes and cleanup evidence independently.
+  Four focused tests and consumer Clippy pass. No Process API change is needed.
+- Qualify Cargo lock initialization through the group owner in a current Canic
+  export. Retain bounded escaped Cargo diagnostics, exact status and cleanup
+  evidence, absent-lock initialization and existing-lock preservation. Two
+  diagnostic tests, all-target Host Clippy and real app-build/refusal checks pass.
+  The export retains other Build suppliers; combined migration remains separate.
+- Follow up with combined current Canic qualification: Build 0.87.3, Text 0.77.2
+  and Process 0.80.1 pass app builds, lock refusal/preservation, diagnostic and
+  display checks in one captured working tree. Keep the standalone evidence tied
+  to its earlier inputs; no production cutover or complete legacy removal claimed.
+- Include all four signer fixture tests in that same combined export. Standalone
+  and combined recipes share fixture preparation and test invocation, removing
+  duplicate wiring while retaining separate source/graph admission for each run.
+- Add Linux `make test-canic-process` for same-capture group and direct-child
+  qualification. Refresh the foreground migration for Canic's package-directory
+  rename and share its fixture runner. The combined run passes 44 tests including
+  a real PTY interaction, real app-build/refusal checks and Host/CLI/client Clippy.
+  Ordinary app qualification retains its platform scope; macOS remains open.
+- Migrate prepared Cargo metadata capture in the combined Process export. Share
+  one private Cargo adapter with lock initialization, preserving separate stdout
+  budgets, diagnostic rendering and failure evidence. Remove Host's direct legacy
+  Process dependency and obsolete evidence conversions. Forty-seven tests, all
+  20 metadata/tool refusals, real app builds and Clippy pass; no new public API.
+- Record the remaining CLI desktop-opener boundary with four current-source
+  fixture/viewer tests and Clippy. Running-child relinquishment is distinct from
+  synchronous close; no replacement handoff API or reaping guarantee is claimed.
+
 ## [0.80.0] - Unreleased
 
 - Introduce one synchronous execution owner with explicit group/direct-child

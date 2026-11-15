@@ -311,3 +311,205 @@ Three ordinary tests and one PTY test pass. Client all-target Clippy, exact loca
 supplier-edge admission and external-lock subset checks pass; no new external
 supplier tuple is required. The sibling and other Process callers remain unchanged.
 Native macOS and the signer group-capture migration remain separate gates.
+
+## Process 0.80.1 signer version/principal capture
+
+`make test-canic-signer` captures current local Canic and applies
+`signer-process.patch` only inside the export. The new private capture adapter
+selects Process 0.80.1; other Host callers still use released Process. It preserves
+exact ICP version admission, null stdin, 1024-byte version streams, 1024/4096-byte
+principal streams, 5/30-second deadlines, principal decoding and no retries.
+No real signer, keys or network calls are used.
+
+Passing evidence: `target/canic-signer-qualification.log`, export
+`target/canic-signer.UpV2YAjX`, source HEAD
+`724744bab2a5bf6972f3021431e6da0e66b55b26`, archive SHA-256
+`4b6dff0c5916c65dd8449faa4d70930ba1395c11d2d4a3d51963065cef566655`.
+Two focused tests cover version/parse/status/limit refusals, exact argument and
+invocation counts, exact capture budgets and a shortened adapter deadline.
+All-target Host Clippy, local supplier-edge and external-lock subset checks pass.
+Executable fixtures are prepared before tests start to avoid concurrent spawn
+and executable-write interference; failures are never retried.
+
+This qualifies version/principal capture only, not signing/submission, complete
+legacy Process removal, native macOS or production migration. Process 0.80.1 adds
+no public API; its eight core tests and the 19 Build tests also pass in
+`target/process-0.80.1-tests.log`.
+
+### Signer failure-evidence follow-up
+
+The strengthened runner passes against current Canic 0.213.0, source HEAD
+`724744bab2a5bf6972f3021431e6da0e66b55b26` with working-tree archive SHA-256
+`249288c4364890dc52fa20ce8b4ac316c223110d33e9228cd3600748c668bac5`.
+Export: `target/canic-signer.cdeIMGmh`; log:
+`target/canic-signer-evidence-tests.log`.
+
+One caller test and three private adapter tests pass, along with all-target Host
+Clippy and external-lock subset/local supplier checks. The new tests assert exact
+stream-limit, deadline and missing-executable causes; original nonzero status and
+retained stdout/stderr; and cleanup/status distinctions. This supersedes the broad
+capture-refusal test without broadening production behavior. Source now selects
+Wire 0.24.1; the export preserves that selection and does not modify the frozen
+Wire repository. Earlier source-specific results remain historical evidence.
+
+## Process 0.80.1 Cargo lock initialization
+
+Run `make test-canic-lock`. The runner applies `lock-process.patch` to a stable
+current local export, checks the Host-to-local-Process edge and external lock
+subset, then runs all-target Host Clippy, two private adapter tests and real CLI
+app builds. Other Build/Text suppliers stay selected; this is not combined
+replacement qualification.
+
+Passed on current Canic 0.213.0 at HEAD
+`724744bab2a5bf6972f3021431e6da0e66b55b26`, working-tree archive SHA-256
+`8749880f0ca791d29f56ba305142799cdd48fc098795de797829042e9dcba308`.
+Export: `target/canic-lock.IxMU8KUs`; log: `target/canic-lock-qualification.log`.
+Tests preserve exit code 7, captured stdout/stderr, terminal escaping, the 4096
+character diagnostic bound and partial-output marker. The CLI fixture verifies
+one lock-init failure without retry, absent lock and unchanged destinations after
+refusal; successful initialization; an existing lock bypassing the refusing
+initializer; exact Wasm output; and retained first output after a later recipe
+failure. No sibling changes or deployment occur. Native macOS remains unqualified.
+
+## Combined Build/Text/Process qualification
+
+`make test-canic-app-build` now composes current-source Build, Text and Process
+lock-initialization patches in one export. The first attempt correctly refused
+stale Build lockfile and Text caller hunks. Refreshes preserve current status and
+progress semantics and migrate newly present subnet-comparison/artifact-listing
+presentation and Cargo diagnostic escaping to the existing Text API. Patches
+still require admission; no historical source or permissive fallback is used.
+
+Passing export: `target/canic-build.TETX46K0`, Canic 0.213.0 at source HEAD
+`6c05a8d7c351f80d7ed93128c41bc3d7e7aa206c`, archive SHA-256
+`ff6fb0444917eb272f3bd64b37a0f924b9ec90963185ccc88429e9411a1a6526`.
+Log: `target/canic-combined-qualification.log`.
+
+The graph checks prove Host -> local Build 0.87.3 -> local Process 0.80.1,
+Host -> local Process for lock initialization, and CLI -> local Text 0.77.2.
+Text/Process composition adds no external tuples beyond the admitted Build lock;
+Build retains its previously reviewed tempfile 3.27.0 addition. Host/CLI all-target
+Clippy, two lock diagnostic tests, real app preflight/lock refusal/preservation,
+exact output and serial partial-failure checks pass. Selected display tests pass:
+nine fleet-terminal, four placements, fifteen status, four subnet comparison and
+two artifact listing. New caller semantics and original tests remain consumer-owned.
+
+The lock patch now places its dependency away from the Build insertion and uses
+two context lines so the diagnostic helper can compose with either selected Text
+API. Its behavior is unchanged. Native macOS, complete legacy Process removal,
+signing/submission and production migration remain outside this evidence.
+
+### Signer capture in the combined graph
+
+`make test-canic-app-build` also applies the signer implementation migration after
+the lock migration selects the identical local Process alias. Only the redundant
+signer manifest hunks are excluded; implementation hunks still require strict
+patch admission, and the combined metadata checks prove the supplier selection.
+The standalone and combined recipes now share `canic-signer-fixture.sh` for fixture
+preparation and the four signer tests, rather than maintaining parallel setup.
+
+Combined evidence: `target/canic-combined-signer.log`, export
+`target/canic-build.OreUxuYf`, source HEAD
+`6c05a8d7c351f80d7ed93128c41bc3d7e7aa206c`, archive SHA-256
+`482f7c89bc614c3da05fa599b6ee1da658d4aeee915939492859e724307eb6b3`.
+Host/CLI Clippy, external-lock admission, two lock diagnostic tests, four signer
+tests, app preflight/build/lock-failure/preservation cases and 34 display tests pass
+on this single capture. This does not combine the separate foreground-client PTY
+recipe or qualify actual signing/submission, native macOS or production cutover.
+
+The refactored standalone command also passes: log
+`target/canic-signer-shared-fixture.log`, export `target/canic-signer.XIJwsExz`.
+It independently performs source/patch/graph admission and Host Clippy before
+running the same four tests; it does not depend on a prior combined export.
+
+## Combined group and foreground execution
+
+On Linux, `make test-canic-process` extends the combined app recipe with the
+foreground client's dependency and implementation migration. The existing local
+Process alias is reused; metadata proves the client selects that exact local
+package and has no remaining direct legacy Process edge. The client now lives at
+`apps/profile/canic-profile-client`; the old path correctly refused before its
+qualification patch was refreshed. Source logic is unchanged by that path update.
+Standalone and combined foreground checks share `canic-foreground-fixture.sh`.
+The ordinary `test-canic-app-build` target does not acquire a Linux PTY requirement.
+
+Combined passing evidence: `target/canic-process-combined.log`, export
+`target/canic-build.s9UhibXV`, current Canic 0.213.0 at source HEAD
+`6c05a8d7c351f80d7ed93128c41bc3d7e7aa206c`, archive SHA-256
+`482f7c89bc614c3da05fa599b6ee1da658d4aeee915939492859e724307eb6b3`.
+The same capture passes 44 tests: two lock, four signer, three foreground, one
+separately selected real PTY case and 34 displays. Real app builds, lock refusal
+and preservation, serial partial failure, external-lock admission and all-target
+Host/CLI/client Clippy also pass. Fixtures use no keys or live IC calls.
+
+The refactored standalone foreground command independently passes against the
+same source identity: `target/foreground-current-qualification.log`, export
+`target/canic-foreground.pkxDT3gO`. This does not qualify actual interactive signing,
+all remaining Host Process callers, native macOS or production cutover.
+
+### Metadata subprocess migration requirements
+
+The combined Process target now also runs the metadata fixture on its own prepared
+command environment. Four added cases refuse before compilation and preserve an
+existing destination: nonzero exit after otherwise valid metadata, stdout above
+8 MiB, stderr above 1 MiB and invalid UTF-8. The nonzero case preserves the escaped
+diagnostic. All ten metadata-selection and six prepared-tool/wrapper refusals also
+pass. Cargo metadata capture itself still selects the retained Process supplier;
+these are acceptance requirements for its next migration, not proof of cutover.
+
+Passing current export: `target/canic-build.ktTS2nFP`, source HEAD
+`6c05a8d7c351f80d7ed93128c41bc3d7e7aa206c`, archive SHA-256
+`14dda462e1fc9058cd3a8ce5289f86303e32ba7d5c847cbddaec86d1c73f40a8`.
+Log: `target/canic-metadata-process-refusals.log`. All 44 previously selected
+fixture/display tests, real app builds and Host/CLI/client Clippy pass as well.
+
+Current Canic moved artifact/progress/placements/artifacts files to module
+directories and introduced typed status presentation. Patch admission refused
+those changes first. Qualification paths and Text adapters were refreshed against
+the captured source, preserving its typed status and continuation logic. No
+historical source fallback or sibling modification was used.
+
+## Metadata execution on replacement Process
+
+`make test-canic-process` now applies `metadata-process.patch` after the admitted
+Build/Text/lock/signer migrations. The patch moves the reviewed lock capture adapter
+into private Canic `cargo_process`, sharing it with metadata execution. Metadata
+retains its 8 MiB stdout budget; lock setup retains 1 MiB. Both retain null stdin,
+1 MiB stderr, a 120-second deadline, fallible capture, original status/failure and
+cleanup evidence, and the existing bounded escaped Cargo diagnostics.
+
+The export removes Host's direct legacy Process dependency, the ToolError wrapper
+and synthetic ExecutionEvidence conversions. Original diagnostic tests use byte
+inputs while retaining their compiler-error selection, Unicode/control escaping,
+bounded/truncated output and destination-preservation assertions. Graph admission
+checks absence of the old direct dependency for both Host and profile client.
+Other workspace callers may still select the legacy package; no global removal
+or production migration is claimed.
+
+Passed: `target/canic-metadata-owner-qualification.log`, export
+`target/canic-build.j69lrrpF`, current source HEAD
+`6c05a8d7c351f80d7ed93128c41bc3d7e7aa206c`, archive SHA-256
+`3fc33c6e96e9fd6684f543ec489a0157ca0c3b29a77ed8ec409bd0583e5e9839`.
+All 47 selected tests pass (the previous 44 plus three original artifact tests),
+as do all 20 metadata/tool refusals, real app-build/lock-preservation/partial-failure
+checks, Linux PTY interaction, Host/CLI/client Clippy and external-lock admission.
+The ordinary app and standalone lock/signer recipes remain independent variants;
+only the combined Process recipe admits this additional metadata migration.
+
+## Retained desktop-opener requirements
+
+`make test-canic-viewer` captures current local Canic without a Process migration.
+It admits the CLI's registry Process 0.79.0 edge, runs all-target CLI Clippy and
+four `view::` tests. The two new fixtures verify running-child relinquishment with
+a parent-opened completion gate, exact literal URL arguments and original missing
+executable failure. The existing tests verify loopback-only report serving and
+polling updates. No real browser, credentials or external network calls are used.
+
+Passing export: `target/canic-viewer.YreL6ltH`; log:
+`target/canic-viewer-boundary.log`. Source HEAD
+`6c05a8d7c351f80d7ed93128c41bc3d7e7aa206c`, archive SHA-256
+`3fc33c6e96e9fd6684f543ec489a0157ca0c3b29a77ed8ec409bd0583e5e9839`.
+The initial restricted run passed opener fixtures but denied loopback binding;
+the complete run passed with local socket access. These results do not prove
+reaping after relinquishment, replacement Process handoff, macOS acceptance or
+browser readiness. The explicit handoff/reaping design remains the next boundary.

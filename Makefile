@@ -12,6 +12,7 @@ help:
 	  '  make test-testkit-catalog Reply catalog and generated module admission' \
 	  '  make test-process      Owned execution and affected Build failure checks' \
 	  '  make test-process-terminal Linux foreground PTY fixture' \
+	  '  make test-canic-process Combined current Canic group/direct-child qualification (Linux)' \
 	  '  make test-testkit-module Installed module test (externally owned server)' \
 	  '  make test-testkit-control Installed controller refusals (externally owned server)' \
 	  '  make test-text         Terminal escaping and Unicode table contracts' \
@@ -47,6 +48,22 @@ help:
 	  '  make tools-check      Prepared-tool admission'
 
 check: toko-tooling-check
+
+.PHONY: test-canic-signer
+test-canic-signer: toko-tooling-check
+	bash scripts/qualification/canic-signer.sh
+
+.PHONY: test-canic-process
+test-canic-process: toko-tooling-check
+	bash scripts/qualification/canic-build.sh process
+
+.PHONY: test-canic-viewer
+test-canic-viewer: toko-tooling-check
+	bash scripts/qualification/canic-viewer.sh
+
+.PHONY: test-canic-lock
+test-canic-lock: toko-tooling-check
+	bash scripts/qualification/canic-lock.sh
 
 # Focused on the first workflow; not a complete product or release gate.
 test-owned-build: toko-tooling-check

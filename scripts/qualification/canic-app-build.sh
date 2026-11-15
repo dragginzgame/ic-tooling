@@ -20,6 +20,27 @@ if "$cli" --json app build --config "$scratch/duplicate.json" > "$scratch/duplic
 fi
 [[ ! -e "$scratch/probe/Cargo.lock" && "$(cat "$scratch/app/a.wasm")" == 'keep a' ]]
 jq '.apps.fixture.canisters.z.wasm = "app/z.wasm"' "$scratch/duplicate.json" > "$config"
+# A failed lock initializer must stop before compilation/publication, without retry.
+mkdir "$scratch/lock-failure-tools"
+cat > "$scratch/lock-failure-tools/cargo" <<'TOOL'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == generate-lockfile ]]; then
+  printf 'attempt\n' >> "$CANIC_LOCK_CALLS"
+  printf 'lock initialization oracle\033[31m\n' >&2
+  exit 7
+fi
+exec "$CANIC_LOCK_REAL_CARGO" "$@"
+TOOL
+chmod 700 "$scratch/lock-failure-tools/cargo"
+export CANIC_LOCK_CALLS="$scratch/lock-calls" CANIC_LOCK_REAL_CARGO
+CANIC_LOCK_REAL_CARGO="$(command -v cargo)"
+if PATH="$scratch/lock-failure-tools:$PATH" "$cli" --json app build --config "$config" > "$scratch/lock-failure.stdout" 2> "$scratch/lock-failure.stderr"; then
+  echo 'Expected lock initialization refusal' >&2; exit 1
+fi
+jq -e '.error == "supplier" and (.message | contains("lock initialization oracle")) and (.message | contains("\u001b") | not)' "$scratch/lock-failure.stderr" >/dev/null
+[[ "$(wc -l < "$CANIC_LOCK_CALLS")" == 1 && ! -e "$scratch/probe/Cargo.lock" ]]
+[[ "$(cat "$scratch/app/a.wasm")" == 'keep a' && "$(cat "$scratch/app/z.wasm")" == 'keep z' ]]
 # Recipes are relative to the config, not to the invoking directory.
 (cd "$scratch/runtime" && "$cli" --json app build --config "$config") > "$scratch/app.json"
 [[ -s "$scratch/probe/Cargo.lock" ]]
@@ -33,7 +54,8 @@ jq -e --arg root "$scratch" --arg hash "$hash" --argjson size "$size" '
   all(.canisters[]; .artifact.sha256 == $hash and .artifact.bytes == $size and
     .wasm == ($root + "/app/" + .canister + ".wasm"))
 ' "$scratch/app.json" >/dev/null
-"$cli" app build --config "$config" > "$scratch/app-human.txt"
+PATH="$scratch/lock-failure-tools:$PATH" "$cli" app build --config "$config" > "$scratch/app-human.txt"
+[[ "$(wc -l < "$CANIC_LOCK_CALLS")" == 1 ]]
 rg -Fq 'Nothing deployed.' "$scratch/app-human.txt"
 sha256sum --check "$scratch/initialized-lock.sha256"
 # Serial app builds are not a transaction: a later failure retains the first output.
