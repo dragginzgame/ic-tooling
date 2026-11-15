@@ -1,82 +1,104 @@
 # Current implementation — 2026-11-15
 
-## Accepted scope
+## Scope and source authority
 
-The maintainer accepted [design revision 2](../DESIGN.md) and authorized its staged
-implementation, including continuation after the Stage 1 architecture checkpoint.
-[Build to owned bytes](../build-owned-artifact.md) and
-[filesystem custody](../filesystem-custody.md) define the implemented slices.
-The [workload register](../workloads.md) preserves later migration obligations.
-Production consumer migration and publication remain separate delivery work.
+The maintainer accepted [design revision 2](../DESIGN.md) and staged implementation.
+Required outcomes drive interfaces; old Rust exports and crate topology do not.
+Current contracts: [owned builds](../build-owned-artifact.md),
+[filesystem custody](../filesystem-custody.md), [HTTP bodies](../http-body.md).
+The [workload register](../workloads.md) preserves remaining obligations.
 
-## Reference and pending-work boundary
+Active qualification uses current local sibling working trees, including edits,
+through [read-only snapshots](../qualification/local-sources.md). Source drift or
+stale patches refuse; historical pinned runs do not qualify changed current source.
+Consumer code stays in its owner; patches here are qualification adapters only.
+Auth is on hold; Storage, Observability and Wire are frozen. Canic is being rewritten:
+its current requirements, not historical implementation, must justify further APIs.
 
-The production reference `../ic-tooling` is read-only, observed at
-`a00369fc29fa837c6deb022cceb7e09aa447292c`.
-The superseded transplant and design evidence remain in Git at
-`cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`, including
-`docs/design/inventory.tsv`, `consumer-evidence.txt`, `source-provenance.md`,
-`docs/build/streaming-selection.md` and the previous status file.
-Existing `ci/extraction-sources.json` describes historical extractions only.
-The user's preexisting deletions of copied trees are preserved. No old product
-source or test trees were imported. The maintainer authorized GitHub delivery of
-this checkpoint on 2026-11-15. Registry publication remains disabled.
+`../ic-tooling` remains a read-only production reference, observed at
+`a00369fc29fa837c6deb022cceb7e09aa447292c`. Superseded transplant/design evidence
+is retained in Git at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`;
+`ci/extraction-sources.json` is historical. Preserve the prior copied-tree deletions.
+No old product source/test trees were admitted into the replacement.
 
-The requested Toko 0.44.3 refresh used the registry exporter and its ownership
-proof. Both workspace locks select that exact version; the 48-file snapshot is
-verified. Common tools remain owned by Toko, not local replacement scripts.
+GitHub checkpoint `86eb859f009d4302b75ab93ddc5e11f7abb5e6ed` is on `origin/main`
+(Build 0.87.0, byte/filesystem 0.80.0). This Stage 3 follow-up is authorized for GitHub delivery only.
+All five packages remain unpublished; consumer migration, publication and canonical
+cutover are separate delivery work. Recheck registry versions before release.
+Toko 0.44.3 is pinned in both workspaces; its 48-file snapshot is verified.
 
-## Implemented ownership
+## Implemented owners
 
-- `ic-build` 0.87.0 owns spawn, bounded Cargo decoding, success checks, exact
-  selection, owned byte capture and explicit process/private-target cleanup.
-  Artifact bytes and SHA-256 outlive scratch without exposing a mutable path.
-- `ic-host-artifacts` 0.80.0 owns bounded complete-stream byte admission and
-  identity independently of native filesystem/process dependencies.
-- `ic-host-fs` 0.80.0 owns held directories, explicit create/open, bounded complete
+- `ic-build` 0.87.1 owns spawn, bounded Cargo decoding, exact selection, owned
+  bytes and explicit process/private-target cleanup. Its scratch is mode 0700;
+  success exposes neither a mutable target path nor independent unchecked results.
+- `ic-host-artifacts` 0.80.1 owns bounded complete-stream read/copy and identity,
+  independently of native filesystem, process and HTTP dependencies.
+- `ic-host-fs` 0.80.1 owns held directories/files, explicit create/open, bounded
   enumeration, cooperative locks and consuming stage/write/seal/commit states.
-  Publication distinguishes not published, committed and visible but unconfirmed.
-  Retention is selected before effects; cleanup refuses observed foreign entries.
-- Build delegates byte admission and descriptor access to those owners. Its
-  temporary directory now explicitly requests mode 0700 rather than relying on
-  tempfile's umask-dependent directory default.
-- Backup's retained recovery-file writes remain separate from named publication.
-  The migration removes old path-resolution wrappers and extra directory reopening.
-  No compatibility facade, generic backend or release group has been introduced.
-- All three packages remain unpublished. Existing registry names are retained with
-  incompatible minor increments above observed 0.86.0 / 0.79.0 registry lines.
+  Commit distinguishes unpublished, committed and visible-but-unconfirmed effects.
+  Retention precedes effects; cleanup and producer removal refuse observed foreign
+  identities. Retained recovery writes remain distinct from named publication.
+- `ic-host-http` 0.80.0 owns complete bounded response bodies only. It preserves
+  original transport/allocation causes, refuses excess before copying, and caps
+  requested buffer growth. Consumers select Reqwest/TLS directly; no client facade,
+  request policy, retry, digest dependency or new byte-buffer API was introduced.
+- `ic-cargo-qualification` 0.1.0 is an external-lock subset admission executable,
+  not a Build library dependency, archive runner or metadata editor. Its new name
+  also requires registry rechecking before publication.
 
-## Qualification and boundaries
+## Consumer evidence
 
-[Backup qualification](../../qualification/backup/README.md) exports only commit
-`d8955cf1e34f24934027f448ef16ee6841eafbb0`, applies the committed migration recipe,
-and verifies Cargo selected the new filesystem supplier. Its dirty sibling tree
-is neither exported nor modified. The patch preserves original persisted formats
-and tests in the isolated export; it does not transplant them into product crates.
-Legacy Backup byte/digest and HTTP suppliers remain explicitly unmigrated.
+[Backup](../../qualification/backup/README.md) uses local HEAD
+`203b2083009b3aad9b5892a4023fc4ea5ee6d7a5` plus current uncommitted work.
+Snapshot identities and logs are recorded there. The patch preserves its metadata
+and transfer-binding records and 13-entry budget. Bounded reads and exact payload
+streams use the new byte owner; Backup owns commitment comparison. Persisted bytes
+remain unchanged. No old filesystem or HTTP supplier remains in its selected graph;
+legacy digest values/in-memory hashing remain explicit. The HTTP slice keeps direct
+Reqwest configuration and TLS, deadline, encoding, certification and no-retry policy.
 
-Latest focused Linux evidence:
+[Scheduling](../../qualification/scheduling/README.md) is still clean at
+`0e5e09ed24e88d6d62a6d2dc923afbb53dc8619e`; its current-source patch applies.
+Timers uses one owned build instead of target locking, message collection and path
+capture. Private bounded config admission and request-derived receipts preserve
+source/tool checks. [Recipe generations](../../qualification/scheduling/observations.md)
+refuse legacy/new comparisons without changing report schemas. Jobs uses retained
+staging for capture and identity-checked producer cleanup. Host/Testkit remain
+unmigrated; no legacy Build remains. PocketIC pins thiserror 2.0.18, which product
+requirements admit while the product lock retains 2.0.21.
 
-- Build: 19 tests, including real offline Wasm, process/protocol refusal,
-  cancellation, no-follow capture, scratch cleanup and compound failure evidence.
-- Byte admission: 2 tests; filesystem: 9 tests covering held roots, permissions,
-  aliases, locks, races, foreign staging, partial writes, retention and sync refusal.
-- Backup: 54 store/payload/capture tests plus five selected ledger/advance tests.
-- Warning-denied product Clippy and Rustdoc; portable byte-owner Wasm Clippy.
-- Shared formatting and Toko snapshot/tool admission. Qualification has an
-  independent workspace/lock; no product depends on its fixture package.
+[Canic](../../qualification/canic/README.md) record admission passed against local
+`df9321fc17c99c93e07d631173200a99c2a890bc` plus edits. Its build, publication,
+parent creation and locking remain unmigrated. [Auth evidence](../../qualification/auth/README.md)
+is historical at `e52a40be75dd9809d0528189d84b43fe96952ad9`; do not continue it.
 
-## Next work and remaining limits
+Latest relevant Linux evidence, scoped to the snapshots linked above:
 
-Stage 3 next qualifies the installed Scheduling workflow against the build owner.
-Refresh its committed source, establish the real required facts, and introduce
-shared-target behavior only if that workflow demonstrates the need.
+- Build: 19 tests, including real offline Wasm and process/protocol/cleanup refusals.
+- Bytes: two tests and Wasm Clippy; filesystem: ten custody/publication failure tests.
+- HTTP: two new local-body tests and 13 current Backup HTTP cases; product/consumer
+  warning-denied Clippy, product Rustdoc, formatting and tooling admission pass.
+  Cargo graph checks keep HTTP/Tokio outside Build and portable bytes.
+- Backup's preceding byte/filesystem slice: 65 tests (54 store/payload/capture,
+  five ledger/advance, six metadata/transfer), Clippy and unchanged external-lock
+  identity admission. That run was not repeated for the separate HTTP slice.
+- Scheduling: 16 Timers and five Jobs host tests, Clippy, two installed Timers
+  subjects and four Jobs installed runs using original/O3/Os/Oz artifacts.
+- Canic: six current-source read/plan/recovery tests; its prior Clippy is historical.
+- Historical Auth: three executable tests plus graph/lock refusals and exact archive
+  native/Wasm all-feature checks. This does not qualify current frozen Auth source.
 
-These slices assume trusted source/tool inputs, cooperative process-group members,
-exclusive child reaping and caller exclusion of concurrent namespace/content
-writers. Identity observations are not atomic compare-and-unlink against hostile
-same-UID writers. Native macOS Intel/ARM, archive acceptance and full Backup
-supplier cutover remain unqualified; Linux results do not establish them.
-Canic/Auth/Storage, simulator/DB, Platform/Query gaps, Profiler and peripheral
-adapters remain later work. No production consumer has migrated and no performance
-or peak-memory improvement is claimed. Recheck registry versions before release.
+## Next work and limits
+
+Use current unfrozen consumer requirements for remaining Stage 3 work. Backup's
+public digest value/format remains a consumer-contract decision; do not recreate
+legacy wrapper APIs merely to remove that dependency. Simulator/DB, Platform/Query
+gaps, Profiler and other required adapters remain later work. Full watchdog/cohort
+comparability, archive acceptance and native macOS Intel/ARM remain unqualified.
+
+These slices assume trusted source/tools, cooperative process groups, exclusive
+child reaping and caller exclusion of namespace/content writers. Identity checks
+are not atomic compare-and-unlink against hostile same-UID writers. HTTP/installed
+fixtures require loopback. No production consumer has migrated; no performance or
+peak-memory improvement is claimed. Shared-target reuse still needs matched evidence.

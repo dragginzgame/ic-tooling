@@ -9,8 +9,13 @@ help:
 	@printf '%s\n' \
 	  'Development (offline; prepare tools and wasm32-unknown-unknown first):' \
 	  '  make check             Admit Cargo tooling selection and installed snapshot' \
+	  '  make test-http-body    Bounded HTTP body fixtures (loopback required)' \
+	  '  make test-backup-http  Current Backup HTTP policy and body qualification' \
 	  '  make test-custody      Byte and publication/custody failure acceptance' \
-	  '  make test-backup-custody Pinned real Backup filesystem migration' \
+	  '  make test-backup-custody Local Backup filesystem and metadata custody (loopback required)' \
+	  '  make test-scheduling-consumer Local Scheduling owned build and installed tests' \
+	  '  make test-canic-consumer Local Canic retained-record admission' \
+	  '  make test-auth-consumer Historical Auth recipe (on hold)' \
 	  '  make test-owned-build  Stage 1 byte/custody/process/protocol and real Wasm acceptance' \
 	  '  make lint-owned-build  Stage 1 library/tests with warnings denied' \
 	  '  make doc-owned-build   Stage 1 public documentation with warnings denied' \
@@ -37,3 +42,22 @@ test-custody: toko-tooling-check
 
 test-backup-custody: toko-tooling-check
 	bash scripts/qualification/backup-consumer.sh
+
+.PHONY: test-scheduling-consumer
+test-scheduling-consumer: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh
+
+.PHONY: test-auth-consumer
+test-auth-consumer: toko-tooling-check
+	bash scripts/qualification/auth-consumer.sh
+
+.PHONY: test-canic-consumer
+test-canic-consumer: toko-tooling-check
+	bash scripts/qualification/canic-consumer.sh
+
+.PHONY: test-http-body test-backup-http
+test-http-body: toko-tooling-check
+	cargo test -p ic-host-http --lib --locked --offline
+
+test-backup-http: toko-tooling-check
+	bash scripts/qualification/backup-consumer.sh http

@@ -1,0 +1,12 @@
+--- a/scripts/ci/check-package-consumer.sh
++++ b/scripts/ci/check-package-consumer.sh
+@@ -39,7 +39,8 @@
+ ' "$fixture/metadata.json" > /dev/null || {
+     echo 'package consumer did not select the exact isolated library graph' >&2; exit 1;
+ }
+-cargo run --quiet --locked --offline -p ic-auth-tooling -- verify-external-lock \
++: "${IC_CARGO_QUALIFICATION:?select the prepared external-lock qualification executable}"
++"$IC_CARGO_QUALIFICATION" verify-external-lock \
+     "$workspace_lock" "$fixture/Cargo.lock" 8388608 || {
+     echo 'package consumer changed an external lock selection' >&2; exit 1;
+ }

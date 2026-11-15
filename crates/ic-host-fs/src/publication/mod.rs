@@ -4,11 +4,11 @@ use std::fs::File;
 use std::io::{self, Read};
 
 use ic_host_artifacts::{Identity, Length};
-use rustix::fs::{AtFlags, linkat, renameat, unlinkat};
+use rustix::fs::{AtFlags, linkat, renameat};
 use thiserror::Error;
 
 use crate::directory::name;
-use crate::{Access, Directory, Error, FileId, FilePolicy};
+use crate::{Directory, Error, FileId};
 
 /// Destination effect selected before staging.
 #[derive(Clone, Copy, Debug)]
@@ -293,26 +293,10 @@ impl Sealed {
 }
 impl Attempt {
     fn check(&self) -> Result<(), Error> {
-        let named = self
-            .directory
-            .open_file(
-                &self.staging,
-                Access::Read,
-                FilePolicy {
-                    forbidden: 0,
-                    single_link: false,
-                },
-            )?
-            .ok_or(Error::Changed)?;
-        if FileId::from_file(&named)? != FileId::from_file(&self.file)? {
-            return Err(Error::Changed);
-        }
-        Ok(())
+        self.directory.check_file(&self.staging, &self.file)
     }
     fn remove(&self) -> Result<(), Error> {
-        self.check()?;
-        unlinkat(&*self.directory.file, &self.staging, AtFlags::empty())?;
-        Ok(())
+        self.directory.remove_file(&self.staging, &self.file)
     }
     fn abort(mut self) -> Result<(), Error> {
         self.active = false;

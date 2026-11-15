@@ -1,22 +1,25 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index f318c8d..258d5f8 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -3,12 +3,6 @@
+@@ -2,12 +2,6 @@
+ # It is not intended for manual editing.
  version = 4
  
- [[package]]
+-[[package]]
 -name = "ambient-authority"
 -version = "0.0.2"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "e9d4ee0d472d1cd2e28c97dfa124b3d8d992e10eb0a035f33f5d12e3a177ba3b"
 -
--[[package]]
+ [[package]]
  name = "anyhow"
  version = "1.0.104"
- source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -189,48 +183,6 @@
+@@ -188,48 +182,6 @@ dependencies = [
+  "syn 2.0.119",
  ]
  
- [[package]]
+-[[package]]
 -name = "cap-fs-ext"
 -version = "4.0.3"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -58,14 +61,14 @@
 - "rustix",
 -]
 -
--[[package]]
+ [[package]]
  name = "cc"
  version = "1.11.2"
- source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -583,17 +535,6 @@
+@@ -582,17 +534,6 @@ dependencies = [
+  "percent-encoding",
  ]
  
- [[package]]
+-[[package]]
 -name = "fs-set-times"
 -version = "0.20.3"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -76,58 +79,68 @@
 - "windows-sys 0.59.0",
 -]
 -
--[[package]]
+ [[package]]
  name = "fs_extra"
  version = "1.3.0"
- source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -824,7 +765,8 @@
+@@ -824,10 +765,12 @@ dependencies = [
  name = "ic-backup"
- version = "0.101.3"
+ version = "0.101.5"
  dependencies = [
 - "ic-host-artifacts",
 + "ic-host-artifacts 0.79.0",
-+ "ic-host-artifacts 0.80.0",
++ "ic-host-artifacts 0.80.1",
   "ic-host-fs",
   "ic-host-http",
   "ic-platform",
-@@ -857,14 +799,18 @@
++ "reqwest",
+  "serde",
+  "serde_json",
+  "thiserror 2.0.21",
+@@ -856,27 +799,29 @@ dependencies = [
+  "sha2 0.11.1",
  ]
  
- [[package]]
++[[package]]
 +name = "ic-host-artifacts"
-+version = "0.80.0"
++version = "0.80.1"
 +dependencies = [
 + "sha2 0.11.1",
 + "thiserror 2.0.21",
 +]
 +
-+[[package]]
+ [[package]]
  name = "ic-host-fs"
 -version = "0.79.0"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "9ef7770c178efe33ca0d9fcb54e78ad45f0c9c3d499f2e1bac70fb1ba5bba182"
-+version = "0.80.0"
++version = "0.80.1"
  dependencies = [
 - "cap-fs-ext",
 - "cap-std",
 - "ic-host-artifacts",
-+ "ic-host-artifacts 0.80.0",
++ "ic-host-artifacts 0.80.1",
   "rustix",
   "thiserror 2.0.21",
  ]
-@@ -875,7 +821,7 @@
- source = "registry+https://github.com/rust-lang/crates.io-index"
- checksum = "d33de424aa5afc596c0dace915e50c7b03057ff52cad64bd3451f9ee2380c3cc"
+ 
+ [[package]]
+ name = "ic-host-http"
+-version = "0.79.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "d33de424aa5afc596c0dace915e50c7b03057ff52cad64bd3451f9ee2380c3cc"
++version = "0.80.0"
  dependencies = [
 - "ic-host-artifacts",
-+ "ic-host-artifacts 0.79.0",
   "reqwest",
- ]
- 
-@@ -1066,28 +1012,6 @@
++ "thiserror 2.0.21",
  ]
  
  [[package]]
+@@ -1065,28 +1010,6 @@ dependencies = [
+  "icu_properties",
+ ]
+ 
+-[[package]]
 -name = "io-extras"
 -version = "0.19.0"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -149,27 +162,27 @@
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "2f0fb0570afe1fed943c5c3d4102d5358592d8625fda6a0007fdbe65a92fba96"
 -
--[[package]]
+ [[package]]
  name = "ipnet"
  version = "2.12.2"
+@@ -1225,12 +1148,6 @@ version = "0.1.3"
  source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -1226,12 +1150,6 @@
  checksum = "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f"
  
- [[package]]
+-[[package]]
 -name = "maybe-owned"
 -version = "0.3.4"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "4facc753ae494aeb6e3c22f839b158aebd4f9270f55cd3c79906c45476c47ab4"
 -
--[[package]]
+ [[package]]
  name = "memchr"
  version = "2.8.3"
- source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -1598,16 +1516,6 @@
+@@ -1597,16 +1514,6 @@ dependencies = [
+  "windows-sys 0.61.2",
  ]
  
- [[package]]
+-[[package]]
 -name = "rustix-linux-procfs"
 -version = "0.1.1"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -179,11 +192,10 @@
 - "rustix",
 -]
 -
--[[package]]
+ [[package]]
  name = "rustls"
  version = "0.23.46"
- source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -2315,25 +2223,7 @@
+@@ -2315,25 +2222,7 @@ version = "0.52.0"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
  dependencies = [
@@ -210,7 +222,7 @@
  ]
  
  [[package]]
-@@ -2351,31 +2241,14 @@
+@@ -2351,31 +2240,14 @@ version = "0.52.6"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973"
  dependencies = [
@@ -250,94 +262,95 @@
  ]
  
  [[package]]
-@@ -2385,106 +2258,48 @@
+@@ -2384,106 +2256,48 @@ version = "0.52.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3"
  
- [[package]]
+-[[package]]
 -name = "windows_aarch64_gnullvm"
 -version = "0.53.1"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "a9d8416fa8b42f5c947f8482c43e7d89e73a173cead56d044f6a56104a6d1b53"
 -
--[[package]]
+ [[package]]
  name = "windows_aarch64_msvc"
  version = "0.52.6"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469"
  
- [[package]]
+-[[package]]
 -name = "windows_aarch64_msvc"
 -version = "0.53.1"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "b9d782e804c2f632e395708e99a94275910eb9100b2114651e04744e9b125006"
 -
--[[package]]
+ [[package]]
  name = "windows_i686_gnu"
  version = "0.52.6"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "8e9b5ad5ab802e97eb8e295ac6720e509ee4c243f69d781394014ebfe8bbfa0b"
  
- [[package]]
+-[[package]]
 -name = "windows_i686_gnu"
 -version = "0.53.1"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "960e6da069d81e09becb0ca57a65220ddff016ff2d6af6a223cf372a506593a3"
 -
--[[package]]
+ [[package]]
  name = "windows_i686_gnullvm"
  version = "0.52.6"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "0eee52d38c090b3caa76c563b86c3a4bd71ef1a819287c19d586d7334ae8ed66"
  
- [[package]]
+-[[package]]
 -name = "windows_i686_gnullvm"
 -version = "0.53.1"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "fa7359d10048f68ab8b09fa71c3daccfb0e9b559aed648a8f95469c27057180c"
 -
--[[package]]
+ [[package]]
  name = "windows_i686_msvc"
  version = "0.52.6"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66"
  
- [[package]]
+-[[package]]
 -name = "windows_i686_msvc"
 -version = "0.53.1"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "1e7ac75179f18232fe9c285163565a57ef8d3c89254a30685b57d83a38d326c2"
 -
--[[package]]
+ [[package]]
  name = "windows_x86_64_gnu"
  version = "0.52.6"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "147a5c80aabfbf0c7d901cb5895d1de30ef2907eb21fbbab29ca94c5b08b1a78"
  
- [[package]]
+-[[package]]
 -name = "windows_x86_64_gnu"
 -version = "0.53.1"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "9c3842cdd74a865a8066ab39c8a7a473c0778a3f29370b5fd6b4b9aa7df4a499"
 -
--[[package]]
+ [[package]]
  name = "windows_x86_64_gnullvm"
  version = "0.52.6"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d"
  
- [[package]]
+-[[package]]
 -name = "windows_x86_64_gnullvm"
 -version = "0.53.1"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "0ffa179e2d07eee8ad8f57493436566c7cc30ac536a3379fdf008f47f6bb7ae1"
 -
--[[package]]
+ [[package]]
  name = "windows_x86_64_msvc"
  version = "0.52.6"
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
  
- [[package]]
+-[[package]]
 -name = "windows_x86_64_msvc"
 -version = "0.53.1"
 -source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -353,26 +366,32 @@
 - "windows-sys 0.59.0",
 -]
 -
--[[package]]
+ [[package]]
  name = "wnaf"
  version = "0.14.1"
- source = "registry+https://github.com/rust-lang/crates.io-index"
+diff --git a/Cargo.toml b/Cargo.toml
+index 389784e..f78aed9 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -11,8 +11,9 @@
+@@ -11,9 +11,11 @@ repository = "https://github.com/dragginzgame/ic-backup"
  publish = false
  
  [workspace.dependencies]
-+ic-byte-admission = { package = "ic-host-artifacts", path = "../../../crates/ic-host-artifacts", version = "0.80.0" }
++ic-byte-admission = { package = "ic-host-artifacts", path = "../../../crates/ic-host-artifacts", version = "0.80.1" }
  ic-host-artifacts = "0.79.0"
 -ic-host-fs = { version = "0.79.0", features = ["capability"] }
-+ic-host-fs = { path = "../../../crates/ic-host-fs", version = "0.80.0" }
- ic-host-http = { version = "0.79.0", default-features = false, features = ["rustls"] }
+-ic-host-http = { version = "0.79.0", default-features = false, features = ["rustls"] }
++ic-host-fs = { path = "../../../crates/ic-host-fs", version = "0.80.1" }
++ic-host-http = { path = "../../../crates/ic-host-http", version = "0.80.0" }
++reqwest = { version = "0.13.5", default-features = false, features = ["rustls"] }
  ic-platform = { version = "0.33.7", default-features = false, features = ["certification-verify", "ecdsa", "ed25519", "ic-protocol", "management-canister-types", "principal-self-authenticating"] }
  serde = { version = "1.0.229", features = ["derive"] }
+ serde_json = "1.0.154"
+diff --git a/crates/ic-backup/Cargo.toml b/crates/ic-backup/Cargo.toml
+index 37d86bd..42e4a1e 100644
 --- a/crates/ic-backup/Cargo.toml
 +++ b/crates/ic-backup/Cargo.toml
-@@ -9,6 +9,7 @@
+@@ -9,9 +9,11 @@ repository.workspace = true
  publish.workspace = true
  
  [target.'cfg(unix)'.dependencies]
@@ -380,9 +399,15 @@
  ic-host-artifacts.workspace = true
  ic-host-fs.workspace = true
  ic-host-http.workspace = true
++reqwest.workspace = true
+ ic-platform.workspace = true
+ serde.workspace = true
+ serde_json.workspace = true
+diff --git a/crates/ic-backup/src/store/capture/ledger/mod.rs b/crates/ic-backup/src/store/capture/ledger/mod.rs
+index e329207..abd0e54 100644
 --- a/crates/ic-backup/src/store/capture/ledger/mod.rs
 +++ b/crates/ic-backup/src/store/capture/ledger/mod.rs
-@@ -6,7 +6,7 @@
+@@ -6,7 +6,7 @@ use super::advance::{
  };
  use super::{CaptureError, CapturePlan, open_optional};
  use ic_host_artifacts::artifact::Sha256Digest;
@@ -391,16 +416,17 @@
  use serde::{Deserialize, Serialize};
  use std::{
      fs::File,
+diff --git a/crates/ic-backup/src/store/capture/mod.rs b/crates/ic-backup/src/store/capture/mod.rs
+index a84e789..dd06771 100644
 --- a/crates/ic-backup/src/store/capture/mod.rs
 +++ b/crates/ic-backup/src/store/capture/mod.rs
-@@ -27,21 +27,16 @@
-     TransferMetadataError, UploadedSnapshotReadback,
+@@ -35,20 +35,17 @@ pub use transfer::{
  };
  
--use super::{
+ use super::{
 -    BackupStore, CREATE, PRIVATE, StoreError, manifest::lower_hex, open_optional, read_optional,
--};
-+use super::{BackupStore, PRIVATE, StoreError, manifest::lower_hex, open_optional, read_optional};
++    BackupStore, PRIVATE, StoreError, manifest::lower_hex, open_optional, read_optional,
+ };
  use ic_host_artifacts::artifact::Sha256Digest;
  use ic_host_fs::{
 -    capability::Directory,
@@ -418,7 +444,7 @@
  };
  use thiserror::Error;
  
-@@ -92,7 +87,7 @@
+@@ -100,7 +97,7 @@ impl CaptureOperation {
          }
          exact(&self.target, "lock", b"", 0)?;
          for entry in self.target.entries(2)? {
@@ -427,15 +453,15 @@
                  return Err(CaptureError::Changed);
              }
          }
-@@ -122,7 +117,6 @@
+@@ -144,7 +141,6 @@ impl CaptureOperation {
          }
          exact(&self.target, "owner.json", &owner(&self.plan)?, 1024)?;
-         for entry in self.directory.entries(9)? {
+         for entry in self.directory.entries(13)? {
 -            let entry = entry?;
              let admitted = match entry.name.to_str() {
                  Some("lock" | "plan.json" | "ledger.bin") => true,
-                 Some("status-request.bin") => state.request.is_some(),
-@@ -183,14 +177,13 @@
+                 Some("metadata-request.bin") => {
+@@ -218,14 +214,13 @@ impl BackupStore {
          }
          exact(&target, "lock", b"", 0)?;
          for entry in target.entries(1)? {
@@ -452,7 +478,7 @@
          file.sync_all()?;
          let lock = acquire(file)?;
          retain(&directory, "plan.json", plan.encoded())?;
-@@ -200,7 +193,7 @@
+@@ -235,7 +230,7 @@ impl BackupStore {
          let ledger_file =
              open_optional(&directory, "ledger.bin")?.ok_or(CaptureError::Incomplete)?;
          let operation = CaptureOperation {
@@ -461,7 +487,7 @@
              operations,
              directory,
              target,
-@@ -211,7 +204,7 @@
+@@ -246,7 +241,7 @@ impl BackupStore {
              usable: true,
          };
          operation.check()?;
@@ -470,7 +496,7 @@
          Ok(operation)
      }
  
-@@ -245,7 +238,7 @@
+@@ -280,7 +275,7 @@ impl BackupStore {
          let ledger_file =
              open_optional(&directory, "ledger.bin")?.ok_or(CaptureError::Incomplete)?;
          let operation = CaptureOperation {
@@ -479,7 +505,7 @@
              operations,
              directory,
              target,
-@@ -261,9 +254,13 @@
+@@ -296,9 +291,13 @@ impl BackupStore {
  }
  
  fn child(parent: &Directory, name: &str, create: bool) -> Result<Directory, CaptureError> {
@@ -496,7 +522,7 @@
  }
  fn target_directory(
      root: &Directory,
-@@ -275,7 +272,7 @@
+@@ -310,7 +309,7 @@ fn target_directory(
      child(&network, &plan.request().target.canister.to_text(), create)
  }
  fn acquire(file: std::fs::File) -> Result<ExclusiveFileLock, CaptureError> {
@@ -505,7 +531,7 @@
          if error.kind() == io::ErrorKind::WouldBlock {
              CaptureError::Locked
          } else {
-@@ -288,17 +285,15 @@
+@@ -323,17 +322,15 @@ fn lock_target(target: &Directory) -> Result<(ExclusiveFileLock, bool), CaptureE
          return Ok((acquire(file)?, false));
      }
      // A missing established lock must never be recreated alongside retained authority.
@@ -526,7 +552,7 @@
      file.write_all(bytes)?;
      file.sync_all()?;
      Ok(())
-@@ -316,9 +311,7 @@
+@@ -351,9 +348,7 @@ fn exact(
      Ok(())
  }
  fn same_identity(first: &Directory, second: &Directory) -> Result<(), CaptureError> {
@@ -537,7 +563,7 @@
          return Err(CaptureError::Changed);
      }
      Ok(())
-@@ -378,7 +371,7 @@
+@@ -413,7 +408,7 @@ pub enum CaptureError {
      Store(#[from] StoreError),
      /// Held-directory admission failure.
      #[error(transparent)]
@@ -546,7 +572,7 @@
      /// Original native IO failure; all partial files remain retained.
      #[error(transparent)]
      Io(#[from] io::Error),
-@@ -448,9 +441,14 @@
+@@ -522,9 +517,14 @@ impl CaptureOperation {
          }
          let mut file = self
              .directory
@@ -564,11 +590,51 @@
              .ok_or(CaptureError::Incomplete)?;
          if file.metadata()?.nlink() != 1
              || FileIdentity::from_file(&file)? != FileIdentity::from_file(&self.ledger_file)?
+diff --git a/crates/ic-backup/src/store/capture/advance/http/mod.rs b/crates/ic-backup/src/store/capture/advance/http/mod.rs
+index 55ac45c..335052e 100644
+--- a/crates/ic-backup/src/store/capture/advance/http/mod.rs
++++ b/crates/ic-backup/src/store/capture/advance/http/mod.rs
+@@ -4,10 +4,8 @@ use super::{
+     StatusEvidence, StatusRequestError,
+ };
+ use ic_host_artifacts::artifact::Sha256Digest;
+-use ic_host_http::{
+-    ReadError, read_body,
+-    reqwest::{self, Client, Url, header},
+-};
++use ic_host_http::Error as BodyError;
++use reqwest::{Client, Url, header};
+ use ic_platform::{
+     canister_sig_creation::extract_raw_root_pk_from_der,
+     ic_protocol::{TransportCallResponse, decode_call_response},
+@@ -296,13 +294,13 @@ impl StatusHttpTransport {
+         {
+             return Err(StatusHttpError::Response);
+         }
+-        let bytes = read_body(response, maximum)
++        let bytes = ic_host_http::body(response, maximum)
+             .await
+             .map_err(|error| match error {
+-                ReadError::DeclaredLength { .. } | ReadError::Limit { .. } => {
++                BodyError::TooLarge { .. } => {
+                     StatusHttpError::ResponseLimit
+                 }
+-                ReadError::Transport(_) | ReadError::Allocation(_) => StatusHttpError::Uncertain,
++                BodyError::Transport(_) | BodyError::Allocation(_) => StatusHttpError::Uncertain,
+             })?;
+         remaining(deadline)?;
+         Ok(bytes)
+diff --git a/crates/ic-backup/src/store/mod.rs b/crates/ic-backup/src/store/mod.rs
+index 955f084..c34f08a 100644
 --- a/crates/ic-backup/src/store/mod.rs
 +++ b/crates/ic-backup/src/store/mod.rs
-@@ -55,31 +55,16 @@
+@@ -60,33 +60,19 @@ pub use capture::{
+ pub use manifest::ManifestError;
+ pub use payload::{PayloadReadError, PayloadSource};
  
- use ic_host_artifacts::artifact::{ArtifactError, Sha256Digest};
+-use ic_host_artifacts::artifact::{ArtifactError, Sha256Digest};
++use ic_byte_admission::Error as ByteError;
++use ic_host_artifacts::artifact::Sha256Digest;
  use ic_host_fs::{
 -    capability::{CapabilityError, Directory, DirectoryOptions, EntryKind},
 -    durable::{NamedWriteError, create_retained_at, publish_retained_at},
@@ -603,7 +669,7 @@
  const MANIFEST_LIMIT: usize = 1024 * 1024;
  
  /// An exact network instance and canister, independent of display names.
-@@ -148,25 +133,34 @@
+@@ -155,25 +141,34 @@ impl BackupStore {
      /// Refuses missing/unsafe/nonprivate directories, occupied roots and IO failures.
      /// Publication errors preserve whether the final format name became visible.
      pub fn initialize(path: &Path) -> Result<Self, StoreError> {
@@ -653,7 +719,7 @@
          Ok(Self { root })
      }
  
-@@ -179,7 +173,7 @@
+@@ -186,7 +181,7 @@ impl BackupStore {
      /// Refuses missing, partial, unsupported or unsafe roots. An empty directory
      /// is not interpreted as an empty initialized store.
      pub fn open(path: &Path) -> Result<Self, StoreError> {
@@ -662,7 +728,7 @@
          let Some(format) = read_optional(&root, "format", 128)? else {
              return Err(StoreError::IncompleteStore);
          };
-@@ -188,7 +182,6 @@
+@@ -195,7 +190,6 @@ impl BackupStore {
          }
          let mut count = 0;
          for entry in root.entries(4)? {
@@ -670,7 +736,7 @@
              let expected = match entry.name.to_str() {
                  Some("format") => EntryKind::File,
                  Some("bundles" | "operations" | "targets") => EntryKind::Directory,
-@@ -273,7 +266,6 @@
+@@ -280,7 +274,6 @@ impl BackupStore {
              .ok_or(StoreError::IncompleteStore)?;
          let mut remaining = limits.bytes.get();
          for entry in bundles.entries(limits.entries.get())? {
@@ -678,12 +744,16 @@
              let id = entry
                  .name
                  .to_str()
-@@ -311,21 +303,23 @@
+@@ -318,21 +311,27 @@ fn read_optional(
      limit: usize,
  ) -> Result<Option<Vec<u8>>, StoreError> {
      open_optional(root, name)?
 -        .map(|file| read_opened_file(file, limit).map_err(StoreError::Read))
-+        .map(|file| ic_host_artifacts::artifact::read_reader(file, limit).map_err(StoreError::Read))
++        .map(|file| {
++            ic_byte_admission::read(file, ic_byte_admission::Length::AtMost(limit as u64))
++                .map(|(bytes, _)| bytes)
++                .map_err(StoreError::Read)
++        })
          .transpose()
  }
  
@@ -713,7 +783,44 @@
  }
  
  /// A local refusal, preserving original IO/publication errors and retained files.
-@@ -388,6 +382,9 @@
+@@ -367,14 +366,14 @@ pub enum StoreError {
+         /// Caller-selected maximum.
+         limit: u64,
+     },
+-    /// Exact payload length/hash admission failed; the original file is retained.
++    /// Exact payload stream admission failed; the original file is retained.
+     #[error("payload verification failed for {member}")]
+     Payload {
+         /// Validated member name from the manifest, never an arbitrary path.
+         member: String,
+-        /// Original bounded read, exact-length or digest failure.
++        /// Original bounded read or exact-length failure.
+         #[source]
+-        source: ArtifactError,
++        source: ByteError,
+     },
+     /// Bounded manifest decoding or semantic validation failed.
+     #[error("invalid completion manifest for bundle {bundle}")]
+@@ -388,13 +387,26 @@ pub enum StoreError {
+     /// Host directory/file admission, including entry limits.
+     #[error(transparent)]
+     Filesystem(#[from] CapabilityError),
+-    /// Host bounded byte read or manifest digest mismatch; no partial result.
++    /// Bounded byte admission refused; no partial result.
+     #[error(transparent)]
+-    Read(#[from] ArtifactError),
++    Read(#[from] ByteError),
++    /// Observed bytes differ from an independently supplied manifest or block commitment.
++    #[error("digest mismatch for {member:?}: expected {expected}, observed {actual:?}")]
++    Digest {
++        /// Payload member when available; None identifies the manifest.
++        member: Option<String>,
++        /// Required digest from the admitted commitment.
++        expected: Sha256Digest,
++        /// Identity of the exact admitted bytes.
++        actual: ic_byte_admission::Identity,
++    },
+     /// Native initialization IO; partial entries remain retained.
      #[error(transparent)]
      Io(#[from] io::Error),
      /// Original publication phase, including visibility before failed durability.
@@ -724,32 +831,103 @@
 -    Publication(#[from] NamedWriteError<Infallible>),
 +    Attempt(#[from] AttemptFailure),
  }
+diff --git a/crates/ic-backup/src/store/payload/mod.rs b/crates/ic-backup/src/store/payload/mod.rs
+index 04d73e3..a744e35 100644
 --- a/crates/ic-backup/src/store/payload/mod.rs
 +++ b/crates/ic-backup/src/store/payload/mod.rs
-@@ -6,11 +6,7 @@
+@@ -5,12 +5,9 @@ pub use source::{PayloadReadError, PayloadSource};
+ use super::{
      BackupStore, BackupSummary, MANIFEST_LIMIT, PRIVATE, StoreError, manifest, open_optional,
  };
- use ic_host_artifacts::artifact::{ArtifactIdentity, Sha256Digest, hash_exact_reader};
+-use ic_host_artifacts::artifact::{ArtifactIdentity, Sha256Digest, hash_exact_reader};
 -use ic_host_fs::{
 -    capability::{Directory, EntryKind},
 -    identity::FileIdentity,
 -    read::read_opened_file,
 -};
++use ic_byte_admission::{Identity, Length};
++use ic_host_artifacts::artifact::Sha256Digest;
 +use ic_host_fs::{Directory, FileId as FileIdentity, Kind as EntryKind};
  use std::{
      collections::BTreeSet,
      ffi::OsStr,
-@@ -128,7 +124,8 @@
+@@ -77,7 +74,7 @@ impl BackupStore {
+             bundle_id,
+             expected_manifest,
+             maximum_payload_bytes,
+-            |file, length| hash_exact_reader(file, length),
++            |file, length| ic_byte_admission::copy(file, std::io::sink(), Length::Exactly(length)),
+         )
+     }
+ 
+@@ -88,7 +85,7 @@ impl BackupStore {
+         bundle_id: &str,
+         expected_manifest: Sha256Digest,
+         maximum_payload_bytes: NonZeroU64,
+-        mut read: impl FnMut(&mut File, u64) -> Result<ArtifactIdentity, super::ArtifactError>,
++        mut read: impl FnMut(&mut File, u64) -> Result<Identity, ic_byte_admission::Error>,
+     ) -> Result<BackupSummary, StoreError> {
+         let original =
+             PayloadDirectory::open(self, bundle_id, expected_manifest, maximum_payload_bytes)?;
+@@ -128,12 +125,11 @@ impl<'store> PayloadDirectory<'store> {
          let manifest_file =
              open_optional(&bundle, "manifest.json")?.ok_or(StoreError::InvalidLayout)?;
          let original_manifest = manifest_file.metadata()?;
 -        let bytes = read_opened_file(manifest_file.try_clone()?, MANIFEST_LIMIT)?;
-+        let bytes =
-+            ic_host_artifacts::artifact::read_reader(manifest_file.try_clone()?, MANIFEST_LIMIT)?;
-         ArtifactIdentity {
-             bytes: bytes.len() as u64,
-             sha256: Sha256Digest::compute(&bytes),
-@@ -209,7 +206,6 @@
+-        ArtifactIdentity {
+-            bytes: bytes.len() as u64,
+-            sha256: Sha256Digest::compute(&bytes),
+-        }
+-        .verify(expected_manifest)?;
++        let (bytes, identity) = ic_byte_admission::read(
++            manifest_file.try_clone()?,
++            Length::AtMost(MANIFEST_LIMIT as u64),
++        )?;
++        check_digest(identity, expected_manifest, None)?;
+         let decoded =
+             manifest::decode(bundle_id, &bytes).map_err(|source| StoreError::Manifest {
+                 bundle: bundle_id.into(),
+@@ -162,7 +158,7 @@ impl<'store> PayloadDirectory<'store> {
+ 
+     fn verify_with<T>(
+         &self,
+-        mut read: impl FnMut(&mut File, u64) -> Result<(ArtifactIdentity, T), super::ArtifactError>,
++        mut read: impl FnMut(&mut File, u64) -> Result<(Identity, T), ic_byte_admission::Error>,
+     ) -> Result<Vec<T>, StoreError> {
+         let mut retained = Vec::with_capacity(self.decoded.members.len());
+         for member in &self.decoded.members {
+@@ -173,12 +169,12 @@ impl<'store> PayloadDirectory<'store> {
+                 .sha256
+                 .parse()
+                 .map_err(|_| StoreError::InvalidLayout)?;
+-            let value = read(&mut file, member.bytes)
+-                .and_then(|(identity, value)| identity.verify(expected).map(|_| value))
+-                .map_err(|source| StoreError::Payload {
++            let (identity, value) =
++                read(&mut file, member.bytes).map_err(|source| StoreError::Payload {
+                     member: member.name.clone(),
+                     source,
+                 })?;
++            check_digest(identity, expected, Some(&member.name))?;
+             unchanged_file(&self.payload, &member.name, &file, &original)?;
+             retained.push(value);
+         }
+@@ -194,8 +190,12 @@ impl<'store> PayloadDirectory<'store> {
+             &self.manifest_file,
+             &self.original_manifest,
+         )?;
+-        hash_exact_reader(current_manifest, self.original_manifest.len())?
+-            .verify(self.decoded.summary.manifest_sha256)?;
++        let identity = ic_byte_admission::copy(
++            current_manifest,
++            std::io::sink(),
++            Length::Exactly(self.original_manifest.len()),
++        )?;
++        check_digest(identity, self.decoded.summary.manifest_sha256, None)?;
+         unchanged_directory(&self.bundle, "payload", &self.payload)?;
+         unchanged_directory(&self.bundles, &self.decoded.summary.bundle_id, &self.bundle)?;
+         unchanged_directory(&self.store.root, "bundles", &self.bundles)?;
+@@ -209,7 +209,6 @@ fn check_members(
  ) -> Result<(), StoreError> {
      let mut names: BTreeSet<_> = members.iter().map(|m| m.name.as_str()).collect();
      for entry in directory.entries(names.len())? {
@@ -757,7 +935,7 @@
          if entry.kind != EntryKind::File
              || !entry.name.to_str().is_some_and(|name| names.remove(name))
          {
-@@ -245,9 +241,7 @@
+@@ -245,10 +244,24 @@ fn unchanged_directory(parent: &Directory, name: &str, held: &Directory) -> Resu
      let current = parent
          .open_directory(OsStr::new(name), PRIVATE)?
          .ok_or(StoreError::CustodyChanged)?;
@@ -768,6 +946,72 @@
          return Err(StoreError::CustodyChanged);
      }
      Ok(())
+ }
++
++// Backup owns expected-commitment policy; the byte owner only identifies admitted bytes.
++fn check_digest(
++    actual: Identity,
++    expected: Sha256Digest,
++    member: Option<&str>,
++) -> Result<(), StoreError> {
++    if actual.sha256 != *expected.as_bytes() {
++        return Err(StoreError::Digest {
++            member: member.map(str::to_owned),
++            expected,
++            actual,
++        });
++    }
++    Ok(())
++}
+diff --git a/crates/ic-backup/src/store/payload/source/mod.rs b/crates/ic-backup/src/store/payload/source/mod.rs
+index 7b81550..99a4a1c 100644
+--- a/crates/ic-backup/src/store/payload/source/mod.rs
++++ b/crates/ic-backup/src/store/payload/source/mod.rs
+@@ -1,6 +1,7 @@
+ //! Held payload bytes with ephemeral block commitments; no operation-evidence admission.
+ use super::{BackupStore, BackupSummary, PayloadDirectory, StoreError, unchanged_file};
+-use ic_host_artifacts::artifact::{ArtifactIdentity, Sha256Digest, hash_exact_reader};
++use ic_byte_admission::{Identity, Length};
++use ic_host_artifacts::artifact::Sha256Digest;
+ use ic_platform::management_canister_types::{ReadCanisterSnapshotDataArgs, SnapshotDataKind};
+ use std::{
+     fmt,
+@@ -82,7 +83,8 @@ impl BackupStore {
+                 pending: Vec::with_capacity(BLOCK_BYTES.min(length as usize)),
+                 blocks: Vec::with_capacity(length.div_ceil(BLOCK_BYTES as u64) as usize),
+             };
+-            let identity = hash_exact_reader(&mut reader, length)?;
++            let identity =
++                ic_byte_admission::copy(&mut reader, io::sink(), Length::Exactly(length))?;
+             if !reader.pending.is_empty() {
+                 reader.blocks.push(Sha256Digest::compute(&reader.pending));
+             }
+@@ -231,15 +233,14 @@ impl PayloadSource<'_> {
+                 block.resize(length, 0);
+                 held.file.seek(SeekFrom::Start(start))?;
+                 held.file.read_exact(&mut block)?;
+-                ArtifactIdentity {
+-                    bytes: length as u64,
+-                    sha256: Sha256Digest::compute(&block),
+-                }
+-                .verify(held.blocks[ordinal as usize])
+-                .map_err(|source| StoreError::Payload {
+-                    member: member.name.clone(),
+-                    source,
+-                })?;
++                super::check_digest(
++                    Identity {
++                        bytes: length as u64,
++                        sha256: *Sha256Digest::compute(&block).as_bytes(),
++                    },
++                    held.blocks[ordinal as usize],
++                    Some(&member.name),
++                )?;
+                 let from = offset.saturating_sub(start) as usize;
+                 let to = (end - start).min(length as u64) as usize;
+                 output.extend_from_slice(&block[from..to]);
+diff --git a/crates/ic-backup/src/store/tests/mod.rs b/crates/ic-backup/src/store/tests/mod.rs
+index 7c0d1bb..d16825c 100644
 --- a/crates/ic-backup/src/store/tests/mod.rs
 +++ b/crates/ic-backup/src/store/tests/mod.rs
 @@ -1,3 +1,5 @@
@@ -776,7 +1020,7 @@
  mod capture;
  mod payload;
  
-@@ -253,7 +255,7 @@
+@@ -253,13 +255,13 @@ fn entry_and_byte_budgets_include_nonmatching_and_unfinished_entries() {
      tiny.entries = NonZeroUsize::new(1).unwrap();
      assert!(matches!(
          store.latest_completed_backup(&target(), tiny),
@@ -785,7 +1029,14 @@
      ));
      tiny = limits();
      tiny.bytes = NonZeroUsize::new(1).unwrap();
-@@ -279,7 +281,7 @@
+     assert!(matches!(
+         store.latest_completed_backup(&target(), tiny),
+-        Err(StoreError::Read(ArtifactError::LimitExceeded { .. }))
++        Err(StoreError::Read(ByteError::Limit { .. }))
+     ));
+     tiny.bytes = NonZeroUsize::new(serde_json::to_vec(&other).unwrap().len()).unwrap();
+     assert!(
+@@ -279,7 +281,7 @@ fn unsafe_root_bundle_and_manifest_links_are_refused() {
      symlink(&path, &alias).unwrap();
      assert!(matches!(
          BackupStore::open(&alias),
@@ -794,7 +1045,7 @@
      ));
      let outside = root("outside");
      symlink(
-@@ -301,7 +303,7 @@
+@@ -301,7 +303,7 @@ fn unsafe_root_bundle_and_manifest_links_are_refused() {
      symlink(&source, folder.join("manifest.json")).unwrap();
      assert!(matches!(
          store.list_backups(None, limits()),
@@ -803,6 +1054,26 @@
      ));
      assert_eq!(fs::read(source).unwrap(), GOLDEN);
  }
+@@ -432,7 +434,7 @@ fn cumulative_and_individual_manifest_byte_limits_refuse_without_partial_rows()
+     budget.bytes = NonZeroUsize::new(total - 1).unwrap();
+     assert!(matches!(
+         store.list_backups(None, budget),
+-        Err(StoreError::Read(ArtifactError::LimitExceeded { .. }))
++        Err(StoreError::Read(ByteError::Limit { .. }))
+     ));
+ 
+     let path = root("oversized-manifest");
+@@ -444,7 +446,7 @@ fn cumulative_and_individual_manifest_byte_limits_refuse_without_partial_rows()
+     write_file(&folder.join("manifest.json"), &bytes);
+     assert!(matches!(
+         store.list_backups(None, limits()),
+-        Err(StoreError::Read(ArtifactError::LimitExceeded { .. }))
++        Err(StoreError::Read(ByteError::Limit { .. }))
+     ));
+ }
+ 
+diff --git a/crates/ic-backup/src/store/tests/payload/mod.rs b/crates/ic-backup/src/store/tests/payload/mod.rs
+index 4176819..5967d20 100644
 --- a/crates/ic-backup/src/store/tests/payload/mod.rs
 +++ b/crates/ic-backup/src/store/tests/payload/mod.rs
 @@ -1,4 +1,5 @@
@@ -811,7 +1082,43 @@
  use std::num::NonZeroU64;
  mod source_tests;
  
-@@ -217,8 +218,7 @@
+@@ -115,7 +116,7 @@ fn corruption_is_distinct_from_listing_and_never_repaired() {
+     fs::write(&file, b"bad wasm").unwrap();
+     let err = fixture.verify().unwrap_err();
+     assert!(matches!(err,
+-        StoreError::Payload { member, source: ArtifactError::DigestMismatch { .. } }
++        StoreError::Digest { member: Some(member), .. }
+         if member == "module.wasm"));
+     assert_eq!(fs::read(file).unwrap(), b"bad wasm");
+     assert_eq!(fixture.store.list_backups(None, limits()).unwrap().len(), 1);
+@@ -136,13 +137,13 @@ fn short_and_grown_files_return_exact_length_failures() {
+                 if bytes.len() < 8 {
+                     assert!(matches!(
+                         source,
+-                        ArtifactError::LengthMismatch {
++                        ByteError::Short {
+                             expected: 8,
+                             actual: 5
+                         }
+                     ));
+                 } else {
+-                    assert!(matches!(source, ArtifactError::LimitExceeded { limit: 8 }));
++                    assert!(matches!(source, ByteError::Limit { limit: 8 }));
+                 }
+             }
+             other => panic!("unexpected refusal: {other:?}"),
+@@ -162,8 +163,8 @@ fn manifest_commitment_and_budget_are_admitted_before_payload_access() {
+     let wrong = Sha256Digest::compute(b"untrusted replacement");
+     assert!(matches!(fixture.store.verify_payload(
+         &fixture.record.operation_id, wrong, NonZeroU64::new(1).unwrap()
+-    ), Err(StoreError::Read(ArtifactError::DigestMismatch { expected, actual }))
+-        if expected == wrong && actual.sha256 == fixture.commitment));
++    ), Err(StoreError::Digest { member: None,  expected, actual  })
++        if expected == wrong && actual.sha256 == *fixture.commitment.as_bytes()));
+     assert!(matches!(
+         fixture.store.verify_payload(
+             &fixture.record.operation_id,
+@@ -217,8 +218,7 @@ fn missing_extra_nested_linked_and_nonprivate_payload_members_refuse() {
              )),
              "extra" => assert!(matches!(
                  error,
@@ -821,7 +1128,7 @@
              )),
              _ => assert!(matches!(error, StoreError::InvalidLayout)),
          }
-@@ -237,7 +237,7 @@
+@@ -237,7 +237,7 @@ fn payload_directory_substitution_and_unsafe_ids_refuse() {
      symlink(&original, &payload).unwrap();
      assert!(matches!(
          fixture.verify(),
@@ -830,7 +1137,42 @@
      ));
      for id in [
          "../escape",
-@@ -354,8 +354,7 @@
+@@ -272,7 +272,7 @@ fn a_self_consistent_replacement_cannot_change_the_trusted_manifest() {
+     )
+     .unwrap();
+     assert!(
+-        matches!(fixture.verify(), Err(StoreError::Read(ArtifactError::DigestMismatch { expected, .. }))
++        matches!(fixture.verify(), Err(StoreError::Digest { member: None,  expected, ..  })
+         if expected == fixture.commitment)
+     );
+     let listed = fixture.store.list_backups(None, limits()).unwrap();
+@@ -315,7 +315,11 @@ fn legacy_same_bytes_file_replacement_during_read_is_refused() {
+         fixture.commitment,
+         NonZeroU64::new(fixture.record.payload_bytes).unwrap(),
+         |file, length| {
+-            let identity = ic_host_artifacts::artifact::hash_exact_reader(file, length)?;
++            let identity = ic_byte_admission::copy(
++                file,
++                std::io::sink(),
++                ic_byte_admission::Length::Exactly(length),
++            )?;
+             if !changed {
+                 fs::rename(&path, &retained)?;
+                 write_file(&path, b"\0asm\x01\0\0\0");
+@@ -343,7 +347,11 @@ fn legacy_extra_entry_after_opening_scan_is_refused_without_cleanup() {
+         fixture.commitment,
+         NonZeroU64::new(fixture.record.payload_bytes).unwrap(),
+         |file, length| {
+-            let identity = ic_host_artifacts::artifact::hash_exact_reader(file, length)?;
++            let identity = ic_byte_admission::copy(
++                file,
++                std::io::sink(),
++                ic_byte_admission::Length::Exactly(length),
++            )?;
+             if !changed {
+                 write_file(&extra, b"retained unexpected bytes");
+                 changed = true;
+@@ -354,8 +362,7 @@ fn legacy_extra_entry_after_opening_scan_is_refused_without_cleanup() {
      assert!(
          matches!(
              result,
@@ -840,7 +1182,71 @@
          ),
          "{result:?}"
      );
-@@ -532,10 +531,7 @@
+@@ -374,7 +381,11 @@ fn changed_manifest_during_payload_read_cannot_return_original_success() {
+             fixture.commitment,
+             NonZeroU64::new(fixture.record.payload_bytes).unwrap(),
+             |file, length| {
+-                let identity = ic_host_artifacts::artifact::hash_exact_reader(file, length)?;
++                let identity = ic_byte_admission::copy(
++                    file,
++                    std::io::sink(),
++                    ic_byte_admission::Length::Exactly(length),
++                )?;
+                 if !changed {
+                     if replace {
+                         fs::rename(&path, fixture.folder.join("retained-manifest"))?;
+@@ -403,10 +414,7 @@ fn changed_manifest_during_payload_read_cannot_return_original_success() {
+             );
+         } else {
+             assert!(
+-                matches!(
+-                    result,
+-                    Err(StoreError::Read(ArtifactError::DigestMismatch { .. }))
+-                ),
++                matches!(result, Err(StoreError::Digest { member: None, .. })),
+                 "{result:?}"
+             );
+             assert_ne!(fs::read(&path).unwrap(), original);
+@@ -431,7 +439,11 @@ fn legacy_replaced_child_directories_during_read_are_refused() {
+             fixture.commitment,
+             NonZeroU64::new(fixture.record.payload_bytes).unwrap(),
+             |file, length| {
+-                let identity = ic_host_artifacts::artifact::hash_exact_reader(file, length)?;
++                let identity = ic_byte_admission::copy(
++                    file,
++                    std::io::sink(),
++                    ic_byte_admission::Length::Exactly(length),
++                )?;
+                 if !changed {
+                     fs::rename(&path, &retained)?;
+                     DirBuilder::new().mode(0o700).create(&path)?;
+@@ -468,7 +480,11 @@ fn legacy_extent_change_after_hash_is_refused() {
+         fixture.commitment,
+         NonZeroU64::new(fixture.record.payload_bytes).unwrap(),
+         |file, length| {
+-            let identity = ic_host_artifacts::artifact::hash_exact_reader(file, length)?;
++            let identity = ic_byte_admission::copy(
++                file,
++                std::io::sink(),
++                ic_byte_admission::Length::Exactly(length),
++            )?;
+             if !changed {
+                 OpenOptions::new()
+                     .append(true)
+@@ -518,7 +534,11 @@ fn legacy_fifo_replacement_after_hash_refuses_and_retains_original() {
+         fixture.commitment,
+         NonZeroU64::new(fixture.record.payload_bytes).unwrap(),
+         |file, length| {
+-            let identity = ic_host_artifacts::artifact::hash_exact_reader(file, length)?;
++            let identity = ic_byte_admission::copy(
++                file,
++                std::io::sink(),
++                ic_byte_admission::Length::Exactly(length),
++            )?;
+             if !changed {
+                 fs::rename(&path, &retained)?;
+                 let status = std::process::Command::new("mkfifo")
+@@ -532,10 +552,7 @@ fn legacy_fifo_replacement_after_hash_refuses_and_retains_original() {
          },
      );
      assert!(
@@ -852,9 +1258,11 @@
          "{result:?}"
      );
      assert!(fs::symlink_metadata(path).unwrap().file_type().is_fifo());
+diff --git a/crates/ic-backup/src/store/tests/payload/source_tests.rs b/crates/ic-backup/src/store/tests/payload/source_tests.rs
+index 99800bb..aef5c04 100644
 --- a/crates/ic-backup/src/store/tests/payload/source_tests.rs
 +++ b/crates/ic-backup/src/store/tests/payload/source_tests.rs
-@@ -188,12 +188,11 @@
+@@ -188,18 +188,17 @@ fn same_inode_same_length_corruption_is_caught_and_handle_stays_invalidated() {
      let fixture = Fixture::new("source-inplace-corruption");
      let mut source = fixture.source();
      let path = fixture.folder.join("payload/module.wasm");
@@ -869,3 +1277,31 @@
      );
      let request = fixture.request(SnapshotDataKind::WasmModule { offset: 0, size: 8 });
      assert!(matches!(
+         source.read_data(&request),
+-        Err(PayloadReadError::Store(StoreError::Payload {
+-            source: ArtifactError::DigestMismatch { .. },
++        Err(PayloadReadError::Store(StoreError::Digest {
++            member: Some(_),
+             ..
+         }))
+     ));
+@@ -318,7 +317,7 @@ fn opening_checks_trusted_manifest_budget_and_complete_payload_before_returning_
+             Sha256Digest::compute(b"wrong"),
+             NonZeroU64::new(1).unwrap()
+         ),
+-        Err(StoreError::Read(ArtifactError::DigestMismatch { .. }))
++        Err(StoreError::Digest { member: None, .. })
+     ));
+     assert!(matches!(
+         fixture.store.open_payload(
+@@ -339,8 +338,8 @@ fn opening_checks_trusted_manifest_budget_and_complete_payload_before_returning_
+             fixture.commitment,
+             NonZeroU64::new(fixture.record.payload_bytes).unwrap()
+         ),
+-        Err(StoreError::Payload {
+-            source: ArtifactError::DigestMismatch { .. },
++        Err(StoreError::Digest {
++            member: Some(_),
+             ..
+         })
+     ));

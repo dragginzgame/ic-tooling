@@ -38,8 +38,8 @@ pub enum Error {
     /// Complete enumeration exceeded its caller-supplied ceiling.
     #[error("directory entry limit exceeded")]
     EntryLimit,
-    /// An original staged entry was replaced or disappeared.
-    #[error("staging identity changed")]
+    /// An expected file entry was replaced or disappeared.
+    #[error("file identity changed")]
     Changed,
     /// Byte admission refused; no completed content identity exists.
     #[error(transparent)]
@@ -213,6 +213,33 @@ impl Directory {
             OFlags::RDWR | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
             Mode::from_bits_truncate(mode),
         )?))
+    }
+    /// Remove one entry only after comparing it with the caller's held regular file.
+    /// The parent is not synchronized; call [`Self::sync`] when durability is required.
+    /// Callers exclude concurrent namespace mutation: comparison and unlink are
+    /// separate syscalls, not an atomic fence against hostile writers.
+    /// # Errors
+    /// Refuses missing/replaced entries, links, special files and original I/O causes.
+    pub fn remove_file(&self, child: &OsStr, expected: &File) -> Result<(), Error> {
+        self.check_file(child, expected)?;
+        fs::unlinkat(&*self.file, child, AtFlags::empty())?;
+        Ok(())
+    }
+    pub(crate) fn check_file(&self, child: &OsStr, expected: &File) -> Result<(), Error> {
+        let named = self
+            .open_file(
+                child,
+                Access::Read,
+                FilePolicy {
+                    forbidden: 0,
+                    single_link: false,
+                },
+            )?
+            .ok_or(Error::Changed)?;
+        if FileId::from_file(&named)? != FileId::from_file(expected)? {
+            return Err(Error::Changed);
+        }
+        Ok(())
     }
     /// Enumerate a complete bounded set; metadata checks do not follow symlinks.
     /// # Errors

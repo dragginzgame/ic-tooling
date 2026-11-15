@@ -85,3 +85,36 @@ fn directory_creation_is_explicit_and_policy_refusal_precedes_effects() {
             .is_err()
     );
 }
+
+#[test]
+fn removal_uses_held_parent_and_refuses_replaced_file() {
+    let scratch = tempfile::tempdir().unwrap();
+    let original = scratch.path().join("original");
+    let moved = scratch.path().join("moved");
+    fs::create_dir(&original).unwrap();
+    let root = Directory::open(&original, 0).unwrap().unwrap();
+    let held = root.create_file(OsStr::new("producer"), 0o600).unwrap();
+    fs::rename(&original, &moved).unwrap();
+    fs::create_dir(&original).unwrap();
+    fs::write(original.join("producer"), b"foreign parent").unwrap();
+    fs::rename(moved.join("producer"), moved.join("held")).unwrap();
+    fs::write(moved.join("producer"), b"foreign child").unwrap();
+    assert!(matches!(
+        root.remove_file(OsStr::new("producer"), &held),
+        Err(Error::Changed)
+    ));
+    assert_eq!(fs::read(moved.join("producer")).unwrap(), b"foreign child");
+    fs::remove_file(moved.join("producer")).unwrap();
+    symlink("held", moved.join("producer")).unwrap();
+    assert!(matches!(
+        root.remove_file(OsStr::new("producer"), &held),
+        Err(Error::Refused(_))
+    ));
+    root.remove_file(OsStr::new("held"), &held).unwrap();
+    root.sync().unwrap();
+    assert!(!moved.join("held").exists());
+    assert_eq!(
+        fs::read(original.join("producer")).unwrap(),
+        b"foreign parent"
+    );
+}

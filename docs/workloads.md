@@ -5,15 +5,18 @@ in commit `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3` under
 `docs/design/consumer-evidence.txt` and `inventory.tsv`. The reviewed production
 baseline is `a00369fc29fa837c6deb022cceb7e09aa447292c` in `../ic-tooling`.
 These are historical observations, not fresh consumer execution or an exhaustive
-current fleet audit. Refresh each consumer's exact committed source before its
-migration; never export unrelated dirty work.
+current fleet audit. Use each active consumer’s current local working tree for qualification;
+[source snapshots](qualification/local-sources.md) preserve edits without modifying
+the sibling. Historical commits do not establish current compatibility. Auth is on hold; Storage,
+Observability and Wire are frozen by maintainer direction. Their obligations stay
+recorded, but no migration or design expansion is active for those repositories.
 
 | Consumer/workflow | Required outcomes and refusals | Proposed destination | Status / gate |
 | --- | --- | --- | --- |
-| Scheduling builds | Exact selected Wasm, complete process/protocol evidence, bounded diagnostics, stable captured bytes, cancellation/cleanup | Build operation | First slice specifies the core; installed Scheduling and required build-script facts remain Stage 3 |
-| Backup payload/local publication | Exact persisted bytes/hash, bounded reads/HTTP, original I/O failures, no foreign cleanup, distinguish visible-but-not-durable | Bytes + filesystem custody; narrow HTTP adapter | Stage 2 filesystem qualified against pinned committed source; legacy digest/HTTP suppliers remain; see [contract](filesystem-custody.md) |
-| Canic host/artifact/CLI | Correct build and publication, destination authority, locks and required terminal output | Build/custody plus explicit presentation adapter | Stage 3; no old path-helper family admitted automatically |
-| Auth / Storage packaging | Exact package/archive and external-lock acceptance, usable released artifacts | Development-plane qualification boundary | Stage 3; verify actual selected Toko interface and displaced editor destination |
+| Scheduling builds | Exact selected Wasm, complete process/protocol evidence, bounded diagnostics, stable captured bytes, cancellation/cleanup | Build operation and filesystem custody | Timers owned-build and Jobs capture/optimization migrations pass selected installed subjects; [qualification](../qualification/scheduling/README.md); no legacy Build, private consumer observations, Host/Testkit still explicit |
+| Backup payload/local publication | Exact persisted bytes/hash, bounded reads/HTTP, original I/O failures, no foreign cleanup, distinguish visible-but-not-durable | Bytes + filesystem custody; narrow HTTP adapter | Current local filesystem, byte streams and HTTP body adapter qualified; legacy digest values/in-memory hashing remain; see [contract](filesystem-custody.md) |
+| Canic host/artifact/CLI | Correct build and publication, destination authority, locks and required terminal output | Build/custody plus explicit presentation adapter | [Local record admission](../qualification/canic/README.md) uses byte/filesystem owners; build, parent creation and publication remain unmigrated |
+| Auth / Storage packaging | Exact package/archive and external-lock acceptance, usable released artifacts | Development-plane qualification executable | [Auth external-lock/package path qualified](../qualification/auth/README.md); Auth is now on hold; Storage archive migration is frozen; released metadata editor remains unmigrated |
 | DB simulation/snapshots | Explicit server/instance lifetime, caller identity, stable-memory oracle, partial snapshot effects | Simulator session | Stage 4; no pool/baseline wrapper by default |
 | Platform / Query | Supported simulator/Wire behavior and upstream type identity | Simulator / narrow Wire adapter if needed | Evidence gap; required workload must be resolved before these consumers migrate |
 | Profiler observations | Required process measurements on Linux and native macOS; no borrowed-PID kill authority | Profiler-owned observation or independently justified leaf | Stage 5; destination unresolved, old supplier stays active |

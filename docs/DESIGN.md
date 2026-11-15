@@ -91,7 +91,7 @@ The maintainer confirmed that existing crates.io names may be reused. Prefer an
 existing name when it still describes the selected owner, with an incremented
 version based on the published line. Incompatible 0.x APIs require a new minor;
 keeping the name grants no legacy export or implementation admission. The first
-build owner uses `ic-build` 0.87.0 and remains unpublished during development.
+build owner uses `ic-build` 0.87.1 and remains unpublished during development.
 
 # New operation contracts
 

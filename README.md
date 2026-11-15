@@ -4,9 +4,17 @@ A ground-up replacement of IC Tooling, governed by [design revision 2](docs/DESI
 The first milestone is one real build-to-owned-artifact workflow with newly
 selected interfaces. Existing crates.io names may be reused with incremented
 versions; retaining a name does not require retaining its old Rust API. The first
-package is `ic-build` 0.87.0. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
-0.80.0 for shared byte admission and held-directory publication. Toko Tooling is
+package is `ic-build` 0.87.1. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
+0.80.1 for shared byte admission and held-directory publication. Toko Tooling is
 pinned to 0.44.3 in both workspaces.
+
+`ic-cargo-qualification` 0.1.0 is a separate unpublished development executable
+for external-lock admission; it adds no dependencies to the ordinary Build API.
+
+`ic-host-http` 0.80.0 is a native [complete-body adapter](docs/http-body.md).
+Consumers select Reqwest directly and own TLS/request policy.
+`make test-http-body` and `make test-backup-http` check the adapter and current
+Backup HTTP behavior using local loopback fixtures.
 
 The production owner remains the read-only `../ic-tooling` reference. All new
 packages remain unpublished; no production consumer has migrated.
@@ -17,7 +25,20 @@ The [first-slice contract](docs/build-owned-artifact.md) defines acceptance and
 [the workload register](docs/workloads.md) records later migration obligations.
 The [filesystem contract](docs/filesystem-custody.md) defines Stage 2. Run
 `make test-custody` for its focused tests and `make test-backup-custody` for the
-[pinned Backup migration](qualification/backup/README.md) in an isolated export.
+[local Backup migration](qualification/backup/README.md) in an isolated export.
+`make test-scheduling-consumer` qualifies the [local Scheduling migration](qualification/scheduling/README.md)
+through the owned build, Jobs capture/optimization and selected installed PocketIC
+subjects; prepared server/Binaryen tools and loopback access are required.
+The frozen `make test-auth-consumer` recipe reproduces historical [Auth's pinned package admission](qualification/auth/README.md)
+and checks exact archives on native and Wasm targets.
+
+`make test-canic-consumer` runs [Canic’s local record admission](qualification/canic/README.md)
+and selected original retained-plan and signed-recovery tests.
+
+Active consumer runners snapshot current local sibling inputs without modifying
+them; see [source selection](docs/qualification/local-sources.md). Old pinned runs
+remain historical evidence. Backup’s current-source tests include local-loopback
+metadata recovery fixtures.
 
 Development uses the pinned Rust 1.100.0 compiler. Real Wasm qualification needs
 its `wasm32-unknown-unknown` target, prepared explicitly with `rustup target add`.

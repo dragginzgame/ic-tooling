@@ -49,17 +49,18 @@ No stronger guarantee is claimed. Required create-only races remain safe atomica
 ## Byte and package ownership
 
 Build and filesystem publication now share the independently useful byte owner,
-`ic-host-artifacts` 0.80.0: length policy, bounded read/copy and exact SHA-256
+`ic-host-artifacts` 0.80.1: length policy, bounded read/copy and exact SHA-256
 identity. No paths, processes, codecs, HTTP or legacy digest wrapper family enters.
-`ic-host-fs` 0.80.0 owns native custody/publication. Both version lines follow registry
-0.79.0 observed on 2026-11-15 and remain unpublished. Build remains 0.87.0.
+`ic-host-fs` 0.80.1 owns native custody/publication. Both version lines follow registry
+0.79.0 observed on 2026-11-15 and remain unpublished. Build remains 0.87.1.
 Rustix and standard File own native primitives; no legacy subsystem is imported.
 
 The isolated Backup migration switches its filesystem supplier completely. Its
-existing 0.79 byte/digest and HTTP suppliers remain explicit, unmigrated dependencies
-because persisted digest representations and HTTP are outside this filesystem slice.
-They are not dependencies of the new filesystem/build products. This qualification
-is not full Backup supplier cutover or archive/host acceptance.
+initial Stage 2 qualification kept 0.79 byte/digest and HTTP suppliers outside this
+filesystem slice. Later [Backup qualification](../qualification/backup/README.md)
+migrates stream admission and HTTP bodies; legacy digest values/in-memory hashing
+remain explicit. None of those legacy suppliers enters the new filesystem/build
+products. This is not full Backup supplier cutover or archive/host acceptance.
 
 ## Acceptance
 
@@ -70,3 +71,20 @@ injected only at the owning private syscall seam; no public mock backend is adde
 Actual Backup store/payload and capture tests qualify retained recovery behavior,
 file/child identity, permissions, exact persisted bytes and cooperative locking.
 Native Linux evidence is distinct from pending native macOS and packaged consumers.
+
+## Jobs recovery-file cleanup
+
+The Stage 3 Scheduling capture migration requires removing an optimizer producer
+only after its independent retained copy is committed. `Directory::remove_file`
+compares the named entry with the caller's still-held file before descriptor-relative
+unlink. It refuses observed replacement or links; it does not synchronize the
+parent implicitly. Publication reuses that same identity/removal owner and retains
+its existing phase-specific parent synchronization. The caller excludes concurrent
+namespace writers; no atomic compare-and-unlink guarantee is added.
+
+Jobs owns optimizer flags, log/producer names, retained `.capture.pending` recovery,
+and when a failed publication may be retried after explicit reconciliation. These
+policies do not enter Build or a generic producer callback API. Capture replaces
+only the selected destination entry and preserves independent complete staging
+bytes if publication fails. Root paths passed to the external optimizer remain
+stable caller-owned inputs during that invocation.

@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-fs"
-version = "0.80.0"
+version = "0.80.1"
 edition.workspace = true
 rust-version.workspace = true
 license-file.workspace = true

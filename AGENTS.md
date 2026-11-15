@@ -18,16 +18,35 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   is identified in `docs/status/current.md`; do not restore the old architecture
   to satisfy obsolete commands or instructions. Preserve unrelated pending work.
 - The Stage 1 architecture checkpoint is complete; Stage 2 introduces shared byte
-  admission and filesystem custody for the pinned Backup qualification. Continue
+  admission and filesystem custody for the pinned Backup qualification. Stage 3
+  has a pinned Scheduling build/installed-test migration with no legacy Build;
+  consumer-owned observations stay private and Host/Testkit uses remain explicit. Continue
   through the design's staged workflows. Every increment must name a removed caller obligation
   or mechanism as well as its focused acceptance evidence.
+- Auth is on hold; Storage, Observability and Wire are frozen by maintainer
+  direction. Preserve completed evidence, but do not continue their migrations
+  or use them to expand the replacement design.
+- Qualify against current local sibling working trees, including tracked edits
+  and non-ignored new source, using read-only snapshots under `target/`. Record
+  source identity, refuse changes during capture and stale migration patches;
+  never fall back to historical commits. Keep consumer implementation in its
+  owning repository; local patches are qualification adapters, not product code.
+  Canic is being rewritten: current requirements, not its older implementation,
+  determine whether further Tooling capabilities are needed.
 - Product packages belong under `crates/`; exclude `qualification/` from the
   root workspace. Separate qualification packages get their own workspace when
   introduced. Packaging follows demonstrated ownership and dependency isolation.
 - Existing crates.io names may be reused when the new owner fits. Increment
   versions from the published line; incompatible 0.x APIs require a new minor.
-  The build owner uses `ic-build` 0.87.0; byte and filesystem owners use
-  `ic-host-artifacts` and `ic-host-fs` 0.80.0. No legacy API compatibility layer.
+  The build owner uses `ic-build` 0.87.1; byte and filesystem owners use
+  `ic-host-artifacts` and `ic-host-fs` 0.80.1. No legacy API compatibility layer.
+- `ic-cargo-qualification` 0.1.0 is an unpublished development-plane executable,
+  currently scoped to external-lock admission. Keep archive qualification and
+  release editing outside the ordinary Build API; Auth's pinned package-checker
+  migration does not imply Storage/editor/Canic cutover.
+- `ic-host-http` 0.80.0 owns complete bounded response bodies only. Consumers
+  depend directly on Reqwest for client/TLS policy; keep HTTP outside Build and
+  portable bytes. Its contract is `docs/http-body.md`.
 - Keep all replacement packages unpublished. Production consumer migration,
   registry publication and canonical cutover are separate delivery work.
 - Keep product documentation under `docs/`. Do not claim performance improvements

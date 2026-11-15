@@ -1,0 +1,1246 @@
+--- a/crates/ic-jobs/Cargo.toml
++++ b/crates/ic-jobs/Cargo.toml
+@@ -1,5 +1,6 @@
+ # Production packages: published scheduling library.
+ [package]
++workspace = "../.."
+ name = "ic-jobs"
+ version = "0.36.3"
+ edition.workspace = true
+--- a/crates/ic-timers/Cargo.toml
++++ b/crates/ic-timers/Cargo.toml
+@@ -1,4 +1,5 @@
+ [package]
++workspace = "../.."
+ name = "ic-timers"
+ rust-version.workspace = true
+ edition.workspace = true
+--- a/qualification/Cargo.toml
++++ b/qualification/Cargo.toml
+@@ -28,7 +28,9 @@
+ serde = { version = "1.0", features = ["derive"] }
+ 
+ clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context"] }
+-ic-build = "0.86.0"
++ic-byte-admission = { package = "ic-host-artifacts", path = "../../../../crates/ic-host-artifacts", version = "0.80.1" }
++ic-custody = { package = "ic-host-fs", path = "../../../../crates/ic-host-fs", version = "0.80.1" }
++ic-build = { package = "ic-build", path = "../../../../crates/ic-build", version = "0.87.1" }
+ ic-host-artifacts = "0.79.0"
+ ic-host-fs = { version = "0.79.0", default-features = false }
+ ic-host-process = { version = "0.79.0", default-features = false }
+@@ -37,6 +39,7 @@
+ ic-testkit = "0.106.0"
+ ic-wire = "0.22.0"
+ serde_json = "1.0"
++toml = "1.2.1"
+ tokio = { version = "1", default-features = false }
+ toko-tooling = "=0.43.2"
+ 
+--- a/qualification/Cargo.lock
++++ b/qualification/Cargo.lock
+@@ -178,15 +178,6 @@
+ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
+ 
+ [[package]]
+-name = "camino"
+-version = "1.2.6"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "bbbad30e4b4c14a39e3cc8aed085a12a327257c316619c93581e017bc52be591"
+-dependencies = [
+- "serde_core",
+-]
+-
+-[[package]]
+ name = "candid"
+ version = "0.10.40"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -222,30 +213,6 @@
+ ]
+ 
+ [[package]]
+-name = "cargo-platform"
+-version = "0.3.3"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "dd0061da739915fae12ea00e16397555ed4371a6bb285431aab930f61b0aa4ba"
+-dependencies = [
+- "serde",
+- "serde_core",
+-]
+-
+-[[package]]
+-name = "cargo_metadata"
+-version = "0.23.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "ef987d17b0a113becdd19d3d0022d04d7ef41f9efe4f3fb63ac44ba61df3ade9"
+-dependencies = [
+- "camino",
+- "cargo-platform",
+- "semver",
+- "serde",
+- "serde_json",
+- "thiserror 2.0.18",
+-]
+-
+-[[package]]
+ name = "cc"
+ version = "1.11.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -347,6 +314,12 @@
+ ]
+ 
+ [[package]]
++name = "const-oid"
++version = "0.10.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "be95d4a884358a21a199689323c29e9256b4a1b315e22f183d155422041d3a9a"
++
++[[package]]
+ name = "core-foundation"
+ version = "0.10.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -452,6 +425,7 @@
+ checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
+ dependencies = [
+  "block-buffer 0.12.1",
++ "const-oid",
+  "crypto-common 0.2.2",
+ ]
+ 
+@@ -819,20 +793,14 @@
+ 
+ [[package]]
+ name = "ic-build"
+-version = "0.86.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "e5502affb4030d7268148a201f15e5d3ed6cb943cba4a35430801740833090e6"
++version = "0.87.1"
+ dependencies = [
+- "cargo_metadata",
+- "ic-host-artifacts",
+- "ic-host-fs",
+- "ic-host-process",
++ "ic-host-artifacts 0.80.1",
++ "ic-host-fs 0.80.1",
+  "rustix",
+- "serde",
+  "serde_json",
++ "tempfile",
+  "thiserror 2.0.18",
+- "toml",
+- "toml_edit",
+ ]
+ 
+ [[package]]
+@@ -858,12 +826,29 @@
+ ]
+ 
+ [[package]]
++name = "ic-host-artifacts"
++version = "0.80.1"
++dependencies = [
++ "sha2 0.11.1",
++ "thiserror 2.0.18",
++]
++
++[[package]]
+ name = "ic-host-fs"
+ version = "0.79.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9ef7770c178efe33ca0d9fcb54e78ad45f0c9c3d499f2e1bac70fb1ba5bba182"
+ dependencies = [
+- "ic-host-artifacts",
++ "ic-host-artifacts 0.79.0",
++ "rustix",
++ "thiserror 2.0.18",
++]
++
++[[package]]
++name = "ic-host-fs"
++version = "0.80.1"
++dependencies = [
++ "ic-host-artifacts 0.80.1",
+  "rustix",
+  "thiserror 2.0.18",
+ ]
+@@ -874,8 +859,8 @@
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "3bfc02220bee55d050f8ebedce5f5ff71764028afcef8b58c1ae2bceb945e650"
+ dependencies = [
+- "ic-host-artifacts",
+- "ic-host-fs",
++ "ic-host-artifacts 0.79.0",
++ "ic-host-fs 0.79.0",
+  "libc",
+  "rustix",
+ ]
+@@ -892,8 +877,9 @@
+ version = "0.34.16"
+ dependencies = [
+  "clap",
+- "ic-build",
+- "ic-host-fs",
++ "ic-host-artifacts 0.80.1",
++ "ic-host-fs 0.79.0",
++ "ic-host-fs 0.80.1",
+  "ic-host-process",
+  "ic-jobs-test-consumer",
+  "ic-platform-types",
+@@ -1014,8 +1000,8 @@
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "090cea21af2208dad7a359e99fe803b356fe8daa27cdc52d545df7de3b32c43e"
+ dependencies = [
+- "ic-host-artifacts",
+- "ic-host-fs",
++ "ic-host-artifacts 0.79.0",
++ "ic-host-fs 0.79.0",
+  "ic-host-process",
+  "ic-platform",
+  "ic-platform-types",
+@@ -1041,8 +1027,10 @@
+ dependencies = [
+  "clap",
+  "ic-build",
+- "ic-host-artifacts",
+- "ic-host-fs",
++ "ic-host-artifacts 0.79.0",
++ "ic-host-artifacts 0.80.1",
++ "ic-host-fs 0.79.0",
++ "ic-host-fs 0.80.1",
+  "ic-host-process",
+  "ic-jobs-canister-tests",
+  "ic-platform-types",
+@@ -1053,6 +1041,7 @@
+  "serde_json",
+  "tokio",
+  "toko-tooling",
++ "toml",
+ ]
+ 
+ [[package]]
+@@ -2509,19 +2498,6 @@
+ ]
+ 
+ [[package]]
+-name = "toml_edit"
+-version = "0.25.19+spec-1.1.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "dd43688c4858d7264ae1cf9a9f874a67c3feb74a883b1cd7bebd6a4ea8307218"
+-dependencies = [
+- "indexmap",
+- "toml_datetime",
+- "toml_parser",
+- "toml_writer",
+- "winnow",
+-]
+-
+-[[package]]
+ name = "toml_parser"
+ version = "1.1.5+spec-1.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -2974,9 +2950,6 @@
+ version = "1.0.5"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "8c3b93199df0ab874cdf0c6a94f0a0dc3423fe41f1cafb62b8bd7b1deb277aef"
+-dependencies = [
+- "memchr",
+-]
+ 
+ [[package]]
+ name = "writeable"
+--- a/qualification/ic-timers-pocketic/Cargo.toml
++++ b/qualification/ic-timers-pocketic/Cargo.toml
+@@ -21,6 +21,9 @@
+ [dependencies]
+ clap = { workspace = true, features = ["derive"] }
+ ic-build.workspace = true
++ic-byte-admission.workspace = true
++ic-custody.workspace = true
++toml.workspace = true
+ ic-host-artifacts.workspace = true
+ ic-host-fs.workspace = true
+ ic-host-process.workspace = true
+--- a/qualification/ic-timers-pocketic/src/build/mod.rs
++++ b/qualification/ic-timers-pocketic/src/build/mod.rs
+@@ -1,42 +1,26 @@
+ //! Consumer recipes; IC Build owns Cargo execution and exact Wasm artifacts.
+ 
+-use ic_build::artifacts::CapturedArtifact;
+-use ic_build::cargo::{
+-    environment::{
+-        ConfigurationLimits, configuration_directories, observe_configurations,
+-        preferred_configuration,
+-    },
+-    execution::{
+-        CargoExecutionPolicy, CargoInvocation, CargoRecipe, execute_cargo, select_cdylib_wasm,
+-    },
+-    observation::schema,
+-    selection::{CargoFeatureSelection, CargoSelection},
+-};
++mod inputs;
+ use ic_host_artifacts::artifact::{Sha256Digest, hash_reader, tree::checksum_relative_files};
+ use ic_host_fs::durable::{PublicationMode, WriteOptions, write_bytes};
+ use ic_host_process::{
+-    child::{CleanupPolicy, OwnedChild},
+-    tool::{
+-        OutputLimit, OutputLimits, OutputStream, ToolError, capture_command, run_group_command,
+-    },
++    child::CleanupPolicy,
++    tool::{OutputLimit, OutputLimits, ToolError, capture_command, run_group_command},
+ };
+ use std::{
+     collections::BTreeSet,
+-    io::Write as _,
+     os::fd::AsFd as _,
+     path::{Path, PathBuf},
+     process::Command,
+     time::Duration,
+ };
+ 
+-// Qualification admits small Cargo configuration trees. Build owns bounded
+-// reads and include traversal; Timers owns these positive resource budgets.
+-const CONFIGURATION_LIMITS: ConfigurationLimits = ConfigurationLimits {
+-    file_bytes: 1024 * 1024,
+-    total_bytes: 16 * 1024 * 1024,
+-    files: 128,
+-    depth: 32,
+-};
++// Only consumer evidence is retained; the actual request is the recipe owner.
++pub(crate) struct BuildEvidence {
++    pub(crate) cargo: Vec<u8>,
++    pub(crate) rustc: Vec<u8>,
++    pub(crate) recipe: String,
++}
+ 
+ // This private driver admits the repository's tracked and unignored files,
+ // including both workspaces and their locks. Cargo owns dependency resolution;
+@@ -77,39 +61,17 @@
+             .sha256,
+         ));
+     }
+-    let directories = configuration_directories(
++    let (configurations, recipe) = inputs::snapshot(
+         root,
+         std::env::var_os("CARGO_HOME").as_deref(),
+         std::env::var_os("HOME").as_deref(),
+     )?;
+-    let configurations = directories
+-        .iter()
+-        .filter_map(|directory| preferred_configuration(directory))
+-        .collect::<Vec<_>>();
+-    let observed = observe_configurations(&configurations, CONFIGURATION_LIMITS)?;
+-    if observed
+-        .iter()
+-        .any(|configuration| !configuration.compiler_overrides.is_empty())
+-    {
+-        return Err("qualification requires explicit compiler selection without Cargo configuration overrides".into());
+-    }
+-    let configuration_identity = observed
+-        .iter()
+-        .map(|configuration| (&configuration.path, configuration.sha256.to_string()))
+-        .collect::<Vec<_>>();
+     let source = Sha256Digest::compute(&serde_json::to_vec(&(
+         checksum_relative_files(files)?.to_string(),
+-        configuration_identity,
++        configurations,
+     ))?)
+     .to_string();
+-    let recipes = observed
+-        .iter()
+-        .map(|configuration| configuration.recipe_sha256.map(|digest| digest.to_string()))
+-        .collect::<Vec<_>>();
+-    Ok((
+-        source,
+-        Sha256Digest::compute(&serde_json::to_vec(&recipes)?).to_string(),
+-    ))
++    Ok((source, recipe))
+ }
+ 
+ /// Full qualification or an explicitly narrower development selection.
+@@ -410,26 +372,12 @@
+             .collect()
+     };
+     for (label, variable, package, feature) in recipes {
+-        let target = root.join("target/timers").join(format!("cargo-{label}"));
+-        let target_lock = ic_host_fs::durable::open_regular_lock_file_with_parents(
+-            &target.with_extension("lock"),
+-        )?;
+-        ic_host_fs::durable::lock_exclusive(&target_lock)?;
+-        let selection = CargoSelection {
+-            profile: Some("timer-probe".to_owned()),
+-            locked: true,
+-            offline: true,
+-            features: CargoFeatureSelection {
+-                features: feature.map(str::to_owned).into_iter().collect(),
+-                default_features: feature.is_none(),
+-                ..CargoFeatureSelection::default()
+-            },
+-        };
++        // Preparation selects real toolchain executables; no PATH lookup or download here.
++        let cargo =
++            PathBuf::from(std::env::var_os("IC_OWNED_CARGO").ok_or("missing prepared Cargo")?);
++        let rustc =
++            PathBuf::from(std::env::var_os("IC_OWNED_RUSTC").ok_or("missing prepared rustc")?);
+         let mut environment: std::collections::BTreeMap<_, _> = std::env::vars_os().collect();
+-        environment
+-            .entry("RUSTC".into())
+-            .or_insert_with(|| "rustc".into());
+-        environment.insert("CARGO_TARGET_DIR".into(), target.into_os_string());
+         for name in [
+             "RUSTC_WRAPPER",
+             "RUSTC_WORKSPACE_WRAPPER",
+@@ -445,63 +393,91 @@
+                 );
+             }
+         }
+-        let invocation = CargoInvocation {
+-            cargo_program: "cargo".into(),
+-            working_directory: root.clone(),
+-            environment,
+-            target: "wasm32-unknown-unknown".into(),
+-            selection,
+-            packages: vec![package.into()],
+-            manifest_path: Some(root.join("Cargo.toml")),
+-            recipe: CargoRecipe::Library,
+-            configurations: Vec::new(),
+-            render_diagnostics: true,
+-            keep_going: false,
+-        };
+-        let mut messages = Vec::new();
+-        let observed = execute_cargo(
+-            &invocation,
+-            CargoExecutionPolicy {
+-                output: OutputLimits {
+-                    stdout: OutputLimit::Truncate(0),
+-                    stderr: OutputLimit::Truncate(1024 * 1024),
+-                    timeout: None,
+-                },
+-                message_bytes: 16 * 1024 * 1024,
+-                probe_cleanup: CleanupPolicy::KillAndWait,
+-            },
+-            OwnedChild::spawn_direct,
+-            || false,
+-            |stream, bytes| {
+-                if stream == OutputStream::Stderr {
+-                    std::io::stderr().write_all(bytes)
+-                } else {
+-                    Ok(())
+-                }
+-            },
+-            |message| {
+-                if let schema::Message::CompilerMessage(diagnostic) = &message
+-                    && let Some(rendered) = &diagnostic.message.rendered
+-                {
+-                    std::io::stderr().write_all(rendered.as_bytes())?;
+-                }
+-                messages.push(message);
+-                Ok(())
++        for name in [
++            "RUSTC",
++            "CARGO_TARGET_DIR",
++            "RUSTC_WRAPPER",
++            "RUSTC_WORKSPACE_WRAPPER",
++        ] {
++            environment.remove(std::ffi::OsStr::new(name));
++        }
++        let observe =
++            |program: &Path, args: &[&str]| -> Result<Vec<u8>, Box<dyn std::error::Error>> {
++                let output = capture_command(
++                    Command::new(program)
++                        .current_dir(&root)
++                        .env_clear()
++                        .envs(&environment)
++                        .args(args),
++                    OutputLimits {
++                        stdout: OutputLimit::Terminate(64 * 1024),
++                        stderr: OutputLimit::Terminate(64 * 1024),
++                        timeout: Some(Duration::from_secs(30)),
++                    },
++                )?
++                .require_success()?;
++                let mut bytes = output.stdout;
++                bytes.extend_from_slice(&output.stderr);
++                Ok(bytes)
++            };
++        let cargo_identity = observe(&cargo, &["--version", "--verbose"])?;
++        let rustc_identity = observe(&rustc, &["-vV"])?;
++        let package_id = test_listing(
++            Command::new(&cargo).current_dir(&root).args([
++                "pkgid",
++                "--offline",
++                "--locked",
++                "--package",
++                package,
++            ]),
++            &scratch,
++            &format!("package-{label}"),
++        )?;
++        let request = ic_build::BuildRequest {
++            manifest: root.join("Cargo.toml"),
++            package: package.into(),
++            package_id: std::str::from_utf8(&package_id)?.trim().into(),
++            library: package.replace('-', "_"),
++            cargo: cargo.clone(),
++            rustc: rustc.clone(),
++            scratch_parent: scratch.clone(),
++            profile: "timer-probe".into(),
++            features: feature.map(str::to_owned).into_iter().collect(),
++            default_features: feature.is_none(),
++            environment: environment.clone().into_iter().collect(),
++            limits: ic_build::Limits {
++                stdout_bytes: 64 * 1024 * 1024,
++                stderr_bytes: 16 * 1024 * 1024,
++                record_bytes: 16 * 1024 * 1024,
++                candidates: 2,
++                artifact_bytes: 1024 * 1024 * 1024,
++                elapsed: Duration::from_secs(20 * 60),
+             },
++        };
++        let owned = ic_build::build(
++            &request,
++            &std::sync::atomic::AtomicBool::new(false),
++            &mut std::io::stderr(),
+         )?;
+-        observed.execution?.require_success()?;
+-        observed.messages?;
+-        let facts = observed
+-            .facts?
+-            .ok_or("successful build omitted compiler observations")?;
+-        let output = select_cdylib_wasm(
+-            &messages,
+-            &root.join(package).join("Cargo.toml"),
+-            &invocation.recipe,
++        if cargo_identity != observe(&cargo, &["--version", "--verbose"])?
++            || rustc_identity != observe(&rustc, &["-vV"])?
++        {
++            return Err("compiler identity changed during owned build".into());
++        }
++        let evidence = BuildEvidence {
++            cargo: cargo_identity,
++            rustc: rustc_identity,
++            recipe: inputs::recipe(&request, &configuration_digest)?,
++        };
++        let artifact = scratch.join(format!("{label}.wasm"));
++        write_bytes(
++            &artifact,
++            WriteOptions {
++                mode: PublicationMode::CreateNew,
++                permissions: 0o600,
++            },
++            owned.bytes(),
+         )?;
+-        let artifact = CapturedArtifact::capture(&output, &scratch, 1024 * 1024 * 1024)?
+-            .retain_to(&scratch.join(format!("{label}.wasm")))?;
+-        drop(target_lock);
+         if input_digest != qualification_inputs(&root, &scratch, "inputs-built")?.0 {
+             return Err("qualification source or configuration changed during builds".into());
+         }
+@@ -509,9 +485,8 @@
+         report.record_build(
+             label,
+             feature.unwrap_or("default"),
+-            &facts,
++            &evidence,
+             &input_digest,
+-            &configuration_digest,
+             &artifact,
+         )?;
+         // Invocation-owned diagnostic artifacts survive both passing and failed
+--- a/qualification/ic-timers-pocketic/src/report/mod.rs
++++ b/qualification/ic-timers-pocketic/src/report/mod.rs
+@@ -1,10 +1,10 @@
+ //! Host-only qualification receipts and cohort comparisons; never deployed in probes.
+ 
++use crate::build::BuildEvidence;
+ use crate::{
+     build::Qualification,
+     cohort::{Cohort, Measurements},
+ };
+-use ic_build::cargo::execution::CargoBuildFacts;
+ use ic_host_artifacts::artifact::{hash_reader, read_reader};
+ use ic_host_fs::durable::{PublicationMode, WriteOptions, write_bytes};
+ use serde::{Deserialize, Serialize};
+@@ -157,9 +157,8 @@
+         &mut self,
+         label: &str,
+         feature: &str,
+-        facts: &CargoBuildFacts,
++        evidence: &BuildEvidence,
+         input_digest: &str,
+-        configuration_digest: &str,
+         artifact: &Path,
+     ) -> Result<()> {
+         let context = Context {
+@@ -167,31 +166,14 @@
+             server_sha256: self.environment.server_sha256.clone(),
+             host: self.environment.host.clone(),
+             profile: self.environment.profile.clone(),
+-            rustc: String::from_utf8(facts.rustc_identity.clone())?,
+-            cargo: String::from_utf8(facts.cargo_identity.clone())?,
+-            target: facts.target.clone(),
++            rustc: String::from_utf8(evidence.rustc.clone())?,
++            cargo: String::from_utf8(evidence.cargo.clone())?,
++            target: "wasm32-unknown-unknown".into(),
+         };
+-        let recipe_environment = facts
+-            .environment
+-            .iter()
+-            .filter(|(name, _)| {
+-                name.as_os_str() != "CARGO_TARGET_DIR"
+-                    && name
+-                        .to_str()
+-                        .is_some_and(ic_build::cargo::environment::is_build_variable)
+-            })
+-            .map(|(name, value)| (name.as_encoded_bytes(), value.as_encoded_bytes()))
+-            .collect::<Vec<_>>();
+-        let environment_digest = ic_host_artifacts::artifact::Sha256Digest::compute(
+-            &serde_json::to_vec(&recipe_environment)?,
+-        );
+         let artifact = Artifact {
+             wasm_sha256: digest(artifact)?,
+             input_digest: input_digest.into(),
+-            recipe_identity: format!(
+-                "library/{label}/{:?}/{configuration_digest}/{environment_digest}",
+-                facts.selection
+-            ),
++            recipe_identity: evidence.recipe.clone(),
+             feature: feature.into(),
+         };
+         self.admit_context(context)?;
+--- a/qualification/ic-timers-pocketic/src/build/inputs/mod.rs
++++ b/qualification/ic-timers-pocketic/src/build/inputs/mod.rs
+@@ -0,0 +1,231 @@
++//! Timers-owned admission and receipt identity, not a Cargo precedence model.
++use ic_byte_admission::{Length, read};
++use ic_custody::{Access, Directory, FilePolicy};
++use ic_host_artifacts::artifact::Sha256Digest;
++use std::{
++    collections::BTreeSet,
++    ffi::OsStr,
++    io,
++    path::{Path, PathBuf},
++};
++use toml::Value;
++
++type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
++const FILE_BYTES: u64 = 1024 * 1024;
++const TOTAL_BYTES: usize = 16 * 1024 * 1024;
++const FILES: usize = 128;
++const DEPTH: usize = 32;
++const COMPILERS: &[&str] = &[
++    "RUSTC",
++    "RUSTDOC",
++    "RUSTC_WRAPPER",
++    "RUSTC_WORKSPACE_WRAPPER",
++    "CARGO_BUILD_RUSTC",
++    "CARGO_BUILD_RUSTDOC",
++    "CARGO_BUILD_RUSTC_WRAPPER",
++    "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
++];
++
++fn invalid() -> Box<dyn std::error::Error> {
++    io::Error::new(
++        io::ErrorKind::InvalidData,
++        "Cargo configuration refused (structure, compiler override or resource bound)",
++    )
++    .into()
++}
++fn present(path: &Path) -> io::Result<bool> {
++    match path.symlink_metadata() {
++        Ok(_) => Ok(true),
++        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
++        Err(error) => Err(error),
++    }
++}
++fn roots(
++    invocation: &Path,
++    cargo_home: Option<&OsStr>,
++    home: Option<&OsStr>,
++) -> Result<Vec<PathBuf>> {
++    if !invocation.is_absolute() {
++        return Err(invalid());
++    }
++    let mut directories: Vec<_> = invocation.ancestors().map(|p| p.join(".cargo")).collect();
++    if let Some(home) = cargo_home
++        .map(PathBuf::from)
++        .or_else(|| home.map(|p| Path::new(p).join(".cargo")))
++    {
++        directories.push(if home.is_absolute() {
++            home
++        } else {
++            invocation.join(home)
++        });
++    }
++    let mut paths = Vec::new();
++    for directory in directories {
++        for name in ["config", "config.toml"] {
++            let path = directory.join(name);
++            if present(&path)? {
++                paths.push(path);
++                break;
++            }
++        }
++    }
++    Ok(paths)
++}
++
++// Receipt data holds only paths and digests, never parsed values or source text.
++pub(super) fn snapshot(
++    invocation: &Path,
++    cargo_home: Option<&OsStr>,
++    home: Option<&OsStr>,
++) -> Result<(Vec<(PathBuf, String)>, String)> {
++    observe(roots(invocation, cargo_home, home)?)
++}
++fn observe(roots: Vec<PathBuf>) -> Result<(Vec<(PathBuf, String)>, String)> {
++    let mut pending: Vec<_> = roots
++        .into_iter()
++        .rev()
++        .map(|path| (path, false, Vec::<PathBuf>::new()))
++        .collect();
++    let mut seen = BTreeSet::new();
++    let mut total = 0;
++    let mut attempts = 0;
++    let mut files = Vec::new();
++    while let Some((path, optional, ancestors)) = pending.pop() {
++        if ancestors.len() > DEPTH || attempts == FILES {
++            return Err(invalid());
++        }
++        attempts += 1;
++        if !path.is_absolute() {
++            return Err(invalid());
++        }
++        if !present(&path)? {
++            if optional {
++                continue;
++            }
++            return Err(io::Error::from(io::ErrorKind::NotFound).into());
++        }
++        let location = path.canonicalize()?;
++        if ancestors.contains(&location) {
++            return Err(invalid());
++        }
++        if !seen.insert(path.clone()) {
++            continue;
++        }
++        let parent = path.parent().ok_or_else(invalid)?;
++        let directory =
++            Directory::open(parent, 0)?.ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?;
++        let file = directory
++            .open_file(
++                path.file_name().ok_or_else(invalid)?,
++                Access::Read,
++                FilePolicy {
++                    forbidden: 0,
++                    single_link: false,
++                },
++            )?
++            .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?;
++        let (bytes, identity) = read(
++            file,
++            Length::AtMost(FILE_BYTES.min((TOTAL_BYTES - total) as u64)),
++        )?;
++        total += bytes.len();
++        // Suppress parser details: they may include credentials from the input.
++        let config: Value = toml::from_str(std::str::from_utf8(&bytes).map_err(|_| invalid())?)
++            .map_err(|_| invalid())?;
++        for (table, names) in [
++            (
++                "build",
++                &[
++                    "rustc",
++                    "rustdoc",
++                    "rustc-wrapper",
++                    "rustc-workspace-wrapper",
++                ][..],
++            ),
++            ("env", COMPILERS),
++        ] {
++            if let Some(value) = config.get(table) {
++                let values = value.as_table().ok_or_else(invalid)?;
++                if names.iter().any(|name| values.contains_key(*name)) {
++                    return Err(invalid());
++                }
++            }
++        }
++        files.push((
++            path.clone(),
++            Sha256Digest::from_bytes(identity.sha256).to_string(),
++        ));
++        if let Some(include) = config.get("include") {
++            let values = match include {
++                Value::Array(values) => values.as_slice(),
++                value => std::slice::from_ref(value),
++            };
++            if pending.len() + values.len() > FILES {
++                return Err(invalid());
++            }
++            let mut ancestors = ancestors;
++            ancestors.push(location);
++            for value in values.iter().rev() {
++                let (name, optional) = match value {
++                    Value::String(name) => (name.as_str(), false),
++                    Value::Table(fields) => (
++                        fields
++                            .get("path")
++                            .and_then(Value::as_str)
++                            .ok_or_else(invalid)?,
++                        fields
++                            .get("optional")
++                            .map(|v| v.as_bool().ok_or_else(invalid))
++                            .transpose()?
++                            .unwrap_or(false),
++                    ),
++                    _ => return Err(invalid()),
++                };
++                pending.push((parent.join(name), optional, ancestors.clone()));
++            }
++        }
++    }
++    let digests: Vec<_> = files.iter().map(|(_, digest)| digest).collect();
++    let recipe = Sha256Digest::compute(&serde_json::to_vec(&digests)?).to_string();
++    Ok((files, recipe))
++}
++
++pub(super) fn recipe(request: &ic_build::BuildRequest, configuration: &str) -> Result<String> {
++    let mut environment: Vec<_> = request
++        .environment
++        .iter()
++        .filter(|(name, _)| {
++            name.to_str().is_some_and(|name| {
++                matches!(
++                    name,
++                    "RUSTFLAGS"
++                        | "RUSTDOCFLAGS"
++                        | "CARGO_ENCODED_RUSTFLAGS"
++                        | "CARGO_ENCODED_RUSTDOCFLAGS"
++                        | "CARGO_INCREMENTAL"
++                        | "RUSTC_BOOTSTRAP"
++                ) || name.starts_with("CARGO_BUILD_")
++                    || name.starts_with("CARGO_PROFILE_")
++                    || name.starts_with("CARGO_TARGET_") && name != "CARGO_TARGET_DIR"
++            })
++        })
++        .map(|(name, value)| (name.as_encoded_bytes(), value.as_encoded_bytes()))
++        .collect();
++    environment.sort();
++    let bytes = serde_json::to_vec(&(
++        "owned-build-v1",
++        &request.package,
++        &request.library,
++        &request.profile,
++        &request.features,
++        request.default_features,
++        "wasm32-unknown-unknown",
++        "locked-offline",
++        configuration,
++        environment,
++    ))?;
++    Ok(format!("owned-build-v1/{}", Sha256Digest::compute(&bytes)))
++}
++
++#[cfg(test)]
++mod tests;
+--- a/qualification/ic-timers-pocketic/src/build/inputs/tests.rs
++++ b/qualification/ic-timers-pocketic/src/build/inputs/tests.rs
+@@ -0,0 +1,148 @@
++use super::*;
++use std::fs;
++
++fn fixture() -> ic_host_fs::testing::FixtureDirectory {
++    ic_host_fs::testing::FixtureDirectory::new(
++        &crate::build::scratch_parent().unwrap(),
++        "timer-inputs",
++    )
++    .unwrap()
++}
++#[test]
++fn configuration_selection_includes_and_drift_are_explicit() {
++    let fixture = fixture();
++    let root = fixture.path();
++    fs::create_dir(root.join(".cargo")).unwrap();
++    let config = root.join(".cargo/config");
++    fs::write(
++        &config,
++        "include = ['child.toml', {path='absent', optional=true}]\n",
++    )
++    .unwrap();
++    fs::write(root.join(".cargo/config.toml"), "malformed fallback").unwrap();
++    let child = root.join(".cargo/child.toml");
++    fs::write(&child, "[build]\njobs=2\n").unwrap();
++    assert!(roots(root, None, None).unwrap().contains(&config));
++    assert!(
++        !roots(root, None, None)
++            .unwrap()
++            .contains(&root.join(".cargo/config.toml"))
++    );
++    let before = observe(vec![config.clone()]).unwrap();
++    assert_eq!(before.0.len(), 2);
++    assert_eq!(before, observe(vec![config.clone()]).unwrap());
++    fs::write(&child, "[build]\njobs=3\n").unwrap();
++    let after = observe(vec![config.clone()]).unwrap();
++    assert_ne!(before.1, after.1);
++    for declaration in [
++        "[build]\nrustc=''",
++        "[env]\nRUSTC_WRAPPER={value='',force=false}",
++        "[env]\nCARGO_BUILD_RUSTDOC='secret-tool'",
++    ] {
++        fs::write(&child, declaration).unwrap();
++        let error = observe(vec![config.clone()]).unwrap_err();
++        assert!(!error.to_string().contains("secret-tool"));
++    }
++    fs::write(&config, "include='required-missing'").unwrap();
++    assert!(
++        observe(vec![config])
++            .unwrap_err()
++            .downcast_ref::<io::Error>()
++            .is_some_and(|e| e.kind() == io::ErrorKind::NotFound)
++    );
++}
++#[test]
++fn unsafe_invalid_and_excessive_configurations_refuse_without_text_leakage() {
++    let fixture = fixture();
++    let root = fixture.path();
++    let config = root.join("config");
++    for text in [
++        "token = 'PRIVATE-secret",
++        "include=17",
++        "[env]\nRUSTC={value='PRIVATE-secret'}",
++        "build='PRIVATE-secret'",
++    ] {
++        fs::write(&config, text).unwrap();
++        let error = observe(vec![config.clone()]).unwrap_err();
++        assert!(!format!("{error:?}").contains("PRIVATE-secret"));
++    }
++    fs::write(&config, "include='config'").unwrap();
++    assert!(observe(vec![config.clone()]).is_err());
++    fs::write(&config, vec![b' '; FILE_BYTES as usize + 1]).unwrap();
++    assert!(observe(vec![config.clone()]).is_err());
++    fs::remove_file(&config).unwrap();
++    fs::write(root.join("target"), "[build]\njobs=1").unwrap();
++    std::os::unix::fs::symlink("target", &config).unwrap();
++    assert!(observe(vec![config.clone()]).is_err());
++    fs::remove_file(&config).unwrap();
++    fs::write(&config, "").unwrap();
++    // Distinct optional lookups still spend the traversal budget.
++    fs::write(
++        &config,
++        format!(
++            "include=[{}]",
++            (0..129)
++                .map(|n| format!("{{path='missing{n}', optional=true}}"))
++                .collect::<Vec<_>>()
++                .join(",")
++        ),
++    )
++    .unwrap();
++    assert!(observe(vec![config]).is_err());
++    for n in 0..34 {
++        fs::write(
++            root.join(format!("depth{n}")),
++            format!("include='depth{}'", n + 1),
++        )
++        .unwrap();
++    }
++    assert!(observe(vec![root.join("depth0")]).is_err());
++    let mut paths = Vec::new();
++    for n in 0..17 {
++        let path = root.join(format!("large{n}"));
++        fs::write(&path, vec![b' '; FILE_BYTES as usize]).unwrap();
++        paths.push(path);
++    }
++    assert!(observe(paths).is_err());
++}
++#[test]
++fn recipe_binds_actual_choices_and_ignores_private_output_locations() {
++    let mut request = ic_build::BuildRequest {
++        manifest: "/source/Cargo.toml".into(),
++        package: "probe".into(),
++        package_id: "opaque-id".into(),
++        library: "probe".into(),
++        cargo: "/tools/cargo".into(),
++        rustc: "/tools/rustc".into(),
++        scratch_parent: "/scratch/one".into(),
++        profile: "timer-probe".into(),
++        features: vec![],
++        default_features: true,
++        environment: vec![
++            ("RUSTFLAGS".into(), "-C opt-level=z".into()),
++            ("TOKEN".into(), "secret".into()),
++        ],
++        limits: ic_build::Limits {
++            stdout_bytes: 1,
++            stderr_bytes: 1,
++            record_bytes: 1,
++            candidates: 1,
++            artifact_bytes: 1,
++            elapsed: std::time::Duration::from_secs(1),
++        },
++    };
++    let original = recipe(&request, "config").unwrap();
++    assert!(original.starts_with("owned-build-v1/"));
++    assert!(!original.contains("secret"));
++    request.scratch_parent = "/scratch/two".into();
++    request.environment.reverse();
++    assert_eq!(original, recipe(&request, "config").unwrap());
++    assert_ne!(original, recipe(&request, "changed").unwrap());
++    request.features.push("watchdog".into());
++    assert_ne!(original, recipe(&request, "config").unwrap());
++    request.features.clear();
++    request
++        .environment
++        .push(("CARGO_INCREMENTAL".into(), "0".into()));
++    assert_ne!(original, recipe(&request, "config").unwrap());
++}
+--- a/qualification/ic-jobs-canister-tests/Cargo.toml
++++ b/qualification/ic-jobs-canister-tests/Cargo.toml
+@@ -32,7 +32,8 @@
+ 
+ [dependencies]
+ clap = { workspace = true, features = ["derive", "std", "help", "usage", "error-context"] }
+-ic-build.workspace = true
++ic-byte-admission.workspace = true
++ic-custody.workspace = true
+ ic-host-process.workspace = true
+ # Disabled for ordinary artifact-capture builds.
+ ic-jobs-test-consumer = { workspace = true, optional = true }
+--- a/qualification/ic-jobs-canister-tests/src/bin/jobs-capture-artifact.rs
++++ b/qualification/ic-jobs-canister-tests/src/bin/jobs-capture-artifact.rs
+@@ -1,6 +1,7 @@
+-//! Jobs-owned optimizer recipe and evidence names around IC Build's exact capture.
++//! Jobs-owned optimizer recipe and recovery evidence using held filesystem custody.
+ use clap::{Args, Parser};
+-use ic_build::artifacts::{CapturedArtifact, produce_and_retain_artifact};
++use ic_byte_admission::Length;
++use ic_custody::{Access, Commit, Destination, Directory, FilePolicy, Policy, Retention};
+ use ic_host_process::status::shell_status_code;
+ use std::{
+     ffi::OsStr,
+@@ -9,45 +10,149 @@
+     process::{Command, ExitCode},
+ };
+ 
+-fn capture(source: &Path, destination: &Path) -> io::Result<()> {
+-    let parent = destination
++const STAGING: &str = ".capture.pending";
++
++#[derive(Debug)]
++struct CaptureFailure {
++    retained_path: PathBuf,
++    outcome: Commit,
++}
++impl std::fmt::Display for CaptureFailure {
++    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        write!(
++            formatter,
++            "capture retained at {}: {:?}",
++            self.retained_path.display(),
++            self.outcome
++        )
++    }
++}
++impl std::error::Error for CaptureFailure {
++    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
++        match &self.outcome {
++            Commit::NotPublished { cause, .. } | Commit::PublishedUnconfirmed { cause, .. } => {
++                Some(cause)
++            }
++            Commit::Committed(_) => None,
++        }
++    }
++}
++fn filesystem(error: ic_custody::Error) -> io::Error {
++    match error {
++        ic_custody::Error::Io(cause) => cause,
++        other => io::Error::other(other),
++    }
++}
++fn parent(path: &Path) -> io::Result<(Directory, &Path, &OsStr)> {
++    let parent = path
+         .parent()
+-        .ok_or_else(|| io::Error::other("missing evidence parent"))?;
+-    let limit = usize::try_from(fs::metadata(source)?.len()).map_err(io::Error::other)?;
+-    CapturedArtifact::capture(source, parent, limit)?
+-        .retain_to(destination)
+-        .map(|_| ())
+-        .map_err(io::Error::other)
++        .ok_or_else(|| io::Error::other("missing parent"))?;
++    let parent = if parent.as_os_str().is_empty() {
++        Path::new(".")
++    } else {
++        parent
++    };
++    let name = path
++        .file_name()
++        .ok_or_else(|| io::Error::other("missing filename"))?;
++    let held = Directory::open(parent, 0)
++        .map_err(filesystem)?
++        .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?;
++    Ok((held, parent, name))
++}
++fn open(parent: &Directory, name: &OsStr) -> io::Result<fs::File> {
++    parent
++        .open_file(
++            name,
++            Access::Read,
++            FilePolicy {
++                forbidden: 0,
++                single_link: false,
++            },
++        )
++        .map_err(filesystem)?
++        .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))
++}
++fn retain(source: &fs::File, destination: &Path, held: &Directory) -> io::Result<()> {
++    let name = destination
++        .file_name()
++        .ok_or_else(|| io::Error::other("missing destination name"))?;
++    let staging = held
++        .stage(
++            OsStr::new(STAGING),
++            name,
++            Policy {
++                destination: Destination::Replace,
++                permissions: 0o600,
++                retention: Retention::Retain,
++            },
++        )
++        .map_err(io::Error::other)?;
++    let sealed = staging
++        .write_from(source, Length::Exactly(source.metadata()?.len()))
++        .map_err(io::Error::other)?
++        .seal()
++        .map_err(io::Error::other)?;
++    let outcome = sealed.commit();
++    let retained_path = match &outcome {
++        Commit::Committed(_) => return Ok(()),
++        Commit::NotPublished { .. } => destination.with_file_name(STAGING),
++        Commit::PublishedUnconfirmed { .. } => destination.to_owned(),
++    };
++    Err(io::Error::other(CaptureFailure {
++        retained_path,
++        outcome,
++    }))
++}
++fn capture(source: &Path, destination: &Path) -> io::Result<()> {
++    let (source_parent, _, source_name) = parent(source)?;
++    let source = open(&source_parent, source_name)?;
++    let (destination_parent, _, _) = parent(destination)?;
++    retain(&source, destination, &destination_parent)
+ }
+-
+ fn optimize(
+     source: &Path,
+     destination: &Path,
+     optimizer: &OsStr,
+     level: &OsStr,
+ ) -> io::Result<ExitCode> {
+-    let parent = destination
+-        .parent()
+-        .ok_or_else(|| io::Error::other("missing evidence parent"))?;
+-    let producer = parent.join("producer.wasm");
+-    // Admit the complete optimizer output, as in the original capture path.
+-    // Build owns exclusive producer/log admission and capture-before-removal.
+-    let status = produce_and_retain_artifact(
+-        &producer,
+-        &parent.join("optimizer.log"),
+-        destination,
+-        usize::MAX,
+-        |producer, log| {
+-            Command::new(optimizer)
+-                .arg(source)
+-                .arg(level)
+-                .arg("-o")
+-                .arg(producer)
+-                .stdout(log.try_clone()?)
+-                .stderr(log)
+-                .status()
+-        },
+-    )?;
++    let (held, directory, name) = parent(destination)?;
++    if [
++        OsStr::new("producer.wasm"),
++        OsStr::new("optimizer.log"),
++        OsStr::new(STAGING),
++    ]
++    .contains(&name)
++    {
++        return Err(io::Error::new(
++            io::ErrorKind::InvalidInput,
++            "evidence names must be distinct",
++        ));
++    }
++    // The caller keeps this optimizer pathname's parent stable during execution.
++    // Exclusive producer/log admission precedes dispatch; all failures retain them.
++    drop(
++        held.create_file(OsStr::new("producer.wasm"), 0o600)
++            .map_err(filesystem)?,
++    );
++    let log = held
++        .create_file(OsStr::new("optimizer.log"), 0o600)
++        .map_err(filesystem)?;
++    let status = Command::new(optimizer)
++        .arg(source)
++        .arg(level)
++        .arg("-o")
++        .arg(directory.join("producer.wasm"))
++        .stdout(log.try_clone()?)
++        .stderr(log)
++        .status()?;
++    if status.success() {
++        let producer = open(&held, OsStr::new("producer.wasm"))?;
++        retain(&producer, destination, &held)?;
++        held.remove_file(OsStr::new("producer.wasm"), &producer)
++            .map_err(filesystem)?;
++        held.sync()?;
++    }
+     let code = shell_status_code(status).unwrap_or(1);
+     Ok(ExitCode::from(u8::try_from(code).unwrap_or(1)))
+ }
+--- a/qualification/ic-jobs-canister-tests/src/bin/tests/mod.rs
++++ b/qualification/ic-jobs-canister-tests/src/bin/tests/mod.rs
+@@ -48,7 +48,7 @@
+     );
+ }
+ 
+-// IC Build owns generic capture/retention proofs. Keep Jobs optimizer
++// Filesystem custody owns generic staging/publication proofs. Keep Jobs optimizer
+ // ordering here and the original-capture command path in consumer tooling.
+ #[cfg(unix)]
+ fn optimizer_fixture() -> (FixtureDirectory, PathBuf, PathBuf) {
+@@ -179,7 +179,7 @@
+     let retained = error
+         .get_ref()
+         .unwrap()
+-        .downcast_ref::<ic_build::artifacts::CaptureRetentionError>()
++        .downcast_ref::<CaptureFailure>()
+         .unwrap();
+     assert_eq!(
+         fs::read(refused.join("producer.wasm")).unwrap(),
+@@ -234,3 +234,27 @@
+     );
+     assert!(!directory.join("optimizer.log").exists());
+ }
++
++#[cfg(unix)]
++#[test]
++fn capture_replaces_only_destination_entry_and_preserves_existing_recovery() {
++    use std::os::unix::fs::symlink;
++    let (fixture, source, _) = optimizer_fixture();
++    let root = fixture.path();
++    let destination = root.join("captured.wasm");
++    let foreign = root.join("foreign.wasm");
++    fs::write(&foreign, b"foreign").unwrap();
++    symlink(&foreign, &destination).unwrap();
++    capture(&source, &destination).unwrap();
++    assert_eq!(fs::read(&destination).unwrap(), b"exact frozen bytes\n");
++    assert_eq!(fs::read(&foreign).unwrap(), b"foreign");
++    fs::write(&source, b"next output").unwrap();
++    fs::write(root.join(STAGING), b"previous recovery").unwrap();
++    assert!(capture(&source, &destination).is_err());
++    assert_eq!(fs::read(root.join(STAGING)).unwrap(), b"previous recovery");
++    assert_eq!(fs::read(&destination).unwrap(), b"exact frozen bytes\n");
++    let linked = root.join("linked-source");
++    symlink(&source, &linked).unwrap();
++    assert!(capture(&linked, &root.join("unused.wasm")).is_err());
++    assert!(!root.join("unused.wasm").exists());
++}
