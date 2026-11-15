@@ -22,6 +22,10 @@ remains tied to its recorded inputs.
 
 ### 🔧 Changed
 
+- Adopt Toko Tooling 0.44.4 in both workspaces through its verified snapshot.
+  Rename the qualification fixture directory to `owned-wasm-probe` to match its
+  existing package identity; update workspace membership and Build callers.
+
 - Advance Build/Text recipe selections for the next development versions. Refresh
   Query only after its stale patch refuses the changed current source.
 

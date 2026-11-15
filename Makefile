@@ -10,12 +10,15 @@ help:
 	  'Development (offline; prepare tools and wasm32-unknown-unknown first):' \
 	  '  make check             Admit Cargo tooling selection and installed snapshot' \
 	  '  make test-testkit-catalog Reply catalog and generated module admission' \
+	  '  make test-process      Owned execution and affected Build failure checks' \
+	  '  make test-process-terminal Linux foreground PTY fixture' \
 	  '  make test-testkit-module Installed module test (externally owned server)' \
 	  '  make test-testkit-control Installed controller refusals (externally owned server)' \
 	  '  make test-text         Terminal escaping and Unicode table contracts' \
 	  '  make test-canic-build-metadata Current Canic metadata admission/refusal' \
 	  '  make test-canic-app-build Combined Canic Build/Text app and display contracts' \
 	  '  make test-canic-build  Current Canic owned Wasm build and publication refusal' \
+	  '  make test-canic-foreground Harmless foreground client/PTY migration checks' \
 	  '  make test-canic-text   Current Canic CLI presentation qualification' \
 	  '  make test-query-text   Current Query presentation and output qualification' \
 	  '  make test-http-body    Bounded HTTP body fixtures (loopback required)' \
@@ -23,6 +26,11 @@ help:
 	  '  make test-custody      Byte and publication/custody failure acceptance' \
 	  '  make test-backup-custody Local Backup filesystem and metadata custody (loopback required)' \
 	  '  make test-scheduling-held Focused rewrite held-reply baseline (prepared server)' \
+	  '  make test-scheduling-replacement Rewrite held replies with replacement Testkit' \
+	  '  make test-scheduling-pressure Watchdog/Jobs held pressure with replacement Testkit' \
+	  '  make test-scheduling-pressure-baseline Same selection with released Testkit' \
+	  '  make test-scheduling-lifecycle Compare watchdog/lifecycle on one source capture' \
+	  '  make test-scheduling-executor Compare default Testkit executor/trap behavior' \
 	  '  make test-scheduling-consumer Scheduling rewrite source/graph admission and driver checks' \
 	  '  make test-platform-agent Current Platform Agent ingress and identity boundary' \
 	  '  make test-platform-consumer Current Platform raw_rand installed behavior' \
@@ -120,7 +128,38 @@ test-canic-build-metadata: toko-tooling-check
 test-scheduling-held: toko-tooling-check
 	bash scripts/qualification/scheduling-consumer.sh held
 
+.PHONY: test-scheduling-replacement
+test-scheduling-replacement: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh replacement
+
+.PHONY: test-scheduling-pressure test-scheduling-pressure-baseline
+test-scheduling-pressure: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh replacement held-pressure
+
+test-scheduling-pressure-baseline: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh held held-pressure
+
+.PHONY: test-scheduling-lifecycle
+test-scheduling-lifecycle: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh comparison lifecycle
+
+.PHONY: test-scheduling-executor
+test-scheduling-executor: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh comparison executor
+
 .PHONY: test-testkit-catalog
+.PHONY: test-process test-process-terminal
+.PHONY: test-canic-foreground
+test-canic-foreground: toko-tooling-check
+	bash scripts/qualification/canic-foreground.sh
+
+test-process: toko-tooling-check
+	cargo test -p ic-host-process -p ic-build --lib --locked --offline
+
+test-process-terminal: toko-tooling-check
+	@test "$$(uname -s)" = Linux || { echo 'This PTY recipe uses Linux script; native macOS qualification remains separate.' >&2; exit 1; }
+	printf 'fixture-answer\n' | script -q -e -c 'cargo test -p ic-host-process --lib --locked --offline tests::foreground_terminal_input_survives_direct_child_ownership -- --ignored --exact' /dev/null
+
 test-testkit-catalog: toko-tooling-check
 	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline
 

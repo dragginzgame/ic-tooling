@@ -65,6 +65,18 @@
       ],
       "changelog": "releases/testkit/CHANGELOG.md",
       "dependencies": []
+    },
+    {
+      "name": "process",
+      "primary": "ic-host-process",
+      "version": "package",
+      "members": [
+        "ic-host-process"
+      ],
+      "changelog": "releases/process/CHANGELOG.md",
+      "dependencies": [
+        "ic-host-process"
+      ]
     }
   ]
 }

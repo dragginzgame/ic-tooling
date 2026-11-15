@@ -1,0 +1,16 @@
+--- a/qualification/executor-driver/src/main.rs
++++ b/qualification/executor-driver/src/main.rs
+@@ -7,10 +7,10 @@
+         .nth(1)
+         .expect("usage: executor-driver PROBE.wasm");
+     let wasm = std::fs::read(path).expect("read probe Wasm");
+-    let server = std::env::var_os("POCKET_IC_BIN")
+-        .expect("set POCKET_IC_BIN to the prepared PocketIC 16.0.0 server");
++    let endpoint = std::env::var("IC_TESTKIT_POCKET_IC_URL")
++        .expect("executor requires an externally owned server endpoint");
+     let pic = PocketIcBuilder::new()
+-        .with_server_binary(server.into())
++        .with_server_url(endpoint.parse().expect("valid server URL"))
+         .with_application_subnet()
+         .build();
+     let canister = pic.create_canister();

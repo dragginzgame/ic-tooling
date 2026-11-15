@@ -1,11 +1,13 @@
 --- a/qualification/once-driver/src/main.rs
 +++ b/qualification/once-driver/src/main.rs
-@@ -12,25 +12,37 @@
+@@ -12,25 +12,59 @@
      let mut args = std::env::args().skip(1);
      let first = args.next().expect("probe wasm path or --metrics-cost");
      let paired = first == "--metrics-cost";
 -    let wasm = std::fs::read(if paired {
-+    let held_only = first == "--held-replies";
++    let lifecycle_only = first == "--lifecycle";
++    let pressure_only = first == "--held-pressure";
++    let held_only = first == "--held-replies" || pressure_only || lifecycle_only;
 +    let wasm = std::fs::read(if paired || held_only {
          args.next().expect("disabled probe path")
      } else {
@@ -35,6 +37,26 @@
          return;
      }
      let external = pic.create_canister().await;
++    if lifecycle_only {
++        watchdog::check(&pic, &wasm, external).await;
++        refusal::watchdog(&pic, &wasm, external).await;
++        lifecycle::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        pic.drop().await;
++        println!("lifecycle: watchdog traps, owner commands, refusal and upgrade checks passed");
++        return;
++    }
++    if pressure_only {
++        watchdog::admission(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        watchdog::pressure(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs_pressure::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        pic.drop().await;
++        println!("held-pressure: watchdog admission, watchdog pressure and jobs pressure passed");
++        return;
++    }
 +    if held_only {
 +        pressure::check(&pic, &wasm, external).await;
 +        held_upgrade::check(&pic, &wasm, external).await;

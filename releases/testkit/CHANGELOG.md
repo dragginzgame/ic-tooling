@@ -3,7 +3,29 @@
 Package: `ic-testkit`. This replacement remains unpublished; this is not a
 crates.io release. The selected consumer currently uses released Testkit 0.106.0.
 
-## [0.107.0] - Unreleased
+## [0.107.1] - Unreleased
+
+- Qualify current Scheduling rewrite pressure and held-upgrade against the local
+  controller through an export-only migration patch. Both drivers share one local
+  supplier; external lock admission, driver Clippy, endpoint refusal and observed
+  instance deletion pass.
+- Add focused watchdog admission/pressure and Jobs pressure selections, including
+  empty HTTP inventory between subjects. Released and replacement suppliers pass;
+  independently captured source identities are recorded because unselected
+  retention fixtures changed between captures. Other modes remain unqualified.
+- Add a single-capture released/replacement comparison for watchdog trap recovery,
+  owner-command precedence, delivery-refusal backoff and upgrade reconstruction.
+  Existing assertions pass for both suppliers, with endpoint refusal and observed
+  instance deletion. Consolidate installed selectors into one qualification patch;
+  no product API or sibling source change is needed.
+- Compare the actual synchronous executor driver on one capture: three lifecycle
+  and three admission checks pass with released and replacement suppliers. Verify
+  the replacement's selected default graph excludes WAT and Platform fixture
+  dependencies; keep endpoint/instance ownership external and check deletion.
+- The 0.107.0 checkpoint is on GitHub; neither version is published. The sibling
+  source and its released supplier selection remain unchanged.
+
+## [0.107.0] - GitHub checkpoint 2026-11-15 (unpublished)
 
 ### Added
 

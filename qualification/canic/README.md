@@ -245,3 +245,69 @@ and Host/CLI/test warning-denied Clippy (`target/canic-combined-clippy.log`). Th
 initial stale Build lock delta and newly unmigrated Text callers refused before
 this refresh. Existing external selections are retained. No sibling was edited;
 this does not refresh other independent slices or their native-host evidence.
+
+## Shared Process adoption in Build
+
+Build 0.87.3 now delegates execution to local Process 0.80.0. The current export's
+metadata must show that exact edge, while Canic's unmigrated Process callers keep
+their released supplier. The original patch refused changed lock and artifact
+contexts; it was refreshed against current source, without changing the sibling.
+
+Current Canic retains escaped, bounded Cargo diagnostics. The qualification
+adapter now formats the new Build failure's existing stderr evidence through the
+consumer's own formatter and retains the typed Build failure. Missing package
+errors retain their requested name and supplier category. The real failing Wasm
+fixture must expose `intentional owned-build diagnostic oracle`; no compiler
+record facade or Canic formatting policy was added to Tooling. Retained external
+lock tuples are unchanged; the only added external tuple is tempfile 3.27.0,
+required by the existing owned-build implementation.
+
+On 2026-11-15, current source HEAD
+`724744bab2a5bf6972f3021431e6da0e66b55b26` plus captured edits, tar SHA-256
+`25b912dfd7202651ceb7bf15c5abb48d008d31ae111207ac56d52ec45b991af0`, passes:
+
+- Artifact build/publication, exact bytes/hash, compiler diagnostic preservation,
+  symlink/hardlink/dangling failure preservation, publication refusal and cleanup:
+  `target/canic-build.GlHwPHbc`, log `target/process-canic-build-refreshed.log`.
+- Valid metadata plus ten malformed metadata refusals and six prepared-tool/wrapper
+  refusals before compilation: `target/canic-build.pcowhaCE`, log
+  `target/process-canic-metadata-run.log`.
+
+The earlier source capture `target/canic-build.Y2RSU7Yn` at the same HEAD, tar
+SHA-256 `b2089e7e5d73b608a845ec1a94132d4de54245f2cdf23816dc78238a16f828ab`, supplies
+Host Clippy and the three unchanged artifact diagnostic tests in
+`target/process-canic-clippy.log` and `target/process-canic-diagnostics-tests.log`.
+These are separate captured identities. App/combined Text proof is not refreshed
+by these runs, and native macOS and direct foreground-tool migration remain open.
+
+## Foreground client migration
+
+`make test-canic-foreground` captures current Canic and applies
+`foreground-process.patch` only in the export. The profile client selects local
+Process 0.80.0 through an explicit workspace alias while unrelated callers retain
+the released supplier. Its previous manual spawn/communicate/success/completeness
+sequence becomes one run with Direct ownership, inherited stdin/stderr, 16 KiB
+stdout and the unchanged 300-second communication deadline. The consumer retains
+bounded output with fallible allocation, error/status/cleanup evidence, argument
+construction, hex decoding and its no-retry policy. No profile or signing code is
+added to Tooling product crates.
+
+The export-only tests call the actual private invocation functions using
+`foreground-tool.sh`, a harmless ICP-shaped local fixture. They verify exact argv
+including leading-dash/shell-looking values, binary argument-file selection, exact
+reply bytes, exact/over output limit, nonzero status with retained bytes, invalid
+UTF-8/odd/non-hex refusal and exactly one invocation for each attempt. A separately
+selected Linux PTY test requires inherited terminal stdin/stderr and reads only
+`fixture-answer`; no real credentials, ICP executable or network are used. Timeout
+and cancellation mechanisms remain covered by the Process tests, not by waiting
+for this consumer's 300-second deadline. The fixture cases do not qualify a real
+signer's password or network behavior.
+
+On 2026-11-15 this passed against HEAD
+`724744bab2a5bf6972f3021431e6da0e66b55b26` plus captured edits, tar SHA-256
+`5389f73680d83261d77b3407d5b691132e32f101584484a28f5b18d78726dde6`.
+Export: `target/canic-foreground.RQhgFUv2`; log: `target/canic-foreground.log`.
+Three ordinary tests and one PTY test pass. Client all-target Clippy, exact local
+supplier-edge admission and external-lock subset checks pass; no new external
+supplier tuple is required. The sibling and other Process callers remain unchanged.
+Native macOS and the signer group-capture migration remain separate gates.

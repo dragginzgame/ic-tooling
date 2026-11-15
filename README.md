@@ -6,7 +6,7 @@ selected interfaces. Existing crates.io names may be reused with incremented
 versions; retaining a name does not require retaining its old Rust API. The first
 package is `ic-build` 0.87.3. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
 0.80.1 for shared byte admission and held-directory publication. Toko Tooling is
-pinned to 0.44.3 in both workspaces.
+pinned to 0.44.4 in both workspaces.
 
 `ic-cargo-qualification` 0.1.2 is a separate unpublished development executable
 for external-lock admission; it adds no dependencies to the ordinary Build API.
@@ -16,21 +16,34 @@ Consumers select Reqwest directly and own TLS/request policy.
 `make test-http-body` and `make test-backup-http` check the adapter and current
 Backup HTTP behavior using local loopback fixtures.
 
+`ic-host-process` 0.80.0 owns [bounded native execution](docs/process-execution.md).
+Build uses its group lifecycle and stream delivery. `make test-process` checks
+the core and Build failures; `make test-process-terminal` runs the Linux PTY case.
+`make test-canic-foreground` qualifies the current foreground client with a harmless
+tool fixture, including terminal interaction and refusal without retry.
+
 `ic-host-text` 0.77.2 supplies pure [escaping and table layouts](docs/text-presentation.md).
 `make test-text` and `make test-query-text` qualify the leaf and current Query’s
 presentation/output callers without network reports. `make test-db-text` exercises
 the current local DB console against its installed records fixture.
 `make test-canic-text` checks current Canic status, terminal and declaration output.
 
-`ic-testkit` 0.107.0 starts the [shared Testkit contract](docs/testkit-held-replies.md)
+`ic-testkit` 0.107.1 starts the [shared Testkit contract](docs/testkit-held-replies.md)
 with the original PocketIC type boundary, an owned bounded reply catalog and Wasm
 generation. `make test-testkit-catalog` checks admission and module validity;
 `make test-testkit-module` checks installed behavior on an externally owned server.
 `make test-testkit-control` checks exclusive release and identity/progress refusals.
-Scheduling still selects the released supplier pending replacement qualification.
+`make test-scheduling-replacement` qualifies a current Scheduling export against
+the replacement; the sibling itself continues selecting the released supplier.
+`make test-scheduling-pressure` selects watchdog admission/pressure and Jobs
+pressure; `make test-scheduling-pressure-baseline` uses the released supplier.
+`make test-scheduling-lifecycle` compares released and replacement suppliers on
+one capture for watchdog traps/owner commands, refusal backoff and upgrade cases.
+`make test-scheduling-executor` compares the synchronous executor trap/admission
+cases and checks that its default Testkit graph excludes fixture dependencies.
 
 The [release ownership map](docs/release-ownership.md) declares foundation, build,
-HTTP, Text, tools and Testkit groups. [Changelogs](CHANGELOG.md) live under `releases/`;
+HTTP, Process, Text, tools and Testkit groups. [Changelogs](CHANGELOG.md) live under `releases/`;
 `make deps-list` reports each package’s group and version.
 
 The production owner remains the read-only `../ic-tooling` reference. All new
@@ -49,7 +62,7 @@ See [current requirements](qualification/scheduling/README.md); this does not
 claim installed-runtime or replacement Testkit acceptance.
 `make test-scheduling-held` selects two installed held-reply scenarios with the
 released supplier and an explicitly prepared server. The [Testkit contract](docs/testkit-held-replies.md)
-defines the next shared implementation slice.
+records the shared implementation and its independent acceptance evidence.
 The frozen `make test-auth-consumer` recipe reproduces historical [Auth's pinned package admission](qualification/auth/README.md)
 and checks exact archives on native and Wasm targets.
 
@@ -67,7 +80,7 @@ and selected original retained-plan and signed-recovery tests.
 using an explicitly prepared external server and the upstream async client.
 Scheduling’s earlier Jobs/Timers experiments are [historical](qualification/scheduling/historical.md).
 The rewrite uses Testkit client types and held-reply fixtures; their replacement
-replacement passes independent fixture tests; consumer qualification remains open.
+replacement passes independent fixture tests and focused current-consumer qualification.
 See [simulator ownership](docs/simulator-ownership.md).
 
 `make test-platform-consumer` qualifies [Platform’s current raw_rand fixture](qualification/platform/README.md)

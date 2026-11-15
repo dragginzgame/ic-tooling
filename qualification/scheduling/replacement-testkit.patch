@@ -1,0 +1,231 @@
+--- a/qualification/Cargo.toml
++++ b/qualification/Cargo.toml
+@@ -18,7 +18,7 @@
+ [workspace.dependencies]
+ ic-jobs = { path = "../crates/ic-jobs", default-features = false, features = ["calendar"] }
+ ic-platform-runtime = { version = "=0.22.5", default-features = false, features = ["runtime"] }
+-ic-testkit = { version = "=0.106.0", default-features = false }
++ic-testkit = { path = "@IC_TOOLING_NEW@/crates/ic-testkit", version = "=0.107.1", default-features = false }
+ ic-timers = { path = "../crates/ic-timers" }
+ tokio = { version = "1.54.1", default-features = false, features = ["rt"] }
+ toko-tooling = "=0.44.3"
+--- a/qualification/once-driver/src/pressure.rs
++++ b/qualification/once-driver/src/pressure.rs
+@@ -1,6 +1,6 @@
+ //! Full-table admission and held-flight pressure, without advancing held-call time.
+ use ic_testkit::{
+-    pic::fixtures::{RawReplyLimits, RawReplyMethod, ReplyMode, held::HeldReplyFixture},
++    held::{Catalog, Fixture, Limits, Reply},
+     pocket_ic::{CanisterId, nonblocking::PocketIc},
+ };
+ 
+@@ -8,22 +8,24 @@
+     let target = pic.create_canister().await;
+     pic.add_cycles(target, 100_000_000_000_000).await;
+     let methods = vec![
+-        RawReplyMethod {
+-            name: "hold",
+-            mode: ReplyMode::Update,
+-            reply: b"ok"
++        Reply {
++            method: "hold",
++            bytes: b"ok"
+         };
+         12
+     ];
+-    let mut held = HeldReplyFixture::new(
++    let mut held = Fixture::new(
+         pic,
+-        target,
+-        &methods,
+-        RawReplyLimits {
+-            methods: 12,
+-            reply_bytes: 24,
+-            method_name_bytes: 48,
+-        },
++        target.to_text().parse().unwrap(),
++        &Catalog::new(
++            &methods,
++            Limits {
++                slots: 12,
++                reply_bytes: 24,
++                name_bytes: 48,
++            },
++        )
++        .unwrap(),
+         50_000_000_000,
+         100_000,
+     )
+--- a/qualification/once-driver/src/held_upgrade.rs
++++ b/qualification/once-driver/src/held_upgrade.rs
+@@ -1,6 +1,6 @@
+ //! Host upgrade refusal preserves a live attempt until its real reply settles.
+ use ic_testkit::{
+-    pic::fixtures::{RawReplyLimits, RawReplyMethod, ReplyMode, held::HeldReplyFixture},
++    held::{Catalog, Fixture, Limits, Reply},
+     pocket_ic::{CanisterId, ErrorCode, nonblocking::PocketIc},
+ };
+ use std::time::Duration;
+@@ -8,19 +8,21 @@
+ pub(super) async fn check(pic: &PocketIc, wasm: &[u8], sender: CanisterId) {
+     let target = pic.create_canister().await;
+     pic.add_cycles(target, 100_000_000_000_000).await;
+-    let mut held = HeldReplyFixture::new(
++    let mut held = Fixture::new(
+         pic,
+-        target,
+-        &[RawReplyMethod {
+-            name: "hold",
+-            mode: ReplyMode::Update,
+-            reply: b"ok",
+-        }],
+-        RawReplyLimits {
+-            methods: 1,
+-            reply_bytes: 2,
+-            method_name_bytes: 4,
+-        },
++        target.to_text().parse().unwrap(),
++        &Catalog::new(
++            &[Reply {
++                method: "hold",
++                bytes: b"ok",
++            }],
++            Limits {
++                slots: 1,
++                reply_bytes: 2,
++                name_bytes: 4,
++            },
++        )
++        .unwrap(),
+         50_000_000_000,
+         100_000,
+     )
+--- a/qualification/once-driver/src/jobs_pressure.rs
++++ b/qualification/once-driver/src/jobs_pressure.rs
+@@ -1,6 +1,6 @@
+ //! Jobs share transport capacity without sharing occurrence or recovery authority.
+ use ic_testkit::{
+-    pic::fixtures::{RawReplyLimits, RawReplyMethod, ReplyMode, held::HeldReplyFixture},
++    held::{Catalog, Fixture, Limits, Reply},
+     pocket_ic::{CanisterId, nonblocking::PocketIc},
+ };
+ use std::time::Duration;
+@@ -18,22 +18,24 @@
+     let target = pic.create_canister().await;
+     pic.add_cycles(target, 100_000_000_000_000).await;
+     let methods = vec![
+-        RawReplyMethod {
+-            name: "hold",
+-            mode: ReplyMode::Update,
+-            reply: b"ok",
++        Reply {
++            method: "hold",
++            bytes: b"ok",
+         };
+         8
+     ];
+-    let mut held = HeldReplyFixture::new(
++    let mut held = Fixture::new(
+         pic,
+-        target,
+-        &methods,
+-        RawReplyLimits {
+-            methods: 8,
+-            reply_bytes: 16,
+-            method_name_bytes: 32,
+-        },
++        target.to_text().parse().unwrap(),
++        &Catalog::new(
++            &methods,
++            Limits {
++                slots: 8,
++                reply_bytes: 16,
++                name_bytes: 32,
++            },
++        )
++        .unwrap(),
+         50_000_000_000,
+         100_000,
+     )
+--- a/qualification/once-driver/src/watchdog.rs
++++ b/qualification/once-driver/src/watchdog.rs
+@@ -1,7 +1,5 @@
+ //! Installed prearm, trap survival, and synchronous owner precedence.
+-use ic_testkit::pic::fixtures::{
+-    RawReplyLimits, RawReplyMethod, ReplyMode, held::HeldReplyFixture,
+-};
++use ic_testkit::held::{Catalog, Fixture, Limits, Reply};
+ use ic_testkit::pocket_ic::{CanisterId, nonblocking::PocketIc};
+ use std::time::Duration;
+ 
+@@ -86,19 +84,21 @@
+ pub(super) async fn admission(pic: &PocketIc, wasm: &[u8], sender: CanisterId) {
+     let target = pic.create_canister().await;
+     pic.add_cycles(target, 100_000_000_000_000).await;
+-    let mut held = HeldReplyFixture::new(
++    let mut held = Fixture::new(
+         pic,
+-        target,
+-        &[RawReplyMethod {
+-            name: "hold",
+-            mode: ReplyMode::Update,
+-            reply: b"ok",
+-        }],
+-        RawReplyLimits {
+-            methods: 1,
+-            reply_bytes: 2,
+-            method_name_bytes: 4,
+-        },
++        target.to_text().parse().unwrap(),
++        &Catalog::new(
++            &[Reply {
++                method: "hold",
++                bytes: b"ok",
++            }],
++            Limits {
++                slots: 1,
++                reply_bytes: 2,
++                name_bytes: 4,
++            },
++        )
++        .unwrap(),
+         50_000_000_000,
+         100_000,
+     )
+@@ -176,22 +176,24 @@
+     let target = pic.create_canister().await;
+     pic.add_cycles(target, 100_000_000_000_000).await;
+     let methods = vec![
+-        RawReplyMethod {
+-            name: "hold",
+-            mode: ReplyMode::Update,
+-            reply: b"ok"
++        Reply {
++            method: "hold",
++            bytes: b"ok"
+         };
+         8
+     ];
+-    let mut held = HeldReplyFixture::new(
++    let mut held = Fixture::new(
+         pic,
+-        target,
+-        &methods,
+-        RawReplyLimits {
+-            methods: 8,
+-            reply_bytes: 16,
+-            method_name_bytes: 32,
+-        },
++        target.to_text().parse().unwrap(),
++        &Catalog::new(
++            &methods,
++            Limits {
++                slots: 8,
++                reply_bytes: 16,
++                name_bytes: 32,
++            },
++        )
++        .unwrap(),
+         50_000_000_000,
+         100_000,
+     )

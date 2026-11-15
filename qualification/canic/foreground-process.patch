@@ -1,0 +1,124 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -25,6 +25,7 @@
+ publish = false
+ 
+ [workspace.dependencies]
++ic-host-process-next = { package = "ic-host-process", path = "@IC_TOOLING_NEW@/crates/ic-host-process", version = "=0.80.0" }
+ base64 = "0.23.1"
+ canic = { path = "crates/canic" }
+ canic-host = { path = "crates/canic-host" }
+--- a/apps/profile/client/Cargo.toml
++++ b/apps/profile/client/Cargo.toml
+@@ -18,7 +18,7 @@
+ canic-profile-protocol.workspace = true
+ clap.workspace = true
+ ic-host-fs.workspace = true
+-ic-host-process.workspace = true
++ic-host-process-next.workspace = true
+ ic-wire.workspace = true
+ serde_json.workspace = true
+ 
+--- a/apps/profile/client/src/main.rs
++++ b/apps/profile/client/src/main.rs
+@@ -5,15 +5,8 @@
+     RouteResult,
+ };
+ use clap::{ArgGroup, Parser, Subcommand};
+-use ic_host_process::{
+-    child::OwnedChild,
+-    tool::{OutputLimit, OutputLimits, SuccessfulExit, communicate_child},
+-};
+-use std::{
+-    path::PathBuf,
+-    process::{Command, Stdio},
+-    time::Duration,
+-};
++use ic_host_process_next::{self as process, Input, Ownership, Policy, Stderr};
++use std::{path::PathBuf, process::Command, time::Duration};
+ 
+ #[derive(Parser)]
+ #[command(version, about = "Use the Canic profile demo", group(ArgGroup::new("destination").required(true).args(["canister", "entry", "manager"])))]
+@@ -208,6 +201,29 @@
+     invoke_arguments(cli, target, method, Some(&args), None, query)
+ }
+ 
++#[derive(Debug)]
++struct InvocationFailure {
++    report: process::Report,
++    stdout: Vec<u8>,
++}
++
++impl std::fmt::Display for InvocationFailure {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        write!(
++            f,
++            "ICP CLI invocation failed: {:?}; {} stdout bytes retained",
++            self.report,
++            self.stdout.len()
++        )
++    }
++}
++
++impl std::error::Error for InvocationFailure {
++    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
++        self.report.failure.as_ref().map(|failure| failure as _)
++    }
++}
++
+ fn invoke_arguments(
+     cli: &Cli,
+     target: &str,
+@@ -243,26 +259,33 @@
+     if let Some(args) = args {
+         command.arg(args);
+     }
+-    command
+-        .stdin(Stdio::inherit())
+-        .stdout(Stdio::piped())
+-        .stderr(Stdio::inherit());
+-    // Stay in the foreground process group so ICP's terminal password prompt works.
+-    let mut child = OwnedChild::spawn_direct(&mut command)?;
+-    let output = communicate_child(
+-        &mut child,
+-        None,
+-        OutputLimits {
+-            stdout: OutputLimit::Terminate(16384),
+-            stderr: OutputLimit::Terminate(16384),
+-            timeout: Some(Duration::from_secs(300)),
++    // Retain foreground terminal interaction; only this child is owned.
++    let mut stdout = Vec::new();
++    let report = process::run(
++        &mut command,
++        Policy {
++            ownership: Ownership::Direct,
++            input: Input::Inherit,
++            stdout_bytes: 16384,
++            stderr: Stderr::Inherit,
++            elapsed: Duration::from_secs(300),
++        },
++        &std::sync::atomic::AtomicBool::new(false),
++        |_, bytes| {
++            stdout
++                .try_reserve(bytes.len())
++                .map_err(std::io::Error::other)?;
++            stdout.extend_from_slice(bytes);
++            Ok(())
+         },
+-        SuccessfulExit::Cleanup,
+-        || false,
+-    )?
+-    .require_success()?
+-    .require_complete()?;
+-    let text = std::str::from_utf8(&output.stdout)?.trim();
++    );
++    if report.failure.is_some()
++        || !report.cleanup.is_empty()
++        || !report.status.is_some_and(|status| status.success())
++    {
++        return Err(Box::new(InvocationFailure { report, stdout }));
++    }
++    let text = std::str::from_utf8(&stdout)?.trim();
+     let hex = text.strip_prefix("0x").unwrap_or(text);
+     if !hex.is_ascii() || !hex.len().is_multiple_of(2) {
+         return Err("ICP CLI returned invalid hex".into());

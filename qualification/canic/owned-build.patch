@@ -10,35 +10,41 @@
  canic-host = { path = "crates/canic-host" }
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -380,7 +380,7 @@
+@@ -380,8 +380,8 @@
   "canic-host",
   "canic-management-protocol",
   "clap",
 - "ic-host-fs",
+- "ic-host-process",
 + "ic-host-fs 0.79.0",
-  "ic-host-process",
++ "ic-host-process 0.79.0",
   "ic-host-text",
   "ic-topology",
-@@ -409,7 +409,8 @@
+  "serde_json",
+@@ -409,8 +409,9 @@
   "canic",
   "canic-management-protocol",
   "canic-wasm-store-protocol",
 - "ic-host-fs",
+- "ic-host-process",
 + "ic-build",
 + "ic-host-fs 0.79.0",
-  "ic-host-process",
++ "ic-host-process 0.79.0",
+  "ic-host-text",
   "ic-platform",
   "ic-topology",
-@@ -458,7 +459,7 @@
+@@ -459,8 +460,8 @@
   "canic-management-protocol",
   "canic-profile-protocol",
   "clap",
 - "ic-host-fs",
+- "ic-host-process",
 + "ic-host-fs 0.79.0",
-  "ic-host-process",
++ "ic-host-process 0.79.0",
   "ic-wire",
   "serde_json",
-@@ -1405,6 +1406,18 @@
+  "toko-tooling",
+@@ -1406,6 +1407,18 @@
  ]
  
  [[package]]
@@ -47,7 +53,7 @@
 +dependencies = [
 + "ic-host-artifacts 0.80.1",
 + "ic-host-fs 0.80.1",
-+ "rustix",
++ "ic-host-process 0.80.0",
 + "serde_json",
 + "tempfile",
 + "thiserror 2.0.21",
@@ -57,7 +63,7 @@
  name = "ic-certification"
  version = "3.2.0"
  source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -1443,12 +1456,29 @@
+@@ -1444,12 +1457,29 @@
  ]
  
  [[package]]
@@ -88,7 +94,7 @@
   "rustix",
   "thiserror 2.0.21",
  ]
-@@ -1459,8 +1489,8 @@
+@@ -1460,13 +1490,21 @@
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "3bfc02220bee55d050f8ebedce5f5ff71764028afcef8b58c1ae2bceb945e650"
  dependencies = [
@@ -99,7 +105,20 @@
   "libc",
   "rustix",
  ]
-@@ -2852,6 +2882,19 @@
+ 
+ [[package]]
++name = "ic-host-process"
++version = "0.80.0"
++dependencies = [
++ "rustix",
++ "thiserror 2.0.21",
++]
++
++[[package]]
+ name = "ic-host-text"
+ version = "0.76.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -2853,6 +2891,19 @@
  ]
  
  [[package]]
@@ -131,18 +150,18 @@
  canic-management-protocol.workspace = true
 --- a/crates/canic-host/src/artifact.rs
 +++ b/crates/canic-host/src/artifact.rs
-@@ -59,7 +59,9 @@
- /// An output path atomically receives a copy, replacing a prior build input.
- ///
- /// # Errors
--/// Refuses build failure, output overflow, timeout or ambiguous artifacts. Installs no tools.
-+/// Requires prepared IC_OWNED_CARGO/IC_OWNED_RUSTC and cached dependencies.
-+/// Selects one workspace package by name and one cdylib target; refuses ambiguity,
-+/// build failure, overflow, timeout or publication failure. Installs no tools.
- pub fn build(
-     manifest: &Path,
-     package: &str,
-@@ -67,34 +69,35 @@
+@@ -29,8 +29,8 @@
+ 
+ #[derive(Debug, thiserror::Error)]
+ #[error("Cargo failed: {source}\n{diagnostic}")]
+-struct CargoFailure {
+-    source: ToolError,
++struct CargoFailure<E> {
++    source: E,
+     diagnostic: String,
+ }
+ 
+@@ -115,90 +115,141 @@
      destination: Option<&Path>,
  ) -> Result<PathBuf> {
      let manifest = manifest.canonicalize().map_err(supplier)?;
@@ -201,11 +220,9 @@
 +            timeout: Some(Duration::from_secs(120)),
          },
      )
-     .map_err(supplier)?
-@@ -102,55 +105,90 @@
-     .map_err(supplier)?
-     .require_complete()
-     .map_err(supplier)?;
+     .and_then(CompletedExecution::require_success)
+     .and_then(CompletedExecution::require_complete)
+     .map_err(cargo_failure)?;
 -    let mut paths = Vec::new();
 -    for line in output
 -        .stdout
@@ -218,6 +235,11 @@
 +        .iter()
 +        .filter(|p| p["name"].as_str() == Some(package))
 +        .collect();
++    if selected.is_empty() && !packages.is_empty() {
++        return Err(supplier(std::io::Error::other(format!(
++            "workspace has no package {package}"
++        ))));
++    }
 +    let [selected] = selected.as_slice() else {
 +        return Err(invalid());
 +    };
@@ -250,6 +272,23 @@
 -        return Err(Error::Invalid(
 -            "build must produce exactly one Wasm artifact".into(),
 -        ));
+-    }
+-    let path = paths.remove(0);
+-    inspect(&path)?;
+-    if let Some(output) = destination {
+-        let bytes = ic_host_fs::read::read_file(&path, MAX_ARTIFACT_BYTES).map_err(supplier)?;
+-        admit_bounded(&bytes, MAX_ARTIFACT_BYTES)?;
+-        if let Some(parent) = output
+-            .parent()
+-            .filter(|parent| !parent.as_os_str().is_empty())
+-        {
+-            ic_host_fs::durable::prepare_private_parents(parent).map_err(supplier)?;
+-        }
+-        ic_host_fs::durable::write_bytes(
+-            output,
+-            ic_host_fs::durable::WriteOptions {
+-                mode: ic_host_fs::durable::PublicationMode::Replace,
+-                permissions: 0o600,
 +    let targets: Vec<_> = selected["targets"]
 +        .as_array()
 +        .ok_or_else(invalid)?
@@ -268,23 +307,7 @@
 +        PathBuf::from(metadata["target_directory"].as_str().ok_or_else(invalid)?);
 +    if !target_directory.is_absolute() {
 +        return Err(invalid());
-     }
--    let path = paths.remove(0);
--    inspect(&path)?;
--    if let Some(output) = destination {
--        let bytes = ic_host_fs::read::read_file(&path, MAX_ARTIFACT_BYTES).map_err(supplier)?;
--        admit_bounded(&bytes, MAX_ARTIFACT_BYTES)?;
--        if let Some(parent) = output
--            .parent()
--            .filter(|parent| !parent.as_os_str().is_empty())
--        {
--            ic_host_fs::durable::prepare_private_parents(parent).map_err(supplier)?;
--        }
--        ic_host_fs::durable::write_bytes(
--            output,
--            ic_host_fs::durable::WriteOptions {
--                mode: ic_host_fs::durable::PublicationMode::Replace,
--                permissions: 0o600,
++    }
 +    let default_output = target_directory
 +        .join("wasm32-unknown-unknown/release")
 +        .join(format!("{}.wasm", library.replace('-', "_")));
@@ -318,16 +341,27 @@
 -        )
 -        .map_err(supplier)?;
 -        return Ok(output.into());
+-    }
+-    Ok(path)
 +        },
 +        &std::sync::atomic::AtomicBool::new(false),
 +        &mut std::io::sink(),
 +    )
-+    .map_err(supplier)?;
++    .map_err(|source| {
++        let evidence = ExecutionEvidence {
++            stderr: source.diagnostics.clone(),
++            stderr_truncated: matches!(source.primary, ic_build::Failure::DiagnosticLimit),
++            ..Default::default()
++        };
++        match cargo_diagnostic(&evidence) {
++            Some(diagnostic) => supplier(CargoFailure { source, diagnostic }),
++            None => supplier(source),
++        }
++    })?;
 +    admit_bounded(artifact.bytes(), MAX_ARTIFACT_BYTES)?;
 +    if let Some(parent) = destination.parent().filter(|p| !p.as_os_str().is_empty()) {
 +        ic_host_fs::durable::prepare_private_parents(parent).map_err(supplier)?;
-     }
--    Ok(path)
++    }
 +    ic_host_fs::durable::write_bytes(
 +        destination,
 +        ic_host_fs::durable::WriteOptions {
@@ -339,3 +373,5 @@
 +    .map_err(supplier)?;
 +    Ok(destination.into())
  }
+ 
+ #[cfg(test)]

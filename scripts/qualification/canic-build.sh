@@ -19,7 +19,7 @@ if [[ "$mode" == app ]]; then
   git -C "$scratch/source" apply "$repo/qualification/canic/text.patch"
 fi
 cp "$repo/qualification/"{Cargo.toml,Cargo.lock} "$scratch/probe/"
-cp -R "$repo/qualification/wasm-probe" "$scratch/probe/"
+cp -R "$repo/qualification/owned-wasm-probe" "$scratch/probe/"
 IC_OWNED_CARGO="$(rustup which --toolchain 1.100.0 cargo)"
 IC_OWNED_RUSTC="$(rustup which --toolchain 1.100.0 rustc)"
 export IC_OWNED_CARGO IC_OWNED_RUSTC
@@ -29,7 +29,10 @@ jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-host") | .id) as $host |
   (.packages[] | select(.name == "ic-build" and .version == "0.87.3" and
     .manifest_path == ($root + "/crates/ic-build/Cargo.toml")) | .id) as $build |
-  any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_build" and .pkg == $build)
+  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.0" and
+    .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+  any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_build" and .pkg == $build) and
+  any($m.resolve.nodes[] | select(.id == $build) | .deps[]; .name == "ic_host_process" and .pkg == $process)
 ' "$scratch/metadata.json" >/dev/null
 if [[ "$mode" == app ]]; then
   jq -e --arg root "$repo" '. as $m |
@@ -110,6 +113,7 @@ if "$cli" "${args[@]}" --features refuse --output "$scratch/explicit.wasm" > "$s
 fi
 cmp "$default" "$scratch/explicit.wasm"
 # Publication refusal retains an occupied directory and its unrelated bytes.
+jq -e '.error == "supplier" and (.message | contains("intentional owned-build diagnostic oracle"))' "$scratch/refuse.stderr" >/dev/null
 mkdir "$scratch/occupied"
 printf 'retain me' > "$scratch/occupied/sentinel"
 if "$cli" "${args[@]}" --output "$scratch/occupied" > "$scratch/publication.stdout" 2> "$scratch/publication.stderr"; then

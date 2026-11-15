@@ -17,18 +17,18 @@ current requirements must justify further APIs.
 retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
 historical evidence. No old product source/test tree was admitted wholesale.
 
-GitHub checkpoint `1f288290269b7ca063e81f80f508856d9fe3aa00` is on `origin/main`.
-Post-push review found no new actionable issue in version wiring and tool-admission
-qualification. The working tree was clean after delivery. Build 0.87.3, Text 0.77.2
-and Tools 0.1.2 remain unpublished drafts; local follow-up adds output-alias
-qualification and a combined Canic Build/Text app workflow. Scheduling source
-selection is corrected to the rewrite; old Timers experiments are historical.
+GitHub checkpoint `03efc892248a3d354cf0d5a757b1f3a2d88a2fee` is on `origin/main`.
+The working tree was clean after delivery. The pushed Testkit/controller and
+qualification review found no implementation defect; stale ownership/qualification
+summaries are corrected in the next draft. Testkit 0.107.1 now qualifies the current
+Scheduling rewrite export. Build 0.87.3 now uses Process 0.80.0; Text 0.77.2 and Tools 0.1.2 are unchanged
+unpublished drafts. Old Timers experiments remain historical.
 Foundation and HTTP are unchanged. Runtime evidence remains tied
 to the versions and snapshots recorded below.
-Six [release groups](../release-ownership.md) own their ledgers; root changelog is
-an index. All seven packages remain unpublished. Consumer migration, registry
+Seven [release groups](../release-ownership.md) own their ledgers; root changelog is
+an index. All eight packages remain unpublished. Consumer migration, registry
 publication and canonical cutover are separate; recheck registry identities first.
-Toko 0.44.3 is pinned in both workspaces; its 48-file snapshot is verified.
+Toko 0.44.4 is pinned in both workspaces; snapshot/tools admission and 19 Build tests pass after renaming `qualification/owned-wasm-probe` to match its package.
 
 ## Implemented owners
 
@@ -49,11 +49,14 @@ Toko 0.44.3 is pinned in both workspaces; its 48-file snapshot is verified.
   or terminal policy. See [Text](../text-presentation.md).
 - `ic-cargo-qualification` 0.1.2 is an external-lock subset admission executable,
   outside Build's graph. It is not an archive runner or metadata editor.
-
-- `ic-testkit` 0.107.0 starts the [shared Testkit contract](../testkit-held-replies.md):
+- `ic-host-process` 0.80.0 owns synchronous group/direct-child execution and bounded
+  observer delivery. Build uses its core; eight native tests, the 19 existing Build
+  tests and Linux terminal fixtures pass, including current Canic's foreground
+  client with a harmless tool. See [execution](../process-execution.md).
+- `ic-testkit` 0.107.1 implements the [shared Testkit contract](../testkit-held-replies.md):
   original PocketIC types and an owned update-reply catalog with complete admission.
   Bounded module generation and exclusive pending/release control pass focused
-  installed tests; consumer replacement qualification remains open. The new
+  installed tests and current Scheduling pressure/held-upgrade qualification. The new
   dependency selects thiserror 2.0.18; prior external tuples otherwise remain intact.
 
 ## Latest scoped evidence
@@ -96,7 +99,18 @@ The next-version changes alone do not refresh earlier runtime evidence.
   is defined. Focused pressure/held-upgrade tests pass with released Testkit, as do
   endpoint refusal, observed instance deletion and driver Clippy. Replacement
   controller passes independent identity, expiry, repeated release and progress
-  refusals. The replacement is present but not selected here yet.
+  refusals. The 0.107.1 replacement export now passes the same pressure/held-upgrade
+  assertions, exact supplier selection, retained external locks, driver Clippy,
+  endpoint refusal and observed instance deletion. A later focused slice passes
+  watchdog admission/pressure and Jobs pressure with released and replacement
+  suppliers; separate source captures differ only in unselected retention fixtures.
+  A single-capture comparison also passes watchdog trap/owner-command behavior,
+  refusal backoff and malformed/stale-envelope upgrade reconstruction with both
+  suppliers. Both instances are observed deleted; no new product API was needed.
+  The synchronous executor also passes three lifecycle and three admission cases
+  with both suppliers on one capture. Its selected replacement graph excludes
+  optional fixture dependencies; endpoint refusal and instance deletion pass.
+  Other modes are not qualified; see the Scheduling record for exact identities.
 - [Backup](../../qualification/backup/README.md): current-source byte/filesystem
   and HTTP migrations preserve metadata, transfer binding, budgets and evidence.
   The 65 custody/payload cases and 13 HTTP cases have separate recorded runs.
@@ -114,9 +128,16 @@ HTTP/Tokio stay outside Build and portable bytes. No full release gate is claime
 ## Remaining gates and limitations
 
 Continue from current unfrozen workloads in the [register](../workloads.md).
+The [native-execution review](../process-execution.md) identifies current Canic
+group-capture and foreground-child requirements that Build's private runner cannot
+serve unchanged. The shared core passes cleanup/lifetime tests and current Canic
+artifact/metadata and foreground-client qualification. Signer group capture remains open;
+no Canic product code moves here. `../ic-profiler` is absent and its current
+checkout/status has been requested. The inspected `ic-platform-new` has no current
+Tooling dependency; old Platform fixture results must not drive that rewrite.
 Managed-server lifetime/cancellation, multi-canister partial snapshot effects,
-remaining Platform drivers, Profiler ownership/native acceptance, full watchdog
-comparability, archive acceptance and native macOS qualification remain open.
+remaining Platform drivers, Profiler ownership/native acceptance, broader Scheduling
+acceptance, archive acceptance and native macOS qualification remain open.
 Borrowed-server success does not justify a wrapper; upstream creation can panic
 or leave remote effects after cancellation, and async deletion is best-effort.
 See [simulator ownership](../simulator-ownership.md).

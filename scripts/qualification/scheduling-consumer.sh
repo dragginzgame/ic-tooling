@@ -2,7 +2,9 @@
 # Admit the current rewrite without applying old Scheduling migration patches.
 set -euo pipefail
 mode="${1:-admit}"
-case "$mode" in admit|held) ;; *) echo "Expected admit or held; historical modes are retired." >&2; exit 2 ;; esac
+selection="${2:-held-replies}"
+case "$selection" in held-replies|held-pressure|lifecycle|executor) ;; *) echo 'Unknown installed selection' >&2; exit 2 ;; esac
+case "$mode" in admit|held|replacement|comparison) ;; *) echo "Expected admit, held, replacement or comparison; historical modes are retired." >&2; exit 2 ;; esac
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${SCHEDULING_SOURCE:-$repo/../ic-scheduling-new}"
 mkdir -p "$repo/target"
@@ -11,7 +13,7 @@ trap 'printf "Scheduling rewrite export: %s\n" "$scratch"' EXIT
 mkdir "$scratch/source"
 source "$repo/scripts/qualification/local-source.sh"
 export_local_source
-if [[ "$mode" == held ]]; then
+if [[ "$mode" != admit ]]; then
   : "${SCHEDULING_POCKET_IC_BIN:?select an explicitly prepared local PocketIC server}"
   [[ "$SCHEDULING_POCKET_IC_BIN" == /* && -x "$SCHEDULING_POCKET_IC_BIN" ]]
   if [[ -z "${SCHEDULING_TESTKIT_CLI:-}" ]]; then
@@ -19,8 +21,12 @@ if [[ "$mode" == held ]]; then
   fi
   [[ "$("$SCHEDULING_TESTKIT_CLI" --version)" == 'ic-testkit-server 0.106.0' ]]
   export GIT_CEILING_DIRECTORIES="$repo/target"
-  git -C "$scratch/source" apply --check "$repo/qualification/scheduling/held-selection.patch"
-  git -C "$scratch/source" apply "$repo/qualification/scheduling/held-selection.patch"
+  selector_patch="$repo/qualification/scheduling/held-selection.patch"
+  if [[ "$selection" == executor ]]; then
+    selector_patch="$repo/qualification/scheduling/executor-endpoint.patch"
+  fi
+  git -C "$scratch/source" apply --check "$selector_patch"
+  git -C "$scratch/source" apply "$selector_patch"
   "$SCHEDULING_POCKET_IC_BIN" --version > "$scratch/server-version.txt"
   sha256sum "$SCHEDULING_POCKET_IC_BIN" "$SCHEDULING_TESTKIT_CLI" > "$scratch/server.sha256"
 fi
@@ -43,14 +49,57 @@ jq -e '. as $m |
   echo 'Expected Scheduling rewrite executor/Once drivers with shared Testkit and held-reply fixtures; source contract refused.' >&2
   exit 1
 }
-if [[ "$mode" == held ]]; then
-  cargo build --manifest-path "$manifest" -p once-probe --release --target wasm32-unknown-unknown --locked --offline
-  cargo build --manifest-path "$manifest" -p once-driver --locked --offline
+run_installed() {
+  local output="$1"
+  local driver=once-driver probe=once-probe wasm=once_probe.wasm
+  if [[ "$selection" == executor ]]; then
+    driver=executor-driver probe=executor-probe wasm=executor_probe.wasm
+  fi
+  mkdir -p "$output"
+  cargo tree --manifest-path "$manifest" -p "$driver" -e normal,build --prefix none --locked --offline > "$output/driver-tree.txt"
+  if [[ "$selection" == executor && ( "$mode" == replacement || "$output" == "$scratch/replacement" ) ]]; then
+    rg -q '^ic-testkit v0.107.1 ' "$output/driver-tree.txt"
+    if rg -q '^(wat|ic-platform|ic-platform-types) v' "$output/driver-tree.txt"; then
+      echo 'Executor unexpectedly selects optional fixture dependencies' >&2; exit 1
+    fi
+  fi
+  cargo build --manifest-path "$manifest" -p "$probe" --release --target wasm32-unknown-unknown --locked --offline
+  cargo build --manifest-path "$manifest" -p "$driver" --locked --offline
   env -u IC_TESTKIT_POCKET_IC_URL POCKET_IC_BIN="$SCHEDULING_POCKET_IC_BIN" "$SCHEDULING_TESTKIT_CLI" run \
-    --ttl 300 --server-stdout "$scratch/server.stdout" --server-stderr "$scratch/server.stderr" -- \
-    bash "$repo/scripts/qualification/scheduling-held.sh" "$scratch" "$CARGO_TARGET_DIR/debug/once-driver" \
-    "$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/once_probe.wasm"
+    --ttl 300 --server-stdout "$output/server.stdout" --server-stderr "$output/server.stderr" -- \
+    bash "$repo/scripts/qualification/scheduling-held.sh" "$output" "$CARGO_TARGET_DIR/debug/$driver" \
+    "$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/$wasm" "$selection"
   sha256sum --check "$scratch/server.sha256"
+}
+if [[ "$mode" == comparison ]]; then
+  run_installed "$scratch/baseline"
+fi
+if [[ "$mode" == replacement || "$mode" == comparison ]]; then
+  cp "$scratch/metadata.json" "$scratch/released-metadata.json"
+  cp "$scratch/source/qualification/Cargo.lock" "$scratch/released-Cargo.lock"
+  sed "s|@IC_TOOLING_NEW@|$repo|g" "$repo/qualification/scheduling/replacement-testkit.patch" > "$scratch/replacement.patch"
+  git -C "$scratch/source" apply --check "$scratch/replacement.patch"
+  git -C "$scratch/source" apply "$scratch/replacement.patch"
+  cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
+  jq -e --arg root "$repo" '. as $m |
+    [.packages[] | select(.name == "ic-testkit")] as $suppliers |
+    ($suppliers | length == 1) and $suppliers[0].version == "0.107.1" and
+    $suppliers[0].manifest_path == ($root + "/crates/ic-testkit/Cargo.toml") and
+    all(["once-driver", "executor-driver"][]; . as $name |
+      ($m.packages[] | select(.name == $name) | .id) as $driver |
+      any($m.resolve.nodes[] | select(.id == $driver) | .deps[];
+        .name == "ic_testkit" and .pkg == $suppliers[0].id))
+  ' "$scratch/metadata.json" >/dev/null
+  cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- \
+    verify-external-lock "$scratch/released-Cargo.lock" "$scratch/source/qualification/Cargo.lock" 1048576
+  cargo clippy --manifest-path "$manifest" -p once-driver -p executor-driver --all-targets --locked --offline -- -D warnings
+fi
+if [[ "$mode" != admit ]]; then
+  if [[ "$mode" == comparison ]]; then
+    run_installed "$scratch/replacement"
+  else
+    run_installed "$scratch"
+  fi
   exit 0
 fi
 # Check the real retained API callers, without running the aggregate installed roster.

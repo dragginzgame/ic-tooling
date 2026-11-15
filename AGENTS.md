@@ -52,10 +52,20 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   portable bytes. Its contract is `docs/http-body.md`.
 - `ic-host-text` 0.77.2 owns escaping and bordered/plain tables for Query, DB and Canic;
   its contract is `docs/text-presentation.md`. Other Text operations remain open.
-- `ic-testkit` 0.107.0 admits the shared PocketIC re-export and bounded owned reply
+- `ic-host-process` 0.80.0 owns synchronous group/direct-child execution and
+  bounded stream delivery. Build uses this shared core; caller decoding and
+  terminal policy stay outside it. Follow `docs/process-execution.md`; Canic
+  signer group-capture migration and native macOS acceptance remain open. The
+  foreground client passes export-only fixture/PTY qualification. Injected
+  cleanup failures, Linux descendant lifetime and current Canic Build checks pass.
+- `ic-testkit` 0.107.1 admits the shared PocketIC re-export and bounded owned reply
   catalogs and generated modules behind `held-reply-fixtures`. Follow
   `docs/testkit-held-replies.md`; exclusive request control passes independent
-  tests, but the replacement is not yet consumer-qualified.
+  tests and current Scheduling pressure/held-upgrade, watchdog admission/pressure
+  and Jobs pressure qualification, plus focused watchdog/refusal/upgrade lifecycle
+  comparison on one capture. The default-feature executor trap/admission comparison
+  also passes with optional fixture dependencies absent. Broader
+  consumer modes and native macOS acceptance remain separate gates.
 - Release ownership is declared in `ci/cargo-release-groups.json`; group ledgers
   live under `releases/`. See `docs/release-ownership.md`. Root changelog is an index;
   qualification fixtures remain outside product groups.

@@ -1,0 +1,22 @@
+[package]
+name = "ic-host-process"
+version = "0.80.0"
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[target.'cfg(any())'.dev-dependencies]
+toko-tooling.workspace = true
+
+[dependencies]
+rustix = { workspace = true, features = ["process"] }
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

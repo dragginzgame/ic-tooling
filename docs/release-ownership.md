@@ -12,10 +12,11 @@ now has its own group as its requirements-driven implementation begins.
 | build | Cargo execution and owned Wasm capture have distinct consumer migrations from storage/byte operations. A presentation or HTTP change must not force a Build version change. |
 | http | Complete response-body admission depends on Reqwest and has its own native consumer requirements. It stays outside Build and portable byte graphs. |
 | text | Pure escaping and table layout serve Query and DB independently of HTTP, process execution and filesystem authority. |
-| testkit | Shared PocketIC client identity and bounded held-reply mechanisms serve test drivers independently of Build and product runtimes. The initial slice admits catalogs; runtime fixture control remains pending. |
+| process | Native child/group execution and bounded communication serve Build and foreground tools without Cargo, IC or observation policy. |
+| testkit | Shared PocketIC client identity, bounded generated fixtures and exclusive held-reply control serve test drivers independently of Build and product runtimes. |
 | tools | The external-lock executable has its own command contract. Its ledger also owns maintained repository qualification/setup workflows; these scripts are not executable library features or runtime dependencies. |
 
-All seven product packages belong to exactly one group. `qualification/wasm-probe`
+All eight product packages belong to exactly one group. `qualification/owned-wasm-probe`
 is an unpublished fixture in its independent workspace, not a product group.
 The Testkit group owns an actual admitted package, not a future simulator wrapper.
 Frozen Wire work and absent packages receive no group. Root dependency aliases list only actual member usage; the policy's

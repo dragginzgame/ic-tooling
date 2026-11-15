@@ -57,3 +57,17 @@ remains tied to its recorded inputs.
 - Extend current Canic qualification to app recipes: refuse duplicate outputs
   before effects, retain lock bytes, and preserve earlier successful outputs when
   a later recipe fails. App builds remain serial, not transactional.
+
+### Shared execution follow-up
+
+- Replace the private spawn/drain/cleanup engine with unpublished Process 0.80.0.
+  Build retains its Cargo stream decoder, bounded diagnostics and error mapping;
+  the 19 existing Build tests pass through the shared owner. The Build API and
+  version stay on the current unpublished draft. Canic qualification must be
+  refreshed before claiming this changed graph against that consumer.
+
+- Refresh current Canic artifact/metadata qualification for the shared Process
+  graph. Retain its newly required bounded/escaped compiler diagnostics and named
+  missing-package refusal in the consumer adapter. Exact output, failure
+  preservation, tool/wrapper refusal and cleanup checks pass; combined app/Text
+  evidence is not implicitly refreshed.
