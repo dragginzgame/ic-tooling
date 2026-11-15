@@ -3,10 +3,15 @@
 set -euo pipefail
 mode="${1:-admit}"
 selection="${2:-held-replies}"
-case "$selection" in held-replies|held-pressure|lifecycle|executor|retention) ;; *) echo 'Unknown installed selection' >&2; exit 2 ;; esac
+case "$selection" in held-replies|held-pressure|lifecycle|executor|retention|jobs-lifecycle|jobs-settlement|uncertainty|jobs-boundaries|completion-refusal|aggregate|metrics-cost) ;; *) echo 'Unknown installed selection' >&2; exit 2 ;; esac
 case "$mode" in admit|held|replacement|comparison) ;; *) echo "Expected admit, held, replacement or comparison; historical modes are retired." >&2; exit 2 ;; esac
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
-source_checkout="${SCHEDULING_SOURCE:-$repo/../ic-scheduling-new}"
+source_checkout="${SCHEDULING_SOURCE:-$repo/../ic-scheduling}"
+# The rewrite moved to the canonical path; never substitute the legacy workspace.
+git -C "$source_checkout" merge-base --is-ancestor f382bacac5461ea965e5813b56f15bd4757bf596 HEAD || {
+  echo 'Scheduling source must descend from the qualified rewrite checkpoint' >&2
+  exit 1
+}
 mkdir -p "$repo/target"
 scratch="$(mktemp -d "$repo/target/scheduling-new.XXXXXXXX")"
 trap 'printf "Scheduling rewrite export: %s\n" "$scratch"' EXIT
@@ -15,10 +20,13 @@ source "$repo/scripts/qualification/local-source.sh"
 export_local_source
 if [[ "$mode" != admit ]]; then
   : "${SCHEDULING_POCKET_IC_BIN:?select an explicitly prepared local PocketIC server}"
-  [[ "$SCHEDULING_POCKET_IC_BIN" == /* && -x "$SCHEDULING_POCKET_IC_BIN" ]]
-  if [[ -z "${SCHEDULING_TESTKIT_CLI:-}" ]]; then
-    SCHEDULING_TESTKIT_CLI="$(bash "$repo/vendor/toko-tooling/scripts/dev/install-rust-tools.sh" --consumer "$repo/../ic-scheduling" --package ic-testkit --version 0.106.0 --bin ic-testkit-server --profile release --features cli --check)"
-  fi
+  [[ "$SCHEDULING_POCKET_IC_BIN" == /* && -x "$SCHEDULING_POCKET_IC_BIN" ]] || {
+    echo 'SCHEDULING_POCKET_IC_BIN must name an existing absolute executable' >&2; exit 1;
+  }
+  : "${SCHEDULING_TESTKIT_CLI:?select an explicitly prepared ic-testkit-server 0.106.0 launcher}"
+  [[ "$SCHEDULING_TESTKIT_CLI" == /* && -x "$SCHEDULING_TESTKIT_CLI" ]] || {
+    echo 'SCHEDULING_TESTKIT_CLI must name an existing absolute executable' >&2; exit 1;
+  }
   [[ "$("$SCHEDULING_TESTKIT_CLI" --version)" == 'ic-testkit-server 0.106.0' ]]
   export GIT_CEILING_DIRECTORIES="$repo/target"
   selector_patch="$repo/qualification/scheduling/held-selection.patch"
@@ -63,12 +71,25 @@ run_installed() {
       echo 'Executor unexpectedly selects optional fixture dependencies' >&2; exit 1
     fi
   fi
-  cargo build --manifest-path "$manifest" -p "$probe" --release --target wasm32-unknown-unknown --locked --offline
+  local wasm_path="$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/$wasm"
+  if [[ "$selection" == metrics-cost ]]; then
+    cargo build --manifest-path "$manifest" -p metrics-probe --no-default-features --release --target wasm32-unknown-unknown --locked --offline
+    cp "$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/metrics_probe.wasm" "$output/metrics-off.wasm"
+    cargo build --manifest-path "$manifest" -p metrics-probe --no-default-features --features metrics --release --target wasm32-unknown-unknown --locked --offline
+    cp "$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/metrics_probe.wasm" "$output/metrics-on.wasm"
+    wasm_path="$output/metrics-off.wasm"
+    sha256sum "$output/metrics-off.wasm" "$output/metrics-on.wasm" > "$output/metrics-wasm.sha256"
+  else
+    cargo build --manifest-path "$manifest" -p "$probe" --release --target wasm32-unknown-unknown --locked --offline
+  fi
   cargo build --manifest-path "$manifest" -p "$driver" --locked --offline
   env -u IC_TESTKIT_POCKET_IC_URL POCKET_IC_BIN="$SCHEDULING_POCKET_IC_BIN" "$SCHEDULING_TESTKIT_CLI" run \
     --ttl 300 --server-stdout "$output/server.stdout" --server-stderr "$output/server.stderr" -- \
     bash "$repo/scripts/qualification/scheduling-held.sh" "$output" "$CARGO_TARGET_DIR/debug/$driver" \
-    "$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/$wasm" "$selection"
+    "$wasm_path" "$selection"
+  if [[ "$selection" == metrics-cost ]]; then
+    sha256sum --check "$output/metrics-wasm.sha256"
+  fi
   sha256sum --check "$scratch/server.sha256"
 }
 if [[ "$mode" == comparison ]]; then

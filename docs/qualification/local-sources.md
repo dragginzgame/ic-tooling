@@ -1,8 +1,9 @@
 # Current local consumer sources
 
 Active Canic, Backup, Scheduling and DB qualification uses current local sibling
-working trees. Scheduling selects `../ic-scheduling-new` specifically; the older
-`../ic-scheduling` experiments do not qualify the rewrite. Historical pinned exports
+working trees. Scheduling's rewrite moved from `../ic-scheduling-new` to
+`../ic-scheduling`; its runner verifies ancestry from a qualified rewrite commit.
+`../ic-scheduling-legacy` is excluded as a consumer source. Historical pinned exports
 remain historical evidence, not the
 source selection for new runs. Auth remains on hold; Storage, Observability and
 Wire remain frozen. Reading a current consumer's existing supplier selection does

@@ -33,7 +33,9 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   owning repository; local patches are qualification adapters, not product code.
   Canic is being rewritten: current requirements, not its older implementation,
   determine whether further Tooling capabilities are needed.
-- Scheduling qualification targets `../ic-scheduling-new`, not `../ic-scheduling`.
+- Scheduling qualification targets the rewrite now at `../ic-scheduling` (formerly
+  `../ic-scheduling-new`); the runner verifies its qualified rewrite ancestry.
+  Legacy source is excluded; installed checks require explicit prepared tool paths.
   Preserve its Testkit client/held-reply-fixture boundary; dependency removal alone
   is not an architecture improvement. Old Scheduling experiments are historical.
 - Product packages belong under `crates/`; exclude `qualification/` from the
@@ -65,10 +67,10 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   catalogs and generated modules behind `held-reply-fixtures`. Follow
   `docs/testkit-held-replies.md`; exclusive request control passes independent
   tests and current Scheduling pressure/held-upgrade, watchdog admission/pressure
-  and Jobs pressure qualification, plus focused watchdog/refusal/upgrade lifecycle
-  comparison on one capture. The default-feature executor trap/admission comparison
-  also passes with optional fixture dependencies absent. Broader
-  consumer modes and native macOS acceptance remain separate gates.
+  and Jobs pressure qualification. The full Once aggregate, paired metrics-feature
+  probe and default-feature executor comparison pass on identical current source
+  bytes; executor fixture dependencies remain absent. Native macOS, other consumers
+  and production migration remain separate gates.
 - Release ownership is declared in `ci/cargo-release-groups.json`; group ledgers
   live under `releases/`. See `docs/release-ownership.md`. Root changelog is an index;
   qualification fixtures remain outside product groups.

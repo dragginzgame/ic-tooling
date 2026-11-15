@@ -8,6 +8,10 @@ package is `ic-build` 0.87.3. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
 0.80.1 for shared byte admission and held-directory publication. Toko Tooling is
 pinned to 0.44.4 in both workspaces.
 
+The byte owner also supplies [complete producer commitments](docs/byte-commitments.md).
+Independent tests pass; `make test-backup-commitments` compares the selected
+consumer migration, currently blocked by failures in the unchanged Backup baseline.
+
 `ic-cargo-qualification` 0.1.2 is a separate unpublished development executable
 for external-lock admission; it adds no dependencies to the ordinary Build API.
 
@@ -59,6 +63,21 @@ one capture for watchdog traps/owner commands, refusal backoff and upgrade cases
 cases and checks that its default Testkit graph excludes fixture dependencies.
 `make test-scheduling-retention` compares retained callback custody and settlement
 after public handles are dropped, using both suppliers on one source capture.
+`make test-scheduling-jobs-lifecycle` compares calendar results, owner precedence,
+upgrade reconstruction and downtime behavior on one current capture.
+`make test-scheduling-jobs-settlement` compares retry budgets, explicit
+reconciliation and completion-relative scheduling with both suppliers.
+`make test-scheduling-uncertainty` compares transient lifetime custody and
+unresolved-work reconstruction across actual upgrades.
+`make test-scheduling-jobs-boundaries` compares initial and one-shot deadlines,
+schedule/progress boundaries and bounded catch-up, including paused upgrades.
+`make test-scheduling-completion-refusal` compares completion cadence, diagnostics
+and low-cycle delivery refusal against the rewrite at its canonical path.
+`make test-scheduling-aggregate` compares the complete Once installed roster,
+including control/dispatch cost observations. Installed selections require explicit
+`SCHEDULING_POCKET_IC_BIN` and `SCHEDULING_TESTKIT_CLI` executable paths.
+`make test-scheduling-metrics` compares the existing metrics-disabled/enabled
+probe with both Testkit suppliers, retaining exact Wasm bytes and observations.
 
 The [release ownership map](docs/release-ownership.md) declares foundation, build,
 HTTP, Process, Text, tools and Testkit groups. [Changelogs](CHANGELOG.md) live under `releases/`;
@@ -74,7 +93,7 @@ The [first-slice contract](docs/build-owned-artifact.md) defines acceptance and
 The [filesystem contract](docs/filesystem-custody.md) defines Stage 2. Run
 `make test-custody` for its focused tests and `make test-backup-custody` for the
 [local Backup migration](qualification/backup/README.md) in an isolated export.
-`make test-scheduling-consumer` admits the current `../ic-scheduling-new` source,
+`make test-scheduling-consumer` admits the rewrite now at `../ic-scheduling`,
 its retained Testkit dependency graph, and focused host-driver compilation.
 See [current requirements](qualification/scheduling/README.md); this does not
 claim installed-runtime or replacement Testkit acceptance.

@@ -1,10 +1,14 @@
 # Scheduling rewrite: current consumer requirements
 
-The maintainer selected `../ic-scheduling-new` as the active Scheduling consumer.
+The selected rewrite moved from `../ic-scheduling-new` to `../ic-scheduling`.
 `make test-scheduling-consumer` snapshots that working tree, including tracked edits
 and non-ignored source, with the shared read-only capture helper. It applies no
 old Scheduling migration patch and does not modify the sibling. An explicit
-`SCHEDULING_SOURCE` override must satisfy the same rewrite package/graph checks.
+`SCHEDULING_SOURCE` override must satisfy the same rewrite ancestry and graph checks.
+The runner verifies descent from `f382bacac5461ea965e5813b56f15bd4757bf596`;
+it never falls back to the legacy source. Installed runs require explicit prepared
+server/launcher paths; the removed legacy checkout is no longer a tool locator.
+Tool bytes are hashed before and after each run independently of consumer source.
 
 The current target admits the locked dependency graph and checks only the host
 `once-driver` and `executor-driver` targets offline. Both must select Testkit
@@ -74,11 +78,11 @@ release authority and uncertain-effect handling. It is an implementation contrac
 not a claim that the replacement runtime fixtures or all their failure tests exist.
 
 Run `make test-scheduling-held` with `SCHEDULING_POCKET_IC_BIN` set to an
-absolute executable path for a prepared local server. The optional
-`SCHEDULING_TESTKIT_CLI` selects the released 0.106.0 launcher; otherwise the
-installed Toko checker selects its already-prepared Scheduling tool receipt.
-That old checkout supplies only a tool asset, never consumer source. No tool is
-installed. This recorded run uses server 16.1.0; the rewrite's earlier 16.0.0
+absolute executable path for a prepared local server. Set `SCHEDULING_TESTKIT_CLI`
+to an absolute executable path for the released 0.106.0 launcher. Both variables
+are required for installed selections; no tool is installed implicitly. Earlier
+runs located these assets through the old checkout's receipt. This recorded run
+uses server 16.1.0; the rewrite's earlier 16.0.0
 observations remain separate.
 
 `held-selection.patch` adds a private `--held-replies` driver selection in the
@@ -266,3 +270,241 @@ instance. Prepared server/launcher hashes, exact replacement supplier identity,
 external-lock admission and driver Clippy pass. This adds retention acceptance;
 it does not qualify the aggregate suite, other Jobs/calendar modes, native macOS
 or production cutover. The sibling source and product API remain unchanged.
+
+## Jobs lifecycle and calendar comparison
+
+`make test-scheduling-jobs-lifecycle` selects `comparison jobs-lifecycle` in the
+existing runner. The export calls unchanged `jobs::calendar`, `jobs::check`,
+`jobs::lifecycle` and `jobs::downtime`, checking empty HTTP inventory between
+subjects. It preserves the current consumer's focused retry selector. Neither
+the sibling nor the Testkit product API changes.
+
+Released 0.106.0 and replacement 0.107.1 both passed on 2026-11-15 from HEAD
+`bc36b9110b19171f068e763697751ca6f94dfe0b`, source-tar SHA-256
+`557f20fe58c3c5e2099bbe2df3e943c3b2ae7096cfc0f75abf4a2e51b0db405c`.
+Export: `target/scheduling-new.NiElDo6D`; log:
+`target/scheduling-jobs-lifecycle-comparison.log`.
+
+Five calendar scenarios retain their exact next-occurrence results. Seven Jobs
+modes check occurrence context, skip-late behavior, edit/pause precedence,
+recovery isolation and reentrant future destruction. Upgrade checks preserve
+selected occurrences/revisions and paused state without replaying settled work.
+Two downtime modes execute overdue work once or skip it according to restored
+lateness policy, with future successors and no catch-up burst.
+
+Both runs pass missing-endpoint refusal and report exactly one deleted instance.
+Prepared tool hashes, external-lock admission, exact replacement identity and
+driver Clippy pass. Scenario logs match; calendar instruction counts are recorded
+consumer observations, not a Tooling performance claim. Other Jobs subjects,
+aggregate-suite execution, native macOS and production migration remain outside
+this evidence.
+
+## Jobs retry, reconciliation and completion comparison
+
+`make test-scheduling-jobs-settlement` selects `comparison jobs-settlement`.
+It runs the unchanged `jobs_retry::check`, `jobs_retry::recovery` and
+`jobs_completion::check` subjects, with empty HTTP inventory between subjects.
+The export retains the consumer's newly added unresolved/lifetime selectors.
+No product API or sibling source is changed.
+
+Released Testkit 0.106.0 and replacement 0.107.1 passed on 2026-11-15 from HEAD
+`bc36b9110b19171f068e763697751ca6f94dfe0b`, source-tar SHA-256
+`865baa453960352bfe6595f13d88d1102bc2468bf11840316d0f4554aec71747`.
+Export: `target/scheduling-new.uHcqC3ty`; log:
+`target/scheduling-jobs-settlement-comparison.log`. This capture includes newer
+working-tree changes than the preceding Jobs lifecycle run; the results do not
+refresh that earlier slice's evidence.
+
+Eleven retry modes preserve capped budgets, stable effect identity, pause/upgrade
+state, owner edits, cancellation and settlement. Seven reconciliation modes check
+explicit retry safety, paused upgrades, exact authority and refusal when retry
+is unavailable. Eleven completion modes check real awaits, completion-relative
+deadlines, pause/upgrade, edits, overflow, recovery and terminal cancellation.
+Uncertain work is not retried merely because time passes or the owner resumes it.
+
+Both suppliers pass all 29 scenarios with matching scenario logs, missing-endpoint
+refusal and exactly one observed deleted instance per run. External-lock admission,
+exact replacement selection, driver Clippy and prepared-tool hashes pass. These
+are consumer functional assertions, not a performance comparison. Other subjects,
+native macOS, aggregate-suite acceptance and production cutover remain separate.
+
+## Lifetime custody and unresolved upgrade comparison
+
+`make test-scheduling-uncertainty` selects `comparison uncertainty`. The exported
+entrypoint runs unchanged `lifetimes::check` and `jobs_unresolved::check`, with
+empty HTTP inventory between subjects. The consumer's current diagnostics
+selector remains intact. No consumer policy or implementation moves into Tooling.
+
+Released Testkit 0.106.0 and replacement 0.107.1 passed on 2026-11-15 from HEAD
+`bc36b9110b19171f068e763697751ca6f94dfe0b`, source-tar SHA-256
+`c6d201893987fa419ebda9c010476a815e0774797906836570f899bae979dd55`.
+Export: `target/scheduling-new.hwf6Dljw`; log:
+`target/scheduling-uncertainty-comparison.log`. This is a newer working-tree
+capture than the settlement comparison; earlier evidence remains snapshot-bound.
+
+Eight lifetime modes check transient settlement, trapped custody, reentrant
+capture release and stale queued replacement. A cleanup trap must preserve
+uncertainty or fault closed, without replay. Seven unresolved-work modes exercise
+real upgrades during running/factory/post-await work, repeated reconstruction,
+retry budgets, owner edits and catch-up custody. Time advancement and resume do
+not replay restored work; retirement or retry follows explicit reconciliation.
+
+Both suppliers pass all 15 scenarios with matching logs, missing-endpoint refusal
+and exactly one observed deleted instance each. External-lock admission, exact
+replacement selection, driver Clippy and prepared-tool hashes pass. No shared
+Testkit API change was necessary. This does not qualify other subjects, the full
+aggregate suite, native macOS or production migration.
+
+## Jobs deadline, progress and catch-up boundaries
+
+`make test-scheduling-jobs-boundaries` selects `comparison jobs-boundaries` in
+the existing runner. It calls unchanged `jobs_initial::check` for recurring and
+one-shot work, `jobs_boundaries::check`, `jobs_boundaries::ahead` and
+`jobs_catch_up::check`, checking empty HTTP inventory between subjects.
+
+Released Testkit 0.106.0 and replacement 0.107.1 passed on 2026-11-15 from HEAD
+`f382bacac5461ea965e5813b56f15bd4757bf596`, source-tar SHA-256
+`ee7f488adfdb6e621bac9522240dd36177a1c7a9daa35b8cc927d5ab3958b3e8`.
+Export: `target/scheduling-new.Xrf6gCqk`; log:
+`target/scheduling-jobs-boundaries-comparison.log`. Earlier comparisons remain
+bound to their own captures rather than being promoted to this newer source.
+
+Six recurring and eight one-shot admission modes preserve exact occurrence bytes
+for zero, overdue and future deadlines, skip-late behavior and reconstruction.
+Boundary assertions cover impossible schedules, exhausted progress, three exact
+catch-up plans and progress ahead of time under both lateness policies. Eleven
+catch-up modes include a full 64-occurrence batch, paused upgrades, schedule edits
+and recovery from first/later traps without replenishing committed batch quota.
+
+Both suppliers produce matching scenario logs and pass missing-endpoint refusal,
+exactly one observed deleted instance, external-lock admission, exact replacement
+selection, driver Clippy and prepared-tool hashes. Instruction counts printed by
+the consumer are observations, not a Tooling performance claim. No product API
+or sibling source changes were needed.
+
+The inspected Once driver still has uncovered inline aggregate cases and separate
+after-completion, diagnostics, general refusal and cost subjects. These focused
+comparisons do not establish full aggregate-suite, native macOS or production
+migration acceptance, nor do they refresh prior subjects against this capture.
+
+## Completion cadence, diagnostics and delivery refusal
+
+`make test-scheduling-completion-refusal` selects `comparison completion-refusal`.
+It runs unchanged `after_completion::check`, `metrics::check` and `refusal::check`,
+with empty HTTP inventory between subjects. These are Scheduling-owned assertions;
+no diagnostics or scheduler product policy is added to Testkit.
+
+The rewrite is now at `../ic-scheduling`. Git ancestry from the previously
+qualified rewrite commit was verified before selecting this path. An explicit
+`SCHEDULING_SOURCE=../ic-scheduling-legacy` run refuses before capture, recorded in
+`target/scheduling-legacy-source-refusal.log`. Only the prepared server/launcher
+assets are read from the legacy checkout; it supplies no consumer source.
+
+Released 0.106.0 and replacement 0.107.1 passed on 2026-11-15 from HEAD
+`6c658af8ae0f2ddd8a06a974f850b2c8e1bd4976`, source-tar SHA-256
+`6a67d7f162e0e3a829eed3f936e067fbb3bb15cbc2ae7ef257c934febf061f7a`.
+Export: `target/scheduling-new.GjZEIbi2`; log:
+`target/scheduling-completion-refusal-comparison.log`.
+
+Five after-completion modes preserve completion-anchored successors, stop and owner
+override, overflow and trap barriers. Diagnostics preserve exact committed counts,
+reentrant reads and initialization. Actual low-cycle delivery refusals retain a
+later retry opportunity without accepting work; funding cannot bypass the retained
+deadline, and the later delivery completes exactly once.
+
+Both suppliers produce matching scenario logs and pass missing-endpoint refusal,
+exactly one observed deleted instance, external-lock admission, exact replacement
+selection, driver Clippy and unchanged prepared-tool hashes. The quoted cycle cost
+is a consumer observation, not a Tooling performance result. This closes the three
+subjects listed above for this capture; inline aggregate cases, cost subjects,
+native macOS and production migration remain separate gates.
+
+## Complete Once aggregate comparison
+
+`make test-scheduling-aggregate` selects `comparison aggregate`. Its entrypoint
+adapter selects the external server then falls through to the original complete
+Once roster, without changing assertions, ordering or consumer cleanup. This
+includes the six inline lifecycle/authentication cases, every subject in that
+roster and its control/dispatch cost probes. The separately invoked paired
+metrics-feature probe and executor driver are not part of this command.
+
+Released Testkit 0.106.0 and replacement 0.107.1 both passed on 2026-11-15 from
+HEAD `ee445be226f3ba679e3798d2f7687f2c4d8b0534`, source-tar SHA-256
+`175eb603c5549de1186d1fef93159bc2678a65e6d513de1a15a983e9732d55a1`.
+Export: `target/scheduling-new.f0HO0V8G`; log:
+`target/scheduling-aggregate-comparison.log`. Both 101-line scenario logs match,
+including recorded samples. No performance improvement is inferred from that
+equality; dispatch prefix samples do not represent whole-message cost.
+
+Both branches pass missing-endpoint refusal and report exactly one deleted
+instance. External-lock admission, exact replacement identity, driver Clippy and
+prepared-tool before/after hashes pass. Earlier isolated runs remain separate
+evidence, but this capture now establishes complete Once roster composition.
+Native macOS, the paired metrics-feature probe, and production migration remain
+outside this result.
+
+The initial attempt stopped before compilation because the prepared tools under
+the removed legacy checkout no longer existed (`target/scheduling-new.1w9WebUU`).
+The successful run explicitly selected PocketIC from
+`../ic-backup/.tools/testkit/16.1.0-x86_64-linux/pocket-ic` and launcher 0.106.0
+from the installed Toko tool store. Their SHA-256 values exactly match the previous
+successful completion/refusal run: server
+`b44e1eccd66e02328146b3e209e3403e3a3428a25d25555aca2f67500e5ae9db`
+and launcher `47bb1fd4174bd7ee48b77f32ddb579252c3c6e1e7cd860a1d9f256d167b616e5`.
+Only these prepared executables are reused; no Backup or legacy consumer source
+is selected. The runner now requires both explicit executable paths and reports
+missing files clearly. Missing-launcher refusal is recorded in
+`target/scheduling-missing-launcher.log`; no installation is implicit.
+
+## Paired metrics-feature comparison
+
+`make test-scheduling-metrics` selects `comparison metrics-cost`. Each supplier
+run builds the existing `metrics-probe` with metrics disabled and enabled in
+separate Cargo invocations, retaining both Wasm files before the next build.
+The original `metrics_cost::check` assertions run against an externally owned
+server; the adapter adds only endpoint selection and a completion sentinel.
+Hashes check that retained probe bytes stay unchanged throughout the run.
+
+Released Testkit 0.106.0 and replacement 0.107.1 passed on 2026-11-15 from HEAD
+`ee445be226f3ba679e3798d2f7687f2c4d8b0534`, source-tar SHA-256
+`175eb603c5549de1186d1fef93159bc2678a65e6d513de1a15a983e9732d55a1`.
+Export: `target/scheduling-new.9BWzKmCx`; log:
+`target/scheduling-metrics-comparison.log`. The source tar is identical to the
+completed Once aggregate capture; no intervening source change is inferred away.
+
+Each branch runs three samples for each feature configuration. Both preserve
+callback counts and stable final state. Disabled metrics return six zero counters;
+enabled metrics return `[2, 2, 0, 1, 0, 0]`, with zero overflow flags in both.
+Disabled/enabled Wasm sizes are 89,674/97,350 bytes. Setup and execution-prefix
+instruction samples are recorded by the original driver; they are not whole-async
+lifetime costs or evidence of a Tooling performance improvement.
+
+The corresponding disabled/enabled Wasm files are byte-identical across suppliers,
+and scenario logs match. Both runs pass missing-endpoint refusal, exactly one
+observed deleted instance, external-lock admission, exact replacement selection,
+driver Clippy and prepared-tool integrity. The complete Once aggregate and this
+separate feature comparison are now qualified on identical source bytes. Executor
+evidence remains tied to its earlier capture; native macOS and production cutover
+remain open. No product implementation or sibling source was changed.
+
+## Executor refresh on the aggregate source
+
+`make test-scheduling-executor` passed with released 0.106.0 and replacement 0.107.1
+on 2026-11-15 from HEAD `ee445be226f3ba679e3798d2f7687f2c4d8b0534`, source-tar
+SHA-256 `175eb603c5549de1186d1fef93159bc2678a65e6d513de1a15a983e9732d55a1`.
+Export: `target/scheduling-new.PWX0Vw62`; log:
+`target/scheduling-executor-current.log`. Its source tar is byte-identical to
+the complete Once aggregate and paired metrics-feature captures above.
+
+All three lifecycle and three admission checks pass with exact reply/event bytes;
+the two scenario logs match. The replacement driver selects local Testkit 0.107.1
+without optional `wat`, `ic-platform` or `ic-platform-types` dependencies in its
+normal/build graph. Both runs refuse a missing endpoint and report exactly one
+deleted instance. External-lock admission, driver Clippy and prepared-tool hashes
+pass. No new adapter or product code was required for this refresh.
+
+The Once aggregate, paired metrics-feature probe and executor are therefore
+qualified against both suppliers on identical current source bytes. This closes
+the earlier mismatch in capture ages; future source edits still require their own
+qualification. Native macOS, other consumers and production migration remain
+separate acceptance work. None of these packages has been published by Tooling.

@@ -17,7 +17,7 @@ current requirements must justify further APIs.
 retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
 historical evidence. No old product source/test tree was admitted wholesale.
 
-GitHub checkpoint `5a0faab4da920d1ca48d9fc859ae3217ae4e277a` is on `origin/main`.
+GitHub checkpoint `87c260722d0d13ba45d716fb760bdaa410ada89d` is on `origin/main`.
 Post-push review of the delivered adapters and qualification wiring found no new
 defect. Process 0.80.2 implements [handoff/reaping](../process-handoff.md): 14 Process
 and 19 Build tests pass, plus Clippy/Rustdoc. Current Canic 0.214.0 viewer replacement
@@ -33,8 +33,8 @@ Toko 0.44.4 is pinned in both workspaces; snapshot/tools admission and 19 Build 
 - `ic-build` 0.87.3 owns bounded Cargo execution/decoding, exact selection, owned
   Wasm bytes and explicit cleanup. Private targets are mode 0700. No mutable
   Cargo path escapes. See [owned builds](../build-owned-artifact.md).
-- `ic-host-artifacts` 0.80.1 owns bounded complete-stream read/copy and identity,
-  independently of native filesystem/process/HTTP dependencies.
+- `ic-host-artifacts` 0.80.1 owns bounded read/copy and [producer commitments](../byte-commitments.md),
+  independently of native dependencies. Producer failure or swallowed overflow returns no identity.
 - `ic-host-fs` 0.80.1 owns held directories/files, bounded enumeration, cooperative
   locks and stage/write/seal/commit. Preserve retained failures and visible-but-
   unconfirmed effects; identity-checked removal still needs caller exclusion.
@@ -91,7 +91,7 @@ The next-version changes alone do not refresh earlier runtime evidence.
   cases pass, including Principal mismatch refusal and observed instance deletion.
   Other Platform drivers remain unqualified; no new simulator product exists.
 - [Scheduling](../../qualification/scheduling/README.md): active source is now
-  `../ic-scheduling-new`. Its executor/Once drivers require the Testkit client
+  `../ic-scheduling` (formerly `ic-scheduling-new`). Its drivers require Testkit's
   boundary and held-reply fixtures. Do not remove that dependency as a design goal.
   Old Build/Jobs/Timers migrations and native-snapshot experiments target the old
   repository and are historical only. The [Testkit contract](../testkit-held-replies.md)
@@ -109,8 +109,8 @@ The next-version changes alone do not refresh earlier runtime evidence.
   The synchronous executor also passes three lifecycle and three admission cases
   with both suppliers on one capture. Its selected replacement graph excludes
   optional fixture dependencies; endpoint refusal and instance deletion pass.
-  Retained-callback and dropped-handle cases also pass on one current capture with
-  both suppliers; see the Scheduling record for identities and unqualified modes.
+  Full Once aggregate, paired metrics-feature and executor checks pass with both
+  suppliers on identical current source bytes. Native macOS remains open.
 - [Backup](../../qualification/backup/README.md): current-source byte/filesystem
   and HTTP migrations preserve metadata, transfer binding, budgets and evidence.
   The 65 custody/payload cases and 13 HTTP cases have separate recorded runs.
@@ -120,14 +120,14 @@ The next-version changes alone do not refresh earlier runtime evidence.
 
 Product evidence: six Testkit unit tests and two installed fixture/controller tests
 pass, plus default/feature Clippy and docs; see the Testkit contract for scope.
-19 Build tests; two byte tests and Wasm Clippy; ten filesystem
+19 Build tests; five byte tests and Wasm Clippy; ten filesystem
 failure tests; two HTTP body tests; three Text escaping/layout tests. Relevant
 Clippy, Rustdoc, formatting and Toko admission pass as recorded by their slices.
 HTTP/Tokio stay outside Build and portable bytes. No full release gate is claimed.
 
 ## Remaining gates and limitations
 
-Continue from current unfrozen workloads in the [register](../workloads.md).
+Next: [Backup commitment qualification](../../qualification/backup/README.md#complete-producer-commitments): baseline has 15 restore failures; no migration acceptance claimed.
 The [native-execution review](../process-execution.md) records the shared Process
 owner used by Build and current Canic group capture, foreground execution and
 desktop handoff. Combined Linux qualification covers artifact/metadata, lock setup,
@@ -136,8 +136,8 @@ No Canic product code moves here. `../ic-profiler` is absent and its current
 checkout/status has been requested. The inspected `ic-platform-new` has no current
 Tooling dependency; old Platform fixture results must not drive that rewrite.
 Managed-server lifetime/cancellation, multi-canister partial snapshot effects,
-remaining Platform drivers, Profiler ownership/native acceptance, broader Scheduling
-acceptance, archive acceptance and native macOS qualification remain open.
+remaining Platform drivers, Profiler ownership/native acceptance, archive acceptance,
+native macOS qualification and production consumer migration remain open.
 Borrowed-server success does not justify a wrapper; upstream creation can panic
 or leave remote effects after cancellation, and async deletion is best-effort.
 See [simulator ownership](../simulator-ownership.md).

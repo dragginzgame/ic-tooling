@@ -12,6 +12,15 @@ case "$selection" in
   held-pressure) expected='held-pressure: watchdog admission, watchdog pressure and jobs pressure passed' ;;
   lifecycle) expected='lifecycle: watchdog traps, owner commands, refusal and upgrade checks passed' ;;
   retention) expected='retention: capture custody and dropped-handle checks passed' ;;
+  jobs-lifecycle) expected='jobs-lifecycle: calendar, owner precedence, upgrade and downtime checks passed' ;;
+  jobs-settlement) expected='jobs-settlement: retry, reconciliation and completion checks passed' ;;
+  uncertainty) expected='uncertainty: lifetime custody and unresolved upgrade checks passed' ;;
+  jobs-boundaries) expected='jobs-boundaries: initial deadlines, progress and bounded catch-up checks passed' ;;
+  completion-refusal) expected='completion-refusal: completion cadence, diagnostics and delivery refusal checks passed' ;;
+  aggregate) expected='Once installed lifecycle, authentication and pressure checks passed' ;;
+  metrics-cost)
+    expected='metrics-cost: paired feature behavior and observations passed'
+    driver_args+=("$scratch/metrics-on.wasm") ;;
   executor)
     expected='executor probe: 3 lifecycle and 3 admission checks passed'
     missing_endpoint='executor requires an externally owned server endpoint'

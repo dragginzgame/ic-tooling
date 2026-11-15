@@ -5,6 +5,9 @@ use std::io::{self, Read, Write};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+mod producer;
+pub use producer::{ProduceError, hash_with};
+
 /// Explicit complete-stream admission policy; one extra byte may be observed.
 #[derive(Clone, Copy, Debug)]
 pub enum Length {

@@ -13,7 +13,7 @@ recorded, but no migration or design expansion is active for those repositories.
 
 | Consumer/workflow | Required outcomes and refusals | Proposed destination | Status / gate |
 | --- | --- | --- | --- |
-| Scheduling rewrite | Shared client/type identity and bounded held-reply fixtures for Once/Jobs pressure, watchdog and upgrade refusal | Requirements-driven Testkit; caller-owned policy | Active source `../ic-scheduling-new`; [current requirements](../qualification/scheduling/README.md). No demonstrated old build-driver or cached-snapshot requirement; old experiments are historical |
+| Scheduling rewrite | Shared client/type identity and bounded held-reply fixtures for Once/Jobs pressure, watchdog and upgrade refusal | Requirements-driven Testkit; caller-owned policy | Active rewrite source `../ic-scheduling` (formerly `ic-scheduling-new`); [current requirements](../qualification/scheduling/README.md). No demonstrated old build-driver or cached-snapshot requirement; old experiments are historical |
 | Backup payload/local publication | Exact persisted bytes/hash, bounded reads/HTTP, original I/O failures, no foreign cleanup, distinguish visible-but-not-durable | Bytes + filesystem custody; narrow HTTP adapter | Current local filesystem, byte streams and HTTP body adapter qualified; legacy digest values/in-memory hashing remain; see [contract](filesystem-custody.md) |
 | Canic host/artifact/CLI | Correct build and publication, destination authority, locks and required terminal output | Build/custody plus explicit presentation adapter | [Local record admission](../qualification/canic/README.md) uses byte/filesystem owners; [current CLI Text](../qualification/canic/README.md#current-cli-text) also qualifies; [owned Build](../qualification/canic/README.md#current-owned-build) qualifies artifact/app recipes, including serial partial failure; parent creation/publication still use old Host FS |
 | Auth / Storage packaging | Exact package/archive and external-lock acceptance, usable released artifacts | Development-plane qualification executable | [Auth external-lock/package path qualified](../qualification/auth/README.md); Auth is now on hold; Storage archive migration is frozen; released metadata editor remains unmigrated |
@@ -33,3 +33,88 @@ Physical crates and release groups are not inherited. The first implementation
 package owns only build-to-artifact. Stage 2 extracts byte admission and filesystem
 custody for demonstrated independent Backup use; Process now owns shared execution. Full portable
 byte and simulator consumers must not acquire the build operation's native graph.
+
+## Legacy capability disposition
+
+This is a capability-family map, not an export-count or LOC completion percentage.
+Reviewed legacy source is clean at `a00369fc29fa837c6deb022cceb7e09aa447292c`.
+The current-source inspection on 2026-11-15 included Canic, Backup, Query, DB and
+Scheduling, including their working-tree edits. Canic HEAD was
+`521b054d425ad152a84c5cecb8fc80d53b459ac6`; Backup HEAD was
+`b7c2c6ae754a5ae2452e65b9be537b517614ebd2`. This inspection identifies work; it
+is not a stable-source execution qualification or an exhaustive fleet audit.
+Frozen consumers were not reopened. Absence from these callers does not prove
+that an old export can be removed or its workload retired.
+
+“Implemented” below covers the stated replacement contract only. “Displaced”
+names the owner of required behavior; it does not imply production migration.
+“Unresolved” keeps the old capability available until its requirement is decided.
+
+| Legacy family | Disposition | Replacement or remaining obligation |
+| --- | --- | --- |
+| Cargo build invocation, messages, selection and captured artifact | Implemented core | Build owns execute/select/capture/cleanup; callers receive owned bytes, not a mutable Cargo output path. |
+| Shared target reuse and build observations | Deferred | Private builds work; shared leases need a measured workload. Workspace/reporting observations are not admitted wholesale. |
+| Native Cargo commands and broad flag/environment helpers | Unresolved / caller-owned selection | Existing prepared-tool admission covers the Wasm build slice, not every native command or general Cargo interface. |
+| External lock admission | Displaced and implemented | `ic-cargo-qualification` owns the development executable; ordinary Build does not. |
+| Package archives and source inventories | Frozen delivery workload | Auth is on hold and Storage is frozen. Exact archive/candidate acceptance still belongs in final release qualification. |
+| Release metadata editor | Displaced, not implemented here | Development/release tooling, not Build's runtime API; determine required callers and Toko ownership before replacing it. |
+| Bounded byte read/copy and content identity | Implemented core | Artifacts admits complete streams with exact/maximum length and original failure evidence. |
+| Digest representation and incremental producer hashing | Partly implemented; consumer acceptance blocked | Complete bounded `hash_with` is independently tested. Current Backup restore baseline fails before migration; digest representation and multi-step hash state remain unresolved. |
+| Gzip, chunk digests, matching writers and generic artifact trees | Unresolved | No new generic family admitted. Backup's own assembled-payload hash is a concrete requirement, not authority to import the old tree framework. |
+| Wasm inspection/validation/custom sections and WAT compilation | Partly displaced; broader surface unresolved | Testkit generates its required held-reply module; Build admits its selected artifact. Neither replaces the complete legacy Wasm utilities. |
+| Batch-label validation and general buffer/budget wrappers | Unresolved / private where needed | Required limits exist within new operations; a reusable public utility needs a caller contract. |
+| Held file/directory access, enumeration and identity | Implemented core | Filesystem provides the qualified Backup custody operations; hostile namespace writers remain outside the contract. |
+| File staging, seal/commit, locks and visible-but-unsynced evidence | Implemented core | New Filesystem operations preserve independent write/publication/durability outcomes. |
+| Parent creation and path-based publication | Required consumer migration | Current Canic artifact, config, store, signed and publication paths retain old FS. Define parent authority and path semantics per operation. |
+| Directory commit, retained trees, non-aliasing export and verified copy | Required or unresolved by caller | Canic fleet-plan/starter staging demonstrates directory publication. Do not model it as file commit or import all durable-tree utilities. |
+| Scratch files, owned-directory guards and path helpers | Partly private/displaced | Build owns its scratch lifecycle; consumer-owned paths/recovery stay with consumers. Remaining standalone helpers need individual requirements. |
+| Bounded group/direct-child execution | Implemented core | Process owns stream limits, cancellation/deadlines, signaling and cleanup evidence; callers own decoding and retry. |
+| Background handoff and reaping | Implemented core | Worker keeps child custody after observer drop; no daemonization or readiness guarantee. |
+| Process identity/sampling, clocks, affinity and descendant observations | Unresolved | Profiler checkout remains absent. This is not covered by execution/reaping or test-only `/proc` observations. |
+| Framing, signal/status helpers and launch gates | Partly private; remainder unresolved | Build/Process own necessary internal mechanisms. No standalone compatibility family is admitted without a current requirement. |
+| Complete bounded HTTP response | Implemented adapter | HTTP owns body admission; consumers own Reqwest clients, TLS and request policy. |
+| Terminal escaping and table rendering | Implemented adapter | Text covers escaped bordered/plain tables and width-aware alignment. |
+| Line fitting/clipping and broader terminal policy | Unresolved | Not implied by table width handling; no completion claim for legacy `fit_line`. |
+| PocketIC type identity and held-reply fixtures | Implemented core | Shared re-export, catalog/module generation and exclusive reply control; current Scheduling comparisons pass. |
+| Prepared server provisioning/CLI and managed-server lifetime | Displaced operationally; replacement ownership open | Qualification still runs released launcher 0.106.0. External tool reuse is not a recoded setup/check/run CLI or managed-server implementation. |
+| Instance attach/create/install/retry and time helpers | Partly displaced | Current consumers use upstream clients and caller-owned runtime/policy. Cancellation/partial effects and required managed ownership still need explicit acceptance. |
+| Snapshots, standalone fixtures and cached baselines | Partial upstream qualification; broader scope unresolved | DB single-controller rollback evidence exists. Multi-canister partial effects remain open; a generic cache/pool is excluded by design. |
+| Testkit Wire | Frozen | No replacement package or API admitted while Wire remains frozen. |
+| Generic public test-support modules and compatibility forwarding | Excluded by design | New tests stay with their owner; no old test tree or compatibility scaffold is copied to increase apparent coverage. |
+
+The last row and generic caches/pools are explicit architecture exclusions.
+The other unimplemented families are **not** declared unnecessary or retired.
+Seven legacy package areas having new packages therefore says little about
+whole-surface completion: Build, Artifacts, Filesystem and Testkit still have
+material capability gaps beyond their implemented cores.
+
+## Next implementation slice: Backup byte commitments
+
+The first complete producer operation is now implemented; see
+[its contract](byte-commitments.md). Narrow restore-schedule and assembled-payload
+adapters compile, but current Backup baseline failures block runtime comparison.
+Independent tests cover the core; no complete legacy Artifacts removal is claimed.
+The steps below retain the intended boundaries for finishing this workload.
+
+1. Define complete bounded producer hashing independently of native I/O and
+   consumer serialization. Unlike an unrestricted digest snapshot, success must
+   identify only a completed producer operation; a producer/limit/write refusal
+   cannot be mistaken for a complete commitment. Preserve original failure causes.
+2. Review the coherent old hashing implementation only after that contract is
+   fixed. Keep Backup's domain tags, field ordering, little-endian lengths, member
+   sorting and lowercase digest encodings in Backup. Do not add Backup formats or
+   a generic artifact-tree abstraction to Tooling.
+3. Add independent acceptance for empty input, multiple writes, exact limits,
+   overflow, producer refusal and accepted-prefix behavior. Match expected hashes
+   against fixed bytes, including the unchanged assembled-payload domain framing.
+   Portable byte consumers must not acquire native, HTTP or Testkit dependencies.
+4. Qualify a current Backup export using the new operation and explicit digest
+   conversion at its persisted/public boundaries. Retain manifest, plan, transfer,
+   capture and restore assertions; prove which legacy Artifacts edges disappear.
+   Existing 65-case custody evidence alone does not cover current capture additions.
+
+This slice removes a real retained supplier obligation without opening frozen
+workloads. Follow it with Canic filesystem contract slices: file publication and
+parent authority first, directory publication separately. Continue server/snapshot
+ownership only from an unfrozen consumer's required lifecycle. Native macOS and
+candidate-archive qualification remain independent release gates throughout.

@@ -1,6 +1,6 @@
 --- a/qualification/once-driver/src/main.rs
 +++ b/qualification/once-driver/src/main.rs
-@@ -12,30 +12,72 @@
+@@ -12,37 +12,154 @@
      let mut args = std::env::args().skip(1);
      let first = args.next().expect("probe wasm path or --metrics-cost");
      let paired = first == "--metrics-cost";
@@ -8,7 +8,22 @@
 +    let lifecycle_only = first == "--lifecycle";
 +    let pressure_only = first == "--held-pressure";
 +    let retention_only = first == "--retention";
-+    let held_only = first == "--held-replies" || pressure_only || lifecycle_only || retention_only;
++    let jobs_only = first == "--jobs-lifecycle";
++    let settlement_only = first == "--jobs-settlement";
++    let uncertainty_only = first == "--uncertainty";
++    let boundaries_only = first == "--jobs-boundaries";
++    let completion_only = first == "--completion-refusal";
++    let aggregate = first == "--aggregate";
++    let held_only = first == "--held-replies"
++        || pressure_only
++        || lifecycle_only
++        || retention_only
++        || jobs_only
++        || settlement_only
++        || uncertainty_only
++        || boundaries_only
++        || completion_only
++        || aggregate;
 +    let wasm = std::fs::read(if paired || held_only {
          args.next().expect("disabled probe path")
      } else {
@@ -19,7 +34,14 @@
      let focused = args.next();
      assert!(focused.as_deref().is_none_or(|arg| matches!(
          arg,
-         "--after-completion" | "--jobs-initial" | "--jobs-one-shot" | "--jobs-completion"
+         "--after-completion"
+             | "--jobs-initial"
+             | "--jobs-one-shot"
+             | "--jobs-completion"
+             | "--jobs-retry"
+             | "--jobs-unresolved"
+             | "--lifetimes"
+             | "--diagnostics"
      )));
 -    let server = std::env::var_os("POCKET_IC_BIN").expect("prepared PocketIC 16.0.0 server");
 -    let pic = PocketIcBuilder::new()
@@ -28,7 +50,7 @@
 -        .build_async()
 -        .await;
 +    let builder = PocketIcBuilder::new().with_application_subnet();
-+    let builder = if held_only {
++    let builder = if held_only || paired {
 +        let endpoint = std::env::var("IC_TESTKIT_POCKET_IC_URL")
 +            .expect("held-replies requires an externally owned server endpoint");
 +        builder.with_server_url(endpoint.parse().expect("valid server URL"))
@@ -40,9 +62,69 @@
      if let Some(enabled) = enabled {
          metrics_cost::check(&pic, &wasm, &enabled).await;
          pic.drop().await;
++        println!("metrics-cost: paired feature behavior and observations passed");
          return;
      }
      let external = pic.create_canister().await;
++    if completion_only {
++        after_completion::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        metrics::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        refusal::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        pic.drop().await;
++        println!("completion-refusal: completion cadence, diagnostics and delivery refusal checks passed");
++        return;
++    }
++    if boundaries_only {
++        jobs_initial::check(&pic, &wasm, external, false).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs_initial::check(&pic, &wasm, external, true).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs_boundaries::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs_boundaries::ahead(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs_catch_up::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        pic.drop().await;
++        println!("jobs-boundaries: initial deadlines, progress and bounded catch-up checks passed");
++        return;
++    }
++    if uncertainty_only {
++        lifetimes::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs_unresolved::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        pic.drop().await;
++        println!("uncertainty: lifetime custody and unresolved upgrade checks passed");
++        return;
++    }
++    if settlement_only {
++        jobs_retry::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs_retry::recovery(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs_completion::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        pic.drop().await;
++        println!("jobs-settlement: retry, reconciliation and completion checks passed");
++        return;
++    }
++    if jobs_only {
++        jobs::calendar(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs::check(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs::lifecycle(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        jobs::downtime(&pic, &wasm, external).await;
++        assert!(pic.get_canister_http().await.is_empty());
++        pic.drop().await;
++        println!("jobs-lifecycle: calendar, owner precedence, upgrade and downtime checks passed");
++        return;
++    }
 +    if retention_only {
 +        retention::check(&pic, &wasm, external).await;
 +        assert!(pic.get_canister_http().await.is_empty());
@@ -70,7 +152,7 @@
 +        println!("held-pressure: watchdog admission, watchdog pressure and jobs pressure passed");
 +        return;
 +    }
-+    if held_only {
++    if held_only && !aggregate {
 +        pressure::check(&pic, &wasm, external).await;
 +        held_upgrade::check(&pic, &wasm, external).await;
 +        pic.drop().await;
@@ -78,5 +160,5 @@
 +        return;
 +    }
      if focused.is_some() {
-         if focused.as_deref() == Some("--jobs-completion") {
-             jobs_completion::check(&pic, &wasm, external).await;
+         if focused.as_deref() == Some("--diagnostics") {
+             metrics::check(&pic, &wasm, external).await;

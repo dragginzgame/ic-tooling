@@ -28,6 +28,31 @@ crates.io release. The selected consumer currently uses released Testkit 0.106.0
   settlement with both suppliers on one capture. Preserve existing consumer
   assertions and focused selectors; endpoint refusal, instance deletion, external
   lock admission and driver Clippy pass without a product API change.
+- Qualify current Jobs calendar results, owner precedence, upgrade reconstruction
+  and downtime with released and replacement Testkit on one source capture.
+  Preserve consumer assertions and retry selectors; no new shared API is needed.
+- Compare 29 current Jobs retry, reconciliation and completion scenarios with both
+  suppliers. Preserve budgets, effect identity, explicit recovery authority and
+  completion-relative deadlines; both runs pass endpoint refusal and deletion.
+- Compare eight transient-lifetime and seven unresolved-upgrade scenarios with
+  both suppliers, preserving trapped custody, stale-delivery refusal and explicit
+  reconciliation before retry. No product implementation changes are needed.
+- Qualify initial and one-shot deadlines, schedule/progress boundaries and bounded
+  catch-up against both suppliers on one current capture. Preserve exact occurrence
+  bytes, non-replay, paused upgrades and catch-up quotas across trap recovery.
+- Follow the verified Scheduling rewrite relocation to `../ic-scheduling`, with
+  ancestry admission rejecting legacy consumer source. Qualify completion cadence,
+  committed diagnostics and low-cycle delivery refusal with both Testkit suppliers.
+- Qualify the complete current Once aggregate with released and replacement
+  Testkit on one capture, including inline authentication/lifecycle and
+  control/dispatch cost probes. Require explicit prepared launcher/server paths
+  after legacy tool locations were removed; matching tool bytes preserve identity.
+- Qualify the paired metrics-disabled/enabled probe with both suppliers on source
+  bytes identical to the aggregate run. Preserve callback behavior, exact counter
+  results and probe bytes; retain observations without a performance-gain claim.
+- Refresh the six executor lifecycle/admission checks on those same source bytes,
+  retaining default-feature isolation. Once aggregate, metrics-feature and executor
+  comparisons now share an exact current source identity with both suppliers.
 
 ## [0.107.0] - GitHub checkpoint 2026-11-15 (unpublished)
 

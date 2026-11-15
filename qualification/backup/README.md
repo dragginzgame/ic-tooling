@@ -1,5 +1,42 @@
 # Backup byte, filesystem and HTTP qualification
 
+## Complete producer commitments
+
+`make test-backup-commitments` is a separate current-source comparison for the
+new [complete producer operation](../../docs/byte-commitments.md). It first runs
+unchanged restore, assembled-payload and completion tests, then applies
+`commitments.patch` only if that baseline passes. It does not compose the older
+filesystem/HTTP migration or silently reuse historical source.
+
+The adapter replaces incremental `HashingWriter<sink>` use in restore request
+schedule and assembled-payload commitments with `hash_with`. Domain tags, ordering,
+length encodings, member hashes and failure checks remain in Backup. Legacy digest
+representation and multi-step capture hashing remain selected; this is not full
+legacy Artifacts removal. A fresh external-lock subset check and exact local
+supplier admission are required before replacement execution. Each selected test
+group must be nonempty, and both branches must pass the same test inventory.
+
+Current baseline on 2026-11-15: HEAD
+`b7c2c6ae754a5ae2452e65b9be537b517614ebd2`, source-tar SHA-256
+`41a7f83cfc9e8dc2fe94ff9a9c092b411b5b959a1356e8e2204b9d88751fd21b`.
+Export: `target/backup-commitments.ZmQ9ruo7`; baseline log inside that directory.
+Thirty restore tests ran: 15 passed and 15 failed **before applying the patch**.
+The isolated original `restore_plan_binds_original_source_and_retains_exact_replayed_bytes`
+also fails at `plan_tests.rs:49`: fixture server count is 0, expected 1
+(`target/backup-commitment-baseline-failure.log`). No assertion was weakened and
+the sibling was not changed. Baseline failure stops automated migration acceptance.
+
+For compile-only inspection, the adapter was subsequently applied manually to
+that exported tree. `cargo check --all-targets` succeeds with the same 15 existing
+Backup warnings (`target/backup-commitments-compile.log`); external-lock admission
+and local byte-owner selection pass. This is not warning-denied Clippy or runtime
+equivalence. The new byte owner independently passes five tests, host and Wasm
+Clippy and warning-denied Rustdoc; all 19 Build and ten Filesystem tests also pass
+(`target/byte-commitments-tests.log`). Consumer qualification remains open until
+the current baseline passes; prior custody/HTTP results below are not refreshed.
+
+## Earlier custody and HTTP slices
+
 `make test-backup-custody` snapshots the current `BACKUP_SOURCE` working tree
 (default `../ic-backup`) under `target/`, including local edits and non-ignored
 additions, without modifying the sibling. It applies [the migration patch](migration.patch),

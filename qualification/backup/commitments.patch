@@ -1,0 +1,163 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -14,3 +14,4 @@
+ [workspace.dependencies]
++ic-byte-admission = { package = "ic-host-artifacts", path = "@IC_TOOLING_NEW@/crates/ic-host-artifacts", version = "=0.80.1" }
+ ic-host-artifacts = "0.79.0"
+ ic-host-fs = { version = "0.79.0", features = ["capability"] }
+--- a/crates/ic-backup/Cargo.toml
++++ b/crates/ic-backup/Cargo.toml
+@@ -11,3 +11,4 @@
+ [target.'cfg(unix)'.dependencies]
++ic-byte-admission.workspace = true
+ ic-host-artifacts.workspace = true
+ ic-host-fs.workspace = true
+--- a/crates/ic-backup/src/store/restore/mod.rs
++++ b/crates/ic-backup/src/store/restore/mod.rs
+@@ -3,10 +3,9 @@
+     BackupSummary, BackupTarget, CaptureSource, RestoreTransfer, RestoreTransferError,
+     RestoreTransferRequest, manifest::lower_hex,
+ };
+-use ic_host_artifacts::artifact::{HashingWriter, Sha256Digest};
++use ic_host_artifacts::artifact::Sha256Digest;
+ use ic_platform::{Principal, candid_codec};
+ use serde::{Deserialize, Serialize};
+-use std::io::{Write, sink};
+ use thiserror::Error;
+ 
+ mod direct;
+@@ -285,24 +284,28 @@
+     Sha256Digest::compute(&[DOMAIN, bytes].concat())
+ }
+ fn schedule_digest(transfer: &RestoreTransfer) -> Result<Sha256Digest, RestorePlanError> {
+-    let mut writer = HashingWriter::new(sink(), 1024 * 1024);
+-    writer
+-        .write_all(b"ic-backup/restore-source-requests/1\0")
++    let identity =
++        ic_byte_admission::hash_with(ic_byte_admission::Length::AtMost(1024 * 1024), |writer| {
++            writer
++                .write_all(b"ic-backup/restore-source-requests/1\0")
++                .map_err(|_| RestorePlanError::Encoding)?;
++            for (ordinal, request) in transfer.source_requests().enumerate() {
++                let bytes = candid_codec::encode_one(&request, 4096)
++                    .map_err(|_| RestorePlanError::Encoding)?;
++                writer
++                    .write_all(&(ordinal as u32).to_le_bytes())
++                    .map_err(|_| RestorePlanError::Encoding)?;
++                writer
++                    .write_all(&(bytes.len() as u32).to_le_bytes())
++                    .map_err(|_| RestorePlanError::Encoding)?;
++                writer
++                    .write_all(Sha256Digest::compute(&bytes).as_bytes())
++                    .map_err(|_| RestorePlanError::Encoding)?;
++            }
++            Ok::<_, RestorePlanError>(())
++        })
+         .map_err(|_| RestorePlanError::Encoding)?;
+-    for (ordinal, request) in transfer.source_requests().enumerate() {
+-        let bytes =
+-            candid_codec::encode_one(&request, 4096).map_err(|_| RestorePlanError::Encoding)?;
+-        writer
+-            .write_all(&(ordinal as u32).to_le_bytes())
+-            .map_err(|_| RestorePlanError::Encoding)?;
+-        writer
+-            .write_all(&(bytes.len() as u32).to_le_bytes())
+-            .map_err(|_| RestorePlanError::Encoding)?;
+-        writer
+-            .write_all(Sha256Digest::compute(&bytes).as_bytes())
+-            .map_err(|_| RestorePlanError::Encoding)?;
+-    }
+-    Ok(writer.identity().sha256)
++    Ok(Sha256Digest::from_bytes(identity.sha256))
+ }
+ 
+ #[cfg(test)]
+--- a/crates/ic-backup/src/store/capture/assembly/mod.rs
++++ b/crates/ic-backup/src/store/capture/assembly/mod.rs
+@@ -1,9 +1,9 @@
+ //! Closed payload-member hashing retained by completion.
+ use super::{CaptureError, open_optional};
+ use crate::store::{StoreError, payload::unchanged_file};
+-use ic_host_artifacts::artifact::{HashingWriter, hash_exact_reader};
++use ic_host_artifacts::artifact::hash_exact_reader;
+ use ic_host_fs::capability::{Directory, EntryKind};
+-use std::{fs::File, io::{Write, sink}};
++use std::{fs::File, io};
+ fn names(directory: &Directory, limit: u64) -> Result<Vec<String>, CaptureError> {
+     let mut names = Vec::new();
+     let mut total = 0_u64;
+@@ -34,35 +34,45 @@
+     limit: u64,
+ ) -> Result<([u8; 32], Vec<crate::store::manifest::MemberRecord>), CaptureError> {
+     let original = names(directory, limit)?;
+-    let mut digest = HashingWriter::new(sink(), 128 * 1024);
+-    digest.write_all(b"ic-backup/assembled-payload/1\0")?;
+     let mut members = Vec::with_capacity(original.len());
+     let mut held: Vec<(String, File, std::fs::Metadata)> = Vec::with_capacity(original.len());
+-    let mut total = 0_u64;
+-    for name in &original {
+-        let mut file = open_optional(directory, name)?.ok_or(CaptureError::Incomplete)?;
+-        let before = file.metadata()?;
+-        total = total
+-            .checked_add(before.len())
+-            .filter(|n| *n <= limit)
+-            .ok_or(CaptureError::Changed)?;
+-        let identity = hash_exact_reader(&mut file, before.len()).map_err(StoreError::from)?;
+-        digest.write_all(&(name.len() as u32).to_le_bytes())?;
+-        digest.write_all(name.as_bytes())?;
+-        digest.write_all(&identity.bytes.to_le_bytes())?;
+-        digest.write_all(identity.sha256.as_bytes())?;
+-        members.push(crate::store::manifest::MemberRecord {
+-            name: name.clone(),
+-            bytes: identity.bytes,
+-            sha256: identity.sha256.to_string(),
+-        });
+-        held.push((name.clone(), file, before));
+-    }
+-    for (name, file, before) in &held {
+-        unchanged_file(directory, name, file, before)?;
+-    }
+-    if names(directory, limit)? != original {
+-        return Err(CaptureError::Changed);
+-    }
+-    Ok((*digest.identity().sha256.as_bytes(), members))
++    let identity =
++        ic_byte_admission::hash_with(ic_byte_admission::Length::AtMost(128 * 1024), |digest| {
++            digest.write_all(b"ic-backup/assembled-payload/1\0")?;
++            let mut total = 0_u64;
++            for name in &original {
++                let mut file = open_optional(directory, name)?.ok_or(CaptureError::Incomplete)?;
++                let before = file.metadata()?;
++                total = total
++                    .checked_add(before.len())
++                    .filter(|n| *n <= limit)
++                    .ok_or(CaptureError::Changed)?;
++                let identity =
++                    hash_exact_reader(&mut file, before.len()).map_err(StoreError::from)?;
++                digest.write_all(&(name.len() as u32).to_le_bytes())?;
++                digest.write_all(name.as_bytes())?;
++                digest.write_all(&identity.bytes.to_le_bytes())?;
++                digest.write_all(identity.sha256.as_bytes())?;
++                members.push(crate::store::manifest::MemberRecord {
++                    name: name.clone(),
++                    bytes: identity.bytes,
++                    sha256: identity.sha256.to_string(),
++                });
++                held.push((name.clone(), file, before));
++            }
++            for (name, file, before) in &held {
++                unchanged_file(directory, name, file, before)?;
++            }
++            if names(directory, limit)? != original {
++                return Err(CaptureError::Changed);
++            }
++            Ok::<_, CaptureError>(())
++        })
++        .map_err(|error| match error {
++            ic_byte_admission::ProduceError::Producer(cause) => cause,
++            ic_byte_admission::ProduceError::Admission(cause) => {
++                CaptureError::Io(io::Error::other(cause))
++            }
++        })?;
++    Ok((identity.sha256, members))
+ }

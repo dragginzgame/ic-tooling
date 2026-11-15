@@ -2,10 +2,10 @@
 
 Status: implemented slice in unpublished `ic-testkit` 0.107.1. Client types
 and catalog admission, module generation and exclusive request control are
-implemented with independent tests and focused Scheduling pressure/held-upgrade,
-watchdog admission/pressure and Jobs pressure qualification. Broader consumers
-and native macOS remain open. This document
-defines the acceptance contract. The active consumer is `../ic-scheduling-new`.
+implemented with independent tests. Scheduling's full Once aggregate, paired
+metrics-feature probe and executor comparison pass on identical current source
+bytes with both suppliers. Other consumers and native macOS remain open. This
+defines the acceptance contract. The active rewrite is now `../ic-scheduling`.
 Its source selection and focused baseline live in
 [Scheduling qualification](../qualification/scheduling/README.md). Earlier
 old-Scheduling snapshot experiments are historical and do not define this scope.
@@ -240,7 +240,7 @@ The runtime Make target also verifies the installed Toko snapshot. Testkit 0.107
 passes the current Scheduling export's focused pressure/held-upgrade qualification
 and a later watchdog admission/pressure plus Jobs pressure selection;
 see its [source and results](../qualification/scheduling/README.md). No sibling
-edits or registry publication are implied. Other installed modes remain unqualified.
+edits or registry publication are implied. Those early slices did not qualify other modes.
 
 The same 0.107.1 draft also passes a single-source-capture released/replacement
 comparison for Scheduling watchdog traps/owner commands, refusal backoff and
@@ -254,3 +254,12 @@ and three admission checks preserve exact reply/event bytes. Its selected
 normal/build tree excludes the optional Platform fixture and WAT dependencies;
 workspace-wide Once feature selection is not used as proof of executor isolation.
 The Scheduling record retains the graph, source and independent cleanup evidence.
+
+The current executor refresh passes against source bytes identical to the full
+Once aggregate and paired metrics-feature comparison at Scheduling HEAD
+`ee445be226f3ba679e3798d2f7687f2c4d8b0534`. Both released 0.106.0 and replacement
+0.107.1 preserve the six executor assertions; the replacement's selected graph
+still excludes optional fixture dependencies. All three comparisons have explicit
+endpoint refusal and observed instance-deletion evidence. See the Scheduling
+record for exact capture hashes and logs. This completes these Linux consumer
+checks, not native macOS acceptance, production migration or registry publication.

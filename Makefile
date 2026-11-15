@@ -25,6 +25,7 @@ help:
 	  '  make test-http-body    Bounded HTTP body fixtures (loopback required)' \
 	  '  make test-backup-http  Current Backup HTTP policy and body qualification' \
 	  '  make test-custody      Byte and publication/custody failure acceptance' \
+	  '  make test-backup-commitments Compare completed Backup byte commitments' \
 	  '  make test-backup-custody Local Backup filesystem and metadata custody (loopback required)' \
 	  '  make test-scheduling-held Focused rewrite held-reply baseline (prepared server)' \
 	  '  make test-scheduling-replacement Rewrite held replies with replacement Testkit' \
@@ -33,6 +34,13 @@ help:
 	  '  make test-scheduling-lifecycle Compare watchdog/lifecycle on one source capture' \
 	  '  make test-scheduling-executor Compare default Testkit executor/trap behavior' \
 	  '  make test-scheduling-retention Compare retained callbacks and dropped handles' \
+	  '  make test-scheduling-jobs-lifecycle Compare Jobs calendar, upgrade and downtime' \
+	  '  make test-scheduling-jobs-settlement Compare Jobs retry, reconciliation and completion' \
+	  '  make test-scheduling-uncertainty Compare lifetime custody and unresolved upgrades' \
+	  '  make test-scheduling-jobs-boundaries Compare initial deadlines and bounded catch-up' \
+	  '  make test-scheduling-completion-refusal Compare completion, diagnostics and refusal' \
+	  '  make test-scheduling-aggregate Compare the complete Once installed roster' \
+	  '  make test-scheduling-metrics Compare paired metrics feature behavior and observations' \
 	  '  make test-scheduling-consumer Scheduling rewrite source/graph admission and driver checks' \
 	  '  make test-platform-agent Current Platform Agent ingress and identity boundary' \
 	  '  make test-platform-consumer Current Platform raw_rand installed behavior' \
@@ -81,6 +89,10 @@ doc-owned-build: toko-tooling-check
 	RUSTDOCFLAGS='-D warnings' cargo doc -p ic-build --no-deps --locked --offline
 
 .PHONY: test-custody test-backup-custody
+.PHONY: test-backup-commitments
+test-backup-commitments: toko-tooling-check
+	bash scripts/qualification/backup-commitments.sh
+
 test-custody: toko-tooling-check
 	cargo test -p ic-host-artifacts -p ic-host-fs --lib --locked --offline
 
@@ -172,6 +184,34 @@ test-scheduling-executor: toko-tooling-check
 .PHONY: test-scheduling-retention
 test-scheduling-retention: toko-tooling-check
 	bash scripts/qualification/scheduling-consumer.sh comparison retention
+
+.PHONY: test-scheduling-jobs-lifecycle
+test-scheduling-jobs-lifecycle: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh comparison jobs-lifecycle
+
+.PHONY: test-scheduling-jobs-settlement
+test-scheduling-jobs-settlement: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh comparison jobs-settlement
+
+.PHONY: test-scheduling-uncertainty
+test-scheduling-uncertainty: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh comparison uncertainty
+
+.PHONY: test-scheduling-jobs-boundaries
+test-scheduling-jobs-boundaries: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh comparison jobs-boundaries
+
+.PHONY: test-scheduling-completion-refusal
+test-scheduling-completion-refusal: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh comparison completion-refusal
+
+.PHONY: test-scheduling-aggregate
+test-scheduling-aggregate: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh comparison aggregate
+
+.PHONY: test-scheduling-metrics
+test-scheduling-metrics: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh comparison metrics-cost
 
 .PHONY: test-testkit-catalog
 .PHONY: test-process test-process-terminal
