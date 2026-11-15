@@ -17,8 +17,8 @@ Consumers select Reqwest directly and own TLS/request policy.
 Backup HTTP behavior using local loopback fixtures.
 
 `ic-host-process` 0.80.2 owns [bounded native execution](docs/process-execution.md).
-Its [handoff/reaping API](docs/process-handoff.md) passes independent Linux tests;
-replacement viewer qualification awaits a consistent current Canic workspace.
+Its [handoff/reaping API](docs/process-handoff.md) passes independent Linux tests
+and current Canic viewer qualification, including reaping after observer drop.
 Existing 0.80.1 consumer evidence remains tied to that version.
 Build uses its group lifecycle and stream delivery. `make test-process` checks
 the core and Build failures; `make test-process-terminal` runs the Linux PTY case.
@@ -27,13 +27,16 @@ tool fixture, including terminal interaction and refusal without retry.
 `make test-canic-signer` checks version/principal admission and bounded group
 capture in a current Canic export, using harmless local signer fixtures.
 `make test-canic-lock` checks Cargo lock initialization, diagnostic refusal and
-existing-lock preservation with Process 0.80.1 in a current Canic export.
+existing-lock preservation with local Process 0.80.2 in a current Canic export.
 On Linux, `make test-canic-process` combines Build, Text, lock initialization,
 signer capture and the foreground client's real PTY fixture on one current export.
+It includes the loopback viewer and opener reaping, requiring local socket access.
 It also migrates metadata capture and checks subprocess, selection and prepared-tool
 refusals before compilation; Host and foreground-client direct legacy Process edges are absent.
-`make test-canic-viewer` checks the remaining retained desktop-opener boundary
+`make test-canic-viewer` checks the retained desktop-opener baseline
 with a harmless child fixture and local loopback viewer tests; it launches no browser.
+`make test-canic-viewer-replacement` selects local Process 0.80.2 and also checks
+Linux reaping after the completion observer is dropped.
 
 `ic-host-text` 0.77.2 supplies pure [escaping and table layouts](docs/text-presentation.md).
 `make test-text` and `make test-query-text` qualify the leaf and current Query’s
@@ -54,6 +57,8 @@ pressure; `make test-scheduling-pressure-baseline` uses the released supplier.
 one capture for watchdog traps/owner commands, refusal backoff and upgrade cases.
 `make test-scheduling-executor` compares the synchronous executor trap/admission
 cases and checks that its default Testkit graph excludes fixture dependencies.
+`make test-scheduling-retention` compares retained callback custody and settlement
+after public handles are dropped, using both suppliers on one source capture.
 
 The [release ownership map](docs/release-ownership.md) declares foundation, build,
 HTTP, Process, Text, tools and Testkit groups. [Changelogs](CHANGELOG.md) live under `releases/`;
@@ -82,7 +87,7 @@ and checks exact archives on native and Wasm targets.
 `make test-canic-build` qualifies current Canic’s owned build and destination
 publication/refusal path using a real Wasm probe. `make test-canic-app-build`
 combines Build and Text for app recipe preflight, lock setup, serial partial
-failure and display tests, plus Process 0.80.1 for lock initialization and signer
+failure and display tests, plus Process 0.80.2 for lock initialization and signer
 version/principal capture. Signer fixtures make no live calls and use no keys.
 `make test-canic-build-metadata` checks workspace/target selection, prepared-tool
 admission and compiler-wrapper refusal before compilation or output replacement.
@@ -94,7 +99,7 @@ and selected original retained-plan and signed-recovery tests.
 using an explicitly prepared external server and the upstream async client.
 Scheduling’s earlier Jobs/Timers experiments are [historical](qualification/scheduling/historical.md).
 The rewrite uses Testkit client types and held-reply fixtures; their replacement
-replacement passes independent fixture tests and focused current-consumer qualification.
+passes independent fixture tests and focused current-consumer qualification.
 See [simulator ownership](docs/simulator-ownership.md).
 
 `make test-platform-consumer` qualifies [Platform’s current raw_rand fixture](qualification/platform/README.md)

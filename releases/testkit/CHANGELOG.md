@@ -24,6 +24,10 @@ crates.io release. The selected consumer currently uses released Testkit 0.106.0
   dependencies; keep endpoint/instance ownership external and check deletion.
 - The 0.107.0 checkpoint is on GitHub; neither version is published. The sibling
   source and its released supplier selection remain unchanged.
+- Compare current Scheduling retained-callback custody and dropped-handle
+  settlement with both suppliers on one capture. Preserve existing consumer
+  assertions and focused selectors; endpoint refusal, instance deletion, external
+  lock admission and driver Clippy pass without a product API change.
 
 ## [0.107.0] - GitHub checkpoint 2026-11-15 (unpublished)
 

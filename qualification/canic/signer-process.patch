@@ -10,8 +10,7 @@
  canic-host = { path = "crates/canic-host" }
 --- a/crates/canic-host/Cargo.toml
 +++ b/crates/canic-host/Cargo.toml
-@@ -16,6 +16,7 @@
- canic-wasm-store-protocol.workspace = true
+@@ -16,5 +16,6 @@
  ic-host-fs.workspace = true
  ic-host-process.workspace = true
 +ic-host-process-next.workspace = true

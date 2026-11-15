@@ -326,7 +326,11 @@ in [Canic qualification](../qualification/canic/README.md). Ordinary app/standal
 recipes have not been silently promoted to this broader migration; remaining
 workspace callers, native macOS and actual signing/submission stay separate.
 
-## Remaining desktop-opener boundary
+## Desktop-opener boundary before Process 0.80.2
+
+This section records the retained baseline and the requirement that led to the
+implemented [handoff contract](process-handoff.md). The completed replacement
+qualification follows below; desktop handoff is no longer an open design task.
 
 Current Canic CLI `view::launch` is the remaining direct legacy Process caller
 outside the migrated Host/profile-client slices. It appends one URL argument,
@@ -352,3 +356,14 @@ reaping custody, failures before/after transfer, caller shutdown behavior and th
 limits of any completion observation. Do not import the old child/session API or
 infer readiness/retry authority merely to remove a dependency. Native macOS and
 actual desktop-opener integration remain separate qualification.
+
+### Process 0.80.2 complete execution composition
+
+The current Canic 0.214.0 combined recipe now includes viewer handoff/reaping and
+selects only local Process in its resolved workspace graph. Fifty-two tests, all
+20 metadata/tool refusals, real app builds, PTY and loopback fixtures, and Clippy
+pass. The newly introduced locked Store-source resolver uses the same private
+Cargo capture adapter; its source admission and consumer-owned output policy are
+preserved. A tiny borrowed-source Wasm fixture and whole-tree comparison check
+that publication does not modify the supplier. No Store product implementation
+was imported or qualified. See [current evidence](../qualification/canic/README.md).

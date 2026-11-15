@@ -32,6 +32,7 @@ help:
 	  '  make test-scheduling-pressure-baseline Same selection with released Testkit' \
 	  '  make test-scheduling-lifecycle Compare watchdog/lifecycle on one source capture' \
 	  '  make test-scheduling-executor Compare default Testkit executor/trap behavior' \
+	  '  make test-scheduling-retention Compare retained callbacks and dropped handles' \
 	  '  make test-scheduling-consumer Scheduling rewrite source/graph admission and driver checks' \
 	  '  make test-platform-agent Current Platform Agent ingress and identity boundary' \
 	  '  make test-platform-consumer Current Platform raw_rand installed behavior' \
@@ -167,6 +168,10 @@ test-scheduling-lifecycle: toko-tooling-check
 .PHONY: test-scheduling-executor
 test-scheduling-executor: toko-tooling-check
 	bash scripts/qualification/scheduling-consumer.sh comparison executor
+
+.PHONY: test-scheduling-retention
+test-scheduling-retention: toko-tooling-check
+	bash scripts/qualification/scheduling-consumer.sh comparison retention
 
 .PHONY: test-testkit-catalog
 .PHONY: test-process test-process-terminal

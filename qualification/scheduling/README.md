@@ -239,3 +239,30 @@ report exactly one deleted instance. Prepared tool hashes, external-lock retenti
 and replacement driver Clippy pass. Graph evidence is in each run's
 `driver-tree.txt`. No product implementation change, sibling edit or full suite
 was required; this does not imply native macOS acceptance or production cutover.
+
+## Retained callback and dropped-handle comparison
+
+`make test-scheduling-retention` selects `comparison retention` through the same
+capture/server runner. It calls the current consumer's unchanged `retention::check`
+and checks empty HTTP inventory before deleting the instance. Only the exported
+entrypoint and supplier bindings change; no Scheduling implementation is copied
+into Tooling. The selector patch preserves the current consumer's additional
+focused Jobs/after-completion routes, and its Toko 0.44.4 selection is retained.
+
+Released Testkit 0.106.0 and replacement 0.107.1 both passed on 2026-11-15 from
+HEAD `ba581e1d344573b832ba27162e6255ec184d1d21`, source-tar SHA-256
+`47a8bf166f59c590747dfa0a984cc7e52cac448ed77feca98ec43e7f43131d9a`.
+Export: `target/scheduling-new.PimVaIJv`; log:
+`target/scheduling-retention-comparison.log`.
+
+The original assertions preserve 64 retained captures through 960 rejected drops
+and repeated settlement (96 future drops, 192 callbacks). Dropping armed public
+handles still lets 32 async Once and 32 watchdog callbacks settle; later cadence
+does not repeat stopped watchdogs. Both scenario logs match. Recorded Wasm page
+counts are observations, not a Tooling memory or performance improvement claim.
+
+Both runs refuse a missing external endpoint and report exactly one deleted
+instance. Prepared server/launcher hashes, exact replacement supplier identity,
+external-lock admission and driver Clippy pass. This adds retention acceptance;
+it does not qualify the aggregate suite, other Jobs/calendar modes, native macOS
+or production cutover. The sibling source and product API remain unchanged.

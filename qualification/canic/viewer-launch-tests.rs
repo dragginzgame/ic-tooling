@@ -4,6 +4,23 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[cfg(target_os = "linux")]
+fn process_identity(pid: u32) -> Option<String> {
+    match fs::read_to_string(format!("/proc/{pid}/stat")) {
+        Ok(stat) => Some(
+            stat.rsplit_once(')')
+                .unwrap()
+                .1
+                .split_whitespace()
+                .nth(19)
+                .unwrap()
+                .to_owned(),
+        ),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => panic!("cannot observe opener identity: {error}"),
+    }
+}
+
 #[test]
 fn opener_handoff_keeps_the_child_alive_and_passes_one_literal_url() {
     let evidence = std::path::PathBuf::from(std::env::var_os("CANIC_VIEWER_EVIDENCE").unwrap());
@@ -15,6 +32,7 @@ fn opener_handoff_keeps_the_child_alive_and_passes_one_literal_url() {
             r#"
         evidence=$0
         test "$#" = 1 || exit 91
+        printf '%s' "$$" > "$evidence/pid"
         count=0
         while test ! -f "$evidence/continue"; do
             count=$((count + 1))
@@ -31,8 +49,27 @@ fn opener_handoff_keeps_the_child_alive_and_passes_one_literal_url() {
     launch(url, command).unwrap();
     // A synchronous wait would let the fixture expire before this gate opens.
     assert!(!evidence.join("expired").exists());
-    fs::write(evidence.join("continue"), b"continue after handoff").unwrap();
     let deadline = Instant::now() + Duration::from_secs(5);
+    #[cfg(target_os = "linux")]
+    let owned_identity = if std::env::var("CANIC_VIEWER_MODE").unwrap() == "replacement" {
+        let pid = loop {
+            if let Some(pid) = fs::read_to_string(evidence.join("pid"))
+                .ok()
+                .and_then(|text| text.parse::<u32>().ok())
+            {
+                break pid;
+            }
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(2));
+        };
+        Some((
+            pid,
+            process_identity(pid).expect("opener must be waiting for gate"),
+        ))
+    } else {
+        None // Retained relinquishment does not promise subsequent reaping.
+    };
+    fs::write(evidence.join("continue"), b"continue after handoff").unwrap();
     loop {
         if fs::read(evidence.join("observed-url")).ok().as_deref() == Some(url.as_bytes()) {
             break;
@@ -44,6 +81,16 @@ fn opener_handoff_keeps_the_child_alive_and_passes_one_literal_url() {
         std::thread::sleep(Duration::from_millis(5));
     }
     assert!(!evidence.join("expired").exists());
+    #[cfg(target_os = "linux")]
+    if let Some((pid, identity)) = owned_identity {
+        while process_identity(pid).as_ref() == Some(&identity) {
+            assert!(
+                Instant::now() < deadline,
+                "opener remains present, including as a zombie"
+            );
+            std::thread::sleep(Duration::from_millis(2));
+        }
+    }
 }
 
 #[test]

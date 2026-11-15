@@ -3,7 +3,7 @@
 set -euo pipefail
 mode="${1:-admit}"
 selection="${2:-held-replies}"
-case "$selection" in held-replies|held-pressure|lifecycle|executor) ;; *) echo 'Unknown installed selection' >&2; exit 2 ;; esac
+case "$selection" in held-replies|held-pressure|lifecycle|executor|retention) ;; *) echo 'Unknown installed selection' >&2; exit 2 ;; esac
 case "$mode" in admit|held|replacement|comparison) ;; *) echo "Expected admit, held, replacement or comparison; historical modes are retired." >&2; exit 2 ;; esac
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${SCHEDULING_SOURCE:-$repo/../ic-scheduling-new}"

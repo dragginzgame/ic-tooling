@@ -48,6 +48,16 @@ if [[ "$mode" == app ]]; then
   if [[ "$foreground" == true ]]; then
     git -C "$scratch/source" apply --check "$repo/qualification/canic/metadata-process.patch"
     git -C "$scratch/source" apply "$repo/qualification/canic/metadata-process.patch"
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/store-source-process.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/store-source-process.patch"
+    git -C "$scratch/source" apply --check --exclude=Cargo.toml "$repo/qualification/canic/viewer-process.patch"
+    git -C "$scratch/source" apply --exclude=Cargo.toml "$repo/qualification/canic/viewer-process.patch"
+    sed "s|@IC_TOOLING_NEW@|$repo|g" "$repo/qualification/canic/retire-process-declaration.patch" > "$scratch/retire-process.patch"
+    git -C "$scratch/source" apply --check "$scratch/retire-process.patch"
+    git -C "$scratch/source" apply "$scratch/retire-process.patch"
+    cp "$repo/qualification/canic/viewer-launch-tests.rs" "$scratch/source/crates/canic-cli/src/view/launch_qualification.rs"
+    printf '\n#[cfg(test)]\nmod launch_qualification;\n' >> "$scratch/source/crates/canic-cli/src/view/mod.rs"
+    mkdir "$scratch/viewer-evidence"
   fi
   cargo metadata --manifest-path "$scratch/source/Cargo.toml" --format-version 1 --offline > "$scratch/composed-metadata.json"
   cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- verify-external-lock "$scratch/admitted-build.lock" "$scratch/source/Cargo.lock" 1048576
@@ -70,6 +80,12 @@ jq -e --arg root "$repo" '. as $m |
 ' "$scratch/metadata.json" >/dev/null
 if [[ "$mode" == app ]]; then
   if [[ "$foreground" == true ]]; then
+    jq -e --arg root "$repo" '[.packages[] | select(.name == "ic-host-process")] |
+      length == 1 and .[0].version == "0.80.2" and .[0].source == null and
+      .[0].manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")
+    ' "$scratch/metadata.json" >/dev/null
+    jq -e '. as $m | all($m.workspace_members[]; . as $member |
+      all($m.resolve.nodes[] | select(.id == $member) | .deps[]; .name != "ic_host_process" or (.pkg | startswith("path+"))))' "$scratch/metadata.json" >/dev/null
     jq -e '. as $m |
       (.packages[] | select(.name == "canic-host") | .id) as $host |
       all($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name != "ic_host_process")
@@ -109,12 +125,15 @@ if [[ "$mode" == app ]]; then
   CARGO_TARGET_DIR="$repo/target/canic-consumer-build" test_signer_fixture "$scratch/source" "$scratch/signer-evidence"
   if [[ "$foreground" == true ]]; then
     CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline artifact::tests::
+    CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline artifact::store_source::tests::
     CARGO_TARGET_DIR="$repo/target/canic-consumer-build" test_foreground_fixture "$scratch/source" "$scratch/foreground-evidence"
   fi
   bash "$repo/scripts/qualification/canic-app-build.sh" "$cli" "$scratch"
   if [[ "$foreground" == true ]]; then
     # Qualify metadata execution without changing the app fixture's prepared tools.
     (bash "$repo/scripts/qualification/canic-build-metadata.sh" "$cli" "$scratch")
+    bash "$repo/scripts/qualification/canic-store-source.sh" "$cli" "$scratch"
+    CANIC_VIEWER_MODE=replacement CANIC_VIEWER_EVIDENCE="$scratch/viewer-evidence" CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-cli --bin canic --locked --offline view::
   fi
   # Newly migrated display callers must work in the same Build + Text graph.
   (

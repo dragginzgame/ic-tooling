@@ -1,0 +1,44 @@
+--- a/crates/canic-host/src/artifact/store_source/mod.rs
++++ b/crates/canic-host/src/artifact/store_source/mod.rs
+@@ -1,12 +1,9 @@
+ //! Resolve the standalone Store from the same locked Git source as its passive protocol.
+-use super::cargo_failure;
+ use crate::{Error, Result, supplier};
+-use ic_host_process::tool::{CompletedExecution, OutputLimit, OutputLimits, capture_group_command};
+ use serde::Deserialize;
+ use std::{
+     path::{Path, PathBuf},
+     process::Command,
+-    time::Duration,
+ };
+ 
+ #[derive(Deserialize)]
+@@ -22,7 +19,7 @@
+ }
+ 
+ pub(super) fn manifest(workspace: &Path) -> Result<PathBuf> {
+-    let output = capture_group_command(
++    let output = crate::cargo_process::capture(
+         Command::new("cargo")
+             .args([
+                 "metadata",
+@@ -32,16 +29,9 @@
+                 "--manifest-path",
+             ])
+             .arg(workspace),
+-        OutputLimits {
+-            stdout: OutputLimit::Terminate(8 * 1024 * 1024),
+-            stderr: OutputLimit::Terminate(1024 * 1024),
+-            timeout: Some(Duration::from_secs(120)),
+-        },
+-    )
+-    .and_then(CompletedExecution::require_success)
+-    .and_then(CompletedExecution::require_complete)
+-    .map_err(cargo_failure)?;
+-    let metadata: Metadata = serde_json::from_slice(&output.stdout).map_err(supplier)?;
++        8 * 1024 * 1024,
++    )?;
++    let metadata: Metadata = serde_json::from_slice(&output).map_err(supplier)?;
+     let source = selected(metadata)?;
+     let root = source.ancestors().nth(3).ok_or_else(|| {
+         Error::Invalid("Store protocol must use the supplier's crates/package layout".into())

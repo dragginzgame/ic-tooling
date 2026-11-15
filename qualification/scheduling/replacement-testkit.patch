@@ -8,7 +8,7 @@
 +ic-testkit = { path = "@IC_TOOLING_NEW@/crates/ic-testkit", version = "=0.107.1", default-features = false }
  ic-timers = { path = "../crates/ic-timers" }
  tokio = { version = "1.54.1", default-features = false, features = ["rt"] }
- toko-tooling = "=0.44.3"
+ toko-tooling = "=0.44.4"
 --- a/qualification/once-driver/src/pressure.rs
 +++ b/qualification/once-driver/src/pressure.rs
 @@ -1,6 +1,6 @@

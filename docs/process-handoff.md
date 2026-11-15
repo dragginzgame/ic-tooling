@@ -2,8 +2,8 @@
 
 Status: implemented independently in unpublished Process 0.80.2 after checkpoint
 `607ff8a`. Fourteen Process tests (six handoff), 19 Build tests, Clippy and Rustdoc
-pass on Linux. Current Canic replacement qualification is blocked by its incomplete
-workspace dependency rename; native macOS remains unqualified. Caller evidence is in
+pass on Linux. Current Canic 0.214.0 replacement viewer qualification also passes,
+including reaping after observer drop; native macOS remains unqualified. Evidence is in
 [the execution contract](process-execution.md#remaining-desktop-opener-boundary).
 
 ## Required outcome and ownership
@@ -95,3 +95,19 @@ Cargo metadata refuses because members inherit `ic-wasm-store-protocol` while
 the workspace still declares `canic-wasm-store-protocol`. No sibling edits or
 historical fallback were used. `target/process-handoff-viewer.log` retains the
 refusal. The replacement viewer patch is not yet consumer-qualified.
+
+### Consumer qualification after the workspace rename
+
+The post-push current Canic 0.214.0 capture resolves the earlier workspace blocker.
+`make test-canic-viewer-replacement` passes four tests, all-target CLI Clippy and
+external-lock/local-supplier checks. The replacement fixture now records the
+opener's PID/start identity before opening its completion gate, then requires that
+identity to disappear after the witness is written. A still-present zombie fails;
+no borrowed PID receives a signal. Canic has already dropped its observer here.
+The retained-supplier mode does not assert a reaping guarantee it never provided.
+
+Evidence: `target/process-handoff-viewer-reaping.log`, export
+`target/canic-viewer.PG2w964W`, source HEAD
+`c39aee1e34dae82be6da89bf6242c3a0e22ade84`, archive SHA-256
+`58a69ad66ad5fa2c7631a2094f543a39bc5831c6bfcc85d3e318c7b7434486c0`.
+This is Linux fixture qualification, not native macOS or real-browser integration.

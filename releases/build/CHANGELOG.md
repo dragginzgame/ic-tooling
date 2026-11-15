@@ -28,6 +28,11 @@ remains tied to its recorded inputs.
 
 ### 🧪 Testing
 
+- Refresh current Canic 0.214.0 Build qualification while preserving its locked
+  Store-source resolver and consumer-owned default destination. A tiny local
+  Wasm supplier fixture verifies publication outside the supplier and unchanged
+  supplier-tree bytes; this does not qualify the production Store implementation.
+
 - Extend combined metadata acceptance with nonzero exit after valid JSON, stdout
   and stderr overflow, and invalid UTF-8. All four refuse before compilation and
   preserve the destination; ten selection and six tool/wrapper refusals also pass.

@@ -11,6 +11,7 @@ case "$selection" in
   held-replies) expected='held-replies: pressure and held-upgrade checks passed' ;;
   held-pressure) expected='held-pressure: watchdog admission, watchdog pressure and jobs pressure passed' ;;
   lifecycle) expected='lifecycle: watchdog traps, owner commands, refusal and upgrade checks passed' ;;
+  retention) expected='retention: capture custody and dropped-handle checks passed' ;;
   executor)
     expected='executor probe: 3 lifecycle and 3 admission checks passed'
     missing_endpoint='executor requires an externally owned server endpoint'

@@ -17,11 +17,11 @@ current requirements must justify further APIs.
 retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
 historical evidence. No old product source/test tree was admitted wholesale.
 
-GitHub checkpoint `607ff8aaa39206952bb2fef17a0f67ad8f071b16` is on `origin/main`.
+GitHub checkpoint `5a0faab4da920d1ca48d9fc859ae3217ae4e277a` is on `origin/main`.
 Post-push review of the delivered adapters and qualification wiring found no new
 defect. Process 0.80.2 implements [handoff/reaping](../process-handoff.md): 14 Process
-and 19 Build tests pass, plus Clippy/Rustdoc. Current Canic's incomplete dependency
-rename blocks viewer replacement qualification. Consumer runtime evidence remains tied
+and 19 Build tests pass, plus Clippy/Rustdoc. Current Canic 0.214.0 viewer replacement
+passes four tests including Linux reaping after observer drop. Runtime evidence remains tied
 to the versions and snapshots recorded below; old Timers experiments are historical.
 Seven [release groups](../release-ownership.md) own their ledgers; root changelog is
 an index. All eight packages remain unpublished. Consumer migration, registry
@@ -75,10 +75,10 @@ The next-version changes alone do not refresh earlier runtime evidence.
   referents. Exact identity, publication refusal and scratch cleanup pass.
   Earlier independent slices cover artifact default/explicit publication and
   refusal, 19 display tests, and six record-admission/recovery tests. Current Canic
-  0.213.0 passes combined Build/Text/Process lock, signer, foreground/PTY and app checks:
-  47 tests, 20 metadata/tool refusals and Clippy pass with metadata on local Process. Host publication
+  0.214.0 passes combined Build/Text/Process execution and viewer reaping checks:
+  52 tests, 20 metadata/tool refusals and Clippy pass with only local Process in the graph. Host publication
   and parent creation still use retained suppliers outside this migration.
-  Retained desktop opener/viewer passes four tests; handoff/reaping design remains open.
+  Desktop handoff/reaping is implemented; native macOS acceptance remains open.
 - [Query](../../qualification/query/README.md): refreshed current source passes
   20 presentation/output tests with Text 0.77.1, including placements partial JSON
   and rejection escaping. CLI/test Clippy and retained external-lock admission pass.
@@ -109,7 +109,8 @@ The next-version changes alone do not refresh earlier runtime evidence.
   The synchronous executor also passes three lifecycle and three admission cases
   with both suppliers on one capture. Its selected replacement graph excludes
   optional fixture dependencies; endpoint refusal and instance deletion pass.
-  Other modes are not qualified; see the Scheduling record for exact identities.
+  Retained-callback and dropped-handle cases also pass on one current capture with
+  both suppliers; see the Scheduling record for identities and unqualified modes.
 - [Backup](../../qualification/backup/README.md): current-source byte/filesystem
   and HTTP migrations preserve metadata, transfer binding, budgets and evidence.
   The 65 custody/payload cases and 13 HTTP cases have separate recorded runs.
@@ -117,8 +118,8 @@ The next-version changes alone do not refresh earlier runtime evidence.
 - [Auth](../../qualification/auth/README.md): pinned archive/external-lock evidence
   is historical at `e52a40be75dd9809d0528189d84b43fe96952ad9`; do not continue it.
 
-Product evidence: six Testkit unit tests and two installed fixture/controller
-tests pass, plus default/feature Clippy and docs; see the Testkit contract for scope.
+Product evidence: six Testkit unit tests and two installed fixture/controller tests
+pass, plus default/feature Clippy and docs; see the Testkit contract for scope.
 19 Build tests; two byte tests and Wasm Clippy; ten filesystem
 failure tests; two HTTP body tests; three Text escaping/layout tests. Relevant
 Clippy, Rustdoc, formatting and Toko admission pass as recorded by their slices.
@@ -127,11 +128,11 @@ HTTP/Tokio stay outside Build and portable bytes. No full release gate is claime
 ## Remaining gates and limitations
 
 Continue from current unfrozen workloads in the [register](../workloads.md).
-The [native-execution review](../process-execution.md) identifies current Canic
-group-capture and foreground-child requirements that Build's private runner cannot
-serve unchanged. The shared core passes cleanup/lifetime tests and current Canic
-artifact/metadata and foreground-client qualification. Signer group capture remains open;
-no Canic product code moves here. `../ic-profiler` is absent and its current
+The [native-execution review](../process-execution.md) records the shared Process
+owner used by Build and current Canic group capture, foreground execution and
+desktop handoff. Combined Linux qualification covers artifact/metadata, lock setup,
+signer capture, Store-source lookup and viewer reaping; native macOS remains open.
+No Canic product code moves here. `../ic-profiler` is absent and its current
 checkout/status has been requested. The inspected `ic-platform-new` has no current
 Tooling dependency; old Platform fixture results must not drive that rewrite.
 Managed-server lifetime/cancellation, multi-canister partial snapshot effects,

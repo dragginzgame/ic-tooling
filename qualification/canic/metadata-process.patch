@@ -1,8 +1,7 @@
 --- a/crates/canic-host/Cargo.toml
 +++ b/crates/canic-host/Cargo.toml
-@@ -16,7 +16,6 @@
+@@ -16,6 +16,5 @@
  canic-management-protocol.workspace = true
- canic-wasm-store-protocol.workspace = true
  ic-host-fs.workspace = true
 -ic-host-process.workspace = true
  ic-host-process-next.workspace = true

@@ -59,8 +59,8 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   the foreground client also passes Linux PTY checks. Native macOS remains open. Injected
   cleanup failures, Linux descendant lifetime and current Canic Build checks pass.
   Process 0.80.2 implements `docs/process-handoff.md`; independent Linux handoff
-  and reaping tests pass. Viewer replacement qualification is blocked by the
-  current Canic dependency rename. Prior consumer evidence is version-bound.
+  and reaping tests pass. Current Canic viewer replacement passes four tests,
+  including Linux reaping after observer drop. Prior evidence is version-bound.
 - `ic-testkit` 0.107.1 admits the shared PocketIC re-export and bounded owned reply
   catalogs and generated modules behind `held-reply-fixtures`. Follow
   `docs/testkit-held-replies.md`; exclusive request control passes independent

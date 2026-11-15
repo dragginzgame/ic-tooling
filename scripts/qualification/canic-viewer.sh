@@ -21,7 +21,7 @@ fi
 cp "$repo/qualification/canic/viewer-launch-tests.rs" "$scratch/source/crates/canic-cli/src/view/launch_qualification.rs"
 printf '\n#[cfg(test)]\nmod launch_qualification;\n' >> "$scratch/source/crates/canic-cli/src/view/mod.rs"
 export CARGO_TARGET_DIR="$repo/target/canic-consumer-build" CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
-export CANIC_VIEWER_EVIDENCE="$scratch/evidence"
+export CANIC_VIEWER_EVIDENCE="$scratch/evidence" CANIC_VIEWER_MODE="$mode"
 manifest="$scratch/source/Cargo.toml"
 if [[ "$mode" == replacement ]]; then
   cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"

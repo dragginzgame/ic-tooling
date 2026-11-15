@@ -1,6 +1,6 @@
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -25,6 +25,7 @@
+@@ -23,6 +23,7 @@
  publish = false
  
  [workspace.dependencies]
@@ -21,10 +21,10 @@
   "ic-host-text",
   "ic-topology",
   "serde_json",
-@@ -409,8 +409,9 @@
+@@ -408,8 +408,9 @@
+  "base64 0.23.1",
   "canic",
   "canic-management-protocol",
-  "canic-wasm-store-protocol",
 - "ic-host-fs",
 - "ic-host-process",
 + "ic-build",
@@ -44,7 +44,7 @@
   "ic-wire 0.24.1",
   "serde_json",
   "toko-tooling",
-@@ -1406,6 +1407,18 @@
+@@ -1381,6 +1382,18 @@
  ]
  
  [[package]]
@@ -63,7 +63,7 @@
  name = "ic-certification"
  version = "3.2.0"
  source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -1444,12 +1457,29 @@
+@@ -1419,12 +1432,29 @@
  ]
  
  [[package]]
@@ -94,7 +94,7 @@
   "rustix",
   "thiserror 2.0.21",
  ]
-@@ -1460,13 +1490,21 @@
+@@ -1435,13 +1465,21 @@
  source = "registry+https://github.com/rust-lang/crates.io-index"
  checksum = "3bfc02220bee55d050f8ebedce5f5ff71764028afcef8b58c1ae2bceb945e650"
  dependencies = [
@@ -118,7 +118,7 @@
  name = "ic-host-text"
  version = "0.76.0"
  source = "registry+https://github.com/rust-lang/crates.io-index"
-@@ -2865,6 +2903,19 @@
+@@ -2851,6 +2889,19 @@
  ]
  
  [[package]]
@@ -150,7 +150,7 @@
  canic-management-protocol.workspace = true
 --- a/crates/canic-host/src/artifact/mod.rs
 +++ b/crates/canic-host/src/artifact/mod.rs
-@@ -29,8 +29,8 @@
+@@ -30,8 +30,8 @@
  
  #[derive(Debug, thiserror::Error)]
  #[error("Cargo failed: {source}\n{diagnostic}")]
@@ -161,10 +161,10 @@
      diagnostic: String,
  }
  
-@@ -115,90 +115,141 @@
-     destination: Option<&Path>,
- ) -> Result<PathBuf> {
-     let manifest = manifest.canonicalize().map_err(supplier)?;
+@@ -122,99 +122,149 @@
+     } else {
+         workspace_manifest.clone()
+     };
 -    let mut command = Command::new("cargo");
 -    command
 -        .current_dir(
@@ -184,6 +184,15 @@
 -        ])
 -        .arg(manifest)
 -        .args(["-p", package]);
+-    if package == "ic-wasm-store" {
+-        // Keep compiler output in the consuming workspace, never Cargo's source checkout.
+-        command.arg("--target-dir").arg(
+-            workspace_manifest
+-                .parent()
+-                .ok_or_else(|| Error::Invalid("manifest has no parent".into()))?
+-                .join("target/store-build"),
+-        );
+-    }
 -    if !features.is_empty() {
 -        command.arg("--features").arg(features.join(","));
 -    }
@@ -253,7 +262,15 @@
 -        let value: serde_json::Value = serde_json::from_slice(line).map_err(supplier)?;
 -        if value["reason"] == "compiler-artifact" {
 -            let files = value["filenames"]
--                .as_array()
++        return Err(invalid());
++    }
++    let targets: Vec<_> = selected["targets"]
++        .as_array()
++        .ok_or_else(invalid)?
++        .iter()
++        .filter(|t| {
++            t["crate_types"]
+                 .as_array()
 -                .ok_or_else(|| Error::Invalid("Cargo artifact missing filenames".into()))?;
 -            for file in files {
 -                let file = file
@@ -264,6 +281,16 @@
 -                }
 -            }
 -        }
++                .is_some_and(|k| k.iter().any(|k| k == "cdylib"))
++        })
++        .collect();
++    let [target] = targets.as_slice() else {
++        return Err(invalid());
++    };
++    let library = target["name"].as_str().ok_or_else(invalid)?;
++    let target_directory =
++        PathBuf::from(metadata["target_directory"].as_str().ok_or_else(invalid)?);
++    if !target_directory.is_absolute() {
 +        return Err(invalid());
      }
 -    paths.sort();
@@ -279,7 +306,9 @@
 -        let bytes = ic_host_fs::read::read_file(&path, MAX_ARTIFACT_BYTES).map_err(supplier)?;
 -        admit_bounded(&bytes, MAX_ARTIFACT_BYTES)?;
 -        if let Some(parent) = output
--            .parent()
++    let publication_directory = if package == "ic-wasm-store" {
++        workspace_manifest
+             .parent()
 -            .filter(|parent| !parent.as_os_str().is_empty())
 -        {
 -            ic_host_fs::durable::prepare_private_parents(parent).map_err(supplier)?;
@@ -289,26 +318,12 @@
 -            ic_host_fs::durable::WriteOptions {
 -                mode: ic_host_fs::durable::PublicationMode::Replace,
 -                permissions: 0o600,
-+    let targets: Vec<_> = selected["targets"]
-+        .as_array()
-+        .ok_or_else(invalid)?
-+        .iter()
-+        .filter(|t| {
-+            t["crate_types"]
-+                .as_array()
-+                .is_some_and(|k| k.iter().any(|k| k == "cdylib"))
-+        })
-+        .collect();
-+    let [target] = targets.as_slice() else {
-+        return Err(invalid());
++            .ok_or_else(invalid)?
++            .join("target/store-build")
++    } else {
++        target_directory
 +    };
-+    let library = target["name"].as_str().ok_or_else(invalid)?;
-+    let target_directory =
-+        PathBuf::from(metadata["target_directory"].as_str().ok_or_else(invalid)?);
-+    if !target_directory.is_absolute() {
-+        return Err(invalid());
-+    }
-+    let default_output = target_directory
++    let default_output = publication_directory
 +        .join("wasm32-unknown-unknown/release")
 +        .join(format!("{}.wasm", library.replace('-', "_")));
 +    let destination = destination.unwrap_or(&default_output);

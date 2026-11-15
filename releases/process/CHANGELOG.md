@@ -18,6 +18,12 @@ Package: `ic-host-process`. Unpublished replacement; no registry release.
 - Prepare export-only viewer migration. Current Canic metadata refuses an
   incomplete `ic-wasm-store-protocol` workspace rename, so replacement consumer
   qualification remains pending; no historical fallback or sibling repair.
+- Qualify current Canic 0.214.0 viewer replacement after the workspace rename
+  settles, including Linux reaping after observer drop and CLI Clippy.
+- Integrate handoff with the combined execution recipe: 52 selected tests, 20
+  metadata/tool refusals, real app builds and Clippy pass with only local Process
+  in the resolved graph. Preserve the new locked Store-source selection and
+  consumer-owned output location; a tiny borrowed-source fixture stays unchanged.
 
 ## [0.80.1] - Unreleased
 

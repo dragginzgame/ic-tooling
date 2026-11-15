@@ -513,3 +513,53 @@ The initial restricted run passed opener fixtures but denied loopback binding;
 the complete run passed with local socket access. These results do not prove
 reaping after relinquishment, replacement Process handoff, macOS acceptance or
 browser readiness. The explicit handoff/reaping design remains the next boundary.
+
+## Replacement viewer handoff and reaping
+
+`make test-canic-viewer-replacement` passes on current Canic 0.214.0 after its
+workspace dependency rename settled. Four tests preserve opener liveness, literal
+URL/spawn errors and loopback serving/polling. In replacement mode the opener test
+also observes PID/start identity before release and eventual disappearance after
+Canic drops its completion observer; a zombie is not accepted as reaped.
+
+Log: `target/process-handoff-viewer-reaping.log`; export
+`target/canic-viewer.PG2w964W`; source HEAD
+`c39aee1e34dae82be6da89bf6242c3a0e22ade84`; tar SHA-256
+`58a69ad66ad5fa2c7631a2094f543a39bc5831c6bfcc85d3e318c7b7434486c0`.
+CLI Clippy, exact local Process 0.80.2 selection, absence of the CLI's old direct
+Process edge and external-lock subset admission pass. No browser, external calls,
+sibling mutation or native macOS acceptance is implied.
+
+## Complete current execution composition with handoff
+
+The current Canic 0.214.0 combined Process export now includes the CLI viewer
+handoff and reaping. `make test-canic-process` applies the reviewed viewer patch,
+retires the unused root legacy Process declaration, and admits exactly one Process
+package: local 0.80.2. Host, foreground client and CLI all use that owner. Loopback
+access is required; no actual browser, external requests or deployments are used.
+
+Source drift was refused before refresh: Canic now resolves `ic-wasm-store` from
+its exact locked protocol Git source and places default output in the consumer's
+`target/store-build`. The Build adapter preserves that source-selection branch
+and destination policy. The resolver's capture uses the already admitted private
+Cargo adapter; its exact-source refusal test is retained. The tiny Store-shaped
+fixture uses the existing probe's Wasm payload, not production Store source. It
+checks one lookup, consumer-owned default output, no supplier target directory and
+unchanged supplier files. A focused follow-up compares complete supplier tar bytes
+before/after; no supplier writes are accepted. No frozen sibling is modified.
+
+Passing combined evidence: `target/process-all-callers.log`, export
+`target/canic-build.1BER0nYl`, source HEAD
+`c39aee1e34dae82be6da89bf6242c3a0e22ade84`, archive SHA-256
+`05809f807e58e70b7155b98a09f1c37f2adebd658b24aa73cb5f0578081ca550`.
+Fifty-two tests pass (47 prior cases, one Store source-selection test and four
+viewer tests), plus all 20 metadata/tool refusals, real app build/refusal cases,
+PTY interaction, supplier-output placement, and Host/CLI/client Clippy. The exact
+single-Process graph assertion passes against this export's recorded metadata.
+Whole supplier-tree preservation passes in `target/store-source-preservation.log`,
+using this compiled CLI and fixture `target/store-source-preservation.sGdoV5HZ`.
+
+This replaces earlier claims of pending viewer composition for this source. Native
+macOS, real desktop-browser integration, the production Store runtime and actual
+signing/submission remain outside the evidence. Other standalone recipes retain
+explicit source/version boundaries and may refuse newer sibling edits.
