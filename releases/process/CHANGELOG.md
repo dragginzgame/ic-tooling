@@ -2,6 +2,23 @@
 
 Package: `ic-host-process`. Unpublished replacement; no registry release.
 
+## [0.80.2] - Unreleased
+
+- Start the next unpublished line after GitHub checkpoint `607ff8a`. Update local
+  Process selections without changing its synchronous API or implementation.
+- Define [desktop-opener handoff](../../docs/process-handoff.md): the worker keeps
+  child/reaping ownership while the caller observes completion. Observer drop
+  must not kill the child or abandon reaping. Implementation and native acceptance
+  remain pending; prior consumer runtime evidence stays tied to 0.80.1.
+- Implement `launch` and `Completion`: return after spawn, retain worker reaping
+  custody after observer drop, and preserve cached status or original wait error.
+  Six new tests include independent Linux reaping evidence and injected setup,
+  interruption and channel failures. All 14 Process and 19 Build tests, Clippy
+  and Rustdoc pass. Synchronous execution remains unchanged.
+- Prepare export-only viewer migration. Current Canic metadata refuses an
+  incomplete `ic-wasm-store-protocol` workspace rename, so replacement consumer
+  qualification remains pending; no historical fallback or sibling repair.
+
 ## [0.80.1] - Unreleased
 
 - Start the next unpublished line after GitHub checkpoint `f086547`; the public

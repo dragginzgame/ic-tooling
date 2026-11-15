@@ -1,8 +1,12 @@
-//! Synchronous owned execution with bounded stream delivery and explicit cleanup evidence.
+//! Owned execution with bounded synchronous delivery and separately reaped launches.
 //!
 //! Callers prepare commands and own decoding, retention and retry policy. This
 //! Unix implementation supports owned groups and direct foreground children;
-//! borrowed PIDs never confer signal authority. No sampling or tool setup is owned.
+//! borrowed PIDs never confer signal authority. Background launches retain reaping
+//! custody independently of completion observers. No sampling or tool setup is owned.
+
+mod handoff;
+pub use handoff::{Completion, launch};
 
 use std::io::{self, Read};
 use std::os::fd::AsFd;

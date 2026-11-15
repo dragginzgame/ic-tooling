@@ -1,6 +1,7 @@
 # Native execution: next owner admission
 
-Status: partial implementation in unpublished `ic-host-process` 0.80.1, adopted
+Status: unpublished `ic-host-process` 0.80.2 starts the [handoff design](process-handoff.md).
+Synchronous implementation is unchanged; the following 0.80.1 evidence covers adoption
 by Build, with current Canic artifact/metadata, foreground-client and signer
 version/principal capture qualification. Native macOS acceptance remains open.
 The existing [design](DESIGN.md#process-session) names the execution ownership
@@ -94,7 +95,7 @@ native execution or simulator requirement.
 ## Admitted implementation and reuse review
 
 The crates.io sparse index was queried on 2026-11-15 and selected the non-yanked
-0.79.0 line (`target/ic-host-process-registry.ndjson`). The replacement uses 0.80.1
+0.79.0 line (`target/ic-host-process-registry.ndjson`). The replacement uses 0.80.2
 for the incompatible contract and remains unpublished. Its only normal suppliers
 are the existing Rustix and thiserror selections; no external lock tuples changed.
 The independent Process release group owns this package.

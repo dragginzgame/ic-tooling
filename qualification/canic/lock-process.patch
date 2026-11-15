@@ -3,7 +3,7 @@
 @@ -56,4 +56,5 @@
  toml = "1.2.1"
  url = "2.5.8"
-+ic-host-process-next = { package = "ic-host-process", path = "@IC_TOOLING_NEW@/crates/ic-host-process", version = "=0.80.1" }
++ic-host-process-next = { package = "ic-host-process", path = "@IC_TOOLING_NEW@/crates/ic-host-process", version = "=0.80.2" }
  
  [workspace.lints.cargo]
 --- a/crates/canic-host/Cargo.toml

@@ -53,7 +53,7 @@
 +dependencies = [
 + "ic-host-artifacts 0.80.1",
 + "ic-host-fs 0.80.1",
-+ "ic-host-process 0.80.1",
++ "ic-host-process 0.80.2",
 + "serde_json",
 + "tempfile",
 + "thiserror 2.0.21",
@@ -108,7 +108,7 @@
  
  [[package]]
 +name = "ic-host-process"
-+version = "0.80.1"
++version = "0.80.2"
 +dependencies = [
 + "rustix",
 + "thiserror 2.0.21",

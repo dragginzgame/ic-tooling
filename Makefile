@@ -61,6 +61,10 @@ test-canic-process: toko-tooling-check
 test-canic-viewer: toko-tooling-check
 	bash scripts/qualification/canic-viewer.sh
 
+.PHONY: test-canic-viewer-replacement
+test-canic-viewer-replacement: toko-tooling-check
+	bash scripts/qualification/canic-viewer.sh replacement
+
 .PHONY: test-canic-lock
 test-canic-lock: toko-tooling-check
 	bash scripts/qualification/canic-lock.sh

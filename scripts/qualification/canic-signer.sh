@@ -21,7 +21,7 @@ manifest="$scratch/source/Cargo.toml"
 cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-host") | .id) as $host |
-  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.1" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
   any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_host_process_next" and .pkg == $process)
 ' "$scratch/metadata.json" >/dev/null
 cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- verify-external-lock "$scratch/original.lock" "$scratch/source/Cargo.lock" 1048576

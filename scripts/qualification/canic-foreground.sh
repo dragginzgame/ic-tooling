@@ -22,7 +22,7 @@ manifest="$scratch/source/Cargo.toml"
 cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-profile-client") | .id) as $client |
-  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.1" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
   any($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
   all($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name != "ic_host_process")
 ' "$scratch/metadata.json" >/dev/null

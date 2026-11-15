@@ -16,7 +16,10 @@ Consumers select Reqwest directly and own TLS/request policy.
 `make test-http-body` and `make test-backup-http` check the adapter and current
 Backup HTTP behavior using local loopback fixtures.
 
-`ic-host-process` 0.80.1 owns [bounded native execution](docs/process-execution.md).
+`ic-host-process` 0.80.2 owns [bounded native execution](docs/process-execution.md).
+Its [handoff/reaping API](docs/process-handoff.md) passes independent Linux tests;
+replacement viewer qualification awaits a consistent current Canic workspace.
+Existing 0.80.1 consumer evidence remains tied to that version.
 Build uses its group lifecycle and stream delivery. `make test-process` checks
 the core and Build failures; `make test-process-terminal` runs the Linux PTY case.
 `make test-canic-foreground` qualifies the current foreground client with a harmless

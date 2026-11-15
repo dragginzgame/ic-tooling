@@ -63,7 +63,7 @@ jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-host") | .id) as $host |
   (.packages[] | select(.name == "ic-build" and .version == "0.87.3" and
     .manifest_path == ($root + "/crates/ic-build/Cargo.toml")) | .id) as $build |
-  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.1" and
+  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2" and
     .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
   any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_build" and .pkg == $build) and
   any($m.resolve.nodes[] | select(.id == $build) | .deps[]; .name == "ic_host_process" and .pkg == $process)
@@ -76,14 +76,14 @@ if [[ "$mode" == app ]]; then
     ' "$scratch/metadata.json" >/dev/null
     jq -e --arg root "$repo" '. as $m |
       (.packages[] | select(.name == "canic-profile-client") | .id) as $client |
-      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.1" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
       any($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
       all($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name != "ic_host_process")
     ' "$scratch/metadata.json" >/dev/null
   fi
   jq -e '. as $m |
     (.packages[] | select(.name == "canic-host") | .id) as $host |
-    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.1") | .id) as $process |
+    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2") | .id) as $process |
     any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_host_process_next" and .pkg == $process)
   ' "$scratch/metadata.json" >/dev/null
   jq -e --arg root "$repo" '. as $m |

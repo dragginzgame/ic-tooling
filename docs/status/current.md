@@ -17,11 +17,11 @@ current requirements must justify further APIs.
 retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
 historical evidence. No old product source/test tree was admitted wholesale.
 
-GitHub checkpoint `f086547ffb7df6bb5f40df16b13ccda01f23f69c` is on `origin/main`.
-Post-push review of Process, its Build adapter and qualification wiring found no
-actionable defect. Process 0.80.1 starts the next local unpublished draft: current
-Canic signer version/principal capture passes export-only qualification without
-a public API change. Other groups are unchanged. Runtime evidence remains tied
+GitHub checkpoint `607ff8aaa39206952bb2fef17a0f67ad8f071b16` is on `origin/main`.
+Post-push review of the delivered adapters and qualification wiring found no new
+defect. Process 0.80.2 implements [handoff/reaping](../process-handoff.md): 14 Process
+and 19 Build tests pass, plus Clippy/Rustdoc. Current Canic's incomplete dependency
+rename blocks viewer replacement qualification. Consumer runtime evidence remains tied
 to the versions and snapshots recorded below; old Timers experiments are historical.
 Seven [release groups](../release-ownership.md) own their ledgers; root changelog is
 an index. All eight packages remain unpublished. Consumer migration, registry
@@ -47,7 +47,7 @@ Toko 0.44.4 is pinned in both workspaces; snapshot/tools admission and 19 Build 
   or terminal policy. See [Text](../text-presentation.md).
 - `ic-cargo-qualification` 0.1.2 is an external-lock subset admission executable,
   outside Build's graph. It is not an archive runner or metadata editor.
-- `ic-host-process` 0.80.1 owns synchronous group/direct-child execution and bounded
+- `ic-host-process` 0.80.2 owns synchronous group/direct-child execution and bounded
   observer delivery. Build uses its core; eight native tests, the 19 existing Build
   tests and Linux terminal fixtures pass, including current Canic's foreground
   client with a harmless tool. Signer capture passes four tests; lock initialization

@@ -806,7 +806,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.80.1"
+version = "0.80.2"
 dependencies = [
  "rustix",
  "tempfile",

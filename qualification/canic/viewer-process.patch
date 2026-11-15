@@ -1,0 +1,65 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -55,6 +55,7 @@
+ toko-tooling = "=0.44.4"
+ toml = "1.2.1"
+ url = "2.5.8"
++ic-host-process-next = { package = "ic-host-process", path = "@IC_TOOLING_NEW@/crates/ic-host-process", version = "=0.80.2" }
+ 
+ [workspace.lints.cargo]
+ unused_dependencies = "deny"
+--- a/crates/canic-cli/Cargo.toml
++++ b/crates/canic-cli/Cargo.toml
+@@ -19,7 +19,7 @@
+ canic-management-protocol.workspace = true
+ clap.workspace = true
+ ic-host-fs.workspace = true
+-ic-host-process.workspace = true
++ic-host-process-next.workspace = true
+ ic-host-text.workspace = true
+ serde_json.workspace = true
+ time.workspace = true
+--- a/crates/canic-cli/src/view/mod.rs
++++ b/crates/canic-cli/src/view/mod.rs
+@@ -1,12 +1,6 @@
+ //! Loopback-only viewer for one retained report; no directory or journal serving.
+ use canic_host::{Error, Result};
+-use std::{
+-    fs::File,
+-    io::Read as _,
+-    net::Ipv4Addr,
+-    path::Path,
+-    process::{Command, Stdio},
+-};
++use std::{fs::File, io::Read as _, net::Ipv4Addr, path::Path, process::Command};
+ use tiny_http::{Header, Method, Request, Response, Server};
+ 
+ #[cfg(test)]
+@@ -141,18 +135,15 @@
+ }
+ 
+ pub(crate) fn launch(url: &str, mut command: Command) -> std::io::Result<()> {
+-    command
+-        .arg(url)
+-        .stdin(Stdio::null())
+-        .stdout(Stdio::null())
+-        .stderr(Stdio::inherit());
+-    let mut child = ic_host_process::child::OwnedChild::spawn_direct(&mut command)?;
+-    if let Some(status) = child.relinquish()?
+-        && !status.success()
+-    {
+-        return Err(std::io::Error::other(format!(
+-            "desktop opener exited with {status}"
+-        )));
++    command.arg(url);
++    let mut completion = ic_host_process_next::launch(command)?;
++    if completion.try_result().is_some() {
++        let status = completion.wait()?;
++        if !status.success() {
++            return Err(std::io::Error::other(format!(
++                "desktop opener exited with {status}"
++            )));
++        }
+     }
+     Ok(())
+ }
