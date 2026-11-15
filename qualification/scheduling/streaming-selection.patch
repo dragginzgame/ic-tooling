@@ -1,0 +1,49 @@
+--- a/qualification/ic-timers-pocketic/src/build/mod.rs
++++ b/qualification/ic-timers-pocketic/src/build/mod.rs
+@@ -7,7 +7,7 @@
+         preferred_configuration,
+     },
+     execution::{
+-        CargoExecutionPolicy, CargoInvocation, CargoRecipe, execute_cargo, select_cdylib_wasm,
++        CargoExecutionPolicy, CargoInvocation, CargoRecipe, CdylibWasmSelector, execute_cargo,
+     },
+     observation::schema,
+     selection::{CargoFeatureSelection, CargoSelection},
+@@ -458,7 +458,13 @@
+             render_diagnostics: true,
+             keep_going: false,
+         };
+-        let mut messages = Vec::new();
++        // Consumer-owned bounds for exact output selection; diagnostics stream below.
++        let mut outputs = CdylibWasmSelector::new(
++            &root.join(package).join("Cargo.toml"),
++            &invocation.recipe,
++            8,
++            64 * 1024,
++        )?;
+         let observed = execute_cargo(
+             &invocation,
+             CargoExecutionPolicy {
+@@ -485,8 +491,7 @@
+                 {
+                     std::io::stderr().write_all(rendered.as_bytes())?;
+                 }
+-                messages.push(message);
+-                Ok(())
++                outputs.observe(&message)
+             },
+         )?;
+         observed.execution?.require_success()?;
+@@ -494,11 +499,7 @@
+         let facts = observed
+             .facts?
+             .ok_or("successful build omitted compiler observations")?;
+-        let output = select_cdylib_wasm(
+-            &messages,
+-            &root.join(package).join("Cargo.toml"),
+-            &invocation.recipe,
+-        )?;
++        let output = outputs.finish()?;
+         let artifact = CapturedArtifact::capture(&output, &scratch, 1024 * 1024 * 1024)?
+             .retain_to(&scratch.join(format!("{label}.wasm")))?;
+         drop(target_lock);

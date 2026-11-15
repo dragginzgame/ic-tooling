@@ -1,0 +1,6 @@
+/target/
+/.tools/
+/.agents/
+/.codex/
+/.aws/
+.DS_Store

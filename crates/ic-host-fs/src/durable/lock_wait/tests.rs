@@ -1,0 +1,183 @@
+use super::{
+    lock_exclusive, lock_exclusive_with_wait, lock_shared, try_lock_exclusive, unlock,
+    wait_for_lock,
+};
+use crate::tests::fixture;
+use std::{fs::File, io, time::Duration};
+
+#[test]
+fn shared_guard_releases_lock_with_a_duplicate_descriptor_open() {
+    let fixture = fixture();
+    let path = fixture.path().join("guarded-shared-lock");
+    std::fs::write(&path, b"caller-owned bytes").unwrap();
+    let first = super::SharedFileLock::acquire(File::open(&path).unwrap()).unwrap();
+    let duplicate = first.file().try_clone().unwrap();
+    let independent = super::SharedFileLock::acquire(File::open(&path).unwrap()).unwrap();
+    let exclusive = File::open(&path).unwrap();
+    drop(first);
+    assert_eq!(
+        try_lock_exclusive(&exclusive).unwrap_err().kind(),
+        io::ErrorKind::WouldBlock
+    );
+    drop(independent);
+    try_lock_exclusive(&exclusive).unwrap();
+    unlock(&exclusive).unwrap();
+    assert_eq!(duplicate.metadata().unwrap().len(), 18);
+    assert_eq!(std::fs::read(&path).unwrap(), b"caller-owned bytes");
+}
+
+#[test]
+fn shared_guard_refuses_nonregular_descriptors() {
+    let fixture = fixture();
+    assert_eq!(
+        super::SharedFileLock::acquire(File::open(fixture.path()).unwrap())
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::InvalidInput
+    );
+}
+
+#[test]
+fn shared_holders_and_explicit_unlock_preserve_descriptor_custody() {
+    let fixture = fixture();
+    let path = fixture.path().join("shared-lock");
+    std::fs::write(&path, b"caller-owned bytes").unwrap();
+    let first = File::open(&path).unwrap();
+    let duplicate = first.try_clone().unwrap();
+    let second = File::open(&path).unwrap();
+    let exclusive = File::open(&path).unwrap();
+    let acquired = File::open(&path).unwrap();
+    lock_shared(&first).unwrap();
+    lock_shared(&second).unwrap();
+    let contended = || {
+        assert!(matches!(
+            try_lock_exclusive(&exclusive),
+            Err(error) if error.kind() == io::ErrorKind::WouldBlock
+        ));
+    };
+    contended();
+    unlock(&first).unwrap();
+    contended();
+    unlock(&second).unwrap();
+    try_lock_exclusive(&exclusive).unwrap();
+    unlock(&exclusive).unwrap();
+    lock_exclusive(&first).unwrap();
+    contended();
+    unlock(&first).unwrap();
+    try_lock_exclusive(&acquired).unwrap();
+    unlock(&acquired).unwrap();
+    assert_eq!(std::fs::read(&path).unwrap(), b"caller-owned bytes");
+    // Every descriptor, including the duplicate, remains open after unlock.
+    for file in [&first, &duplicate, &second, &exclusive, &acquired] {
+        assert_eq!(file.metadata().unwrap().len(), 18);
+    }
+}
+
+#[test]
+fn direct_descriptor_operations_refuse_nonregular_files() {
+    let fixture = fixture();
+    let directory = File::open(fixture.path()).unwrap();
+    let operations: [fn(&File) -> io::Result<()>; 4] =
+        [lock_shared, lock_exclusive, try_lock_exclusive, unlock];
+    for operation in operations {
+        assert_eq!(
+            operation(&directory).unwrap_err().kind(),
+            io::ErrorKind::InvalidInput
+        );
+    }
+}
+
+#[test]
+fn callback_failure_and_invalid_intervals_do_not_acquire() {
+    let fixture = fixture();
+    let path = fixture.path().join("lock");
+    std::fs::write(&path, b"").unwrap();
+    let held = File::open(&path).unwrap();
+    rustix::fs::flock(&held, rustix::fs::FlockOperation::LockExclusive).unwrap();
+    let pending = File::open(&path).unwrap();
+    assert_eq!(
+        lock_exclusive_with_wait(&pending, Duration::ZERO, |_| panic!("invalid interval"))
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::InvalidInput
+    );
+    assert_eq!(
+        lock_exclusive_with_wait(&pending, Duration::from_millis(1), |_| Err(
+            io::Error::from(io::ErrorKind::PermissionDenied)
+        ))
+        .unwrap_err()
+        .kind(),
+        io::ErrorKind::PermissionDenied
+    );
+    assert_eq!(
+        rustix::fs::flock(
+            &pending,
+            rustix::fs::FlockOperation::NonBlockingLockExclusive
+        ),
+        Err(rustix::io::Errno::WOULDBLOCK)
+    );
+}
+
+#[test]
+fn interrupted_acquisition_retries_without_false_contention() {
+    let mut attempts = 0;
+    wait_for_lock(
+        Duration::from_millis(1),
+        |_| panic!("interruption is not contention"),
+        || {
+            attempts += 1;
+            if attempts < 3 {
+                Err(io::Error::from(io::ErrorKind::Interrupted))
+            } else {
+                Ok(())
+            }
+        },
+    )
+    .unwrap();
+    assert_eq!(attempts, 3);
+}
+
+#[test]
+fn nonregular_descriptors_are_rejected_before_observation() {
+    let fixture = fixture();
+    let directory = File::open(fixture.path()).unwrap();
+    assert_eq!(
+        lock_exclusive_with_wait(&directory, Duration::from_millis(1), |_| panic!(
+            "nonregular descriptor"
+        ))
+        .unwrap_err()
+        .kind(),
+        io::ErrorKind::InvalidInput
+    );
+}
+
+#[test]
+fn exclusive_guard_releases_on_drop_and_explicit_release_with_duplicates() {
+    let fixture = fixture();
+    let path = fixture.path().join("exclusive-guard");
+    std::fs::write(&path, b"retained").unwrap();
+    for explicit in [false, true] {
+        let guard = super::ExclusiveFileLock::try_acquire(File::open(&path).unwrap()).unwrap();
+        let duplicate = guard.file().try_clone().unwrap();
+        let observer = File::open(&path).unwrap();
+        assert_eq!(
+            try_lock_exclusive(&observer).unwrap_err().kind(),
+            io::ErrorKind::WouldBlock
+        );
+        if explicit {
+            guard.release().unwrap();
+        } else {
+            drop(guard);
+        }
+        try_lock_exclusive(&observer).unwrap();
+        unlock(&observer).unwrap();
+        assert_eq!(duplicate.metadata().unwrap().len(), 8);
+    }
+    assert_eq!(std::fs::read(&path).unwrap(), b"retained");
+    assert_eq!(
+        super::ExclusiveFileLock::try_acquire(File::open(fixture.path()).unwrap())
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::InvalidInput
+    );
+}

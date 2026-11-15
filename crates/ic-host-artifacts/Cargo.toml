@@ -1,0 +1,42 @@
+[package]
+name = "ic-host-artifacts"
+edition.workspace = true
+rust-version.workspace = true
+version = "0.79.0"
+license-file.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Bounded host artifact streams, identities, gzip and Wasm tooling"
+readme = "../../README.md"
+publish = false
+
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
+[features]
+default = []
+gzip = ["dep:flate2"]
+wasm = ["dep:leb128", "dep:wasmparser"]
+wasm-text = ["dep:wat"]
+wasm-validation = ["wasm", "wasmparser/validate"]
+
+[dependencies]
+flate2 = { workspace = true, optional = true }
+leb128 = { workspace = true, optional = true }
+sha2.workspace = true
+wasmparser = { workspace = true, optional = true }
+wat = { workspace = true, optional = true }
+
+[dev-dependencies]
+clap = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ["std"] }
+serde_json.workspace = true
+toko-tooling.workspace = true
+wasmparser.workspace = true
+
+[lints]
+workspace = true
+
+[[test]]
+name = "consumer_contracts"
+required-features = ["wasm"]

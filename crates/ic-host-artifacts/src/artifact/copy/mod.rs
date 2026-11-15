@@ -1,0 +1,93 @@
+//! Stream bytes to a caller-owned staging sink with bounded identity capture.
+
+#[cfg(test)]
+mod tests;
+
+use super::{ArtifactError, ArtifactIdentity, HashingWriter, visit_reader};
+use std::{
+    fmt,
+    io::{self, Read, Write},
+};
+
+/// A bounded copy failed before a complete source identity could be returned.
+#[derive(Debug)]
+pub enum CopyError {
+    /// Source IO or complete-input byte allowance failed.
+    Input(ArtifactError),
+    /// The caller's sink failed, possibly after accepting a partial chunk.
+    Output(io::Error),
+}
+
+impl fmt::Display for CopyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Input(source) => write!(f, "copy input failed: {source}"),
+            Self::Output(source) => write!(f, "copy output failed: {source}"),
+        }
+    }
+}
+
+impl std::error::Error for CopyError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Input(source) => Some(source),
+            Self::Output(source) => Some(source),
+        }
+    }
+}
+
+impl From<ArtifactError> for CopyError {
+    fn from(source: ArtifactError) -> Self {
+        Self::Input(source)
+    }
+}
+
+/// Preserve native input/output I/O identity at an I/O-only boundary.
+///
+/// Non-I/O input failures remain a downcastable [`CopyError`] cause with kind
+/// [`io::ErrorKind::Other`]. Keep `CopyError` directly when the input/output
+/// distinction is needed: converting a native error discards that distinction.
+impl From<CopyError> for io::Error {
+    fn from(error: CopyError) -> Self {
+        match error {
+            CopyError::Input(ArtifactError::Io(source)) | CopyError::Output(source) => source,
+            other @ CopyError::Input(_) => Self::other(other),
+        }
+    }
+}
+
+/// Copy one bounded source stream and identify its bytes with constant memory.
+///
+/// Shares the read traversal used by [`super::hash_reader`] and
+/// [`super::read_reader`]: observes at most `max_bytes + 1` bytes, detects
+/// overflow before writing the overflowing chunk, and retries interrupted reads
+/// only. Writes each accepted chunk through `Write::write_all`, which handles
+/// short writes and interrupted writes according to the standard IO contract.
+/// The shared [`HashingWriter`] validates accepted-byte counts before advancing
+/// through output. Impossible reader/writer counts return IO
+/// [`io::ErrorKind::InvalidData`] through the corresponding error variant.
+/// A blocking reader or writer's deadlines remain caller-owned.
+///
+/// Bytes reach the sink before the complete source is known. Supply a private
+/// staging sink, check the returned identity against your admitted digest, and
+/// validate it before publication. Copying does not freeze source contents or
+/// independently re-read the sink. On every failure, partial output remains
+/// available to the caller; no identity for the complete input is returned.
+///
+/// This function never opens paths, flushes, synchronizes, renames or deletes
+/// files. It chooses no filesystem authority or publication/recovery policy.
+///
+/// # Errors
+/// Returns distinct typed source/limit and sink failures. Output may contain a
+/// prefix even when the source is oversized or a write fails.
+pub fn copy_reader(
+    mut reader: impl Read,
+    writer: &mut impl Write,
+    max_bytes: u64,
+) -> Result<ArtifactIdentity, CopyError> {
+    let mut writer = HashingWriter::new(writer, max_bytes);
+    visit_reader::<CopyError>(&mut reader, &mut [0; 16 * 1024], max_bytes, |chunk| {
+        writer.write_all(chunk).map_err(CopyError::Output)
+    })?;
+    Ok(writer.into_parts().1)
+}

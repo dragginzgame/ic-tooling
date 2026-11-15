@@ -1,0 +1,74 @@
+[workspace]
+members = [
+    "crates/ic-build",
+    "crates/ic-host-artifacts",
+    "crates/ic-host-fs",
+    "crates/ic-host-process",
+]
+exclude = ["qualification"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.100.0"
+license-file = "LICENSE.md"
+repository = "https://github.com/dragginzgame/ic-tooling-new"
+authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
+
+[workspace.dependencies]
+cap-fs-ext = "4.0.2"
+cap-std = "4.0.2"
+cargo_metadata = "0.23.1"
+flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
+ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.79.0", default-features = false }
+ic-host-fs = { path = "crates/ic-host-fs", version = "0.79.0", default-features = false }
+ic-host-process = { path = "crates/ic-host-process", version = "0.79.0", default-features = false }
+libc = "0.2.190"
+rustix = { version = "1.1.4", default-features = false, features = ["std", "fs"] }
+sha2 = { version = "0.11.1", default-features = false }
+tempfile = "3.27.0"
+thiserror = "2.0.18"
+toml = "1"
+toml_edit = "0.25.17"
+# Wat's minor line selects the matching 0.x encoder family; upgrade these together.
+wat = { version = "~1.263.0", default-features = false }
+
+clap = { version = "4.6.7", default-features = false, features = ["std", "help", "usage", "error-context"] }
+leb128 = "0.2.5"
+serde = { version = "1.0.228", default-features = false }
+serde_json = "1.0.150"
+wasmparser = { version = "0.263", default-features = false, features = ["std", "features"] }
+
+toko-tooling = "=0.44.0"
+
+[workspace.lints.cargo]
+unused_dependencies = "deny"
+unused_workspace_dependencies = "deny"
+unused_workspace_package_fields = "deny"
+missing_lints_inheritance = "deny"
+unknown_lints = "deny"
+
+[workspace.lints.rust]
+dead_code = "deny"
+unused_must_use = "deny"
+unfulfilled_lint_expectations = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+missing_docs = "warn"
+# Reviewed macOS process queries and scoped Unix signal actions permit local FFI.
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+# Retain reviewed API/style checks; experimental groups are selected individually.
+pedantic = { level = "warn", priority = -1 }
+redundant_clone = "warn"
+needless_pass_by_value = "warn"
+wildcard_imports = "warn"
+missing_panics_doc = "warn"
+must_use_candidate = "warn"
+too_many_lines = "allow"
+
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"
+invalid_markdown_table = "deny"
