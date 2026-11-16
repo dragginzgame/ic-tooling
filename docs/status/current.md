@@ -48,13 +48,17 @@ for the workflow's single Gitleaks history scan.
 Issue repairs (registry publication pending):
 [#1 — Hosted CI wiring](https://github.com/dragginzgame/ic-tooling/issues/1) adds
 repository-wide snapshot/pin and formatting checks before the native matrix;
-Actionlint, `make check` and `make fmt-check` pass locally. New hosted evidence
-remains pending. [#2 — Retained-file publication](https://github.com/dragginzgame/ic-tooling/issues/2)
+Actionlint passes locally; `make check` and `make fmt-check` pass locally and in
+[hosted run 43858083308](https://github.com/dragginzgame/ic-tooling/actions/runs/43858083308)
+at `a66eae8`. The setup follow-up explicitly prepares both pinned
+Rust components before admission. [#2 — Retained-file publication](https://github.com/dragginzgame/ic-tooling/issues/2)
 adds `Directory::admit_retained` at the [existing FS owner](../filesystem-custody.md#reopening-an-original-publication-file).
 It verifies the original held identity and complete expected bytes, then reuses
 create-only seal/commit with retained failure evidence. All 29 FS library tests,
-FS Clippy and Rustdoc pass on Linux. The new native macOS cases remain pending;
-neither publication nor Backup adoption is claimed. Package versions are unchanged.
+FS Clippy and Rustdoc pass on Linux and both native macOS architectures at
+`a66eae8d500451aff613fa8819598c2257f4ffb5`; archived macOS logs confirm all six new
+recovery cases. Neither publication nor Backup adoption is claimed. Package versions
+are unchanged.
 
 ## Owners and evidence entrypoints
 

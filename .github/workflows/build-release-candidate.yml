@@ -20,8 +20,8 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-      - name: Prepare pinned Rust and formatting component
-        run: rustup toolchain install 1.100.0 --profile minimal --component rustfmt
+      - name: Prepare pinned Rust and repository components
+        run: rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@8bcece573511a6ce6ee8879443a8d19b6e43e7ad # 0.44.4
       - name: Prepare common tools
         run: make install-tools
@@ -61,7 +61,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Prepare pinned Rust and Wasm target
-        run: rustup toolchain install 1.100.0 --profile minimal --component clippy --target wasm32-unknown-unknown
+        run: rustup toolchain install 1.100.0 --profile minimal --component clippy --component rustfmt --target wasm32-unknown-unknown
       - name: Qualify the four packaged crates
         env:
           BUILD_RELEASE_ONLINE: 'true'

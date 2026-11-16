@@ -12,7 +12,8 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 - Run snapshot/pin admission and non-mutating formatting before the native CI
   matrix, including on tooling-only and documentation-only pull requests.
-  Prepare tools through the shared installer and pinned download cache; retain
+  Prepare all repository-required Rust components and common tools explicitly
+  through the shared installer and pinned download cache; retain
   one history secret scan outside the matrix.
   [#1 — Complete hosted CI wiring for adopted Toko Tooling checks](https://github.com/dragginzgame/ic-tooling/issues/1).
 

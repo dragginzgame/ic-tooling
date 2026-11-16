@@ -129,11 +129,13 @@ without weakening the test. Archive hashes and per-command logs live with each r
 
 The GitHub `Build release candidate` workflow checks Ubuntu 24.04, macOS 15 Apple
 Silicon and macOS 15 Intel after one repository job runs `make check` and
-`make fmt-check`. That job explicitly prepares Rustfmt and the common tools using
+`make fmt-check`. That job explicitly prepares Rustfmt, Clippy and the common tools using
 the shared installers and pinned download cache. Pull requests have no path
 filter, so documentation and tooling changes receive repository admission and
-the single history secret scan too. These local wiring changes still require a
-new hosted run; the earlier passing run does not qualify them.
+the single history secret scan too. [Run 43858083308](https://github.com/dragginzgame/ic-tooling/actions/runs/43858083308)
+at `a66eae8` passes repository admission, formatting, the secret scan and all three
+native jobs. Its setup log exposed implicit Clippy preparation during admission;
+the follow-up selects both repository-required Rust components in explicit setup.
 
 The native matrix checks Ubuntu 24.04, macOS 15 Apple
 Silicon and macOS 15 Intel. It prepares Rust 1.100.0, Clippy and the Wasm target;

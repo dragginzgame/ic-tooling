@@ -80,10 +80,13 @@ mode and bytes; parent rename; short/excess/mismatched content; invalid names,
 permissions, aliases, links and substituted identities; occupied destinations;
 explicit abort; and file-sync, cleanup and parent-sync failures. FS Clippy
 (`--all-targets -- -D warnings`) and Rustdoc (`-D warnings`) pass. These changes
-are unpublished; native macOS execution remains required by
+are unpublished. [Hosted run 43858083308](https://github.com/dragginzgame/ic-tooling/actions/runs/43858083308)
+at `a66eae8d500451aff613fa8819598c2257f4ffb5` also passes the packaged tests,
+Clippy and Rustdoc on Linux, Apple Silicon macOS and Intel macOS. Retained
+macOS artifact logs confirm all six new cases and the original source identity,
+completing the native producer qualification required by
 [#2 — Support publication of original retained files after reopen](https://github.com/dragginzgame/ic-tooling/issues/2).
-The existing packaged native matrix selects these tests. Backup migration and
-current-consumer qualification remain separate work.
+Backup migration and current-consumer qualification remain separate work.
 
 [Explicit directory preparation](directory-preparation.md) extends this owner
 with held-root traversal and creation of named children. It returns the held leaf
