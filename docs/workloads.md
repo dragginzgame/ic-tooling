@@ -124,8 +124,17 @@ Fleet staging now similarly retains prepared root/child handles through ordered
 member writes; the 41 paired cases and two custody tests pass. Recovery/release
 writers now also retain prepared custody, with six publication cases expanding
 the comparison to 47. Live submission/terminal-result handling remains outside
-runtime evidence. Artifact inspection and app-output path resolution remain
-separate migrations; released test helpers are retained as independent oracles.
+runtime evidence. Artifact inspection now uses consumer-selected alias resolution,
+held regular-file admission and bounded bytes, with two additional paired cases
+(49 total). Private app-output resolution now preserves missing/dangling alias
+comparison and pre-lock refusal, bringing the comparison to 52 cases. No generic
+path API enters Tooling. Host's direct released-FS dependency is now dev-only in
+the export, proved by library compilation and resolved metadata. All 52 paired
+cases and two custody tests still pass. Released test helpers remain independent
+oracles. Composing Host's Process adapters now also passes nine focused cases and
+removes legacy FS/Process from its native normal/build graph. Library compilation,
+Clippy and graph admission pass. Current CLI/runtime composition and archive
+acceptance remain separate work.
 
 Continue server/snapshot
 ownership only from an unfrozen consumer's required lifecycle. Native macOS and

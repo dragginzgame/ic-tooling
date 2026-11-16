@@ -1,7 +1,7 @@
 --- a/crates/canic-host/src/artifact/store_source/mod.rs
 +++ b/crates/canic-host/src/artifact/store_source/mod.rs
 @@ -1,12 +1,9 @@
- //! Resolve the standalone Store from the same locked Git source as its passive protocol.
+ //! Resolve the registry Store artifact input without linking its runtime into Host.
 -use super::cargo_failure;
  use crate::{Error, Result, supplier};
 -use ic_host_process::tool::{CompletedExecution, OutputLimit, OutputLimits, capture_group_command};
@@ -12,20 +12,20 @@
 -    time::Duration,
  };
  
- #[derive(Deserialize)]
-@@ -22,7 +19,7 @@
+ const REGISTRY: &str = "registry+https://github.com/rust-lang/crates.io-index";
+@@ -45,7 +42,7 @@
  }
  
- pub(super) fn manifest(workspace: &Path) -> Result<PathBuf> {
+ fn metadata(manifest: &Path) -> Result<Metadata> {
 -    let output = capture_group_command(
 +    let output = crate::cargo_process::capture(
          Command::new("cargo")
              .args([
                  "metadata",
-@@ -32,16 +29,9 @@
+@@ -55,16 +52,9 @@
                  "--manifest-path",
              ])
-             .arg(workspace),
+             .arg(manifest),
 -        OutputLimits {
 -            stdout: OutputLimit::Terminate(8 * 1024 * 1024),
 -            stderr: OutputLimit::Terminate(1024 * 1024),
@@ -35,10 +35,10 @@
 -    .and_then(CompletedExecution::require_success)
 -    .and_then(CompletedExecution::require_complete)
 -    .map_err(cargo_failure)?;
--    let metadata: Metadata = serde_json::from_slice(&output.stdout).map_err(supplier)?;
+-    serde_json::from_slice(&output.stdout).map_err(supplier)
 +        8 * 1024 * 1024,
 +    )?;
-+    let metadata: Metadata = serde_json::from_slice(&output).map_err(supplier)?;
-     let source = selected(metadata)?;
-     let root = source.ancestors().nth(3).ok_or_else(|| {
-         Error::Invalid("Store protocol must use the supplier's crates/package layout".into())
++    serde_json::from_slice(&output).map_err(supplier)
+ }
+ 
+ fn package<'a>(metadata: &'a Metadata, name: &str) -> Result<&'a Package> {

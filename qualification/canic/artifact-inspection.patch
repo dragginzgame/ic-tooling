@@ -1,0 +1,28 @@
+--- a/crates/canic-host/src/artifact/mod.rs
++++ b/crates/canic-host/src/artifact/mod.rs
+@@ -98,10 +98,21 @@
+ /// # Errors
+ /// Refuses unreadable, oversized or non-Wasm inputs. Full Wasm validation is the IC's responsibility.
+ pub fn inspect(path: &Path) -> Result<Artifact> {
+-    admit_bounded(
+-        &ic_host_fs::read::read_file(path, MAX_ARTIFACT_BYTES).map_err(supplier)?,
+-        MAX_ARTIFACT_BYTES,
+-    )
++    // Inspection follows caller-selected aliases; retained-record reads do not.
++    let resolved = path.canonicalize().map_err(supplier)?;
++    let parent = resolved.parent().ok_or_else(|| Error::Invalid("artifact needs a filename".into()))?;
++    let name = resolved.file_name().ok_or_else(|| Error::Invalid("artifact needs a filename".into()))?;
++    let missing = || supplier(std::io::Error::from(std::io::ErrorKind::NotFound));
++    let directory = ic_fs_next::Directory::open(parent, 0).map_err(supplier)?.ok_or_else(missing)?;
++    let file = directory.open_file(name, ic_fs_next::Access::Read,
++        ic_fs_next::FilePolicy { forbidden: 0, single_link: false })
++        .map_err(supplier)?.ok_or_else(missing)?;
++    if file.metadata().map_err(supplier)?.len() > MAX_ARTIFACT_BYTES as u64 {
++        return Err(supplier(ic_bytes_next::Error::Limit { limit: MAX_ARTIFACT_BYTES as u64 }));
++    }
++    let (bytes, _) = ic_bytes_next::read(file, ic_bytes_next::Length::AtMost(MAX_ARTIFACT_BYTES as u64))
++        .map_err(supplier)?;
++    admit_bounded(&bytes, MAX_ARTIFACT_BYTES)
+ }
+ 
+ /// Build one explicit Cargo package and select its Wasm from artifact records.

@@ -22,6 +22,11 @@ remains tied to its recorded inputs.
 
 ### 🔧 Changed
 
+- Compose current Canic Host filesystem and Process qualification on one source
+  capture. Verify the dev-only legacy-FS oracle and absence of legacy FS/Process
+  from Host's native normal/build graph; compare 52 cases and run two custody
+  plus nine focused Process checks. Preserve current registry Store inputs and
+  ordinary module wiring for shared fixtures.
 - Adopt Toko Tooling 0.44.4 in both workspaces through its verified snapshot.
   Rename the qualification fixture directory to `owned-wasm-probe` to match its
   existing package identity; update workspace membership and Build callers.

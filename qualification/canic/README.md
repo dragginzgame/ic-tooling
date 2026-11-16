@@ -4,6 +4,138 @@ Current recipes select the next unpublished Build 0.87.3 / Text 0.77.2 where
 used. Their patches and locked graphs admit current local sources; historical
 runtime evidence below remains bound to its recorded checkpoint inputs.
 
+## Composed Host Process and filesystem graph
+
+The composed preparation recipe now also applies the existing lock, signer,
+metadata and Store-source Process adapters before making legacy FS test-only.
+Host uses local Process 0.80.2 directly, sharing the owner already selected by
+Build. Native `cargo tree --edges normal,build` must contain neither released
+Process 0.79.0 nor FS 0.79.0. Metadata separately admits the exact local Process
+path and test-only direct FS edge; library-only compilation checks direct access.
+This graph boundary is Host-specific. CLI/viewer/profile-client dependencies and
+production manifests remain unchanged by this recipe.
+
+Store-source lookup now uses current Canic's registry input contract, including
+the locked protocol/runtime version check. Its Process patch was refreshed against
+that implementation; the old Git-source selection is not restored. The nine
+additional Process checks cover lock evidence/diagnostics, compiler diagnostics,
+registry-pair admission, signer version/principal refusals and bounded capture
+(stream overflow, deadline and spawn failure). The signer is a harmless local
+fixture; it uses no keys or network calls. These checks complement the paired
+filesystem cases without claiming live submission or a refreshed full CLI build.
+
+Reused lock/signer fixtures now use ordinary Rust child modules. This removes
+their `#[path]` wiring in the touched runners without importing fixtures into
+product crates or changing their assertions.
+
+Passing Linux run: `target/canic-build.BCSYpwy3`, logged in
+`target/canic-host-composed.log`; additional checks are in
+`host-process-tests.log` within that export. Canic 0.216.5 HEAD
+`2ee4add03126aa2f5259c609fa05eae8a14bcd14` plus working-tree changes; source-tar
+SHA-256 `979811db02103018f91770bd3007b3969e164d0aafe46955f1b94240b733cb06`.
+All 52 paired cases, two custody cases and nine focused Process cases pass,
+alongside library compilation, Clippy and graph/lock admission. The saved native
+normal/build tree contains local FS 0.80.1 and Process 0.80.2, with neither legacy
+package. Their released test oracles and unrelated workspace consumers remain.
+
+Earlier composition attempts stopped safely at patch context checks: the path
+fixture registration conflicted with a lock-adapter EOF insertion, then metadata
+context assumed adjacent module declarations. The registration now precedes the
+type declaration and the metadata patch retains focused unchanged context.
+Failure logs are `target/canic-host-composition-patch-refusal.log` and
+`target/canic-host-metadata-patch-refusal.log`; no consumer repair or fallback was
+used. The refreshed full CLI/runtime recipe has not been rerun by this slice.
+
+## Host's direct legacy filesystem dependency
+
+After the filesystem caller adapters, `filesystem-test-only.patch` moves Host's
+released `ic-host-fs` declaration to unconditional dev-dependencies. The registry
+package remains available to original fixture allocation, preparation and lock
+interoperability tests. Production library code must compile without that direct
+dependency; `cargo check -p canic-host --lib` tests this boundary independently of
+the all-target Clippy and paired behavior checks.
+
+Resolved metadata must contain exactly one Host-to-released-FS edge, with exactly
+one unconditional `dev` kind. Local FS/Bytes identity and external-lock checks
+remain required. The runner saves `host-runtime-tree.txt` rather than treating
+the direct-edge change as full runtime removal: released Process 0.79.0 still
+depends on released FS 0.79.0. Composing the existing Process migration with this
+filesystem export is a separate qualification step. No public legacy export is
+removed, and the production sibling manifest is unchanged.
+
+Passing Linux run: `target/canic-build.W5YqoIT7`, logged in
+`target/canic-filesystem-test-only.log`. Current Canic 0.216.5 HEAD
+`2ee4add03126aa2f5259c609fa05eae8a14bcd14` plus working-tree changes; source-tar
+SHA-256 `31f64eef8b10043f1c80075b037b4fde4f0dfb3398670a4c26b23db7d3b877f0`.
+The library-only compile, exact direct-edge assertion, all-target Clippy and
+dependency/lock admission pass, as do all 52 paired cases and two custody tests.
+The saved normal/build tree confirms the remaining Process-to-legacy-FS edge.
+
+## App-output path comparison
+
+`output-path.patch` moves the app recipe's destination comparison to the private
+export module `output_path`. It preserves the original path for the independent
+artifact writer and performs no creation, removal or locking. Existing paths use
+native canonicalization; missing suffixes are resolved component by component,
+including dangling aliases and traversal back into existing ancestors. Raw native
+components retain `file/.`, `file/..` and trailing-separator refusal. The fixed
+Canic allowance of 40 active missing-target expansions remains local policy;
+completed independent aliases do not consume that allowance.
+
+This is a newly implemented consumer adapter, derived from required comparison
+outcomes and the released resolver's documented behavior. The production reference
+was read-only; its general path API, implementation and test tree were not imported.
+No path normalization API is added to Tooling. This comparison is not a held-path
+capability, a confinement boundary or proof against concurrent namespace writers.
+
+Three paired fixtures select the released resolver before migration and the
+private resolver afterward, retaining identical assertions. They cover missing
+suffixes, absolute/relative/dangling aliases, parent traversal, native filenames,
+file traversal refusal, cycles and active-depth limits. Existing app tests also
+require output-alias refusal before lock/output creation, even with one canister
+selected. No historical source fallback or production sibling modification occurs.
+
+Passing Linux run: `target/canic-build.IMzTNGo3`, logged in
+`target/canic-output-path.log`. Current Canic 0.216.5 HEAD
+`2ee4add03126aa2f5259c609fa05eae8a14bcd14` plus working-tree changes; source-tar
+SHA-256 `65b6805f6cff5f9097e185b83e1a59e62ef8e78aad38d457f0c8c2404bddf401`.
+Both suppliers pass the same 52 cases, both replacement custody tests pass, and
+Host all-target warning-denied Clippy plus local dependency/lock admission pass.
+An earlier run (`target/canic-build.GINe379G`) passed baseline but refused the
+test adapter's context-free patch; adding function context fixed the patch, not
+consumer source. That failure log is `target/canic-output-path-patch-refusal.log`.
+The legacy dependency remains selected for independent test oracles; normal graph
+isolation, packaged artifacts and native macOS still need separate qualification.
+
+## Artifact inspection
+
+The composed preparation recipe adds `artifact-inspection.patch` and two identical
+inspection fixtures to both suppliers. Canic resolves its selected input aliases;
+held-directory admission then opens a regular file with no additional link
+following. Existing permission/hard-link policy is unrestricted. Descriptor size
+admission precedes bounded complete-byte reading, which independently refuses
+growth beyond `MAX_ARTIFACT_BYTES`. The existing Wasm header and identity policy
+remains in Canic. No generic path-following API enters the filesystem owner.
+
+Fixtures check the known minimal-Wasm digest and length through direct, parent
+alias, final alias and hard-link paths. They also check non-Wasm and oversized
+inputs, directory/FIFO refusal, missing-file cause and dangling-link preservation.
+The FIFO fixture uses the prepared host's `mkfifo` utility. This adds inspection
+to the existing composition without changing retained records' final-link refusal.
+Namespace/content writer exclusion remains required; canonicalization does not
+freeze a path or grant hostile-writer confinement. No performance improvement is
+claimed; the retained consumer admission still computes its own digest.
+
+Passing Linux run: `target/canic-build.u6G01qsU`, logged in
+`target/canic-artifact-inspection.log`. Canic 0.216.4 HEAD
+`f0cbb3e78592b869a464cc46b80289700e9d4cd7` plus working-tree changes; source-tar
+SHA-256 `4b9f26340ea6507b7b94e7a95be7945c51ab65c2dc0b0cb97457226e47ace360`.
+Both suppliers pass identical 49-case inventories, plus both replacement custody
+tests, Host all-target warning-denied Clippy and dependency/lock admission.
+App-output path resolution remains on the released filesystem supplier; test
+helpers remain independent oracles. Native macOS and production migration remain
+unqualified.
+
 ## Recovery and release preparation
 
 `recovery-preparation.patch` retains prepared directory custody for signed

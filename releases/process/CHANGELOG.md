@@ -4,6 +4,10 @@ Package: `ic-host-process`. Unpublished replacement; no registry release.
 
 ## [0.80.2] - Unreleased
 
+- Compose current Canic Host's Process and filesystem adapters: nine focused
+  Process checks pass alongside 52 paired filesystem cases and two custody tests.
+  Its native normal/build graph excludes legacy FS/Process; CLI/runtime and native
+  macOS qualification remain separate. No Process API change is introduced.
 - Start the next unpublished line after GitHub checkpoint `607ff8a`. Update local
   Process selections without changing its synchronous API or implementation.
 - Define [desktop-opener handoff](../../docs/process-handoff.md): the worker keeps

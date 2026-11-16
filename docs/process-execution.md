@@ -367,3 +367,13 @@ Cargo capture adapter; its source admission and consumer-owned output policy are
 preserved. A tiny borrowed-source Wasm fixture and whole-tree comparison check
 that publication does not modify the supplier. No Store product implementation
 was imported or qualified. See [current evidence](../qualification/canic/README.md).
+
+### Host composition with filesystem custody
+
+The later Canic 0.216.5 Host-only export combines Process with held FS and private
+output-path policy. Its native normal/build graph contains only local FS 0.80.1
+and Process 0.80.2; released FS remains a dev-only oracle. The 52 paired filesystem
+cases, two custody cases and nine focused Process cases pass with library checks,
+Clippy and dependency admission. Store lookup preserves the current locked
+registry-pair contract. This does not refresh the earlier full CLI, PTY, loopback
+or real app-build evidence; see the source-bound composition entry in the recipe.

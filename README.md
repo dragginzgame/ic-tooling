@@ -38,6 +38,14 @@ Starter and fleet staging member parents and writes also use held custody.
 The composed recipe now includes recovery/release preparation and six publication
 cases: 47 paired tests plus two custody tests. Live signing/submission remains
 outside this qualification.
+Artifact inspection adds two paired cases (49 total), preserving input aliases,
+bounded regular-file admission and exact Wasm identity.
+Private app-output comparison adds three paired alias/traversal/depth cases
+(52 total), retaining refusal before locks or output creation.
+Host's direct released-FS edge is test-only in this export, verified by library
+compilation and metadata. The recipe also composes Host's Process adapters: nine
+focused Process cases pass, and its native normal/build graph contains no legacy
+FS or Process. CLI/runtime composition and archive qualification remain separate.
 
 `ic-cargo-qualification` 0.1.2 is a separate unpublished development executable
 for external-lock admission; it adds no dependencies to the ordinary Build API.

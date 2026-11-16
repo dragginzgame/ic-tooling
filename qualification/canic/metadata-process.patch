@@ -9,8 +9,7 @@
  ic-platform = { workspace = true, features = ["agent", "ic-protocol", "management-canister-types", "cycles-ledger-types", "icp-ledger-types", "icrc-ledger-types"] }
 --- a/crates/canic-host/src/lib.rs
 +++ b/crates/canic-host/src/lib.rs
-@@ -2,6 +2,7 @@
- 
+@@ -3,5 +3,6 @@
  mod app_build;
  mod artifact;
 +mod cargo_process;
@@ -19,14 +18,12 @@
  mod fleet_plan;
 --- a/crates/canic-host/src/app_build.rs
 +++ b/crates/canic-host/src/app_build.rs
-@@ -4,7 +4,6 @@
+@@ -4,5 +4,4 @@
  use std::{
      path::{Path, PathBuf},
      process::Command,
 -    time::Duration,
  };
- 
- /// A replaceable build output, not retained deployment evidence.
 @@ -83,76 +82,8 @@
      Ok(built)
  }
@@ -244,8 +241,8 @@
              .unwrap()
              .ends_with("[Cargo diagnostic truncated]")
      );
---- a/crates/canic-host/src/lock_process_tests.rs
-+++ b/crates/canic-host/src/lock_process_tests.rs
+--- a/crates/canic-host/src/app_build/lock_process_tests.rs
++++ b/crates/canic-host/src/app_build/lock_process_tests.rs
 @@ -10,7 +10,9 @@
      let crate::Error::Supplier(source) = error else {
          panic!("wrong error owner")

@@ -41,6 +41,15 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🧪 Testing
 
+- Move Canic Host's direct released-FS dependency to test-only use in the export;
+  verify library compilation and exact dependency kind while retaining independent
+  test oracles. The released Process transitive edge remains explicit.
+- Qualify Canic's private output-path comparison with missing/dangling aliases,
+  traversal refusal and active-depth limits, preserving pre-lock app admission.
+  The composed comparison passes 52 paired cases without a new public path API.
+- Qualify Canic artifact inspection through held regular-file admission and bounded
+  bytes, preserving alias/hard-link behavior, exact identity and refusal of invalid,
+  oversized or special inputs. The composed comparison now has 49 paired cases.
 - Extend Canic held preparation to recovery/release records and dispatch deadlines;
   pass 47 paired cases plus two custody tests. Preserve authority, persisted JSON
   and recovery ordering; live signing/submission remains outside runtime evidence.
