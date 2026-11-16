@@ -45,6 +45,17 @@ Toko 0.44.4 is pinned in both workspaces; snapshot/tools admission and 19 Build 
 The snapshot now selects the shared CI installer (49 files at the same revision)
 for the workflow's single Gitleaks history scan.
 
+Issue repairs (registry publication pending):
+[#1 — Hosted CI wiring](https://github.com/dragginzgame/ic-tooling/issues/1) adds
+repository-wide snapshot/pin and formatting checks before the native matrix;
+Actionlint, `make check` and `make fmt-check` pass locally. New hosted evidence
+remains pending. [#2 — Retained-file publication](https://github.com/dragginzgame/ic-tooling/issues/2)
+adds `Directory::admit_retained` at the [existing FS owner](../filesystem-custody.md#reopening-an-original-publication-file).
+It verifies the original held identity and complete expected bytes, then reuses
+create-only seal/commit with retained failure evidence. All 29 FS library tests,
+FS Clippy and Rustdoc pass on Linux. The new native macOS cases remain pending;
+neither publication nor Backup adoption is claimed. Package versions are unchanged.
+
 ## Owners and evidence entrypoints
 
 Use `make deps-list` for local versions. Read only the contract affected by the task:

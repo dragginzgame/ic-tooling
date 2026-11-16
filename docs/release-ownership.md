@@ -128,6 +128,14 @@ refused colored output; selecting libtest `--color never` corrected the parser,
 without weakening the test. Archive hashes and per-command logs live with each run.
 
 The GitHub `Build release candidate` workflow checks Ubuntu 24.04, macOS 15 Apple
+Silicon and macOS 15 Intel after one repository job runs `make check` and
+`make fmt-check`. That job explicitly prepares Rustfmt and the common tools using
+the shared installers and pinned download cache. Pull requests have no path
+filter, so documentation and tooling changes receive repository admission and
+the single history secret scan too. These local wiring changes still require a
+new hosted run; the earlier passing run does not qualify them.
+
+The native matrix checks Ubuntu 24.04, macOS 15 Apple
 Silicon and macOS 15 Intel. It prepares Rust 1.100.0, Clippy and the Wasm target;
 `BUILD_RELEASE_ONLINE=true` permits dependency preparation before locked offline
 tests. `BUILD_RELEASE_CONSUMER=none` explicitly excludes the unavailable sibling

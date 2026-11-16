@@ -40,7 +40,7 @@ pub enum Error {
     /// Complete enumeration exceeded its caller-supplied ceiling.
     #[error("directory entry limit exceeded")]
     EntryLimit,
-    /// An expected file entry was replaced or disappeared.
+    /// An expected file entry was replaced/disappeared, or retained content changed.
     #[error("file identity changed")]
     Changed,
     /// Byte admission refused; no completed content identity exists.

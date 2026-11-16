@@ -46,6 +46,45 @@ stage replacements, including cleanup. Unix lacks atomic compare-identity-and-un
 checks do not protect against hostile mutation between observation and mutation.
 No stronger guarantee is claimed. Required create-only races remain safe atomically.
 
+## Reopening an original publication file
+
+Backup's interrupted manifest publication requires completing publication of the
+original `manifest.pending` after reopening, without regenerating bytes or
+renewing application authority. `Directory::admit_retained` borrows the caller's
+held original file and admits its staging/destination names, private permission
+policy, single-link regular-file identity and complete expected length/SHA-256.
+It opens its own descriptor at offset zero; the caller's offset is unchanged.
+Admission never writes, changes permissions or removes an entry, including on
+refusal. Backup supplies the expected identity from its reconciled journal;
+Tooling does not interpret the manifest or decide whether to retry.
+
+Success returns the existing `Written` state with create-only destination
+authority and explicit retained-recovery semantics: failure or Drop preserves
+the original stage. `seal` synchronizes it before `commit` can expose it.
+Explicit `abort` remains an intentional removal request. Existing commit phase
+outcomes, identity-checked cleanup and held-parent behavior remain unchanged.
+Callers exclude namespace/content writers and writable aliases from admission
+through commit; borrowing an original descriptor cannot revoke their authority.
+This is not recovery of a visible-but-unconfirmed destination, which must first
+be reconciled by the consumer.
+
+Reuse decision: extend this rewrite's publication owner with independently
+written admission; reuse its `Directory::open_file`, `FileId`, bounded byte copy
+to a sink, and `Written`/`Sealed` lifecycle. No legacy exports, Backup code or
+recovery framework are imported. This removes the caller's need to recreate a
+retained stage or implement pathname publication syscalls.
+
+Local Linux qualification on 2026-11-16: all 29 FS library tests pass, including
+six new retained-publication cases. They cover drop/reopen and original inode,
+mode and bytes; parent rename; short/excess/mismatched content; invalid names,
+permissions, aliases, links and substituted identities; occupied destinations;
+explicit abort; and file-sync, cleanup and parent-sync failures. FS Clippy
+(`--all-targets -- -D warnings`) and Rustdoc (`-D warnings`) pass. These changes
+are unpublished; native macOS execution remains required by
+[#2 — Support publication of original retained files after reopen](https://github.com/dragginzgame/ic-tooling/issues/2).
+The existing packaged native matrix selects these tests. Backup migration and
+current-consumer qualification remain separate work.
+
 [Explicit directory preparation](directory-preparation.md) extends this owner
 with held-root traversal and creation of named children. It returns the held leaf
 and retains partial effects on failure; file publication never creates parents

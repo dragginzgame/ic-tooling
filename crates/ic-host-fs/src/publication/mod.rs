@@ -8,7 +8,7 @@ use rustix::fs::{AtFlags, linkat, renameat};
 use thiserror::Error;
 
 use crate::directory::name;
-use crate::{Directory, Error, FileId};
+use crate::{Access, Directory, Error, FileId, FilePolicy};
 
 /// Destination effect selected before staging.
 #[derive(Clone, Copy, Debug)]
@@ -121,6 +121,73 @@ pub struct Sealed {
 }
 
 impl Directory {
+    /// Admit an original retained file for create-only publication without rewriting it.
+    ///
+    /// `original` must remain held from the caller's recovery inspection. `expected`
+    /// is the complete content identity authorized by that recovery protocol, not
+    /// merely a digest of whatever bytes happen to exist. The named entry must be
+    /// the same regular file, have one hard link and no `forbidden` permission bits.
+    /// Reading uses a fresh descriptor at offset zero and leaves `original`'s offset
+    /// unchanged. Callers exclude namespace/content writers and writable aliases
+    /// from admission through commit; this API cannot revoke external write access.
+    ///
+    /// The returned [`Written`] requires synchronization through [`Written::seal`].
+    /// It always retains staging on failure or Drop and never replaces an occupied
+    /// destination. Only an explicit abort or successful publication removes the
+    /// original staging name. Admission refusal never removes or modifies evidence.
+    /// # Errors
+    /// Refuses invalid/equal names, unsafe entries, changed file/content identity,
+    /// short/excess bytes and original I/O failures. The caller retains `original`.
+    pub fn admit_retained(
+        &self,
+        staging: &OsStr,
+        destination: &OsStr,
+        original: &File,
+        expected: Identity,
+        forbidden: u32,
+    ) -> Result<Written, Error> {
+        name(staging)?;
+        name(destination)?;
+        if staging == destination {
+            return Err(Error::Name);
+        }
+        let mut file = self
+            .open_file(
+                staging,
+                Access::Read,
+                FilePolicy {
+                    forbidden,
+                    single_link: true,
+                },
+            )?
+            .ok_or(Error::Changed)?;
+        if FileId::from_file(&file)? != FileId::from_file(original)? {
+            return Err(Error::Changed);
+        }
+        let content =
+            ic_host_artifacts::copy(&mut file, io::sink(), Length::Exactly(expected.bytes))?;
+        if content != expected {
+            return Err(Error::Changed);
+        }
+        self.check_file(staging, &file)?;
+        Ok(Written {
+            attempt: Attempt {
+                directory: self.clone(),
+                file,
+                staging: staging.into(),
+                destination: destination.into(),
+                policy: Policy {
+                    destination: Destination::CreateNew,
+                    // No creation or permission changes occur for a retained file.
+                    permissions: 0,
+                    retention: Retention::Retain,
+                },
+                active: true,
+            },
+            content,
+        })
+    }
+
     /// Create a new named stage after admitting both names, then sync its parent.
     /// No parents are implicitly created. Stage and destination must differ.
     /// # Errors
@@ -218,9 +285,13 @@ impl Sealed {
     /// All failures are represented in the returned phase-specific outcome.
     #[must_use]
     pub fn commit(self) -> Commit {
-        self.commit_with(Directory::sync)
+        self.commit_with(Directory::sync, Attempt::remove)
     }
-    fn commit_with(mut self, sync: impl FnOnce(&Directory) -> io::Result<()>) -> Commit {
+    fn commit_with(
+        mut self,
+        sync: impl FnOnce(&Directory) -> io::Result<()>,
+        remove: impl FnOnce(&Attempt) -> Result<(), Error>,
+    ) -> Commit {
         if let Err(cause) = self.attempt.check() {
             return Commit::NotPublished { cause, stage: self };
         }
@@ -263,7 +334,7 @@ impl Sealed {
             content: self.content,
         };
         let cleanup = if matches!(self.attempt.policy.destination, Destination::CreateNew) {
-            self.attempt.remove()
+            remove(&self.attempt)
         } else {
             Ok(())
         };

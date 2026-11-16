@@ -5,6 +5,16 @@ Packages: `ic-host-artifacts`, `ic-host-fs`.
 This group starts with the replacement implementation. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.80.2] - Unreleased
+
+### ➕ Added
+
+- Admit an original retained file for create-only publication after reopening,
+  verifying its held identity, permissions and complete expected bytes before
+  using the existing seal/commit lifecycle. Refusal retains recovery evidence;
+  no rewriting, permission changes or automatic retries occur.
+  [#2 — Support publication of original retained files after reopen](https://github.com/dragginzgame/ic-tooling/issues/2).
+
 ## [0.80.1] - 2026-11-16
 
 ### 🔧 Changed
