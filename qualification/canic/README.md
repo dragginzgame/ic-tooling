@@ -1,8 +1,35 @@
 # Canic retained-record admission
 
-Current recipes select the next unpublished Build 0.87.3 / Text 0.77.2 where
-used. Their patches and locked graphs admit current local sources; historical
-runtime evidence below remains bound to its recorded checkpoint inputs.
+## Current source review — 2026-11-16
+
+The current Canic working tree has already adopted the published host foundation.
+A read-only capture at HEAD `37270cb30f840d45592781a4fd957e823c39c895`, including
+working-tree changes, is retained at `target/canic-next-review.iDdmNsEk` with
+source-tar SHA-256
+`ec5e50fcaa60fa7218db1d56ee079d6ccd1e68ca6150c12e9a387b2c98eb0503`.
+Its product lock selects registry Artifacts/FS 0.80.2 and Process 0.80.2; Text
+remains 0.76.0. Its current root catalog has no `ic-build` dependency.
+
+The CLI calls `canic_host::save_fleet_report`. Host's `fleet/report.rs` prepares
+the report parent, uses `staging_directory::allocate` to obtain a held directory,
+then publishes `index.html` through `output_publication::publish_in`. Naming,
+collision budget and report policy remain Canic-owned; FS owns custody and
+publication. The old automatic-report-allocation migration obligation is removed:
+this path already uses the replacement API without a new Tooling mechanism.
+
+`git apply --check` of `report-publication.patch` refuses the captured CLI's
+changed `fleet/mod.rs`, as required. Do not replay this historical patch or repair
+it to recreate an already-adopted implementation. Reassess each old runner against
+the current workflow before selecting it; further product changes belong in Canic.
+This is source and lock inspection plus stale-patch refusal, not new runtime,
+archive or native-host qualification. Canic's own
+`docs/qualification/history.md` records its adoption acceptance separately.
+
+## Historical migration recipes
+
+The recipes below selected local Build 0.87.3 / Text 0.77.2 where used. Build is
+now published; Text remains unpublished. Their runtime evidence remains bound to
+the recorded captures, and does not qualify the current Canic working tree.
 
 ## CLI/runtime composition
 

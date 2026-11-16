@@ -18,6 +18,13 @@ Foundation 0.80.2 adds [original retained-file publication](docs/filesystem-cust
 after reopening, without rewriting recovery bytes. Its final versioned archives
 pass native CI on all three hosts, and registry readback matches uploaded bytes.
 
+Canic's current source already selects the published host foundation and owns
+report-directory allocation and publication through the new FS API. The
+[current source review](qualification/canic/README.md#current-source-review--2026-11-16)
+records the capture, registry selections and refusal of the obsolete report patch.
+The Canic migration results below describe earlier captured exports; reassess
+their recipes before running them against the rewritten consumer.
+
 The byte owner also supplies [complete producer commitments](docs/byte-commitments.md).
 Independent tests pass; `make test-backup-commitments` compares the selected
 consumer migration, currently blocked by failures in the unchanged Backup baseline.
@@ -57,9 +64,10 @@ compilation and metadata. The recipe also composes Host's Process adapters: nine
 focused Process cases pass, and its native normal/build graph contains no legacy
 FS or Process. `make test-canic-runtime` extends that same capture through real
 CLI artifact/app builds, four viewer tests and 20 metadata/tool refusals.
-Report file publication adds two paired cases through held FS custody and a
-replacement-only parent-traversal refusal. Automatic report-directory allocation
-still selects legacy FS; archive qualification remains open.
+In that historical export, report file publication adds two paired cases through
+held FS custody and a replacement-only parent-traversal refusal. Automatic report-directory allocation
+still selected legacy FS; current Canic has since replaced that path. Its current
+archive qualification is not established by those historical results.
 
 `ic-cargo-qualification` 0.1.3 is a separate unpublished development executable
 for external-lock admission; it adds no dependencies to the ordinary Build API.
