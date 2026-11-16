@@ -18,6 +18,12 @@ Foundation 0.80.2 adds [original retained-file publication](docs/filesystem-cust
 after reopening, without rewriting recovery bytes. Its final versioned archives
 pass native CI on all three hosts, and registry readback matches uploaded bytes.
 
+HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.1 are also published on crates.io.
+Their [release receipts](docs/release-ownership.md#independent-library-publication)
+record archive/source verification and separate local and hosted acceptance.
+Testkit uses Platform Protocol 0.2.3 and Types 0.21.1; consumer adoption remains
+separate from these publications.
+
 Canic's current source already selects the published host foundation and owns
 report-directory allocation and publication through the new FS API. The
 [current source review](qualification/canic/README.md#current-source-review--2026-11-16)

@@ -21,9 +21,9 @@ still need our escaping and scalar-width policy and introduces unneeded options.
 No legacy source or test tree is imported. Allocation follows ordinary String/Vec
 semantics; callers bound inputs and output. No memory/performance gain is claimed.
 
-The unpublished 0.77 line breaks from the observed 0.76.0 line;
-recheck registry selection before eventual publication. Other Text callers and
-operations remain unqualified; this does not retire them.
+Published 0.77.2 breaks from the observed 0.76.0 line; see
+[release receipts](release-ownership.md#independent-library-publication).
+Other Text callers and operations remain unqualified; this does not retire them.
 
 Current DB’s local console is a second caller of the same two operations. Its
 exported migration composes with direct PocketIC, retaining the consumer’s installed

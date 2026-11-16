@@ -1,10 +1,12 @@
 # Testkit: first replacement contract
 
-Status: implemented slice in unpublished `ic-testkit` 0.107.1. Client types
+Status: published `ic-testkit` 0.107.1. Client types
 and catalog admission, module generation and exclusive request control are
 implemented with independent tests. Scheduling's full Once aggregate, paired
 metrics-feature probe and executor comparison pass on identical current source
-bytes with both suppliers. Other consumers and native macOS remain open. This
+bytes with both suppliers. Other consumer migrations remain open. Package native
+acceptance and the later Protocol migration's local checks are distinguished in
+the [release receipts](release-ownership.md#independent-library-publication). This
 defines the acceptance contract. The active rewrite is now `../ic-scheduling`.
 Its source selection and focused baseline live in
 [Scheduling qualification](../qualification/scheduling/README.md). Earlier

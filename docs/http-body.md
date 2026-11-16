@@ -7,8 +7,9 @@ status/encoding admission, TLS, timeout, no-retry policy and certificate decodin
 The replacement `ic-host-http` 0.80.0 owns only `body(Response, usize) -> Vec<u8>`
 as an async fallible operation. It does not re-export the client or offer TLS
 features. Consumers select Reqwest directly and retain its upstream type identity.
-The incompatible version increment is from the observed 0.79.0 supplier; the new
-package remains unpublished and registry selection must be rechecked at release.
+The incompatible version increment is from the observed 0.79.0 supplier.
+Version 0.80.0 is published; [release receipts](release-ownership.md#independent-library-publication)
+record registry provenance and native package acceptance separately from consumer migration.
 
 An available content length above the ceiling refuses before polling the body.
 Every received chunk is checked against remaining capacity before allocation or

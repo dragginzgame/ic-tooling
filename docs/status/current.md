@@ -45,11 +45,12 @@ Candid type table can change the generated Wasm bytes.
 Final archive run `target/library-release.sCTEKGgV` passes six unit and both
 installed tests, lint/docs for both feature selections, default-graph isolation
 and independent deletion observation. The old Platform/Types graph is absent.
-The refreshed Testkit publication dry run passes with an identical archive;
-no upload occurred. Platform #5 is closed with the local adoption evidence.
+The refreshed Testkit publication dry run passed with an identical archive;
+subsequent publication is recorded below. Platform #5 is closed with the local adoption evidence.
 
-The maintainer authorized publication of HTTP 0.80.0, Text 0.77.2 and Testkit
-0.107.1 after preparation and Platform adoption. Their metadata permits only crates.io; the private
+HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.1 are now published after the
+maintainer-authorized preparation and Platform adoption. Their metadata permits
+only crates.io; the private
 `ic-cargo-qualification` 0.1.3 remains unpublished with `publish = false`.
 [Library readiness](../release-ownership.md#independent-library-readiness) records
 registry availability, current first-party selections and the explicit group gate.
@@ -64,8 +65,12 @@ The [library readiness matrix](https://github.com/dragginzgame/ic-tooling/action
 passes Linux, Apple Silicon macOS and Intel macOS at `0329953`, before the
 Protocol migration. The final migrated Testkit has the local archive acceptance
 above; its hosted checks remain asynchronous. The adoption is delivered in
-`e65e5381f1739beb23e1bf3b6cb8bd06cfa929b1`. Release notes are dated for the
-authorized delivery; registry receipts will distinguish completed uploads.
+`e65e5381f1739beb23e1bf3b6cb8bd06cfa929b1`. Release source is
+`18198d6cfe6c097ef007a1a6a8b312c0a394e211`, with annotated tags
+`http-v0.80.0`, `text-v0.77.2` and `testkit-v0.107.1` pushed with `main` atomically.
+All three verified Cargo uploads succeeded. Downloaded non-yanked registry archives
+match the uploaded bytes, index checksums and exact committed source/manifests.
+See [publication receipts](../release-ownership.md#independent-library-publication).
 
 ## Owners and evidence entrypoints
 

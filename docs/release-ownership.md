@@ -23,7 +23,7 @@ Frozen Wire work and absent packages receive no group. Root dependency aliases l
 alias rosters reflect those declarations without adding display-only dependencies.
 
 Pending headings describe unpublished development history or future candidates;
-the first Foundation, Process and Build entries are now dated releases. Breaking
+all seven libraries now have dated release entries. Breaking
 consumer migrations are explicit in the affected ledgers. Registry availability,
 version reconciliation and release admission remain required before publication.
 Existing development version increments were preserved by this organizational work.
@@ -36,15 +36,47 @@ their owners; detailed test results remain in the existing qualification records
 `make deps-list` reports ownership across both workspaces. No release/publication
 entrypoint is introduced by this change; future release tooling must require an
 explicit group selection. Seven library manifests permit only `crates-io`;
-the private qualification executable retains `publish = false`. Only the first
-four libraries are published; publication permission in a manifest is not delivery.
+the private qualification executable retains `publish = false`. All seven
+libraries are published; publication permission in a manifest is not delivery.
+
+## Independent library publication
+
+The maintainer authorized HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.1 publication
+after preparation and the Platform/Toko adoption. All three were published on
+2026-11-16 from `18198d6cfe6c097ef007a1a6a8b312c0a394e211`. Annotated tags
+`http-v0.80.0`, `text-v0.77.2` and `testkit-v0.107.1` were pushed atomically with
+`main`. The private tools package and consumer migrations are outside this delivery;
+Backup adoption remains maintainer-owned.
+
+Cargo verified each package before upload. Registry readback confirms non-yanked
+versions, matching index checksums and byte-identical preflight/upload/download
+archives. Their source, original manifests, licence and clean Cargo VCS provenance
+match the tagged release. No local dependency override is present in the normalized
+manifests. HTTP/Text sources match their qualified archives; their normalized
+manifest change is only the inactive Toko marker from 0.44.5 to 0.44.6. Testkit's
+source and normalized manifest match its final Protocol-qualified archive; the
+commit hook only reformatted the original manifest's feature array.
+
+| Published archive | SHA-256 |
+| --- | --- |
+| HTTP 0.80.0 | `81c55b5294ff4c4bcab841ca6b72140796abd5c095651bf7e44e77ac2f5f843a` |
+| Text 0.77.2 | `421d01724ce7a61567333c6fd1a18ccf7878958cff441729581f69959a2389bb` |
+| Testkit 0.107.1 | `a4fe4ea7882118e731ef1ebe8c668fc5dfa5252c1c972b1de68bc444868fae42` |
+
+The [library readiness matrix](https://github.com/dragginzgame/ic-tooling/actions/runs/43899230778)
+passed on Linux, Apple Silicon macOS and Intel macOS at `0329953`, before the
+Protocol migration. Migrated Testkit's final local archive acceptance is recorded
+below. Hosted checks for the newer adoption/release source remain asynchronous
+under the maintainer's direction; the earlier matrix is not represented as new
+Protocol qualification. Publication logs, registry records, archives and provenance
+checks remain under `target/publication-libraries-2026-11-16/`.
 
 ## Independent library readiness
 
-The maintainer requested publication preparation for HTTP, Text and Testkit.
-This selects three independent groups; it does not authorize an upload or include
-the private tools package. The Canic source-review documentation is recorded in
-a separate documentation commit. No Backup or other sibling source is changed.
+The initial preparation request selected HTTP, Text and Testkit independently;
+the later publication authorization and receipts are recorded above. Preparation
+did not include the private tools package. The Canic source-review documentation
+is recorded in a separate documentation commit. No Backup or other sibling source is changed.
 
 | Group | Candidate | Latest registry release at review |
 | --- | --- | --- |
@@ -52,8 +84,8 @@ a separate documentation commit. No Backup or other sibling source is changed.
 | text | `ic-host-text` 0.77.2 | 0.76.0 |
 | testkit | `ic-testkit` 0.107.1 | 0.106.0 |
 
-Registry review on 2026-11-16 confirms all three candidate versions are absent;
-their new minor lines carry the incompatible replacement APIs. At the initial
+Pre-publication registry review on 2026-11-16 confirmed all three candidate versions
+were absent; their new minor lines carry the incompatible replacement APIs. At the initial
 review, first-party selections were current stable, non-yanked releases: Platform
 0.33.7, Platform Types 0.20.4 and Toko Tooling 0.44.5. Subsequent maintenance adopts
 Toko 0.44.6. The [Platform migration](testkit-held-replies.md#platform-034-migration-review)
@@ -95,8 +127,8 @@ All three server instances are independently observed as deleted. Both Testkit
 feature configurations pass Clippy/Rustdoc and default graph isolation. Archive
 source matches the linted source; source/tool hashes remain unchanged throughout.
 Formatting, ShellCheck, Actionlint and missing-group/tool refusals pass. Registry
-ownership confirms `borovan` for all three names. New native CI results remain
-pending; prior four-crate matrix results do not qualify these libraries.
+ownership confirms `borovan` for all three names. The library native matrix later
+passed at `0329953`; prior four-crate results do not qualify these libraries.
 All three `cargo publish --dry-run --allow-dirty --locked` checks pass, with
 verification enabled and no uploads. Their generated archives exactly match
 the qualified archives. Cargo's registry preflight requires network access even
@@ -107,7 +139,8 @@ instance observation, lint/docs and default-graph isolation pass. The feature
 graph excludes the old Platform/Types packages. Earlier Testkit archive/dry-run
 receipts retain their older selections and are superseded for this candidate.
 The refreshed Testkit publication dry run passes with verification enabled;
-its archive exactly matches the final qualified archive. No upload occurred.
+its archive exactly matches the final qualified archive. These readiness checks
+performed no uploads; subsequent authorized publication is recorded above.
 
 ## First production cutover scope
 
