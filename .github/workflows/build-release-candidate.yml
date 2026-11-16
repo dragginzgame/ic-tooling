@@ -3,7 +3,7 @@ name: Build release candidate
 on:
   workflow_dispatch:
   push:
-    branches: [release/build-readiness]
+    branches: [main, release/build-readiness]
   pull_request:
     paths:
       - 'crates/ic-build/**'

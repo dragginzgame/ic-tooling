@@ -1,4 +1,4 @@
-# IC Tooling New
+# IC Tooling
 
 A ground-up replacement of IC Tooling, governed by [design revision 2](docs/DESIGN.md).
 The first milestone is one real build-to-owned-artifact workflow with newly

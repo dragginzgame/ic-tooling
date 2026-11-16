@@ -2,11 +2,12 @@
 
 Packages: `ic-build`.
 
-This group starts with the replacement implementation. All entries are pending;
-no replacement package has been published. Earlier shared development evidence is
+This group starts with the replacement implementation. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
-## [0.87.3] - Unreleased
+## [0.87.3] - 2026-11-16
+
+### 🔧 Changed
 
 Continues the unpublished development line after GitHub checkpoint
 [aaebfa4](https://github.com/dragginzgame/ic-tooling-new/commit/aaebfa4db99593c3709a0ee92f71bc691f6ac4b6).

@@ -1,4 +1,4 @@
-# IC Tooling New
+# IC Tooling
 
 This repository adopts the installed [Toko Tooling baseline](TOKO-TOOLING.md).
 Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
@@ -56,8 +56,9 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
 - Release ownership is declared in `ci/cargo-release-groups.json`; group ledgers
   live under `releases/`. See `docs/release-ownership.md`. Root changelog is an index;
   qualification fixtures remain outside product groups.
-- Keep all replacement packages unpublished. Production consumer migration,
-  registry publication and canonical cutover are separate delivery work.
+- The maintainer authorized canonical public GitHub cutover and publication of
+  the first four-crate build stack on 2026-11-16. Other packages remain unpublished;
+  production consumer migration remains separate delivery work.
 - Keep product documentation under `docs/`. Do not claim performance improvements
   without matched measurements, or present old test results as new qualification.
 

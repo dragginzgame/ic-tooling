@@ -1,8 +1,10 @@
 # Process changelog
 
-Package: `ic-host-process`. Unpublished replacement; no registry release.
+Package: `ic-host-process`. Earlier unreleased headings retain development history.
 
-## [0.80.2] - Unreleased
+## [0.80.2] - 2026-11-16
+
+### 🔧 Changed
 
 - Resolve Darwin's zombie-only group `EPERM` only after confirming the owned
   leader exited and no other group members remain. Preserve genuine or uncertain

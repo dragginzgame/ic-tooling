@@ -2,11 +2,12 @@
 
 Packages: `ic-host-artifacts`, `ic-host-fs`.
 
-This group starts with the replacement implementation. All entries are pending;
-no replacement package has been published. Earlier shared development evidence is
+This group starts with the replacement implementation. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
-## [0.80.1] - Unreleased
+## [0.80.1] - 2026-11-16
+
+### 🔧 Changed
 
 - Fix macOS creation-mode compilation by converting validated permission bits
   once to Rustix's native mode type; reject invalid bits before conversion.
