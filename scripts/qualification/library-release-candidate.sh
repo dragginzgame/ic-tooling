@@ -95,7 +95,7 @@ done
 if [[ "$testkit" == true ]]; then
   cargo tree --manifest-path "$candidate/Cargo.toml" -p ic-testkit --no-default-features \
     -e normal,build --prefix none --locked --offline > "$scratch/default-tree.txt"
-  if grep -Eq '^(wat|ic-platform|ic-platform-types) v' "$scratch/default-tree.txt"; then
+  if grep -Eq '^(wat|ic-platform|ic-platform-protocol|ic-platform-types) v' "$scratch/default-tree.txt"; then
     echo 'Fixture dependencies entered the default Testkit graph' >&2; exit 1
   fi
   cargo test --manifest-path "$candidate/Cargo.toml" -p ic-testkit --no-default-features \

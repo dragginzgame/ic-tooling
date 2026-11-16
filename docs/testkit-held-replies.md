@@ -10,6 +10,48 @@ Its source selection and focused baseline live in
 [Scheduling qualification](../qualification/scheduling/README.md). Earlier
 old-Scheduling snapshot experiments are historical and do not define this scope.
 
+## Platform 0.34 migration review
+
+The migration now selects published Protocol 0.2.3 with only `http-request`,
+and Types 0.21.1 for public Principal arguments. Protocol's narrow
+`encode_http_get_args` replaces the old HTTP DTO and generic Candid encoder.
+The legacy Platform 0.33.7 and Types 0.20.4 dependencies are removed; no unused
+certificate-only Platform 0.34 dependency or compatibility facade is added.
+This removes Testkit's obligation to assemble generic management DTOs and opt
+into their broad codec/type graph. Protocol owns wire encoding; Testkit still
+owns fixture URLs, slot bodies, reply identity and the module-byte ceiling.
+
+[Platform #5](https://github.com/dragginzgame/ic-platform/issues/5) supplied the
+missing encoder. The verified Protocol 0.2.3 archive has SHA-256
+`9fe6bc76a461f60b585bee7d6e5117bbe6e63de87ef3cfe4982f0895c00fad91`, from
+source commit `cbbf26ade6644ed6fbcadfe3ccbafe809c362f25`. The earlier Protocol
+0.2.2 inspection and feature-refusal probe remain historical evidence under
+`target/dependency-adoption-review`, not an active migration blocker.
+
+Explicit Principal callers must select Types 0.21.1; text-inferred adapters need
+no Rust changes. PocketIC's original client/types and canonical text conversion
+remain unchanged. `CompileError::Encoding` now carries Protocol's `EncodeError`,
+preserving output-limit versus allocation refusal. Protocol uses a narrower
+Candid type table, so generated module bytes can change; byte-for-byte equality
+with the old encoder is not claimed. Required HTTP fields and original callback
+payloads are preserved and independently observed through the simulator.
+
+The installed module test now asserts exact URL inventory, GET, empty headers,
+slot-body bytes, response cap, full replication and legacy pricing, then releases
+in reverse order and checks original page-spanning payloads, rejection and
+exhaustion. Unit acceptance separately checks encoder-limit propagation and the
+complete module's exact/one-byte-short cap. Default graph guards now also exclude
+Protocol. All implementation edits stay in this repository.
+
+Final formatted archive run `target/library-release.sCTEKGgV` passes six unit
+tests, both installed tests, default and feature-enabled Clippy/Rustdoc, and
+default-graph isolation. All three instances are independently observed deleted;
+source/tool hashes remain unchanged. The feature graph contains one Types 0.21.1
+and Protocol 0.2.3, with no old Platform or Types 0.20.4. The preceding
+`target/library-release.mVj1vUCI` run passed before formatting; use the final run
+for the current archive's source identity. Older Types-only evidence remains
+historical, not qualification of this encoder.
+
 ## Purpose and ownership
 
 Testkit owns reusable IC test mechanisms. For this slice those are a single

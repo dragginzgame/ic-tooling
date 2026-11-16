@@ -28,11 +28,25 @@ rewriting recovery bytes; all 29 FS tests passed on each native host.
 Issues [#1](https://github.com/dragginzgame/ic-tooling/issues/1) (hosted CI) and
 [#2](https://github.com/dragginzgame/ic-tooling/issues/2) (retained publication) are closed.
 
-Toko 0.44.5 is pinned in both workspaces and installed through its verified exporter.
-All 49 retained files and the cache action implementation match 0.44.4. Adoption
-commit `34e14e455cae447e3e1d21fb9249683ede4b966a` is pushed;
-[CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43868115486) passes
-repository admission, secrets and the existing four-crate native matrix.
+Toko 0.44.6 is pinned in both workspaces and installed through its verified exporter.
+The 49-file snapshot changes only the baseline's explicit asynchronous hosted-CI
+rule; executable files and the cache-action implementation are unchanged. CI
+action references select the reviewed 0.44.6 source commit. Snapshot/tool admission,
+formatting and Actionlint pass locally. Earlier [0.44.5 CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43868115486)
+remains evidence for its own delivered source.
+
+The [Platform migration](../testkit-held-replies.md#platform-034-migration-review)
+now adopts Protocol 0.2.3's bounded HTTP encoder and Types 0.21.1. Legacy Platform
+0.33.7 / Types 0.20.4 are removed. [Platform #5](https://github.com/dragginzgame/ic-platform/issues/5)
+supplied the missing capability; no sibling implementation was modified.
+Testkit no longer assembles generic management DTOs. Required request semantics,
+original callback bytes and module limits remain enforced; Protocol's narrower
+Candid type table can change the generated Wasm bytes.
+Final archive run `target/library-release.sCTEKGgV` passes six unit and both
+installed tests, lint/docs for both feature selections, default-graph isolation
+and independent deletion observation. The old Platform/Types graph is absent.
+The refreshed Testkit publication dry run passes with an identical archive;
+no upload occurred. Platform #5 is closed with the local adoption evidence.
 
 The maintainer requested preparation, not publication, of HTTP 0.80.0, Text 0.77.2
 and Testkit 0.107.1. Their metadata now permits only crates.io; the private

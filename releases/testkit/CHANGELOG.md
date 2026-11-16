@@ -7,12 +7,24 @@ crates.io release. The selected consumer currently uses released Testkit 0.106.0
 
 ### ⚠️ Breaking
 
+- Move the public fixture Principal boundary to Platform Types 0.21.1. Explicit
+  Principal callers must select the same cohort; PocketIC's original client/type
+  identity and canonical text conversion are unchanged.
+- Replace the legacy Platform HTTP DTO/general encoder with Protocol 0.2.3's
+  bounded HTTP GET encoder. `CompileError::Encoding` carries its output-limit
+  or allocation refusal. Generated Candid/Wasm bytes may differ; management
+  request semantics and immutable callback payloads are preserved.
+
 - Replace the legacy Testkit surface with original PocketIC types and the
   optional `held-reply-fixtures` catalog, generator and exclusive controller.
   Consumers migrate explicitly; no legacy server launcher, snapshot helpers or
   compatibility facade is shipped in this package. Callers own servers and instances.
 
 ### 🧪 Testing
+
+- Independently observe the migrated HTTP request's URLs, method, headers,
+  slot bodies, response budget, replication and pricing through PocketIC.
+  Retain reverse release, original replies, refusal and deletion checks.
 
 - Prepare registry metadata and archive qualification for default and held-reply
   features, including installed module/controller checks and observed instance

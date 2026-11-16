@@ -10,6 +10,10 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Adopt Toko Tooling 0.44.6 in both workspaces through its verified exporter and
+  align the hosted cache-action references with that release. Executable snapshot
+  files are unchanged; hosted CI policy now explicitly covers registry publication.
+
 - Add explicit HTTP/Text/Testkit archive readiness, preserving packaged-source
   identity and Testkit feature isolation. Reuse the prepared external simulator
   owner for installed checks and add the selected libraries to native CI.

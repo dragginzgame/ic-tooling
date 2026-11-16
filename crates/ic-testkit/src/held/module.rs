@@ -3,8 +3,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
-use ic_platform::candid_codec;
-use ic_platform::management_canister_types::{HttpMethod, HttpRequestArgs};
+use ic_platform_protocol::http_request::{EncodeError, encode_http_get_args};
 use ic_platform_types::Principal;
 
 use super::Catalog;
@@ -23,7 +22,7 @@ pub enum CompileError {
     Representation,
     /// Platform refused the bounded HTTP request encoding.
     #[error("barrier encoding failed: {0:?}")]
-    Encoding(candid_codec::Error),
+    Encoding(EncodeError),
     /// The Wasm compiler refused the generated source.
     #[error("fixture compilation failed: {0}")]
     Compilation(#[from] wat::Error),
@@ -89,18 +88,14 @@ impl Catalog {
                 .filter(|n| *n <= i32::MAX as usize)
                 .ok_or(CompileError::Representation)?;
             let reply = layout.append(&mut source, &slot.bytes)?;
-            let args = HttpRequestArgs {
-                url: format!("{prefix}{index}"),
-                max_response_bytes: Some(256),
-                method: HttpMethod::GET,
-                headers: vec![],
-                body: Some((index as u64).to_le_bytes().to_vec()),
-                transform: None,
-                is_replicated: Some(true),
-                pricing_version: None,
-            };
-            let encoded =
-                candid_codec::encode_one(&args, module_bytes).map_err(CompileError::Encoding)?;
+            let encoded = encode_http_get_args(
+                &format!("{prefix}{index}"),
+                Some(&(index as u64).to_le_bytes()),
+                256,
+                true,
+                module_bytes,
+            )
+            .map_err(CompileError::Encoding)?;
             let request = layout.append(&mut source, &encoded)?;
             // Writing into String is infallible apart from process allocation failure.
             let _ = writeln!(

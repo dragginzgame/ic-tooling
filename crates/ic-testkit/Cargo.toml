@@ -14,10 +14,15 @@ toko-tooling.workspace = true
 
 [features]
 default = []
-held-reply-fixtures = ["dep:thiserror", "dep:ic-platform", "dep:ic-platform-types", "dep:wat"]
+held-reply-fixtures = [
+    "dep:thiserror",
+    "dep:ic-platform-protocol",
+    "dep:ic-platform-types",
+    "dep:wat",
+]
 
 [dependencies]
-ic-platform = { workspace = true, optional = true, features = ["management-canister-types"] }
+ic-platform-protocol = { workspace = true, optional = true, features = ["http-request"] }
 ic-platform-types = { workspace = true, optional = true }
 pocket-ic.workspace = true
 thiserror = { workspace = true, optional = true }

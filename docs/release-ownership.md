@@ -53,9 +53,16 @@ a separate documentation commit. No Backup or other sibling source is changed.
 | testkit | `ic-testkit` 0.107.1 | 0.106.0 |
 
 Registry review on 2026-11-16 confirms all three candidate versions are absent;
-their new minor lines carry the incompatible replacement APIs. The required
-first-party selections are current stable, non-yanked releases: Platform 0.33.7,
-Platform Types 0.20.4 and Toko Tooling 0.44.5. The installed-test bootstrap remains
+their new minor lines carry the incompatible replacement APIs. At the initial
+review, first-party selections were current stable, non-yanked releases: Platform
+0.33.7, Platform Types 0.20.4 and Toko Tooling 0.44.5. Subsequent maintenance adopts
+Toko 0.44.6. The [Platform migration](testkit-held-replies.md#platform-034-migration-review)
+now adopts Protocol 0.2.3's published HTTP encoder and Types 0.21.1, removing
+Platform 0.33.7 and its internal Types 0.20.4 edge. The certificate-only Platform
+0.34.3 package has no role in Testkit's fixture graph.
+[Platform #5](https://github.com/dragginzgame/ic-platform/issues/5) supplied the
+missing capability. Final publication admission must use this current selection.
+The installed-test bootstrap remains
 released `ic-testkit-server` 0.106.0 with PocketIC 16.1.0: the replacement package
 deliberately has no launcher. That executable is qualification infrastructure,
 not a candidate runtime dependency. No general dependency refresh is selected.
@@ -94,6 +101,13 @@ All three `cargo publish --dry-run --allow-dirty --locked` checks pass, with
 verification enabled and no uploads. Their generated archives exactly match
 the qualified archives. Cargo's registry preflight requires network access even
 for a dry run; the refused offline attempt is retained beside the passing logs.
+The final Protocol 0.2.3 / Types 0.21.1 adoption requalifies only Testkit in
+`target/library-release.sCTEKGgV`: six unit tests, both installed tests, deleted
+instance observation, lint/docs and default-graph isolation pass. The feature
+graph excludes the old Platform/Types packages. Earlier Testkit archive/dry-run
+receipts retain their older selections and are superseded for this candidate.
+The refreshed Testkit publication dry run passes with verification enabled;
+its archive exactly matches the final qualified archive. No upload occurred.
 
 ## First production cutover scope
 

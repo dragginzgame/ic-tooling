@@ -132,6 +132,24 @@ fn compiled_module_caps_are_exact_and_empty_catalog_is_valid() {
         catalog.compile(target, 0, 0),
         Err(super::CompileError::ModuleLimit { limit: 0 })
     ));
+    let catalog = Catalog::new(
+        &[Reply {
+            method: "hold",
+            bytes: b"",
+        }],
+        Limits {
+            slots: 1,
+            name_bytes: 4,
+            reply_bytes: 0,
+        },
+    )
+    .unwrap();
+    assert!(matches!(
+        catalog.compile(target, 0, 64),
+        Err(super::CompileError::Encoding(
+            ic_platform_protocol::http_request::EncodeError::OutputLimit { max_bytes: 64 }
+        ))
+    ));
 }
 
 #[test]
@@ -200,7 +218,8 @@ fn generated_module_preserves_opaque_data_and_escapes_export_names() {
 fn installed_modules_keep_replies_bound_to_slots_and_reject_failures() {
     use pocket_ic::PocketIcBuilder;
     use pocket_ic::common::rest::{
-        CanisterHttpReject, CanisterHttpReply, CanisterHttpResponse, MockCanisterHttpResponse,
+        CanisterHttpMethod, CanisterHttpPricingVersion, CanisterHttpReject,
+        CanisterHttpReplication, CanisterHttpReply, CanisterHttpResponse, MockCanisterHttpResponse,
     };
 
     let endpoint = std::env::var("IC_TESTKIT_POCKET_IC_URL")
@@ -253,7 +272,25 @@ fn installed_modules_keep_replies_bound_to_slots_and_reject_failures() {
     }
     let mut pending = pic.get_canister_http();
     pending.sort_by_key(|request| request.request_id);
+    let mut urls: Vec<_> = pending.iter().map(|request| request.url.clone()).collect();
+    urls.sort();
+    let mut expected: Vec<_> = [a, b]
+        .into_iter()
+        .flat_map(|target| {
+            (0..2).map(move |slot| format!("https://ic-testkit.invalid/held/{target}/{slot}"))
+        })
+        .collect();
+    expected.sort();
+    assert_eq!(urls, expected);
     for request in pending.into_iter().rev() {
+        assert_eq!(request.http_method, CanisterHttpMethod::GET);
+        assert_eq!(request.max_response_bytes, Some(256));
+        assert!(request.headers.is_empty());
+        assert_eq!(
+            request.replication,
+            CanisterHttpReplication::FullyReplicated
+        );
+        assert_eq!(request.pricing_version, CanisterHttpPricingVersion::Legacy);
         let slot = if request.url.ends_with("/0") {
             0_u64
         } else {

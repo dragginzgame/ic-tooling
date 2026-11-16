@@ -67,7 +67,7 @@ run_installed() {
   cargo tree --manifest-path "$manifest" -p "$driver" -e normal,build --prefix none --locked --offline > "$output/driver-tree.txt"
   if [[ "$selection" == executor && ( "$mode" == replacement || "$output" == "$scratch/replacement" ) ]]; then
     rg -q '^ic-testkit v0.107.1 ' "$output/driver-tree.txt"
-    if rg -q '^(wat|ic-platform|ic-platform-types) v' "$output/driver-tree.txt"; then
+    if rg -q '^(wat|ic-platform|ic-platform-protocol|ic-platform-types) v' "$output/driver-tree.txt"; then
       echo 'Executor unexpectedly selects optional fixture dependencies' >&2; exit 1
     fi
   fi
