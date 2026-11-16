@@ -109,6 +109,9 @@ native log assertion uses standard grep. The next native run found that Rustix
 does not expose `mkfifoat` on macOS; the lock refusal fixture now creates its FIFO
 using native `mkfifo`, retaining the same product assertion. These fixes require
 fresh native evidence.
+An executing macOS run also reproduced concurrent sidecar creation returning
+`ENOENT` from `openat(O_CREAT)`. Sidecars now use exclusive creation, opening an
+existing entry only after `EEXIST`; no missing-name retry or repair is introduced.
 The first executing macOS tests also found Darwin's zombie-only group `EPERM`
 behavior. Process now proves exited-leader/no-other-member state before treating
 that specific refusal as complete; uncertain or live groups retain cleanup errors.

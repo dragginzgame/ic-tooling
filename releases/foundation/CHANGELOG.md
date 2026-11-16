@@ -12,6 +12,9 @@ in [checkpoint history](../history.md), not a prior release of this group.
   once to Rustix's native mode type; reject invalid bits before conversion.
   Prepare FIFO refusal fixtures through native `mkfifo` on both hosts because
   Rustix does not expose `mkfifoat` on macOS.
+- Separate exclusive sidecar creation from opening an occupied entry to avoid
+  Darwin's concurrent create-or-open `ENOENT`; retain no-follow admission,
+  unchanged existing files and nonblocking contention.
 - Prepare crates.io-only candidate metadata for Artifacts and FS. Extracted
   archives pass Linux byte/custody/publication tests and the Build consumer;
   native macOS CI remains required before release readiness.

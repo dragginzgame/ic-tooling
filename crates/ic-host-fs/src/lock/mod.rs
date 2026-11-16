@@ -36,12 +36,20 @@ impl Directory {
             Err(rustix::io::Errno::NOENT) => {}
             Err(cause) => return Err(cause.into()),
         }
-        let file = File::from(openat(
+        let flags = OFlags::RDWR | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC;
+        // Darwin's create-or-open path can return ENOENT when another creator
+        // wins. Separate exclusive creation from opening that occupied entry;
+        // never retry a missing/replaced name or repair an existing file.
+        let descriptor = match openat(
             &*self.file,
             child,
-            OFlags::RDWR | OFlags::CREATE | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
+            flags | OFlags::CREATE | OFlags::EXCL,
             permissions,
-        )?);
+        ) {
+            Err(rustix::io::Errno::EXIST) => openat(&*self.file, child, flags, permissions)?,
+            result => result?,
+        };
+        let file = File::from(descriptor);
         let file = admit_file(file, policy)?;
         Lock::acquire(file).map_err(Error::Io)
     }
