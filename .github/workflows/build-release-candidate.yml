@@ -71,8 +71,9 @@ jobs:
           launcher="$(bash vendor/toko-tooling/scripts/dev/install-rust-tools.sh \
             --consumer "$GITHUB_WORKSPACE" --package ic-testkit --version 0.106.0 \
             --bin ic-testkit-server --features cli --profile release)"
-          "$launcher" setup --directory "$RUNNER_TEMP/pocket-ic"
-          server="$("$launcher" check --directory "$RUNNER_TEMP/pocket-ic")"
+          TESTKIT_RELEASE_LAUNCHER="$launcher" bash scripts/qualification/test-pocketic-setup.sh
+          server="$(bash scripts/qualification/setup-pocketic.sh \
+            "$launcher" "$RUNNER_TEMP/pocket-ic" "$RUNNER_TEMP/pocket-ic-setup-evidence")"
           echo "TESTKIT_RELEASE_LAUNCHER=$launcher" >> "$GITHUB_ENV"
           echo "POCKET_IC_BIN=$server" >> "$GITHUB_ENV"
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@d019d4d86f8c3b1d98667f32427f0bb8ffc6f87c # 0.44.6
@@ -80,11 +81,12 @@ jobs:
           mode: save
           extra-key: testkit-server-0.106.0-pocketic-16.1.0
       - name: Qualify packaged HTTP, Text and Testkit
+        id: library-qualification
         env:
           LIBRARY_RELEASE_ONLINE: 'true'
         run: bash scripts/qualification/library-release-candidate.sh http text testkit
       - name: Retain library archives and evidence
-        if: always()
+        if: ${{ always() && steps.library-qualification.outcome != 'skipped' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: library-candidate-${{ matrix.os }}
@@ -101,6 +103,17 @@ jobs:
             target/library-release.*/server.stderr
             target/library-release.*/candidate/Cargo.lock
           if-no-files-found: error
+      - name: Retain simulator setup diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pocket-ic-setup-${{ matrix.os }}
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/pocket-ic-setup-evidence/
+            ${{ runner.temp }}/pocket-ic/.setup-v1-*/download.stderr
+            ${{ runner.temp }}/pocket-ic/.setup-v1-*/failure.txt
+          if-no-files-found: warn
   native:
     needs: repository
     strategy:

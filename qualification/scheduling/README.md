@@ -48,15 +48,13 @@ baseline for replacement work.
 
 ## Historical evidence boundary
 
-[Earlier Scheduling experiments](historical.md) used `../ic-scheduling`. They
-retain their source IDs, logs and patches, but do not qualify this rewrite or
-justify its architecture. Their direct-client migration is not the accepted target.
-The active Makefile no longer exposes the old Jobs snapshots/Timers session/native
-snapshot commands. `scheduling-historical.sh` retains reproduction only with
-`HISTORICAL_SCHEDULING_EVIDENCE=1` and an explicit old `SCHEDULING_SOURCE`; it is not
-called by an active target. Existing prepared binaries in the old checkout can
-remain tool assets for other consumers; that does not select its source for this
-rewrite's qualification.
+[Earlier Scheduling experiments](historical.md) used the pre-rewrite source then
+located at `../ic-scheduling`. Their source IDs and results remain historical;
+they do not qualify this rewrite or justify its architecture. The executable
+historical lane, its exclusive patches and Jobs/Timers session helpers are removed
+under [#4](https://github.com/dragginzgame/ic-tooling/issues/4). There is no supported
+reproduction command or compatibility lane for that source. Current rewrite
+qualification retains its own selectors, patches and explicit prepared tools.
 
 ## Initial corrected-source evidence
 
@@ -66,8 +64,8 @@ On 2026-11-15 the runner captured HEAD
 `target/scheduling-new.qz5U96ZW`. Testkit graph admission and both host-driver
 checks passed (`target/scheduling-new-admission.log`). An explicit override to
 old `../ic-scheduling` refused the rewrite source contract before driver compilation
-(`target/scheduling-old-source-refusal.log`); the historical runner refuses an
-unqualified invocation (`target/scheduling-history-guard.log`). This did not run
+(`target/scheduling-old-source-refusal.log`); the now-removed historical runner's
+old guard result is retained in `target/scheduling-history-guard.log`. This did not run
 PocketIC, deploy canisters, modify sibling files, or qualify any new Testkit API.
 
 ## Focused held-reply baseline and next contract

@@ -1,4 +1,8 @@
-# Timers observation migration
+# Historical Timers observation migration
+
+This records the pre-rewrite experiment described in [historical evidence](historical.md).
+Its executable migration has been removed; these observations are not current
+Scheduling requirements or instructions to restore the old lane.
 
 The pinned Timers driver needs to detect input/configuration drift, reject hidden
 compiler selections, and bind a receipt to the actual owned-build request and

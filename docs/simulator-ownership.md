@@ -22,6 +22,40 @@ library setup test. The qualification runner only checks prepared assets offline
 Ordinary driver invocations now require an externally supplied endpoint; this is
 an isolated migration recipe, not production cutover of DB's commands.
 
+## Qualification setup diagnostics
+
+The tools workflow owns setup reporting under
+[#3](https://github.com/dragginzgame/ic-tooling/issues/3), outside the Testkit library.
+Use `scripts/qualification/setup-pocketic.sh` with three absolute arguments:
+the prepared 0.106.0 launcher, its asset directory and a new evidence directory.
+On success stdout contains the path returned by the launcher's independent offline
+`check`. No asset selection, download, checksum, version or publication logic is
+copied from the legacy implementation. The existing launcher remains a bootstrap;
+this does not change the published 0.106.0 binary or restore its library API.
+
+On failure the command preserves the setup/check exit status, names its retained
+logs and displays at most 4096 bytes per diagnostic. Controls, non-ASCII bytes,
+backslashes and colons are escaped, including terminal and workflow-command syntax.
+Complete raw evidence remains in retained files. Only the attempt explicitly named by this
+setup invocation is reported; older attempts are not selected by timestamp/glob.
+Missing diagnostic files are reported without replacing the original failure.
+No retry or network-cause inference is introduced.
+
+The library CI job uses this entrypoint and retains setup stdout/stderr plus
+failed-attempt `download.stderr` and `failure.txt`, including hidden attempt paths,
+even when setup prevents archive qualification. It does not upload downloaded
+binaries or partial archives. Callers no longer need to locate and open failed
+attempt files manually to see the bounded diagnostic.
+
+`make test-pocketic-setup` requires `TESTKIT_RELEASE_LAUNCHER` and forces curl exit
+56 through the real prepared launcher without networking. Focused fixtures cover
+control/workflow escaping, report bounds, retained raw bytes, stale/missing evidence,
+original status, successful offline admission and checksum refusal. CI runs that
+same check on its native hosts; local execution does not claim native CI acceptance.
+Wasm Store's legacy library caller needs a separate consumer migration, tracked in
+[Store #3](https://github.com/dragginzgame/ic-wasm-store/issues/3); the reporting
+entrypoint does not alter that consumer's already-released library dependency.
+
 ## Honest failure and lifetime boundaries
 
 PocketIC 16.1.0's asynchronous client has no Rust Drop implementation that deletes
@@ -69,7 +103,7 @@ successful borrowed-server workflows.
 
 ## Scheduling rewrite: Testkit is a demonstrated owner
 
-The active consumer is `../ic-scheduling-new`. It explicitly selects Testkit's
+The active rewrite is now `../ic-scheduling` (formerly `../ic-scheduling-new`). It explicitly selects Testkit's
 PocketIC re-export and held-reply fixtures. These serve shared type identity,
 bounded fixture construction and deterministic pending/release control for Once,
 Jobs, watchdog and held-upgrade tests. Removing that dependency is not a goal.
@@ -78,10 +112,14 @@ The [replacement contract](testkit-held-replies.md) is grounded in these
 passes pressure and held-upgrade scenarios using released Testkit. Runtime, topology, funding, simulated time and
 consumer assertions remain caller-owned; shared mechanisms belong in Testkit.
 
-The earlier direct-client and snapshot experiments used `../ic-scheduling` and
+The earlier direct-client and snapshot experiments used pre-rewrite source then
+located at `../ic-scheduling` and
 remain [historical evidence](../qualification/scheduling/historical.md). Their
 native-snapshot failure and local upload workaround do not establish a snapshot
 requirement for the rewrite. No legacy snapshot or held-reply subsystem is admitted
 for wholesale import. The new Testkit catalog, generator and exclusive controller
 have independent acceptance evidence in the replacement contract; Scheduling's
 replacement-supplier qualification remains separate.
+
+The historical runner and its exclusive adapters have been removed. Retained
+observations are not instructions to restore that executable lane.

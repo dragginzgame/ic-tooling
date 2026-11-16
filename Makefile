@@ -15,6 +15,7 @@ help:
 	  '  make test-canic-process Combined current Canic group/direct-child qualification (Linux)' \
 	  '  make test-testkit-module Installed module test (externally owned server)' \
 	  '  make test-testkit-control Installed controller refusals (externally owned server)' \
+	  '  make test-pocketic-setup Failed-download diagnostics (prepared launcher; no network)' \
 	  '  make test-library-release-candidate RELEASE_GROUPS="http text testkit" Selected archive readiness (prepared Testkit tools required)' \
 	  '  make test-text         Terminal escaping and Unicode table contracts' \
 	  '  make test-canic-build-metadata Current Canic metadata admission/refusal' \
@@ -69,6 +70,10 @@ help:
 	  '  make tools-check      Prepared-tool admission'
 
 check: toko-tooling-check
+
+.PHONY: test-pocketic-setup
+test-pocketic-setup:
+	bash scripts/qualification/test-pocketic-setup.sh
 
 .PHONY: test-build-release-candidate
 test-build-release-candidate: toko-tooling-check

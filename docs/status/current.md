@@ -64,7 +64,9 @@ Delivery stays on `main`, as directed by the maintainer, with asynchronous CI.
 The [library readiness matrix](https://github.com/dragginzgame/ic-tooling/actions/runs/43899230778)
 passes Linux, Apple Silicon macOS and Intel macOS at `0329953`, before the
 Protocol migration. The final migrated Testkit has the local archive acceptance
-above; its hosted checks remain asynchronous. The adoption is delivered in
+above. At `b22647e`, its Linux and Apple Silicon library jobs pass; Intel macOS
+stops during PocketIC download before library qualification (details below).
+The adoption is delivered in
 `e65e5381f1739beb23e1bf3b6cb8bd06cfa929b1`. Release source is
 `18198d6cfe6c097ef007a1a6a8b312c0a394e211`, with annotated tags
 `http-v0.80.0`, `text-v0.77.2` and `testkit-v0.107.1` pushed with `main` atomically.
@@ -115,6 +117,33 @@ its next adoption remain outside this work. [Query](../../qualification/query/RE
 and [DB](../../qualification/db/README.md) retain scoped Text/installed-console
 evidence. [Platform](../../qualification/platform/README.md) evidence must not drive
 its rewrite; [Auth](../../qualification/auth/README.md) stays on hold.
+
+Issue [#4](https://github.com/dragginzgame/ic-tooling/issues/4) removes the executable
+pre-rewrite Scheduling lane and its exclusive patches/session helpers. Historical
+source identities and results remain in the archive without runnable instructions.
+Current rewrite dispatch is unchanged; script lint, retired-mode refusal and Make
+dispatch checks pass without replaying any old simulator experiment.
+
+Issue [#3](https://github.com/dragginzgame/ic-tooling/issues/3) is handled at the
+[qualification setup boundary](../simulator-ownership.md#qualification-setup-diagnostics).
+The workflow reports bounded escaped download diagnostics and exact evidence paths,
+preserves original failure status and offline checks, and retains hidden attempt
+diagnostics in CI. The real prepared 0.106.0 launcher passes a controlled failed-curl
+regression without network access; focused fixtures cover limits, stale/missing
+evidence and check failure. The published legacy binary is unchanged. These issue
+repairs affect qualification workflows only; no new hosted acceptance or release is claimed.
+Wasm Store's remaining setup migration is tracked in
+[Store #3](https://github.com/dragginzgame/ic-wasm-store/issues/3); no sibling source was edited.
+
+The latest inspected [CI run](https://github.com/dragginzgame/ic-tooling/actions/runs/43911987682)
+at `b22647e` passes repository/secrets checks, all three native jobs, and Linux/Apple
+Silicon library qualification. The Intel library job fails in PocketIC setup with
+`unix_wait_status(5632)` (curl exit 22), then the old uploader fails because no
+library archive exists. Its download stderr was not uploaded; the HTTP failure's
+underlying cause is unknown. The #3 workflow repair supplies that missing evidence
+and skips archive upload when qualification never starts. This is not a Platform
+failure or a claim to have repaired the download service. Delivery proceeds with
+CI asynchronous; no retry or additional native wait was introduced.
 
 Managed-server lifetime/cancellation, multi-canister partial snapshot effects,
 remaining Platform drivers, Profiler ownership/native acceptance, current-consumer

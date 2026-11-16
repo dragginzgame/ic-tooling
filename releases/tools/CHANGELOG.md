@@ -10,6 +10,16 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Report bounded, escaped PocketIC setup diagnostics and exact retained evidence
+  paths through the qualification bootstrap. Preserve original failure status and
+  offline artifact admission; retain setup evidence even before archive tests start.
+  [#3 — Surface PocketIC setup download stderr](https://github.com/dragginzgame/ic-tooling/issues/3).
+
+- Remove the pre-rewrite Scheduling runner, its four exclusive migration patches
+  and two session helpers. Retain historical source identities and results without
+  runnable instructions; current rewrite qualification keeps its own dispatch.
+  [#4 — Remove the executable pre-rewrite Scheduling qualification runner](https://github.com/dragginzgame/ic-tooling/issues/4).
+
 - Adopt Toko Tooling 0.44.6 in both workspaces through its verified exporter and
   align the hosted cache-action references with that release. Executable snapshot
   files are unchanged; hosted CI policy now explicitly covers registry publication.
