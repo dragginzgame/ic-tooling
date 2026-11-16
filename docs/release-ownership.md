@@ -53,6 +53,29 @@ Build/Testkit need no new release: their existing compatible Process requirement
 already admit the patch. The inherited Protocol 0.2.8 lock selection is retained;
 it is outside these packages' graphs and does not claim new Testkit qualification.
 
+Published from `de86fe21dc746eda79e662008f0d670f20970ac7`; `main` and both annotated
+tags were pushed atomically and their remote identities verified. Clean-source
+Cargo publication admission passed; source/tests, manifests, licence and clean
+VCS provenance match the release. Registry readback is non-yanked and byte-identical
+to preflight and uploaded archives:
+
+| Package | Archive SHA-256 |
+| --- | --- |
+| `ic-host-process` 0.80.3 | `2b473c407b5d0e39597559bb9b506637849c6e7ad540ef45ab3b566b97244f82` |
+| `ic-cargo-metadata` 0.1.0 | `5430d9278184df2c90d096712bd44b5dffa5c619dba550a646ee979c13400d0d` |
+
+Toko installed the released metadata command in release profile (17-second
+compilation); offline tool admission passed. The installed command passed all
+Toko coordinated/multi-lock and Scheduling Timers/Jobs transaction checks under
+`target/cargo-metadata-consumer.vDBN9VkA/`. Tooling #8 is closed; adoption and
+delivery in receiving repositories remain with their owners.
+Post-push review of the delivered package boundaries and directly affected
+archive/consumer callers found no actionable defect. No new native runtime CI
+pass is claimed. Publication admission was followed by root-lock resolution drift;
+both variants are retained in the release evidence. Rechecking the committed
+inputs left the root lock unchanged and produced byte-identical archives before
+upload. The final checkout retains the committed selection.
+
 The libproc archive and source review are recorded in
 [Process execution](process-execution.md). Both macOS targets pass all-target
 Process Clippy with libproc 0.15.0. This is cross-compilation evidence, not native
@@ -60,8 +83,8 @@ runtime acceptance. Linux packaged Build-stack unit/PTY tests, Clippy and docs
 pass at `target/build-release.u9sAKBc9/`; only Process is selected for publication.
 The metadata editor's selected Linux archive gate passes at
 `target/library-release.xHftYEED/`. Existing actual Toko/Scheduling transaction
-acceptance remains bound to its captured sources; registry installation will be
-qualified after publication. Logs are under `target/deploy-metadata-libproc/`.
+acceptance remains bound to its captured sources; registry installation and its
+fresh consumer checks are verified above. Logs are under `target/deploy-metadata-libproc/`.
 The existing CI matrix owns native runtime acceptance asynchronously, under the
 maintainer's explicit direction to push without waiting for CI.
 

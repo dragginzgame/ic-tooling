@@ -83,7 +83,7 @@ archive qualification is not established by those historical results.
 `ic-cargo-qualification` 0.1.3 is a separate unpublished development executable
 for external-lock admission; it adds no dependencies to the ordinary Build API.
 
-`ic-cargo-metadata` 0.1.0 is an unpublished [release metadata renderer](docs/cargo-metadata.md).
+`ic-cargo-metadata` 0.1.0 is a published [release metadata renderer](docs/cargo-metadata.md).
 It emits bounded manifest/lock candidates without writing inputs; Toko owns the
 transactions, rollback and Cargo graph checks. `make test-cargo-metadata` checks
 the command and `make test-cargo-metadata-consumer` qualifies current Toko and

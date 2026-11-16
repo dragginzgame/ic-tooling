@@ -17,12 +17,22 @@ local, and hosted CI runs asynchronously.
 
 ## Latest delivery
 
+Process 0.80.3 and Cargo metadata 0.1.0 are published from
+`de86fe21dc746eda79e662008f0d670f20970ac7`, with annotated
+`process-v0.80.3` and `cargo-metadata-v0.1.0` tags pushed on `main`.
+Non-yanked registry archives match the verified uploads. Process adopts macOS-only
+libproc 0.15.0; both macOS targets pass cross-compilation/lint, and the Linux
+packaged Build-stack unit/terminal gate passes. Native runtime CI is asynchronous.
+The registry-installed metadata editor passes Toko coordinated/multi-lock and
+Scheduling Timers/Jobs transactions. Tooling #8 is closed. See the
+[release receipt](../release-ownership.md#process-0803-and-cargo-metadata-010-delivery).
+
 Testkit 0.107.4 is published from `67ac61f89a7311e278027bee3078de7e24a0a241`, tag
 `testkit-v0.107.4`, with byte-identical non-yanked registry readback. It supplies
 the optional [server CLI](../simulator-ownership.md), managed server, compatible
 Protocol 0.2.7 and Types 0.21.2 requirements. Original PocketIC types and separate
 default/held-reply/managed-server/CLI feature boundaries remain.
-Artifacts/FS 0.80.2, Process 0.80.2, Build 0.87.3, HTTP 0.80.0 and Text 0.77.2 are
+Artifacts/FS 0.80.2, Build 0.87.3, HTTP 0.80.0 and Text 0.77.2 are
 published. `ic-cargo-qualification` remains private. [Release receipts](../release-ownership.md)
 retain exact sources, archive checksums and acceptance. The release and its
 subsequent documentation receipt are delivered directly on `main`.
@@ -72,8 +82,8 @@ repository. Canic already owns report-directory publication through new FS;
 correctly refuse changed owners. Canic's broader Platform work remains separate.
 [WasmStore #3](https://github.com/dragginzgame/ic-wasm-store/issues/3) is also closed.
 Tooling #5 and Tooling #7 are closed; supplier fixes are published.
-[Tooling #8](https://github.com/dragginzgame/ic-tooling/issues/8) remains the separate
-release metadata editor requirement. [Tooling #9](https://github.com/dragginzgame/ic-tooling/issues/9)
+[Tooling #8](https://github.com/dragginzgame/ic-tooling/issues/8) is closed after
+release metadata editor publication and installed acceptance. [Tooling #9](https://github.com/dragginzgame/ic-tooling/issues/9)
 is closed after publication and registry-only 0.107.4/Protocol 0.2.7 resolution.
 
 [CI run 43968510609](https://github.com/dragginzgame/ic-tooling/actions/runs/43968510609)
@@ -81,15 +91,15 @@ at `a00f697` passes library archives, CLI lifetime/failure cleanup and Build arc
 on Linux, Apple Silicon macOS and Intel macOS. This completes Tooling #10's native
 acceptance, including actual setup and the packaged command on all hosts.
 
-Tooling #8's [metadata renderer](../cargo-metadata.md) is implemented locally as
+Tooling #8's [metadata renderer](../cargo-metadata.md) is published as
 `ic-cargo-metadata` 0.1.0, outside Build, with its own release group. It removes
 the old Build CLI dependency while Toko retains transactions and delivery.
 Focused tests and Linux archive admission pass. Current captured Toko coordinated
 and multi-lock checks and Scheduling's real Timers/Jobs release transactions pass,
-including rollback, preservation and downgrade refusal. Native CI is wired;
-publication and registry installation remain outstanding, so #8 remains open.
-Changes are uncommitted. The pre-existing Protocol 0.2.8 lock edit is preserved
-separately and is not a new qualified adoption.
+including rollback, preservation and downgrade refusal, with the registry-installed
+command. Native CI is wired and remains asynchronous. The pre-existing Protocol
+0.2.8 lock selection is retained in the delivered root lock; this release does not
+claim new Testkit/Protocol qualification.
 
 ## Owners and remaining requirements
 

@@ -78,9 +78,24 @@ The first consumer run caught compound requirements being refused; the corrected
 renderer preserves those ranges and outside-member paths, with a focused command
 regression and successful current-consumer checks.
 
-Native macOS archive checks are wired into CI but have not run for this change.
-Publication and normal registry tool installation remain separate delivery proof;
-Tooling #8 stays open because it requires a released successor.
+Native macOS archive checks are wired into CI; no result for this release is recorded here.
+They remain asynchronous under maintainer direction. Publication and registry
+installation are verified below; Tooling #8 is closed.
+
+## Publication and installed acceptance
+
+Version 0.1.0 is published from `de86fe21dc746eda79e662008f0d670f20970ac7`, tag
+`cargo-metadata-v0.1.0`. The non-yanked registry archive matches clean-source
+publication admission and upload bytes, SHA-256
+`5430d9278184df2c90d096712bd44b5dffa5c619dba550a646ee979c13400d0d`.
+Toko's ordinary registry installer succeeded in release profile; its offline
+`--check` admitted the exact executable, reporting `ic-cargo-metadata 0.1.0`.
+That installed command passed the entire current-source consumer runner at
+`target/cargo-metadata-consumer.vDBN9VkA/`, with the same source identities recorded
+above. This covers Toko coordinated/multi-lock transactions and both Scheduling
+groups, including rollback, status preservation, unrelated files, lock
+synchronization and downgrade refusal. No consumer source or delivery was changed.
+Installation and registry evidence is under `target/deploy-metadata-libproc/`.
 
 ## Local use and installation boundary
 
@@ -106,8 +121,16 @@ contain `alias`, `previous` and `next`. Coordinated `manifest` context contains
 `manifest` (the parsed TOML JSON) and `members` (each with `name` and an absolute
 `manifest_path`). The renderer does not choose versions or replace source files.
 
-After publication, Toko's existing installer can select package/bin
-`ic-cargo-metadata`, version `0.1.0`, without features, and return its absolute path
-for `CARGO_RELEASE_METADATA_EDITOR`. No legacy executable alias is supplied.
-That registry installation has not yet been performed; current acceptance uses
-the explicitly prepared archive executable.
+In a consumer with Toko's Rust installer selected, prepare the published command
+once (network access):
+
+```sh
+CARGO_RELEASE_METADATA_EDITOR="$(bash vendor/toko-tooling/scripts/dev/install-rust-tools.sh \
+  --consumer "$PWD" --package ic-cargo-metadata --version 0.1.0 \
+  --bin ic-cargo-metadata --profile release)"
+export CARGO_RELEASE_METADATA_EDITOR
+```
+
+Normal release checks use the same installer selection with `--check` for offline
+admission of its absolute path. No features or legacy executable alias are needed.
+Consumers retain their own version policy, candidate transaction and Cargo checks.
