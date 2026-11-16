@@ -105,10 +105,13 @@ archives, source identity, logs and completion evidence even after failure.
 The first hosted run exposed four Linux-sized mode assumptions in FS creation;
 the shared permission validator now returns Rustix's native mode after rejecting
 bits outside 0777. It also exposed missing ripgrep on the Linux runner; the single
-native log assertion uses standard grep. These fixes require fresh native evidence.
+native log assertion uses standard grep. The next native run found that Rustix
+does not expose `mkfifoat` on macOS; the lock refusal fixture now creates its FIFO
+using native `mkfifo`, retaining the same product assertion. These fixes require
+fresh native evidence.
 The required Gitleaks history scan runs once outside the host matrix using the
 installed pinned shared installer. Native jobs need Bash, Git, jq, grep, Perl,
-tar, shasum and script; no GNU-only script arguments are used on macOS.
+tar, shasum, mkfifo and script; no GNU-only script arguments are used on macOS.
 
 Before publishing: require the selected commit's native jobs to pass, review the
 archive inventory and candidate hashes, and recheck registry versions and owner

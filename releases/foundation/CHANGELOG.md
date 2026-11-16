@@ -10,6 +10,8 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 - Fix macOS creation-mode compilation by converting validated permission bits
   once to Rustix's native mode type; reject invalid bits before conversion.
+  Prepare FIFO refusal fixtures through native `mkfifo` on both hosts because
+  Rustix does not expose `mkfifoat` on macOS.
 - Prepare crates.io-only candidate metadata for Artifacts and FS. Extracted
   archives pass Linux byte/custody/publication tests and the Build consumer;
   native macOS CI remains required before release readiness.

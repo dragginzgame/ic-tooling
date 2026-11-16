@@ -109,12 +109,16 @@ fn unsafe_entries_and_policy_refuse_without_repair() {
         parent.lock(OsStr::new("link"), 0o600, POLICY),
         Err(Error::Kind)
     ));
-    rustix::fs::mkfifoat(
-        &*parent.file,
-        "fifo",
-        rustix::fs::Mode::RUSR | rustix::fs::Mode::WUSR,
-    )
-    .unwrap();
+    // Rustix does not expose mkfifoat on macOS; create only the test input
+    // with the native utility and retain the same product refusal assertion.
+    assert!(
+        std::process::Command::new("mkfifo")
+            .args(["-m", "600"])
+            .arg(scratch.path().join("fifo"))
+            .status()
+            .unwrap()
+            .success()
+    );
     assert!(matches!(
         parent.lock(OsStr::new("fifo"), 0o600, POLICY),
         Err(Error::Kind)
