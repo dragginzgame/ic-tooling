@@ -3,7 +3,7 @@ name: Build release candidate
 on:
   workflow_dispatch:
   push:
-    branches: [main, release/build-readiness, release/library-readiness]
+    branches: [main, release/build-readiness]
   pull_request:
 
 permissions:

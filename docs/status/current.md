@@ -45,8 +45,8 @@ server inventory confirms deletion of all three instances. All three Cargo
 publication dry runs pass without uploads. Formatting, ShellCheck and Actionlint
 pass. Candidate source and tool hashes remain unchanged across the archive gate.
 
-Readiness delivery selects `release/library-readiness`. The maintainer authorized
-its push with asynchronous CI; the new Linux, Apple Silicon macOS and Intel macOS
+Readiness delivery stays on `main`, as directed by the maintainer. Its push uses
+asynchronous CI; the new Linux, Apple Silicon macOS and Intel macOS
 library results remain pending. Prior four-crate results do not qualify these
 packages. Release notes remain undated; no candidate tags or uploads have been
 made. The Canic source review is recorded in a separate documentation commit.
