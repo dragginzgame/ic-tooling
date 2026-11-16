@@ -2,16 +2,15 @@
 
 Packages: `ic-host-text`.
 
-This group starts with the replacement implementation. All entries are pending;
-no replacement package has been published. Earlier shared development evidence is
-in [checkpoint history](../history.md), not a prior release of this group.
+This group starts with the replacement implementation. Earlier shared development
+evidence is in [checkpoint history](../history.md), not a prior release of this group.
 
-## [0.77.2] - Unreleased
+## [0.77.2] - 2026-11-16
 
-Continues the unpublished development line after GitHub checkpoint
+First replacement release after the unpublished GitHub checkpoint
 [aaebfa4](https://github.com/dragginzgame/ic-tooling-new/commit/aaebfa4db99593c3709a0ee92f71bc691f6ac4b6).
-This version advance changes no public behavior; prior qualification evidence
-remains tied to its recorded inputs.
+The replacement API requires explicit migration from 0.76.0. Prior qualification
+evidence remains tied to its recorded inputs.
 
 ### ⚠️ Breaking
 

@@ -1,9 +1,9 @@
 # Testkit changelog
 
-Package: `ic-testkit`. This replacement remains unpublished; this is not a
-crates.io release. The selected consumer currently uses released Testkit 0.106.0.
+Package: `ic-testkit`. Consumer adoption remains separate from publication;
+the qualified Scheduling captures select released Testkit 0.106.0.
 
-## [0.107.1] - Unreleased
+## [0.107.1] - 2026-11-16
 
 ### ⚠️ Breaking
 
@@ -47,8 +47,8 @@ crates.io release. The selected consumer currently uses released Testkit 0.106.0
   and three admission checks pass with released and replacement suppliers. Verify
   the replacement's selected default graph excludes WAT and Platform fixture
   dependencies; keep endpoint/instance ownership external and check deletion.
-- The 0.107.0 checkpoint is on GitHub; neither version is published. The sibling
-  source and its released supplier selection remain unchanged.
+- The 0.107.0 checkpoint remains unpublished; 0.107.1 is the first replacement
+  release. The sibling source and its supplier selection remain unchanged.
 - Compare current Scheduling retained-callback custody and dropped-handle
   settlement with both suppliers on one capture. Preserve existing consumer
   assertions and focused selectors; endpoint refusal, instance deletion, external

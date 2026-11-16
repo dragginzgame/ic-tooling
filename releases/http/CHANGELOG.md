@@ -2,11 +2,10 @@
 
 Packages: `ic-host-http`.
 
-This group starts with the replacement implementation. All entries are pending;
-no replacement package has been published. Earlier shared development evidence is
-in [checkpoint history](../history.md), not a prior release of this group.
+This group starts with the replacement implementation. Earlier shared development
+evidence is in [checkpoint history](../history.md), not a prior release of this group.
 
-## [0.80.0] - Unreleased
+## [0.80.0] - 2026-11-16
 
 ### ⚠️ Breaking
 

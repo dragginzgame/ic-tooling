@@ -48,8 +48,8 @@ and independent deletion observation. The old Platform/Types graph is absent.
 The refreshed Testkit publication dry run passes with an identical archive;
 no upload occurred. Platform #5 is closed with the local adoption evidence.
 
-The maintainer requested preparation, not publication, of HTTP 0.80.0, Text 0.77.2
-and Testkit 0.107.1. Their metadata now permits only crates.io; the private
+The maintainer authorized publication of HTTP 0.80.0, Text 0.77.2 and Testkit
+0.107.1 after preparation and Platform adoption. Their metadata permits only crates.io; the private
 `ic-cargo-qualification` 0.1.3 remains unpublished with `publish = false`.
 [Library readiness](../release-ownership.md#independent-library-readiness) records
 registry availability, current first-party selections and the explicit group gate.
@@ -59,11 +59,13 @@ server inventory confirms deletion of all three instances. All three Cargo
 publication dry runs pass without uploads. Formatting, ShellCheck and Actionlint
 pass. Candidate source and tool hashes remain unchanged across the archive gate.
 
-Readiness delivery stays on `main`, as directed by the maintainer. Its push uses
-asynchronous CI; the new Linux, Apple Silicon macOS and Intel macOS
-library results remain pending. Prior four-crate results do not qualify these
-packages. Release notes remain undated; no candidate tags or uploads have been
-made. The Canic source review is recorded in a separate documentation commit.
+Delivery stays on `main`, as directed by the maintainer, with asynchronous CI.
+The [library readiness matrix](https://github.com/dragginzgame/ic-tooling/actions/runs/43899230778)
+passes Linux, Apple Silicon macOS and Intel macOS at `0329953`, before the
+Protocol migration. The final migrated Testkit has the local archive acceptance
+above; its hosted checks remain asynchronous. The adoption is delivered in
+`e65e5381f1739beb23e1bf3b6cb8bd06cfa929b1`. Release notes are dated for the
+authorized delivery; registry receipts will distinguish completed uploads.
 
 ## Owners and evidence entrypoints
 

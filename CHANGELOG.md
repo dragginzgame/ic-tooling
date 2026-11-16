@@ -1,7 +1,8 @@
 # Changelog
 
-Independent groups own their pending release notes. There is no shared workspace
-version. All replacement packages remain unpublished.
+Independent groups own their release notes. There is no shared workspace version.
+See [release receipts](docs/release-ownership.md) for publication status;
+pending entries and historical checkpoints are not registry releases.
 
 | Group | Packages |
 | --- | --- |
