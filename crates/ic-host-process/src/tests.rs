@@ -28,7 +28,7 @@ fn simultaneous_streams_have_independent_exact_budgets_and_natural_status() {
         },
     );
     assert!(report.failure.is_none(), "{report:?}");
-    assert!(report.cleanup.is_empty());
+    assert!(report.cleanup.is_empty(), "{report:?}");
     assert_eq!(report.status.unwrap().code(), Some(7));
     assert_eq!(counts, [131072; 2]);
 }
@@ -56,7 +56,7 @@ fn overflow_and_observer_failure_keep_original_status_and_partial_evidence() {
         assert!(matches!(report.failure, Some(Failure::Limit(value)) if value == stream));
         assert!(retained.len() <= 4);
         assert!(report.status.is_some());
-        assert!(report.cleanup.is_empty());
+        assert!(report.cleanup.is_empty(), "{report:?}");
     }
     // Wait for the leader to exit before the observer refuses. Cleanup must not
     // replace its original natural nonzero status with the observer failure.
@@ -91,7 +91,7 @@ fn overflow_and_observer_failure_keep_original_status_and_partial_evidence() {
     assert!(retained.ends_with(b":retained"));
     assert!(matches!(report.failure, Some(Failure::Observer { .. })));
     assert_eq!(report.status.unwrap().code(), Some(13));
-    assert!(report.cleanup.is_empty());
+    assert!(report.cleanup.is_empty(), "{report:?}");
 }
 
 #[test]
@@ -114,7 +114,7 @@ fn direct_child_joins_parent_group_and_inherited_stderr_is_not_captured() {
     );
     assert!(report.failure.is_none(), "{report:?}");
     assert!(report.status.unwrap().success());
-    assert!(report.cleanup.is_empty());
+    assert!(report.cleanup.is_empty(), "{report:?}");
     assert_eq!(
         String::from_utf8(output)
             .unwrap()
@@ -138,7 +138,7 @@ fn readiness_cancellation_and_retained_pipe_deadline_close_only_owned_execution(
         });
         assert!(matches!(report.failure, Some(Failure::Cancelled)));
         assert!(!report.status.unwrap().success());
-        assert!(report.cleanup.is_empty());
+        assert!(report.cleanup.is_empty(), "{report:?}");
     }
     let mut command = Command::new("/bin/sh");
     command.args(["-c", "sleep 30 & exit 23"]);
@@ -147,7 +147,7 @@ fn readiness_cancellation_and_retained_pipe_deadline_close_only_owned_execution(
     let report = run(&mut command, limits, &AtomicBool::new(false), |_, _| Ok(()));
     assert!(matches!(report.failure, Some(Failure::Deadline)));
     assert_eq!(report.status.unwrap().code(), Some(23));
-    assert!(report.cleanup.is_empty());
+    assert!(report.cleanup.is_empty(), "{report:?}");
 }
 
 #[test]
@@ -160,7 +160,7 @@ fn spawn_failure_has_no_status_and_close_is_locally_idempotent() {
     );
     assert!(matches!(report.failure, Some(Failure::Io(_))));
     assert!(report.status.is_none());
-    assert!(report.cleanup.is_empty());
+    assert!(report.cleanup.is_empty(), "{report:?}");
     let child = Command::new("/bin/sh")
         .args(["-c", "exit 0"])
         .spawn()
@@ -203,7 +203,7 @@ fn foreground_terminal_input_survives_direct_child_ownership() {
     );
     assert!(report.failure.is_none(), "{report:?}");
     assert!(report.status.unwrap().success(), "{report:?}");
-    assert!(report.cleanup.is_empty());
+    assert!(report.cleanup.is_empty(), "{report:?}");
     assert_eq!(output, b"foreground-ok");
 }
 
@@ -334,7 +334,7 @@ fn group_descendant_stops_but_direct_descendant_can_finish_after_close() {
             Ok(())
         });
         assert!(matches!(report.failure, Some(Failure::Cancelled)));
-        assert!(report.cleanup.is_empty());
+        assert!(report.cleanup.is_empty(), "{report:?}");
         let (pid, start) = descendant.unwrap();
         let deadline = Instant::now();
         if ownership == Ownership::Group {

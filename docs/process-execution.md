@@ -10,10 +10,13 @@ Darwin can return `EPERM` for a group containing only zombies: its
 [XNU group iteration](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sig.c)
 excludes zombies and returns that error when no eligible member is found. The
 native candidate run reproduced this after a successful Cargo exit. Process now
-admits this one case only after `waitid(WNOWAIT)` proves its owned leader exited
+admits this one case only after owned-child fallback and `waitid(WNOWAIT)` prove its leader exited
 and a group-filtered libproc query contains no other members. The leader remains
-unreaped, pinning identity throughout. A live leader, other group member or query
-failure retains the original permission error and direct-child fallback.
+unreaped, pinning identity throughout. A signalling refusal, other group member or query
+failure retains the original permission error and ordinary direct-child fallback.
+The terminal wait follows successful direct signalling; it also covers Darwin's
+transition between excluding an exiting leader and making its status observable.
+Like existing cleanup/reaping, this wait is not a hard wall-clock bound.
 Cooperative membership and exclusive reaping remain required; this grants no
 authority over borrowed PIDs or credential-changing descendants.
 

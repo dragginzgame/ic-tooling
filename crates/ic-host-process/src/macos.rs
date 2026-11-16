@@ -2,14 +2,21 @@
 use std::process::Child;
 
 use libproc::processes::{ProcFilter, pids_by_type};
-use rustix::process::{Pid, WaitId, WaitIdOptions, waitid};
+use rustix::process::{Pid, Signal, WaitId, WaitIdOptions, kill_process, waitid};
 
 pub(super) fn exited_group(child: &Child) -> bool {
     // Keep the leader unreaped throughout: its PID still pins group identity.
+    // Darwin can exclude an exiting leader before WNOHANG observes its status.
+    // Perform the same owned-child fallback as ordinary cleanup, then observe
+    // terminal status without reaping before deciding whether the group is empty.
+    match kill_process(Pid::from_child(child), Signal::KILL) {
+        Ok(()) | Err(rustix::io::Errno::SRCH) => {}
+        Err(_) => return false,
+    }
     if !matches!(
         waitid(
             WaitId::Pid(Pid::from_child(child)),
-            WaitIdOptions::EXITED | WaitIdOptions::NOHANG | WaitIdOptions::NOWAIT,
+            WaitIdOptions::EXITED | WaitIdOptions::NOWAIT,
         ),
         Ok(Some(_))
     ) {
