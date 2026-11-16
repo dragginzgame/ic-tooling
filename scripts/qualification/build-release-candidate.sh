@@ -78,7 +78,7 @@ case "$(uname -s)" in
     ;;
   *) echo 'Native candidate qualification supports Linux and macOS.' >&2; exit 1 ;;
 esac
-rg -q 'test result: ok\. 1 passed; 0 failed' "$scratch/terminal.log"
+grep -q 'test result: ok\. 1 passed; 0 failed' "$scratch/terminal.log"
 cargo clippy --manifest-path "$candidate/Cargo.toml" --workspace --all-targets --locked --offline -- -D warnings > "$scratch/clippy.log" 2>&1
 RUSTDOCFLAGS='-D warnings' cargo doc --manifest-path "$candidate/Cargo.toml" --workspace --no-deps --locked --offline > "$scratch/docs.log" 2>&1
 if [[ "${BUILD_RELEASE_CONSUMER:-current}" == current ]]; then

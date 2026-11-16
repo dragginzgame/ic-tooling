@@ -102,8 +102,12 @@ Silicon and macOS 15 Intel. It prepares Rust 1.100.0, Clippy and the Wasm target
 tests. `BUILD_RELEASE_CONSUMER=none` explicitly excludes the unavailable sibling
 on hosted runners; the Linux current-consumer evidence is separate. It uploads
 archives, source identity, logs and completion evidence even after failure.
+The first hosted run exposed four Linux-sized mode assumptions in FS creation;
+the shared permission validator now returns Rustix's native mode after rejecting
+bits outside 0777. It also exposed missing ripgrep on the Linux runner; the single
+native log assertion uses standard grep. These fixes require fresh native evidence.
 The required Gitleaks history scan runs once outside the host matrix using the
-installed pinned shared installer. Native jobs need Bash, Git, jq, ripgrep, Perl,
+installed pinned shared installer. Native jobs need Bash, Git, jq, grep, Perl,
 tar, shasum and script; no GNU-only script arguments are used on macOS.
 
 Before publishing: require the selected commit's native jobs to pass, review the

@@ -1,5 +1,5 @@
 use super::{Directory, Error, name, valid_mode};
-use rustix::fs::{self, Mode};
+use rustix::fs;
 use std::ffi::OsStr;
 use std::io;
 
@@ -42,13 +42,13 @@ impl Directory {
         sync: &mut impl FnMut(&Self) -> io::Result<()>,
     ) -> Result<Self, PrepareFailure> {
         let policy = || {
-            valid_mode(mode)?;
+            let permissions = valid_mode(mode)?;
             if mode & forbidden != 0 {
                 return Err(Error::Permissions { mode, forbidden });
             }
-            Ok(())
+            Ok(permissions)
         };
-        policy().map_err(|source| PrepareFailure {
+        let permissions = policy().map_err(|source| PrepareFailure {
             component: None,
             source,
         })?;
@@ -64,7 +64,7 @@ impl Directory {
                 if let Some(existing) = parent.open_directory(child, forbidden)? {
                     return Ok(existing);
                 }
-                match fs::mkdirat(&*parent.file, *child, Mode::from_bits_truncate(mode)) {
+                match fs::mkdirat(&*parent.file, *child, permissions) {
                     Ok(()) | Err(rustix::io::Errno::EXIST) => {}
                     Err(error) => return Err(error.into()),
                 }

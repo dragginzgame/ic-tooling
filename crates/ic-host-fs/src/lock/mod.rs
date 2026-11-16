@@ -7,7 +7,7 @@ use crate::{
     Directory, Error, FilePolicy,
     directory::{admit_file, name, valid_mode},
 };
-use rustix::fs::{AtFlags, FileType, FlockOperation, Mode, OFlags, flock, openat, statat};
+use rustix::fs::{AtFlags, FileType, FlockOperation, OFlags, flock, openat, statat};
 
 impl Directory {
     /// Open or create a regular sidecar and acquire its exclusive nonblocking lock.
@@ -21,7 +21,7 @@ impl Directory {
     /// and regular-file/permission/link admission refusals.
     pub fn lock(&self, child: &OsStr, mode: u32, policy: FilePolicy) -> Result<Lock, Error> {
         name(child)?;
-        valid_mode(mode)?;
+        let permissions = valid_mode(mode)?;
         if mode & policy.forbidden != 0 {
             return Err(Error::Permissions {
                 mode,
@@ -40,7 +40,7 @@ impl Directory {
             &*self.file,
             child,
             OFlags::RDWR | OFlags::CREATE | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
-            Mode::from_bits_truncate(mode),
+            permissions,
         )?);
         let file = admit_file(file, policy)?;
         Lock::acquire(file).map_err(Error::Io)

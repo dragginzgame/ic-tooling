@@ -163,11 +163,11 @@ impl Directory {
         forbidden: u32,
     ) -> Result<Self, Error> {
         name(child)?;
-        valid_mode(mode)?;
+        let permissions = valid_mode(mode)?;
         if mode & forbidden != 0 {
             return Err(Error::Permissions { mode, forbidden });
         }
-        fs::mkdirat(&*self.file, child, Mode::from_bits_truncate(mode))?;
+        fs::mkdirat(&*self.file, child, permissions)?;
         self.sync()?;
         self.open_directory(child, forbidden)?.ok_or(Error::Changed)
     }
@@ -199,12 +199,12 @@ impl Directory {
     /// Refuses invalid names/modes, occupied names and native creation failures.
     pub fn create_file(&self, child: &OsStr, mode: u32) -> Result<File, Error> {
         name(child)?;
-        valid_mode(mode)?;
+        let permissions = valid_mode(mode)?;
         Ok(File::from(fs::openat(
             &*self.file,
             child,
             OFlags::RDWR | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-            Mode::from_bits_truncate(mode),
+            permissions,
         )?))
     }
     /// Remove one entry only after comparing it with the caller's held regular file.
@@ -288,14 +288,15 @@ pub(crate) fn name(value: &OsStr) -> Result<(), Error> {
         Ok(())
     }
 }
-pub(crate) fn valid_mode(mode: u32) -> Result<(), Error> {
+pub(crate) fn valid_mode(mode: u32) -> Result<Mode, Error> {
     if mode & !0o777 != 0 {
         Err(Error::Permissions {
             mode,
             forbidden: !0o777,
         })
     } else {
-        Ok(())
+        // The admitted nine permission bits fit both macOS and Linux mode_t.
+        Ok(Mode::from_bits_truncate(mode as _))
     }
 }
 pub(crate) fn admit_file(file: File, policy: FilePolicy) -> Result<File, Error> {
