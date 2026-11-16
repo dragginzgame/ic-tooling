@@ -1,6 +1,6 @@
 # Testkit: first replacement contract
 
-Status: published `ic-testkit` 0.107.2. The [compatibility correction](qualification/testkit-types-compatibility.md)
+Status: published `ic-testkit` 0.107.3. The [compatibility correction](qualification/testkit-types-compatibility.md)
 permits Types `>=0.21.2, <0.22.0` and qualifies registry-only Runtime 0.23.13
 resolution; Scheduling's installed scenarios remain blocked by its consumer build.
 Client types
@@ -19,14 +19,16 @@ old-Scheduling snapshot experiments are historical and do not define this scope.
 
 ## Platform 0.34 migration review
 
-### Current Protocol 0.2.6 development selection
+### Published Protocol 0.2.6 selection
 
-The local dependency is now Protocol 0.2.6, with only `http-request`; Types remains
+The dependency is now Protocol 0.2.6, with only `http-request`; Types remains
 0.21.2. The HTTP encoder source is identical to 0.2.5, while new Caffeine and
 management-snapshot features remain disabled. Six fixture unit tests, all-feature
 Clippy and graph admission pass. The [adoption record](qualification/platform-adoption.md)
 binds the verified archive and focused evidence, retaining earlier installed
-acceptance for the unchanged encoder. This update is not yet published.
+acceptance for the unchanged encoder. This update is published in Testkit 0.107.3;
+the [release receipt](release-ownership.md#testkit-01073-publication) adds fresh
+archive acceptance and verified registry provenance.
 
 ### Earlier Protocol 0.2.5 dependency refresh
 

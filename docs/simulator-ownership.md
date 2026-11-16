@@ -1,7 +1,7 @@
 # External simulator ownership: first qualification
 
 The new optional [prepared server owner](testkit-server.md) supplies the separate
-capability requested in Tooling #6. Its local implementation does not restore the
+capability requested in Tooling #6, published in Testkit 0.107.3. It does not restore the
 legacy API or change the historical external-server evidence below. Default and
 held-reply-only clients still need an explicitly supplied server owner.
 

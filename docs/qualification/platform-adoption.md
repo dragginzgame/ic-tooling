@@ -2,7 +2,7 @@
 
 ## Current Protocol 0.2.6 refresh
 
-Local Tooling now selects Protocol 0.2.6. Its non-yanked crates.io archive has
+Testkit 0.107.3 selects Protocol 0.2.6. Its non-yanked crates.io archive has
 SHA-256 `758e0b8455b2ab340a4503f211357b7725f52a55a2c8c209ee2f01b122763b7e`
 and identifies source `a813d4ea5378515984a547a9f4e9d37f2124cf14`. Types 0.21.2
 remains the latest published release; its compatible requirement and checksum
@@ -32,8 +32,10 @@ metadata for both workspaces, exact Protocol feature admission, and exclusion of
 fixture dependencies from default Testkit. The two installed held-fixture checks
 below retain applicability to the unchanged encoder and Types code; they were
 not rerun or relabeled as new simulator evidence. Formatting and installed Toko
-admission pass. This refresh is local, uncommitted and unpublished; it introduces
-no sibling edits, executable-tool upgrade or new native-host qualification.
+admission pass. This refresh was subsequently published in Testkit 0.107.3; the
+[release receipt](../release-ownership.md#testkit-01073-publication) adds fresh
+archive acceptance and registry readback. No sibling edits or new native macOS
+qualification are claimed. Toko's separate 0.44.11 adoption is also delivered.
 
 ## Earlier Protocol 0.2.5 adoption
 

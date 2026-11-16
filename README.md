@@ -18,16 +18,16 @@ Foundation 0.80.2 adds [original retained-file publication](docs/filesystem-cust
 after reopening, without rewriting recovery bytes. Its final versioned archives
 pass native CI on all three hosts, and registry readback matches uploaded bytes.
 
-HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.2 are also published on crates.io.
+HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.3 are also published on crates.io.
 Their [release receipts](docs/release-ownership.md#independent-library-publication)
 record archive/source verification and separate local and hosted acceptance.
-Testkit 0.107.2 uses Protocol 0.2.5 and a compatible Types `0.21.2` requirement,
+Testkit 0.107.3 uses Protocol 0.2.6 and a compatible Types `0.21.2` requirement,
 resolving the published Runtime 0.23.13 cohort. Its [receipt and consumer evidence](docs/qualification/testkit-types-compatibility.md)
 distinguish successful registry resolution from Scheduling's remaining Wasm migration.
 
-Local development now selects Protocol 0.2.6 with Types 0.21.2. The
-[adoption record](docs/qualification/platform-adoption.md) verifies the unchanged
-HTTP encoder and focused checks; this refresh is selected for Testkit 0.107.3.
+The [Platform adoption record](docs/qualification/platform-adoption.md) verifies
+the unchanged HTTP encoder and focused checks. Testkit 0.107.3 also publishes the
+optional prepared-server owner, with [archive and registry evidence](docs/release-ownership.md#testkit-01073-publication).
 
 Canic's current source already selects the published host foundation and owns
 report-directory allocation and publication through the new FS API. The
@@ -122,7 +122,7 @@ generation. `make test-testkit-catalog` checks admission and module validity;
 `make test-testkit-module` checks installed behavior on an externally owned server.
 `make test-testkit-control` checks exclusive release and identity/progress refusals.
 `make test-scheduling-replacement` qualifies a current Scheduling export against
-local Testkit 0.107.2; the captured sibling selects the published replacement, 0.107.1. The
+local Testkit 0.107.3; the captured sibling selects the published replacement, 0.107.1. The
 adapter changes only the supplier dependency, preserving its migrated fixture calls.
 
 The optional [managed server capability](docs/testkit-server.md) is implemented

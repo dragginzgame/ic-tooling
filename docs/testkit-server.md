@@ -1,5 +1,8 @@
 # Explicit prepared simulator and server ownership
 
+Published in Testkit 0.107.3; [release and registry evidence](release-ownership.md#testkit-01073-publication)
+records the verified archive and the additional release-time installed checks.
+
 The optional `managed-server` capability supplies [Tooling #6](https://github.com/dragginzgame/ic-tooling/issues/6).
 Testkit owns PocketIC asset selection and the dependency between an instance and
 its server. Process owns spawning, fair bounded output, cancellation, group
@@ -128,7 +131,7 @@ override the explicit lifetime budget.
 
 ## Focused local acceptance — 2026-11-16
 
-Linux x86-64 checks pass on the local, uncommitted implementation:
+The initial Linux x86-64 checks passed before committing the implementation:
 
 - Four offline/startup tests cover missing/corrupt/nonexecutable/linked assets,
   changed identity, early exit, startup deadline, malformed readiness, and both

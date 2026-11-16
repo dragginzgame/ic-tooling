@@ -18,7 +18,9 @@ CI are separate from ordinary local fixes, and CI runs asynchronously.
 ## Current local work and delivery
 
 [Tooling #6](https://github.com/dragginzgame/ic-tooling/issues/6) supplies the
-`managed-server` Testkit capability selected for the 0.107.3 release. The
+`managed-server` Testkit capability published in 0.107.3 from `3c3fd63`, with
+`main` and `testkit-v0.107.3` pushed. Registry readback matches the uploaded
+archive, index checksum and clean committed source. The
 [contract and acceptance](../testkit-server.md) record explicit pinned preparation,
 offline admission, bounded Process-owned startup/output/lifetime, instance-held
 server ownership, deletion attempts and abandonment evidence. Four refusal tests
@@ -28,7 +30,7 @@ Rustdoc and feature isolation pass. No native macOS execution is claimed.
 Canic's read-only current capture and required callers are recorded there;
 [Canic #15](https://github.com/dragginzgame/canic/issues/15) owns actual harness
 adoption, application/gateway/failure qualification and removal of 0.106.0 imports.
-No sibling source or release was changed by this fix.
+No sibling source or release was changed by this delivery.
 
 Testkit 0.107.2 is published from `74006ca`, tag `testkit-v0.107.2`; registry
 readback matches the verified archive. It permits compatible Types 0.21.2 patches.
@@ -42,12 +44,12 @@ version conflict is resolved. Do not relabel old Scheduling checks as new accept
 Artifacts/FS 0.80.2, Process 0.80.2, Build 0.87.3, HTTP 0.80.0 and Text 0.77.2
 are published; [release receipts](../release-ownership.md) retain source identities,
 archive checksums and native acceptance. `ic-cargo-qualification` remains private.
-The maintainer authorized deployment after Toko adoption. Testkit 0.107.3 is the
-selected compatible candidate for Tooling #6 and Protocol 0.2.6. Its complete
-archive gate and Cargo publication dry run pass; [delivery evidence](../release-ownership.md#testkit-01073-delivery-preparation)
-records exact source/metadata comparison and remaining publication. Other libraries
+The maintainer-authorized deployment is complete. Testkit 0.107.3 delivers
+Tooling #6 and Protocol 0.2.6. Its complete archive gate and Cargo publication
+verification pass; [delivery evidence](../release-ownership.md#testkit-01073-publication)
+records exact source/metadata comparison and registry readback. Other libraries
 have no changed public source/requirements beyond the inactive Toko marker;
-they need no republication. Private qualification changes deliver through Git.
+needed no republication. Private qualification changes are delivered through Git.
 
 Toko 0.44.11 is selected in both workspaces and installed through its verified
 exporter (source `08d63df7661910554ef72980037f55edd914aba0`). The 49-file receipt,
@@ -59,12 +61,12 @@ The [Platform adoption inventory](../qualification/platform-adoption.md) now sel
 Protocol 0.2.6 / Types 0.21.2 across the affected product graph; qualification and
 native-tool dispositions are recorded there. The HTTP encoder is unchanged from
 0.2.5; six unit tests, all-feature Clippy, metadata and feature admission pass.
-This refresh is included in the 0.107.3 candidate. Earlier installed held-fixture checks
+This refresh is published in 0.107.3. Earlier installed held-fixture checks
 remain evidence for the unchanged encoder; 0.2.5 was published with Testkit 0.107.2.
-Pending qualification/docs changes retire obsolete
+Delivered qualification/docs changes retire obsolete
 Platform executable adapters and update Scheduling's supplier-only adapter.
-Preserve those edits and the maintainer's release-ownership policy edits; they
-are independent of Tooling #6. Historical frozen comparisons are not renewed migrations.
+The maintainer's release-ownership policy edits are also delivered. Historical
+frozen comparisons are not renewed migrations. Hosted CI remains asynchronous.
 
 ## Owners and evidence entrypoints
 

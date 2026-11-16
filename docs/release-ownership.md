@@ -41,7 +41,21 @@ libraries are published; publication permission in a manifest is not delivery.
 
 ## Independent library publication
 
-### Testkit 0.107.3 delivery preparation
+### Testkit 0.107.3 publication
+
+Published on 2026-11-16 from `3c3fd63a6c16f4f1c38eef7984d211791022ba37`.
+`main` and annotated tag `testkit-v0.107.3` were pushed atomically to the canonical
+GitHub repository. Cargo verified the clean committed package before upload.
+Registry readback is non-yanked and byte-identical to the uploaded archive, with
+SHA-256 `f1abdecdc13e767e8f5f7f83f2c19e48a414d6a7eea2e2ffdbfe95222c56d6c2`.
+The index checksum, clean Cargo VCS identity, source/examples, original/normalized
+manifests and licence match the release source. Protocol is 0.2.6, Types remains
+compatible with 0.21.2, and the optional Host dependencies resolve from crates.io.
+Toko 0.44.11 is installed and selected in both maintained workspaces and the
+reviewed cache actions. Hosted CI is asynchronous; no new native macOS result is
+claimed. Post-push review of the delivered package and its archive/CI callers
+found no actionable defect. Canic adoption remains with
+[Canic #15](https://github.com/dragginzgame/canic/issues/15).
 
 The maintainer authorized Toko adoption and deployment on 2026-11-16. The selected
 public group is Testkit: compatible opt-in managed-server APIs and Protocol 0.2.6.
@@ -70,7 +84,7 @@ archive exactly; the normalized manifest differs only in package version.
 Afterward the runner's comma-containing feature argument was quoted without
 changing its value; ShellCheck and Actionlint pass on final wiring. Snapshot,
 metadata and formatting admission pass with Toko 0.44.11. Evidence is retained
-under `target/deploy-testkit/`; publication is not yet claimed by these checks.
+under `target/deploy-testkit/`; registry publication and readback are recorded above.
 
 ### Initial independent library publication
 
