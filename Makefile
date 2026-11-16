@@ -19,6 +19,12 @@ help:
 	  '  make test-canic-build-metadata Current Canic metadata admission/refusal' \
 	  '  make test-canic-app-build Combined Canic Build/Text app and display contracts' \
 	  '  make test-canic-build  Current Canic owned Wasm build and publication refusal' \
+	  '  make test-canic-publication Current Canic held-parent artifact publication' \
+	  '  make test-canic-config-publication Compare current Canic config writers' \
+	  '  make test-canic-record-publication Compare retained-record and recovery writers' \
+	  '  make test-canic-starter-publication Compare starter directory publication' \
+	  '  make test-canic-directory-publication Compare starter/fleet directory publication' \
+	  '  make test-canic-filesystem Compare retained reads and publication together' \
 	  '  make test-canic-foreground Harmless foreground client/PTY migration checks' \
 	  '  make test-canic-text   Current Canic CLI presentation qualification' \
 	  '  make test-query-text   Current Query presentation and output qualification' \
@@ -26,6 +32,7 @@ help:
 	  '  make test-backup-http  Current Backup HTTP policy and body qualification' \
 	  '  make test-custody      Byte and publication/custody failure acceptance' \
 	  '  make test-backup-commitments Compare completed Backup byte commitments' \
+	  '  make test-backup-assembly Compare current Backup assembly commitments' \
 	  '  make test-backup-custody Local Backup filesystem and metadata custody (loopback required)' \
 	  '  make test-scheduling-held Focused rewrite held-reply baseline (prepared server)' \
 	  '  make test-scheduling-replacement Rewrite held replies with replacement Testkit' \
@@ -93,6 +100,10 @@ doc-owned-build: toko-tooling-check
 test-backup-commitments: toko-tooling-check
 	bash scripts/qualification/backup-commitments.sh
 
+.PHONY: test-backup-assembly
+test-backup-assembly: toko-tooling-check
+	bash scripts/qualification/backup-commitments.sh assembly
+
 test-custody: toko-tooling-check
 	cargo test -p ic-host-artifacts -p ic-host-fs --lib --locked --offline
 
@@ -149,6 +160,30 @@ test-canic-text: toko-tooling-check
 .PHONY: test-canic-build
 test-canic-build: toko-tooling-check
 	bash scripts/qualification/canic-build.sh
+
+.PHONY: test-canic-publication
+test-canic-publication: toko-tooling-check
+	bash scripts/qualification/canic-build.sh custody
+
+.PHONY: test-canic-config-publication
+test-canic-config-publication: toko-tooling-check
+	bash scripts/qualification/canic-build.sh config
+
+.PHONY: test-canic-record-publication
+test-canic-record-publication: toko-tooling-check
+	bash scripts/qualification/canic-build.sh records
+
+.PHONY: test-canic-starter-publication
+test-canic-starter-publication: toko-tooling-check
+	bash scripts/qualification/canic-build.sh starter
+
+.PHONY: test-canic-directory-publication
+test-canic-directory-publication: toko-tooling-check
+	bash scripts/qualification/canic-build.sh trees
+
+.PHONY: test-canic-filesystem
+test-canic-filesystem: toko-tooling-check
+	bash scripts/qualification/canic-build.sh filesystem
 
 .PHONY: test-canic-app-build
 test-canic-app-build: toko-tooling-check

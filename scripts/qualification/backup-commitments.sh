@@ -2,6 +2,14 @@
 # Compare completed Backup commitment producers without migrating unrelated custody.
 set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+scope="${1:-all}"
+case "$scope" in all|assembly) ;; *) echo 'Expected all or assembly' >&2; exit 2 ;; esac
+assembly_tests=(
+  fixed_runtime_acquires_multi_extent_evidence_and_cold_replays_without_live_inputs
+  partial_materialization_is_retained_and_cannot_unlock_final_status
+  interrupted_publication_reconciles_exact_readiness_without_new_effects
+  partial_manifest_and_changed_completed_payload_refuse_without_repair
+)
 source_checkout="${BACKUP_SOURCE:-$repo/../ic-backup}"
 mkdir -p "$repo/target"
 scratch="$(mktemp -d "$repo/target/backup-commitments.XXXXXXXX")"
@@ -13,8 +21,12 @@ manifest="$scratch/source/Cargo.toml"
 export CARGO_TARGET_DIR="$repo/target/backup-consumer-build" CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
 cp "$scratch/source/Cargo.lock" "$scratch/original.lock"
 run_checks() {
-  for selection in store::restore::tests store::capture::advance::tests::assembly_tests store::capture::advance::tests::completion_tests; do
-    cargo test --manifest-path "$manifest" -p ic-backup --lib --locked --offline "$selection" || return
+  if [[ "$scope" == all ]]; then
+    cargo test --manifest-path "$manifest" -p ic-backup --lib --locked --offline store::restore::tests || return
+  fi
+  for selection in "${assembly_tests[@]}"; do
+    cargo test --manifest-path "$manifest" -p ic-backup --lib --locked --offline \
+      "store::capture::ledger::recording::runtime::tests::$selection" -- --exact || return
   done
 }
 run_checks > "$scratch/baseline.log" 2>&1 || {
@@ -22,10 +34,18 @@ run_checks > "$scratch/baseline.log" 2>&1 || {
   echo 'Unchanged Backup baseline failed; commitment migration was not applied.' >&2
   exit 1
 }
+if rg -q '^test result: ok\. 0 passed' "$scratch/baseline.log"; then
+  echo 'A required Backup commitment test selection was empty; migration was not applied.' >&2
+  exit 1
+fi
 sed "s|@IC_TOOLING_NEW@|$repo|g" "$repo/qualification/backup/commitments.patch" > "$scratch/migration.patch"
 export GIT_CEILING_DIRECTORIES="$repo/target"
-git -C "$scratch/source" apply --check "$scratch/migration.patch"
-git -C "$scratch/source" apply "$scratch/migration.patch"
+patch_options=()
+if [[ "$scope" == assembly ]]; then
+  patch_options+=(--exclude=crates/ic-backup/src/store/restore/mod.rs)
+fi
+git -C "$scratch/source" apply --check "${patch_options[@]}" "$scratch/migration.patch"
+git -C "$scratch/source" apply "${patch_options[@]}" "$scratch/migration.patch"
 cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "ic-backup") | .id) as $consumer |

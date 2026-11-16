@@ -74,19 +74,22 @@
  #[cfg(test)]
 --- a/crates/ic-backup/src/store/capture/assembly/mod.rs
 +++ b/crates/ic-backup/src/store/capture/assembly/mod.rs
-@@ -1,9 +1,9 @@
+@@ -1,12 +1,9 @@
  //! Closed payload-member hashing retained by completion.
  use super::{CaptureError, open_optional};
  use crate::store::{StoreError, payload::unchanged_file};
 -use ic_host_artifacts::artifact::{HashingWriter, hash_exact_reader};
 +use ic_host_artifacts::artifact::hash_exact_reader;
  use ic_host_fs::capability::{Directory, EntryKind};
--use std::{fs::File, io::{Write, sink}};
+-use std::{
+-    fs::File,
+-    io::{Write, sink},
+-};
 +use std::{fs::File, io};
  fn names(directory: &Directory, limit: u64) -> Result<Vec<String>, CaptureError> {
      let mut names = Vec::new();
      let mut total = 0_u64;
-@@ -34,35 +34,45 @@
+@@ -37,35 +34,45 @@
      limit: u64,
  ) -> Result<([u8; 32], Vec<crate::store::manifest::MemberRecord>), CaptureError> {
      let original = names(directory, limit)?;

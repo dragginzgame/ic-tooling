@@ -1,0 +1,20 @@
+--- a/crates/canic-host/src/store.rs
++++ b/crates/canic-host/src/store.rs
+@@ -1,3 +1,3 @@
+ use crate::{Error, Result, supplier};
+-use ic_host_fs::durable::{self, PublicationMode, WriteOptions};
++use ic_host_fs::durable;
+ use serde::{Serialize, de::DeserializeOwned};
+@@ -44,11 +44,3 @@
+     }
+-    durable::write_bytes(
+-        path,
+-        WriteOptions {
+-            mode: PublicationMode::CreateNew,
+-            permissions: 0o600,
+-        },
+-        bytes,
+-    )
+-    .map_err(supplier)
++    crate::output_publication::publish(path, bytes, ic_fs_next::Destination::CreateNew, 0o777)
+ }

@@ -1,0 +1,35 @@
+--- a/crates/canic-host/src/starter/mod.rs
++++ b/crates/canic-host/src/starter/mod.rs
+@@ -246,18 +246,16 @@
+-        durable::commit_existing_directory_with(
+-            &staging,
+-            &destination,
+-            |_held, path| {
+-                for (file, bytes) in &files {
+-                    if crate::store::read(&path.join(file), bytes.len())? != *bytes {
+-                        return Err(Error::Invalid(
+-                            "starter staging changed before publication".into(),
+-                        ));
+-                    }
+-                }
+-                Ok::<(), Error>(())
+-            },
+-            |_, _| Ok(()),
+-        )
+-        .map_err(supplier)?;
++        let held_parent = ic_fs_next::Directory::open(&parent, 0).map_err(supplier)?
++            .ok_or_else(|| Error::Invalid("starter parent disappeared".into()))?;
++        let staging_name = staging.file_name()
++            .ok_or_else(|| Error::Invalid("starter staging needs a name".into()))?;
++        let held = held_parent.open_directory(staging_name, 0).map_err(supplier)?
++            .ok_or_else(|| Error::Invalid("starter staging disappeared".into()))?;
++        for (file, bytes) in &files {
++            if crate::store::read(&staging.join(file), bytes.len())? != *bytes {
++                return Err(Error::Invalid(
++                    "starter staging changed before publication".into(),
++                ));
++            }
++        }
++        held_parent.publish_directory(staging_name, &held, name).map_err(supplier)?;
+         Ok(())
+     };

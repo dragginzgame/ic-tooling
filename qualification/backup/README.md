@@ -4,9 +4,29 @@
 
 `make test-backup-commitments` is a separate current-source comparison for the
 new [complete producer operation](../../docs/byte-commitments.md). It first runs
-unchanged restore, assembled-payload and completion tests, then applies
+unchanged restore and current fixed-capture completion tests, then applies
 `commitments.patch` only if that baseline passes. It does not compose the older
 filesystem/HTTP migration or silently reuse historical source.
+
+`make test-backup-assembly` selects only the assembled-payload adapter and four
+unchanged fixed-runtime tests: complete multi-extent capture/cold replay, partial
+materialization refusal, interrupted publication reconciliation, and damaged
+manifest/completed-payload refusal. The restore source remains unchanged in this
+mode. These replace selectors for phase-based tests removed by Backup's rewrite;
+an empty baseline selection refuses before migration. The full mode still
+requires restore acceptance. Both modes require warning-denied all-target Clippy.
+The current completion caller uses the returned member records and discards the
+aggregate tree digest; these tests therefore qualify completion behavior, not an
+independent persisted aggregate-digest vector.
+
+Assembly comparison passed on 2026-11-15 using local HEAD
+`b7c2c6ae754a5ae2452e65b9be537b517614ebd2` plus working-tree changes, source-tar
+SHA-256 `5c9fd8761c954faa45317937863f98645868cb8b4a7ec24f54333ce464bc738f`.
+All four exact tests passed with both suppliers on the same captured source;
+all-target warning-denied Clippy, exact local supplier selection and retained
+external-lock admission passed. Export: `target/backup-commitments.FSwgIYxO`;
+log: `target/backup-assembly-run.log`. The exported restore module matches its
+original captured bytes. No consumer assertions or sibling files were changed.
 
 The adapter replaces incremental `HashingWriter<sink>` use in restore request
 schedule and assembled-payload commitments with `hash_with`. Domain tags, ordering,
@@ -16,7 +36,7 @@ legacy Artifacts removal. A fresh external-lock subset check and exact local
 supplier admission are required before replacement execution. Each selected test
 group must be nonempty, and both branches must pass the same test inventory.
 
-Current baseline on 2026-11-15: HEAD
+Earlier full baseline on 2026-11-15: HEAD
 `b7c2c6ae754a5ae2452e65b9be537b517614ebd2`, source-tar SHA-256
 `41a7f83cfc9e8dc2fe94ff9a9c092b411b5b959a1356e8e2204b9d88751fd21b`.
 Export: `target/backup-commitments.ZmQ9ruo7`; baseline log inside that directory.
@@ -32,8 +52,8 @@ Backup warnings (`target/backup-commitments-compile.log`); external-lock admissi
 and local byte-owner selection pass. This is not warning-denied Clippy or runtime
 equivalence. The new byte owner independently passes five tests, host and Wasm
 Clippy and warning-denied Rustdoc; all 19 Build and ten Filesystem tests also pass
-(`target/byte-commitments-tests.log`). Consumer qualification remains open until
-the current baseline passes; prior custody/HTTP results below are not refreshed.
+(`target/byte-commitments-tests.log`). Restore qualification remains open until
+its current baseline passes; prior custody/HTTP results below are not refreshed.
 
 ## Earlier custody and HTTP slices
 

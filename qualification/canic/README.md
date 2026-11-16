@@ -4,6 +4,168 @@ Current recipes select the next unpublished Build 0.87.3 / Text 0.77.2 where
 used. Their patches and locked graphs admit current local sources; historical
 runtime evidence below remains bound to its recorded checkpoint inputs.
 
+## Combined retained reads and publication
+
+`make test-canic-filesystem` compares the released suppliers with the composed
+current read, configuration, retained-record and starter/fleet publication adapters
+on one source capture. Its 37 exact selections include 33 unchanged Canic tests
+and four qualification cases installed identically before both branches. Missing
+tests, a failing baseline, stale patches or differing passing inventories refuse.
+
+`record-read.patch` refreshes only the existing retained-reader migration using
+the already-selected local aliases. It resolves an allowed ancestor alias once,
+holds the parent, admits a regular final file without following a final link,
+then performs bounded byte admission. Existing permission/hardlink policy remains.
+Trailing separators and directory inputs refuse; empty/over-limit reads and
+missing-file `NotFound` behavior retain their checks. The focused fixture now
+looks through the error source chain instead of requiring one supplier's wrapper
+depth. These are existing qualification assertions adapted for both suppliers,
+not edits to Canic's original tests or a new product API.
+
+Locks, explicit private-directory preparation, staging-name allocation and
+unrelated artifact-inspection/path helpers still select the released filesystem
+supplier. This closes a composed retained-read/publication check, not full
+dependency removal, live network qualification or production migration.
+
+Passing run on 2026-11-16: Canic 0.216.3, HEAD
+`8412c1edca540e6f299ab1cf9fc2d3e9f2c3ed5a` plus working-tree changes; source-tar
+SHA-256 `195a96a91e989f58bab2b7f51d72aafed030c5724e168742d2e760e5f36a29b4`.
+Both suppliers passed the same 37 tests, Host all-target warning-denied Clippy,
+local byte/filesystem selection and retained external-lock admission. Export:
+`target/canic-build.XMZIv7rU`; log: `target/canic-filesystem.log`. Earlier artifact
+CLI builds remain separate source-bound evidence, not part of this comparison.
+
+## Starter and fleet directory publication
+
+`make test-canic-starter-publication` compares six unchanged starter cases.
+`make test-canic-directory-publication` adds ten exact fleet-plan cases on the
+same captured source. Baseline failure or a missing named test stops migration;
+both branches must pass the same inventory. The export applies
+`starter-publication.patch` and `fleet-publication.patch` to the namespace
+transition only. Unique staging allocation, durable member writes, application
+validation, journal locks and retained recovery policy stay with Canic.
+
+Each caller holds the parent and staging directory before its existing content
+verification, then publishes through `Directory::publish_directory`. Starter
+still compares each generated file; fleet still loads and validates the exact
+plan identity. Files and child directories were synchronized by the original
+member writers; the new operation syncs the staging root and parent transition.
+Failure never deletes staging. Starter retains both paths in its existing error;
+post-rename synchronization errors retain the new typed publication receipt.
+
+These workflows allocate fresh staging before committing, so they do not use the
+old helper's implicit recovery from a missing staging name. Existing-destination
+recovery and validation remain consumer decisions. No tree traversal, Canic schema
+or public preparation callback is added to Tooling. Other old filesystem imports
+remain; this is not complete consumer cutover or native macOS qualification.
+
+The starter cases cover generated declarations, validation before staging, build
+preflight/aliases, physical source aliases, occupied destination symlinks and
+concurrent initializers. The fleet cases preserve manifest limits, Store binding,
+upgrade completion, retained approval/expiry, cancellation, tampered-artifact
+refusal and original two-child slot/digest mapping. These are local fixture tests,
+not live signing or IC deployment.
+
+Passing combined comparison on 2026-11-16: Canic 0.216.3, local HEAD
+`8412c1edca540e6f299ab1cf9fc2d3e9f2c3ed5a` plus working-tree changes, source-tar
+SHA-256 `9ac12b11844b3e428e5c56fb10e449d8bb41554649e6cc059eb0521a28884e22`.
+Both suppliers pass the same 16 exact tests, Host all-target warning-denied Clippy,
+exact local filesystem admission and retained external-lock checks. Export:
+`target/canic-build.SwPA21MC`; log: `target/canic-directory-publication.log`.
+The earlier standalone six-case starter comparison passed in
+`target/canic-build.kwGUQ0gW`; it is superseded for this slice by the combined run.
+
+## Held-parent artifact publication
+
+`make test-canic-publication` composes the owned-Build adapter with the new
+Filesystem 0.80.1 directory-preparation and file-publication operations in a
+current source export. Only artifact output is migrated. Config, journals,
+signed requests, starter trees and directory commits retain their suppliers.
+
+The private `artifact-publication.rs` adapter keeps Canic path policy: select `/`
+or the current directory once, reject parent traversal, admit normal components,
+and prepare missing directories relative to held custody. Existing modes remain;
+new directories request 0700 and files 0600. Publication uses the held leaf without
+reopening its pathname. A private stage is created exclusively; collision refuses,
+not retries. Failed publication explicitly aborts staging and retains any cleanup
+failure; visible-but-unconfirmed errors retain the receipt and failed phase.
+No Canic path, naming, serialization or recovery policy enters a Tooling product.
+
+The runner checks default and explicit real Wasm builds, exact identities, nested
+parent creation, existing modes, symlink-parent and traversal refusal, final
+symlink/hardlink/dangling replacement, failed-build preservation, occupied-directory
+refusal and stage/build scratch cleanup. Host all-target Clippy denies warnings;
+metadata admits the exact local filesystem supplier and retained external locks.
+Current CLI diagnostics explicitly select `--json`. The owned-Build patch context
+was refreshed for Canic's registry-source working-directory correction; prepared
+Cargo/Rustc selection remains explicit. This run does not requalify Store builds.
+
+This is focused Linux artifact-output evidence. Native macOS, other writers and
+production cutover remain separate gates. No sibling files are modified.
+
+Passing run on 2026-11-16: Canic 0.216.3, HEAD
+`8412c1edca540e6f299ab1cf9fc2d3e9f2c3ed5a` plus working-tree changes; source-tar
+SHA-256 `801a061a6799194cadfd0980cd09aa4104990ae6a198dd3c02f5569e464c8144`.
+Export: `target/canic-build.DV2V4iDF`; log: `target/canic-publication-run.log`.
+
+## Configuration publication
+
+`make test-canic-config-publication` runs six unchanged current configuration
+tests before migration, then applies `config-publication.patch` and repeats the
+same exact inventory. Missing selections refuse. Initial configuration selects
+CreateNew; updates select Replace while retaining the original sidecar lock,
+reload-under-lock, validation and serialization protocol. Retained-record reads
+and locking still use the released supplier; this is not complete filesystem
+dependency removal. Both output adapters share one private exported
+`output_publication` module; no new Tooling API or Canic product code is added.
+
+All six cases pass with both suppliers: malformed/unknown-field refusal,
+app/fleet editing and lock contention, concurrent first initialization, resolved
+fleet bounds, symlink refusal, and local bounded initialization with existing-file
+preservation. Host all-target warning-denied Clippy, exact local supplier selection
+and retained external-lock admission pass. No consumer assertions were changed.
+
+Evidence on 2026-11-16: Canic 0.216.3, HEAD
+`8412c1edca540e6f299ab1cf9fc2d3e9f2c3ed5a` plus working-tree changes;
+source-tar SHA-256 `14155c641b281d56836695f88c4f42769dbafa8c19c1dc3f05d91d01373015ee`.
+Final export: `target/canic-build.BL64f00o`; log: `target/canic-config-publication.log`.
+Journal/signed writers, starter directory publication, native macOS and production
+migration remain open. The shared helper's artifact checks also pass on identical
+source bytes in `target/canic-build.S4elvkoV` (`target/canic-publication-run.log`).
+The earlier artifact capture above has different source bytes.
+
+## Retained-record publication
+
+`make test-canic-record-publication` composes the configuration adapter with
+`record-publication.patch`. `store::put` keeps its 12 MiB bound before effects and
+selects CreateNew for retained records, including signed envelopes, authority,
+replies and rejections. It never replaces existing evidence. Missing parents
+request 0777 reduced by the umask, matching the retained writer; artifact/config
+callers explicitly select 0700. Existing directory modes remain unchanged.
+
+The runner compares 19 exact tests on one capture: six configuration cases, two
+original plan/evidence cases, all nine current signed-authority/recovery cases,
+and two qualification tests installed identically before both branches. The new
+tests check oversize refusal before parent creation, parent-mode equivalence to
+ordinary directory creation, create-only byte preservation and stage cleanup.
+Every named test must exist. Original Canic assertions remain unchanged.
+
+Only completed record publication is migrated. Store locking, explicit private
+directory preparation in signed workflows, retained reads, signing scratch,
+dispatch/retry policy and directory publication still belong to their existing
+owners. This does not qualify live signing, IC dispatch or a complete filesystem
+dependency removal. Partial and visible-but-unconfirmed publication errors retain
+their typed causes and cleanup/receipt evidence through the shared private adapter.
+
+Passing comparison on 2026-11-16: Canic 0.216.3, HEAD
+`8412c1edca540e6f299ab1cf9fc2d3e9f2c3ed5a` plus working-tree changes, source-tar
+SHA-256 `14155c641b281d56836695f88c4f42769dbafa8c19c1dc3f05d91d01373015ee`.
+Export: `target/canic-build.kSQ7MHPU`; log: `target/canic-record-publication.log`.
+Both inventories contain the same 19 passing tests; all-target Host Clippy,
+exact local supplier admission and retained external-lock checks pass.
+Artifact publication also passes with the final shared helper on identical source
+bytes in `target/canic-build.0uvmI8co` (`target/canic-publication-run.log`).
+
 
 `make test-canic-consumer` snapshots the current `CANIC_SOURCE` working tree
 (default `../canic`), including local edits and non-ignored additions, without

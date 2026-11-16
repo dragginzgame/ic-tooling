@@ -1,0 +1,21 @@
+--- a/crates/canic-host/src/fleet_plan/mod.rs
++++ b/crates/canic-host/src/fleet_plan/mod.rs
+@@ -581,9 +581,11 @@
+     store::put_json(&staging.join("fleet.json"), &value)?;
+-    ic_host_fs::durable::commit_existing_directory_with(
+-        &staging,
+-        &dir,
+-        |_, path| load(path, &id).map(|_| ()),
+-        |_, _| Ok(()),
+-    )
+-    .map_err(supplier)?;
++    let held_parent = ic_fs_next::Directory::open(journal, 0).map_err(supplier)?
++        .ok_or_else(|| Error::Invalid("fleet journal disappeared".into()))?;
++    let staging_name = staging.file_name()
++        .ok_or_else(|| Error::Invalid("fleet staging needs a name".into()))?;
++    let held = held_parent.open_directory(staging_name, 0).map_err(supplier)?
++        .ok_or_else(|| Error::Invalid("fleet staging disappeared".into()))?;
++    load(&staging, &id)?;
++    held_parent.publish_directory(staging_name, &held, dir.file_name().ok_or_else(|| Error::Invalid("fleet destination needs a name".into()))?)
++        .map_err(supplier)?;
+     Ok(FleetPlanning::Create {

@@ -161,14 +161,16 @@
      diagnostic: String,
  }
  
-@@ -122,99 +122,149 @@
+@@ -122,101 +122,149 @@
      } else {
          workspace_manifest.clone()
      };
 -    let mut command = Command::new("cargo");
 -    command
 -        .current_dir(
--            manifest
+-            // Registry archives have no rust-toolchain.toml. Keep the consumer's
+-            // toolchain selection even when building the standalone Store manifest.
+-            workspace_manifest
 -                .parent()
 -                .ok_or_else(|| Error::Invalid("manifest has no parent".into()))?,
 -        )
@@ -185,7 +187,7 @@
 -        .arg(manifest)
 -        .args(["-p", package]);
 -    if package == "ic-wasm-store" {
--        // Keep compiler output in the consuming workspace, never Cargo's source checkout.
+-        // Keep compiler output in the consuming workspace, never Cargo's registry source.
 -        command.arg("--target-dir").arg(
 -            workspace_manifest
 -                .parent()

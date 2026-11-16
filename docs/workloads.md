@@ -59,14 +59,14 @@ names the owner of required behavior; it does not imply production migration.
 | Package archives and source inventories | Frozen delivery workload | Auth is on hold and Storage is frozen. Exact archive/candidate acceptance still belongs in final release qualification. |
 | Release metadata editor | Displaced, not implemented here | Development/release tooling, not Build's runtime API; determine required callers and Toko ownership before replacing it. |
 | Bounded byte read/copy and content identity | Implemented core | Artifacts admits complete streams with exact/maximum length and original failure evidence. |
-| Digest representation and incremental producer hashing | Partly implemented; consumer acceptance blocked | Complete bounded `hash_with` is independently tested. Current Backup restore baseline fails before migration; digest representation and multi-step hash state remain unresolved. |
+| Digest representation and incremental producer hashing | Partly implemented and qualified | Complete bounded `hash_with` passes independent tests and current Backup assembly comparison. Restore baseline fails before migration; digest representation and multi-step hash state remain unresolved. |
 | Gzip, chunk digests, matching writers and generic artifact trees | Unresolved | No new generic family admitted. Backup's own assembled-payload hash is a concrete requirement, not authority to import the old tree framework. |
 | Wasm inspection/validation/custom sections and WAT compilation | Partly displaced; broader surface unresolved | Testkit generates its required held-reply module; Build admits its selected artifact. Neither replaces the complete legacy Wasm utilities. |
 | Batch-label validation and general buffer/budget wrappers | Unresolved / private where needed | Required limits exist within new operations; a reusable public utility needs a caller contract. |
 | Held file/directory access, enumeration and identity | Implemented core | Filesystem provides the qualified Backup custody operations; hostile namespace writers remain outside the contract. |
-| File staging, seal/commit, locks and visible-but-unsynced evidence | Implemented core | New Filesystem operations preserve independent write/publication/durability outcomes. |
-| Parent creation and path-based publication | Required consumer migration | Current Canic artifact, config, store, signed and publication paths retain old FS. Define parent authority and path semantics per operation. |
-| Directory commit, retained trees, non-aliasing export and verified copy | Required or unresolved by caller | Canic fleet-plan/starter staging demonstrates directory publication. Do not model it as file commit or import all durable-tree utilities. |
+| File staging, seal/commit, locks and visible-but-unsynced evidence | Implemented core | File publication preserves independent effects/durability. Held-parent sidecar open/admit/acquire passes four independent tests; Canic lock migration remains pending. |
+| Parent creation and path-based publication | Implemented and qualified for artifact/config/record output | Held-parent publication passes artifact checks and a combined 37-case retained-read/publication comparison. Locks, explicit preparation, staging allocation and unrelated artifact/path helpers still use old FS. |
+| Directory commit, retained trees, non-aliasing export and verified copy | Directory publication implemented and qualified; other capabilities unresolved | Held no-replace directory publication passes five independent cases and 16 current Canic starter/fleet comparisons. No generic tree traversal/recovery framework is admitted. |
 | Scratch files, owned-directory guards and path helpers | Partly private/displaced | Build owns its scratch lifecycle; consumer-owned paths/recovery stay with consumers. Remaining standalone helpers need individual requirements. |
 | Bounded group/direct-child execution | Implemented core | Process owns stream limits, cancellation/deadlines, signaling and cleanup evidence; callers own decoding and retry. |
 | Background handoff and reaping | Implemented core | Worker keeps child custody after observer drop; no daemonization or readiness guarantee. |
@@ -88,33 +88,31 @@ Seven legacy package areas having new packages therefore says little about
 whole-surface completion: Build, Artifacts, Filesystem and Testkit still have
 material capability gaps beyond their implemented cores.
 
-## Next implementation slice: Backup byte commitments
+## Next implementation slice: Canic parent authority and publication
 
-The first complete producer operation is now implemented; see
-[its contract](byte-commitments.md). Narrow restore-schedule and assembled-payload
-adapters compile, but current Backup baseline failures block runtime comparison.
-Independent tests cover the core; no complete legacy Artifacts removal is claimed.
-The steps below retain the intended boundaries for finishing this workload.
+The complete producer operation is implemented; see [its contract](byte-commitments.md).
+Four current Backup assembly tests pass with both suppliers and Clippy. Restore
+remains blocked by its earlier baseline failures; no full Artifacts removal is claimed.
 
-1. Define complete bounded producer hashing independently of native I/O and
-   consumer serialization. Unlike an unrestricted digest snapshot, success must
-   identify only a completed producer operation; a producer/limit/write refusal
-   cannot be mistaken for a complete commitment. Preserve original failure causes.
-2. Review the coherent old hashing implementation only after that contract is
-   fixed. Keep Backup's domain tags, field ordering, little-endian lengths, member
-   sorting and lowercase digest encodings in Backup. Do not add Backup formats or
-   a generic artifact-tree abstraction to Tooling.
-3. Add independent acceptance for empty input, multiple writes, exact limits,
-   overflow, producer refusal and accepted-prefix behavior. Match expected hashes
-   against fixed bytes, including the unchanged assembled-payload domain framing.
-   Portable byte consumers must not acquire native, HTTP or Testkit dependencies.
-4. Qualify a current Backup export using the new operation and explicit digest
-   conversion at its persisted/public boundaries. Retain manifest, plan, transfer,
-   capture and restore assertions; prove which legacy Artifacts edges disappear.
-   Existing 65-case custody evidence alone does not cover current capture additions.
+[Directory preparation](directory-preparation.md) now implements explicit child
+creation relative to held custody. Four independent tests pass, including retained
+prefixes after child/parent synchronization failures. It removes manual sequencing
+and reopening a prepared path without importing consumer path policy.
 
-This slice removes a real retained supplier obligation without opening frozen
-workloads. Follow it with Canic filesystem contract slices: file publication and
-parent authority first, directory publication separately. Continue server/snapshot
+Current Canic artifact, configuration and retained-record output pass held-root
+preparation composed with file stage/write/seal/commit. Nineteen writer/recovery
+comparisons preserve create-only evidence, original permissions and signing
+authority. A combined 37-case comparison now also qualifies retained reads with
+all these writers. Locks and explicit signed-workflow parent preparation remain
+selected from the released supplier. [Directory publication](directory-publication.md)
+passes independent tests and 16 current starter/fleet comparisons, preserving
+retained staging and visible-but-unconfirmed outcomes. Next review remaining
+locks, staging allocation, artifact/path helpers and explicit preparation by required caller;
+the completed slices do not establish full filesystem dependency removal.
+Keep Canic serialization, staging names and retry/recovery decisions with its owner.
+The [sidecar operation](sidecar-locks.md) now owns open/create/admit/acquire with
+four independent tests; its next gate is current Canic lock interoperability.
+
+Continue server/snapshot
 ownership only from an unfrozen consumer's required lifecycle. Native macOS and
 candidate-archive qualification remain independent release gates throughout.

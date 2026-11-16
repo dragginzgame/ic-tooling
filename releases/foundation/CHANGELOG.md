@@ -17,12 +17,21 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Add `Directory::lock` to own held-parent sidecar open/create, regular-file
+  admission and nonblocking acquisition. Preserve existing bytes/modes/inode,
+  original contention and explicit release; no sync, replacement or cleanup.
+- Add no-replace publication of a caller-prepared held directory. Return distinct
+  pre-publication and visible-but-unconfirmed failures with namespace evidence;
+  retain staging on refusal and leave tree validation/recovery with the caller.
+- Add held-directory preparation for explicit child components. Validate names
+  before effects, return the held leaf, and retain created prefixes with the
+  failed component and original cause. Production consumer migration remains separate.
 - Add `hash_with` for complete bounded producer commitments without buffering
   payloads or exposing digest snapshots. Preserve producer errors and refuse
   swallowed overflow; producer completion and length admission gate identity.
-- Prepare narrow Backup restore-schedule and assembled-payload adapters. They
-  compile with retained external locks, but consumer acceptance is blocked by
-  15 failures in the unchanged current restore baseline; no sibling repair.
+- Qualify the Backup assembled-payload adapter with four current fixed-capture
+  completion/refusal tests using both suppliers, retained external locks and
+  warning-denied Clippy. Restore remains blocked by 15 earlier baseline failures.
 
 - Share bounded complete-stream admission and held-directory custody with Build
   and Backup. Add held-file identity-checked removal for producer cleanup while
@@ -32,6 +41,27 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🧪 Testing
 
+- Pass four independent sidecar-lock tests for native interoperability,
+  concurrent creation, parent rename, policy refusal and preserved foreign bytes.
+- Pass a combined 37-case current Canic retained-read/publication comparison with
+  both suppliers, preserving ancestor aliases, final-link refusal, bounds and
+  missing-file causes alongside config/record/starter/fleet recovery assertions.
+- Pass five independent directory-publication cases covering atomic competition,
+  occupied/link refusal, identity substitution, parent rename and sync failures.
+- Qualify 16 current Canic starter/fleet cases with both suppliers. Preserve
+  content verification, no-replace publication, retained approvals, cancellation,
+  expiry and slot mapping; staging allocation and member writers stay unchanged.
+- Pass four independent directory-preparation tests, including root rename,
+  link/permission refusal and retained prefixes after child/parent sync failures.
+- Qualify current Canic artifact publication through held parent preparation and
+  stage/write/seal/commit, preserving final-entry replacement, refusal, existing
+  modes and cleanup. Other Canic writers remain unmigrated.
+- Compare six current Canic configuration cases with both suppliers, preserving
+  create-only initialization, locked replacement, bounds and symlink refusal.
+  The original sidecar locking and retained-record reads remain selected.
+- Compare retained-record publication and signed recovery with both suppliers;
+  preserve create-only evidence, original parent permissions, authority/expiry
+  behavior and bounds before effects. Signing and lock protocols stay unchanged.
 - Qualify current Backup metadata, payload and transfer-binding behavior, retaining
   its budget, commitment comparison, recovery evidence and uncertain-write refusals.
 - Qualify Canic retained-record admission and signed recovery. Current local-source

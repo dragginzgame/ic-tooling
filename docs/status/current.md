@@ -1,4 +1,4 @@
-# Current implementation — 2026-11-15
+# Current implementation — 2026-11-16
 
 ## Authority and delivery
 
@@ -17,7 +17,7 @@ current requirements must justify further APIs.
 retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
 historical evidence. No old product source/test tree was admitted wholesale.
 
-GitHub checkpoint `87c260722d0d13ba45d716fb760bdaa410ada89d` is on `origin/main`.
+GitHub checkpoint `1a8d0cfa0c72dbd8e77ec86f2573c6e46e9b821e` is on `origin/main`.
 Post-push review of the delivered adapters and qualification wiring found no new
 defect. Process 0.80.2 implements [handoff/reaping](../process-handoff.md): 14 Process
 and 19 Build tests pass, plus Clippy/Rustdoc. Current Canic 0.214.0 viewer replacement
@@ -38,7 +38,7 @@ Toko 0.44.4 is pinned in both workspaces; snapshot/tools admission and 19 Build 
 - `ic-host-fs` 0.80.1 owns held directories/files, bounded enumeration, cooperative
   locks and stage/write/seal/commit. Preserve retained failures and visible-but-
   unconfirmed effects; identity-checked removal still needs caller exclusion.
-  See [custody](../filesystem-custody.md).
+  [Directory preparation](../directory-preparation.md) returns held custody; [directory publication](../directory-publication.md) now passes independent failure tests.
 - `ic-host-http` 0.80.0 owns complete bounded response bodies, typed original
   transport/allocation causes and capped fallible growth. Reqwest/TLS/request
   policy stays consumer-owned. See [HTTP](../http-body.md).
@@ -121,13 +121,14 @@ The next-version changes alone do not refresh earlier runtime evidence.
 Product evidence: six Testkit unit tests and two installed fixture/controller tests
 pass, plus default/feature Clippy and docs; see the Testkit contract for scope.
 19 Build tests; five byte tests and Wasm Clippy; ten filesystem
-failure tests; two HTTP body tests; three Text escaping/layout tests. Relevant
+failure tests plus four preparation, five directory-publication and four sidecar-lock tests; two HTTP and three Text tests. Relevant
 Clippy, Rustdoc, formatting and Toko admission pass as recorded by their slices.
 HTTP/Tokio stay outside Build and portable bytes. No full release gate is claimed.
 
 ## Remaining gates and limitations
 
-Next: [Backup commitment qualification](../../qualification/backup/README.md#complete-producer-commitments): baseline has 15 restore failures; no migration acceptance claimed.
+[Backup assembly](../../qualification/backup/README.md#complete-producer-commitments) passes four current tests with both suppliers and Clippy; restore remains blocked by its earlier 15 baseline failures.
+Canic reads/publication passes 37 comparisons; artifact CLI evidence is separate. [Sidecar locks](../sidecar-locks.md) pass independent tests; next qualify Canic, then remaining staging/preparation/path calls.
 The [native-execution review](../process-execution.md) records the shared Process
 owner used by Build and current Canic group capture, foreground execution and
 desktop handoff. Combined Linux qualification covers artifact/metadata, lock setup,
@@ -146,5 +147,4 @@ These slices assume trusted source/tools, cooperative process groups, exclusive
 child reaping and caller exclusion of namespace/content writers. Identity checks
 are not hostile-writer atomic compare-and-unlink. App builds are serial, not an
 all-or-nothing transaction. HTTP/installed fixtures require loopback. No production
-consumer has migrated; no performance or peak-memory improvement is claimed.
-Shared-target reuse still needs matched evidence.
+consumer has migrated; no performance or peak-memory improvement is claimed. Shared-target reuse needs matched evidence.

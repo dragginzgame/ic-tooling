@@ -1,4 +1,6 @@
 //! Descriptor-relative admission; no application formats or implicit hierarchy creation.
+mod preparation;
+pub use preparation::PrepareFailure;
 use std::ffi::{OsStr, OsString};
 use std::fs::{File, Metadata};
 use std::io;
@@ -188,16 +190,7 @@ impl Directory {
         let Some(fd) = optional(fs::openat(&*self.file, child, flags, Mode::empty()))? else {
             return Ok(None);
         };
-        let file = File::from(fd);
-        let metadata = file.metadata()?;
-        if !metadata.is_file() {
-            return Err(Error::Kind);
-        }
-        permissions(&metadata, policy.forbidden)?;
-        if policy.single_link && metadata.nlink() != 1 {
-            return Err(Error::Aliased);
-        }
-        Ok(Some(file))
+        admit_file(File::from(fd), policy).map(Some)
     }
     /// Create a retained recovery file, never replace it. No automatic deletion.
     /// The caller owns ordered writes, sync and recovery of partial effects. This
@@ -295,7 +288,7 @@ pub(crate) fn name(value: &OsStr) -> Result<(), Error> {
         Ok(())
     }
 }
-fn valid_mode(mode: u32) -> Result<(), Error> {
+pub(crate) fn valid_mode(mode: u32) -> Result<(), Error> {
     if mode & !0o777 != 0 {
         Err(Error::Permissions {
             mode,
@@ -304,6 +297,17 @@ fn valid_mode(mode: u32) -> Result<(), Error> {
     } else {
         Ok(())
     }
+}
+pub(crate) fn admit_file(file: File, policy: FilePolicy) -> Result<File, Error> {
+    let metadata = file.metadata()?;
+    if !metadata.is_file() {
+        return Err(Error::Kind);
+    }
+    permissions(&metadata, policy.forbidden)?;
+    if policy.single_link && metadata.nlink() != 1 {
+        return Err(Error::Aliased);
+    }
+    Ok(file)
 }
 fn directory_flags() -> OFlags {
     OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC

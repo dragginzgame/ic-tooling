@@ -1,8 +1,8 @@
 # Stage 2: Backup filesystem custody
 
-The consumer oracle is committed Backup `d8955cf1e34f24934027f448ef16ee6841eafbb0`.
-Its dirty working tree is not an input. Qualification exports that exact commit
-under this repository's target directory and applies a durable reviewed patch.
+The initial consumer oracle was Backup `d8955cf1e34f24934027f448ef16ee6841eafbb0`.
+That pinned run is historical; active qualification snapshots current local
+working trees as specified in [source selection](qualification/local-sources.md).
 Original store/payload/capture tests remain in that export, not copied into products.
 
 ## Required behavior and selected boundary
@@ -45,6 +45,11 @@ writers while operating on admitted state. Identity checks refuse observed forei
 stage replacements, including cleanup. Unix lacks atomic compare-identity-and-unlink:
 checks do not protect against hostile mutation between observation and mutation.
 No stronger guarantee is claimed. Required create-only races remain safe atomically.
+
+[Explicit directory preparation](directory-preparation.md) extends this owner
+with held-root traversal and creation of named children. It returns the held leaf
+and retains partial effects on failure; file publication never creates parents
+implicitly. Current Canic artifact-output qualification passes; other writers remain pending.
 
 ## Byte and package ownership
 

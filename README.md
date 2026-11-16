@@ -11,6 +11,24 @@ pinned to 0.44.4 in both workspaces.
 The byte owner also supplies [complete producer commitments](docs/byte-commitments.md).
 Independent tests pass; `make test-backup-commitments` compares the selected
 consumer migration, currently blocked by failures in the unchanged Backup baseline.
+`make test-backup-assembly` passes four current fixed-capture completion/refusal
+tests with both suppliers and Clippy, without selecting the restore migration.
+
+Filesystem [directory preparation](docs/directory-preparation.md) returns a held
+leaf after explicit child creation, preserving partial failures. Independent Linux
+tests and `make test-canic-publication` pass for current Canic artifact output;
+other writers and native macOS qualification remain open.
+`make test-canic-config-publication` also passes six unchanged configuration tests
+with both suppliers, retaining Canic's original sidecar-lock protocol.
+`make test-canic-record-publication` compares create-only retained records and
+signed-attempt recovery, including original authority and expiry behavior.
+Filesystem [directory publication](docs/directory-publication.md) independently
+passes no-replace and partial-failure tests. `make test-canic-directory-publication`
+also passes 16 current starter/fleet tests with both suppliers.
+`make test-canic-filesystem` composes retained reads and all these publication
+adapters on one current source capture, checking both suppliers' test inventories.
+Held-directory [sidecar locks](docs/sidecar-locks.md) now pass independent tests;
+Canic lock migration remains separate from the completed publication checks.
 
 `ic-cargo-qualification` 0.1.2 is a separate unpublished development executable
 for external-lock admission; it adds no dependencies to the ordinary Build API.

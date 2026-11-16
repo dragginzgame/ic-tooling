@@ -4,7 +4,7 @@ set -euo pipefail
 mode="${1:-artifact}"
 foreground=false
 case "$mode" in
-  artifact|app|metadata) ;;
+  artifact|app|metadata|custody|config|records|starter|trees|filesystem) ;;
   process)
     [[ "$(uname -s)" == Linux ]] || { echo 'Combined foreground PTY qualification requires Linux; macOS remains separate.' >&2; exit 1; }
     mode=app
@@ -20,9 +20,107 @@ trap 'printf "Canic Build export: %s\n" "$scratch"' EXIT
 mkdir "$scratch/source" "$scratch/probe" "$scratch/runtime"
 source "$repo/scripts/qualification/local-source.sh"
 export_local_source
+if [[ "$mode" == records || "$mode" == filesystem ]]; then
+  [[ ! -L "$scratch/source/crates/canic-host/src/store" ]]
+  [[ ! -e "$scratch/source/crates/canic-host/src/store/publication_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/store/publication_tests.rs" ]]
+  mkdir -p "$scratch/source/crates/canic-host/src/store"
+  cp "$repo/qualification/canic/record-publication-tests.rs" "$scratch/source/crates/canic-host/src/store/publication_tests.rs"
+  printf '\n#[cfg(test)]\nmod publication_tests;\n' >> "$scratch/source/crates/canic-host/src/store.rs"
+fi
+if [[ "$mode" == filesystem ]]; then
+  [[ ! -e "$scratch/source/crates/canic-host/src/store/read_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/store/read_tests.rs" ]]
+  cp "$repo/qualification/canic/record-read-tests.rs" "$scratch/source/crates/canic-host/src/store/read_tests.rs"
+  printf '\n#[cfg(test)]\nmod read_tests;\n' >> "$scratch/source/crates/canic-host/src/store.rs"
+fi
+writer_checks() {
+  local selection
+  if [[ "$mode" == filesystem ]]; then
+    for selection in exact_bytes_limits_and_original_missing_cause final_links_refuse_and_ancestor_links_remain_supported; do
+      CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "store::read_tests::$selection" -- --exact || return
+    done
+  fi
+  if [[ "$mode" == starter || "$mode" == trees || "$mode" == filesystem ]]; then
+    for selection in starter_config_resolves_supplied_root_store_and_generated_app_without_effects invalid_names_or_source_are_refused_before_any_staging app_build_admits_all_recipes_before_creating_a_lock_or_output app_build_refuses_output_aliases_before_creating_a_lock_or_output source_alias_resolves_physically_and_destination_symlinks_are_not_replaced concurrent_initializers_publish_one_complete_project; do
+      CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "starter::tests::$selection" -- --exact || return
+    done
+    if [[ "$mode" == trees || "$mode" == filesystem ]]; then
+      for selection in stored_fleet_admits_full_manifests_and_keeps_retained_inline_delivery fleet_store_is_an_independent_output_binding_and_debit fleet_upgrade_requires_completion_and_never_reopens_or_substitutes_authority fleet_authority_is_retained_before_outputs_and_replanning_never_renews_it fleet_refuses_unsupported_trees_conflicts_and_tampered_artifacts expired_unsubmitted_fleet_cannot_start_root_or_renew_its_schedule cancellation_retains_evidence_and_permanently_revokes_only_unprepared_work existing_fleet_approval_keeps_its_original_digest two_child_approval_retains_slot_mapping_and_cancels_only_before_preparation retained_two_child_approval_preserves_digest_and_rejects_slot_reassignment; do
+        CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "fleet_plan::tests::$selection" -- --exact || return
+      done
+    fi
+    if [[ "$mode" != filesystem ]]; then return 0; fi
+  fi
+  for selection in nested_unknown_fields_refuse_edits_without_changing_config app_and_fleet_initialization_preserve_evidence_and_refuse_conflicts concurrent_first_app_initializers_cannot_replace_a_winner app_definition_bounds_apply_to_resolved_fleets_before_publication fleet_initialization_does_not_follow_config_symlinks initialization_is_local_bounded_and_preserves_existing_files; do
+    CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "config::tests::$selection" -- --exact || return
+  done
+  if [[ "$mode" == records || "$mode" == filesystem ]]; then
+    for selection in tests::plan_identity_admission_and_artifact_custody tests::retained_evidence_never_overwrites_and_store_excludes_concurrent_writer store::publication_tests::oversize_refuses_before_parent_creation store::publication_tests::record_creation_preserves_parent_mode_and_never_replaces_evidence; do
+      CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "$selection" -- --exact || return
+    done
+    for selection in maintenance_observation_cannot_sign_another_root_or_effect recovery_retains_exact_attempt_and_deadline_after_effect_expiry exact_attempt_binding_rejects_changed_authority_argument_network_and_id status_authority_must_bind_the_same_request expired_uncertain_attempt_stays_retained_without_a_new_signature observation_authority_cannot_dispatch_effects_after_approval_expiry scoped_observation_rejects_sibling_and_legacy_payloads_before_signing publication_read_authority_survives_effect_expiry_without_renewing_mutations store_readiness_authority_cannot_change_target_or_renew_handover; do
+      CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "signed::tests::$selection" -- --exact || return
+    done
+  fi
+}
+if [[ "$mode" == config || "$mode" == records || "$mode" == filesystem || "$mode" == starter || "$mode" == trees ]]; then
+  writer_checks > "$scratch/$mode-baseline.log" 2>&1 || { tail -40 "$scratch/$mode-baseline.log"; exit 1; }
+  if rg -q '^test result: ok\. 0 passed' "$scratch/$mode-baseline.log"; then
+    echo 'Required writer test missing; migration was not applied.' >&2; exit 1
+  fi
+fi
 export GIT_CEILING_DIRECTORIES="$repo/target"
 git -C "$scratch/source" apply --check "$repo/qualification/canic/owned-build.patch"
 git -C "$scratch/source" apply "$repo/qualification/canic/owned-build.patch"
+if [[ "$mode" == custody || "$mode" == config || "$mode" == records || "$mode" == filesystem || "$mode" == starter || "$mode" == trees ]]; then
+  cp "$scratch/source/Cargo.lock" "$scratch/admitted-build.lock"
+  sed "s|@IC_TOOLING_NEW@|$repo|g" "$repo/qualification/canic/artifact-publication.patch" > "$scratch/publication.patch"
+  git -C "$scratch/source" apply --check "$scratch/publication.patch"
+  git -C "$scratch/source" apply "$scratch/publication.patch"
+  [[ ! -e "$scratch/source/crates/canic-host/src/output_publication.rs" && ! -L "$scratch/source/crates/canic-host/src/output_publication.rs" ]]
+  cp "$repo/qualification/canic/artifact-publication.rs" "$scratch/source/crates/canic-host/src/output_publication.rs"
+  if [[ "$mode" == config || "$mode" == records || "$mode" == filesystem ]]; then
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/config-publication.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/config-publication.patch"
+  fi
+  if [[ "$mode" == records || "$mode" == filesystem ]]; then
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/record-publication.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/record-publication.patch"
+  fi
+  if [[ "$mode" == starter || "$mode" == trees || "$mode" == filesystem ]]; then
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/starter-publication.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/starter-publication.patch"
+  fi
+  if [[ "$mode" == trees || "$mode" == filesystem ]]; then
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/fleet-publication.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/fleet-publication.patch"
+  fi
+  if [[ "$mode" == filesystem ]]; then
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/record-read.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/record-read.patch"
+  fi
+  cargo metadata --manifest-path "$scratch/source/Cargo.toml" --format-version 1 --offline > "$scratch/publication-metadata.json"
+  jq -e --arg root "$repo" '. as $m |
+    (.packages[] | select(.name == "canic-host") | .id) as $host |
+    (.packages[] | select(.name == "ic-host-fs" and .version == "0.80.1" and .source == null and .manifest_path == ($root + "/crates/ic-host-fs/Cargo.toml")) | .id) as $fs |
+    (.packages[] | select(.name == "ic-host-artifacts" and .version == "0.80.1" and .source == null and .manifest_path == ($root + "/crates/ic-host-artifacts/Cargo.toml")) | .id) as $bytes |
+    any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_fs_next" and .pkg == $fs) and
+    any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_bytes_next" and .pkg == $bytes)
+  ' "$scratch/publication-metadata.json" >/dev/null
+  cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- verify-external-lock "$scratch/admitted-build.lock" "$scratch/source/Cargo.lock" 1048576
+  CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo clippy --manifest-path "$scratch/source/Cargo.toml" -p canic-host --all-targets --locked --offline -- -D warnings
+  if [[ "$mode" == config || "$mode" == records || "$mode" == filesystem || "$mode" == starter || "$mode" == trees ]]; then
+    writer_checks > "$scratch/$mode-replacement.log" 2>&1
+    for branch in baseline replacement; do
+      if rg -q '^test result: ok\. 0 passed' "$scratch/$mode-$branch.log"; then
+        echo 'Required writer test missing' >&2; exit 1
+      fi
+      rg '^test .* \.\.\. ok$' "$scratch/$mode-$branch.log" | LC_ALL=C sort > "$scratch/$mode-$branch-tests.txt"
+    done
+    cmp "$scratch/$mode-baseline-tests.txt" "$scratch/$mode-replacement-tests.txt"
+    cat "$scratch/$mode-replacement-tests.txt"
+    exit 0
+  fi
+fi
 if [[ "$mode" == app ]]; then
   cp "$scratch/source/Cargo.lock" "$scratch/admitted-build.lock"
   git -C "$scratch/source" apply --check "$repo/qualification/canic/text.patch"
@@ -150,7 +248,7 @@ fi
 default="$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/owned_wasm_probe.wasm"
 mkdir -p "$(dirname "$default")"
 printf 'stale output' > "$default"
-args=(artifact build --manifest "$scratch/probe/Cargo.toml" --package owned-wasm-probe)
+args=(--json artifact build --manifest "$scratch/probe/Cargo.toml" --package owned-wasm-probe)
 "$cli" "${args[@]}" > "$scratch/default.json"
 jq -e --arg path "$default" '.wasm == $path and .artifact.bytes > 8' "$scratch/default.json" >/dev/null
 hash="$(sha256sum "$default" | cut -d ' ' -f1)"
@@ -160,6 +258,27 @@ rg -a -q 'owned-wasm-probe!' "$default"
 "$cli" "${args[@]}" --output "$scratch/explicit.wasm" > "$scratch/explicit.json"
 cmp "$default" "$scratch/explicit.wasm"
 jq -e --arg hash "$hash" --arg path "$scratch/explicit.wasm" '.artifact.sha256 == $hash and .wasm == $path' "$scratch/explicit.json" >/dev/null
+if [[ "$mode" == custody ]]; then
+  mkdir "$scratch/existing-parent"
+  chmod 755 "$scratch/existing-parent"
+  "$cli" "${args[@]}" --output "$scratch/existing-parent/new/deep/artifact.wasm" > "$scratch/nested.json"
+  cmp "$default" "$scratch/existing-parent/new/deep/artifact.wasm"
+  [[ -n "$(find "$scratch/existing-parent" -prune -perm 0755 -print)" ]]
+  [[ -n "$(find "$scratch/existing-parent/new" -prune -perm 0700 -print)" ]]
+  [[ -n "$(find "$scratch/existing-parent/new/deep/artifact.wasm" -prune -perm 0600 -print)" ]]
+  ln -s existing-parent "$scratch/parent-alias"
+  for output in "$scratch/parent-alias/forbidden/artifact.wasm" "$scratch/not-created/../escape.wasm"; do
+    if "$cli" "${args[@]}" --output "$output" > "$scratch/parent-refuse.stdout" 2> "$scratch/parent-refuse.stderr"; then
+      echo 'Expected parent authority refusal' >&2; exit 1
+    fi
+    if [[ "$output" == *parent-alias* ]]; then
+      jq -e '.error == "supplier" and (.message | contains("filesystem link/type refused"))' "$scratch/parent-refuse.stderr" >/dev/null
+    else
+      jq -e '.error == "invalid" and (.message | contains("parent traversal"))' "$scratch/parent-refuse.stderr" >/dev/null
+    fi
+  done
+  [[ ! -e "$scratch/existing-parent/forbidden" && ! -e "$scratch/not-created" && ! -e "$scratch/escape.wasm" ]]
+fi
 # Replace the selected entry without following a final symlink or mutating an alias.
 printf 'foreign bytes' > "$scratch/foreign.wasm"
 ln -s foreign.wasm "$scratch/symlink.wasm"
@@ -204,3 +323,7 @@ fi
 # Private target cleanup also applies after the failed Cargo invocation.
 [[ -z "$(ls -A "$scratch/runtime")" ]]
 printf 'Default/explicit publication and symlink/hardlink/dangling failure preservation, exact identity, publication refusal and scratch cleanup passed.\n'
+if [[ "$mode" == custody ]]; then
+  [[ -z "$(find "$scratch" -name '.canic-artifact-*' -print -quit)" ]]
+  printf 'Held parent preparation, existing modes, private creation, traversal/link refusal and staging cleanup passed.\n'
+fi
