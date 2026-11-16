@@ -1,0 +1,34 @@
+[package]
+name = "ic-cargo-metadata"
+version = "0.1.0"
+description = "Bounded, format-preserving Cargo release metadata renderer"
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = ["crates-io"]
+
+[target.'cfg(any())'.dev-dependencies]
+toko-tooling.workspace = true
+
+[package.metadata.toko-tooling.loc]
+category = "build_tooling"
+
+[dependencies]
+clap.workspace = true
+ic-host-artifacts.workspace = true
+ic-host-fs.workspace = true
+ic-host-text.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+toml_edit.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

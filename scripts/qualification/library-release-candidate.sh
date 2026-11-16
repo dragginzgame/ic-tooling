@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Explicit HTTP/Text/Testkit archive readiness; no publication or sibling edits.
+# Explicit library/tool archive readiness; no publication or sibling edits.
 set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 cd "$repo"
-[[ $# -gt 0 ]] || { echo 'Select release groups: http text testkit' >&2; exit 2; }
+[[ $# -gt 0 ]] || { echo 'Select release groups: http text testkit cargo-metadata' >&2; exit 2; }
 packages=()
 selection=()
 features=()
@@ -15,6 +15,7 @@ for group in "$@"; do
   case "$group" in
     http) package=ic-host-http ;;
     text) package=ic-host-text ;;
+    cargo-metadata) package=ic-cargo-metadata ;;
     testkit) package=ic-testkit; testkit=true; features=(--features 'ic-testkit/held-reply-fixtures,ic-testkit/cli') ;;
     *) echo "Unsupported library release group: $group" >&2; exit 2 ;;
   esac

@@ -28,7 +28,7 @@ if [[ "$mode" == replacement ]]; then
   cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- verify-external-lock "$scratch/original.lock" "$scratch/source/Cargo.lock" 1048576
   jq -e --arg root "$repo" '. as $m |
     (.packages[] | select(.name == "canic-cli") | .id) as $cli |
-    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
     any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
     all($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name != "ic_host_process")
   ' "$scratch/metadata.json" >/dev/null

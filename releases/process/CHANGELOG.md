@@ -2,6 +2,14 @@
 
 Package: `ic-host-process`. Earlier unreleased headings retain development history.
 
+## [0.80.3] - 2026-11-16
+
+### 🔧 Changed
+
+- Adopt macOS-only libproc 0.15.0 with bindgen 0.73 and SDKROOT-aware binding
+  generation. Preserve the process-group API, zero-result errno handling and
+  cleanup guarantees; no Process API or Linux runtime dependency changes.
+
 ## [0.80.2] - 2026-11-16
 
 ### 🔧 Changed

@@ -24,12 +24,25 @@ Cooperative membership and exclusive reaping remain required; this grants no
 authority over borrowed PIDs or credential-changing descendants.
 
 Rustix has no group-membership query for macOS. The target-gated, exact libproc
-0.14.11 dependency supplies a safe native query; errno is cleared for its documented
+0.15.0 dependency supplies a safe native query; errno is cleared for its documented
 zero-result convention. These dependencies and libproc's binding generation are
 absent from Linux builds. Native macOS setup requires Xcode/Command Line Tools
 and libclang. No observation API, sampler or application policy is added.
 The native regression distinguishes an exited solitary leader from an exited
 leader with a live child, retaining existing cleanup failure-order tests.
+
+Process 0.80.3 adopts libproc 0.15.0. The non-yanked upstream archive SHA-256 is
+`564c269d134dc8276288e18bf00b30e7fe2136ff8f0974f9bf65477cd5ad82fe`.
+Compared with 0.14.11, `processes.rs` and the used Darwin `listpids`/return handling
+are unchanged. The errno reset therefore remains necessary. Upstream raises its
+MSRV to 1.85 (below our 1.100 compiler), upgrades bindgen to 0.73 and honors
+SDKROOT when generating native bindings. It also supplies committed bindings for
+cross-target compilation; those do not establish native runtime acceptance.
+The selected root graph is `ic-host-process` on both macOS architectures; Linux
+continues to exclude libproc and bindgen. The independent qualification workspace
+has no Process dependency. No public type or downstream minimum-capability change
+requires a Build/Testkit release. Native cleanup acceptance for this adoption runs
+asynchronously in the existing CI matrix, separately from prior 0.80.2 evidence.
 The existing [design](DESIGN.md#process-session) names the execution ownership
 boundary. This review checks it against current local callers rather than copying
 `ic-host-process` or exposing Build's private implementation unchanged.

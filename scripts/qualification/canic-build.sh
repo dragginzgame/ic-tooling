@@ -255,7 +255,7 @@ if [[ "$mode" == custody || "$mode" == config || "$mode" == records || "$mode" =
     CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo check --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline
     jq -e --arg root "$repo" '. as $m |
       (.packages[] | select(.name == "canic-host") | .id) as $host |
-      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2" and .source == null and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and .source == null and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
       any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
       all($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name != "ic_host_process")
     ' "$scratch/publication-metadata.json" >/dev/null
@@ -346,7 +346,7 @@ jq -e --arg root "$supplier" '. as $m |
   (.packages[] | select(.name == "canic-host") | .id) as $host |
   (.packages[] | select(.name == "ic-build" and .version == "0.87.3" and
     .manifest_path == ($root + "/crates/ic-build/Cargo.toml")) | .id) as $build |
-  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2" and
+  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and
     .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
   any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_build" and .pkg == $build) and
   any($m.resolve.nodes[] | select(.id == $build) | .deps[]; .name == "ic_host_process" and .pkg == $process)
@@ -354,7 +354,7 @@ jq -e --arg root "$supplier" '. as $m |
 if [[ "$mode" == app ]]; then
   if [[ "$foreground" == true ]]; then
     jq -e --arg root "$repo" '[.packages[] | select(.name == "ic-host-process")] |
-      length == 1 and .[0].version == "0.80.2" and .[0].source == null and
+      length == 1 and .[0].version == "0.80.3" and .[0].source == null and
       .[0].manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")
     ' "$scratch/metadata.json" >/dev/null
     jq -e '. as $m | all($m.workspace_members[]; . as $member |
@@ -365,14 +365,14 @@ if [[ "$mode" == app ]]; then
     ' "$scratch/metadata.json" >/dev/null
     jq -e --arg root "$repo" '. as $m |
       (.packages[] | select(.name == "canic-profile-client") | .id) as $client |
-      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
       any($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
       all($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name != "ic_host_process")
     ' "$scratch/metadata.json" >/dev/null
   fi
   jq -e '. as $m |
     (.packages[] | select(.name == "canic-host") | .id) as $host |
-    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2") | .id) as $process |
+    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3") | .id) as $process |
     any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_host_process_next" and .pkg == $process)
   ' "$scratch/metadata.json" >/dev/null
   jq -e --arg root "$repo" '. as $m |
@@ -391,7 +391,7 @@ if [[ "$runtime_migration" == true ]]; then
     (.packages[] | select(.name == "canic-cli") | .id) as $cli |
     (.packages[] | select(.name == "ic-host-fs" and .version == "0.80.1" and .source == null and .manifest_path == ($root + "/crates/ic-host-fs/Cargo.toml")) | .id) as $fs |
     (.packages[] | select(.name == "ic-host-artifacts" and .version == "0.80.1" and .source == null and .manifest_path == ($root + "/crates/ic-host-artifacts/Cargo.toml")) | .id) as $bytes |
-    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.2" and .source == null and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and .source == null and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
     any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_fs_next" and .pkg == $fs) and
     any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_bytes_next" and .pkg == $bytes) and
     any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and

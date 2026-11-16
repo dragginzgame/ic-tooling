@@ -42,8 +42,8 @@ patches/runners are retired. [Tooling #10](https://github.com/dragginzgame/ic-to
 owns this supported setup/check/run successor. DB #3 is closed as a
 misclassified consumer mirror; its source/acceptance evidence is retained there.
 The CLI is published and installed through Toko; offline tool/server admission,
-piped IO, original child failure and endpoint closure pass. Tooling #10 retains
-native-host acceptance under asynchronous CI. Sibling sources are unchanged,
+piped IO, original child failure and endpoint closure pass. Tooling #10 is closed
+after native-host acceptance. Sibling sources are unchanged,
 and DB adoption remains with its owner.
 
 Focused Linux evidence from the installed 0.107.4 archive passes setup/admission,
@@ -76,19 +76,27 @@ Tooling #5 and Tooling #7 are closed; supplier fixes are published.
 release metadata editor requirement. [Tooling #9](https://github.com/dragginzgame/ic-tooling/issues/9)
 is closed after publication and registry-only 0.107.4/Protocol 0.2.7 resolution.
 
-Delivered [CI run 43954042484](https://github.com/dragginzgame/ic-tooling/actions/runs/43954042484)
-passed the Build stack on all three native hosts and the library lane on macOS
-Intel. Linux library checks failed because an extracted optional registry Host
-dependency was not fetched before offline tests; the delivered gate fixes that setup
-omission. macOS ARM setup received HTTP 403 from the asset download. Its diagnostics
-worked; no upstream service repair or ARM library acceptance is claimed. These
-results qualify that earlier source only, not the new CLI/Protocol release.
+[CI run 43968510609](https://github.com/dragginzgame/ic-tooling/actions/runs/43968510609)
+at `a00f697` passes library archives, CLI lifetime/failure cleanup and Build archives
+on Linux, Apple Silicon macOS and Intel macOS. This completes Tooling #10's native
+acceptance, including actual setup and the packaged command on all hosts.
+
+Tooling #8's [metadata renderer](../cargo-metadata.md) is implemented locally as
+`ic-cargo-metadata` 0.1.0, outside Build, with its own release group. It removes
+the old Build CLI dependency while Toko retains transactions and delivery.
+Focused tests and Linux archive admission pass. Current captured Toko coordinated
+and multi-lock checks and Scheduling's real Timers/Jobs release transactions pass,
+including rollback, preservation and downgrade refusal. Native CI is wired;
+publication and registry installation remain outstanding, so #8 remains open.
+Changes are uncommitted. The pre-existing Protocol 0.2.8 lock edit is preserved
+separately and is not a new qualified adoption.
 
 ## Owners and remaining requirements
 
 | Owner | Contract |
 | --- | --- |
 | Build | [Owned builds](../build-owned-artifact.md) |
+| Cargo metadata command | [Release candidate rendering](../cargo-metadata.md) |
 | Artifacts | [Producer commitments](../byte-commitments.md) |
 | FS | [Preparation](../directory-preparation.md), [publication](../directory-publication.md), [locks](../sidecar-locks.md), [custody](../filesystem-custody.md) |
 | HTTP / Text | [Bounded bodies](../http-body.md), [presentation](../text-presentation.md) |

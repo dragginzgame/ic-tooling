@@ -83,12 +83,18 @@ archive qualification is not established by those historical results.
 `ic-cargo-qualification` 0.1.3 is a separate unpublished development executable
 for external-lock admission; it adds no dependencies to the ordinary Build API.
 
+`ic-cargo-metadata` 0.1.0 is an unpublished [release metadata renderer](docs/cargo-metadata.md).
+It emits bounded manifest/lock candidates without writing inputs; Toko owns the
+transactions, rollback and Cargo graph checks. `make test-cargo-metadata` checks
+the command and `make test-cargo-metadata-consumer` qualifies current Toko and
+Scheduling callers with an explicitly prepared executable.
+
 `ic-host-http` 0.80.0 is a native [complete-body adapter](docs/http-body.md).
 Consumers select Reqwest directly and own TLS/request policy.
 `make test-http-body` and `make test-backup-http` check the adapter and current
 Backup HTTP behavior using local loopback fixtures.
 
-`ic-host-process` 0.80.2 owns [bounded native execution](docs/process-execution.md).
+`ic-host-process` 0.80.3 owns [bounded native execution](docs/process-execution.md).
 Its [handoff/reaping API](docs/process-handoff.md) passes independent Linux tests
 and current Canic viewer qualification, including reaping after observer drop.
 Existing 0.80.1 consumer evidence remains tied to that version.
@@ -166,7 +172,7 @@ including control/dispatch cost observations. Installed selections require expli
 probe with both Testkit suppliers, retaining exact Wasm bytes and observations.
 
 The [release ownership map](docs/release-ownership.md) declares foundation, build,
-HTTP, Process, Text, tools and Testkit groups. [Changelogs](CHANGELOG.md) live under `releases/`;
+HTTP, Process, Text, tools, Cargo metadata and Testkit groups. [Changelogs](CHANGELOG.md) live under `releases/`;
 `make deps-list` reports each package’s group and version.
 
 Read [AGENTS.md](AGENTS.md), [TOKO-TOOLING.md](TOKO-TOOLING.md), and

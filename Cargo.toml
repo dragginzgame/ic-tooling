@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/ic-build",
+    "crates/ic-cargo-metadata",
     "crates/ic-cargo-qualification",
     "crates/ic-host-artifacts",
     "crates/ic-host-fs",
@@ -25,14 +26,16 @@ ctrlc = { version = "3.5.2", features = ["termination"] }
 errno = "0.3.15"
 ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.80.2" }
 ic-host-fs = { path = "crates/ic-host-fs", version = "0.80.2" }
-ic-host-process = { path = "crates/ic-host-process", version = "0.80.2" }
+ic-host-process = { path = "crates/ic-host-process", version = "0.80.3" }
 ic-host-text = { path = "crates/ic-host-text", version = "0.77.2" }
 ic-platform-protocol = { version = "0.2.7", default-features = false }
 ic-platform-types = { version = "0.21.2", default-features = false }
-libproc = "=0.14.11"
+libproc = "=0.15.0"
 pocket-ic = "=16.1.0"
 reqwest = { version = "0.13.5", default-features = false }
 rustix = { version = "1.1.6", features = ["fs"] }
+semver = "1.0.28"
+serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 sha2 = "0.11.1"
 tempfile = "3.27.0"
@@ -40,6 +43,7 @@ thiserror = "2.0.18"
 tokio = { version = "1.54.1", default-features = false }
 toko-tooling = "=0.44.11"
 toml = "1.2.1"
+toml_edit = "0.25.19"
 unicode-width = "0.2.3"
 wasmparser = "=0.263.0"
 wat = "=1.263.0"

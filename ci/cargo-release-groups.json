@@ -3,6 +3,14 @@
   "qualification_workspace": "qualification",
   "groups": [
     {
+      "name": "cargo-metadata",
+      "primary": "ic-cargo-metadata",
+      "version": "package",
+      "members": ["ic-cargo-metadata"],
+      "changelog": "releases/cargo-metadata/CHANGELOG.md",
+      "dependencies": []
+    },
+    {
       "name": "foundation",
       "primary": "ic-host-artifacts",
       "version": "package",

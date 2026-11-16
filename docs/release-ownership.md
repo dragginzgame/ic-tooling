@@ -10,13 +10,14 @@ now has its own group as its requirements-driven implementation begins.
 | --- | --- |
 | foundation | Byte admission and held filesystem custody share the existing 0.80 development line and capture/publication contracts. Build and the qualification executable consume them; they remain coordinated in this slice. |
 | build | Cargo execution and owned Wasm capture have distinct consumer migrations from storage/byte operations. A presentation or HTTP change must not force a Build version change. |
+| cargo-metadata | Installable read-only release metadata rendering serves Toko transactions; its command protocol and publication are independent of Build and the private external-lock checker. |
 | http | Complete response-body admission depends on Reqwest and has its own native consumer requirements. It stays outside Build and portable byte graphs. |
 | text | Pure escaping and table layout serve Query and DB independently of HTTP, process execution and filesystem authority. |
 | process | Native child/group execution and bounded communication serve Build and foreground tools without Cargo, IC or observation policy. |
 | testkit | Shared PocketIC client identity, bounded generated fixtures and exclusive held-reply control serve test drivers independently of Build and product runtimes. |
 | tools | The external-lock executable has its own command contract. Its ledger also owns maintained repository qualification/setup workflows; these scripts are not executable library features or runtime dependencies. |
 
-All eight product packages belong to exactly one group. `qualification/owned-wasm-probe`
+All nine product packages belong to exactly one group. `qualification/owned-wasm-probe`
 is a private fixture in the independent qualification workspace, not a product group.
 The server CLI belongs to Testkit's package and group; the private prototype is removed.
 The Testkit group owns an actual admitted package, not a future simulator wrapper.
@@ -41,6 +42,33 @@ the private qualification executable retains `publish = false`. All seven
 libraries are published; publication permission in a manifest is not delivery.
 
 ## Independent library publication
+
+### Process 0.80.3 and Cargo metadata 0.1.0 delivery
+
+The maintainer authorized libproc adoption and deployment with Tooling #8's fix.
+The selected publishable groups are Process 0.80.3 and Cargo metadata 0.1.0,
+delivered from this checkout's `main` to `origin/main` with annotated tags
+`process-v0.80.3` and `cargo-metadata-v0.1.0`, then crates.io publication.
+Build/Testkit need no new release: their existing compatible Process requirements
+already admit the patch. The inherited Protocol 0.2.8 lock selection is retained;
+it is outside these packages' graphs and does not claim new Testkit qualification.
+
+The libproc archive and source review are recorded in
+[Process execution](process-execution.md). Both macOS targets pass all-target
+Process Clippy with libproc 0.15.0. This is cross-compilation evidence, not native
+runtime acceptance. Linux packaged Build-stack unit/PTY tests, Clippy and docs
+pass at `target/build-release.u9sAKBc9/`; only Process is selected for publication.
+The metadata editor's selected Linux archive gate passes at
+`target/library-release.xHftYEED/`. Existing actual Toko/Scheduling transaction
+acceptance remains bound to its captured sources; registry installation will be
+qualified after publication. Logs are under `target/deploy-metadata-libproc/`.
+The existing CI matrix owns native runtime acceptance asynchronously, under the
+maintainer's explicit direction to push without waiting for CI.
+
+Process qualification adapters select 0.80.3 while retaining their source-drift
+refusals. Updating a supplier selection does not claim a new Canic migration;
+its earlier source-bound evidence remains historical. The archive gate now runs
+Clippy before its expensive runtime checks.
 
 ### Testkit 0.107.4 publication
 
@@ -90,6 +118,11 @@ pass through the registry-installed executable. Installer compilation took 106
 seconds; its phase log, selected path and runtime evidence are retained under
 `target/deploy-01074/`. Tooling #10's remaining native-host acceptance stays with
 asynchronous CI; registry delivery and supported installation are complete.
+
+Subsequent [CI run 43968510609](https://github.com/dragginzgame/ic-tooling/actions/runs/43968510609)
+at `a00f69718564c323ac96812c6986a82c8a872533` passed on Linux and both native macOS
+architectures. Every library lane passed actual setup, CLI cleanup and packaged
+library acceptance; the Build-stack lanes also passed. Tooling #10 is closed.
 
 ### Testkit 0.107.3 publication
 

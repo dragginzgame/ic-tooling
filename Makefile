@@ -21,6 +21,8 @@ help:
 	  '  make test-pocketic-setup Failed-download diagnostics (TESTKIT_SERVER_CLI; no network)' \
 	  '  make test-library-release-candidate RELEASE_GROUPS="http text testkit" Selected archive readiness (prepared Testkit tools required)' \
 	  '  make test-text         Terminal escaping and Unicode table contracts' \
+	  '  make test-cargo-metadata Renderer lint and document/command boundary tests' \
+	  '  make test-cargo-metadata-consumer Current Toko/Scheduling release transactions (prepared editor)' \
 	  '  make test-canic-build-metadata Current Canic metadata admission/refusal' \
 	  '  make test-canic-app-build Combined Canic Build/Text app and display contracts' \
 	  '  make test-canic-build  Current Canic owned Wasm build and publication refusal' \
@@ -69,6 +71,14 @@ help:
 	  '  make tools-check      Prepared-tool admission'
 
 check: toko-tooling-check
+
+.PHONY: test-cargo-metadata test-cargo-metadata-consumer
+test-cargo-metadata:
+	cargo clippy -p ic-cargo-metadata --all-targets --locked --offline -- -D warnings
+	cargo test -p ic-cargo-metadata --locked --offline
+
+test-cargo-metadata-consumer:
+	bash scripts/qualification/cargo-metadata-consumer.sh
 
 .PHONY: test-pocketic-setup
 test-pocketic-setup:

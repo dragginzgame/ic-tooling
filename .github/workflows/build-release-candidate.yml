@@ -88,11 +88,11 @@ jobs:
       - name: Qualify command lifetime and failure cleanup
         id: simulator-qualification
         run: make test-testkit-server-cli
-      - name: Qualify packaged HTTP, Text and Testkit
+      - name: Qualify packaged HTTP, Text, Testkit and metadata editor
         id: library-qualification
         env:
           LIBRARY_RELEASE_ONLINE: 'true'
-        run: bash scripts/qualification/library-release-candidate.sh http text testkit
+        run: bash scripts/qualification/library-release-candidate.sh http text testkit cargo-metadata
       - name: Retain library archives and evidence
         if: ${{ always() && (steps.library-qualification.outcome != 'skipped' || steps.simulator-qualification.outcome != 'skipped') }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
