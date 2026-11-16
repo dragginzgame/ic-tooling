@@ -30,9 +30,19 @@ refusals. Server inventory independently observes instance deletion.
 Archive run `target/library-release.rkypb3mu` passes all selected checks, including
 six unit tests and both installed tests, with all three instances observed deleted.
 Source and tool hashes remain stable. Cargo's verified publication dry run passes;
-its archive is byte-identical to the qualified candidate. Publication/readback
-status and final archive identity are recorded below after verification. Hosted CI
-is asynchronous; no new native macOS acceptance is inferred from local Linux execution.
+its archive is byte-identical to the qualified candidate. After committing, the
+clean-provenance archive preserves the same normalized manifest, lock and source;
+only VCS provenance changes. Hosted CI is asynchronous; no new native macOS
+acceptance is inferred from local Linux execution.
+
+Testkit **0.107.2 is published**, non-yanked, from commit
+`74006cadd6501895959c6a7641a8f01f33cc47ff`, tag `testkit-v0.107.2`. Main and the
+annotated tag were pushed atomically. The registry download is byte-identical to
+the verified committed preflight/upload archive, SHA-256
+`6d0ad701e379df81e149511b0d6bbb810648770ec777a4eb88fd7e87e4ee2883`.
+Its original manifest/source match the committed files, and Cargo VCS provenance
+identifies the release commit without a dirty marker. The unrelated root-manifest
+comment edit was preserved during clean-input publication and restored afterward.
 
 ## Current Scheduling boundary
 
@@ -49,10 +59,17 @@ warning-denied Clippy. Building `once-probe` stops in `ic-timers` with 21 errors
 at remaining old identity/system/task APIs; see `scheduling-local.log`. This is a
 different current source capture from the earlier 17-error probe review.
 
+After publication, a second export of the identical captured bytes changes only
+the Testkit requirement to registry `=0.107.2` and applies the same private selector.
+It resolves one registry Testkit 0.107.2, Types 0.21.2, Runtime 0.23.13 and guard
+0.23.13 with no supplier path override. Both native drivers again pass all-target
+warning-denied Clippy. The registry-only Wasm build stops at the same 21 Timers
+errors; logs/metadata are `scheduling-registry-*` under `target/issue-5/`.
+
 The held-flight/held-upgrade and watchdog-admission/Jobs-pressure cases require
 that Wasm artifact. They remain blocked at their owning consumer; no passing
-installed Scheduling result is claimed. Registry resolution and publication can
-remove Tooling's supplier conflict but cannot establish the remaining acceptance
+installed Scheduling result is claimed. Registry resolution and publication have
+removed Tooling's supplier conflict but cannot establish the remaining acceptance
 in [Tooling #5](https://github.com/dragginzgame/ic-tooling/issues/5).
 [Scheduling #2](https://github.com/dragginzgame/ic-scheduling/issues/2) owns the
 consumer implementation and migration evidence.
