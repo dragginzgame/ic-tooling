@@ -1,7 +1,7 @@
 //! Export-only mapping of Canic output destination policy to held custody.
 use crate::{Error, Result, supplier};
 use ic_fs_next::{Commit, Destination, Directory, Policy, Retention};
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Component, Path};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -43,10 +43,21 @@ pub(crate) fn publish(
     {
         return Err(Error::Invalid("output needs a normal filename".into()));
     }
-    // Keep path authority in Canic. Parent traversal refuses before creation;
-    // root/current-directory selection happens once, then all work is relative.
+    let name = destination
+        .file_name()
+        .ok_or_else(|| Error::Invalid("output needs a filename".into()))?;
+    let path = destination
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let parent = prepare(path, parent_mode)?;
+    publish_in(&parent, name, bytes, mode)
+}
+
+pub(crate) fn prepare(path: &Path, mode: u32) -> Result<Directory> {
+    // Application path policy remains outside the filesystem product.
     let mut names = Vec::new();
-    for component in destination.components() {
+    for component in path.components() {
         match component {
             Component::Normal(name) => names.push(name),
             Component::RootDir | Component::CurDir => {}
@@ -57,10 +68,7 @@ pub(crate) fn publish(
             }
         }
     }
-    let name = names
-        .pop()
-        .ok_or_else(|| Error::Invalid("output needs a filename".into()))?;
-    let anchor = if destination.is_absolute() {
+    let anchor = if path.is_absolute() {
         Path::new("/")
     } else {
         Path::new(".")
@@ -68,10 +76,15 @@ pub(crate) fn publish(
     let root = Directory::open(anchor, 0)
         .map_err(supplier)?
         .ok_or_else(|| Error::Invalid("output root disappeared".into()))?;
-    // The calling writer selects parent policy; existing modes remain unchanged.
-    let parent = root
-        .prepare_directories(&names, parent_mode, 0)
-        .map_err(supplier)?;
+    root.prepare_directories(&names, mode, 0).map_err(supplier)
+}
+
+pub(crate) fn publish_in(
+    parent: &Directory,
+    name: &OsStr,
+    bytes: &[u8],
+    mode: Destination,
+) -> Result<()> {
     let staging = OsString::from(format!(
         ".canic-artifact-{}-{}",
         std::process::id(),

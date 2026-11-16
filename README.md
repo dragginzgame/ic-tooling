@@ -27,8 +27,17 @@ passes no-replace and partial-failure tests. `make test-canic-directory-publicat
 also passes 16 current starter/fleet tests with both suppliers.
 `make test-canic-filesystem` composes retained reads and all these publication
 adapters on one current source capture, checking both suppliers' test inventories.
-Held-directory [sidecar locks](docs/sidecar-locks.md) now pass independent tests;
-Canic lock migration remains separate from the completed publication checks.
+Held-directory [sidecar locks](docs/sidecar-locks.md) pass independent tests.
+`make test-canic-sidecar-lock` compares Store/configuration locking alongside
+the retained-read/publication cases and released-helper interoperability.
+`make test-canic-parent-preparation` also compares Store/plan writers using the
+prepared directory directly for locking and publication.
+That recipe also retains starter/fleet staging custody from allocation through
+publication, with two additional collision and identity acceptance tests.
+Starter and fleet staging member parents and writes also use held custody.
+The composed recipe now includes recovery/release preparation and six publication
+cases: 47 paired tests plus two custody tests. Live signing/submission remains
+outside this qualification.
 
 `ic-cargo-qualification` 0.1.2 is a separate unpublished development executable
 for external-lock admission; it adds no dependencies to the ordinary Build API.

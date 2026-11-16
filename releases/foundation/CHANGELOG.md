@@ -41,6 +41,24 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🧪 Testing
 
+- Extend Canic held preparation to recovery/release records and dispatch deadlines;
+  pass 47 paired cases plus two custody tests. Preserve authority, persisted JSON
+  and recovery ordering; live signing/submission remains outside runtime evidence.
+- Qualify fleet staging member writes through retained root/child handles, keeping
+  preparation order, slot mapping, JSON bytes and create-only publication in the
+  composed 41-case comparison plus two custody tests.
+- Qualify starter member preparation and publication through held staging custody,
+  removing its released parent helper and pathname-based writes while preserving
+  generated content, create-only behavior and retained partial staging.
+- Qualify held starter/fleet staging allocation in the 41-case Canic comparison
+  plus two collision/identity cases; retain the created handle through publication
+  without adding public allocation policy or importing consumer product code.
+- Qualify Canic Store/plan preparation with 41 composed cases: use prepared custody
+  directly for locking and both plan writes, preserving permissions, path refusal,
+  bounds and retained recovery behavior.
+- Qualify Canic Store/configuration sidecar locks in a 39-case combined comparison,
+  preserving contention with the released helper, inode/bytes/modes, hard-link
+  policy and release on scope exit. Native macOS remains unqualified.
 - Pass four independent sidecar-lock tests for native interoperability,
   concurrent creation, parent rename, policy refusal and preserved foreign bytes.
 - Pass a combined 37-case current Canic retained-read/publication comparison with

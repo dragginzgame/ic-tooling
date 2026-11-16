@@ -64,7 +64,7 @@ names the owner of required behavior; it does not imply production migration.
 | Wasm inspection/validation/custom sections and WAT compilation | Partly displaced; broader surface unresolved | Testkit generates its required held-reply module; Build admits its selected artifact. Neither replaces the complete legacy Wasm utilities. |
 | Batch-label validation and general buffer/budget wrappers | Unresolved / private where needed | Required limits exist within new operations; a reusable public utility needs a caller contract. |
 | Held file/directory access, enumeration and identity | Implemented core | Filesystem provides the qualified Backup custody operations; hostile namespace writers remain outside the contract. |
-| File staging, seal/commit, locks and visible-but-unsynced evidence | Implemented core | File publication preserves independent effects/durability. Held-parent sidecar open/admit/acquire passes four independent tests; Canic lock migration remains pending. |
+| File staging, seal/commit, locks and visible-but-unsynced evidence | Implemented core | File publication preserves independent effects/durability. Held-parent sidecar open/admit/acquire passes four independent tests and a 39-case current Canic comparison with released-lock interoperability. |
 | Parent creation and path-based publication | Implemented and qualified for artifact/config/record output | Held-parent publication passes artifact checks and a combined 37-case retained-read/publication comparison. Locks, explicit preparation, staging allocation and unrelated artifact/path helpers still use old FS. |
 | Directory commit, retained trees, non-aliasing export and verified copy | Directory publication implemented and qualified; other capabilities unresolved | Held no-replace directory publication passes five independent cases and 16 current Canic starter/fleet comparisons. No generic tree traversal/recovery framework is admitted. |
 | Scratch files, owned-directory guards and path helpers | Partly private/displaced | Build owns its scratch lifecycle; consumer-owned paths/recovery stay with consumers. Remaining standalone helpers need individual requirements. |
@@ -103,15 +103,29 @@ Current Canic artifact, configuration and retained-record output pass held-root
 preparation composed with file stage/write/seal/commit. Nineteen writer/recovery
 comparisons preserve create-only evidence, original permissions and signing
 authority. A combined 37-case comparison now also qualifies retained reads with
-all these writers. Locks and explicit signed-workflow parent preparation remain
-selected from the released supplier. [Directory publication](directory-publication.md)
+all these writers. Explicit signed-workflow parent preparation remains selected
+from the released supplier. [Directory publication](directory-publication.md)
 passes independent tests and 16 current starter/fleet comparisons, preserving
 retained staging and visible-but-unconfirmed outcomes. Next review remaining
-locks, staging allocation, artifact/path helpers and explicit preparation by required caller;
+staging allocation, artifact/path helpers and explicit preparation by required caller;
 the completed slices do not establish full filesystem dependency removal.
 Keep Canic serialization, staging names and retry/recovery decisions with its owner.
 The [sidecar operation](sidecar-locks.md) now owns open/create/admit/acquire with
-four independent tests; its next gate is current Canic lock interoperability.
+four independent tests and 39 composed Canic cases. Store/configuration locks
+interoperate with the released helper; remaining preparation/staging/path calls
+still retain their suppliers. Store/plan preparation now passes 41 composed cases:
+Store locks through the prepared directory and plan publication uses held custody
+for both writes. The composed recipe now also retains starter/fleet staging
+handles from allocation through publication, with two independent collision and
+identity tests. Naming and the collision budget stay in the private consumer
+adapter; no new Tooling API is added. Starter member preparation and publication
+now use that held root and returned leaves, passing the same composed comparison.
+Fleet staging now similarly retains prepared root/child handles through ordered
+member writes; the 41 paired cases and two custody tests pass. Recovery/release
+writers now also retain prepared custody, with six publication cases expanding
+the comparison to 47. Live submission/terminal-result handling remains outside
+runtime evidence. Artifact inspection and app-output path resolution remain
+separate migrations; released test helpers are retained as independent oracles.
 
 Continue server/snapshot
 ownership only from an unfrozen consumer's required lifecycle. Native macOS and

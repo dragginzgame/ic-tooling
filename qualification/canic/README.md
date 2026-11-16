@@ -4,6 +4,167 @@ Current recipes select the next unpublished Build 0.87.3 / Text 0.77.2 where
 used. Their patches and locked graphs admit current local sources; historical
 runtime evidence below remains bound to its recorded checkpoint inputs.
 
+## Recovery and release preparation
+
+`recovery-preparation.patch` retains prepared directory custody for signed
+authority/attempt/reply/rejection writes, publication dispatch deadlines, and
+fleet release module/plan writes. A private `store::put_json_in` preserves the
+existing pretty-JSON encoding and record bound through `put_in`; no schema or
+filesystem public API changes. Existing evidence reads, signing scratch cleanup,
+authority admission, expiry checks and network dispatch ordering remain unchanged.
+Read paths and signing scratch still require caller namespace/content exclusion.
+
+The composed recipe selects six additional original publication tests alongside
+the existing signed recovery and filesystem cases. These cover retained deadlines,
+conflicting authority, receipt/manifest binding and unpublished-release refusal.
+The resulting 47 paired cases do not exercise live update replies or certified
+rejections: those migrated branches receive compile/Clippy validation here,
+with their file publication primitive covered separately. Full fleet release
+execution and actual signing/submission remain outside this evidence.
+
+Passing Linux run: `target/canic-build.UbqRprbi`, logged in
+`target/canic-recovery-preparation.log`. Canic 0.216.4 HEAD
+`f0cbb3e78592b869a464cc46b80289700e9d4cd7` plus working-tree changes; source-tar
+SHA-256 `8c3ac40011aadd1d779a970a546cac866684bd9831dfc9642a73ae8300538488`.
+Both suppliers pass identical 47-case inventories, plus both replacement custody
+tests, Host all-target warning-denied Clippy and dependency/lock admission.
+Remaining released filesystem calls in product source are artifact inspection
+and app-output path resolution; test helpers remain independent baseline oracles.
+This inspection does not establish full filesystem migration or archive acceptance.
+
+## Held staging allocation
+
+`fleet-members.patch` keeps the prepared root and child directories while writing
+the fleet's staged records. Preparation remains root then application children;
+publication remains root module/plan, optional Store module, application modules,
+then fleet JSON. Child handles follow the slot order already admitted by
+`FleetPlan::digest`; no slot policy or persisted representation moves to Tooling.
+The optional Store directory is prepared at its original point in that sequence.
+All writes use `store::put_in`, retaining the record bound and create-only policy.
+Content validation still calls the original `load` before directory publication.
+This removes fleet staging member pathname reopening, with no new public API.
+
+Fleet member migration passes all 41 paired cases and both replacement custody
+tests in `target/canic-build.dOpCLZbT`, logged in `target/canic-fleet-members.log`.
+Host all-target warning-denied Clippy, local dependency admission and external-lock
+checks pass. The capture has the same HEAD and source-tar hash recorded below.
+The ten original fleet cases retain one/two-child slot mapping, original digest,
+Store binding, retained approvals, cancellation, expiry and artifact refusals.
+This is Linux export evidence; it does not migrate the production consumer or
+qualify native macOS.
+
+The recipe's `starter-members.patch` then uses the held staging directory for
+starter member creation. Each generated relative member parent is decomposed into
+normal names, prepared with 0700, and passed directly to `store::put_in`. This
+removes the starter's released private-parent helper and pathname-based member
+publication. Existing record bounds, 0600 file mode, create-only policy, sorted
+member order, partial staging retention and exact content verification remain.
+Verification still uses the retained staging path; namespace/content exclusion
+remains required. Signed recovery and fleet release preparation are separate migrations.
+
+Starter member migration passes the same 41 paired cases and two replacement
+custody tests, plus Host all-target Clippy and dependency admission, in
+`target/canic-build.nHJiFWDy` (`target/canic-starter-members.log`). This capture
+has the identical HEAD and source-tar hash recorded below for staging allocation.
+The six unchanged starter tests include complete project creation, pre-effect
+refusals, alias policy and concurrent initializers; no sibling source was edited.
+
+The parent-preparation recipe additionally applies `staging-directory.patch` to
+starter and fleet publication. Their private allocator keeps the two Canic
+prefixes, process/sequence names, 32 collision attempts and 0700 request reduced
+by umask. It uses `Directory::create_directory` and retains that returned handle
+through content verification and no-replace publication. No new public allocator
+or consumer policy enters the Tooling crates. Content verification still uses paths;
+callers must exclude namespace/content mutation throughout the operation.
+
+Only occupied candidates retry; other creation, parent-sync or admission failures
+stop and identify the candidate, retaining any created directory. This adds parent
+synchronization at allocation; failures are not silently treated as collisions.
+The original released allocator is inspected solely for naming, collision and
+retention obligations; its generic options and implementation are not imported.
+
+The same 41 consumer cases compare released and replacement suppliers. Two
+replacement-only tests separately check occupied files/directories/symlinks,
+budget exhaustion, private mode, held-parent rename and refusal of substituted
+staging without removing either original or foreign entries. These are custody
+acceptance tests, not additional paired baseline cases.
+
+Passing Linux run on 2026-11-16: `target/canic-build.PuxsEEij`, logged in
+`target/canic-staging-allocation.log`. Current Canic 0.216.4 HEAD
+`f0cbb3e78592b869a464cc46b80289700e9d4cd7` plus working-tree changes; source-tar
+SHA-256 `bfa61b57c0b751c65ff727bf49a3b659a170954284f2fa1d75166b961e40d5e3`.
+Both suppliers pass the identical 41-case inventory; both new custody tests,
+Host all-target warning-denied Clippy, local dependency admission and external-lock
+checks pass. Native macOS and production migration remain open.
+
+## Store and plan directory preparation
+
+`make test-canic-parent-preparation` adds `parent-preparation.patch` to the
+composed read/publication/lock comparison. Store uses the prepared held directory
+directly to acquire its sidecar. Single-plan publication retains the prepared
+directory while publishing both module and serialized plan through `store::put_in`.
+This removes the prepare-path/reopen-path sequence at these two boundaries.
+
+The shared private output adapter owns Canic's path decomposition; Tooling still
+accepts explicit child names. Existing directory modes remain unchanged, missing
+private children request 0700, and parent traversal or symlink components refuse.
+Record size limits, create-only destinations, serialization order, partial plan
+publication and original lock policy remain unchanged. Signed/publication/fleet
+workflow preparation and unique staging allocation are not migrated by this slice.
+
+Two additional tests, installed identically for both suppliers, check private
+creation with existing-mode preservation and traversal/alias refusal before
+effects. The full comparison requires 41 exact cases, including the original
+plan-byte, recovery and lock assertions. No original consumer assertion changes.
+
+Passing run on 2026-11-16: Canic 0.216.4, HEAD
+`f0cbb3e78592b869a464cc46b80289700e9d4cd7` plus working-tree changes, source-tar
+SHA-256 `a1fe4e786b9a4d2c16a0834680c6916020644e0ddc835b1a8be1bb9d278591fa`.
+Both suppliers pass the same 41 tests, Host all-target warning-denied Clippy,
+local byte/filesystem admission and retained external-lock checks. Export:
+`target/canic-build.mSmzY4Jw`; log: `target/canic-parent-preparation.log`.
+
+The runner refreshes only exported file timestamps after capture. A preceding
+artifact attempt reported missing `Slot::ALL` without rebuilding the protocol;
+the untouched identical capture compiled and contained that constant, indicating
+stale shared-target reuse rather than a missing source definition.
+The failed attempt is retained at `target/canic-build.EJrLEf36` with
+`target/canic-publication-refresh-failure.log`; its untouched-source check is
+`target/canic-publication-baseline-check.log` (passed). Source tar receipts and
+bytes are unchanged by timestamp refresh.
+The final artifact CLI rerun passes in `target/canic-build.rp7Ie6Qz`, logged in
+`target/canic-publication-run.log`, on identical source bytes to the final 41-case
+comparison. No source repair or historical fallback was used.
+
+## Store and configuration sidecar locks
+
+`make test-canic-sidecar-lock` composes the filesystem comparison below with
+`sidecar-lock.patch`. Store holds the new `Lock` owner; configuration retains a
+local owner across reload, update, encoding and publication. Scope exit releases
+the lock as before. The existing configuration contention message remains intact.
+The private adapter resolves the caller-selected parent once, preserves ancestor
+alias policy, requests 0600 for new files and allows existing modes/hard links.
+It never creates parents, replaces a sidecar, or adds synchronization.
+
+The two additional qualification tests run unchanged against both suppliers:
+released-helper/Store contention in both directions, release on Store drop,
+existing inode/bytes/mode preservation with a hard link, and rejection of sidecar
+symlinks/directories without foreign-entry changes. Together with the composed
+read/publication cases, 39 exact selections are required. Original Canic tests,
+sidecar naming, reload-under-lock and configuration validation remain unchanged.
+
+Explicit private-parent preparation, unique staging allocation, artifact/path
+helpers and test-only released lock fixtures remain selected from the old
+filesystem supplier. This is interoperability qualification, not full dependency
+removal, native macOS acceptance or production migration.
+
+Passing run on 2026-11-16: Canic 0.216.3, local HEAD
+`8412c1edca540e6f299ab1cf9fc2d3e9f2c3ed5a` plus working-tree changes, source-tar
+SHA-256 `b040680021326157080ce90bc66d0bc87ce58db2d0e7be6dfd45976e4df8d714`.
+Both suppliers pass the same 39 tests, Host all-target warning-denied Clippy,
+exact byte/filesystem selection and retained external-lock admission. Export:
+`target/canic-build.DDa6GUbq`; log: `target/canic-sidecar-lock.log`.
+
 ## Combined retained reads and publication
 
 `make test-canic-filesystem` compares the released suppliers with the composed

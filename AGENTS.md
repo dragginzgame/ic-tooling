@@ -43,34 +43,16 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   introduced. Packaging follows demonstrated ownership and dependency isolation.
 - Existing crates.io names may be reused when the new owner fits. Increment
   versions from the published line; incompatible 0.x APIs require a new minor.
-  The build owner uses `ic-build` 0.87.3; byte and filesystem owners use
-  `ic-host-artifacts` and `ic-host-fs` 0.80.1. No legacy API compatibility layer.
-- `ic-cargo-qualification` 0.1.2 is an unpublished development-plane executable,
-  currently scoped to external-lock admission. Keep archive qualification and
-  release editing outside the ordinary Build API; Auth's pinned package-checker
-  migration does not imply Storage/editor/Canic cutover.
-- `ic-host-http` 0.80.0 owns complete bounded response bodies only. Consumers
-  depend directly on Reqwest for client/TLS policy; keep HTTP outside Build and
-  portable bytes. Its contract is `docs/http-body.md`.
-- `ic-host-text` 0.77.2 owns escaping and bordered/plain tables for Query, DB and Canic;
-  its contract is `docs/text-presentation.md`. Other Text operations remain open.
-- `ic-host-process` 0.80.2 owns synchronous group/direct-child execution and
-  bounded stream delivery. Build uses this shared core; caller decoding and
-  terminal policy stay outside it. Follow `docs/process-execution.md`; Canic
-  signer capture and foreground client pass export-only fixture qualification;
-  the foreground client also passes Linux PTY checks. Native macOS remains open. Injected
-  cleanup failures, Linux descendant lifetime and current Canic Build checks pass.
-  Process 0.80.2 implements `docs/process-handoff.md`; independent Linux handoff
-  and reaping tests pass. Current Canic viewer replacement passes four tests,
-  including Linux reaping after observer drop. Prior evidence is version-bound.
-- `ic-testkit` 0.107.1 admits the shared PocketIC re-export and bounded owned reply
-  catalogs and generated modules behind `held-reply-fixtures`. Follow
-  `docs/testkit-held-replies.md`; exclusive request control passes independent
-  tests and current Scheduling pressure/held-upgrade, watchdog admission/pressure
-  and Jobs pressure qualification. The full Once aggregate, paired metrics-feature
-  probe and default-feature executor comparison pass on identical current source
-  bytes; executor fixture dependencies remain absent. Native macOS, other consumers
-  and production migration remain separate gates.
+  No legacy API compatibility layer. Package versions belong in Cargo metadata
+  and `make deps-list`, not this overlay.
+- Build owns Cargo execution and owned artifacts; FS owns held custody; HTTP owns
+  bounded bodies, with Reqwest/TLS policy in callers. Keep HTTP outside Build and
+  portable bytes. Text owns presentation primitives, not output policy. Process
+  owns execution/bounded observation; caller decoding and terminal policy stay local.
+- Read the affected contracts linked from [the current handoff](docs/status/current.md).
+  Keep archive qualification and release editing outside Build. Testkit preserves
+  original PocketIC types and bounded owned reply fixtures. Package or test counts
+  do not establish migration; source-bound qualification stays with its owner.
 - Release ownership is declared in `ci/cargo-release-groups.json`; group ledgers
   live under `releases/`. See `docs/release-ownership.md`. Root changelog is an index;
   qualification fixtures remain outside product groups.

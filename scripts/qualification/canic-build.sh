@@ -3,6 +3,10 @@
 set -euo pipefail
 mode="${1:-artifact}"
 foreground=false
+lock_migration=false
+parent_migration=false
+if [[ "$mode" == parents ]]; then mode=locks; parent_migration=true; fi
+if [[ "$mode" == locks ]]; then mode=filesystem; lock_migration=true; fi
 case "$mode" in
   artifact|app|metadata|custody|config|records|starter|trees|filesystem) ;;
   process)
@@ -20,6 +24,10 @@ trap 'printf "Canic Build export: %s\n" "$scratch"' EXIT
 mkdir "$scratch/source" "$scratch/probe" "$scratch/runtime"
 source "$repo/scripts/qualification/local-source.sh"
 export_local_source
+# Tar preserves sibling mtimes, which can predate a shared target's freshness
+# observations even when a newly captured path package has different bytes.
+# Refresh only export timestamps so Cargo rechecks these captured source inputs.
+find "$scratch/source" -type f -exec touch {} +
 if [[ "$mode" == records || "$mode" == filesystem ]]; then
   [[ ! -L "$scratch/source/crates/canic-host/src/store" ]]
   [[ ! -e "$scratch/source/crates/canic-host/src/store/publication_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/store/publication_tests.rs" ]]
@@ -32,8 +40,31 @@ if [[ "$mode" == filesystem ]]; then
   cp "$repo/qualification/canic/record-read-tests.rs" "$scratch/source/crates/canic-host/src/store/read_tests.rs"
   printf '\n#[cfg(test)]\nmod read_tests;\n' >> "$scratch/source/crates/canic-host/src/store.rs"
 fi
+if [[ "$lock_migration" == true ]]; then
+  [[ ! -e "$scratch/source/crates/canic-host/src/store/sidecar_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/store/sidecar_tests.rs" ]]
+  cp "$repo/qualification/canic/sidecar-lock-tests.rs" "$scratch/source/crates/canic-host/src/store/sidecar_tests.rs"
+  printf '\n#[cfg(test)]\nmod sidecar_tests;\n' >> "$scratch/source/crates/canic-host/src/store.rs"
+fi
+if [[ "$parent_migration" == true ]]; then
+  [[ ! -e "$scratch/source/crates/canic-host/src/store/parent_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/store/parent_tests.rs" ]]
+  cp "$repo/qualification/canic/parent-preparation-tests.rs" "$scratch/source/crates/canic-host/src/store/parent_tests.rs"
+  printf '\n#[cfg(test)]\nmod parent_tests;\n' >> "$scratch/source/crates/canic-host/src/store.rs"
+fi
 writer_checks() {
   local selection
+  if [[ "$parent_migration" == true ]]; then
+    for selection in artifact_listing_preserves_unknown_outcomes_scope_and_corrupt_evidence immutable_release_plans_retain_deadlines_without_reserving_deployment_slots publication_rejects_conflicting_authority_and_retains_an_exact_read_contract publication_evidence_cannot_become_an_installation_receipt_or_change_the_manifest store_declarations_cannot_use_the_greeting_child_contract deployment_refuses_an_unpublished_release_before_reserving_the_child; do
+      CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "publication::tests::$selection" -- --exact || return
+    done
+    for selection in private_parent_creation_preserves_existing_modes private_parent_refusals_precede_creation; do
+      CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "store::parent_tests::$selection" -- --exact || return
+    done
+  fi
+  if [[ "$lock_migration" == true ]]; then
+    for selection in sidecar_preserves_inode_bytes_modes_and_legacy_contention unsafe_sidecars_refuse_without_replacing_foreign_entries; do
+      CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "store::sidecar_tests::$selection" -- --exact || return
+    done
+  fi
   if [[ "$mode" == filesystem ]]; then
     for selection in exact_bytes_limits_and_original_missing_cause final_links_refuse_and_ancestor_links_remain_supported; do
       CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "store::read_tests::$selection" -- --exact || return
@@ -98,6 +129,29 @@ if [[ "$mode" == custody || "$mode" == config || "$mode" == records || "$mode" =
     git -C "$scratch/source" apply --check "$repo/qualification/canic/record-read.patch"
     git -C "$scratch/source" apply "$repo/qualification/canic/record-read.patch"
   fi
+  if [[ "$lock_migration" == true ]]; then
+    [[ ! -e "$scratch/source/crates/canic-host/src/sidecar_lock.rs" && ! -L "$scratch/source/crates/canic-host/src/sidecar_lock.rs" ]]
+    cp "$repo/qualification/canic/sidecar-lock.rs" "$scratch/source/crates/canic-host/src/sidecar_lock.rs"
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/sidecar-lock.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/sidecar-lock.patch"
+  fi
+  if [[ "$parent_migration" == true ]]; then
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/parent-preparation.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/parent-preparation.patch"
+    [[ ! -e "$scratch/source/crates/canic-host/src/staging_directory.rs" && ! -L "$scratch/source/crates/canic-host/src/staging_directory.rs" ]]
+    [[ ! -e "$scratch/source/crates/canic-host/src/staging_directory" && ! -L "$scratch/source/crates/canic-host/src/staging_directory" ]]
+    cp "$repo/qualification/canic/staging-directory.rs" "$scratch/source/crates/canic-host/src/staging_directory.rs"
+    mkdir "$scratch/source/crates/canic-host/src/staging_directory"
+    cp "$repo/qualification/canic/staging-directory-tests.rs" "$scratch/source/crates/canic-host/src/staging_directory/tests.rs"
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/staging-directory.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/staging-directory.patch"
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/starter-members.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/starter-members.patch"
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/fleet-members.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/fleet-members.patch"
+    git -C "$scratch/source" apply --check "$repo/qualification/canic/recovery-preparation.patch"
+    git -C "$scratch/source" apply "$repo/qualification/canic/recovery-preparation.patch"
+  fi
   cargo metadata --manifest-path "$scratch/source/Cargo.toml" --format-version 1 --offline > "$scratch/publication-metadata.json"
   jq -e --arg root "$repo" '. as $m |
     (.packages[] | select(.name == "canic-host") | .id) as $host |
@@ -118,6 +172,12 @@ if [[ "$mode" == custody || "$mode" == config || "$mode" == records || "$mode" =
     done
     cmp "$scratch/$mode-baseline-tests.txt" "$scratch/$mode-replacement-tests.txt"
     cat "$scratch/$mode-replacement-tests.txt"
+    if [[ "$parent_migration" == true ]]; then
+      for selection in collisions_preserve_foreign_entries_and_stop_at_budget held_allocation_survives_parent_rename_and_rejects_substitution; do
+        CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo test --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline "staging_directory::tests::$selection" -- --exact > "$scratch/staging-$selection.log" 2>&1
+        rg '^test result: ok\. 1 passed' "$scratch/staging-$selection.log"
+      done
+    fi
     exit 0
   fi
 fi

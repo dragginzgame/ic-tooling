@@ -52,3 +52,15 @@ suppliers, plus warning-denied Clippy and dependency admission. See the
 This qualifies the namespace transition; tree creation/writing and consumer
 recovery decisions still use their retained protocols. Production migration and
 native macOS acceptance remain open.
+
+The composed parent-preparation recipe additionally replaces Canic's staging
+allocation in its export. A private, bounded naming loop uses the existing
+`Directory::create_directory`; the returned directory remains held through
+publication, removing the later staging-path reopen. This requires no additional
+public API or generic allocation policy. The 41 paired consumer cases and two
+replacement-only collision/identity cases pass on the source recorded in the
+[Canic recipe](../qualification/canic/README.md#held-staging-allocation).
+Starter member writers now prepare parents relative to the held staging directory
+and publish through the returned leaf. Fleet staging similarly retains prepared
+root/child handles for member writes. Content verification still uses paths;
+all callers must exclude namespace mutation.

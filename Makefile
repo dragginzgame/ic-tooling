@@ -25,6 +25,8 @@ help:
 	  '  make test-canic-starter-publication Compare starter directory publication' \
 	  '  make test-canic-directory-publication Compare starter/fleet directory publication' \
 	  '  make test-canic-filesystem Compare retained reads and publication together' \
+	  '  make test-canic-sidecar-lock Compare Store/config locks and filesystem callers' \
+	  '  make test-canic-parent-preparation Compare held preparation, staging and recovery' \
 	  '  make test-canic-foreground Harmless foreground client/PTY migration checks' \
 	  '  make test-canic-text   Current Canic CLI presentation qualification' \
 	  '  make test-query-text   Current Query presentation and output qualification' \
@@ -184,6 +186,14 @@ test-canic-directory-publication: toko-tooling-check
 .PHONY: test-canic-filesystem
 test-canic-filesystem: toko-tooling-check
 	bash scripts/qualification/canic-build.sh filesystem
+
+.PHONY: test-canic-sidecar-lock
+test-canic-sidecar-lock: toko-tooling-check
+	bash scripts/qualification/canic-build.sh locks
+
+.PHONY: test-canic-parent-preparation
+test-canic-parent-preparation: toko-tooling-check
+	bash scripts/qualification/canic-build.sh parents
 
 .PHONY: test-canic-app-build
 test-canic-app-build: toko-tooling-check

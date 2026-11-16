@@ -44,3 +44,17 @@ and child/parent sync failures. Current Canic artifact-output qualification now
 passes, as do six configuration comparisons with the original lock protocol; see
 [scoped evidence](../qualification/canic/README.md#held-parent-artifact-publication).
 Other Canic writers and native macOS execution remain separate gates.
+
+Current Canic Store/plan preparation now passes a 41-case composed comparison.
+Store locks through the prepared directory; plan publication retains that directory
+for both member writes. Existing modes, private creation, traversal/link refusal,
+record bounds and serialization order remain checked. See [consumer evidence](../qualification/canic/README.md#store-and-plan-directory-preparation).
+Starter members also use held staging as their preparation root, publishing each
+file directly through the returned leaf. This removes their released parent
+helper and pathname reopening without a new public operation. Staging allocation
+uses existing held-directory creation. Fleet staging also retains prepared
+root/child handles through its ordered writes. Recovery/release preparation now
+retains directories for authority, attempt, reply/rejection, dispatch-deadline and
+release records in the export. The expanded comparison passes 47 paired cases and
+two custody tests. Actual submission and certified terminal-result branches are
+not runtime-qualified by these fixtures; see the explicit consumer boundaries.

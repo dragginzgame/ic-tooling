@@ -44,5 +44,8 @@ and configuration edits). The read-only legacy helper was reviewed at
 Four new lock tests pass on Linux; all 23 filesystem and 19 Build tests pass,
 with warning-denied Clippy/Rustdoc, formatting and snapshot admission. Logs:
 `target/sidecar-lock-tests.log` and `target/sidecar-lock-check.log`. Current Canic
-lock migration remains unqualified; earlier publication comparisons retain their
-original lock supplier and must not be presented as acceptance of this operation.
+Store/configuration lock migration now passes a 39-case combined comparison with
+both suppliers, including released-helper interoperability and original inode,
+mode and byte preservation. See [scoped evidence](../qualification/canic/README.md#store-and-configuration-sidecar-locks).
+Earlier publication comparisons retain their original lock supplier; native macOS
+and production migration remain open.

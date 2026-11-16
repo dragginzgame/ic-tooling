@@ -1,0 +1,43 @@
+--- a/crates/canic-host/src/lib.rs
++++ b/crates/canic-host/src/lib.rs
+@@ -3,2 +3,3 @@
++mod sidecar_lock;
+ mod output_publication;
+ mod app_build;
+--- a/crates/canic-host/src/store.rs
++++ b/crates/canic-host/src/store.rs
+@@ -3,6 +3,3 @@
+ use serde::{Serialize, de::DeserializeOwned};
+-use std::{
+-    fs::File,
+-    path::{Path, PathBuf},
+-};
++use std::path::{Path, PathBuf};
+ 
+@@ -12,3 +9,3 @@
+     pub path: PathBuf,
+-    _lock: File,
++    _lock: ic_fs_next::Lock,
+ }
+@@ -18,4 +15,3 @@
+         durable::prepare_private_parents(root).map_err(supplier)?;
+-        let lock = durable::open_private_regular_lock_file(&root.join("lock")).map_err(supplier)?;
+-        durable::try_lock_exclusive(&lock).map_err(supplier)?;
++        let lock = crate::sidecar_lock::acquire(&root.join("lock")).map_err(supplier)?;
+         Ok(Self {
+--- a/crates/canic-host/src/config/mod.rs
++++ b/crates/canic-host/src/config/mod.rs
+@@ -696,11 +696,9 @@
+ fn edit_config<T>(path: &Path, update: impl FnOnce(&mut Config) -> Result<T>) -> Result<T> {
+-    use ic_host_fs::durable;
+ 
+     // Refuse missing/invalid input before creating a sidecar; reload under lock.
+     load_config(path)?;
+-    let lock = durable::open_private_regular_lock_file(&lock_path(path)).map_err(supplier)?;
+-    durable::try_lock_exclusive(&lock).map_err(|error| {
+-        if error.kind() == std::io::ErrorKind::WouldBlock {
++    let _lock = crate::sidecar_lock::acquire(&lock_path(path)).map_err(|error| {
++        if matches!(&error, ic_fs_next::Error::Io(cause) if cause.kind() == std::io::ErrorKind::WouldBlock) {
+             Error::Invalid("config is being edited by another Canic command".into())
+         } else {
+             supplier(error)
