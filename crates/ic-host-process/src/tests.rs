@@ -186,7 +186,7 @@ fn foreground_terminal_input_survives_direct_child_ownership() {
         "run through the prepared PTY fixture"
     );
     let mut command = Command::new("/bin/sh");
-    command.args(["-c", "test -t 0 || exit 41; test -t 2 || exit 42; read answer; test \"$answer\" = fixture-answer || exit 43; printf foreground-ok"]);
+    command.args(["-c", "test -t 0 || exit 41; test -t 2 || exit 42; printf ic-process-terminal-ready >&2; read answer; test \"$answer\" = fixture-answer || exit 43; printf foreground-ok"]);
     let mut limits = policy(Ownership::Direct);
     limits.input = Input::Inherit;
     limits.stderr = Stderr::Inherit;

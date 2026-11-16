@@ -64,7 +64,7 @@ jq -e --arg root "$candidate" --argjson names '["ic-host-artifacts","ic-host-fs"
     $p[0].publish == ["crates-io"] and ($p[0].description | length > 0))
 ' "$scratch/candidate-metadata.json" >/dev/null
 cargo test --manifest-path "$candidate/Cargo.toml" --workspace --lib --locked --offline > "$scratch/tests.log" 2>&1
-# script(1) has different command/exit interfaces on Linux and native macOS.
+# BSD script injects EOF for piped input; macOS uses a prompt-driven native PTY.
 export BUILD_RELEASE_MANIFEST="$candidate/Cargo.toml"
 export CARGO_TERM_COLOR=never
 case "$(uname -s)" in
@@ -74,7 +74,7 @@ case "$(uname -s)" in
     printf 'fixture-answer\n' | script -q -e -c 'cargo test --manifest-path "$BUILD_RELEASE_MANIFEST" -p ic-host-process --lib --locked --offline tests::foreground_terminal_input_survives_direct_child_ownership -- --ignored --exact --color never' /dev/null > "$scratch/terminal.log" 2>&1
     ;;
   Darwin)
-    printf 'fixture-answer\n' | script -q /dev/null cargo test --manifest-path "$candidate/Cargo.toml" -p ic-host-process --lib --locked --offline tests::foreground_terminal_input_survives_direct_child_ownership -- --ignored --exact --color never > "$scratch/terminal.log" 2>&1
+    expect "$repo/qualification/process-terminal.exp" "$candidate/Cargo.toml" > "$scratch/terminal.log" 2>&1
     ;;
   *) echo 'Native candidate qualification supports Linux and macOS.' >&2; exit 1 ;;
 esac

@@ -119,7 +119,10 @@ See the [native execution contract](process-execution.md) for the dependency and
 custody boundaries. Xcode/Command Line Tools with libclang are required on macOS.
 The required Gitleaks history scan runs once outside the host matrix using the
 installed pinned shared installer. Native jobs need Bash, Git, jq, grep, Perl,
-tar, shasum, mkfifo and script; no GNU-only script arguments are used on macOS.
+tar, shasum and mkfifo. Linux uses util-linux script for its PTY; macOS uses native
+Expect to wait for the child's readiness prompt before sending input. BSD script
+injected EOF ahead of piped input in the first terminal run. The fixture still
+requires terminal stdin/stderr and the exact answer; it does not skip the contract.
 
 Before publishing: require the selected commit's native jobs to pass, review the
 archive inventory and candidate hashes, and recheck registry versions and owner

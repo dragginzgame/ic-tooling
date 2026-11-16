@@ -1,0 +1,16 @@
+# Native macOS terminal input proof. Send only after the child owns its terminal.
+set timeout 120
+if {$argc != 1} { exit 2 }
+spawn -noecho cargo test --manifest-path [lindex $argv 0] -p ic-host-process --lib --locked --offline tests::foreground_terminal_input_survives_direct_child_ownership -- --ignored --exact --color never
+expect {
+    "ic-process-terminal-ready" { send -- "fixture-answer\r" }
+    timeout { exit 124 }
+    eof { exit 1 }
+}
+expect {
+    eof {}
+    timeout { exit 124 }
+}
+set result [wait]
+if {[llength $result] != 4 || [lindex $result 2] != 0} { exit 1 }
+exit [lindex $result 3]
