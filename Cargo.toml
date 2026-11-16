@@ -36,7 +36,7 @@ tempfile = "3.27.0"
 # Testkit's PocketIC requires exactly 2.0.18; other members share this selection.
 thiserror = "2.0.18"
 tokio = { version = "1.54.1", default-features = false }
-toko-tooling = "=0.44.4"
+toko-tooling = "=0.44.5"
 toml = "1.2.1"
 unicode-width = "0.2.3"
 wasmparser = "=0.263.0"

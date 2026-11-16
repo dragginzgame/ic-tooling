@@ -22,10 +22,10 @@ jobs:
           persist-credentials: false
       - name: Prepare pinned Rust and repository components
         run: rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@8bcece573511a6ce6ee8879443a8d19b6e43e7ad # 0.44.4
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@081753852ae398661fadfd0fe3b3fc631f0a96e6 # 0.44.5
       - name: Prepare common tools
         run: make install-tools
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@8bcece573511a6ce6ee8879443a8d19b6e43e7ad # 0.44.4
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@081753852ae398661fadfd0fe3b3fc631f0a96e6 # 0.44.5
         with:
           mode: save
       - name: Admit snapshot and Cargo pins
@@ -39,12 +39,12 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@8bcece573511a6ce6ee8879443a8d19b6e43e7ad # 0.44.4
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@081753852ae398661fadfd0fe3b3fc631f0a96e6 # 0.44.5
       - name: Prepare pinned secret scanner
         run: |
           scanner="$(bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh gitleaks --install-dir "$RUNNER_TEMP/ci-tools")"
           echo "GITLEAKS_BIN=$scanner" >> "$GITHUB_ENV"
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@8bcece573511a6ce6ee8879443a8d19b6e43e7ad # 0.44.4
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@081753852ae398661fadfd0fe3b3fc631f0a96e6 # 0.44.5
         with:
           mode: save
       - name: Scan repository history once

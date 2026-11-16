@@ -10,6 +10,10 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Adopt Toko Tooling 0.44.5 in both workspaces through its verified exporter;
+  align the hosted download-cache action with the release's source commit.
+  The retained 49-file snapshot and cache-action implementation are unchanged.
+
 - Run snapshot/pin admission and non-mutating formatting before the native CI
   matrix, including on tooling-only and documentation-only pull requests.
   Prepare all repository-required Rust components and common tools explicitly

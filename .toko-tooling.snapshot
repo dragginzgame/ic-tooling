@@ -1,9 +1,9 @@
 # Toko Tooling snapshot v1
-# version	0.44.4
+# version	0.44.5
 # layout	vendor
 format	1
 source	https://crates.io/crates/toko-tooling
-revision	b52bb793b386309b8c4a9e88f32711bb5d1fd11a47bf337c11c63ca2aa22fc97
+revision	aef8ac5d84866cf4ceb5b9d91ce9d458708069fc0c585345f07054186d267199
 # entrypoint	TOKO-TOOLING.md
 # entrypoint	LICENSE.md
 # entrypoint	CONTRIBUTING.md

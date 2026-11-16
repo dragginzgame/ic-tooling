@@ -58,10 +58,10 @@ Clippy also passes locally. Final versioned archives pass
 at release commit `828c2692523a7a906188c111c9b58f30d0f52468` on all three native
 hosts, including repository admission and the single secret scan.
 The required first-party product supplier is Artifacts in this same cohort;
-Toko 0.44.4 remains the reviewed qualification supplier. Registry review found
-stable non-yanked Toko 0.44.5; this optional tooling refresh is deferred to the
-next dependency-maintenance batch. No freshness claim is made for unrelated
-product or qualification graphs.
+Toko 0.44.4 was the reviewed qualification supplier. Registry review found
+stable non-yanked Toko 0.44.5; its refresh was deferred during publication and
+subsequently adopted in the next tooling-maintenance increment. No freshness
+claim is made for unrelated product or qualification graphs.
 
 Both 0.80.2 packages were published on 2026-11-16 from release commit `828c269`;
 the annotated `foundation-v0.80.2` tag and `main` were pushed atomically.

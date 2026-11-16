@@ -41,9 +41,15 @@ Runtime evidence remains tied to the captured source and suppliers in the linked
 qualification recipes; old Timers experiments are historical. Seven [release groups](../release-ownership.md) own their ledgers; root changelog is
 an index. Text, HTTP, Testkit and the private qualification executable remain
 unpublished. No production consumer migration is claimed.
-Toko 0.44.4 is pinned in both workspaces; snapshot/tools admission and 19 Build tests pass after renaming `qualification/owned-wasm-probe` to match its package.
-The snapshot now selects the shared CI installer (49 files at the same revision)
-for the workflow's single Gitleaks history scan.
+Toko 0.44.5 is pinned in both workspaces and installed through its verified
+exporter. Snapshot/pin admission, tool admission, `make fmt-check` for both
+workspaces and Actionlint pass. All 49 retained files are byte-identical to the
+0.44.4 snapshot; the CI cache action is also unchanged and now pinned to the
+0.44.5 source commit. No new consumer mechanism or workaround is needed.
+The earlier 19 Build tests qualify the unchanged fixture-directory rename to
+`qualification/owned-wasm-probe`; this tooling refresh does not rerun product
+qualification. The shared CI installer remains selected for the workflow's
+single Gitleaks history scan.
 
 Foundation 0.80.2 is published from `828c2692523a7a906188c111c9b58f30d0f52468`
 with tag `foundation-v0.80.2`. [Final native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43862099971)
