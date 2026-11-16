@@ -19,16 +19,16 @@ This is source inspection, not a new DB installed-runtime pass.
 DB's `scripts/with-pocketic.sh` still owns a separately prepared 0.106.0 launcher.
 [Tooling #10](https://github.com/dragginzgame/ic-tooling/issues/10) owns the supported
 command successor; DB #3 was closed after correcting the supplier ownership.
-The managed-server library is published; pending Testkit 0.107.4 now supplies the
-optional `cli` product executable. Publication and native acceptance remain separate
-from local implementation. DB must not build another generic launcher.
+Published Testkit 0.107.4 supplies the optional `cli` product executable as well
+as the managed-server library. Native acceptance and DB adoption remain separate
+from this supplier delivery. DB must not build another generic launcher.
 The successor must retain bounded output/lifetime, failure evidence and endpoint
 semantics. Console tests
 also exercise standalone invocation with the endpoint removed; changing only an
 outer Tooling runner would not qualify that caller. The supplying capability is
 [already published as library operations](../../docs/testkit-server.md); the
 [command guide](../../docs/simulator-ownership.md#db-adoption-boundary-and-historical-requirements)
-documents Toko installation after publication and DB's thin wrapper adaptation.
+documents Toko installation and DB's thin wrapper adaptation.
 
 [Historical Tooling DB evidence](https://github.com/dragginzgame/ic-tooling/blob/10e7d64e3103af84c18e433be434e4527dee75d6/qualification/db/README.md)
 retains raw-memory rollback, Text console, instance deletion and source identities.

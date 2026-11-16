@@ -1,6 +1,6 @@
 # Testkit: first replacement contract
 
-Status: Testkit 0.107.4 is prepared for delivery with Protocol `>=0.2.7, <0.3.0`.
+Status: Testkit 0.107.4 is published with Protocol `>=0.2.7, <0.3.0`.
 The [compatibility correction](qualification/testkit-types-compatibility.md)
 permits Types `>=0.21.2, <0.22.0`. Scheduling has completed its Runtime migration;
 current pressure and held-upgrade checks pass through the product server command.

@@ -15,23 +15,22 @@ code stays in its owner. Auth is on hold; Storage, Observability and Wire are
 frozen. Backup adoption remains user-owned. Stay on `main`; ordinary fixes remain
 local, and hosted CI runs asynchronously.
 
-## Delivery and pending local work
+## Latest delivery
 
-Testkit 0.107.3 is published from `3c3fd63`, tag `testkit-v0.107.3`, with verified
-registry readback. It supplies the optional [managed server](../testkit-server.md)
-and Protocol 0.2.6; Types uses a compatible 0.21.2 requirement. Original PocketIC
-types and independent default/held-reply/managed-server feature boundaries remain.
+Testkit 0.107.4 is published from `67ac61f89a7311e278027bee3078de7e24a0a241`, tag
+`testkit-v0.107.4`, with byte-identical non-yanked registry readback. It supplies
+the optional [server CLI](../simulator-ownership.md), managed server, compatible
+Protocol 0.2.7 and Types 0.21.2 requirements. Original PocketIC types and separate
+default/held-reply/managed-server/CLI feature boundaries remain.
 Artifacts/FS 0.80.2, Process 0.80.2, Build 0.87.3, HTTP 0.80.0 and Text 0.77.2 are
 published. `ic-cargo-qualification` remains private. [Release receipts](../release-ownership.md)
-retain exact sources, archive checksums and acceptance. Latest delivered main is
-`10e7d64e3103af84c18e433be434e4527dee75d6`.
+retain exact sources, archive checksums and acceptance. The release and its
+subsequent documentation receipt are delivered directly on `main`.
 
 Toko 0.44.11 is installed through its verified 49-file exporter snapshot from
 `08d63df7661910554ef72980037f55edd914aba0`; both workspace markers/locks agree.
 
-Testkit 0.107.4 is selected for authorized deployment with compatible Protocol
-`>=0.2.7, <0.3.0` and the optional [product CLI](../simulator-ownership.md),
-reusing the managed-server/Process/FS owners and removing the private runner.
+The CLI reuses the managed-server/Process/FS owners and removes the private runner.
 Scheduling and archive scripts require explicit prepared tools/directories;
 no sibling tool lookup remains. Setup keeps bounded diagnostics and original
 failure status. Run preserves piped stdin and child stdout/stderr, with bounded
@@ -42,8 +41,10 @@ DB already owns direct-client/Text adoption, so its obsolete Tooling migration
 patches/runners are retired. [Tooling #10](https://github.com/dragginzgame/ic-tooling/issues/10)
 owns this supported setup/check/run successor. DB #3 is closed as a
 misclassified consumer mirror; its source/acceptance evidence is retained there.
-The CLI remains unpublished; native host and actual registry-installation checks
-remain delivery work. Sibling sources are unchanged.
+The CLI is published and installed through Toko; offline tool/server admission,
+piped IO, original child failure and endpoint closure pass. Tooling #10 retains
+native-host acceptance under asynchronous CI. Sibling sources are unchanged,
+and DB adoption remains with its owner.
 
 Focused Linux evidence from the installed 0.107.4 archive passes setup/admission,
 byte-preserving IO, success/nonzero/timeout/signal/spawn cleanup, secondary report
@@ -73,15 +74,15 @@ correctly refuse changed owners. Canic's broader Platform work remains separate.
 Tooling #5 and Tooling #7 are closed; supplier fixes are published.
 [Tooling #8](https://github.com/dragginzgame/ic-tooling/issues/8) remains the separate
 release metadata editor requirement. [Tooling #9](https://github.com/dragginzgame/ic-tooling/issues/9)
-is addressed by the compatible Protocol requirement in the selected 0.107.4 release.
+is closed after publication and registry-only 0.107.4/Protocol 0.2.7 resolution.
 
 Delivered [CI run 43954042484](https://github.com/dragginzgame/ic-tooling/actions/runs/43954042484)
 passed the Build stack on all three native hosts and the library lane on macOS
 Intel. Linux library checks failed because an extracted optional registry Host
-dependency was not fetched before offline tests; the pending gate fixes that setup
+dependency was not fetched before offline tests; the delivered gate fixes that setup
 omission. macOS ARM setup received HTTP 403 from the asset download. Its diagnostics
 worked; no upstream service repair or ARM library acceptance is claimed. These
-results qualify delivered source only, not the pending runner rewrite.
+results qualify that earlier source only, not the new CLI/Protocol release.
 
 ## Owners and remaining requirements
 

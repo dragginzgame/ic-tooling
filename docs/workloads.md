@@ -78,7 +78,7 @@ names the owner of required behavior; it does not imply production migration.
 | Terminal escaping and table rendering | Implemented adapter | Text covers escaped bordered/plain tables and width-aware alignment. |
 | Line fitting/clipping and broader terminal policy | Unresolved | Not implied by table width handling; no completion claim for legacy `fit_line`. |
 | PocketIC type identity and held-reply fixtures | Implemented core | Shared re-export, catalog/module generation and exclusive reply control; current Scheduling comparisons pass. |
-| Prepared server provisioning and managed-server lifetime | Library published; product CLI pending | Testkit owns pinned offline preparation and bounded lifetime; its optional [setup/check/run command](simulator-ownership.md) replaces the private qualification runner in 0.107.4. |
+| Prepared server provisioning and managed-server lifetime | Library and product CLI published | Testkit owns pinned offline preparation and bounded lifetime; its optional [setup/check/run command](simulator-ownership.md) replaces the private qualification runner in 0.107.4. |
 | Instance attach/create/install/retry and time helpers | Partly displaced | Current consumers use upstream clients and caller-owned runtime/policy. Managed lifetime, abandonment and gateway acceptance exist in [Testkit](testkit-server.md); caller-specific creation/install/retry policy remains local. |
 | Snapshots, standalone fixtures and cached baselines | Partial upstream qualification; broader scope unresolved | DB single-controller rollback evidence exists. Multi-canister partial effects remain open; a generic cache/pool is excluded by design. |
 | Testkit Wire | Frozen | No replacement package or API admitted while Wire remains frozen. |

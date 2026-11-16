@@ -2,7 +2,7 @@
 
 Testkit 0.107.4 adds `ic-testkit-server` behind the optional `cli` feature for
 [Tooling #10](https://github.com/dragginzgame/ic-tooling/issues/10). This version is
-pending local work, not a registry release. The command owns setup/check/run policy;
+published on crates.io. The command owns setup/check/run policy;
 the [managed-server library](testkit-server.md) owns asset selection, byte admission
 and server lifetime. Process owns bounded execution and child groups, FS owns asset
 publication, and Text owns diagnostic escaping. Consumers retain their runtimes,
@@ -26,7 +26,7 @@ The command syntax below is a new supported contract, not a promise of legacy
 
 ## Installation and explicit preparation
 
-After 0.107.4 is published, use the existing reviewed Toko installer from the
+Use the existing reviewed Toko installer to select 0.107.4 from the
 consumer checkout. Installation is an explicit setup step; ordinary execution
 adds `--check` to this selection to admit an already installed executable offline:
 
@@ -37,12 +37,12 @@ TESTKIT_SERVER_CLI="$(bash vendor/toko-tooling/scripts/dev/install-rust-tools.sh
 export TESTKIT_SERVER_CLI
 ```
 
-Until publication, Tooling developers build the local candidate explicitly with
+Tooling developers can build the local candidate explicitly with
 `make prepare-testkit-server-cli` and select
 `TESTKIT_SERVER_CLI="$PWD/target/debug/ic-testkit-server"`. This is development
 qualification, not registry installation or permission for consumers to depend on
-a mutable sibling executable. Toko's `--describe` accepts the product selection;
-actual registry installation remains a delivery check after publication.
+a mutable sibling executable. The [release receipt](release-ownership.md#testkit-01074-publication)
+records registry publication and installation evidence separately from development.
 
 With the selected CLI and prepared absolute curl/gzip executables:
 
@@ -135,6 +135,10 @@ or native macOS evidence.
 
 ## Local candidate evidence — 2026-11-16
 
+This preceding development evidence used Protocol 0.2.6. The final published
+0.107.4 with Protocol 0.2.7 passed the complete archive gate separately; see its
+[release receipt](release-ownership.md#testkit-01074-publication).
+
 The corrected local Testkit 0.107.4 archive is
 `target/issue-10/repackaging/package/ic-testkit-0.107.4.crate`, SHA-256
 `9e83e20d1236e787b6839bf36d8c3cf68c68e097d4bf287f2b58fcdcb0b245e8`.
@@ -161,9 +165,9 @@ Formatting, baseline admission, ShellCheck and actionlint pass.
 The current [Scheduling capture](../../qualification/scheduling/README.md#current-runner-acceptance--2026-11-16)
 passes real pressure/held-upgrade checks through the product command. This removes
 the private launcher package without moving the consumer's client or assertions.
-Toko installer `--describe` accepts the package/bin/features selection. Registry
-installation, publication and native macOS acceptance remain outstanding; no
-hosted run or DB migration is claimed by these local results.
+At that checkpoint, Toko installer `--describe` accepted the package/bin/features
+selection, while registry installation, publication and native macOS acceptance
+were outstanding. No hosted run or DB migration is claimed by those local results.
 
 ## DB adoption boundary and historical requirements
 

@@ -18,12 +18,12 @@ Foundation 0.80.2 adds [original retained-file publication](docs/filesystem-cust
 after reopening, without rewriting recovery bytes. Its final versioned archives
 pass native CI on all three hosts, and registry readback matches uploaded bytes.
 
-HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.3 are also published on crates.io.
+HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.4 are also published on crates.io.
 Their [release receipts](docs/release-ownership.md#independent-library-publication)
 record archive/source verification and separate local and hosted acceptance.
-Testkit 0.107.3 uses Protocol 0.2.6 and a compatible Types `0.21.2` requirement,
-resolving the published Runtime 0.23.13 cohort. Its [receipt and consumer evidence](docs/qualification/testkit-types-compatibility.md)
-distinguish successful registry resolution from Scheduling's remaining Wasm migration.
+Testkit 0.107.4 uses compatible Protocol `0.2.7` and Types `0.21.2` requirements,
+removing exact-patch cohort conflicts. Its [release receipt](docs/release-ownership.md#testkit-01074-publication)
+records archive and registry evidence; Scheduling has completed its Runtime migration.
 
 The [Platform adoption record](docs/qualification/platform-adoption.md) verifies
 the unchanged HTTP encoder and focused checks. Testkit 0.107.3 also publishes the
@@ -135,12 +135,12 @@ completed owner-side Runtime migration, installed acceptance and Timers/Jobs
 publication. Earlier failing and passing Tooling comparisons remain bound to
 their recorded source captures.
 
-Pending Testkit 0.107.4 adds the optional [product server CLI](docs/simulator-ownership.md)
+Published Testkit 0.107.4 adds the optional [product server CLI](docs/simulator-ownership.md)
 for setup/check/run, replacing the private qualification caller. Build locally with
 `make prepare-testkit-server-cli`; ordinary tests require an absolute
 `TESTKIT_SERVER_CLI` path and prepared server directory. The guide documents Toko
-installation after publication; no registry availability or consumer migration is
-claimed yet. Ordinary checks download nothing.
+installation of the published executable; consumer migration remains separate.
+Ordinary checks download nothing.
 `make test-scheduling-pressure` selects watchdog admission/pressure and Jobs
 pressure; `make test-scheduling-pressure-baseline` uses the released supplier.
 `make test-scheduling-lifecycle` compares released and replacement suppliers on

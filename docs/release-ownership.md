@@ -44,6 +44,18 @@ libraries are published; publication permission in a manifest is not delivery.
 
 ### Testkit 0.107.4 publication
 
+Published on 2026-11-16 from `67ac61f89a7311e278027bee3078de7e24a0a241`.
+`main` and annotated tag `testkit-v0.107.4` were pushed atomically and verified.
+Cargo's clean-source, all-feature publication admission passed before upload.
+The non-yanked registry archive is byte-identical to both dry-run and uploaded
+archives, SHA-256 `8629db43fa7a3e3655184c6173a5ccdecf67a87d29f0c929228bec7f8a1c392b`.
+Its clean VCS provenance, source, original/normalized manifests and licence match
+the release and qualified candidate. A registry-only consumer resolves exact
+Testkit 0.107.4 with exact Protocol 0.2.7 and held-reply fixtures without overrides;
+[Tooling #9](https://github.com/dragginzgame/ic-tooling/issues/9) is closed.
+Post-push review of the delivered package and directly affected callers found no
+actionable defect. No new native macOS pass is claimed.
+
 The maintainer authorized Protocol adoption and deployment on 2026-11-16.
 The selected public group is Testkit 0.107.4: the optional setup/check/run CLI and
 a compatible Protocol requirement from 0.2.7. Delivery uses this checkout's
@@ -57,8 +69,8 @@ Protocol archive identity and the unchanged HTTP encoder are recorded in the
 The selected complete local gate installs and exercises the extracted Testkit
 archive, including feature isolation, lint/docs, managed-server and held replies.
 Hosted native CI runs asynchronously; earlier macOS passes are not new CLI or
-Protocol acceptance. Publication and registry installation receipts follow here
-after verifying the release source and registry bytes.
+Protocol acceptance. Registry installation is verified separately from archive
+qualification; its receipt is recorded below.
 
 The complete Linux gate passed at `target/library-release.KR6eIDms/`: default
 and enabled-feature lint/tests/docs, isolated dependency graphs, installed
@@ -69,6 +81,15 @@ stable. Its precommit archive SHA-256 is
 The current Scheduling pressure/held-upgrade pass and exact Protocol admission
 are retained at `target/scheduling-new.wJUWIZWv/`. Logs, independent lock-drift
 refusal and registry observations are under `target/deploy-01074/`.
+
+The existing Toko installer successfully installed the published `cli` binary in
+release profile, then admitted that exact selection with offline `--check`.
+`--version` reports `ic-testkit-server 0.107.4`; offline prepared-server admission,
+piped input/output, preservation of child exit 23 and independent endpoint closure
+pass through the registry-installed executable. Installer compilation took 106
+seconds; its phase log, selected path and runtime evidence are retained under
+`target/deploy-01074/`. Tooling #10's remaining native-host acceptance stays with
+asynchronous CI; registry delivery and supported installation are complete.
 
 ### Testkit 0.107.3 publication
 

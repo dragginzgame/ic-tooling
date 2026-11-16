@@ -3,7 +3,7 @@
 Published in Testkit 0.107.3; [release and registry evidence](release-ownership.md#testkit-01073-publication)
 records the verified archive and the additional release-time installed checks.
 
-Pending Testkit 0.107.4 adds the optional `cli` feature and installable
+Published Testkit 0.107.4 adds the optional `cli` feature and installable
 [`ic-testkit-server` command](simulator-ownership.md). It uses this unchanged
 library contract for setup/check/run; CLI policy does not enter default,
 held-reply-only or managed-server-only dependency graphs.
