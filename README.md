@@ -8,6 +8,12 @@ package is `ic-build` 0.87.3. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
 0.80.1 for shared byte admission and held-directory publication. Toko Tooling is
 pinned to 0.44.4 in both workspaces.
 
+The [first release candidate](docs/release-ownership.md#first-production-cutover-scope)
+contains Artifacts, FS, Process and Build. `make test-build-release-candidate`
+checks extracted Cargo archives and a fresh current Canic build export. Linux
+acceptance passes; native macOS CI is the remaining host gate. Publication and
+production consumer adoption have not happened.
+
 The byte owner also supplies [complete producer commitments](docs/byte-commitments.md).
 Independent tests pass; `make test-backup-commitments` compares the selected
 consumer migration, currently blocked by failures in the unchanged Backup baseline.
@@ -45,9 +51,13 @@ Private app-output comparison adds three paired alias/traversal/depth cases
 Host's direct released-FS edge is test-only in this export, verified by library
 compilation and metadata. The recipe also composes Host's Process adapters: nine
 focused Process cases pass, and its native normal/build graph contains no legacy
-FS or Process. CLI/runtime composition and archive qualification remain separate.
+FS or Process. `make test-canic-runtime` extends that same capture through real
+CLI artifact/app builds, four viewer tests and 20 metadata/tool refusals.
+Report file publication adds two paired cases through held FS custody and a
+replacement-only parent-traversal refusal. Automatic report-directory allocation
+still selects legacy FS; archive qualification remains open.
 
-`ic-cargo-qualification` 0.1.2 is a separate unpublished development executable
+`ic-cargo-qualification` 0.1.3 is a separate unpublished development executable
 for external-lock admission; it adds no dependencies to the ordinary Build API.
 
 `ic-host-http` 0.80.0 is a native [complete-body adapter](docs/http-body.md).

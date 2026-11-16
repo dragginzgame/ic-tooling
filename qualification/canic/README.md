@@ -4,6 +4,72 @@ Current recipes select the next unpublished Build 0.87.3 / Text 0.77.2 where
 used. Their patches and locked graphs admit current local sources; historical
 runtime evidence below remains bound to its recorded checkpoint inputs.
 
+## CLI/runtime composition
+
+`make test-canic-runtime` extends the composed Host recipe on the same captured
+source. It migrates CLI viewer handoff to local Process, compiles the real CLI,
+runs all-target CLI Clippy, and checks the four local viewer/launch cases without
+opening a browser. It then runs the real owned-Wasm probe through artifact output,
+parent preparation, alias replacement, compilation/publication refusal and cleanup.
+App checks retain pre-lock duplicate refusal, config-relative recipes, lock
+failure/preservation and serial partial output. Metadata checks explicitly select
+JSON output and refuse invalid metadata/tools before compilation or publication.
+
+The Host native graph remains free of legacy FS/Process; CLI's direct Process
+edge selects local 0.80.2. Automatic fleet-report directory allocation still requires legacy FS, so
+this recipe does not retire its normal dependency or claim whole-workspace
+filesystem isolation. Text stays at the current consumer selection. Foreground
+profile/PTY and registry Store-build runtime checks are outside this selection;
+their earlier independent results do not qualify the current composition.
+No deployment, live signing, browser launch or sibling edit is involved. Local
+loopback access and the explicitly prepared Rust/Wasm toolchain are required.
+
+Passing Linux run: `target/canic-build.zeOv61KJ`, logged in
+`target/canic-runtime-composed.log`. Canic 0.216.5 HEAD
+`2ee4add03126aa2f5259c609fa05eae8a14bcd14` plus working-tree changes; source-tar
+SHA-256 `2dab00357b0dda539467006d736fb2a8b6d2a0ed852c19638ef4b611cd9f7db7`.
+The identical 52-case inventories, two custody cases, nine Host Process cases and
+four viewer cases pass on this capture. Library/CLI compilation, Host/CLI Clippy,
+graph/lock admission, artifact/app runtime checks and all 20 metadata/tool refusals
+pass. Viewer evidence includes Linux child reaping after observer drop. These
+results select tools 0.1.3 and do not refresh the unselected profile/Store flows.
+
+### Report file publication
+
+The runtime recipe now installs the same two report publication fixtures before
+and after migration. The CLI export reuses the private artifact-output adapter:
+held parent preparation, a sealed 0600 stage and create-only publication replace
+the released pathname writer. Parent creation requests 0777 reduced by umask;
+existing modes remain unchanged. Exact rendered bytes, existing-file preservation,
+occupied directories, final links and ancestor-link refusal are compared.
+No new public Tooling API or product implementation is introduced.
+
+This adapter deliberately narrows report paths: parent traversal is rejected
+before effects. The released writer accepts `not-created/../escape.html`; that
+is not a preserved refusal. An explicitly selected replacement-only test checks
+the new policy separately from the paired inventory. Automatic snapshot-directory
+allocation remains on the released helper, and serving/rendering policy remains
+owned by Canic. Production adoption must account for the narrower path policy.
+
+The first attempted capture, `target/canic-build.nZAqfbPY`, failed in unchanged
+Canic `plan/mod.rs` because its predecessor value was `()` rather than a collection.
+Its source archive SHA-256 was
+`78ff293deb4752bc0961839c6dd99f055b031b615f17c46dba7d5ae1d8dd7840`.
+A fresh capture after the sibling changed passed that compilation. The next
+baseline (`target/canic-build.GugNcuwJ`) exposed the traversal-policy difference;
+the fixture now distinguishes preserved behavior from the new policy. Neither
+failure was repaired in the sibling or hidden by falling back to older source.
+
+Passing Linux export: `target/canic-build.VIaAaG1B`; log
+`target/canic-report-publication.log`. Canic 0.216.5 HEAD
+`2ee4add03126aa2f5259c609fa05eae8a14bcd14` plus working-tree changes, archive
+SHA-256 `bd5088aa6b141eeef12911d879a36063799b38cd584446ec5631e47ab4fd3c8e`.
+All 54 paired cases (52 Host, two report), the replacement-only report policy
+case, two custody, nine Host Process and four viewer cases pass. Host/CLI Clippy,
+exact local graph and lock admission, real artifact/app builds and 20 metadata/tool
+refusals also pass. The report test inventories match; the policy test is ignored
+in the paired run and explicitly required with `--ignored --exact` afterward.
+
 ## Composed Host Process and filesystem graph
 
 The composed preparation recipe now also applies the existing lock, signer,

@@ -133,8 +133,13 @@ the export, proved by library compilation and resolved metadata. All 52 paired
 cases and two custody tests still pass. Released test helpers remain independent
 oracles. Composing Host's Process adapters now also passes nine focused cases and
 removes legacy FS/Process from its native normal/build graph. Library compilation,
-Clippy and graph admission pass. Current CLI/runtime composition and archive
-acceptance remain separate work.
+Clippy and graph admission pass. Current CLI/runtime composition now also passes
+four viewer cases, real artifact/app build/publication cases and 20 metadata/tool
+refusals on that recipe's fresh single capture. Report file publication adds two
+paired cases and one replacement-only traversal refusal through held FS custody;
+automatic report-directory allocation still uses legacy FS. Foreground profile
+and registry Store-build runtime are not refreshed;
+archive acceptance remains separate work.
 
 Continue server/snapshot
 ownership only from an unfrozen consumer's required lifecycle. Native macOS and

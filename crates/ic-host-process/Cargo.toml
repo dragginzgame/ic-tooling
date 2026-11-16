@@ -1,12 +1,13 @@
 [package]
 name = "ic-host-process"
 version = "0.80.2"
+description = "Owned native process execution with bounded communication and reaping"
 edition.workspace = true
 rust-version.workspace = true
 license-file.workspace = true
 repository.workspace = true
 authors.workspace = true
-publish = false
+publish = ["crates-io"]
 
 [target.'cfg(any())'.dev-dependencies]
 toko-tooling.workspace = true

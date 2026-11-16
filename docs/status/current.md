@@ -17,13 +17,26 @@ current requirements must justify further APIs.
 retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
 historical evidence. No old product source/test tree was admitted wholesale.
 
-GitHub checkpoint `3747b9dc8b6f25a6a5527465c1bf03a40c2bdc7e` is on `origin/main`.
+GitHub checkpoint `353e37a9632c30f0912f7060eecdb12def6ee19e` is on `origin/main`.
 Post-push review of its qualification adapters/wiring found no actionable issue.
+The next milestone is the first production build-stack cutover, scoped in
+[release ownership](../release-ownership.md). Artifacts 0.80.1, FS 0.80.1,
+Process 0.80.2 and Build 0.87.3 now have crates.io-only publication metadata.
+They remain unpublished. Extracted archives pass 61 Linux unit cases plus the
+foreground-terminal case, Clippy and Rustdoc; a current Canic export builds with
+the archives and passes 20 metadata/tool refusals. Native macOS evidence and
+registry-only consumer adoption remain outstanding. GitHub-hosted native CI was
+requested for the readiness branch; it does not authorize registry uploads.
+Tools 0.1.3 starts the next local unpublished development line; library versions
+are unchanged. All three tools tests and `make check` pass; only its local lock
+entry changed. The version advance does not refresh prior runtime evidence.
 Runtime evidence remains tied to the captured source and suppliers in the linked
 qualification recipes; old Timers experiments are historical. Seven [release groups](../release-ownership.md) own their ledgers; root changelog is
 an index. All eight packages remain unpublished. Consumer migration, registry
 publication and canonical cutover are separate; recheck registry identities first.
 Toko 0.44.4 is pinned in both workspaces; snapshot/tools admission and 19 Build tests pass after renaming `qualification/owned-wasm-probe` to match its package.
+The snapshot now selects the shared CI installer (49 files at the same revision)
+for the workflow's single Gitleaks history scan.
 
 ## Owners and evidence entrypoints
 
@@ -61,7 +74,15 @@ version bumps do not refresh them. No full release gate is claimed.
 ## Remaining gates and limitations
 
 [Backup assembly](../../qualification/backup/README.md#complete-producer-commitments) passes four current tests with both suppliers and Clippy; restore remains blocked by its earlier 15 baseline failures.
-Canic Host's composed FS/Process export passes 52 paired cases, two custody cases and nine focused Process cases on current 0.216.5. Library compilation, Clippy and graph admission pass; native normal/build edges contain no legacy FS/Process. Released test helpers remain dev-only. Next: current CLI/runtime composition and archive qualification. Live signing/submission remains outside runtime evidence.
+Canic runtime composition passes 54 paired cases, one replacement-only report
+traversal refusal, 15 custody/Process/viewer cases, real artifact/app builds and
+20 metadata/tool refusals on one current 0.216.5 capture. Host/CLI Clippy and graph
+checks pass; Host normal/build edges exclude legacy FS/Process. Report files use
+held FS custody; automatic report-directory allocation retains legacy FS. The
+report adapter deliberately rejects parent traversal accepted by the released
+writer; this narrower path policy is explicit in its qualification recipe.
+Next: automatic report allocation, registry Store-build runtime and archive
+qualification. Live signing/submission remains outside runtime evidence.
 The [native-execution review](../process-execution.md) records the shared Process
 owner used by Build and current Canic group capture, foreground execution and
 desktop handoff. Combined Linux qualification covers artifact/metadata, lock setup,

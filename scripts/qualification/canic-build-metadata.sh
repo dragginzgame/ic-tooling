@@ -30,7 +30,7 @@ fi
 CARGO
 chmod +x "$scratch/cargo-fixture"
 export IC_OWNED_CARGO="$scratch/cargo-fixture"
-args=(artifact build --manifest "$scratch/probe/Cargo.toml" --package owned-wasm-probe --output "$scratch/metadata.wasm")
+args=(--json artifact build --manifest "$scratch/probe/Cargo.toml" --package owned-wasm-probe --output "$scratch/metadata.wasm")
 cp "$scratch/probe-metadata.json" "$QUALIFICATION_METADATA"
 "$cli" "${args[@]}" > "$scratch/metadata-valid.json"
 [[ -f "$QUALIFICATION_BUILD_MARKER" ]]

@@ -4,6 +4,8 @@ Package: `ic-host-process`. Unpublished replacement; no registry release.
 
 ## [0.80.2] - Unreleased
 
+- Prepare crates.io-only candidate metadata. Extracted-archive unit and explicit
+  foreground-terminal acceptance pass on Linux; native macOS CI remains required.
 - Compose current Canic Host's Process and filesystem adapters: nine focused
   Process checks pass alongside 52 paired filesystem cases and two custody tests.
   Its native normal/build graph excludes legacy FS/Process; CLI/runtime and native

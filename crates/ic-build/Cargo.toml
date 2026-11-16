@@ -1,12 +1,13 @@
 [package]
 name = "ic-build"
 version = "0.87.3"
+description = "Bounded Cargo execution and owned WebAssembly build artifacts"
 edition.workspace = true
 rust-version.workspace = true
 license-file.workspace = true
 repository.workspace = true
 authors.workspace = true
-publish = false
+publish = ["crates-io"]
 
 [target.'cfg(any())'.dev-dependencies]
 toko-tooling.workspace = true

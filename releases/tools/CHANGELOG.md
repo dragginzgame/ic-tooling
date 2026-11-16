@@ -6,6 +6,28 @@ This group starts with the replacement implementation. All entries are pending;
 no replacement package has been published. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.1.3] - Unreleased
+
+- Add a four-crate archive readiness command and native Linux/macOS CI. Keep
+  production publication separate; qualify extracted dependency candidates and
+  current Canic metadata/build refusals without sibling edits.
+- Start the next unpublished tools development line after GitHub checkpoint
+  [353e37a](https://github.com/dragginzgame/ic-tooling-new/commit/353e37a9632c30f0912f7060eecdb12def6ee19e).
+  The tools group owns qualification workflows; library versions and public
+  behavior are unchanged. Earlier runtime evidence remains bound to its recorded
+  inputs.
+- Add `test-canic-runtime` to compose current Host custody with CLI viewer and real
+  artifact/app build checks on one source capture. Pass 52 paired cases, 15 focused
+  cases and 20 metadata/tool refusals with Host/CLI Clippy and graph admission.
+  Preserve explicit JSON fixture output; fleet-report FS, profile/Store runtime
+  and archive acceptance remain separate work.
+- Extend the runtime export with held report-file publication, reusing the
+  private output adapter. Two paired cases preserve rendered bytes, modes,
+  occupied entries and link refusal; a separate replacement-only case proves
+  the explicitly narrower parent-traversal policy. The complete 54-case paired
+  comparison and existing runtime checks pass. Automatic report-directory
+  allocation retains its released helper; no library API changes.
+
 ## [0.1.2] - Unreleased
 
 Continues the unpublished development line after GitHub checkpoint

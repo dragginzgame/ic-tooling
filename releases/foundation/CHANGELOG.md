@@ -8,6 +8,9 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ## [0.80.1] - Unreleased
 
+- Prepare crates.io-only candidate metadata for Artifacts and FS. Extracted
+  archives pass Linux byte/custody/publication tests and the Build consumer;
+  native macOS CI remains required before release readiness.
 ### ⚠️ Breaking
 
 - The replacement byte and filesystem APIs require explicit consumer migration

@@ -377,3 +377,10 @@ cases, two custody cases and nine focused Process cases pass with library checks
 Clippy and dependency admission. Store lookup preserves the current locked
 registry-pair contract. This does not refresh the earlier full CLI, PTY, loopback
 or real app-build evidence; see the source-bound composition entry in the recipe.
+
+The later `test-canic-runtime` selection qualifies current CLI viewer handoff and
+Linux reaping alongside Host custody on one capture: four viewer cases, real
+artifact/app builds and 20 metadata/tool refusals pass in addition to the Host
+comparison. Host/CLI Clippy and graph admission pass. The profile client's PTY and
+registry Store-build runtime remain unrefreshed; this is not full workspace or
+native macOS acceptance. Exact source and supplier identities stay in the recipe.

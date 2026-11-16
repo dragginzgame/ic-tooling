@@ -21,6 +21,8 @@ remains tied to its recorded inputs.
 
 ### 🔧 Changed
 
+- Prepare the 0.87.3 first-release candidate with crates.io-only publication
+  metadata and a package description; registry upload remains separate.
 - Continue the unpublished 0.87 line after the Stage 1–2 checkpoint. Build uses
   the shared byte and filesystem owners and a private target with mode 0700.
 - Admit thiserror 2.0.18 for Scheduling's exact PocketIC requirement while the
@@ -28,6 +30,9 @@ remains tied to its recorded inputs.
 
 ### 🧪 Testing
 
+- Qualify extracted Build/Artifacts/FS/Process archives, including real Wasm
+  capture and current Canic metadata/tool refusal checks. Native macOS CI is
+  configured separately from the passing Linux evidence.
 - Refresh current Canic 0.214.0 Build qualification while preserving its locked
   Store-source resolver and consumer-owned default destination. A tiny local
   Wasm supplier fixture verifies publication outside the supplier and unchanged

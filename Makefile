@@ -27,6 +27,7 @@ help:
 	  '  make test-canic-filesystem Compare retained reads and publication together' \
 	  '  make test-canic-sidecar-lock Compare Store/config locks and filesystem callers' \
 	  '  make test-canic-parent-preparation Compare held preparation, staging and recovery' \
+	  '  make test-canic-runtime Compose Host custody with real CLI build and viewer checks' \
 	  '  make test-canic-foreground Harmless foreground client/PTY migration checks' \
 	  '  make test-canic-text   Current Canic CLI presentation qualification' \
 	  '  make test-query-text   Current Query presentation and output qualification' \
@@ -58,6 +59,7 @@ help:
 	  '  make test-canic-consumer Local Canic retained-record admission' \
 	  '  make test-auth-consumer Historical Auth recipe (on hold)' \
 	  '  make test-owned-build  Stage 1 byte/custody/process/protocol and real Wasm acceptance' \
+	  '  make test-build-release-candidate Package four release crates and qualify archives/current consumer' \
 	  '  make lint-owned-build  Stage 1 library/tests with warnings denied' \
 	  '  make doc-owned-build   Stage 1 public documentation with warnings denied' \
 	  '  make fmt / fmt-check   Shared Rust/manifest formatting' \
@@ -66,6 +68,10 @@ help:
 	  '  make tools-check      Prepared-tool admission'
 
 check: toko-tooling-check
+
+.PHONY: test-build-release-candidate
+test-build-release-candidate: toko-tooling-check
+	bash scripts/qualification/build-release-candidate.sh
 
 .PHONY: test-canic-signer
 test-canic-signer: toko-tooling-check
@@ -194,6 +200,10 @@ test-canic-sidecar-lock: toko-tooling-check
 .PHONY: test-canic-parent-preparation
 test-canic-parent-preparation: toko-tooling-check
 	bash scripts/qualification/canic-build.sh parents
+
+.PHONY: test-canic-runtime
+test-canic-runtime: toko-tooling-check
+	bash scripts/qualification/canic-build.sh runtime
 
 .PHONY: test-canic-app-build
 test-canic-app-build: toko-tooling-check

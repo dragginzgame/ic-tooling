@@ -1,0 +1,65 @@
+--- a/crates/canic-cli/Cargo.toml
++++ b/crates/canic-cli/Cargo.toml
+@@ -15,6 +15,9 @@
+ doc = false
+ 
+ [dependencies]
++ic-fs-next.workspace = true
++ic-bytes-next.workspace = true
++thiserror.workspace = true
+ canic-host.workspace = true
+ canic-management-protocol.workspace = true
+ clap.workspace = true
+--- a/crates/canic-cli/src/main.rs
++++ b/crates/canic-cli/src/main.rs
+@@ -6,6 +6,7 @@
+ #[cfg(test)]
+ mod config_tests;
+ mod fleet;
++mod output_publication;
+ mod placements;
+ mod progress;
+ mod status;
+@@ -17,10 +18,14 @@
+     AppCanisterCommand, AppCommand, ArtifactCommand, CanisterCommand, Cli, Commands, FleetCommand,
+     help_command,
+ };
+-use canic_host::{Error, PlanInput};
++use canic_host::{Error, PlanInput, Result};
+ use clap::FromArgMatches as _;
+ use std::{io::IsTerminal as _, path::PathBuf};
+ 
++fn supplier(error: impl std::error::Error + Send + Sync + 'static) -> Error {
++    Error::Supplier(Box::new(error))
++}
++
+ enum Output {
+     Json(serde_json::Value),
+     Text(String),
+--- a/crates/canic-cli/src/fleet/mod.rs
++++ b/crates/canic-cli/src/fleet/mod.rs
+@@ -1,5 +1,5 @@
+ use canic_host::{Error, Fleet, Result};
+-use ic_host_fs::durable::{self, PublicationMode, WriteOptions};
++use ic_host_fs::durable;
+ use std::{fmt::Write as _, num::NonZeroUsize, path::Path};
+ 
+ mod metrics;
+@@ -398,15 +398,9 @@
+ }
+ 
+ fn write(path: &Path, snapshot: &Fleet, routes: &str) -> Result<()> {
+-    durable::write_bytes(
+-        path,
+-        WriteOptions {
+-            mode: PublicationMode::CreateNew,
+-            permissions: 0o600,
+-        },
+-        render(snapshot, routes).as_bytes(),
++    crate::output_publication::publish(
++        path, render(snapshot, routes).as_bytes(), ic_fs_next::Destination::CreateNew, 0o777,
+     )
+-    .map_err(|error| Error::Supplier(Box::new(error)))
+ }
+ 
+ pub(crate) fn publish(

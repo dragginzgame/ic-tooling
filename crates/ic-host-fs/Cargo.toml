@@ -1,12 +1,13 @@
 [package]
 name = "ic-host-fs"
 version = "0.80.1"
+description = "Held filesystem custody and explicit durable publication"
 edition.workspace = true
 rust-version.workspace = true
 license-file.workspace = true
 repository.workspace = true
 authors.workspace = true
-publish = false
+publish = ["crates-io"]
 
 [target.'cfg(any())'.dev-dependencies]
 toko-tooling.workspace = true
