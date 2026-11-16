@@ -60,17 +60,35 @@ proves upload authorization. Qualify the packaged candidates and
 their registry dependency graph, then publish and migrate the selected consumer.
 Current Canic owned-build qualification is the starting consumer evidence;
 production adoption must use its then-current source and account for its ongoing
-rewrite. Native macOS acceptance is required by the adopted baseline and remains
-a release gate; Linux success does not waive it.
+rewrite. Native macOS acceptance is required by the adopted baseline; the first
+four-crate candidate now satisfies that gate on both supported architectures.
 
 Text 0.77.2, HTTP 0.80.0 and Testkit 0.107.1 are independent later adoption batches;
 they are not dependencies of this first stack. The private qualification executable
 0.1.3 remains unpublished. Backup restore failures and frozen/on-hold consumers
 do not block this scoped build release. This milestone does not itself constitute
-publication or a completed consumer migration; candidate packaging and cutover
-checks are the next work, rather than additional unrelated qualification slices.
+publication or a completed consumer migration. Candidate packaging and native
+qualification are complete; registry delivery and consumer cutover are next.
 
 ## Candidate qualification and delivery boundary
+
+The first four-crate stack is ready for publication. [Run 43841772100](https://github.com/dragginzgame/ic-tooling-new/actions/runs/43841772100)
+passed at `6541ba0d53bb4d99fc358fbed5850f0f5cc2df8b` on
+`release/build-readiness`: Ubuntu 24.04, macOS 15 Apple Silicon, macOS 15 Intel
+and the full-history secret scan. Extracted archives pass 61 Linux unit cases
+or 60 macOS unit cases, plus the foreground-terminal case on each host,
+warning-denied Clippy and Rustdoc. The run retains each host's archives, hashes,
+source identity and logs. Subsequent documentation-only edits reuse this evidence.
+
+The latest local complete candidate run is `target/build-release.1XQOqMeC` at
+`076d33dfab15ceb14282be0a0efed54ff6e4f8f2`, before the terminal fixture/driver
+correction in the passing CI commit; product runtime code is unchanged between
+these commits. Its current Canic export `target/canic-build.IANsOjKU` has HEAD
+`2ee4add03126aa2f5259c609fa05eae8a14bcd14` plus working edits, source archive
+SHA-256 `7547a001603207db3b2a2ab87c051e1c07f04478784a7a07274a7c3b80987056`.
+The real Wasm build and 20 metadata/tool refusals pass with all four extracted
+candidate paths admitted. This is Linux consumer evidence; hosted native jobs
+qualify the four-crate core, not a macOS Canic migration.
 
 `make test-build-release-candidate` creates four Cargo archives under a fresh
 `target/build-release.*`, records hashes, extracts them, and qualifies only those
@@ -107,8 +125,8 @@ the shared permission validator now returns Rustix's native mode after rejecting
 bits outside 0777. It also exposed missing ripgrep on the Linux runner; the single
 native log assertion uses standard grep. The next native run found that Rustix
 does not expose `mkfifoat` on macOS; the lock refusal fixture now creates its FIFO
-using native `mkfifo`, retaining the same product assertion. These fixes require
-fresh native evidence.
+using native `mkfifo`, retaining the same product assertion. The passing run
+above includes these fixes.
 An executing macOS run also reproduced concurrent sidecar creation returning
 `ENOENT` from `openat(O_CREAT)`. Sidecars now use exclusive creation, opening an
 existing entry only after `EEXIST`; no missing-name retry or repair is introduced.

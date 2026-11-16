@@ -10,8 +10,8 @@ pinned to 0.44.4 in both workspaces.
 
 The [first release candidate](docs/release-ownership.md#first-production-cutover-scope)
 contains Artifacts, FS, Process and Build. `make test-build-release-candidate`
-checks extracted Cargo archives and a fresh current Canic build export. Linux
-acceptance passes; native macOS CI is the remaining host gate. Publication and
+checks extracted Cargo archives and a fresh current Canic build export. Linux,
+Apple Silicon macOS and Intel macOS acceptance pass. Publication and
 production consumer adoption have not happened.
 
 The byte owner also supplies [complete producer commitments](docs/byte-commitments.md).
@@ -23,7 +23,7 @@ tests with both suppliers and Clippy, without selecting the restore migration.
 Filesystem [directory preparation](docs/directory-preparation.md) returns a held
 leaf after explicit child creation, preserving partial failures. Independent Linux
 tests and `make test-canic-publication` pass for current Canic artifact output;
-other writers and native macOS qualification remain open.
+other writers and native macOS consumer qualification remain open.
 `make test-canic-config-publication` also passes six unchanged configuration tests
 with both suppliers, retaining Canic's original sidecar-lock protocol.
 `make test-canic-record-publication` compares create-only retained records and

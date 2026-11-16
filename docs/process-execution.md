@@ -4,7 +4,10 @@ Status: unpublished `ic-host-process` 0.80.2 starts the [handoff design](process
 The first-release native checks also require Darwin group-cleanup admission
 described below; earlier evidence predates that correction. The following 0.80.1 evidence covers adoption
 by Build, with current Canic artifact/metadata, foreground-client and signer
-version/principal capture qualification. Native macOS acceptance remains open.
+version/principal capture qualification. The four-crate release candidate now
+passes native Linux and both macOS architectures, including Darwin cleanup and
+foreground-terminal tests; see [release evidence](release-ownership.md#candidate-qualification-and-delivery-boundary).
+Native macOS qualification of the broader Canic consumer flows remains open.
 
 Darwin can return `EPERM` for a group containing only zombies: its
 [XNU group iteration](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sig.c)

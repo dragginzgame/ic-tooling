@@ -24,9 +24,12 @@ The next milestone is the first production build-stack cutover, scoped in
 Process 0.80.2 and Build 0.87.3 now have crates.io-only publication metadata.
 They remain unpublished. Extracted archives pass 61 Linux unit cases plus the
 foreground-terminal case, Clippy and Rustdoc; a current Canic export builds with
-the archives and passes 20 metadata/tool refusals. Native macOS evidence and
-registry-only consumer adoption remain outstanding. GitHub-hosted native CI was
-requested for the readiness branch; it does not authorize registry uploads.
+the archives and passes 20 metadata/tool refusals. The first four-crate stack is
+ready for publication: [native CI](https://github.com/dragginzgame/ic-tooling-new/actions/runs/43841772100)
+passes Linux, Apple Silicon macOS, Intel macOS and the history secret scan at
+`6541ba0d53bb4d99fc358fbed5850f0f5cc2df8b` on `release/build-readiness`.
+Registry publication and registry-only consumer adoption remain separate delivery
+work; the native CI request does not authorize registry uploads.
 Tools 0.1.3 starts the next local unpublished development line; library versions
 are unchanged. All three tools tests and `make check` pass; only its local lock
 entry changed. The version advance does not refresh prior runtime evidence.
@@ -86,13 +89,14 @@ qualification. Live signing/submission remains outside runtime evidence.
 The [native-execution review](../process-execution.md) records the shared Process
 owner used by Build and current Canic group capture, foreground execution and
 desktop handoff. Combined Linux qualification covers artifact/metadata, lock setup,
-signer capture, Store-source lookup and viewer reaping; native macOS remains open.
+signer capture, Store-source lookup and viewer reaping; native macOS consumer
+qualification remains open. The four-crate core's native release checks pass.
 No Canic product code moves here. `../ic-profiler` is absent and its current
 checkout/status has been requested. The inspected `ic-platform-new` has no current
 Tooling dependency; old Platform fixture results must not drive that rewrite.
 Managed-server lifetime/cancellation, multi-canister partial snapshot effects,
 remaining Platform drivers, Profiler ownership/native acceptance, archive acceptance,
-native macOS qualification and production consumer migration remain open.
+native macOS consumer qualification and production consumer migration remain open.
 Borrowed-server success does not justify a wrapper; upstream creation can panic
 or leave remote effects after cancellation, and async deletion is best-effort.
 See [simulator ownership](../simulator-ownership.md).
