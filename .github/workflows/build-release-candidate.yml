@@ -64,33 +64,37 @@ jobs:
         run: rustup toolchain install 1.100.0 --profile minimal --component clippy --component rustfmt
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
         with:
-          extra-key: testkit-server-0.106.0-pocketic-16.1.0
+          extra-key: testkit-managed-server-pocketic-16.1.0
       - name: Prepare external simulator owner and server
         shell: bash
         run: |
-          launcher="$(bash vendor/toko-tooling/scripts/dev/install-rust-tools.sh \
-            --consumer "$GITHUB_WORKSPACE" --package ic-testkit --version 0.106.0 \
-            --bin ic-testkit-server --features cli --profile release)"
-          TESTKIT_RELEASE_LAUNCHER="$launcher" bash scripts/qualification/test-pocketic-setup.sh
-          server="$(bash scripts/qualification/setup-pocketic.sh \
-            "$launcher" "$RUNNER_TEMP/pocket-ic" "$RUNNER_TEMP/pocket-ic-setup-evidence")"
-          echo "TESTKIT_RELEASE_LAUNCHER=$launcher" >> "$GITHUB_ENV"
-          echo "POCKET_IC_BIN=$server" >> "$GITHUB_ENV"
-          archive="$(dirname "$server")/archive.gz"
+          cargo fetch --locked
+          cargo clippy -p ic-testkit --features cli --bin ic-testkit-server --locked --offline -- -D warnings
+          make prepare-testkit-server-cli
+          export TESTKIT_SERVER_CLI="$GITHUB_WORKSPACE/target/debug/ic-testkit-server"
+          make test-pocketic-setup
+          "$TESTKIT_SERVER_CLI" setup "$RUNNER_TEMP/pocket-ic" \
+            "$RUNNER_TEMP/pocket-ic-setup-evidence" /usr/bin/curl /usr/bin/gzip
+          echo "TESTKIT_SERVER_CLI=$TESTKIT_SERVER_CLI" >> "$GITHUB_ENV"
+          echo "TESTKIT_SERVER_DIRECTORY=$RUNNER_TEMP/pocket-ic" >> "$GITHUB_ENV"
+          archive="$RUNNER_TEMP/pocket-ic-setup-evidence/archive.gz"
           test -f "$archive" && test ! -L "$archive"
           echo "TESTKIT_SERVER_ARCHIVE=$archive" >> "$GITHUB_ENV"
           echo "TESTKIT_GZIP=/usr/bin/gzip" >> "$GITHUB_ENV"
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
         with:
           mode: save
-          extra-key: testkit-server-0.106.0-pocketic-16.1.0
+          extra-key: testkit-managed-server-pocketic-16.1.0
+      - name: Qualify command lifetime and failure cleanup
+        id: simulator-qualification
+        run: make test-testkit-server-cli
       - name: Qualify packaged HTTP, Text and Testkit
         id: library-qualification
         env:
           LIBRARY_RELEASE_ONLINE: 'true'
         run: bash scripts/qualification/library-release-candidate.sh http text testkit
       - name: Retain library archives and evidence
-        if: ${{ always() && steps.library-qualification.outcome != 'skipped' }}
+        if: ${{ always() && (steps.library-qualification.outcome != 'skipped' || steps.simulator-qualification.outcome != 'skipped') }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: library-candidate-${{ matrix.os }}
@@ -104,8 +108,8 @@ jobs:
             target/library-release.*/source-head
             target/library-release.*/source.patch
             target/library-release.*/source.tar
-            target/library-release.*/server.stdout
-            target/library-release.*/server.stderr
+            target/library-release.*/server/
+            target/testkit-server-cli.*/
             target/library-release.*/candidate/Cargo.lock
           if-no-files-found: error
       - name: Retain simulator setup diagnostics
@@ -114,11 +118,14 @@ jobs:
         with:
           name: pocket-ic-setup-${{ matrix.os }}
           retention-days: 7
-          include-hidden-files: true
           path: |
-            ${{ runner.temp }}/pocket-ic-setup-evidence/
-            ${{ runner.temp }}/pocket-ic/.setup-v1-*/download.stderr
-            ${{ runner.temp }}/pocket-ic/.setup-v1-*/failure.txt
+            ${{ runner.temp }}/pocket-ic-setup-evidence/download.stdout
+            ${{ runner.temp }}/pocket-ic-setup-evidence/download.stderr
+            ${{ runner.temp }}/pocket-ic-setup-evidence/download.txt
+            ${{ runner.temp }}/pocket-ic-setup-evidence/prepare.txt
+            ${{ runner.temp }}/pocket-ic-setup-evidence/server.stdout
+            ${{ runner.temp }}/pocket-ic-setup-evidence/server.stderr
+            ${{ runner.temp }}/pocket-ic-setup-evidence/server.txt
           if-no-files-found: warn
   native:
     needs: repository

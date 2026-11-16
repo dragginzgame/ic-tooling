@@ -17,7 +17,8 @@ help:
 	  '  make test-testkit-control Installed controller refusals (externally owned server)' \
 	  '  make test-testkit-server Offline assets and bounded startup refusal checks' \
 	  '  make test-testkit-server-installed Prepared-archive lifecycle/gateway/held checks (explicit archive and gzip)' \
-	  '  make test-pocketic-setup Failed-download diagnostics (prepared launcher; no network)' \
+	  '  make prepare-testkit-server-cli Build the product server CLI (cached dependencies)' \
+	  '  make test-pocketic-setup Failed-download diagnostics (TESTKIT_SERVER_CLI; no network)' \
 	  '  make test-library-release-candidate RELEASE_GROUPS="http text testkit" Selected archive readiness (prepared Testkit tools required)' \
 	  '  make test-text         Terminal escaping and Unicode table contracts' \
 	  '  make test-canic-build-metadata Current Canic metadata admission/refusal' \
@@ -56,8 +57,6 @@ help:
 	  '  make test-scheduling-aggregate Compare the complete Once installed roster' \
 	  '  make test-scheduling-metrics Compare paired metrics feature behavior and observations' \
 	  '  make test-scheduling-consumer Scheduling rewrite source/graph admission and driver checks' \
-	  '  make test-db-text       Current DB installed console with new Text' \
-	  '  make test-db-consumer   Current DB rollback and external-server ownership' \
 	  '  make test-canic-consumer Local Canic retained-record admission' \
 	  '  make test-auth-consumer Historical Auth recipe (on hold)' \
 	  '  make test-owned-build  Stage 1 byte/custody/process/protocol and real Wasm acceptance' \
@@ -74,6 +73,13 @@ check: toko-tooling-check
 .PHONY: test-pocketic-setup
 test-pocketic-setup:
 	bash scripts/qualification/test-pocketic-setup.sh
+
+.PHONY: prepare-testkit-server-cli test-testkit-server-cli
+prepare-testkit-server-cli:
+	cargo build -p ic-testkit --features cli --bin ic-testkit-server --locked --offline
+
+test-testkit-server-cli:
+	bash scripts/qualification/test-testkit-server-cli.sh
 
 .PHONY: test-build-release-candidate
 test-build-release-candidate: toko-tooling-check
@@ -148,21 +154,12 @@ test-http-body: toko-tooling-check
 test-backup-http: toko-tooling-check
 	bash scripts/qualification/backup-consumer.sh http
 
-.PHONY: test-db-consumer
-test-db-consumer: toko-tooling-check
-	bash scripts/qualification/db-consumer.sh
-
-
 .PHONY: test-text test-query-text
 test-text: toko-tooling-check
 	cargo test -p ic-host-text --lib --locked --offline
 
 test-query-text: toko-tooling-check
 	bash scripts/qualification/query-consumer.sh
-
-.PHONY: test-db-text
-test-db-text: toko-tooling-check
-	bash scripts/qualification/db-consumer.sh text
 
 .PHONY: test-canic-text
 test-canic-text: toko-tooling-check

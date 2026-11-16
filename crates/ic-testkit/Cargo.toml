@@ -1,6 +1,6 @@
 [package]
 name = "ic-testkit"
-version = "0.107.3"
+version = "0.107.4"
 description = "Shared PocketIC types, held-reply fixtures and optional bounded server ownership"
 edition.workspace = true
 rust-version.workspace = true
@@ -12,8 +12,13 @@ publish = ["crates-io"]
 [target.'cfg(any())'.dev-dependencies]
 toko-tooling.workspace = true
 
+[[bin]]
+name = "ic-testkit-server"
+required-features = ["cli"]
+
 [features]
 default = []
+cli = ["managed-server", "dep:clap", "dep:ctrlc", "dep:ic-host-text"]
 managed-server = [
     "dep:ic-host-artifacts",
     "dep:ic-host-fs",
@@ -30,9 +35,12 @@ held-reply-fixtures = [
 ]
 
 [dependencies]
+clap = { workspace = true, optional = true }
+ctrlc = { workspace = true, optional = true }
 ic-host-artifacts = { workspace = true, optional = true }
 ic-host-fs = { workspace = true, optional = true }
 ic-host-process = { workspace = true, optional = true }
+ic-host-text = { workspace = true, optional = true }
 ic-platform-protocol = { workspace = true, optional = true, features = ["http-request"] }
 ic-platform-types = { workspace = true, optional = true }
 pocket-ic.workspace = true

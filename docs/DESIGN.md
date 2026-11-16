@@ -3,6 +3,10 @@ Revision 2 — 15 November 2026. Accepted implementation contract.
 The maintainer accepted this revision on 2026-11-15. Current implementation and
 qualification boundaries are recorded in [the handoff](status/current.md).
 
+Scope update, 2026-11-16: the maintainer confirmed Profiler is retired. Its
+historical observation imports no longer require a replacement owner or native
+qualification. Historical source evidence remains retained below.
+
 This design supersedes the previous “IC Tooling rewrite architecture and launch gates” plan wherever it requires retaining existing crates, exports, signatures, release groups or test trees. The earlier source review remains evidence about behavior and consumers; it is not the target architecture.
 
 **Build a new system from required workflows. Do not populate the new repository by importing the old workspace.** Preserve necessary user-visible outcomes and safety invariants. Redesign the mechanisms and Rust APIs that deliver them. Existing code may be reused only after the new owner, contract and state model are defined and the specific implementation has passed a reuse review.
@@ -62,7 +66,7 @@ Preserve persisted application formats, exact hash inputs, application Wire sche
 
 Required host behavior remains Linux x86-64 and native macOS Intel/ARM for launch. Portable code must not acquire native dependencies accidentally. Do not add a PocketIC transport fork, handwritten cryptography, general plugin framework, universal operation executor, lifecycle registry or generic transaction framework.
 
-The first launch scope includes the required behaviors of the previously observed Backup, Scheduling, Canic, Auth, Storage, DB and Profiler consumers. This is a workload list, not a commitment to reproduce all of their current imports. Resolve the Platform/Query evidence gaps and any additional supported callers during contract freeze. Moving a capability to a different owner requires its own migration; omission from the new tree is not proof that the workload has been retired.
+The first launch scope includes the required behaviors of the previously observed Backup, Scheduling, Canic, Auth, Storage and DB consumers, subject to the maintainer's current hold/freeze directions. Profiler was explicitly retired on 2026-11-16. This is a workload list, not a commitment to reproduce all of their current imports. Resolve the Platform/Query evidence gaps and any additional supported callers during contract freeze. Moving a capability to a different owner requires its own migration; omission from the new tree is not proof that the workload has been retired.
 
 # Target ownership model
 
@@ -222,7 +226,7 @@ Wire remains a narrow adapter: encode once, call once, decode once, with explici
 | - | - | - |
 | HTTP body reader | Small adapter over the selected upstream client | Required consumer needs complete bounded body semantics; preserve type identity/TLS isolation |
 | Terminal text/tables | Small pure presentation adapter or consumer-local utility | Actual consumers need identical escaping/width/output semantics; no framework |
-| Process sampling/procfs/macOS observation | Separate observation responsibility, outside ProcessSession | Profiler migration identifies whether it belongs in Profiler or a shared leaf; retain old supplier until replacement qualifies |
+| Process sampling/procfs/macOS observation | Outside ProcessSession; no admitted replacement | Profiler is retired by maintainer direction; any future consumer must demonstrate its own measurement contract |
 | Cargo manifest/lock release editor | Development-plane tool, outside the core build-to-artifact operation | Use an admitted released editor initially; transfer to Toko or implement a separately scoped tool only against a specified protocol |
 | Archive and external-lock checks | Qualification capability, not ordinary application-build API | Auth/release consumers still need them; expose a focused separate boundary if public use is required |
 | Generic runner, receipts, release transaction | Selected Toko supplier | Verify its real supported interface; no local fork or assumed future feature |
@@ -357,7 +361,7 @@ Implement explicit prepared-server attach/start, instance lifetime and close beh
 
 ## Stage 5 Resolve leaf and displaced capabilities
 
-Evaluate HTTP/Text reuse individually. Complete Profiler observation's destination and native acceptance. Finish any required CLI/editor/qualification capability that moved out of the core. Do not merge supplier work into this repository merely because it is easier to edit.
+Evaluate HTTP/Text reuse individually. Profiler observation and native acceptance are no longer required after its explicit retirement. Finish any required CLI/editor/qualification capability that moved out of the core. Do not merge supplier work into this repository merely because it is easier to edit.
 
 **Gate:** no required workload is silently lost; no unneeded peripheral surface has entered the product; final export/package/release graph is documented.
 

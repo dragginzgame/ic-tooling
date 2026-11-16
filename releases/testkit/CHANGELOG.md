@@ -3,6 +3,25 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.107.4] - 2026-11-16
+
+### 🐛 Fixed
+
+- Admit compatible Protocol releases from 0.2.7 through the 0.2 line, removing
+  the exact 0.2.6 conflict in consumers' held-reply graphs. Keep only the
+  `http-request` feature and preserve encoder bytes, fixture limits and original
+  PocketIC identities.
+  [Tooling #9 — Protocol compatibility](https://github.com/dragginzgame/ic-tooling/issues/9).
+
+### ✨ Added
+
+- Optional `cli` feature supplies the installable `ic-testkit-server` setup/check/run
+  command, using the managed-server, Process, FS and Text owners. Preserve explicit
+  pinned preparation, offline admission, bounded capture/deadlines, command IO and
+  original nonzero status, with signal cancellation and server/group cleanup.
+  Default and non-CLI library graphs exclude command parsing/signal dependencies.
+  [Tooling #10 — Supported server command successor](https://github.com/dragginzgame/ic-tooling/issues/10).
+
 ## [0.107.3] - 2026-11-16
 
 ### 🔧 Changed

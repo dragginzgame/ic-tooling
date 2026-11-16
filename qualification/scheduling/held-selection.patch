@@ -1,6 +1,6 @@
 --- a/qualification/once-driver/src/main.rs
 +++ b/qualification/once-driver/src/main.rs
-@@ -12,37 +12,154 @@
+@@ -12,40 +12,157 @@
      let mut args = std::env::args().skip(1);
      let first = args.next().expect("probe wasm path or --metrics-cost");
      let paired = first == "--metrics-cost";
@@ -35,6 +35,9 @@
      assert!(focused.as_deref().is_none_or(|arg| matches!(
          arg,
          "--after-completion"
+             | "--runtime-core"
+             | "--refusal"
+             | "--jobs-behavior"
              | "--jobs-initial"
              | "--jobs-one-shot"
              | "--jobs-completion"
@@ -159,6 +162,6 @@
 +        println!("held-replies: pressure and held-upgrade checks passed");
 +        return;
 +    }
-     if focused.is_some() {
-         if focused.as_deref() == Some("--diagnostics") {
-             metrics::check(&pic, &wasm, external).await;
+     if focused.is_some() && focused.as_deref() != Some("--runtime-core") {
+         if focused.as_deref() == Some("--jobs-behavior") {
+             jobs::check(&pic, &wasm, external).await;

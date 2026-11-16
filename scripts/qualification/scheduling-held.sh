@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The released CLI owns this server; the selected driver owns its instance.
+# The Testkit server command owns this server; the driver owns its instance.
 set -euo pipefail
 scratch="$1"
 driver="$2"

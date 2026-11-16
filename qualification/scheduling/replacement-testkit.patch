@@ -2,10 +2,10 @@
 +++ b/qualification/Cargo.toml
 @@ -19,7 +19,7 @@
  ic-jobs = { path = "../crates/ic-jobs", default-features = false, features = ["calendar"] }
- ic-platform-runtime = { version = "=0.23.13", default-features = false, features = ["call-ic0", "system-raw"] }
+ ic-platform-runtime = { version = "=0.23.14", default-features = false, features = ["call-ic0", "system-raw"] }
  ic-platform-types = { version = "=0.21.2", default-features = false }
--ic-testkit = { version = "=0.107.1", default-features = false }
-+ic-testkit = { path = "@IC_TOOLING_NEW@/crates/ic-testkit", version = "=0.107.3", default-features = false }
+-ic-testkit = { version = "=0.107.3", default-features = false }
++ic-testkit = { path = "@IC_TOOLING_NEW@/crates/ic-testkit", version = "=0.107.4", default-features = false }
  ic-timers = { path = "../crates/ic-timers" }
  tokio = { version = "1.54.1", default-features = false, features = ["rt"] }
- toko-tooling = "=0.44.9"
+ toko-tooling = "=0.44.11"

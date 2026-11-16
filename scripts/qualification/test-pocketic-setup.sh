@@ -1,80 +1,73 @@
 #!/usr/bin/env bash
-# Failed-download regression through the actual prepared bootstrap; no network.
+# Exercise the product command and asset admission, without networking.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
-: "${TESTKIT_RELEASE_LAUNCHER:?select the prepared ic-testkit-server 0.106.0 launcher}"
+: "${TESTKIT_SERVER_CLI:?select an absolute prepared ic-testkit-server executable}"
+[[ "$TESTKIT_SERVER_CLI" == /* && -x "$TESTKIT_SERVER_CLI" ]]
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/ic-setup-diagnostics.XXXXXXXX")"
 fixture="$(cd "$fixture" && pwd -P)"
 trap 'status=$?; if [[ $status == 0 ]]; then rm -rf "$fixture"; else printf "Setup regression evidence: %q\n" "$fixture" >&2; fi' EXIT
-mkdir "$fixture/bin"
-cat > "$fixture/bin/curl" <<'CURL'
-#!/usr/bin/env bash
-printf 'called\n' >> "$SETUP_FIXTURE/curl-calls"
-printf 'curl: (56) controlled receive failure\033[31m\n::error::injected\342\200\256\n' >&2
-exit 56
-CURL
-chmod +x "$fixture/bin/curl"
-export SETUP_FIXTURE="$fixture"
-status=0
-PATH="$fixture/bin:$PATH" bash "$repo/scripts/qualification/setup-pocketic.sh" \
-  "$TESTKIT_RELEASE_LAUNCHER" "$fixture/assets" "$fixture/evidence" \
-  > "$fixture/stdout" 2> "$fixture/stderr" || status=$?
-[[ $status == 1 && ! -s "$fixture/stdout" ]]
-[[ $(wc -l < "$fixture/curl-calls") -eq 1 ]]
-grep -Fq 'curl\x3a (56) controlled receive failure\x1b[31m\x0a\x3a\x3aerror\x3a\x3ainjected\xe2\x80\xae' "$fixture/stderr"
-grep -Fq 'PocketIC setup failed (exit 1)' "$fixture/stderr"
-attempts=("$fixture"/assets/.setup-v1-*-*)
-[[ ${#attempts[@]} == 1 && -f "${attempts[0]}/failure.txt" && -f "${attempts[0]}/download.stderr" ]]
-printf 'curl: (56) controlled receive failure\033[31m\n::error::injected\342\200\256\n' > "$fixture/expected-stderr"
-cmp "$fixture/expected-stderr" "${attempts[0]}/download.stderr"
-grep -Fq "${attempts[0]}/download.stderr" "$fixture/stderr"
-grep -Fq 'tool exited unsuccessfully' "$fixture/evidence/setup.stderr"
-[[ ! -e "$fixture/evidence/check.stdout" ]]
-
-# Exercise reporting bounds, stale evidence exclusion, and offline check dispatch.
-cat > "$fixture/launcher" <<'LAUNCHER'
+cat > "$fixture/curl" <<'CURL'
 #!/usr/bin/env bash
 set -eu
-case "$1" in
-  --version) echo 'ic-testkit-server 0.106.0' ;;
-  setup)
-    [[ ${SETUP_MODE:-failure} == success ]] && exit 0
-    attempt="$3/.setup-v1-123-0"
-    mkdir -p "$attempt" "$3/.setup-v1-999-0"
-    echo 'stale-marker' > "$3/.setup-v1-999-0/download.stderr"
-    echo "PocketIC setup evidence: $attempt" >&2
-    echo 'original failure' > "$attempt/failure.txt"
-    if [[ ${SETUP_MODE:-failure} != missing ]]; then
-      printf '%4096s' '' | tr ' ' x > "$attempt/download.stderr"
-      printf 'past-limit-marker\n' >> "$attempt/download.stderr"
-    fi
+case "$SETUP_MODE" in
+  failure)
+    printf 'curl: (56) controlled failure\033[31m\n::error::injected\342\200\256\n' >&2
     exit 56 ;;
-  check)
-    echo checked >> "$SETUP_FIXTURE/check-calls"
-    if [[ ${CHECK_FAIL:-0} == 1 ]]; then echo 'checksum refusal' >&2; exit 23; fi
-    echo '/prepared/pocket-ic' ;;
+  overflow) head -c 200000 /dev/zero >&2; exit 0 ;;
+  corrupt)
+    while [[ "$1" != --output ]]; do shift; done
+    printf corrupt > "$2" ;;
+  success)
+    while [[ "$1" != --output ]]; do shift; done
+    cp "$TESTKIT_SERVER_ARCHIVE" "$2" ;;
 esac
-LAUNCHER
-chmod +x "$fixture/launcher"
+CURL
+chmod +x "$fixture/curl"
+"$TESTKIT_SERVER_CLI" --version | grep -Eq '^ic-testkit-server [0-9]+\.[0-9]+\.[0-9]+$'
 status=0
-bash "$repo/scripts/qualification/setup-pocketic.sh" "$fixture/launcher" \
-  "$fixture/fake-assets" "$fixture/bounded-evidence" > "$fixture/stdout" 2> "$fixture/stderr" || status=$?
-[[ $status == 56 && ! -e "$fixture/check-calls" ]]
-if grep -Eq 'past-limit-marker|stale-marker' "$fixture/stderr"; then exit 1; fi
-[[ $(wc -c < "$fixture/stderr") -lt 6000 ]]
-grep -Fq 'past-limit-marker' "$fixture/fake-assets/.setup-v1-123-0/download.stderr"
-status=0
-SETUP_MODE=missing bash "$repo/scripts/qualification/setup-pocketic.sh" "$fixture/launcher" \
-  "$fixture/missing-assets" "$fixture/missing-evidence" > "$fixture/stdout" 2> "$fixture/stderr" || status=$?
-[[ $status == 56 ]]
-grep -Fq 'Diagnostic unavailable' "$fixture/stderr"
-SETUP_MODE=success bash "$repo/scripts/qualification/setup-pocketic.sh" "$fixture/launcher" \
-  "$fixture/fake-assets" "$fixture/success-evidence" > "$fixture/stdout" 2> "$fixture/stderr"
-[[ $(cat "$fixture/stdout") == /prepared/pocket-ic ]]
-status=0
-SETUP_MODE=success CHECK_FAIL=1 bash "$repo/scripts/qualification/setup-pocketic.sh" "$fixture/launcher" \
-  "$fixture/fake-assets" "$fixture/check-evidence" > "$fixture/stdout" 2> "$fixture/stderr" || status=$?
-[[ $status == 23 && ! -s "$fixture/stdout" ]]
-grep -Fq 'checksum refusal' "$fixture/stderr"
-[[ $(wc -l < "$fixture/check-calls") -eq 2 ]]
-printf 'Setup diagnostics: actual failed download, escaping, evidence, bounds, missing evidence and offline admission pass.\n'
+"$TESTKIT_SERVER_CLI" run "$fixture/missing" "$fixture/invalid" --ttl 0 -- true > /dev/null 2>&1 || status=$?
+[[ $status == 2 && ! -e "$fixture/invalid" ]]
+if "$TESTKIT_SERVER_CLI" check "$fixture/missing" > /dev/null 2>&1; then exit 1; fi
+for mode in failure overflow corrupt; do
+  status=0
+  SETUP_MODE="$mode" "$TESTKIT_SERVER_CLI" setup "$fixture/$mode-assets" \
+    "$fixture/$mode" "$fixture/curl" /usr/bin/gzip > "$fixture/stdout" 2> "$fixture/stderr" || status=$?
+  [[ $status != 0 && ! -s "$fixture/stdout" && ! -e "$fixture/$mode-assets/pocket-ic" ]]
+  [[ -f "$fixture/$mode/download.stderr" && ! -L "$fixture/$mode/download.stderr" ]]
+  [[ $(wc -c < "$fixture/$mode/download.stderr") -le 131072 ]]
+  [[ $(wc -c < "$fixture/stderr") -lt 32768 ]]
+  if [[ "$mode" == failure ]]; then
+    [[ $status == 56 ]]
+    grep -Fq 'curl\x3a (56) controlled failure\u{1b}[31m\n\x3a\x3aerror\x3a\x3ainjected\u{202e}' "$fixture/stderr"
+    printf 'curl: (56) controlled failure\033[31m\n::error::injected\342\200\256\n' > "$fixture/expected"
+    cmp "$fixture/expected" "$fixture/$mode/download.stderr"
+  fi
+done
+# Refuse reused or linked evidence; never replace a retained failure's files.
+cp "$fixture/failure/download.stderr" "$fixture/retained"
+ln -s "$fixture/failure" "$fixture/linked"
+for evidence in failure linked; do
+  if SETUP_MODE=corrupt "$TESTKIT_SERVER_CLI" setup "$fixture/other-assets" \
+    "$fixture/$evidence" "$fixture/curl" /usr/bin/gzip > /dev/null 2>&1; then exit 1; fi
+done
+cmp "$fixture/retained" "$fixture/failure/download.stderr"
+if [[ -n "${TESTKIT_SERVER_ARCHIVE:-}" ]]; then
+  cat > "$fixture/gzip" <<'GZIP'
+#!/usr/bin/env bash
+printf 'controlled gzip failure\033[31m\n' >&2
+exit 43
+GZIP
+  chmod +x "$fixture/gzip"
+  status=0
+  SETUP_MODE=success "$TESTKIT_SERVER_CLI" setup "$fixture/gzip-assets" \
+    "$fixture/gzip-evidence" "$fixture/curl" "$fixture/gzip" \
+    > "$fixture/stdout" 2> "$fixture/stderr" || status=$?
+  [[ $status == 43 && ! -s "$fixture/stdout" && ! -e "$fixture/gzip-assets/pocket-ic" ]]
+  grep -Fq 'controlled gzip failure\u{1b}[31m\n' "$fixture/stderr"
+  printf 'controlled gzip failure\033[31m\n' > "$fixture/expected"
+  cmp "$fixture/expected" "$fixture/gzip-evidence/server.stderr"
+  SETUP_MODE=success "$TESTKIT_SERVER_CLI" setup "$fixture/prepared" \
+    "$fixture/success" "$fixture/curl" /usr/bin/gzip > "$fixture/stdout"
+  [[ "$(cat "$fixture/stdout")" == "$("$TESTKIT_SERVER_CLI" check "$fixture/prepared")" ]]
+fi
+printf 'Setup failure status, bounded escaped diagnostics, raw evidence, checksum refusal and stale/link refusal pass.\n'

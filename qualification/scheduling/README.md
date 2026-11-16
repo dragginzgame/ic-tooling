@@ -1,34 +1,63 @@
 # Scheduling rewrite: current consumer requirements
 
-The selected rewrite moved from `../ic-scheduling-new` to `../ic-scheduling`.
-Testkit 0.107.2 is now [published with a compatible Types requirement](../../docs/qualification/testkit-types-compatibility.md).
-A registry-only export resolves the new cohort and passes both native drivers'
-Clippy. Current consumer Timers source still prevents the Wasm probe build, so
-installed acceptance remains incomplete. The local adapter selects 0.107.2; the
-recorded baseline below remains the consumer's selected 0.107.1.
-`make test-scheduling-consumer` snapshots that working tree, including tracked edits
-and non-ignored source, with the shared read-only capture helper. It applies no
-old Scheduling migration patch and does not modify the sibling. An explicit
-`SCHEDULING_SOURCE` override must satisfy the same rewrite ancestry and graph checks.
-The runner verifies descent from `f382bacac5461ea965e5813b56f15bd4757bf596`;
-it never falls back to the legacy source. Installed runs require explicit prepared
-server/launcher paths; the removed legacy checkout is no longer a tool locator.
-Tool bytes are hashed before and after each run independently of consumer source.
+[Scheduling #2](https://github.com/dragginzgame/ic-scheduling/issues/2) is completed.
+Its owner published Timers 0.46.0 and Jobs 0.39.0 with Runtime/guard 0.23.14 and
+Testkit 0.107.2 after complete installed checks on Linux/PocketIC 16.0.0. This
+supersedes the historical Runtime build blocker below. Current local Scheduling
+now selects registry Testkit 0.107.3 and Toko 0.44.11. This owner evidence is not a
+rerun of Tooling's earlier PocketIC 16.1.0 comparisons.
 
-The current target admits the locked dependency graph and checks only the host
-`once-driver` and `executor-driver` targets offline. Both must select Testkit
-registry 0.107.1, with the same supplier package ID; Once enables `held-reply-fixtures`.
-Neither driver may depend directly on PocketIC. This is source/graph and caller
-compilation evidence, not installed-runtime proof or acceptance of a replacement
-Testkit implementation. `make test-scheduling-replacement` separately selects
-local Testkit 0.107.1 in the captured export and runs the focused installed checks
-described below. It does not change the sibling's supplier selection.
+`make test-scheduling-consumer` snapshots `../ic-scheduling`, including tracked
+edits and non-ignored source. It verifies rewrite ancestry from
+`f382bacac5461ea965e5813b56f15bd4757bf596`, refuses capture drift and admits one
+registry Testkit 0.107.3 shared by the executor and Once drivers. No direct
+PocketIC dependency or historical-source fallback is admitted. Installed modes
+require explicit `TESTKIT_SERVER_CLI` and `SCHEDULING_SERVER_DIRECTORY`; see the
+[product command](../../docs/simulator-ownership.md). Tools are hashed before/after.
 
-The current consumer already uses the published replacement API. The local
-supplier patch now changes only its manifest dependency; it no longer rewrites
-fixture descriptors or constructors. Comparison modes select registry 0.107.1
-and local 0.107.1 on the same capture. The dated 0.106.0 comparisons below remain
-historical acceptance for their recorded inputs, not the current baseline.
+The local replacement adapter changes only the supplier manifest dependency,
+selecting this checkout's Testkit 0.107.4. It preserves the consumer's held-fixture calls,
+external endpoint boundary and private selectors. Stale patches must refuse;
+source/graph admission does not imply a fresh installed or archive pass.
+For the Protocol adoption, the replacement lock admission additionally permits
+only registry Protocol 0.2.7 with its reviewed archive checksum. The original
+captured lock remains intact; every other new external identity still refuses.
+
+## Current runner acceptance — 2026-11-16
+
+The Protocol 0.2.7 release check repeats pressure/held-upgrade acceptance on this
+same source identity, using local Testkit 0.107.4 and the product CLI:
+`target/scheduling-new.wJUWIZWv/`, log
+`target/deploy-01074/scheduling-held-qualified.log`. Exact supplier admission,
+Clippy, instance deletion and tool stability pass. A deliberately added unrelated
+registry identity still refuses in `target/deploy-01074/unrelated-drift.log`.
+
+Product-command capture at HEAD `df5d14a482973e427ea79cae022bd38971b39fa7`, tar
+SHA-256 `35181357d57eb68d42af60567d795bc08c958930efe99d26c8b56ace8e0376c2`,
+passes source/graph admission, local Testkit 0.107.4 Clippy/external-lock checks,
+and real pressure/held-upgrade checks through `ic-testkit-server` with prepared
+PocketIC 16.1.0 on Linux. Instance deletion and selected tool hashes pass
+independently. Evidence: `target/scheduling-new.FsYDrjyH/`, log
+`target/issue-10/scheduling-held.log`. This removes the private launcher package;
+the consumer retains its client, held fixtures and application assertions. It
+does not rerun all owner acceptance, qualify other hosts or change the sibling.
+
+The preceding private-runner capture is historical:
+
+Read-only capture at HEAD `df5d14a482973e427ea79cae022bd38971b39fa7`, tar SHA-256
+`4e8db311c967299edc969a3a8310c13f5f6e6a1d1571c64605c8e86a6d460d3e`, passes
+registry driver admission and local-supplier Clippy/external-lock checks. The
+refreshed private selector preserves the consumer's new focused options. Local
+Testkit 0.107.3 passes pressure and held-upgrade checks through the new private
+managed-server caller with prepared PocketIC 16.1.0 on Linux. Instance deletion
+and tool hashes pass independently. Evidence: `target/scheduling-new.dsY6YyGG/`,
+log `target/debt-scheduling-held.log`. This focused pass does not rerun all owner
+acceptance from Scheduling #2, test other hosts or change the sibling.
+
+## Historical captures
+
+The remaining dated captures retain their original versions, commands and limits.
+They are evidence, not current setup instructions or current blockers.
 
 ## Platform Runtime refresh — 2026-11-16
 

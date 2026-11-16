@@ -112,8 +112,8 @@ Linux reaping after the completion observer is dropped.
 
 `ic-host-text` 0.77.2 supplies pure [escaping and table layouts](docs/text-presentation.md).
 `make test-text` and `make test-query-text` qualify the leaf and current Query’s
-presentation/output callers without network reports. `make test-db-text` exercises
-the current local DB console against its installed records fixture.
+presentation/output callers without network reports. DB now owns its adopted
+Text/console checks; [historical Tooling evidence](qualification/db/README.md) remains.
 `make test-canic-text` checks current Canic status, terminal and declaration output.
 
 `ic-testkit` 0.107.1 starts the [shared Testkit contract](docs/testkit-held-replies.md)
@@ -122,7 +122,7 @@ generation. `make test-testkit-catalog` checks admission and module validity;
 `make test-testkit-module` checks installed behavior on an externally owned server.
 `make test-testkit-control` checks exclusive release and identity/progress refusals.
 `make test-scheduling-replacement` qualifies a current Scheduling export against
-local Testkit 0.107.3; the captured sibling selects the published replacement, 0.107.1. The
+local Testkit 0.107.4; the current sibling selects registry 0.107.3. The
 adapter changes only the supplier dependency, preserving its migrated fixture calls.
 
 The optional [managed server capability](docs/testkit-server.md) is implemented
@@ -130,11 +130,17 @@ for explicit pinned-archive preparation, offline checks and bounded server
 ownership. `make test-testkit-server` checks refusal paths; the separately selected
 installed target needs `TESTKIT_SERVER_ARCHIVE` and an absolute `TESTKIT_GZIP`.
 This capability is introduced by Testkit 0.107.3; it is absent from 0.107.2.
-Current Scheduling qualification is [blocked](qualification/scheduling/README.md#platform-runtime-refresh--2026-11-16)
-by its Runtime migration and its older Testkit selection. Published 0.107.2 removes
-the Types conflict; [current registry-only evidence](docs/qualification/testkit-types-compatibility.md)
-records the remaining consumer build failure.
-Earlier passing comparisons remain bound to their recorded source captures.
+[Scheduling #2](https://github.com/dragginzgame/ic-scheduling/issues/2) now records
+completed owner-side Runtime migration, installed acceptance and Timers/Jobs
+publication. Earlier failing and passing Tooling comparisons remain bound to
+their recorded source captures.
+
+Pending Testkit 0.107.4 adds the optional [product server CLI](docs/simulator-ownership.md)
+for setup/check/run, replacing the private qualification caller. Build locally with
+`make prepare-testkit-server-cli`; ordinary tests require an absolute
+`TESTKIT_SERVER_CLI` path and prepared server directory. The guide documents Toko
+installation after publication; no registry availability or consumer migration is
+claimed yet. Ordinary checks download nothing.
 `make test-scheduling-pressure` selects watchdog admission/pressure and Jobs
 pressure; `make test-scheduling-pressure-baseline` uses the released supplier.
 `make test-scheduling-lifecycle` compares released and replacement suppliers on
@@ -155,7 +161,7 @@ schedule/progress boundaries and bounded catch-up, including paused upgrades.
 and low-cycle delivery refusal against the rewrite at its canonical path.
 `make test-scheduling-aggregate` compares the complete Once installed roster,
 including control/dispatch cost observations. Installed selections require explicit
-`SCHEDULING_POCKET_IC_BIN` and `SCHEDULING_TESTKIT_CLI` executable paths.
+`SCHEDULING_SERVER_DIRECTORY` and an absolute `TESTKIT_SERVER_CLI` executable path.
 `make test-scheduling-metrics` compares the existing metrics-disabled/enabled
 probe with both Testkit suppliers, retaining exact Wasm bytes and observations.
 
@@ -191,8 +197,8 @@ admission and compiler-wrapper refusal before compilation or output replacement.
 `make test-canic-consumer` runs [Canic’s local record admission](qualification/canic/README.md)
 and selected original retained-plan and signed-recovery tests.
 
-`make test-db-consumer` qualifies [current DB rollback](qualification/db/README.md)
-using an explicitly prepared external server and the upstream async client.
+DB owns the adopted external-endpoint client and rollback checks. Tooling's
+[superseded migration adapters](qualification/db/README.md) are retired.
 Scheduling’s earlier Jobs/Timers experiments are [historical](qualification/scheduling/historical.md).
 The rewrite uses Testkit client types and held-reply fixtures. Independent fixture
 tests pass; earlier consumer acceptance and current migration blockers are recorded

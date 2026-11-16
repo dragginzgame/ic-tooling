@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The prepared external launcher owns the server; tests own and delete instances.
+# The prepared managed-server caller owns the server; tests own and delete instances.
 set -euo pipefail
 manifest="$1"
 scratch="$2"

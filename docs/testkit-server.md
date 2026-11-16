@@ -3,6 +3,11 @@
 Published in Testkit 0.107.3; [release and registry evidence](release-ownership.md#testkit-01073-publication)
 records the verified archive and the additional release-time installed checks.
 
+Pending Testkit 0.107.4 adds the optional `cli` feature and installable
+[`ic-testkit-server` command](simulator-ownership.md). It uses this unchanged
+library contract for setup/check/run; CLI policy does not enter default,
+held-reply-only or managed-server-only dependency graphs.
+
 The optional `managed-server` capability supplies [Tooling #6](https://github.com/dragginzgame/ic-tooling/issues/6).
 Testkit owns PocketIC asset selection and the dependency between an instance and
 its server. Process owns spawning, fair bounded output, cancellation, group
@@ -49,14 +54,17 @@ teardown independently in every native test harness.
 
 ## Consumer requirements and scope
 
-Canic was captured read-only at HEAD `e84702b3bdcf4eb209476aadd053df21f18dd8eb`
+Initial requirement evidence: Canic was captured read-only at HEAD `e84702b3bdcf4eb209476aadd053df21f18dd8eb`
 plus tracked edits and non-ignored additions, tar SHA-256
 `9d5cd0cdab4dce808427caf8cc9694bd8615b9540b4758938dde6496bd53a515`, under
-`target/issue-6/canic-review/`. Its qualification and DB witness currently use
+`target/issue-6/canic-review/`. Its qualification and DB witness then used
 legacy preparation/startup plus explicit instance close; CLI/signer fixtures
 also borrow localhost gateways. Those are requirements, not new acceptance.
-Canic's owning migration is [Canic #15](https://github.com/dragginzgame/canic/issues/15).
-No Canic/Auth implementation is edited or migrated by this supplier slice.
+[Canic #15](https://github.com/dragginzgame/canic/issues/15) subsequently closed
+with local adoption of published 0.107.3, removal of old lifecycle imports and
+application/gateway/failure acceptance. That closure records local consumer
+work, separately from delivery; it does not relabel this initial capture.
+No Canic/Auth source is edited by this supplier slice.
 
 Official archive digests come from the PocketIC 16.1.0 GitHub release metadata;
 executable digests were measured after verifying and decompressing those archives.

@@ -47,7 +47,7 @@ must capture the then-current working tree using the shared helper.
 | `apps/profile/client/src/main.rs`, ICP invocation | Direct-child ownership, inherited terminal stdin/stderr, bounded piped stdout and elapsed deadline | Foreground password interaction, arguments, network/identity choice, hex decoding and uncertain-effect reporting |
 | `crates/ic-build/src/process/mod.rs` here | Owned-group lifetime, fair pipe draining, bounded diagnostics, cancellation, incremental stdout delivery and explicit cleanup errors | Cargo command/environment admission, protocol decoding, artifact selection and scratch custody |
 
-Canic's profile demo is an application profile, not evidence that the missing
+Canic's profile demo is an application profile, not evidence that the retired
 `ic-profiler` process-observation consumer moved there. Do not infer process-sampling
 requirements from its name. A borrowed PID supplies no termination authority.
 
@@ -104,15 +104,14 @@ from this review.
 
 ## Other source-availability findings
 
-The previously recorded `../ic-profiler` directory is absent. Profiler ownership,
-required measurements and native acceptance remain unresolved until its current
-checkout or retirement/on-hold status is identified. Do not reconstruct its API
-from the historical production supplier.
+The maintainer confirmed Profiler is retired on 2026-11-16. Its process-observation
+owner, measurements and native acceptance are no longer required. Retain the
+historical evidence without reconstructing its API from the old supplier.
 
 `../ic-platform-new` at observed HEAD
 `46bba06a9a2523de443c7a4ce0a812dbb7de7092` has no current Tooling dependency in its
 inspected product/qualification manifests or Rust imports. Its native heap profiler
-is private qualification, not evidence for the missing process-observation
+is private qualification, not evidence for the retired process-observation
 consumer. Retain earlier Platform fixture results as source-bound evidence; do
 not expand old Platform migrations to satisfy the rewrite's future requirements.
 Current Query inspection found only already-admitted Text operations, not a new

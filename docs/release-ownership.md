@@ -17,7 +17,8 @@ now has its own group as its requirements-driven implementation begins.
 | tools | The external-lock executable has its own command contract. Its ledger also owns maintained repository qualification/setup workflows; these scripts are not executable library features or runtime dependencies. |
 
 All eight product packages belong to exactly one group. `qualification/owned-wasm-probe`
-is an unpublished fixture in its independent workspace, not a product group.
+is a private fixture in the independent qualification workspace, not a product group.
+The server CLI belongs to Testkit's package and group; the private prototype is removed.
 The Testkit group owns an actual admitted package, not a future simulator wrapper.
 Frozen Wire work and absent packages receive no group. Root dependency aliases list only actual member usage; the policy's
 alias rosters reflect those declarations without adding display-only dependencies.
@@ -40,6 +41,34 @@ the private qualification executable retains `publish = false`. All seven
 libraries are published; publication permission in a manifest is not delivery.
 
 ## Independent library publication
+
+### Testkit 0.107.4 publication
+
+The maintainer authorized Protocol adoption and deployment on 2026-11-16.
+The selected public group is Testkit 0.107.4: the optional setup/check/run CLI and
+a compatible Protocol requirement from 0.2.7. Delivery uses this checkout's
+`main`, `origin/main`, annotated `testkit-v0.107.4`, and crates.io. Other public
+package source/requirements are unchanged; the root's added optional CLI
+dependencies are used only by Testkit. Qualification/documentation maintenance
+delivers through Git, with the private tools ledger remaining pending.
+
+Protocol archive identity and the unchanged HTTP encoder are recorded in the
+[adoption review](qualification/platform-adoption.md#protocol-027-deployment).
+The selected complete local gate installs and exercises the extracted Testkit
+archive, including feature isolation, lint/docs, managed-server and held replies.
+Hosted native CI runs asynchronously; earlier macOS passes are not new CLI or
+Protocol acceptance. Publication and registry installation receipts follow here
+after verifying the release source and registry bytes.
+
+The complete Linux gate passed at `target/library-release.KR6eIDms/`: default
+and enabled-feature lint/tests/docs, isolated dependency graphs, installed
+archived CLI setup/IO/failure/cleanup, both held-reply checks with three observed
+deletions, and both managed-server installed checks. Source/tool hashes remained
+stable. Its precommit archive SHA-256 is
+`f730d5125d08ff0e006e71f6a87695510323551eb4948ec82f37306c79bc7625`.
+The current Scheduling pressure/held-upgrade pass and exact Protocol admission
+are retained at `target/scheduling-new.wJUWIZWv/`. Logs, independent lock-drift
+refusal and registry observations are under `target/deploy-01074/`.
 
 ### Testkit 0.107.3 publication
 
@@ -141,16 +170,16 @@ Platform 0.33.7 and its internal Types 0.20.4 edge. The certificate-only Platfor
 0.34.3 package has no role in Testkit's fixture graph.
 [Platform #5](https://github.com/dragginzgame/ic-platform/issues/5) supplied the
 missing capability. Final publication admission must use this current selection.
-The installed-test bootstrap remains
-released `ic-testkit-server` 0.106.0 with PocketIC 16.1.0: the replacement package
-deliberately has no launcher. That executable is qualification infrastructure,
-not a candidate runtime dependency. No general dependency refresh is selected.
+The original installed-test bootstrap used released `ic-testkit-server` 0.106.0
+with PocketIC 16.1.0. Current Tooling qualification replaces that external tool
+with the optional [Testkit CLI](simulator-ownership.md). The gate installs it from
+the extracted candidate and tests that exact executable. Historical receipts retain their inputs.
 
 `make test-library-release-candidate RELEASE_GROUPS='http text testkit'` selects
 only these groups; either an individual group or a subset is supported. Testkit
-requires absolute prepared executable paths in `TESTKIT_RELEASE_LAUNCHER` and
-`POCKET_IC_BIN`. The runner checks their versions before qualification, never
-downloads tools implicitly, and records their hashes before and after use.
+requires absolute `TESTKIT_SERVER_CLI`, `TESTKIT_SERVER_DIRECTORY`,
+`TESTKIT_SERVER_ARCHIVE` and `TESTKIT_GZIP` paths. The runner admits prepared assets
+offline, never downloads tools implicitly, and records hashes before and after use.
 Set `LIBRARY_RELEASE_ONLINE=true` only when preparing uncached dependencies.
 
 The gate runs warning-denied Clippy before packaging, compares packaged source

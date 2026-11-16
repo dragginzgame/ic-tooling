@@ -1,130 +1,184 @@
-# External simulator ownership: first qualification
+# Testkit server command
 
-The new optional [prepared server owner](testkit-server.md) supplies the separate
-capability requested in Tooling #6, published in Testkit 0.107.3. It does not restore the
-legacy API or change the historical external-server evidence below. Default and
-held-reply-only clients still need an explicitly supplied server owner.
+Testkit 0.107.4 adds `ic-testkit-server` behind the optional `cli` feature for
+[Tooling #10](https://github.com/dragginzgame/ic-tooling/issues/10). This version is
+pending local work, not a registry release. The command owns setup/check/run policy;
+the [managed-server library](testkit-server.md) owns asset selection, byte admission
+and server lifetime. Process owns bounded execution and child groups, FS owns asset
+publication, and Text owns diagnostic escaping. Consumers retain their runtimes,
+instances, application assertions, simulation and retry policy.
 
-The current local IC DB rollback driver needs an application subnet, its caller's
-Tokio runtime, exact upstream client types, raw stable-memory observation and
-explicit instance teardown. It does not require a pool, baseline cache, installation
-policy wrapper or new public Tooling session type for this workflow.
+## Ownership and reuse decision
 
-The [DB qualification adapter](../qualification/db/README.md) selects PocketIC
-16.1.0 directly. Its private consumer helper requires `IC_TESTKIT_POCKET_IC_URL`
-and always supplies it to the upstream asynchronous builder. Missing configuration
-refuses before construction even when `POCKET_IC_BIN` exists. It creates no runtime,
-server, downloader or discovery fallback. Calls retain upstream client/type identity;
-all affected driver callers borrow that client directly and consume its explicit
-async `drop` operation at closing. No replacement product API is introduced here.
+The private qualification runner demonstrated this command workflow for archive
+and Scheduling tests. Its orchestration is admitted as one coherent unit into
+Testkit's product package; the private package and its second dependency graph are
+removed. No historical launcher source, compatibility layer, pin catalog or tool
+store is imported. The product command additionally preserves child stdin/output,
+handles interruption signals, and retains decompression failures. Default Testkit
+and held-only/managed-only users do not acquire Clap, CtrlC or Text. The binary is
+in the existing Testkit release group; it needs no independently versioned package.
 
-A separately prepared `ic-testkit-server` 0.106.0 executable owns the server process
-for the qualification command. That released launcher is an explicit development
-bootstrap, not a new implementation or a migrated Tooling product dependency.
-The driver graph has no `ic-testkit` package. Provisioning is outside instance use;
-its exported `make m0-setup` delegates to the released CLI instead of an ignored
-library setup test. The qualification runner only checks prepared assets offline.
-Ordinary driver invocations now require an externally supplied endpoint; this is
-an isolated migration recipe, not production cutover of DB's commands.
+This removes the obligation to implement a launcher in each consumer. It follows
+Toko's [PocketIC ownership contract](https://github.com/dragginzgame/toko-tooling/blob/08d63df7661910554ef72980037f55edd914aba0/rules/engineering-details.md#rust-workspaces-and-portable-tooling).
+The command syntax below is a new supported contract, not a promise of legacy
+0.106.0 CLI compatibility. The managed-server library API is unchanged.
 
-## Qualification setup diagnostics
+## Installation and explicit preparation
 
-The tools workflow owns setup reporting under
-[Tooling #3](https://github.com/dragginzgame/ic-tooling/issues/3), outside the Testkit library.
-Use `scripts/qualification/setup-pocketic.sh` with three absolute arguments:
-the prepared 0.106.0 launcher, its asset directory and a new evidence directory.
-On success stdout contains the path returned by the launcher's independent offline
-`check`. No asset selection, download, checksum, version or publication logic is
-copied from the legacy implementation. The existing launcher remains a bootstrap;
-this does not change the published 0.106.0 binary or restore its library API.
+After 0.107.4 is published, use the existing reviewed Toko installer from the
+consumer checkout. Installation is an explicit setup step; ordinary execution
+adds `--check` to this selection to admit an already installed executable offline:
 
-On failure the command preserves the setup/check exit status, names its retained
-logs and displays at most 4096 bytes per diagnostic. Controls, non-ASCII bytes,
-backslashes and colons are escaped, including terminal and workflow-command syntax.
-Complete raw evidence remains in retained files. Only the attempt explicitly named by this
-setup invocation is reported; older attempts are not selected by timestamp/glob.
-Missing diagnostic files are reported without replacing the original failure.
-No retry or network-cause inference is introduced.
+```sh
+TESTKIT_SERVER_CLI="$(bash vendor/toko-tooling/scripts/dev/install-rust-tools.sh \
+  --consumer "$PWD" --package ic-testkit --version 0.107.4 \
+  --bin ic-testkit-server --features cli --profile release)"
+export TESTKIT_SERVER_CLI
+```
 
-The library CI job uses this entrypoint and retains setup stdout/stderr plus
-failed-attempt `download.stderr` and `failure.txt`, including hidden attempt paths,
-even when setup prevents archive qualification. It does not upload downloaded
-binaries or partial archives. Callers no longer need to locate and open failed
-attempt files manually to see the bounded diagnostic.
+Until publication, Tooling developers build the local candidate explicitly with
+`make prepare-testkit-server-cli` and select
+`TESTKIT_SERVER_CLI="$PWD/target/debug/ic-testkit-server"`. This is development
+qualification, not registry installation or permission for consumers to depend on
+a mutable sibling executable. Toko's `--describe` accepts the product selection;
+actual registry installation remains a delivery check after publication.
 
-`make test-pocketic-setup` requires `TESTKIT_RELEASE_LAUNCHER` and forces curl exit
-56 through the real prepared launcher without networking. Focused fixtures cover
-control/workflow escaping, report bounds, retained raw bytes, stale/missing evidence,
-original status, successful offline admission and checksum refusal. CI runs that
-same check on its native hosts; local execution does not claim native CI acceptance.
-Wasm Store's legacy library caller needs a separate consumer migration, tracked in
-[Store #3](https://github.com/dragginzgame/ic-wasm-store/issues/3); the reporting
-entrypoint does not alter that consumer's already-released library dependency.
+With the selected CLI and prepared absolute curl/gzip executables:
 
-## Honest failure and lifetime boundaries
+```sh
+mkdir -p target/simulator
+"$TESTKIT_SERVER_CLI" setup "$PWD/target/simulator/prepared" \
+  "$PWD/target/simulator/setup-evidence" /usr/bin/curl /usr/bin/gzip
+"$TESTKIT_SERVER_CLI" check "$PWD/target/simulator/prepared"
+```
 
-PocketIC 16.1.0's asynchronous client has no Rust Drop implementation that deletes
-its instance. Its async `drop` sends DELETE but only logs transport failure and
-does not classify HTTP status. Returning from that operation establishes a deletion
-attempt, not confirmed remote cleanup. The qualification independently observes
-`/instances` and server reachability afterward; those observations prove this run's
-outcome, not a stronger upstream API contract. The read-only inventory request is
-a test oracle, not a new simulator transport implementation.
+`setup DIRECTORY NEW_EVIDENCE_DIRECTORY ABSOLUTE_CURL ABSOLUTE_GZIP` is the only
+network operation. Directory/evidence/tool arguments must be absolute without
+CR/LF. Evidence must be new; the destination is created with private permissions
+if absent, and its parent must exist. Curl configuration files are disabled;
+HTTPS redirects, a 120-second curl deadline, 130-second Process deadline, 64 MiB
+body limit and 128 KiB per captured output stream bound the download. Testkit
+verifies its selected archive, bounds decompression, and publishes the executable
+create-only. A separate offline check admits it again before success. Existing
+invalid assets are refused, never repaired or overwritten. No automatic retry.
 
-Construction still inherits upstream panic behavior. The consumer timeout can
-cancel creation after remote effects; no instance ID or automatic recovery is
-promised in that case. Cancellation of teardown likewise cannot prove deletion.
-The external server owner outlives the whole command and stops its own process
-on completion/failure. The client receives no server shutdown authority.
+`check DIRECTORY` downloads nothing and prints only the admitted executable path
+on stdout. Setup has the same success stdout. Diagnostics go to stderr; the gzip
+archive stays in the new evidence directory. `POCKET_IC_BIN` and upstream server
+search/download are not alternative sources. Tooling qualification selects
+`TESTKIT_SERVER_DIRECTORY`, `TESTKIT_SERVER_ARCHIVE` and `TESTKIT_GZIP` explicitly;
+Scheduling selects `SCHEDULING_SERVER_DIRECTORY`.
 
-## Decision and remaining work
+## Execution, output and failure
 
-For the admitted borrowed-server DB workflow, use the upstream async client and
-explicit preparation boundary; do not add a facade merely to preserve old helper
-names. This removes the legacy library lifecycle wrapper and its dependency graph.
-The actual consumer test remains in its exported current source, with its raw-memory
-oracle unchanged. No legacy implementation or test tree enters product crates.
+```sh
+"$TESTKIT_SERVER_CLI" run "$PWD/target/simulator/prepared" \
+  "$PWD/target/simulator/run-evidence" --ttl 300 -- cargo test --locked --offline
+```
 
-This is the first Stage 4 ownership result, not completion of Stage 3 or Stage 4.
-A new managed-server capability still needs process lifetime, cancellation, bounded
-startup, instance/server dependency and cleanup evidence. Jobs single-canister
-recovery now uses the same direct upstream client boundary
-(see [qualification](../qualification/scheduling/README.md)). The consumer owns
-controller identity, snapshot retention and its finite install-rate-limit retry.
-Unauthorized capture/restore and exact raw stable-memory restoration pass. This
-does not establish multi-canister snapshot atomicity: snapshot sets still need
-actual current requirements, explicit callers and partial-effect evidence.
-Neither borrowing nor successful deletion promises restoration, rollback of time,
-cleanup after every failure, native macOS qualification or live IC behavior.
+`run DIRECTORY NEW_EVIDENCE_DIRECTORY --ttl SECONDS -- COMMAND ARGS...` admits
+prepared bytes offline and starts one loopback server. TTL defaults to 300 seconds
+and accepts 1–3600. Startup has 30 seconds; server output has 1 MiB per stream;
+server lifetime is command TTL plus 60 seconds. The child receives
+`IC_TESTKIT_POCKET_IC_URL`; `POCKET_IC_BIN` is removed. Command construction and
+Cargo policy stay with the caller. No Cargo invocation is built into Testkit.
 
-Platform’s [current raw_rand fixture](../qualification/platform/README.md) also
-uses the direct client and caller-owned runtime. The Agent fixture now does the
-same, with four ingress identity cases, certificate refusal and actual Principal
-package identity admission. The qualification preserves its
-producer-byte and runtime rejection/cleanup/cancellation checks. This removes
-managed-server custody only from those fixtures; the other Platform drivers and
-Query workload remain unqualified. No shared lifecycle type follows from these
-successful borrowed-server workflows.
+The child uses inherited stdin, supporting pipes and files. Stdout/stderr are
+forwarded byte-for-byte and also retained, each with a 16 MiB total byte budget.
+This is intentional command IO passthrough, including binary/terminal bytes;
+only Testkit-owned diagnostics are escaped. The command runs in an owned process
+group. This is a bounded command runner, not a foreground-terminal/job-control or
+daemonization service. Callers must exclude processes that escape the owned group.
+Blocking output sinks/kernel operations are not hard real-time guarantees.
 
-## Scheduling rewrite: Testkit is a demonstrated owner
+After normal/nonzero exit, spawn refusal, output refusal, timeout or cancellation,
+Process closes the command group and the CLI stops and joins the server. SIGINT,
+SIGTERM and SIGHUP set Process cancellation; startup/preparation observe it at their
+bounded phase boundaries. Cancellation does not undo already published files or
+remote effects. Forced termination such as SIGKILL cannot promise Rust cleanup.
+Nonzero command/curl/gzip exit codes are preserved; signal termination, admission,
+communication or cleanup failure returns 1 when no nonzero tool code exists.
+Clap usage errors return 2. A successful command cannot conceal failed cleanup.
+Secondary report-write failure cannot replace an already observed nonzero status.
 
-The active rewrite is now `../ic-scheduling` (formerly `../ic-scheduling-new`). It explicitly selects Testkit's
-PocketIC re-export and held-reply fixtures. These serve shared type identity,
-bounded fixture construction and deterministic pending/release control for Once,
-Jobs, watchdog and held-upgrade tests. Removing that dependency is not a goal.
-The [replacement contract](testkit-held-replies.md) is grounded in these
-[current requirements](../qualification/scheduling/README.md). Its focused baseline
-passes pressure and held-upgrade scenarios using released Testkit. Runtime, topology, funding, simulated time and
-consumer assertions remain caller-owned; shared mechanisms belong in Testkit.
+Each new evidence directory retains bounded command/server streams, Process
+reports and the started endpoint. External clients must finish before the child
+exits. They do not hold a Rust `Instance`, so a zero abandonment count is not proof
+of remote deletion. Scheduling and held-reply checks independently observe instance
+inventory. Shutdown/deletion never implies restoration of time or data.
 
-The earlier direct-client and snapshot experiments used pre-rewrite source then
-located at `../ic-scheduling` and
-remain [historical evidence](../qualification/scheduling/historical.md). Their
-native-snapshot failure and local upload workaround do not establish a snapshot
-requirement for the rewrite. No legacy snapshot or held-reply subsystem is admitted
-for wholesale import. The new Testkit catalog, generator and exclusive controller
-have independent acceptance evidence in the replacement contract; Scheduling's
-replacement-supplier qualification remains separate.
+## Diagnostics and acceptance
 
-The historical runner and its exclusive adapters have been removed. Retained
-observations are not instructions to restore that executable lane.
+[Tooling #3](https://github.com/dragginzgame/ic-tooling/issues/3)'s reporting obligation
+is retained. At most 4096 diagnostic source bytes are shown through Text escaping,
+with colons additionally escaped against CI workflow-command syntax. Raw bounded
+download/decompression/startup stderr and original Process status remain available.
+CI uploads named setup evidence with seven-day retention, excluding archives and
+partial downloads. Evidence starts in an exclusive private directory; existing
+or linked evidence is refused. Namespace writers must remain excluded.
+
+`make test-pocketic-setup` uses a fake curl and real CLI: exit 56, escaped/raw
+bytes, output overflow, checksum refusal, offline missing-asset refusal, invalid
+TTL and stale/link refusal. With an existing `TESTKIT_SERVER_ARCHIVE`, it also
+checks gzip exit 43 and successful preparation. `make test-testkit-server-cli`
+uses a real prepared server for command IO, nonzero exit, timeout, SIGTERM, spawn
+failure and secondary diagnostic failures, independently checking endpoint closure.
+
+The archive gate installs the CLI from the extracted candidate with Cargo, then
+uses that installed executable for these checks and both existing held-reply tests.
+The native workflow runs the same gate on Linux and both macOS architectures.
+Local evidence and remaining host/delivery limits are recorded in the
+[current handoff](status/current.md). Earlier private-runner evidence remains under
+`target/debt-held/` and `target/simulator-owner.g7XjBr1S/`; it is not product release
+or native macOS evidence.
+
+## Local candidate evidence — 2026-11-16
+
+The corrected local Testkit 0.107.4 archive is
+`target/issue-10/repackaging/package/ic-testkit-0.107.4.crate`, SHA-256
+`9e83e20d1236e787b6839bf36d8c3cf68c68e097d4bf287f2b58fcdcb0b245e8`.
+Cargo installed its CLI from the extracted archive into
+`target/issue-10/installed-corrected/`, using a fresh compilation directory.
+`--version` reports `ic-testkit-server 0.107.4`. That executable passes complete
+setup fixtures (including real archive preparation and gzip exit 43), byte-exact
+piped IO, success/nonzero/timeout/SIGTERM/spawn cleanup, and original exit retention
+when secondary report writes fail. It also runs both held-reply installed tests;
+both managed-server installed tests pass separately. Logs and source hashes are
+under `target/issue-10/`; runtime evidence is
+`target/testkit-server-cli.1aKreAs8/`.
+
+The initial archive gate at `target/library-release.6q1V7BeI/` passed package/source,
+Clippy, default/full library tests and documentation checks, then exposed Clap's
+package-name default in the CLI version output. The corrected archive sets the
+binary name explicitly. Its library source is unchanged from that gate; focused
+Clippy and the corrected installed-command checks above pass. The initial gate
+did not finish successfully, and its earlier library results are reused only for
+those unchanged sources. Default/managed-only/held-only graphs exclude CLI
+dependencies; the CLI graph excludes fixture WAT and Platform dependencies.
+Formatting, baseline admission, ShellCheck and actionlint pass.
+
+The current [Scheduling capture](../../qualification/scheduling/README.md#current-runner-acceptance--2026-11-16)
+passes real pressure/held-upgrade checks through the product command. This removes
+the private launcher package without moving the consumer's client or assertions.
+Toko installer `--describe` accepts the package/bin/features selection. Registry
+installation, publication and native macOS acceptance remain outstanding; no
+hosted run or DB migration is claimed by these local results.
+
+## DB adoption boundary and historical requirements
+
+DB's migration is thin: select this executable through Toko, invoke setup explicitly,
+use offline check for ordinary admission, and make `scripts/with-pocketic.sh` invoke
+`run` with its prepared directory, a unique evidence directory and original command.
+An existing externally supplied endpoint can still execute the DB command directly.
+Keep DB's runtime, direct PocketIC client, missing/invalid endpoint test, raw-memory
+rollback oracle and console assertions. Its standalone console test removes the
+endpoint and exercises that command wrapper; piped input/output must still work.
+The original evidence from DB #3 is retained in [Tooling #10](https://github.com/dragginzgame/ic-tooling/issues/10).
+No DB source or adoption is changed by this supplier implementation.
+
+[Earlier DB/Platform/Scheduling observations](https://github.com/dragginzgame/ic-tooling/blob/10e7d64e3103af84c18e433be434e4527dee75d6/docs/simulator-ownership.md)
+retain their exact historical scope. Current inspected callers do not justify a
+shared multi-canister snapshot-set abstraction. Such an operation needs an unfrozen
+consumer's controller identity, ordering and partial-effect recovery contract;
+this command does not introduce cached baselines or claim snapshot atomicity.

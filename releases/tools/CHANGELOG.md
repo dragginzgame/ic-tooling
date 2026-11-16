@@ -10,6 +10,16 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Replace the legacy Testkit 0.106.0 qualification launcher and implicit sibling
+  tool lookup with Testkit's product CLI, removing the temporary private runner.
+  Scheduling and archive checks use explicit prepared paths; bounded setup
+  diagnostics, original command failures and server cleanup remain observable.
+  Fetch the extracted archive's registry graph before offline feature checks.
+  Retire DB's already-adopted direct-client/Text migration patches and runners;
+  [Tooling #10](https://github.com/dragginzgame/ic-tooling/issues/10) supplies the
+  command interface; archive qualification installs and tests its actual package.
+  Reconcile completed Scheduling/Canic adoption with the workload register.
+
 - Retire the obsolete Platform raw_rand/Agent qualification adapters and their
   Make targets after current-source capture confirms their owner scripts were
   removed. Preserve dated evidence without restoring old Platform APIs. Refresh

@@ -1,4 +1,11 @@
-# Testkit Types compatibility — issue 5
+# Testkit Types compatibility — Tooling #5
+
+[Tooling #5](https://github.com/dragginzgame/ic-tooling/issues/5) is closed.
+[Scheduling #2](https://github.com/dragginzgame/ic-scheduling/issues/2) subsequently
+completed the consumer implementation and installed acceptance, publishing Timers
+0.46.0 and Jobs 0.39.0 with Runtime/guard 0.23.14 and Testkit 0.107.2. Its owner
+records Linux/PocketIC 16.0.0 evidence, distinct from the historical Tooling
+captures below. The earlier 21-error build is no longer a current blocker.
 
 The Testkit 0.107.2 correction changes its Types requirement from an exact patch
 to `0.21.2` (`>=0.21.2, <0.22.0`). The lock still selects 0.21.2. No legacy Runtime,
@@ -44,7 +51,7 @@ Its original manifest/source match the committed files, and Cargo VCS provenance
 identifies the release commit without a dirty marker. The unrelated root-manifest
 comment edit was preserved during clean-input publication and restored afterward.
 
-## Current Scheduling boundary
+## Historical Scheduling boundary at publication
 
 The read-only capture records HEAD `3d2b3fd3775252e779181c4175a8ecf661afb60b`
 plus current tracked edits and non-ignored additions, source tar SHA-256

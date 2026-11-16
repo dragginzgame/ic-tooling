@@ -1,13 +1,31 @@
 # Platform adoption — 2026-11-16
 
-## Current Protocol 0.2.6 refresh
+## Protocol 0.2.7 deployment
+
+Testkit 0.107.4 selects the compatible requirement `0.2.7` (`>=0.2.7, <0.3.0`),
+with the root lock selecting the latest non-yanked Protocol 0.2.7. Its verified
+archive SHA-256 is `db4ea27c2705897b24b1c7c239db916abbb4c15eb97c1adcda896d0ca3891ff4`,
+source `26834168a74cf76a4b8f93d4450c3da4f9e3f5db`. The published 0.2.6/0.2.7
+HTTP encoder source trees are byte-identical. Only `http-request` is enabled;
+Types and original PocketIC identities remain unchanged. No product adaptation
+or compatibility layer is necessary.
+
+This removes the exact patch-cohort conflict tracked in
+[Tooling #9](https://github.com/dragginzgame/ic-tooling/issues/9), while Cargo's lock
+still records exact admitted bytes. The independent qualification workspace has
+no Protocol dependency. Scheduling's local supplier adapter explicitly admits
+only Protocol 0.2.7's reviewed checksum in addition to its captured external
+identities; unrelated lock drift still refuses. Consumer source stays untouched.
+Release evidence is recorded in the [Testkit receipt](../release-ownership.md#testkit-01074-publication).
+
+## Earlier Protocol 0.2.6 refresh
 
 Testkit 0.107.3 selects Protocol 0.2.6. Its non-yanked crates.io archive has
 SHA-256 `758e0b8455b2ab340a4503f211357b7725f52a55a2c8c209ee2f01b122763b7e`
 and identifies source `a813d4ea5378515984a547a9f4e9d37f2124cf14`. Types 0.21.2
 remains the latest published release; its compatible requirement and checksum
 below are unchanged. Only Protocol's version/checksum changed in the resolved
-dependency selections. Pending managed-server work is preserved separately.
+dependency selections. The managed-server capability was also published in 0.107.3.
 
 The verified 0.2.5 and 0.2.6 `src/http_request/` trees are identical. New Caffeine
 and management-snapshot modules are gated by disabled features. Tooling still
@@ -20,11 +38,10 @@ product/dev/build declarations, scripts and native tool selections. Only Testkit
 directly selects Platform crates. The independent owned-Wasm-probe workspace has
 no Platform dependency. Captured sibling manifest context is not a Tooling pin;
 consumer migrations remain in their owners. Auth and the other expressly frozen
-comparisons remain excluded. The prepared 0.106.0 launcher is still an external
-qualification tool with older transitive Platform dependencies; there is no Rust
-type exchange with it. Replacing its setup/CLI wiring is separate Testkit tooling
-work, now enabled by the local [Tooling #6 capability](../testkit-server.md), not a reason
-to add the Platform facade or Runtime to Tooling's product graph.
+comparisons remain excluded. The optional [product CLI](../simulator-ownership.md)
+now composes Testkit managed-server instead of the old 0.106.0 launcher; the
+private qualification prototype is removed. The CLI graph does not select Platform;
+the product's held fixtures retain their explicit Protocol/Types boundary.
 
 Focused evidence in `target/platform-adoption-current/` passes six held-fixture
 unit tests, all-feature/all-target Testkit Clippy with warnings denied, locked
@@ -53,7 +70,7 @@ and Principal type. Protocol adds a separate version-one pricing encoder while
 the existing encoder preserves unspecified pricing. Types source is unchanged
 from 0.21.1. No product implementation or compatibility layer is added.
 
-## Repository inventory
+## Historical inventory at the 0.2.5 refresh
 
 | Surface | Selection and disposition |
 | --- | --- |
@@ -71,7 +88,7 @@ its fixture bounds and original PocketIC identity. Delivery of the new pins and
 completion of Scheduling's installed qualification remain outstanding; this is
 not a fleet-wide completion claim.
 
-## Current-source review captures
+## Historical current-source review captures
 
 All captures use the shared double-capture helper, including tracked edits and
 non-ignored additions, under `target/platform-adoption-next/<owner>-review/`.

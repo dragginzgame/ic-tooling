@@ -19,15 +19,10 @@ mkdir "$scratch/source"
 source "$repo/scripts/qualification/local-source.sh"
 export_local_source
 if [[ "$mode" != admit ]]; then
-  : "${SCHEDULING_POCKET_IC_BIN:?select an explicitly prepared local PocketIC server}"
-  [[ "$SCHEDULING_POCKET_IC_BIN" == /* && -x "$SCHEDULING_POCKET_IC_BIN" ]] || {
-    echo 'SCHEDULING_POCKET_IC_BIN must name an existing absolute executable' >&2; exit 1;
-  }
-  : "${SCHEDULING_TESTKIT_CLI:?select an explicitly prepared ic-testkit-server 0.106.0 launcher}"
-  [[ "$SCHEDULING_TESTKIT_CLI" == /* && -x "$SCHEDULING_TESTKIT_CLI" ]] || {
-    echo 'SCHEDULING_TESTKIT_CLI must name an existing absolute executable' >&2; exit 1;
-  }
-  [[ "$("$SCHEDULING_TESTKIT_CLI" --version)" == 'ic-testkit-server 0.106.0' ]]
+  : "${TESTKIT_SERVER_CLI:?select an absolute prepared ic-testkit-server executable}"
+  : "${SCHEDULING_SERVER_DIRECTORY:?select an absolute prepared Testkit server directory}"
+  [[ "$TESTKIT_SERVER_CLI" == /* && -x "$TESTKIT_SERVER_CLI" ]]
+  server="$("$TESTKIT_SERVER_CLI" check "$SCHEDULING_SERVER_DIRECTORY")"
   export GIT_CEILING_DIRECTORIES="$repo/target"
   selector_patch="$repo/qualification/scheduling/held-selection.patch"
   if [[ "$selection" == executor ]]; then
@@ -35,15 +30,15 @@ if [[ "$mode" != admit ]]; then
   fi
   git -C "$scratch/source" apply --check "$selector_patch"
   git -C "$scratch/source" apply "$selector_patch"
-  "$SCHEDULING_POCKET_IC_BIN" --version > "$scratch/server-version.txt"
-  sha256sum "$SCHEDULING_POCKET_IC_BIN" "$SCHEDULING_TESTKIT_CLI" > "$scratch/server.sha256"
+  "$server" --version > "$scratch/server-version.txt"
+  sha256sum "$server" "$TESTKIT_SERVER_CLI" > "$scratch/server.sha256"
 fi
 export CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
 export CARGO_TARGET_DIR="$repo/target/scheduling-new-consumer-build"
 manifest="$scratch/source/qualification/Cargo.toml"
 cargo metadata --manifest-path "$manifest" --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e '. as $m |
-  [.packages[] | select(.name == "ic-testkit" and .version == "0.107.1" and
+  [.packages[] | select(.name == "ic-testkit" and .version == "0.107.3" and
     .source == "registry+https://github.com/rust-lang/crates.io-index")] as $suppliers |
   $suppliers[0].id as $testkit |
   ($suppliers | length == 1) and
@@ -55,7 +50,7 @@ jq -e '. as $m |
     all($m.resolve.nodes[] | select(.id == $driver) | .deps[]; .name != "pocket_ic")) and
   any($m.resolve.nodes[] | select(.id == $testkit) | .features[]; . == "held-reply-fixtures")
 ' "$scratch/metadata.json" >/dev/null || {
-  echo 'Expected Scheduling rewrite executor/Once drivers with registry Testkit 0.107.1 and held-reply fixtures; source contract refused.' >&2
+  echo 'Expected Scheduling rewrite executor/Once drivers with registry Testkit 0.107.3 and held-reply fixtures; source contract refused.' >&2
   exit 1
 }
 run_installed() {
@@ -67,7 +62,7 @@ run_installed() {
   mkdir -p "$output"
   cargo tree --manifest-path "$manifest" -p "$driver" -e normal,build --prefix none --locked --offline > "$output/driver-tree.txt"
   if [[ "$selection" == executor && ( "$mode" == replacement || "$output" == "$scratch/replacement" ) ]]; then
-    rg -q '^ic-testkit v0.107.3 ' "$output/driver-tree.txt"
+    rg -q '^ic-testkit v0.107.4 ' "$output/driver-tree.txt"
     if rg -q '^(wat|ic-platform|ic-platform-protocol|ic-platform-types) v' "$output/driver-tree.txt"; then
       echo 'Executor unexpectedly selects optional fixture dependencies' >&2; exit 1
     fi
@@ -84,8 +79,8 @@ run_installed() {
     cargo build --manifest-path "$manifest" -p "$probe" --release --target wasm32-unknown-unknown --locked --offline
   fi
   cargo build --manifest-path "$manifest" -p "$driver" --locked --offline
-  env -u IC_TESTKIT_POCKET_IC_URL POCKET_IC_BIN="$SCHEDULING_POCKET_IC_BIN" "$SCHEDULING_TESTKIT_CLI" run \
-    --ttl 300 --server-stdout "$output/server.stdout" --server-stderr "$output/server.stderr" -- \
+  env -u IC_TESTKIT_POCKET_IC_URL "$TESTKIT_SERVER_CLI" run \
+    "$SCHEDULING_SERVER_DIRECTORY" "$output/server" --ttl 300 -- \
     bash "$repo/scripts/qualification/scheduling-held.sh" "$output" "$CARGO_TARGET_DIR/debug/$driver" \
     "$wasm_path" "$selection"
   if [[ "$selection" == metrics-cost ]]; then
@@ -105,15 +100,32 @@ if [[ "$mode" == replacement || "$mode" == comparison ]]; then
   cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
   jq -e --arg root "$repo" '. as $m |
     [.packages[] | select(.name == "ic-testkit")] as $suppliers |
-    ($suppliers | length == 1) and $suppliers[0].version == "0.107.3" and
+    ($suppliers | length == 1) and $suppliers[0].version == "0.107.4" and
     $suppliers[0].manifest_path == ($root + "/crates/ic-testkit/Cargo.toml") and
     all(["once-driver", "executor-driver"][]; . as $name |
       ($m.packages[] | select(.name == $name) | .id) as $driver |
       any($m.resolve.nodes[] | select(.id == $driver) | .deps[];
         .name == "ic_testkit" and .pkg == $suppliers[0].id))
   ' "$scratch/metadata.json" >/dev/null
+  # Tooling #9 admits exactly this reviewed supplier change, not arbitrary drift.
+  cp "$scratch/released-Cargo.lock" "$scratch/admitted-Cargo.lock"
+  jq -e '[.packages[] | select(.name == "ic-platform-protocol")] |
+    length == 1 and .[0].version == "0.2.7" and
+    .[0].source == "registry+https://github.com/rust-lang/crates.io-index"' \
+    "$scratch/metadata.json" >/dev/null
+  if ! jq -e 'any(.packages[]; .name == "ic-platform-protocol" and .version == "0.2.7")' \
+    "$scratch/released-metadata.json" >/dev/null; then
+    cat >> "$scratch/admitted-Cargo.lock" <<'PROTOCOL'
+
+[[package]]
+name = "ic-platform-protocol"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db4ea27c2705897b24b1c7c239db916abbb4c15eb97c1adcda896d0ca3891ff4"
+PROTOCOL
+  fi
   cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- \
-    verify-external-lock "$scratch/released-Cargo.lock" "$scratch/source/qualification/Cargo.lock" 1048576
+    verify-external-lock "$scratch/admitted-Cargo.lock" "$scratch/source/qualification/Cargo.lock" 1048576
   cargo clippy --manifest-path "$manifest" -p once-driver -p executor-driver --all-targets --locked --offline -- -D warnings
 fi
 if [[ "$mode" != admit ]]; then
