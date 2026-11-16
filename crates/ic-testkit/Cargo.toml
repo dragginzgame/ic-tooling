@@ -1,7 +1,7 @@
 [package]
 name = "ic-testkit"
-version = "0.107.2"
-description = "Shared PocketIC types and bounded held-reply test fixtures"
+version = "0.107.3"
+description = "Shared PocketIC types, held-reply fixtures and optional bounded server ownership"
 edition.workspace = true
 rust-version.workspace = true
 license-file.workspace = true
@@ -14,6 +14,14 @@ toko-tooling.workspace = true
 
 [features]
 default = []
+managed-server = [
+    "dep:ic-host-artifacts",
+    "dep:ic-host-fs",
+    "dep:ic-host-process",
+    "dep:tempfile",
+    "dep:thiserror",
+    "dep:tokio",
+]
 held-reply-fixtures = [
     "dep:thiserror",
     "dep:ic-platform-protocol",
@@ -22,15 +30,25 @@ held-reply-fixtures = [
 ]
 
 [dependencies]
+ic-host-artifacts = { workspace = true, optional = true }
+ic-host-fs = { workspace = true, optional = true }
+ic-host-process = { workspace = true, optional = true }
 ic-platform-protocol = { workspace = true, optional = true, features = ["http-request"] }
 ic-platform-types = { workspace = true, optional = true }
 pocket-ic.workspace = true
+tempfile = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["time"] }
 wat = { workspace = true, optional = true }
 
 [dev-dependencies]
+reqwest = { workspace = true, features = ["json"] }
 tokio = { workspace = true, features = ["rt", "net", "time"] }
 wasmparser.workspace = true
+
+[[example]]
+name = "prepare_server"
+required-features = ["managed-server"]
 
 [lints]
 workspace = true

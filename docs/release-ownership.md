@@ -41,6 +41,39 @@ libraries are published; publication permission in a manifest is not delivery.
 
 ## Independent library publication
 
+### Testkit 0.107.3 delivery preparation
+
+The maintainer authorized Toko adoption and deployment on 2026-11-16. The selected
+public group is Testkit: compatible opt-in managed-server APIs and Protocol 0.2.6.
+Other libraries have no changed public source or runtime requirements; the
+inactive Toko marker does not require their republication. The private tools
+ledger stays pending and its qualification maintenance delivers through Git.
+Delivery uses this checkout's `main`, `origin/main` and `testkit-v0.107.3`, with
+crates.io publication after local archive qualification and package admission.
+Hosted native CI remains asynchronous under the existing patch-release policy.
+
+The Testkit archive gate now selects both optional features and qualifies the
+managed-server refusal tests and two installed lifecycle checks from the extracted
+archive, alongside the existing held-fixture tests and independent deletion
+observation. It additionally requires absolute `TESTKIT_SERVER_ARCHIVE` and
+`TESTKIT_GZIP` inputs, whose hashes are retained with the launcher/server hashes.
+Hosted setup selects `archive.gz` from the launcher's verified bundle and
+`/usr/bin/gzip`; neither ordinary tests nor the archive gate download assets.
+The existing bootstrap remains separate from the newly published library API.
+
+Pre-version archive gate `target/library-release.VQtbHJuf` passes ten unit cases,
+both installed held-fixture cases with all three deletions observed, and both
+managed-server installed cases. Default and feature-enabled lint/docs, graph
+isolation and source/tool stability checks pass. The versioned 0.107.3 Cargo
+publication dry run also passes. Its source and examples match that qualified
+archive exactly; the normalized manifest differs only in package version.
+Afterward the runner's comma-containing feature argument was quoted without
+changing its value; ShellCheck and Actionlint pass on final wiring. Snapshot,
+metadata and formatting admission pass with Toko 0.44.11. Evidence is retained
+under `target/deploy-testkit/`; publication is not yet claimed by these checks.
+
+### Initial independent library publication
+
 The maintainer authorized HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.1 publication
 after preparation and the Platform/Toko adoption. All three were published on
 2026-11-16 from `18198d6cfe6c097ef007a1a6a8b312c0a394e211`. Annotated tags
@@ -118,8 +151,15 @@ or older consumer test run substitutes for this archive gate.
 
 The existing GitHub workflow now has a separate `libraries` matrix for Linux,
 Apple Silicon macOS and Intel macOS, sharing the single repository secret scan.
-Native results for the new matrix are required before publication. Release notes
-remain undated and no release tags or registry uploads are created by readiness.
+The initial incompatible HTTP, Text and Testkit publications retain this specific
+new-host-matrix qualification requirement. It applies to these first replacement
+releases, not subsequent routine patches or unrelated groups. Routine patches
+proceed after their required local archive gates and publication admission; hosted
+CI is asynchronous unless an enforced protection or a maintainer-selected, named
+qualification requires waiting. Known relevant failures still need resolution or
+explicit disposition. Report the requirement and its source before waiting.
+Readiness alone does not authorize tags or uploads; release notes remain undated
+until authorized delivery.
 
 Linux archive run `target/library-release.vBZQpJd2` passes two HTTP tests, three
 Text tests, six Testkit unit tests and both explicitly selected installed tests.

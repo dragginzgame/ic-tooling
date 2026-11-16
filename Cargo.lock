@@ -881,9 +881,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-protocol"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93ed6052f78c99bf45bcf1ffdd11bd6eb4de4463dbe425a7b63e093b8f7a0ed2"
+checksum = "758e0b8455b2ab340a4503f211357b7725f52a55a2c8c209ee2f01b122763b7e"
 
 [[package]]
 name = "ic-platform-types"
@@ -900,11 +900,16 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.107.2"
+version = "0.107.3"
 dependencies = [
+ "ic-host-artifacts",
+ "ic-host-fs",
+ "ic-host-process",
  "ic-platform-protocol",
  "ic-platform-types",
  "pocket-ic",
+ "reqwest",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "toko-tooling",
@@ -2328,9 +2333,9 @@ dependencies = [
 
 [[package]]
 name = "toko-tooling"
-version = "0.44.9"
+version = "0.44.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdfd5bc761f55ede02e82f8af36ca82415696209b3ff45e8f080e82cab85c418"
+checksum = "7d16b815ae322ae3f88580ee6af1611bdafde08b77592cd886bfa0eece0f1be8"
 
 [[package]]
 name = "toml"

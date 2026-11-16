@@ -3,6 +3,23 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.107.3] - 2026-11-16
+
+### 🔧 Changed
+
+- Adopt Platform Protocol 0.2.6 with only `http-request`; retain compatible Types
+  0.21.2. The HTTP encoder is unchanged, preserving fixture request bytes, bounds
+  and unspecified pricing; new Caffeine and snapshot features remain disabled.
+
+### ✨ Added
+
+- Optional `managed-server` capability for explicit PocketIC 16.1.0 archive
+  preparation, offline verification, bounded owned startup/output and retained
+  server/instance lifetime. Reuse Process and FS owners; preserve original client
+  types, caller-owned runtimes and localhost gateways. Explicit deletion reports
+  attempts, while server stop retains process/cleanup and abandonment evidence.
+  [Tooling #6 — Prepared simulator assets and server lifecycle](https://github.com/dragginzgame/ic-tooling/issues/6).
+
 ## [0.107.2] - 2026-11-16
 
 ### 🐛 Fixed

@@ -6,7 +6,7 @@ selected interfaces. Existing crates.io names may be reused with incremented
 versions; retaining a name does not require retaining its old Rust API. The first
 package is `ic-build` 0.87.3. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
 0.80.2 for shared byte admission and held-directory publication. Toko Tooling is
-pinned to 0.44.6 in both workspaces.
+pinned to 0.44.11 in both workspaces.
 
 The [first release](docs/release-ownership.md#first-production-cutover-scope)
 contains Artifacts, FS, Process and Build. `make test-build-release-candidate`
@@ -18,11 +18,16 @@ Foundation 0.80.2 adds [original retained-file publication](docs/filesystem-cust
 after reopening, without rewriting recovery bytes. Its final versioned archives
 pass native CI on all three hosts, and registry readback matches uploaded bytes.
 
-HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.1 are also published on crates.io.
+HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.2 are also published on crates.io.
 Their [release receipts](docs/release-ownership.md#independent-library-publication)
 record archive/source verification and separate local and hosted acceptance.
-Testkit uses Platform Protocol 0.2.3 and Types 0.21.1; consumer adoption remains
-separate from these publications.
+Testkit 0.107.2 uses Protocol 0.2.5 and a compatible Types `0.21.2` requirement,
+resolving the published Runtime 0.23.13 cohort. Its [receipt and consumer evidence](docs/qualification/testkit-types-compatibility.md)
+distinguish successful registry resolution from Scheduling's remaining Wasm migration.
+
+Local development now selects Protocol 0.2.6 with Types 0.21.2. The
+[adoption record](docs/qualification/platform-adoption.md) verifies the unchanged
+HTTP encoder and focused checks; this refresh is selected for Testkit 0.107.3.
 
 Canic's current source already selects the published host foundation and owns
 report-directory allocation and publication through the new FS API. The
@@ -117,7 +122,19 @@ generation. `make test-testkit-catalog` checks admission and module validity;
 `make test-testkit-module` checks installed behavior on an externally owned server.
 `make test-testkit-control` checks exclusive release and identity/progress refusals.
 `make test-scheduling-replacement` qualifies a current Scheduling export against
-the replacement; the sibling itself continues selecting the released supplier.
+local Testkit 0.107.2; the captured sibling selects the published replacement, 0.107.1. The
+adapter changes only the supplier dependency, preserving its migrated fixture calls.
+
+The optional [managed server capability](docs/testkit-server.md) is implemented
+for explicit pinned-archive preparation, offline checks and bounded server
+ownership. `make test-testkit-server` checks refusal paths; the separately selected
+installed target needs `TESTKIT_SERVER_ARCHIVE` and an absolute `TESTKIT_GZIP`.
+This capability is introduced by Testkit 0.107.3; it is absent from 0.107.2.
+Current Scheduling qualification is [blocked](qualification/scheduling/README.md#platform-runtime-refresh--2026-11-16)
+by its Runtime migration and its older Testkit selection. Published 0.107.2 removes
+the Types conflict; [current registry-only evidence](docs/qualification/testkit-types-compatibility.md)
+records the remaining consumer build failure.
+Earlier passing comparisons remain bound to their recorded source captures.
 `make test-scheduling-pressure` selects watchdog admission/pressure and Jobs
 pressure; `make test-scheduling-pressure-baseline` uses the released supplier.
 `make test-scheduling-lifecycle` compares released and replacement suppliers on
@@ -177,14 +194,14 @@ and selected original retained-plan and signed-recovery tests.
 `make test-db-consumer` qualifies [current DB rollback](qualification/db/README.md)
 using an explicitly prepared external server and the upstream async client.
 Scheduling’s earlier Jobs/Timers experiments are [historical](qualification/scheduling/historical.md).
-The rewrite uses Testkit client types and held-reply fixtures; their replacement
-passes independent fixture tests and focused current-consumer qualification.
+The rewrite uses Testkit client types and held-reply fixtures. Independent fixture
+tests pass; earlier consumer acceptance and current migration blockers are recorded
+separately in the [Scheduling evidence](qualification/scheduling/README.md).
 See [simulator ownership](docs/simulator-ownership.md).
 
-`make test-platform-consumer` qualifies [Platform’s current raw_rand fixture](qualification/platform/README.md)
-with direct PocketIC and externally owned server lifetime.
-`make test-platform-agent` selects Agent ingress, certificates and upstream type identity. Other Platform drivers
-and Query remain open qualification work.
+Platform's old raw_rand and Agent fixture results are [historical](qualification/platform/README.md).
+Their scripts no longer exist in the rewritten owner, so the obsolete adapters and
+Make targets are removed. New Platform acceptance stays with its current owner.
 
 Active consumer runners snapshot current local sibling inputs without modifying
 them; see [source selection](docs/qualification/local-sources.md). Old pinned runs

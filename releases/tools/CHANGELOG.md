@@ -10,15 +10,36 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Retire the obsolete Platform raw_rand/Agent qualification adapters and their
+  Make targets after current-source capture confirms their owner scripts were
+  removed. Preserve dated evidence without restoring old Platform APIs. Refresh
+  Scheduling's manifest-only adapter for Runtime 0.23.13 / Types 0.21.2; its
+  remaining probe migration is tracked in Scheduling #2.
+
+- Adopt Toko Tooling 0.44.11 across both workspaces and all reviewed cache-action
+  references. Supplier adoption includes qualification and native callers by
+  default; explicitly frozen comparisons retain their recorded inputs. Keep
+  compatible `thiserror` requirements and the existing single qualification
+  package tier; installed executable bytes are unchanged.
+
+- Qualify Testkit's optional managed-server feature from its Cargo archive,
+  including prepared assets, gateway/held-reply behavior and failure cleanup.
+  Hosted setup reuses its verified gzip archive with an explicit gzip executable;
+  setup diagnostics and library evidence have seven-day artifact retention.
+
+- Admit current Scheduling's registry Testkit 0.107.1 selection. Remove the obsolete
+  fixture API migration from its local-supplier adapter; comparisons now change only
+  the dependency while preserving consumer assertions and current-source capture.
+
 - Report bounded, escaped PocketIC setup diagnostics and exact retained evidence
   paths through the qualification bootstrap. Preserve original failure status and
   offline artifact admission; retain setup evidence even before archive tests start.
-  [#3 — Surface PocketIC setup download stderr](https://github.com/dragginzgame/ic-tooling/issues/3).
+  [Tooling #3 — Surface PocketIC setup download stderr](https://github.com/dragginzgame/ic-tooling/issues/3).
 
 - Remove the pre-rewrite Scheduling runner, its four exclusive migration patches
   and two session helpers. Retain historical source identities and results without
   runnable instructions; current rewrite qualification keeps its own dispatch.
-  [#4 — Remove the executable pre-rewrite Scheduling qualification runner](https://github.com/dragginzgame/ic-tooling/issues/4).
+  [Tooling #4 — Remove the executable pre-rewrite Scheduling qualification runner](https://github.com/dragginzgame/ic-tooling/issues/4).
 
 - Adopt Toko Tooling 0.44.6 in both workspaces through its verified exporter and
   align the hosted cache-action references with that release. Executable snapshot
@@ -41,7 +62,7 @@ in [checkpoint history](../history.md), not a prior release of this group.
   Prepare all repository-required Rust components and common tools explicitly
   through the shared installer and pinned download cache; retain
   one history secret scan outside the matrix.
-  [#1 — Complete hosted CI wiring for adopted Toko Tooling checks](https://github.com/dragginzgame/ic-tooling/issues/1).
+  [Tooling #1 — Complete hosted CI wiring for adopted Toko Tooling checks](https://github.com/dragginzgame/ic-tooling/issues/1).
 
 - Add a four-crate archive readiness command and native Linux/macOS CI. Keep
   production publication separate; qualify extracted dependency candidates and

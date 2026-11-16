@@ -6,73 +6,65 @@
 no old product source/test tree was admitted wholesale. Historical production
 reference: `a00369fc29fa837c6deb022cceb7e09aa447292c`; superseded transplant/design
 checkpoint: `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`. Preserve that evidence.
-The public canonical repository is `dragginzgame/ic-tooling`; the predecessor is
-`dragginzgame/ic-tooling-legacy`. Historical local checkout names are not current
-source selections.
+Canonical repository: `dragginzgame/ic-tooling`; predecessor: `ic-tooling-legacy`.
+Historical checkout names are not current source selections.
 
 Use [read-only current-source snapshots](../qualification/local-sources.md),
 including sibling edits. Refuse capture drift and stale patches. Consumer product
 code stays in its owner. Auth is on hold; Storage, Observability and Wire are
-frozen. Canic's current requirements must justify further Tooling capabilities.
-Backup adoption remains user-owned; no sibling changes are part of current work.
+frozen. Backup adoption remains user-owned. Stay on `main`; delivery and hosted
+CI are separate from ordinary local fixes, and CI runs asynchronously.
 
-## Delivery and active readiness
+## Current local work and delivery
 
-Artifacts/FS 0.80.2, Process 0.80.2 and Build 0.87.3 are published. Registry
-readback matches uploaded bytes, checksums and release source. Foundation's latest
-release is `828c2692523a7a906188c111c9b58f30d0f52468`, tag `foundation-v0.80.2`;
-its [native acceptance](https://github.com/dragginzgame/ic-tooling/actions/runs/43862099971)
-passes Linux and both macOS architectures. See [release receipts](../release-ownership.md).
-FS includes original retained-file admission for create-only seal/commit without
-rewriting recovery bytes; all 29 FS tests passed on each native host.
-Issues [#1](https://github.com/dragginzgame/ic-tooling/issues/1) (hosted CI) and
-[#2](https://github.com/dragginzgame/ic-tooling/issues/2) (retained publication) are closed.
+[Tooling #6](https://github.com/dragginzgame/ic-tooling/issues/6) supplies the
+`managed-server` Testkit capability selected for the 0.107.3 release. The
+[contract and acceptance](../testkit-server.md) record explicit pinned preparation,
+offline admission, bounded Process-owned startup/output/lifetime, instance-held
+server ownership, deletion attempts and abandonment evidence. Four refusal tests
+and both real Linux installed tests pass, including gateway use, held replies,
+independent deletion observation, cancellation, unwind and expiry. Clippy,
+Rustdoc and feature isolation pass. No native macOS execution is claimed.
+Canic's read-only current capture and required callers are recorded there;
+[Canic #15](https://github.com/dragginzgame/canic/issues/15) owns actual harness
+adoption, application/gateway/failure qualification and removal of 0.106.0 imports.
+No sibling source or release was changed by this fix.
 
-Toko 0.44.6 is pinned in both workspaces and installed through its verified exporter.
-The 49-file snapshot changes only the baseline's explicit asynchronous hosted-CI
-rule; executable files and the cache-action implementation are unchanged. CI
-action references select the reviewed 0.44.6 source commit. Snapshot/tool admission,
-formatting and Actionlint pass locally. Earlier [0.44.5 CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43868115486)
-remains evidence for its own delivered source.
+Testkit 0.107.2 is published from `74006ca`, tag `testkit-v0.107.2`; registry
+readback matches the verified archive. It permits compatible Types 0.21.2 patches.
+The [Tooling #5 release evidence](../qualification/testkit-types-compatibility.md) records
+passing unit/installed/archive checks and registry-only Scheduling driver
+resolution/Clippy with Runtime 0.23.13 and one guard. Current Timers source still
+fails its Wasm build. Tooling #5's installed scenarios remain blocked in
+[Scheduling #2](https://github.com/dragginzgame/ic-scheduling/issues/2); the supplier
+version conflict is resolved. Do not relabel old Scheduling checks as new acceptance.
 
-The [Platform migration](../testkit-held-replies.md#platform-034-migration-review)
-now adopts Protocol 0.2.3's bounded HTTP encoder and Types 0.21.1. Legacy Platform
-0.33.7 / Types 0.20.4 are removed. [Platform #5](https://github.com/dragginzgame/ic-platform/issues/5)
-supplied the missing capability; no sibling implementation was modified.
-Testkit no longer assembles generic management DTOs. Required request semantics,
-original callback bytes and module limits remain enforced; Protocol's narrower
-Candid type table can change the generated Wasm bytes.
-Final archive run `target/library-release.sCTEKGgV` passes six unit and both
-installed tests, lint/docs for both feature selections, default-graph isolation
-and independent deletion observation. The old Platform/Types graph is absent.
-The refreshed Testkit publication dry run passed with an identical archive;
-subsequent publication is recorded below. Platform #5 is closed with the local adoption evidence.
+Artifacts/FS 0.80.2, Process 0.80.2, Build 0.87.3, HTTP 0.80.0 and Text 0.77.2
+are published; [release receipts](../release-ownership.md) retain source identities,
+archive checksums and native acceptance. `ic-cargo-qualification` remains private.
+The maintainer authorized deployment after Toko adoption. Testkit 0.107.3 is the
+selected compatible candidate for Tooling #6 and Protocol 0.2.6. Its complete
+archive gate and Cargo publication dry run pass; [delivery evidence](../release-ownership.md#testkit-01073-delivery-preparation)
+records exact source/metadata comparison and remaining publication. Other libraries
+have no changed public source/requirements beyond the inactive Toko marker;
+they need no republication. Private qualification changes deliver through Git.
 
-HTTP 0.80.0, Text 0.77.2 and Testkit 0.107.1 are now published after the
-maintainer-authorized preparation and Platform adoption. Their metadata permits
-only crates.io; the private
-`ic-cargo-qualification` 0.1.3 remains unpublished with `publish = false`.
-[Library readiness](../release-ownership.md#independent-library-readiness) records
-registry availability, current first-party selections and the explicit group gate.
-Linux archive run `target/library-release.vBZQpJd2` passes 11 unit tests, both
-installed Testkit tests, default-feature isolation, Clippy and Rustdoc. Independent
-server inventory confirms deletion of all three instances. All three Cargo
-publication dry runs pass without uploads. Formatting, ShellCheck and Actionlint
-pass. Candidate source and tool hashes remain unchanged across the archive gate.
+Toko 0.44.11 is selected in both workspaces and installed through its verified
+exporter (source `08d63df7661910554ef72980037f55edd914aba0`). The 49-file receipt,
+package markers and locks agree; executable tooling is unchanged. Snapshot,
+formatting, Actionlint and qualification-layout checks pass. Details and version
+selection remain in Cargo metadata and [release ownership](../release-ownership.md).
 
-Delivery stays on `main`, as directed by the maintainer, with asynchronous CI.
-The [library readiness matrix](https://github.com/dragginzgame/ic-tooling/actions/runs/43899230778)
-passes Linux, Apple Silicon macOS and Intel macOS at `0329953`, before the
-Protocol migration. The final migrated Testkit has the local archive acceptance
-above. At `b22647e`, its Linux and Apple Silicon library jobs pass; Intel macOS
-stops during PocketIC download before library qualification (details below).
-The adoption is delivered in
-`e65e5381f1739beb23e1bf3b6cb8bd06cfa929b1`. Release source is
-`18198d6cfe6c097ef007a1a6a8b312c0a394e211`, with annotated tags
-`http-v0.80.0`, `text-v0.77.2` and `testkit-v0.107.1` pushed with `main` atomically.
-All three verified Cargo uploads succeeded. Downloaded non-yanked registry archives
-match the uploaded bytes, index checksums and exact committed source/manifests.
-See [publication receipts](../release-ownership.md#independent-library-publication).
+The [Platform adoption inventory](../qualification/platform-adoption.md) now selects
+Protocol 0.2.6 / Types 0.21.2 across the affected product graph; qualification and
+native-tool dispositions are recorded there. The HTTP encoder is unchanged from
+0.2.5; six unit tests, all-feature Clippy, metadata and feature admission pass.
+This refresh is included in the 0.107.3 candidate. Earlier installed held-fixture checks
+remain evidence for the unchanged encoder; 0.2.5 was published with Testkit 0.107.2.
+Pending qualification/docs changes retire obsolete
+Platform executable adapters and update Scheduling's supplier-only adapter.
+Preserve those edits and the maintainer's release-ownership policy edits; they
+are independent of Tooling #6. Historical frozen comparisons are not renewed migrations.
 
 ## Owners and evidence entrypoints
 
@@ -87,72 +79,39 @@ for groups. Read the affected contract before changing an owner:
 | HTTP | [Bounded bodies](../http-body.md) |
 | Text | [Presentation](../text-presentation.md) |
 | Process | [Execution](../process-execution.md), [handoff/reaping](../process-handoff.md) |
-| Testkit | [Held replies](../testkit-held-replies.md), [simulator ownership](../simulator-ownership.md) |
+| Testkit | [Held replies](../testkit-held-replies.md), [managed server](../testkit-server.md), [historical external recipe](../simulator-ownership.md) |
 
-`ic-cargo-qualification` owns external-lock subset admission, not archive running
-or release editing inside Build. HTTP/Tokio and simulator dependencies stay outside
-Build and portable bytes. Testkit preserves PocketIC's original client types;
-its held-reply feature is explicit and caller-owned servers remain external.
+Build does not own archive running or release editing. HTTP/Tokio and simulator
+dependencies stay outside Build and portable bytes. Testkit preserves original
+PocketIC types; held fixtures and managed servers are separately optional.
 
 ## Consumer boundaries and remaining work
 
-[Canic's current source review](../../qualification/canic/README.md#current-source-review--2026-11-16)
-captures HEAD `37270cb30f840d45592781a4fd957e823c39c895` plus working-tree edits.
-Its product lock selects registry Artifacts/FS 0.80.2 and Process 0.80.2. CLI report
-publication delegates to Host, which already uses held report-directory allocation
-and the published FS API. The old report patch correctly refuses this source;
-that migration obligation is obsolete. The earlier 54-case paired composition,
-real builds and metadata refusals remain historical evidence for their own captures.
-Further Canic work must start from current requirements and consumer-owned
-acceptance. Store-build, archive and native macOS consumer qualification are not
-inferred from source inspection or old recipes. No current runtime test was run
-for that source review.
+[Canic](../../qualification/canic/README.md#current-source-review--2026-11-16)
+already owns held report-directory publication; its old report patch correctly
+refuses current source. Historical paired build/metadata checks do not qualify
+new application, Store-build, archive or native macOS outcomes. New simulator
+requirements and the later source capture belong to the Tooling #6 contract above.
+[Scheduling](../../qualification/scheduling/README.md) targets its rewrite with
+verified ancestry and explicit tools; pre-rewrite experiments remain historical.
+[Backup](../../qualification/backup/README.md) retains four captured assembly
+passes and earlier restore baseline failures; its next adoption is user-owned.
+[Query](../../qualification/query/README.md), [DB](../../qualification/db/README.md)
+and [Platform](../../qualification/platform/README.md) retain scoped historical
+evidence. [Auth](../../qualification/auth/README.md) remains on hold.
 
-[Scheduling](../../qualification/scheduling/README.md) targets the rewrite now at
-`../ic-scheduling` with verified ancestry and explicit prepared tools. Its paired
-Once aggregate, metrics-feature and executor checks share exact source identity;
-old Scheduling experiments are historical. [Backup](../../qualification/backup/README.md)
-assembly has four passing captured tests; earlier restore baseline failures and
-its next adoption remain outside this work. [Query](../../qualification/query/README.md)
-and [DB](../../qualification/db/README.md) retain scoped Text/installed-console
-evidence. [Platform](../../qualification/platform/README.md) evidence must not drive
-its rewrite; [Auth](../../qualification/auth/README.md) stays on hold.
+Tooling #3's [setup diagnostics](../simulator-ownership.md#qualification-setup-diagnostics)
+repair retains bounded escaped stderr and original status, with controlled failure
+checks. The earlier Intel download failure's underlying HTTP cause remains unknown;
+no service repair or new hosted acceptance is claimed. [Store #3](https://github.com/dragginzgame/ic-wasm-store/issues/3)
+owns its setup migration. Tooling #4 retired the executable pre-rewrite Scheduling
+lane, preserving historical identities and checking refusal/current dispatch.
 
-Issue [#4](https://github.com/dragginzgame/ic-tooling/issues/4) removes the executable
-pre-rewrite Scheduling lane and its exclusive patches/session helpers. Historical
-source identities and results remain in the archive without runnable instructions.
-Current rewrite dispatch is unchanged; script lint, retired-mode refusal and Make
-dispatch checks pass without replaying any old simulator experiment.
-
-Issue [#3](https://github.com/dragginzgame/ic-tooling/issues/3) is handled at the
-[qualification setup boundary](../simulator-ownership.md#qualification-setup-diagnostics).
-The workflow reports bounded escaped download diagnostics and exact evidence paths,
-preserves original failure status and offline checks, and retains hidden attempt
-diagnostics in CI. The real prepared 0.106.0 launcher passes a controlled failed-curl
-regression without network access; focused fixtures cover limits, stale/missing
-evidence and check failure. The published legacy binary is unchanged. These issue
-repairs affect qualification workflows only; no new hosted acceptance or release is claimed.
-Wasm Store's remaining setup migration is tracked in
-[Store #3](https://github.com/dragginzgame/ic-wasm-store/issues/3); no sibling source was edited.
-
-The latest inspected [CI run](https://github.com/dragginzgame/ic-tooling/actions/runs/43911987682)
-at `b22647e` passes repository/secrets checks, all three native jobs, and Linux/Apple
-Silicon library qualification. The Intel library job fails in PocketIC setup with
-`unix_wait_status(5632)` (curl exit 22), then the old uploader fails because no
-library archive exists. Its download stderr was not uploaded; the HTTP failure's
-underlying cause is unknown. The #3 workflow repair supplies that missing evidence
-and skips archive upload when qualification never starts. This is not a Platform
-failure or a claim to have repaired the download service. Delivery proceeds with
-CI asynchronous; no retry or additional native wait was introduced.
-
-Managed-server lifetime/cancellation, multi-canister partial snapshot effects,
-remaining Platform drivers, Profiler ownership/native acceptance, current-consumer
-archive acceptance and production deployment remain open. Profiler's checkout was
-absent at its last review. Borrowed-server success does not justify a wrapper;
-creation may leave remote effects after cancellation and async deletion is best-effort.
-
-These contracts assume trusted source/tools, cooperative process groups, exclusive
-child reaping and caller exclusion of namespace/content writers. Identity checks
-are not hostile-writer atomic compare-and-unlink. App builds are serial rather
-than transactional. Loopback fixtures require local socket access. No performance,
-peak-memory or shared-target improvement is claimed without matched measurements.
+Multi-canister partial snapshot effects, remaining Platform drivers, Profiler
+ownership/native acceptance, current-consumer archive acceptance and production
+deployment remain separate work. Profiler's checkout was absent at its last review.
+Creation cancellation may leave remote effects; async deletion is best-effort.
+Contracts assume trusted tools, cooperative process groups, exclusive child reaping
+and caller exclusion of namespace/content writers. Identity checks are not a
+hostile-writer fence. App builds are serial, not transactional. Loopback fixtures
+need socket access. No performance improvement is claimed without measurements.

@@ -43,7 +43,8 @@ export CARGO_TARGET_DIR="$repo/target/scheduling-new-consumer-build"
 manifest="$scratch/source/qualification/Cargo.toml"
 cargo metadata --manifest-path "$manifest" --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e '. as $m |
-  [.packages[] | select(.name == "ic-testkit" and .version == "0.106.0")] as $suppliers |
+  [.packages[] | select(.name == "ic-testkit" and .version == "0.107.1" and
+    .source == "registry+https://github.com/rust-lang/crates.io-index")] as $suppliers |
   $suppliers[0].id as $testkit |
   ($suppliers | length == 1) and
   all(["once-driver", "executor-driver"][]; . as $name |
@@ -54,7 +55,7 @@ jq -e '. as $m |
     all($m.resolve.nodes[] | select(.id == $driver) | .deps[]; .name != "pocket_ic")) and
   any($m.resolve.nodes[] | select(.id == $testkit) | .features[]; . == "held-reply-fixtures")
 ' "$scratch/metadata.json" >/dev/null || {
-  echo 'Expected Scheduling rewrite executor/Once drivers with shared Testkit and held-reply fixtures; source contract refused.' >&2
+  echo 'Expected Scheduling rewrite executor/Once drivers with registry Testkit 0.107.1 and held-reply fixtures; source contract refused.' >&2
   exit 1
 }
 run_installed() {
@@ -66,7 +67,7 @@ run_installed() {
   mkdir -p "$output"
   cargo tree --manifest-path "$manifest" -p "$driver" -e normal,build --prefix none --locked --offline > "$output/driver-tree.txt"
   if [[ "$selection" == executor && ( "$mode" == replacement || "$output" == "$scratch/replacement" ) ]]; then
-    rg -q '^ic-testkit v0.107.1 ' "$output/driver-tree.txt"
+    rg -q '^ic-testkit v0.107.3 ' "$output/driver-tree.txt"
     if rg -q '^(wat|ic-platform|ic-platform-protocol|ic-platform-types) v' "$output/driver-tree.txt"; then
       echo 'Executor unexpectedly selects optional fixture dependencies' >&2; exit 1
     fi
@@ -104,7 +105,7 @@ if [[ "$mode" == replacement || "$mode" == comparison ]]; then
   cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
   jq -e --arg root "$repo" '. as $m |
     [.packages[] | select(.name == "ic-testkit")] as $suppliers |
-    ($suppliers | length == 1) and $suppliers[0].version == "0.107.1" and
+    ($suppliers | length == 1) and $suppliers[0].version == "0.107.3" and
     $suppliers[0].manifest_path == ($root + "/crates/ic-testkit/Cargo.toml") and
     all(["once-driver", "executor-driver"][]; . as $name |
       ($m.packages[] | select(.name == $name) | .id) as $driver |
@@ -123,6 +124,6 @@ if [[ "$mode" != admit ]]; then
   fi
   exit 0
 fi
-# Check the real retained API callers, without running the aggregate installed roster.
+# Check the current published API callers without running the aggregate roster.
 cargo check --manifest-path "$manifest" -p once-driver -p executor-driver --all-targets --locked --offline
-printf 'Scheduling rewrite drivers admitted with retained Testkit types and held-reply fixtures; no replacement or installed-runtime acceptance claimed.\n'
+printf 'Scheduling rewrite drivers admitted with published Testkit types and held-reply fixtures; no local-supplier or installed-runtime acceptance claimed.\n'

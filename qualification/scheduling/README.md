@@ -1,6 +1,11 @@
 # Scheduling rewrite: current consumer requirements
 
 The selected rewrite moved from `../ic-scheduling-new` to `../ic-scheduling`.
+Testkit 0.107.2 is now [published with a compatible Types requirement](../../docs/qualification/testkit-types-compatibility.md).
+A registry-only export resolves the new cohort and passes both native drivers'
+Clippy. Current consumer Timers source still prevents the Wasm probe build, so
+installed acceptance remains incomplete. The local adapter selects 0.107.2; the
+recorded baseline below remains the consumer's selected 0.107.1.
 `make test-scheduling-consumer` snapshots that working tree, including tracked edits
 and non-ignored source, with the shared read-only capture helper. It applies no
 old Scheduling migration patch and does not modify the sibling. An explicit
@@ -12,12 +17,71 @@ Tool bytes are hashed before and after each run independently of consumer source
 
 The current target admits the locked dependency graph and checks only the host
 `once-driver` and `executor-driver` targets offline. Both must select Testkit
-0.106.0, with the same supplier package ID; Once enables `held-reply-fixtures`.
+registry 0.107.1, with the same supplier package ID; Once enables `held-reply-fixtures`.
 Neither driver may depend directly on PocketIC. This is source/graph and caller
 compilation evidence, not installed-runtime proof or acceptance of a replacement
 Testkit implementation. `make test-scheduling-replacement` separately selects
 local Testkit 0.107.1 in the captured export and runs the focused installed checks
 described below. It does not change the sibling's supplier selection.
+
+The current consumer already uses the published replacement API. The local
+supplier patch now changes only its manifest dependency; it no longer rewrites
+fixture descriptors or constructors. Comparison modes select registry 0.107.1
+and local 0.107.1 on the same capture. The dated 0.106.0 comparisons below remain
+historical acceptance for their recorded inputs, not the current baseline.
+
+## Platform Runtime refresh — 2026-11-16
+
+Later current-source capture at the same HEAD `3d2b3fd3775252e779181c4175a8ecf661afb60b`
+has tar SHA-256 `56aad13d860ef1f920c4d4b0a54bf7ba3ab3721143aff4fcef33328f8399d030`.
+It selects Runtime 0.23.13 (`call-ic0`, `system-raw`) and Types 0.21.2 in the
+qualification manifest, while its qualification lock still contains Runtime 0.22.5.
+Published Testkit 0.107.1 requires exact Types 0.21.1, so Cargo refuses the registry
+baseline before compilation. Normal admission/comparison commands remain strict;
+they do not fall back to the earlier source or rewrite the consumer's baseline.
+
+The manifest-only local-supplier adapter now matches this capture. Applying it
+and the existing focused selector only to the exported source allows offline
+resolution with local Testkit, Protocol 0.2.5 and Types 0.21.2. Both host drivers
+pass all-target warning-denied Clippy. The subsequent Wasm `once-probe` build fails
+with 17 errors at removed Runtime imports, executor helpers and call/completion
+methods. No installed or paired acceptance is claimed for this capture, and the
+resolved export is not claimed to preserve the old lock's external selections.
+
+Evidence is under `target/platform-adoption-next/`: `scheduling-metadata.log`,
+`scheduling-local-resolution.log`, `scheduling-local-metadata.json` and
+`scheduling-local-build.log`. [Scheduling #2](https://github.com/dragginzgame/ic-scheduling/issues/2#issuecomment-6926773677)
+tracks owner-side probe/lock migration. Compatible Testkit publication is separate
+Tooling delivery work. No sibling source was edited or probe implementation copied.
+
+## Published supplier refresh — 2026-11-16
+
+This earlier passing capture predates the Runtime refresh above.
+
+The read-only capture records HEAD `3d2b3fd3775252e779181c4175a8ecf661afb60b`
+plus current tracked edits and non-ignored additions, source tar SHA-256
+`01b8658271082d2c6afb977ea8ac5ea5cfcfe49b05272aa788baf9c0b4fdc21b`.
+Its lock selects registry Testkit 0.107.1 with the verified publication checksum
+`a4fe4ea7882118e731ef1ebe8c668fc5dfa5252c1c972b1de68bc444868fae42`.
+Pressure, held-upgrade, Jobs-pressure and watchdog callers already use the new
+catalog/fixture API. The former API migration patch correctly refuses this source;
+it has been reduced to the manifest-only local-supplier substitution.
+
+Fresh paired acceptance in `target/scheduling-new.faFrl9X7` uses that same capture
+with registry and local Testkit 0.107.1. Both pass pressure and held-upgrade,
+missing-endpoint refusal and independent observation of one deleted instance.
+Pressure preserves the 64/65 admission boundary, eight held flights and twelve
+single starts; upgrade refusal preserves the original settlement. Tool hashes
+match before and after both runs. Driver Clippy and external-lock subset admission
+pass. The selected owner is still the original Testkit/PocketIC type boundary;
+no sibling implementation or assertion was changed.
+
+The command was `scheduling-consumer.sh comparison held-replies`, with explicitly
+prepared PocketIC 16.1.0 and launcher 0.106.0. The first sandbox attempt compiled
+but could not bind loopback; only the later live run supplies installed evidence.
+Logs are under `target/toko-adoption-0.44.8/scheduling-held-comparison-live.log`.
+This refresh does not rerun or relabel older aggregate, metrics, executor or macOS
+acceptance. No new public Testkit API or consumer migration obligation is introduced.
 
 ## Requirements from the actual callers
 
@@ -33,8 +97,8 @@ consumer boundary while designing the replacement; removing Testkit is not a goa
 | `once-driver/src/held_upgrade.rs` | Hold a real reply through upgrade refusal, then release and observe original settlement | Testkit reply control; consumer owns upgrade authority and recovery assertions |
 | `once-driver/src/watchdog.rs` | Held request admission, cadence/coalescing while flights remain pending, explicit release | Same shared fixture; consumer owns simulated-time/tick policy |
 
-The fixtures use `RawReplyMethod`, `RawReplyLimits`, `ReplyMode` and
-`HeldReplyFixture::{new, wasm, pending, release}`. Limits, funding and request
+The fixtures use `held::{Catalog, Reply, Limits, Fixture}` and
+`Fixture::{new, pending, release}` with its owned `wasm` bytes. Limits, funding and request
 budgets are selected by the consumer. Do not replace this with copied per-driver
 fixture machinery. Preserve exact request selection, type identity, bounds and
 failure behavior before admitting a new shared Testkit contract.
@@ -103,22 +167,22 @@ hash checks pass. Focused driver Clippy passes
 Testkit 0.106.0; no replacement Testkit acceptance, supplier-wide failure coverage,
 performance result or sibling modification is claimed.
 
-Next: implement the small shared owner and its independent failure cases, then
-run this same consumer selection against the replacement. Do not copy the old
-fixture or test tree wholesale, or expand into the full installed roster.
+That initial baseline preceded the shared owner and its independent failure
+checks. The implementation and subsequent comparisons below completed that slice;
+current supplier selection is described at the top of this document.
 
 ## Replacement Testkit 0.107.1 qualification
 
-`make test-scheduling-replacement` captures current rewrite source, admits its
-released graph, then applies `held-selection.patch` and
-`replacement-testkit.patch` only to that export. The latter changes the supplier
-to this checkout and replaces old fixture descriptors/constructors with
-`held::{Catalog, Reply, Limits, Fixture}`. It keeps consumer assertions, funding,
-installation, tick budgets and release order intact. Principal conversion uses
+At the initial 2026-11-15 qualification, `make test-scheduling-replacement` captured
+rewrite source, admitted its released graph, then applied `held-selection.patch`
+and the former API migration patch only to that export. The latter changed the
+supplier to this checkout and replaced fixture descriptors/constructors with
+`held::{Catalog, Reply, Limits, Fixture}`. It kept consumer assertions, funding,
+installation, tick budgets and release order intact. Principal conversion used
 canonical text at the native-client/Platform identity boundary. No consumer code
-is added to the product Testkit crate.
+was added to the product Testkit crate.
 
-The complete Once driver must compile, so the patch adapts Jobs-pressure and
+The complete Once driver had to compile, so the former patch adapted Jobs-pressure and
 watchdog call sites too. Only pressure and held-upgrade are executed here; adapting
 and compiling those other call sites does not qualify their installed behavior.
 Executor and Once must resolve the same sole local Testkit 0.107.1 package.
@@ -137,9 +201,9 @@ external-lock admission, missing-endpoint refusal, instance deletion (`["Deleted
 and prepared-tool identity checks passed. The server was prepared PocketIC 16.1.0;
 released Testkit's CLI owned server lifetime only. It was not linked into the driver.
 
-This qualifies an unpublished replacement in a disposable current-source export.
-The sibling remains unchanged and continues selecting released Testkit. Broader
-Once/Jobs/watchdog/calendar execution, macOS and production cutover remain separate.
+That run qualified the then-unpublished replacement in a disposable export.
+The sibling was unchanged and still selected released Testkit at that checkpoint.
+Later dated sections retain their own broader acceptance evidence.
 
 ## Watchdog and Jobs held-pressure selection
 

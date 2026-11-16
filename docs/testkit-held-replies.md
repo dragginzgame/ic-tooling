@@ -1,10 +1,15 @@
 # Testkit: first replacement contract
 
-Status: published `ic-testkit` 0.107.1. Client types
+Status: published `ic-testkit` 0.107.2. The [compatibility correction](qualification/testkit-types-compatibility.md)
+permits Types `>=0.21.2, <0.22.0` and qualifies registry-only Runtime 0.23.13
+resolution; Scheduling's installed scenarios remain blocked by its consumer build.
+Client types
 and catalog admission, module generation and exclusive request control are
-implemented with independent tests. Scheduling's full Once aggregate, paired
-metrics-feature probe and executor comparison pass on identical current source
-bytes with both suppliers. Other consumer migrations remain open. Package native
+implemented with independent tests. Scheduling's earlier Once aggregate, paired
+metrics-feature probe and executor comparison pass on their recorded source
+captures with both suppliers. Its current Runtime migration has separate
+[qualification blockers](../qualification/scheduling/README.md#platform-runtime-refresh--2026-11-16).
+Other consumer migrations remain open. Package native
 acceptance and the later Protocol migration's local checks are distinguished in
 the [release receipts](release-ownership.md#independent-library-publication). This
 defines the acceptance contract. The active rewrite is now `../ic-scheduling`.
@@ -14,7 +19,39 @@ old-Scheduling snapshot experiments are historical and do not define this scope.
 
 ## Platform 0.34 migration review
 
-The migration now selects published Protocol 0.2.3 with only `http-request`,
+### Current Protocol 0.2.6 development selection
+
+The local dependency is now Protocol 0.2.6, with only `http-request`; Types remains
+0.21.2. The HTTP encoder source is identical to 0.2.5, while new Caffeine and
+management-snapshot features remain disabled. Six fixture unit tests, all-feature
+Clippy and graph admission pass. The [adoption record](qualification/platform-adoption.md)
+binds the verified archive and focused evidence, retaining earlier installed
+acceptance for the unchanged encoder. This update is not yet published.
+
+### Earlier Protocol 0.2.5 dependency refresh
+
+The earlier development selection was Protocol 0.2.5 with only `http-request` and
+Types 0.21.2, verified against the registry on 2026-11-16. Both archives identify
+source `9dfdc0083fa5d6e56da7b90c04c20de4b2d3cc9f`; checksums and the repository-wide
+inventory are in the [adoption record](qualification/platform-adoption.md).
+Protocol adds explicit version-one pricing through a separate encoder; Testkit
+keeps `encode_http_get_args` and unspecified pricing. Types source is unchanged
+from 0.21.1, but explicit Principal callers must align their Cargo selection with
+0.21.2. Registry/placement features remain disabled. Protocol retains encoding
+ownership; no new fixture mechanism or request policy is introduced. This is
+local dependency adoption, not a new Testkit publication.
+
+Focused Linux evidence in `target/platform-adoption-next/` passes six unit
+tests, warning-denied all-target Clippy and both separately selected installed
+module/controller tests. Independent inventory observes all three instances
+deleted. Default Testkit excludes Protocol, Types and WAT; the fixture graph
+selects only Protocol's `http-request` feature. Source and prepared-tool hashes
+remain unchanged across execution, and formatting checks pass. These are current
+development checks, not a new archive release or native macOS qualification.
+
+### Published migration evidence
+
+The 0.107.1 release selected Protocol 0.2.3 with only `http-request`,
 and Types 0.21.1 for public Principal arguments. Protocol's narrow
 `encode_http_get_args` replaces the old HTTP DTO and generic Candid encoder.
 The legacy Platform 0.33.7 and Types 0.20.4 dependencies are removed; no unused

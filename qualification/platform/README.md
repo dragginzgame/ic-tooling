@@ -1,21 +1,31 @@
-# Current Platform raw_rand qualification
+# Historical Platform fixture qualification
 
-`raw-rand-session.patch` migrates only the current Platform entropy fixture to
+## Retirement after the Platform rewrite — 2026-11-16
+
+Current Platform capture HEAD `7e0e3af86372bc77729c808b42a04e154d801147`, tar SHA-256
+`cd72a802156cb2c7f127f40baf41214166b247f943951fee86643bdeca9a5202`, has removed
+the raw_rand and Agent scripts, fixture sources and identity checker targeted by
+these adapters. Both patches refuse this source with missing-path errors, recorded
+under `target/platform-adoption-next/platform-*-refusal.log`.
+
+The two patches, three exclusive session/identity/runner scripts and Make targets
+are removed. There is no runnable legacy lane or historical-source fallback.
+Platform owns its replacement qualification workspace. The evidence below remains
+bound to the old capture and does not qualify the rewrite or justify restoring
+its old APIs. See the [current adoption inventory](../../docs/qualification/platform-adoption.md).
+
+## Historical raw_rand qualification — 2026-11-15
+
+The former `raw-rand-session.patch` migrated only the then-current entropy fixture to
 upstream PocketIC 16.1.0. The driver owns its Tokio runtime and instance, requires
 an explicit external URL and awaits instance deletion. It removes that fixture's
 Testkit dependency and managed-server tuple; other Platform drivers retain their
 existing infrastructure. No Platform or Canic implementation enters product crates.
 
-Run `make test-platform-consumer` or `make test-platform-agent` directly. By default,
-the installed Toko checker admits Scheduling’s already prepared `ic-testkit`
-0.106.0 CLI (feature `cli`), and the server assets come from
-`../ic-scheduling/.tools/ic-testkit-server`. No tools are installed automatically.
-Override `PLATFORM_TESTKIT_CLI` with a prepared executable and
-`PLATFORM_SERVER_DIRECTORY` with its prepared assets to use another location. `PLATFORM_SOURCE` defaults to the current local `../ic-platform`.
-The sibling is read-only. The shared snapshot helper records current tracked and
-unignored source, checks capture stability and refuses stale patches. The exported
-fixture uses the sibling's prepared host-tool links and an already installed
-`ic-wasm`; there is no installation or network fallback.
+The historical runs used Scheduling's prepared Testkit 0.106.0 launcher and server
+assets plus an installed `ic-wasm`. The shared helper captured tracked and
+non-ignored source read-only and checked capture stability. These tool locations
+and source assumptions are no longer current runner instructions.
 
 The runner uses Platform's focused `check-platform-raw-rand.sh`, retaining its
 source-owner identity checks, feature-graph restrictions, compiler/lint policy,
@@ -45,12 +55,11 @@ CLI/server/optimizer hashes matched after execution. The fixture generates its
 own lock offline from the source lock; this is not a claim that every dependency
 was already selected by the root workspace. No production sibling was edited.
 
-## Agent ingress and upstream type identity
+## Historical Agent ingress and upstream type identity
 
-`make test-platform-agent` selects `agent-session.patch` independently of the
-raw_rand patch, using the same prepared CLI and server-directory variables.
-The shared runner selects only one fixture per invocation. No optimizer is required
-for Agent: the existing consumer builds its tiny echo canister from WAT.
+The Agent run selected its own session patch independently of raw_rand, using
+the same prepared CLI and server assets. The consumer built its tiny echo canister
+from WAT without an optimizer.
 
 The patch removes only the Agent fixture's Testkit dependency and server custody.
 It preserves the existing NNS/application topology, explicit root key, query,

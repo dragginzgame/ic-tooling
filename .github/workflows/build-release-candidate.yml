@@ -22,10 +22,10 @@ jobs:
           persist-credentials: false
       - name: Prepare pinned Rust and repository components
         run: rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@77222d570f2946acd6bae966efbb891d1072e3ce # 0.44.9
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
       - name: Prepare common tools
         run: make install-tools
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@77222d570f2946acd6bae966efbb891d1072e3ce # 0.44.9
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
         with:
           mode: save
       - name: Admit snapshot and Cargo pins
@@ -39,12 +39,12 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@77222d570f2946acd6bae966efbb891d1072e3ce # 0.44.9
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
       - name: Prepare pinned secret scanner
         run: |
           scanner="$(bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh gitleaks --install-dir "$RUNNER_TEMP/ci-tools")"
           echo "GITLEAKS_BIN=$scanner" >> "$GITHUB_ENV"
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@77222d570f2946acd6bae966efbb891d1072e3ce # 0.44.9
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
         with:
           mode: save
       - name: Scan repository history once
@@ -62,7 +62,7 @@ jobs:
           persist-credentials: false
       - name: Prepare pinned Rust components
         run: rustup toolchain install 1.100.0 --profile minimal --component clippy --component rustfmt
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@77222d570f2946acd6bae966efbb891d1072e3ce # 0.44.9
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
         with:
           extra-key: testkit-server-0.106.0-pocketic-16.1.0
       - name: Prepare external simulator owner and server
@@ -76,7 +76,11 @@ jobs:
             "$launcher" "$RUNNER_TEMP/pocket-ic" "$RUNNER_TEMP/pocket-ic-setup-evidence")"
           echo "TESTKIT_RELEASE_LAUNCHER=$launcher" >> "$GITHUB_ENV"
           echo "POCKET_IC_BIN=$server" >> "$GITHUB_ENV"
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@77222d570f2946acd6bae966efbb891d1072e3ce # 0.44.9
+          archive="$(dirname "$server")/archive.gz"
+          test -f "$archive" && test ! -L "$archive"
+          echo "TESTKIT_SERVER_ARCHIVE=$archive" >> "$GITHUB_ENV"
+          echo "TESTKIT_GZIP=/usr/bin/gzip" >> "$GITHUB_ENV"
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
         with:
           mode: save
           extra-key: testkit-server-0.106.0-pocketic-16.1.0
@@ -90,6 +94,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: library-candidate-${{ matrix.os }}
+          retention-days: 7
           path: |
             target/library-release.*/archives/
             target/library-release.*/*.log
@@ -108,6 +113,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pocket-ic-setup-${{ matrix.os }}
+          retention-days: 7
           include-hidden-files: true
           path: |
             ${{ runner.temp }}/pocket-ic-setup-evidence/

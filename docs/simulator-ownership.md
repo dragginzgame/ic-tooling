@@ -1,5 +1,10 @@
 # External simulator ownership: first qualification
 
+The new optional [prepared server owner](testkit-server.md) supplies the separate
+capability requested in Tooling #6. Its local implementation does not restore the
+legacy API or change the historical external-server evidence below. Default and
+held-reply-only clients still need an explicitly supplied server owner.
+
 The current local IC DB rollback driver needs an application subnet, its caller's
 Tokio runtime, exact upstream client types, raw stable-memory observation and
 explicit instance teardown. It does not require a pool, baseline cache, installation
@@ -25,7 +30,7 @@ an isolated migration recipe, not production cutover of DB's commands.
 ## Qualification setup diagnostics
 
 The tools workflow owns setup reporting under
-[#3](https://github.com/dragginzgame/ic-tooling/issues/3), outside the Testkit library.
+[Tooling #3](https://github.com/dragginzgame/ic-tooling/issues/3), outside the Testkit library.
 Use `scripts/qualification/setup-pocketic.sh` with three absolute arguments:
 the prepared 0.106.0 launcher, its asset directory and a new evidence directory.
 On success stdout contains the path returned by the launcher's independent offline

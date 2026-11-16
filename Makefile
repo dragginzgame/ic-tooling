@@ -15,6 +15,8 @@ help:
 	  '  make test-canic-process Combined current Canic group/direct-child qualification (Linux)' \
 	  '  make test-testkit-module Installed module test (externally owned server)' \
 	  '  make test-testkit-control Installed controller refusals (externally owned server)' \
+	  '  make test-testkit-server Offline assets and bounded startup refusal checks' \
+	  '  make test-testkit-server-installed Prepared-archive lifecycle/gateway/held checks (explicit archive and gzip)' \
 	  '  make test-pocketic-setup Failed-download diagnostics (prepared launcher; no network)' \
 	  '  make test-library-release-candidate RELEASE_GROUPS="http text testkit" Selected archive readiness (prepared Testkit tools required)' \
 	  '  make test-text         Terminal escaping and Unicode table contracts' \
@@ -54,8 +56,6 @@ help:
 	  '  make test-scheduling-aggregate Compare the complete Once installed roster' \
 	  '  make test-scheduling-metrics Compare paired metrics feature behavior and observations' \
 	  '  make test-scheduling-consumer Scheduling rewrite source/graph admission and driver checks' \
-	  '  make test-platform-agent Current Platform Agent ingress and identity boundary' \
-	  '  make test-platform-consumer Current Platform raw_rand installed behavior' \
 	  '  make test-db-text       Current DB installed console with new Text' \
 	  '  make test-db-consumer   Current DB rollback and external-server ownership' \
 	  '  make test-canic-consumer Local Canic retained-record admission' \
@@ -152,14 +152,6 @@ test-backup-http: toko-tooling-check
 test-db-consumer: toko-tooling-check
 	bash scripts/qualification/db-consumer.sh
 
-
-.PHONY: test-platform-consumer
-test-platform-consumer: toko-tooling-check
-	bash scripts/qualification/platform-consumer.sh
-
-.PHONY: test-platform-agent
-test-platform-agent: toko-tooling-check
-	bash scripts/qualification/platform-consumer.sh agent
 
 .PHONY: test-text test-query-text
 test-text: toko-tooling-check
@@ -304,3 +296,11 @@ test-testkit-module: toko-tooling-check
 test-testkit-control: toko-tooling-check
 	@test -n "$${IC_TESTKIT_POCKET_IC_URL:-}" || { echo 'IC_TESTKIT_POCKET_IC_URL must select an externally owned server' >&2; exit 1; }
 	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline held::control::tests::installed_control_refuses_foreign_consumed_expired_and_automatic_releases -- --ignored --exact
+
+.PHONY: test-testkit-server test-testkit-server-installed
+test-testkit-server: toko-tooling-check
+	cargo test -p ic-testkit --features managed-server --lib --locked --offline server::tests
+
+test-testkit-server-installed: toko-tooling-check
+	@test -n "$${TESTKIT_SERVER_ARCHIVE:-}" -a -n "$${TESTKIT_GZIP:-}" || { echo 'Select TESTKIT_SERVER_ARCHIVE and absolute TESTKIT_GZIP explicitly' >&2; exit 1; }
+	cargo test -p ic-testkit --features managed-server,held-reply-fixtures --lib --locked --offline server::tests::installed_ -- --ignored

@@ -15,7 +15,7 @@ for group in "$@"; do
   case "$group" in
     http) package=ic-host-http ;;
     text) package=ic-host-text ;;
-    testkit) package=ic-testkit; testkit=true; features=(--features ic-testkit/held-reply-fixtures) ;;
+    testkit) package=ic-testkit; testkit=true; features=(--features 'ic-testkit/held-reply-fixtures,ic-testkit/managed-server') ;;
     *) echo "Unsupported library release group: $group" >&2; exit 2 ;;
   esac
   jq -e --arg group "$group" --arg package "$package" \
@@ -32,7 +32,12 @@ esac
 if [[ "$testkit" == true ]]; then
   : "${TESTKIT_RELEASE_LAUNCHER:?select a prepared ic-testkit-server 0.106.0 executable}"
   : "${POCKET_IC_BIN:?select a prepared PocketIC 16.1.0 executable}"
-  for tool in "$TESTKIT_RELEASE_LAUNCHER" "$POCKET_IC_BIN"; do
+  : "${TESTKIT_SERVER_ARCHIVE:?select the prepared PocketIC 16.1.0 gzip archive}"
+  : "${TESTKIT_GZIP:?select an absolute prepared gzip executable}"
+  [[ "$TESTKIT_SERVER_ARCHIVE" == /* && -f "$TESTKIT_SERVER_ARCHIVE" && ! -L "$TESTKIT_SERVER_ARCHIVE" ]] || {
+    echo 'Prepared simulator archive must be an absolute regular non-symlink file' >&2; exit 2;
+  }
+  for tool in "$TESTKIT_RELEASE_LAUNCHER" "$POCKET_IC_BIN" "$TESTKIT_GZIP"; do
     [[ "$tool" == /* && -x "$tool" ]] || { echo 'Prepared tools must be absolute executable paths' >&2; exit 2; }
   done
   [[ "$("$TESTKIT_RELEASE_LAUNCHER" --version)" == 'ic-testkit-server 0.106.0' ]]
@@ -53,7 +58,7 @@ git diff --binary HEAD -- "${inputs[@]}" > "$scratch/source.patch"
 tar -cf "$scratch/source.tar" "${inputs[@]}"
 printf '%s\n' "$@" > "$scratch/groups.txt"
 if [[ "$testkit" == true ]]; then
-  shasum -a 256 "$TESTKIT_RELEASE_LAUNCHER" "$POCKET_IC_BIN" > "$scratch/tools.sha256"
+  shasum -a 256 "$TESTKIT_RELEASE_LAUNCHER" "$POCKET_IC_BIN" "$TESTKIT_SERVER_ARCHIVE" "$TESTKIT_GZIP" > "$scratch/tools.sha256"
 fi
 if [[ "${LIBRARY_RELEASE_ONLINE:-false}" == true ]]; then cargo fetch --locked > "$scratch/fetch.log" 2>&1; fi
 # Lint before packaging or expensive runtime checks. The extracted src trees are
@@ -112,6 +117,10 @@ if [[ "$testkit" == true ]]; then
     --server-stdout "$scratch/server.stdout" --server-stderr "$scratch/server.stderr" -- \
     bash "$repo/scripts/qualification/testkit-installed.sh" "$candidate/Cargo.toml" "$scratch" \
     > "$scratch/installed.log" 2>&1
+  cargo test --manifest-path "$candidate/Cargo.toml" -p ic-testkit "${features[@]}" \
+    --lib --locked --offline server::tests::installed_ -- --ignored --color never \
+    > "$scratch/managed-installed.log" 2>&1
+  grep -Fq 'test result: ok. 2 passed; 0 failed' "$scratch/managed-installed.log"
   shasum -a 256 -c "$scratch/tools.sha256"
 fi
 checkpoint > "$scratch/source-after.sha256"
