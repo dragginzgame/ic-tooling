@@ -44,7 +44,7 @@ explicit group selection. The four first-cutover manifests now permit only
 
 The maintainer authorized publication of foundation 0.80.2 on 2026-11-16,
 excluding Backup migration. Artifacts and FS remain one coordinated group;
-publish Artifacts first, then verify FS against that registry supplier. Artifacts
+Artifacts was published first, then FS verified against that registry supplier. Artifacts
 has no runtime change. FS adds original retained-file admission for create-only
 publication; no existing byte or persistence format changes. Other package
 versions and all external dependency selections remain unchanged.
@@ -53,16 +53,33 @@ Product source is unchanged from `0ace03b62684b876c3dc43cdb7280bbc980fa58c`, who
 [hosted acceptance](https://github.com/dragginzgame/ic-tooling/actions/runs/43858852879)
 passes repository admission, the single history secret scan and packaged native
 tests/Clippy/Rustdoc on Linux and both macOS architectures. Early foundation
-Clippy also passes locally. Final versioned archives require the selected release
-commit's native CI plus fresh Cargo package verification and registry readback.
+Clippy also passes locally. Final versioned archives pass
+[run 43862099971](https://github.com/dragginzgame/ic-tooling/actions/runs/43862099971)
+at release commit `828c2692523a7a906188c111c9b58f30d0f52468` on all three native
+hosts, including repository admission and the single secret scan.
 The required first-party product supplier is Artifacts in this same cohort;
 Toko 0.44.4 remains the reviewed qualification supplier. Registry review found
 stable non-yanked Toko 0.44.5; this optional tooling refresh is deferred to the
 next dependency-maintenance batch. No freshness claim is made for unrelated
 product or qualification graphs.
 
-Release metadata is prepared; registry upload is pending. Retain publication
-logs, archives and checksums under `target/publication-foundation-0.80.2/`.
+Both 0.80.2 packages were published on 2026-11-16 from release commit `828c269`;
+the annotated `foundation-v0.80.2` tag and `main` were pushed atomically.
+Downloaded registry archives are non-yanked, match uploaded bytes and index
+checksums, and contain the release commit's exact source and licence. Cargo
+verified FS against registry Artifacts 0.80.2 without local overrides.
+The final normalized manifests match the CI candidates. Qualification-only
+unused patch records are absent from the publication locks, and FS's publication
+lock identifies Artifacts by its registry source/checksum.
+
+| Published archive | SHA-256 |
+| --- | --- |
+| Artifacts 0.80.2 | `f8645c876c9f26469c46e0ec764b639b192d2f2336d71815a2fd11d4c86b6f1e` |
+| FS 0.80.2 | `81c73a53b929355c2056a2783c0f61676251c0ddba2d6e0109c3ac53841b396b` |
+
+Publication logs, downloaded archives, source/provenance checks and Linux CI
+evidence remain under `target/publication-foundation-0.80.2/`. Backup was not
+modified or migrated; the maintainer owns that next step.
 
 ### Initial four-crate publication
 

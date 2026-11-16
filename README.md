@@ -5,15 +5,18 @@ The first milestone is one real build-to-owned-artifact workflow with newly
 selected interfaces. Existing crates.io names may be reused with incremented
 versions; retaining a name does not require retaining its old Rust API. The first
 package is `ic-build` 0.87.3. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
-0.80.1 for shared byte admission and held-directory publication. Toko Tooling is
+0.80.2 for shared byte admission and held-directory publication. Toko Tooling is
 pinned to 0.44.4 in both workspaces.
 
 The [first release](docs/release-ownership.md#first-production-cutover-scope)
 contains Artifacts, FS, Process and Build. `make test-build-release-candidate`
 checks extracted Cargo archives and a fresh current Canic build export. Linux,
-Apple Silicon macOS and Intel macOS acceptance pass. Artifacts 0.80.1, FS 0.80.1,
+Apple Silicon macOS and Intel macOS acceptance pass. Artifacts 0.80.2, FS 0.80.2,
 Process 0.80.2 and Build 0.87.3 are published on crates.io. Production consumer
 adoption remains separate; these APIs require explicit migration from legacy.
+Foundation 0.80.2 adds [original retained-file publication](docs/filesystem-custody.md#reopening-an-original-publication-file)
+after reopening, without rewriting recovery bytes. Its final versioned archives
+pass native CI on all three hosts, and registry readback matches uploaded bytes.
 
 The byte owner also supplies [complete producer commitments](docs/byte-commitments.md).
 Independent tests pass; `make test-backup-commitments` compares the selected
@@ -128,9 +131,6 @@ probe with both Testkit suppliers, retaining exact Wasm bytes and observations.
 The [release ownership map](docs/release-ownership.md) declares foundation, build,
 HTTP, Process, Text, tools and Testkit groups. [Changelogs](CHANGELOG.md) live under `releases/`;
 `make deps-list` reports each package’s group and version.
-
-The production owner remains the read-only `../ic-tooling` reference. All new
-packages remain unpublished; no production consumer has migrated.
 
 Read [AGENTS.md](AGENTS.md), [TOKO-TOOLING.md](TOKO-TOOLING.md), and
 [the current handoff](docs/status/current.md) before implementation.

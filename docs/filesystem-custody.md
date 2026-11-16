@@ -80,13 +80,15 @@ mode and bytes; parent rename; short/excess/mismatched content; invalid names,
 permissions, aliases, links and substituted identities; occupied destinations;
 explicit abort; and file-sync, cleanup and parent-sync failures. FS Clippy
 (`--all-targets -- -D warnings`) and Rustdoc (`-D warnings`) pass. These changes
-are unpublished. [Hosted run 43858083308](https://github.com/dragginzgame/ic-tooling/actions/runs/43858083308)
+were first qualified by [hosted run 43858083308](https://github.com/dragginzgame/ic-tooling/actions/runs/43858083308)
 at `a66eae8d500451aff613fa8819598c2257f4ffb5` also passes the packaged tests,
 Clippy and Rustdoc on Linux, Apple Silicon macOS and Intel macOS. Retained
 macOS artifact logs confirm all six new cases and the original source identity,
 completing the native producer qualification required by
 [#2 — Support publication of original retained files after reopen](https://github.com/dragginzgame/ic-tooling/issues/2).
 Backup migration and current-consumer qualification remain separate work.
+Foundation 0.80.2 is now published; [release receipts](release-ownership.md#foundation-0802-follow-up)
+record final versioned native acceptance and verified registry bytes.
 
 [Explicit directory preparation](directory-preparation.md) extends this owner
 with held-root traversal and creation of named children. It returns the held leaf
@@ -98,8 +100,8 @@ implicitly. Current Canic artifact-output qualification passes; other writers re
 Build and filesystem publication now share the independently useful byte owner,
 `ic-host-artifacts` 0.80.1: length policy, bounded read/copy and exact SHA-256
 identity. No paths, processes, codecs, HTTP or legacy digest wrapper family enters.
-`ic-host-fs` 0.80.1 owns native custody/publication. Both version lines follow registry
-0.79.0 observed on 2026-11-15 and remain unpublished. Build remains 0.87.1.
+`ic-host-fs` owns native custody/publication. These replacement lines followed
+registry 0.79.0 observed on 2026-11-15; foundation 0.80.2 is now published.
 Rustix and standard File own native primitives; no legacy subsystem is imported.
 
 The isolated Backup migration switches its filesystem supplier completely. Its

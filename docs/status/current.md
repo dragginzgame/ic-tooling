@@ -45,11 +45,13 @@ Toko 0.44.4 is pinned in both workspaces; snapshot/tools admission and 19 Build 
 The snapshot now selects the shared CI installer (49 files at the same revision)
 for the workflow's single Gitleaks history scan.
 
-Issue repairs (registry publication pending):
-The maintainer authorized foundation 0.80.2 publication only; Backup remains
-user-owned. Artifacts/FS metadata and the foundation ledger are prepared for
-that coordinated release. External dependencies and other versions are unchanged;
-final native CI, package verification and registry readback precede completion.
+Foundation 0.80.2 is published from `828c2692523a7a906188c111c9b58f30d0f52468`
+with tag `foundation-v0.80.2`. [Final native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43862099971)
+passes on Linux and both macOS architectures. Registry Artifacts/FS archives
+match uploaded bytes, index checksums and committed source; FS verified against
+published Artifacts without local overrides. [Release receipts](../release-ownership.md#foundation-0802-follow-up)
+record checksums and retained evidence. External dependencies and other versions
+are unchanged. Backup was not modified; its migration remains user-owned.
 [#1 — Hosted CI wiring](https://github.com/dragginzgame/ic-tooling/issues/1) adds
 repository-wide snapshot/pin and formatting checks before the native matrix;
 Actionlint passes locally; `make check` and `make fmt-check` pass locally and in
@@ -61,8 +63,8 @@ It verifies the original held identity and complete expected bytes, then reuses
 create-only seal/commit with retained failure evidence. All 29 FS library tests,
 FS Clippy and Rustdoc pass on Linux and both native macOS architectures at
 `a66eae8d500451aff613fa8819598c2257f4ffb5`; archived macOS logs confirm all six new
-recovery cases. Neither publication nor Backup adoption is claimed. Package versions
-are unchanged.
+recovery cases. The final 0.80.2 archives pass the later release run above.
+Both issues are closed; no Backup adoption is claimed.
 
 ## Owners and evidence entrypoints
 
