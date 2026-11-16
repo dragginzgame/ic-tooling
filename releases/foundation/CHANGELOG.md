@@ -5,7 +5,7 @@ Packages: `ic-host-artifacts`, `ic-host-fs`.
 This group starts with the replacement implementation. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
-## [0.80.2] - Unreleased
+## [0.80.2] - 2026-11-16
 
 ### ➕ Added
 
@@ -14,6 +14,11 @@ in [checkpoint history](../history.md), not a prior release of this group.
   using the existing seal/commit lifecycle. Refusal retains recovery evidence;
   no rewriting, permission changes or automatic retries occur.
   [#2 — Support publication of original retained files after reopen](https://github.com/dragginzgame/ic-tooling/issues/2).
+
+### 🔧 Changed
+
+- Advance Artifacts with the coordinated foundation group; its byte API and
+  implementation are unchanged. Backup adoption remains consumer-owned work.
 
 ## [0.80.1] - 2026-11-16
 

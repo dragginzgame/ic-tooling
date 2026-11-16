@@ -21,8 +21,8 @@ authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
 
 [workspace.dependencies]
 errno = "0.3.15"
-ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.80.1" }
-ic-host-fs = { path = "crates/ic-host-fs", version = "0.80.1" }
+ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.80.2" }
+ic-host-fs = { path = "crates/ic-host-fs", version = "0.80.2" }
 ic-host-process = { path = "crates/ic-host-process", version = "0.80.2" }
 ic-platform = { version = "=0.33.7", default-features = false }
 ic-platform-types = { version = "=0.20.4", default-features = false }

@@ -46,6 +46,10 @@ The snapshot now selects the shared CI installer (49 files at the same revision)
 for the workflow's single Gitleaks history scan.
 
 Issue repairs (registry publication pending):
+The maintainer authorized foundation 0.80.2 publication only; Backup remains
+user-owned. Artifacts/FS metadata and the foundation ledger are prepared for
+that coordinated release. External dependencies and other versions are unchanged;
+final native CI, package verification and registry readback precede completion.
 [#1 — Hosted CI wiring](https://github.com/dragginzgame/ic-tooling/issues/1) adds
 repository-wide snapshot/pin and formatting checks before the native matrix;
 Actionlint passes locally; `make check` and `make fmt-check` pass locally and in

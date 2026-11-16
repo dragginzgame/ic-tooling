@@ -40,6 +40,32 @@ explicit group selection. The four first-cutover manifests now permit only
 
 ## First production cutover scope
 
+### Foundation 0.80.2 follow-up
+
+The maintainer authorized publication of foundation 0.80.2 on 2026-11-16,
+excluding Backup migration. Artifacts and FS remain one coordinated group;
+publish Artifacts first, then verify FS against that registry supplier. Artifacts
+has no runtime change. FS adds original retained-file admission for create-only
+publication; no existing byte or persistence format changes. Other package
+versions and all external dependency selections remain unchanged.
+
+Product source is unchanged from `0ace03b62684b876c3dc43cdb7280bbc980fa58c`, whose
+[hosted acceptance](https://github.com/dragginzgame/ic-tooling/actions/runs/43858852879)
+passes repository admission, the single history secret scan and packaged native
+tests/Clippy/Rustdoc on Linux and both macOS architectures. Early foundation
+Clippy also passes locally. Final versioned archives require the selected release
+commit's native CI plus fresh Cargo package verification and registry readback.
+The required first-party product supplier is Artifacts in this same cohort;
+Toko 0.44.4 remains the reviewed qualification supplier. Registry review found
+stable non-yanked Toko 0.44.5; this optional tooling refresh is deferred to the
+next dependency-maintenance batch. No freshness claim is made for unrelated
+product or qualification graphs.
+
+Release metadata is prepared; registry upload is pending. Retain publication
+logs, archives and checksums under `target/publication-foundation-0.80.2/`.
+
+### Initial four-crate publication
+
 The maintainer selected first production adoption as the next milestone, ahead
 of completing every legacy workload. The initial publication on 2026-11-16 consists
 of the dependency-complete owned-build stack:
