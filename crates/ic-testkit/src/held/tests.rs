@@ -254,6 +254,7 @@ fn installed_modules_keep_replies_bound_to_slots_and_reject_failures() {
         )
         .unwrap();
         let target_id = ic_platform_types::Principal::from_text(target.to_text()).unwrap();
+        assert_eq!(target_id.as_slice(), target.as_slice());
         let wasm = catalog.compile(target_id, 50_000_000_000, 100_000).unwrap();
         pic.add_cycles(target, 100_000_000_000_000);
         pic.install_canister(target, wasm, vec![], None);

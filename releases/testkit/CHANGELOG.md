@@ -1,7 +1,25 @@
 # Testkit changelog
 
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
-the qualified Scheduling captures select released Testkit 0.106.0.
+each qualification record identifies its actual supplier and source capture.
+
+## [0.107.2] - 2026-11-16
+
+### 🐛 Fixed
+
+- Permit compatible Platform Types patches (`>=0.21.2, <0.22.0`) instead of
+  requiring one exact patch. Testkit can share Types 0.21.2 with Runtime 0.23.13
+  in a native-driver/Wasm-probe workspace, removing the supplier conflict from
+  [#5](https://github.com/dragginzgame/ic-tooling/issues/5). Keep PocketIC's original
+  types and assert exact Principal bytes across the explicit conversion boundary.
+
+### 🔧 Changed
+
+- Adopt Platform Protocol 0.2.5 with only `http-request` and Types 0.21.2;
+  preserve original PocketIC types and unspecified HTTP pricing. The new optional
+  pricing-version encoder and Registry capabilities are not selected.
+  Unit and installed module/controller checks, observed instance deletion,
+  Clippy and default-feature isolation pass on Linux.
 
 ## [0.107.1] - 2026-11-16
 

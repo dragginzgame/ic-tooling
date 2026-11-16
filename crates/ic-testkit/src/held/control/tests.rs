@@ -71,6 +71,8 @@ fn installed_control_refuses_foreign_consumed_expired_and_automatic_releases() {
             let b = pic.create_canister().await;
             let a_id = Principal::from_text(a.to_text()).unwrap();
             let b_id = Principal::from_text(b.to_text()).unwrap();
+            assert_eq!(a_id.as_slice(), a.as_slice());
+            assert_eq!(b_id.as_slice(), b.as_slice());
             let mut first = Fixture::new(&pic, a_id, &catalog, 50_000_000_000, 100_000)
                 .await
                 .unwrap();

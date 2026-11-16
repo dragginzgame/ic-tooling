@@ -881,15 +881,15 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-protocol"
-version = "0.2.3"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fe6bc76a461f60b585bee7d6e5117bbe6e63de87ef3cfe4982f0895c00fad91"
+checksum = "93ed6052f78c99bf45bcf1ffdd11bd6eb4de4463dbe425a7b63e093b8f7a0ed2"
 
 [[package]]
 name = "ic-platform-types"
-version = "0.21.1"
+version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "339477b696137ec7fd6f96725c5733b80d67c5fd75b27c8dfaa83846629b9958"
+checksum = "3b08201b2ebbb9a9f0e1c8ee2854f48ff3f68a777c441147273c600bf6723d7d"
 dependencies = [
  "crc32fast",
  "data-encoding",
@@ -900,7 +900,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.107.1"
+version = "0.107.2"
 dependencies = [
  "ic-platform-protocol",
  "ic-platform-types",
@@ -2328,9 +2328,9 @@ dependencies = [
 
 [[package]]
 name = "toko-tooling"
-version = "0.44.6"
+version = "0.44.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c27413bf2875a061354aff385a92c66bdf9f058ac372d28b062aaf982c4229c8"
+checksum = "bdfd5bc761f55ede02e82f8af36ca82415696209b3ff45e8f080e82cab85c418"
 
 [[package]]
 name = "toml"

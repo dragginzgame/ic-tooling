@@ -24,8 +24,8 @@ errno = "0.3.15"
 ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.80.2" }
 ic-host-fs = { path = "crates/ic-host-fs", version = "0.80.2" }
 ic-host-process = { path = "crates/ic-host-process", version = "0.80.2" }
-ic-platform-protocol = { version = "=0.2.3", default-features = false }
-ic-platform-types = { version = "=0.21.1", default-features = false }
+ic-platform-protocol = { version = "=0.2.5", default-features = false }
+ic-platform-types = { version = "0.21.2", default-features = false }
 libproc = "=0.14.11"
 pocket-ic = "=16.1.0"
 reqwest = { version = "0.13.5", default-features = false }
@@ -36,7 +36,7 @@ tempfile = "3.27.0"
 # Testkit's PocketIC requires exactly 2.0.18; other members share this selection.
 thiserror = "2.0.18"
 tokio = { version = "1.54.1", default-features = false }
-toko-tooling = "=0.44.6"
+toko-tooling = "=0.44.9"
 toml = "1.2.1"
 unicode-width = "0.2.3"
 wasmparser = "=0.263.0"
