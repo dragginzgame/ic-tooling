@@ -29,6 +29,9 @@ remains tied to its recorded inputs.
 
 ### 🧪 Testing
 
+- Prepare the 0.77.2 registry candidate with complete package metadata and add
+  extracted-archive presentation, lint and documentation checks to the native matrix.
+
 - Refresh current Canic caller migrations without replacing new presentation
   behavior. Include Cargo diagnostic escaping, subnet comparison and artifact
   listing; focused display tests and all-target Clippy pass in the combined

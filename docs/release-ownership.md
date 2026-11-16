@@ -35,8 +35,65 @@ their owners; detailed test results remain in the existing qualification records
 
 `make deps-list` reports ownership across both workspaces. No release/publication
 entrypoint is introduced by this change; future release tooling must require an
-explicit group selection. The four first-cutover manifests now permit only
-`crates-io`; the other four retain `publish = false`. The first four are published.
+explicit group selection. Seven library manifests permit only `crates-io`;
+the private qualification executable retains `publish = false`. Only the first
+four libraries are published; publication permission in a manifest is not delivery.
+
+## Independent library readiness
+
+The maintainer requested publication preparation for HTTP, Text and Testkit.
+This selects three independent groups; it does not authorize an upload or include
+the private tools package. The Canic source-review documentation is recorded in
+a separate documentation commit. No Backup or other sibling source is changed.
+
+| Group | Candidate | Latest registry release at review |
+| --- | --- | --- |
+| http | `ic-host-http` 0.80.0 | 0.79.0 |
+| text | `ic-host-text` 0.77.2 | 0.76.0 |
+| testkit | `ic-testkit` 0.107.1 | 0.106.0 |
+
+Registry review on 2026-11-16 confirms all three candidate versions are absent;
+their new minor lines carry the incompatible replacement APIs. The required
+first-party selections are current stable, non-yanked releases: Platform 0.33.7,
+Platform Types 0.20.4 and Toko Tooling 0.44.5. The installed-test bootstrap remains
+released `ic-testkit-server` 0.106.0 with PocketIC 16.1.0: the replacement package
+deliberately has no launcher. That executable is qualification infrastructure,
+not a candidate runtime dependency. No general dependency refresh is selected.
+
+`make test-library-release-candidate RELEASE_GROUPS='http text testkit'` selects
+only these groups; either an individual group or a subset is supported. Testkit
+requires absolute prepared executable paths in `TESTKIT_RELEASE_LAUNCHER` and
+`POCKET_IC_BIN`. The runner checks their versions before qualification, never
+downloads tools implicitly, and records their hashes before and after use.
+Set `LIBRARY_RELEASE_ONLINE=true` only when preparing uncached dependencies.
+
+The gate runs warning-denied Clippy before packaging, compares packaged source
+and licence bytes, then tests the extracted archives and builds warning-denied
+Rustdoc. Testkit's default graph must exclude fixture-only WAT/Platform edges;
+default and feature-enabled configurations are checked separately. Installed
+module and controller tests run against the candidate on an externally owned
+server, followed by independent observation of all three deleted instances.
+Logs, archives, checksums, source capture and the candidate lock remain under
+`target/library-release.*`; changed source refuses completion. No sibling migration
+or older consumer test run substitutes for this archive gate.
+
+The existing GitHub workflow now has a separate `libraries` matrix for Linux,
+Apple Silicon macOS and Intel macOS, sharing the single repository secret scan.
+Native results for the new matrix are required before publication. Release notes
+remain undated and no release tags or registry uploads are created by readiness.
+
+Linux archive run `target/library-release.vBZQpJd2` passes two HTTP tests, three
+Text tests, six Testkit unit tests and both explicitly selected installed tests.
+All three server instances are independently observed as deleted. Both Testkit
+feature configurations pass Clippy/Rustdoc and default graph isolation. Archive
+source matches the linted source; source/tool hashes remain unchanged throughout.
+Formatting, ShellCheck, Actionlint and missing-group/tool refusals pass. Registry
+ownership confirms `borovan` for all three names. New native CI results remain
+pending; prior four-crate matrix results do not qualify these libraries.
+All three `cargo publish --dry-run --allow-dirty --locked` checks pass, with
+verification enabled and no uploads. Their generated archives exactly match
+the qualified archives. Cargo's registry preflight requires network access even
+for a dry run; the refused offline attempt is retained beside the passing logs.
 
 ## First production cutover scope
 

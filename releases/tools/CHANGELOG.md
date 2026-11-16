@@ -10,6 +10,14 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Add explicit HTTP/Text/Testkit archive readiness, preserving packaged-source
+  identity and Testkit feature isolation. Reuse the prepared external simulator
+  owner for installed checks and add the selected libraries to native CI.
+
+- Retire the obsolete Canic report-allocation migration from the current handoff.
+  Record its existing published-FS adoption from a read-only current-source
+  capture and preserve the old report patch's refusal of changed source.
+
 - Adopt Toko Tooling 0.44.5 in both workspaces through its verified exporter;
   align the hosted download-cache action with the release's source commit.
   The retained 49-file snapshot and cache-action implementation are unchanged.

@@ -1,139 +1,108 @@
 # Current implementation — 2026-11-16
 
-## Authority and delivery
+## Authority and scope
 
-The maintainer accepted [design revision 2](../DESIGN.md). Required outcomes drive
-interfaces; old Rust exports, packages and release groups do not. Consumer code
-stays in its owner; patches here are qualification migrations only.
+[Design revision 2](../DESIGN.md) is accepted. Required outcomes drive interfaces;
+no old product source/test tree was admitted wholesale. Historical production
+reference: `a00369fc29fa837c6deb022cceb7e09aa447292c`; superseded transplant/design
+checkpoint: `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`. Preserve that evidence.
+The public canonical repository is `dragginzgame/ic-tooling`; the predecessor is
+`dragginzgame/ic-tooling-legacy`. Historical local checkout names are not current
+source selections.
 
-Use current local sibling working trees, including edits, through
-[read-only snapshots](../qualification/local-sources.md). Refuse capture drift or
-stale patches; historical passing runs do not qualify changed source. Auth is on
-hold; Storage, Observability and Wire are frozen. Canic is being rewritten and its
-current requirements must justify further APIs.
+Use [read-only current-source snapshots](../qualification/local-sources.md),
+including sibling edits. Refuse capture drift and stale patches. Consumer product
+code stays in its owner. Auth is on hold; Storage, Observability and Wire are
+frozen. Canic's current requirements must justify further Tooling capabilities.
+Backup adoption remains user-owned; no sibling changes are part of current work.
 
-`../ic-tooling` remains the read-only production reference, observed at
-`a00369fc29fa837c6deb022cceb7e09aa447292c`. Superseded transplant/design evidence is
-retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
-historical evidence. No old product source/test tree was admitted wholesale.
+## Delivery and active readiness
 
-The public canonical repository is now `dragginzgame/ic-tooling`; the former
-production GitHub repository is `dragginzgame/ic-tooling-legacy`. The local
-checkout remains `ic-tooling-new`, and the local sibling remains read-only.
-Release source `ca0bef0cd29ab272c3e3419d28292ca83ecff875` is on `origin/main`.
-The first build-stack publication is complete, scoped in
-[release ownership](../release-ownership.md). Artifacts 0.80.1, FS 0.80.1,
-Process 0.80.2 and Build 0.87.3 were published on 2026-11-16. Downloaded registry
-archives match uploaded packages, index checksums and product sources. Cargo
-verified Build against all three published suppliers without local overrides.
-Extracted candidates pass 61 Linux unit cases plus the
-foreground-terminal case, Clippy and Rustdoc; a current Canic export builds with
-the archives and passes 20 metadata/tool refusals. The first four-crate stack is
-qualified by [native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43841772100), which
-passes Linux, Apple Silicon macOS, Intel macOS and the history secret scan at
-`6541ba0d53bb4d99fc358fbed5850f0f5cc2df8b` on `release/build-readiness`.
-Registry-only consumer qualification and production adoption remain separate
-delivery work. Publication was explicitly authorized after readiness completed.
-Tools 0.1.3 starts the next local unpublished development line; library versions
-are unchanged. All three tools tests and `make check` pass; only its local lock
-entry changed. The version advance does not refresh prior runtime evidence.
-Runtime evidence remains tied to the captured source and suppliers in the linked
-qualification recipes; old Timers experiments are historical. Seven [release groups](../release-ownership.md) own their ledgers; root changelog is
-an index. Text, HTTP, Testkit and the private qualification executable remain
-unpublished. No production consumer migration is claimed.
-Toko 0.44.5 is pinned in both workspaces and installed through its verified
-exporter. Snapshot/pin admission, tool admission, `make fmt-check` for both
-workspaces and Actionlint pass. All 49 retained files are byte-identical to the
-0.44.4 snapshot; the CI cache action is also unchanged and now pinned to the
-0.44.5 source commit. No new consumer mechanism or workaround is needed.
-The earlier 19 Build tests qualify the unchanged fixture-directory rename to
-`qualification/owned-wasm-probe`; this tooling refresh does not rerun product
-qualification. The shared CI installer remains selected for the workflow's
-single Gitleaks history scan.
+Artifacts/FS 0.80.2, Process 0.80.2 and Build 0.87.3 are published. Registry
+readback matches uploaded bytes, checksums and release source. Foundation's latest
+release is `828c2692523a7a906188c111c9b58f30d0f52468`, tag `foundation-v0.80.2`;
+its [native acceptance](https://github.com/dragginzgame/ic-tooling/actions/runs/43862099971)
+passes Linux and both macOS architectures. See [release receipts](../release-ownership.md).
+FS includes original retained-file admission for create-only seal/commit without
+rewriting recovery bytes; all 29 FS tests passed on each native host.
+Issues [#1](https://github.com/dragginzgame/ic-tooling/issues/1) (hosted CI) and
+[#2](https://github.com/dragginzgame/ic-tooling/issues/2) (retained publication) are closed.
 
-Foundation 0.80.2 is published from `828c2692523a7a906188c111c9b58f30d0f52468`
-with tag `foundation-v0.80.2`. [Final native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43862099971)
-passes on Linux and both macOS architectures. Registry Artifacts/FS archives
-match uploaded bytes, index checksums and committed source; FS verified against
-published Artifacts without local overrides. [Release receipts](../release-ownership.md#foundation-0802-follow-up)
-record checksums and retained evidence. External dependencies and other versions
-are unchanged. Backup was not modified; its migration remains user-owned.
-[#1 — Hosted CI wiring](https://github.com/dragginzgame/ic-tooling/issues/1) adds
-repository-wide snapshot/pin and formatting checks before the native matrix;
-Actionlint passes locally; `make check` and `make fmt-check` pass locally and in
-[hosted run 43858083308](https://github.com/dragginzgame/ic-tooling/actions/runs/43858083308)
-at `a66eae8`. The setup follow-up explicitly prepares both pinned
-Rust components before admission. [#2 — Retained-file publication](https://github.com/dragginzgame/ic-tooling/issues/2)
-adds `Directory::admit_retained` at the [existing FS owner](../filesystem-custody.md#reopening-an-original-publication-file).
-It verifies the original held identity and complete expected bytes, then reuses
-create-only seal/commit with retained failure evidence. All 29 FS library tests,
-FS Clippy and Rustdoc pass on Linux and both native macOS architectures at
-`a66eae8d500451aff613fa8819598c2257f4ffb5`; archived macOS logs confirm all six new
-recovery cases. The final 0.80.2 archives pass the later release run above.
-Both issues are closed; no Backup adoption is claimed.
+Toko 0.44.5 is pinned in both workspaces and installed through its verified exporter.
+All 49 retained files and the cache action implementation match 0.44.4. Adoption
+commit `34e14e455cae447e3e1d21fb9249683ede4b966a` is pushed;
+[CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43868115486) passes
+repository admission, secrets and the existing four-crate native matrix.
+
+The maintainer requested preparation, not publication, of HTTP 0.80.0, Text 0.77.2
+and Testkit 0.107.1. Their metadata now permits only crates.io; the private
+`ic-cargo-qualification` 0.1.3 remains unpublished with `publish = false`.
+[Library readiness](../release-ownership.md#independent-library-readiness) records
+registry availability, current first-party selections and the explicit group gate.
+Linux archive run `target/library-release.vBZQpJd2` passes 11 unit tests, both
+installed Testkit tests, default-feature isolation, Clippy and Rustdoc. Independent
+server inventory confirms deletion of all three instances. All three Cargo
+publication dry runs pass without uploads. Formatting, ShellCheck and Actionlint
+pass. Candidate source and tool hashes remain unchanged across the archive gate.
+
+Readiness delivery selects `release/library-readiness`. The maintainer authorized
+its push with asynchronous CI; the new Linux, Apple Silicon macOS and Intel macOS
+library results remain pending. Prior four-crate results do not qualify these
+packages. Release notes remain undated; no candidate tags or uploads have been
+made. The Canic source review is recorded in a separate documentation commit.
 
 ## Owners and evidence entrypoints
 
-Use `make deps-list` for local versions. Read only the contract affected by the task:
+Use `make deps-list` for versions and [release ownership](../release-ownership.md)
+for groups. Read the affected contract before changing an owner:
 
 | Owner | Contract |
 | --- | --- |
 | Build | [Owned builds](../build-owned-artifact.md) |
 | Artifacts | [Producer commitments](../byte-commitments.md) |
-| FS | [Preparation](../directory-preparation.md), [publication](../directory-publication.md), [sidecar locks](../sidecar-locks.md) |
+| FS | [Preparation](../directory-preparation.md), [publication](../directory-publication.md), [locks](../sidecar-locks.md), [retained custody](../filesystem-custody.md) |
 | HTTP | [Bounded bodies](../http-body.md) |
 | Text | [Presentation](../text-presentation.md) |
 | Process | [Execution](../process-execution.md), [handoff/reaping](../process-handoff.md) |
 | Testkit | [Held replies](../testkit-held-replies.md), [simulator ownership](../simulator-ownership.md) |
 
-`ic-cargo-qualification` is private external-lock subset admission, outside Build;
-it is not an archive runner or metadata editor. HTTP/Tokio stay outside Build and
-portable bytes. Testkit's thiserror 2.0.18 selection is scoped to that graph.
+`ic-cargo-qualification` owns external-lock subset admission, not archive running
+or release editing inside Build. HTTP/Tokio and simulator dependencies stay outside
+Build and portable bytes. Testkit preserves PocketIC's original client types;
+its held-reply feature is explicit and caller-owned servers remain external.
 
-Consumer recipes retain source hashes, commands, results and limitations:
-[Canic](../../qualification/canic/README.md),
-[Query](../../qualification/query/README.md), [DB](../../qualification/db/README.md),
-[Platform](../../qualification/platform/README.md),
-[Scheduling](../../qualification/scheduling/README.md),
-[Backup](../../qualification/backup/README.md) and
-[Auth](../../qualification/auth/README.md).
-Canic has Linux Build/Text/Process evidence; Query and DB have scoped Text evidence.
-Scheduling's rewrite has paired held-reply, pressure, watchdog, Once, metrics-feature
-and executor evidence; old Scheduling experiments do not qualify it. Platform's
-old driver evidence must not drive the replacement. Auth evidence is historical
-at `e52a40be75dd9809d0528189d84b43fe96952ad9`; its migration remains on hold.
-Product and consumer test inventories stay in these existing contracts/recipes;
-version bumps do not refresh them. No full release gate is claimed.
+## Consumer boundaries and remaining work
 
-## Remaining gates and limitations
+[Canic's current source review](../../qualification/canic/README.md#current-source-review--2026-11-16)
+captures HEAD `37270cb30f840d45592781a4fd957e823c39c895` plus working-tree edits.
+Its product lock selects registry Artifacts/FS 0.80.2 and Process 0.80.2. CLI report
+publication delegates to Host, which already uses held report-directory allocation
+and the published FS API. The old report patch correctly refuses this source;
+that migration obligation is obsolete. The earlier 54-case paired composition,
+real builds and metadata refusals remain historical evidence for their own captures.
+Further Canic work must start from current requirements and consumer-owned
+acceptance. Store-build, archive and native macOS consumer qualification are not
+inferred from source inspection or old recipes. No current runtime test was run
+for that source review.
 
-[Backup assembly](../../qualification/backup/README.md#complete-producer-commitments) passes four current tests with both suppliers and Clippy; restore remains blocked by its earlier 15 baseline failures.
-Canic runtime composition passes 54 paired cases, one replacement-only report
-traversal refusal, 15 custody/Process/viewer cases, real artifact/app builds and
-20 metadata/tool refusals on one current 0.216.5 capture. Host/CLI Clippy and graph
-checks pass; Host normal/build edges exclude legacy FS/Process. Report files use
-held FS custody; automatic report-directory allocation retains legacy FS. The
-report adapter deliberately rejects parent traversal accepted by the released
-writer; this narrower path policy is explicit in its qualification recipe.
-Next: automatic report allocation, registry Store-build runtime and archive
-qualification. Live signing/submission remains outside runtime evidence.
-The [native-execution review](../process-execution.md) records the shared Process
-owner used by Build and current Canic group capture, foreground execution and
-desktop handoff. Combined Linux qualification covers artifact/metadata, lock setup,
-signer capture, Store-source lookup and viewer reaping; native macOS consumer
-qualification remains open. The four-crate core's native release checks pass.
-No Canic product code moves here. `../ic-profiler` is absent and its current
-checkout/status has been requested. The inspected `ic-platform-new` has no current
-Tooling dependency; old Platform fixture results must not drive that rewrite.
+[Scheduling](../../qualification/scheduling/README.md) targets the rewrite now at
+`../ic-scheduling` with verified ancestry and explicit prepared tools. Its paired
+Once aggregate, metrics-feature and executor checks share exact source identity;
+old Scheduling experiments are historical. [Backup](../../qualification/backup/README.md)
+assembly has four passing captured tests; earlier restore baseline failures and
+its next adoption remain outside this work. [Query](../../qualification/query/README.md)
+and [DB](../../qualification/db/README.md) retain scoped Text/installed-console
+evidence. [Platform](../../qualification/platform/README.md) evidence must not drive
+its rewrite; [Auth](../../qualification/auth/README.md) stays on hold.
+
 Managed-server lifetime/cancellation, multi-canister partial snapshot effects,
-remaining Platform drivers, Profiler ownership/native acceptance, archive acceptance,
-native macOS consumer qualification and production consumer migration remain open.
-Borrowed-server success does not justify a wrapper; upstream creation can panic
-or leave remote effects after cancellation, and async deletion is best-effort.
-See [simulator ownership](../simulator-ownership.md).
+remaining Platform drivers, Profiler ownership/native acceptance, current-consumer
+archive acceptance and production deployment remain open. Profiler's checkout was
+absent at its last review. Borrowed-server success does not justify a wrapper;
+creation may leave remote effects after cancellation and async deletion is best-effort.
 
-These slices assume trusted source/tools, cooperative process groups, exclusive
+These contracts assume trusted source/tools, cooperative process groups, exclusive
 child reaping and caller exclusion of namespace/content writers. Identity checks
-are not hostile-writer atomic compare-and-unlink. App builds are serial, not an
-all-or-nothing transaction. HTTP/installed fixtures require loopback. No production
-consumer has migrated; no performance or peak-memory improvement is claimed. Shared-target reuse needs matched evidence.
+are not hostile-writer atomic compare-and-unlink. App builds are serial rather
+than transactional. Loopback fixtures require local socket access. No performance,
+peak-memory or shared-target improvement is claimed without matched measurements.

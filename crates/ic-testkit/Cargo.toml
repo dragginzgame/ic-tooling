@@ -1,12 +1,13 @@
 [package]
 name = "ic-testkit"
 version = "0.107.1"
+description = "Shared PocketIC types and bounded held-reply test fixtures"
 edition.workspace = true
 rust-version.workspace = true
 license-file.workspace = true
 repository.workspace = true
 authors.workspace = true
-publish = false
+publish = ["crates-io"]
 
 [target.'cfg(any())'.dev-dependencies]
 toko-tooling.workspace = true

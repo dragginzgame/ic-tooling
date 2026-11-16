@@ -21,5 +21,8 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🧪 Testing
 
+- Prepare the 0.80.0 registry candidate with complete package metadata and add
+  extracted-archive loopback, lint and documentation checks to the native matrix.
+
 - Qualify current Backup HTTP policy, body limits and transfer behavior using
   local-loopback fixtures, retaining original transport causes and refusal cases.

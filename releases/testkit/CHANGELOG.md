@@ -5,6 +5,19 @@ crates.io release. The selected consumer currently uses released Testkit 0.106.0
 
 ## [0.107.1] - Unreleased
 
+### ⚠️ Breaking
+
+- Replace the legacy Testkit surface with original PocketIC types and the
+  optional `held-reply-fixtures` catalog, generator and exclusive controller.
+  Consumers migrate explicitly; no legacy server launcher, snapshot helpers or
+  compatibility facade is shipped in this package. Callers own servers and instances.
+
+### 🧪 Testing
+
+- Prepare registry metadata and archive qualification for default and held-reply
+  features, including installed module/controller checks and observed instance
+  deletion with an explicitly prepared external server owner.
+
 - Qualify current Scheduling rewrite pressure and held-upgrade against the local
   controller through an export-only migration patch. Both drivers share one local
   supplier; external lock admission, driver Clippy, endpoint refusal and observed

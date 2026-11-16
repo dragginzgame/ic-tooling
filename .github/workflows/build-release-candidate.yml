@@ -3,7 +3,7 @@ name: Build release candidate
 on:
   workflow_dispatch:
   push:
-    branches: [main, release/build-readiness]
+    branches: [main, release/build-readiness, release/library-readiness]
   pull_request:
 
 permissions:
@@ -49,6 +49,58 @@ jobs:
           mode: save
       - name: Scan repository history once
         run: '"$GITLEAKS_BIN" git --redact=100 --no-banner --no-color --log-level error'
+  libraries:
+    needs: repository
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Prepare pinned Rust components
+        run: rustup toolchain install 1.100.0 --profile minimal --component clippy --component rustfmt
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@081753852ae398661fadfd0fe3b3fc631f0a96e6 # 0.44.5
+        with:
+          extra-key: testkit-server-0.106.0-pocketic-16.1.0
+      - name: Prepare external simulator owner and server
+        shell: bash
+        run: |
+          launcher="$(bash vendor/toko-tooling/scripts/dev/install-rust-tools.sh \
+            --consumer "$GITHUB_WORKSPACE" --package ic-testkit --version 0.106.0 \
+            --bin ic-testkit-server --features cli --profile release)"
+          "$launcher" setup --directory "$RUNNER_TEMP/pocket-ic"
+          server="$("$launcher" check --directory "$RUNNER_TEMP/pocket-ic")"
+          echo "TESTKIT_RELEASE_LAUNCHER=$launcher" >> "$GITHUB_ENV"
+          echo "POCKET_IC_BIN=$server" >> "$GITHUB_ENV"
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@081753852ae398661fadfd0fe3b3fc631f0a96e6 # 0.44.5
+        with:
+          mode: save
+          extra-key: testkit-server-0.106.0-pocketic-16.1.0
+      - name: Qualify packaged HTTP, Text and Testkit
+        env:
+          LIBRARY_RELEASE_ONLINE: 'true'
+        run: bash scripts/qualification/library-release-candidate.sh http text testkit
+      - name: Retain library archives and evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: library-candidate-${{ matrix.os }}
+          path: |
+            target/library-release.*/archives/
+            target/library-release.*/*.log
+            target/library-release.*/*.json
+            target/library-release.*/*.txt
+            target/library-release.*/*.sha256
+            target/library-release.*/source-head
+            target/library-release.*/source.patch
+            target/library-release.*/source.tar
+            target/library-release.*/server.stdout
+            target/library-release.*/server.stderr
+            target/library-release.*/candidate/Cargo.lock
+          if-no-files-found: error
   native:
     needs: repository
     strategy:

@@ -1,12 +1,13 @@
 [package]
 name = "ic-host-http"
 version = "0.80.0"
+description = "Complete bounded response bodies with caller-owned Reqwest policy"
 edition.workspace = true
 rust-version.workspace = true
 license-file.workspace = true
 repository.workspace = true
 authors.workspace = true
-publish = false
+publish = ["crates-io"]
 
 [target.'cfg(any())'.dev-dependencies]
 toko-tooling.workspace = true

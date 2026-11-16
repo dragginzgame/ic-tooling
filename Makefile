@@ -15,6 +15,7 @@ help:
 	  '  make test-canic-process Combined current Canic group/direct-child qualification (Linux)' \
 	  '  make test-testkit-module Installed module test (externally owned server)' \
 	  '  make test-testkit-control Installed controller refusals (externally owned server)' \
+	  '  make test-library-release-candidate RELEASE_GROUPS="http text testkit" Selected archive readiness (prepared Testkit tools required)' \
 	  '  make test-text         Terminal escaping and Unicode table contracts' \
 	  '  make test-canic-build-metadata Current Canic metadata admission/refusal' \
 	  '  make test-canic-app-build Combined Canic Build/Text app and display contracts' \
@@ -72,6 +73,11 @@ check: toko-tooling-check
 .PHONY: test-build-release-candidate
 test-build-release-candidate: toko-tooling-check
 	bash scripts/qualification/build-release-candidate.sh
+
+.PHONY: test-library-release-candidate
+# Explicit group scope; Testkit additionally requires prepared launcher/server paths.
+test-library-release-candidate: toko-tooling-check
+	bash scripts/qualification/library-release-candidate.sh $(RELEASE_GROUPS)
 
 .PHONY: test-canic-signer
 test-canic-signer: toko-tooling-check
