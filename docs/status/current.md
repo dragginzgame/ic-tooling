@@ -17,26 +17,30 @@ current requirements must justify further APIs.
 retained at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3`; preserve those deletions and
 historical evidence. No old product source/test tree was admitted wholesale.
 
-GitHub checkpoint `353e37a9632c30f0912f7060eecdb12def6ee19e` is on `origin/main`.
-Post-push review of its qualification adapters/wiring found no actionable issue.
-The next milestone is the first production build-stack cutover, scoped in
+The public canonical repository is now `dragginzgame/ic-tooling`; the former
+production GitHub repository is `dragginzgame/ic-tooling-legacy`. The local
+checkout remains `ic-tooling-new`, and the local sibling remains read-only.
+Release source `ca0bef0cd29ab272c3e3419d28292ca83ecff875` is on `origin/main`.
+The first build-stack publication is complete, scoped in
 [release ownership](../release-ownership.md). Artifacts 0.80.1, FS 0.80.1,
-Process 0.80.2 and Build 0.87.3 now have crates.io-only publication metadata.
-They remain unpublished. Extracted archives pass 61 Linux unit cases plus the
+Process 0.80.2 and Build 0.87.3 were published on 2026-11-16. Downloaded registry
+archives match uploaded packages, index checksums and product sources. Cargo
+verified Build against all three published suppliers without local overrides.
+Extracted candidates pass 61 Linux unit cases plus the
 foreground-terminal case, Clippy and Rustdoc; a current Canic export builds with
 the archives and passes 20 metadata/tool refusals. The first four-crate stack is
-ready for publication: [native CI](https://github.com/dragginzgame/ic-tooling-new/actions/runs/43841772100)
+qualified by [native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/43841772100), which
 passes Linux, Apple Silicon macOS, Intel macOS and the history secret scan at
 `6541ba0d53bb4d99fc358fbed5850f0f5cc2df8b` on `release/build-readiness`.
-Registry publication and registry-only consumer adoption remain separate delivery
-work; the native CI request does not authorize registry uploads.
+Registry-only consumer qualification and production adoption remain separate
+delivery work. Publication was explicitly authorized after readiness completed.
 Tools 0.1.3 starts the next local unpublished development line; library versions
 are unchanged. All three tools tests and `make check` pass; only its local lock
 entry changed. The version advance does not refresh prior runtime evidence.
 Runtime evidence remains tied to the captured source and suppliers in the linked
 qualification recipes; old Timers experiments are historical. Seven [release groups](../release-ownership.md) own their ledgers; root changelog is
-an index. All eight packages remain unpublished. Consumer migration, registry
-publication and canonical cutover are separate; recheck registry identities first.
+an index. Text, HTTP, Testkit and the private qualification executable remain
+unpublished. No production consumer migration is claimed.
 Toko 0.44.4 is pinned in both workspaces; snapshot/tools admission and 19 Build tests pass after renaming `qualification/owned-wasm-probe` to match its package.
 The snapshot now selects the shared CI installer (49 files at the same revision)
 for the workflow's single Gitleaks history scan.

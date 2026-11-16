@@ -8,11 +8,12 @@ package is `ic-build` 0.87.3. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
 0.80.1 for shared byte admission and held-directory publication. Toko Tooling is
 pinned to 0.44.4 in both workspaces.
 
-The [first release candidate](docs/release-ownership.md#first-production-cutover-scope)
+The [first release](docs/release-ownership.md#first-production-cutover-scope)
 contains Artifacts, FS, Process and Build. `make test-build-release-candidate`
 checks extracted Cargo archives and a fresh current Canic build export. Linux,
-Apple Silicon macOS and Intel macOS acceptance pass. Publication and
-production consumer adoption have not happened.
+Apple Silicon macOS and Intel macOS acceptance pass. Artifacts 0.80.1, FS 0.80.1,
+Process 0.80.2 and Build 0.87.3 are published on crates.io. Production consumer
+adoption remains separate; these APIs require explicit migration from legacy.
 
 The byte owner also supplies [complete producer commitments](docs/byte-commitments.md).
 Independent tests pass; `make test-backup-commitments` compares the selected

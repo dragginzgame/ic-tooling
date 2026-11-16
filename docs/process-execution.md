@@ -1,6 +1,6 @@
 # Native execution: next owner admission
 
-Status: unpublished `ic-host-process` 0.80.2 starts the [handoff design](process-handoff.md).
+Status: `ic-host-process` 0.80.2 was published on 2026-11-16 and starts the [handoff design](process-handoff.md).
 The first-release native checks also require Darwin group-cleanup admission
 described below; earlier evidence predates that correction. The following 0.80.1 evidence covers adoption
 by Build, with current Canic artifact/metadata, foreground-client and signer

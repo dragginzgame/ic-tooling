@@ -22,8 +22,8 @@ The Testkit group owns an actual admitted package, not a future simulator wrappe
 Frozen Wire work and absent packages receive no group. Root dependency aliases list only actual member usage; the policy's
 alias rosters reflect those declarations without adding display-only dependencies.
 
-Current pending headings match the existing package versions. They describe
-unpublished replacement candidates, not claimed crates.io releases. Breaking
+Pending headings describe unpublished development history or future candidates;
+the first Foundation, Process and Build entries are now dated releases. Breaking
 consumer migrations are explicit in the affected ledgers. Registry availability,
 version reconciliation and release admission remain required before publication.
 Existing development version increments were preserved by this organizational work.
@@ -36,28 +36,39 @@ their owners; detailed test results remain in the existing qualification records
 `make deps-list` reports ownership across both workspaces. No release/publication
 entrypoint is introduced by this change; future release tooling must require an
 explicit group selection. The four first-cutover manifests now permit only
-`crates-io`; the other four retain `publish = false`. Nothing has been published.
+`crates-io`; the other four retain `publish = false`. The first four are published.
 
 ## First production cutover scope
 
 The maintainer selected first production adoption as the next milestone, ahead
-of completing every legacy workload. The proposed initial publication consists
+of completing every legacy workload. The initial publication on 2026-11-16 consists
 of the dependency-complete owned-build stack:
 
-| Package | Local candidate version |
+| Package | Published version |
 | --- | --- |
 | `ic-host-artifacts` | 0.80.1 |
 | `ic-host-fs` | 0.80.1 |
 | `ic-host-process` | 0.80.2 |
 | `ic-build` | 0.87.3 |
 
-Publish Artifacts before FS, and all three dependencies before Build. The public
-sparse index checked on 2026-11-16 ends at 0.79.0 for Artifacts/FS/Process and
-0.86.0 for Build; none of the four candidate versions appears in it. Public API
-owner lookups list `borovan` for all four. Recheck versions and upload credentials
-immediately before delivery; this read-only check neither reserves a version nor
-proves upload authorization. Qualify the packaged candidates and
-their registry dependency graph, then publish and migrate the selected consumer.
+Artifacts, FS, Process and Build were published in that order from commit
+`ca0bef0cd29ab272c3e3419d28292ca83ecff875`. The public canonical repository is
+[dragginzgame/ic-tooling](https://github.com/dragginzgame/ic-tooling); the legacy
+repository had already moved to `dragginzgame/ic-tooling-legacy`. Release tags
+are `foundation-v0.80.1`, `process-v0.80.2` and `build-v0.87.3`.
+All four versions were absent before upload and are now available, not yanked.
+Cargo package verification ran for every upload; Build resolved its three
+suppliers from crates.io without local overrides. Downloaded archives match
+the uploaded bytes, index checksums and committed product source. Receipts are
+under `target/publication-2026-11-16/`.
+
+| Published archive | SHA-256 |
+| --- | --- |
+| Artifacts 0.80.1 | `b9083e3927eb9649c429a1c8dfeb5b7be844cebf1596e93b077f9908d6289dcc` |
+| FS 0.80.1 | `6dfb8ed3f645487c12ec0f7a8384bc1750e67649bdf7062bb12f136b3384e461` |
+| Process 0.80.2 | `d4189c2a9262d34336c59ca7b22851cab1c629cd9afa98cd28a878e124d2e6d1` |
+| Build 0.87.3 | `dfaf7d08e0033e1a245fa84f87098bb1fd7229947183e5a47f6e0f1b957ca433` |
+
 Current Canic owned-build qualification is the starting consumer evidence;
 production adoption must use its then-current source and account for its ongoing
 rewrite. Native macOS acceptance is required by the adopted baseline; the first
@@ -66,19 +77,21 @@ four-crate candidate now satisfies that gate on both supported architectures.
 Text 0.77.2, HTTP 0.80.0 and Testkit 0.107.1 are independent later adoption batches;
 they are not dependencies of this first stack. The private qualification executable
 0.1.3 remains unpublished. Backup restore failures and frozen/on-hold consumers
-do not block this scoped build release. This milestone does not itself constitute
-publication or a completed consumer migration. Candidate packaging and native
-qualification are complete; registry delivery and consumer cutover are next.
+do not block this scoped build release. Publication is complete; consumer
+cutover remains separate. No sibling source or deployment was changed.
 
 ## Candidate qualification and delivery boundary
 
-The first four-crate stack is ready for publication. [Run 43841772100](https://github.com/dragginzgame/ic-tooling-new/actions/runs/43841772100)
+The first four-crate stack passed readiness before publication. [Run 43841772100](https://github.com/dragginzgame/ic-tooling/actions/runs/43841772100)
 passed at `6541ba0d53bb4d99fc358fbed5850f0f5cc2df8b` on
 `release/build-readiness`: Ubuntu 24.04, macOS 15 Apple Silicon, macOS 15 Intel
 and the full-history secret scan. Extracted archives pass 61 Linux unit cases
 or 60 macOS unit cases, plus the foreground-terminal case on each host,
 warning-denied Clippy and Rustdoc. The run retains each host's archives, hashes,
-source identity and logs. Subsequent documentation-only edits reuse this evidence.
+source identity and logs. The publication commit changes repository metadata,
+release notes and the CI branch trigger; product source and Cargo.lock are
+unchanged from this qualified commit. Runtime evidence is retained, with fresh
+Cargo package verification and registry archive admission at publication.
 
 The latest local complete candidate run is `target/build-release.1XQOqMeC` at
 `076d33dfab15ceb14282be0a0efed54ff6e4f8f2`, before the terminal fixture/driver
