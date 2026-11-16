@@ -12,6 +12,10 @@ publish = ["crates-io"]
 [target.'cfg(any())'.dev-dependencies]
 toko-tooling.workspace = true
 
+[target.'cfg(target_os = "macos")'.dependencies]
+errno.workspace = true
+libproc.workspace = true
+
 [dependencies]
 rustix = { workspace = true, features = ["process"] }
 thiserror.workspace = true

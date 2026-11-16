@@ -4,6 +4,10 @@ Package: `ic-host-process`. Unpublished replacement; no registry release.
 
 ## [0.80.2] - Unreleased
 
+- Resolve Darwin's zombie-only group `EPERM` only after confirming the owned
+  leader exited and no other group members remain. Preserve genuine or uncertain
+  cleanup failures and direct fallback. Add macOS-only safe libproc admission
+  and a native live-descendant regression case.
 - Prepare crates.io-only candidate metadata. Extracted-archive unit and explicit
   foreground-terminal acceptance pass on Linux; native macOS CI remains required.
 - Compose current Canic Host's Process and filesystem adapters: nine focused

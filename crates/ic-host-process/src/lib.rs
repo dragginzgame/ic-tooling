@@ -6,6 +6,8 @@
 //! custody independently of completion observers. No sampling or tool setup is owned.
 
 mod handoff;
+#[cfg(target_os = "macos")]
+mod macos;
 pub use handoff::{Completion, launch};
 
 use std::io::{self, Read};
@@ -120,6 +122,8 @@ impl Session {
         self.close_with(
             |child| match kill_process_group(Pid::from_child(child), Signal::KILL) {
                 Ok(()) | Err(rustix::io::Errno::SRCH) => Ok(()),
+                #[cfg(target_os = "macos")]
+                Err(rustix::io::Errno::PERM) if macos::exited_group(child) => Ok(()),
                 Err(error) => Err(error.into()),
             },
             Child::kill,

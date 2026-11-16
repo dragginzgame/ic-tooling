@@ -109,6 +109,11 @@ native log assertion uses standard grep. The next native run found that Rustix
 does not expose `mkfifoat` on macOS; the lock refusal fixture now creates its FIFO
 using native `mkfifo`, retaining the same product assertion. These fixes require
 fresh native evidence.
+The first executing macOS tests also found Darwin's zombie-only group `EPERM`
+behavior. Process now proves exited-leader/no-other-member state before treating
+that specific refusal as complete; uncertain or live groups retain cleanup errors.
+See the [native execution contract](process-execution.md) for the dependency and
+custody boundaries. Xcode/Command Line Tools with libclang are required on macOS.
 The required Gitleaks history scan runs once outside the host matrix using the
 installed pinned shared installer. Native jobs need Bash, Git, jq, grep, Perl,
 tar, shasum, mkfifo and script; no GNU-only script arguments are used on macOS.

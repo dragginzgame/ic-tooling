@@ -1,9 +1,29 @@
 # Native execution: next owner admission
 
 Status: unpublished `ic-host-process` 0.80.2 starts the [handoff design](process-handoff.md).
-Synchronous implementation is unchanged; the following 0.80.1 evidence covers adoption
+The first-release native checks also require Darwin group-cleanup admission
+described below; earlier evidence predates that correction. The following 0.80.1 evidence covers adoption
 by Build, with current Canic artifact/metadata, foreground-client and signer
 version/principal capture qualification. Native macOS acceptance remains open.
+
+Darwin can return `EPERM` for a group containing only zombies: its
+[XNU group iteration](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sig.c)
+excludes zombies and returns that error when no eligible member is found. The
+native candidate run reproduced this after a successful Cargo exit. Process now
+admits this one case only after `waitid(WNOWAIT)` proves its owned leader exited
+and a group-filtered libproc query contains no other members. The leader remains
+unreaped, pinning identity throughout. A live leader, other group member or query
+failure retains the original permission error and direct-child fallback.
+Cooperative membership and exclusive reaping remain required; this grants no
+authority over borrowed PIDs or credential-changing descendants.
+
+Rustix has no group-membership query for macOS. The target-gated, exact libproc
+0.14.11 dependency supplies a safe native query; errno is cleared for its documented
+zero-result convention. These dependencies and libproc's binding generation are
+absent from Linux builds. Native macOS setup requires Xcode/Command Line Tools
+and libclang. No observation API, sampler or application policy is added.
+The native regression distinguishes an exited solitary leader from an exited
+leader with a live child, retaining existing cleanup failure-order tests.
 The existing [design](DESIGN.md#process-session) names the execution ownership
 boundary. This review checks it against current local callers rather than copying
 `ic-host-process` or exposing Build's private implementation unchanged.
