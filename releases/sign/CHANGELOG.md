@@ -35,6 +35,6 @@ Package: `ic-host-sign`. Initial package; no registry release is claimed.
   stays open for native macOS provider acceptance. Published Platform 0.34.15
   resolves the signed-status admission gap in
   [Platform #29](https://github.com/dragginzgame/ic-platform/issues/29).
-- Initial archive/publication qualification requires Process 0.81.0's pipe-input
-  API and a corresponding dependency minimum. Current Cargo metadata still uses
-  the unreleased local Process implementation; do not publish this package yet.
+- Process 0.81.0 is published and the extracted Linux Sign archive/installed
+  provider gate passes against registry dependencies. Complete native macOS
+  fixture acceptance remains required before this initial publication.

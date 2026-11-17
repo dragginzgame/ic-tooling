@@ -97,6 +97,21 @@ impl PrivateKeychain {
                 .success()
         );
     }
+
+    pub(super) fn delete_credential(&self, name: &str) {
+        // The creator uses the legacy file-keychain API. Delete its exact item
+        // through the native CLI rather than keyring's SecItemDelete search,
+        // which returned NoEntry for this successfully read legacy item.
+        let deleted = Command::new("/usr/bin/security")
+            .args(["delete-generic-password", "-a", name, "-s", "icp-cli"])
+            .arg(&self.path)
+            .output()
+            .unwrap();
+        assert!(
+            deleted.status.success(),
+            "disposable credential deletion failed"
+        );
+    }
 }
 
 impl Drop for PrivateKeychain {

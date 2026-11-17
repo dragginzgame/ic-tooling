@@ -175,7 +175,11 @@ The separate Sign lint step lacked prepared offline dependencies; preparation is
 now explicit. Linux provider collection also required an undeclared `rg`; the
 runner now uses standard grep. The initial macOS provider job compiled the helper
 and passed network denial, but refused the credential rather than showing UI.
-Successful native credential access is not yet claimed.
+The preauthorized fixture subsequently signs updates and independent status,
+refuses its locked keychain and passes network denial on native macOS. Its final
+credential deletion failed through keyring's SecItem search for the legacy item;
+the fixture now deletes that exact owned item through the native CLI. A complete
+passing native fixture remains required.
 
 The macOS fixture now requires `SIGNER_TEST_DISPOSABLE_KEYCHAIN=1` in an ephemeral
 account. It snapshots default/search preferences, creates a password-protected
@@ -194,11 +198,11 @@ Native provider jobs use Toko's pinned ICP installer. macOS runs inside inherite
 Unix sockets and no prompt-header traffic. The macOS fixture correction still
 requires successful hosted execution; source wiring is not native acceptance.
 
-Finish native macOS provider acceptance before closing #12. The supported profile
+Finish native macOS provider acceptance before closing Tooling #12. The supported profile
 has no signing-time unlock UI to cancel; operators unlock/authorize it beforehand.
 Canic's installed
-Backup acceptance stays with Canic. Sign has a separate group/ledger but is not
-archive-qualified yet. Process 0.81.0 is published and the matching dependency
+Backup acceptance stays with Canic. Sign's extracted Linux archive and installed
+provider gate pass at `target/library-release.DizteaZD`. Process 0.81.0 is published and the matching dependency
 minimum is selected. The Sign archive gate admits extracted source, isolated
 provider dependencies and an installed CLI through explicit prepared manifest/
 helper paths. Local path success alone is not registry readiness. Consumer cutover

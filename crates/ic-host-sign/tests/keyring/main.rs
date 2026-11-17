@@ -14,6 +14,7 @@ use zeroize::Zeroizing;
 mod mac_keychain;
 
 struct Disposable {
+    #[cfg(target_os = "linux")]
     entry: Credential,
     #[cfg(target_os = "macos")]
     keychain: mac_keychain::PrivateKeychain,
@@ -22,7 +23,9 @@ struct Disposable {
     helper: PathBuf,
 }
 
+#[cfg(target_os = "linux")]
 struct Credential(keyring::Entry, bool);
+#[cfg(target_os = "linux")]
 impl Drop for Credential {
     fn drop(&mut self) {
         if self.1 {
@@ -80,6 +83,7 @@ impl Disposable {
             status.success(),
             "disposable ICP keyring identity creation failed"
         );
+        #[cfg(target_os = "linux")]
         let entry = Credential(
             keyring::Entry::new("icp-cli", &name).expect("native credential session unavailable"),
             true,
@@ -102,6 +106,7 @@ impl Disposable {
         };
         Self {
             directory,
+            #[cfg(target_os = "linux")]
             entry,
             config,
             helper,
@@ -132,6 +137,16 @@ impl Disposable {
         let tool = protocol::tool_hash(&self.helper).unwrap();
         println!("Disposable helper SHA-256: {tool:02x?}");
         Signer::new(&self.helper, tool, self.config.clone()).unwrap()
+    }
+
+    fn delete_credential(&self) {
+        #[cfg(target_os = "linux")]
+        self.entry
+            .0
+            .delete_credential()
+            .expect("disposable credential deletion failed");
+        #[cfg(target_os = "macos")]
+        self.keychain.delete_credential(&self.config.identity);
     }
 }
 
@@ -177,11 +192,7 @@ async fn native_icp_keyring_update() {
     assert_ne!(status.envelope_bytes(), original);
     assert_eq!(signed.envelope_bytes(), original);
 
-    fixture
-        .entry
-        .0
-        .delete_credential()
-        .expect("disposable credential deletion failed");
+    fixture.delete_credential();
     let next = fixture.request();
     assert!(matches!(
         signer.sign(next, approved).await,
@@ -254,11 +265,7 @@ async fn native_keyring_cancellation_retains_custody() {
     assert!(report.status.is_some(), "helper was not reaped");
     assert_eq!(signer.state(), ic_host_sign::State::Ready);
     drop(resume);
-    fixture
-        .entry
-        .0
-        .delete_credential()
-        .expect("disposable credential deletion failed");
+    fixture.delete_credential();
 }
 
 #[cfg(target_os = "linux")]
@@ -364,12 +371,11 @@ async fn native_locked_keyring_refuses_without_changing_identity() {
 #[ignore = "requires the qualification runner's disposable keychain account"]
 async fn native_locked_keychain_refuses_without_prompting() {
     use std::time::Duration;
-    let mut fixture = Disposable::create();
+    let fixture = Disposable::create();
     let mut signer = fixture.signer();
     let approved = signer.commitment();
     let signed = signer.sign(fixture.request(), approved).await.unwrap();
     let original = signed.envelope_bytes().to_vec();
-    fixture.entry.1 = false;
     fixture.keychain.lock();
     let refused = tokio::time::timeout(
         Duration::from_secs(3),

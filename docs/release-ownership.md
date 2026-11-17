@@ -14,7 +14,7 @@ now has its own group as its requirements-driven implementation begins.
 | http | Complete response-body admission depends on Reqwest and has its own native consumer requirements. It stays outside Build and portable byte graphs. |
 | text | Pure escaping and table layout serve Query and DB independently of HTTP, process execution and filesystem authority. |
 | process | Native child/group execution and bounded communication serve Build and foreground tools without Cargo, IC or observation policy. |
-| sign | Existing native-keyring signing, protocol admission and cancellable external exchange serve Canic's Backup adapter. Platform/keyring dependencies stay outside generic Process, Build, portable bytes and Testkit. Initial development is unpublished and not yet archive-qualified. |
+| sign | Existing native-keyring signing, protocol admission and cancellable external exchange serve Canic's Backup adapter. Platform/keyring dependencies stay outside generic Process, Build, portable bytes and Testkit. Linux archive qualification passes; initial publication awaits complete native provider acceptance. |
 | testkit | Shared PocketIC client identity, bounded generated fixtures and exclusive held-reply control serve test drivers independently of Build and product runtimes. |
 | tools | The external-lock executable has its own command contract. Its ledger also owns maintained repository qualification/setup workflows; these scripts are not executable library features or runtime dependencies. |
 
@@ -71,13 +71,33 @@ that Cargo omits from the publication lock; its hash is therefore different.
 The mismatched comparison and initial intent are retained, the corrected exact
 publication identity was recorded before upload, and no tag was rewritten.
 
-Build/Testkit/Sign publication is still in progress. The complete Linux Testkit
-archive/CLI/installed gate passes at `target/library-release.14Ds7w3H` against
-published Process 0.81.0. Sign's first macOS provider attempt compiles and passes
-the network-denial probe but refuses the credential. Its fixture lacked explicit
-helper authorization; the corrected fixture prepares a private disposable keychain
-and narrow application ACL before ICP populates the actual credential. Native
-provider success is not yet claimed.
+Build 0.87.4 and Testkit 0.110.0 are published from
+`23f80e236343d7ff8ec070536863daecb89c77ec`, tagged `build-v0.87.4` and
+`testkit-v0.110.0`. Fresh registry records and archives match their publication
+preflights exactly:
+
+| Package | Registry/archive SHA-256 |
+| --- | --- |
+| `ic-build` 0.87.4 | `64d0ba66cf80b92d3443fc367f8a9603aea2a1b245985788e41f202dae093efd` |
+| `ic-testkit` 0.110.0 | `16709c74c5c169ea786224ea8e10a8b45446219000c18c441e8aa73bd1409252` |
+
+The complete Linux Testkit archive/CLI/installed gate passes at
+`target/library-release.14Ds7w3H` against published Process 0.81.0. Source,
+normalized manifest and complete dependency lock match its publication archive;
+only VCS identity advances. Build's source/manifest also match its gate. Its lock
+adds registry source/checksums for the same three qualified local suppliers;
+published supplier source matches. Fresh publication preflights compile both
+packages against registry dependencies.
+
+Sign's extracted archive/default graph/installed provider gate passes at
+`target/library-release.DizteaZD`, including all three real Linux keyring cases.
+Sign publication remains in progress. The initial macOS fixture lacked helper
+authorization. Its private-keychain/narrow-ACL correction successfully signs exact
+updates and independent status, refuses a locked keychain and passes network denial
+in [native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44177241916).
+That job then fails deleting its legacy credential through keyring's SecItem API;
+the fixture now deletes its exact owned item through the native CLI. Complete
+native provider acceptance still requires that corrected fixture to pass.
 
 The scoped release graph retains Protocol 0.3.3, Nix 0.31.3 and thiserror 2.0.18;
 the concurrent Protocol 0.3.5/Nix 0.31.4 edits remain preserved for restoration.

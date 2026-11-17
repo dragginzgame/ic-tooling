@@ -13,8 +13,9 @@ for existing ICP secp256k1 keyring identities, exact authenticated update/status
 bytes and retained cancellation custody. It is noninteractive: unlock/authorize
 the existing OS credential first. Linux disposable-provider acceptance passes;
 native macOS acceptance remains outstanding.
-The remaining release candidate selects Build 0.87.4, Testkit 0.110.0 and Sign
-0.1.0; see the [cohort receipt](docs/release-ownership.md#signing-cohort--process-0810-first).
+Build 0.87.4 and Testkit 0.110.0 are published. Sign 0.1.0 remains a release
+candidate pending complete native provider acceptance; see the
+[cohort receipt](docs/release-ownership.md#signing-cohort--process-0810-first).
 
 A ground-up replacement of IC Tooling, governed by [design revision 2](docs/DESIGN.md).
 The first milestone is one real build-to-owned-artifact workflow with newly
