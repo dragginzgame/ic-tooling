@@ -63,6 +63,29 @@ Hosted native CI remains asynchronous; successful setup runs do not prove a
 hosted failure-artifact upload. Final publication admission verifies the versioned
 archives against these qualified source trees before upload.
 
+Published from `02ac139f175069e4809c93aab428ddaee30eca17`; `main` and annotated
+`process-v0.80.5` / `testkit-v0.108.1` tags were pushed atomically and their remote
+identities verified. Clean-source Cargo publication preflight and upload passed
+with all features. Extracted source/licence bytes match the qualified candidates;
+normalized manifests differ only in the selected package versions. Provenance
+identifies the clean release commit and exact package directories.
+
+| Published package | Verified registry/archive SHA-256 |
+| --- | --- |
+| `ic-host-process` 0.80.5 | `73930a7f8d56062e7fa5c8821b5259b355ea841e9137842644619bfbbe8927b2` |
+| `ic-testkit` 0.108.1 | `dae330c65abdc613e8bfdabe5d45bbfcc613c48a1d9f0f250194608f6b1291e9` |
+
+Both registry records are non-yanked; downloaded archives match the verified
+preflight/upload bytes. Publication logs, source comparisons, registry records
+and recovery locks remain under `target/deploy-scanner/`. The concurrent lock
+edits are restored with released member versions and remain uncommitted. The
+post-push review of the release and its affected callers found no further defect;
+hosted native CI runs asynchronously.
+
+Toko installed the registry Testkit 0.108.1 CLI in release profile. Its version,
+offline prepared-tool receipt and prepared-server admission checks pass; the
+selected executable and verification output are retained in the same evidence root.
+
 ### Foundation 0.80.3, Process 0.80.4 and Testkit 0.108.0 delivery
 
 The maintainer authorized deployment on 2026-11-17 from this checkout's `main`

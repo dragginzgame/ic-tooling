@@ -17,7 +17,7 @@ user-owned. Profiler is retired. The [workload register](../workloads.md) retain
 historical source identities and consumer boundaries; no current unfrozen caller
 justifies a new snapshot-set/cache API without a defined partial-effect contract.
 
-## Current release
+## Latest delivery
 
 - Secret-scanner setup now uses bounded sanitized diagnostics, failure uploads
   and artifact reporting. Actionlint and 57 focused checks pass, including the
@@ -25,13 +25,14 @@ justifies a new snapshot-set/cache API without a defined partial-effect contract
 - Process's inline macOS test and Testkit's fixture constructor now live in
   test-only files through ordinary directory modules. Both macOS Process targets
   pass all-target Clippy; Testkit's managed-server Clippy and four ordinary server
-  tests pass. This is not new native macOS or installed-simulator qualification.
-- Deployment selects Process 0.80.5 and Testkit 0.108.1 because their package
-  contents changed. Both archive gates pass with committed dependencies; see the
+  tests pass. Both release archive gates pass, including Testkit's installed
+  CLI/simulator checks; native macOS execution remains with asynchronous CI.
+- Process 0.80.5 and Testkit 0.108.1 are published from `02ac139` with verified
+  registry readback. Both archive gates used committed dependencies; see the
   [release record](../release-ownership.md#process-0805-and-testkit-01081-delivery).
 - Concurrent Protocol/Clap/Nix/Zeroize lock edits are preserved in
-  `target/deploy-scanner/concurrent-Cargo.lock`. Restore them after publication,
-  retaining the two new member versions. Private Tools 0.1.3 remains pending.
+  `target/deploy-scanner/concurrent-Cargo.lock` and restored with the two released
+  member versions. They remain uncommitted. Private Tools 0.1.3 remains pending.
 
 ## Blockers and next actions
 
@@ -40,8 +41,8 @@ are fixed. Full-history scanning, candidate admission/rejection and the four-gro
 Linux archive gate pass; see [failure causes and evidence](../qualification/ci-setup.md#reviewed-ci-failures--2026-11-17).
 The delivered cache/timeout/CI fixes and handoff cleanup at `92655b1` pass
 [hosted CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44073531569).
-The new scanner failure-upload path and native test relocation await hosted
-observation after a future delivery; no new CI run is awaited.
+The new scanner failure-upload path and native test relocation have been pushed;
+hosted observation remains outstanding and no new CI run is awaited.
 
 On a delivery request, select affected groups under [release ownership](../release-ownership.md).
 Current work removes reliance on ephemeral scanner logs and separates test-only
@@ -54,8 +55,8 @@ client/held-reply-fixture boundary. See the [workload decisions](../workloads.md
 
 ## Delivery and evidence boundaries
 
-Foundation 0.80.3, Process 0.80.4 and Testkit 0.108.0 are published; exact commits,
-checksums, tool selections and acceptance live in the [release receipt](../release-ownership.md#foundation-0803-process-0804-and-testkit-01080-delivery).
+Foundation 0.80.3, Process 0.80.5 and Testkit 0.108.1 are published; exact commits,
+checksums, tool selections and acceptance live in the [release receipts](../release-ownership.md).
 Earlier publication and native-host evidence remain in that document, not here.
 
 Consumer archive/deployment acceptance is separate from supplier qualification.
