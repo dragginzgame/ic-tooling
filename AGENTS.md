@@ -14,18 +14,17 @@ Read it, [README.md](README.md), [the current design](docs/DESIGN.md) and
   failure guarantees. Rust signatures, helper names, crate boundaries and old
   test structure are not compatibility requirements. Unknown required workloads
   block their migration, not independent implementation slices.
-- `../ic-tooling` remains the read-only production reference. Historical evidence
-  is identified in `docs/status/current.md`; do not restore the old architecture
-  to satisfy obsolete commands or instructions. Preserve unrelated pending work.
-- The Stage 1 architecture checkpoint is complete; Stage 2 introduces shared byte
-  admission and filesystem custody for the pinned Backup qualification. Stage 3
-  records a historical old-Scheduling build/installed-test migration; it does not
-  qualify the Scheduling rewrite. Consumer-owned observations stay private. Continue
-  through the design's staged workflows. Every increment must name a removed caller obligation
-  or mechanism as well as its focused acceptance evidence.
-- Auth is on hold; Storage, Observability and Wire are frozen by maintainer
-  direction. Preserve completed evidence, but do not continue their migrations
-  or use them to expand the replacement design.
+- This checkout is the current implementation, not its own legacy reference.
+  Use the exact historical source identities in `docs/status/current.md` for
+  read-only predecessor research; do not guess a sibling path or restore old
+  architecture to satisfy obsolete commands. Preserve unrelated pending work.
+- The current handoff owns stage completion and historical migration evidence.
+  Every increment must name its concrete caller obligation or removed mechanism
+  and focused acceptance evidence.
+- The existing holds on Tooling-owned Auth, Storage, Observability and Wire
+  migration work remain in force. They do not declare those repositories globally
+  frozen or override their own maintainer-authorized work. Preserve completed
+  evidence and do not expand these migration lanes without authorization.
 - Qualify against current local sibling working trees, including tracked edits
   and non-ignored new source, using read-only snapshots under `target/`. Record
   source identity, refuse changes during capture and stale migration patches;
