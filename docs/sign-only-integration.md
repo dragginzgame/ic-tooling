@@ -2,7 +2,8 @@
 
 [Tooling #12](https://github.com/dragginzgame/ic-tooling/issues/12) owns the native
 integration for Canic's Backup adapter. Sign's archive and actual provider
-qualification pass on Linux and native Intel/ARM macOS; initial publication is ready.
+qualification pass on Linux and native Intel/ARM macOS. Sign 0.1.0 is published;
+see the [verified receipt](release-ownership.md#signing-cohort--process-0810-first).
 Consumer adoption belongs to [Canic #5](https://github.com/dragginzgame/canic/issues/5).
 
 ## Ownership and selected provider
@@ -129,7 +130,7 @@ Short delivery, cancellation, deadline and output limits preserve failure and
 cleanup evidence. Debug reports length only. `Input`/`Policy` lose `Copy` and
 retain `Clone`; published Process 0.81.0 supplies this boundary.
 
-## Executed evidence and remaining acceptance
+## Executed evidence
 
 Twelve Linux library tests pass: pre-dispatch refusal; tool/manifest drift; bounded,
 malformed and failed output; authenticated exact update fields/corrupt signature;

@@ -11,7 +11,7 @@ pending entries and historical checkpoints are not registry releases.
 | [cargo-metadata](releases/cargo-metadata/CHANGELOG.md) | `ic-cargo-metadata` |
 | [http](releases/http/CHANGELOG.md) | `ic-host-http` |
 | [process](releases/process/CHANGELOG.md) | `ic-host-process` |
-| [sign](releases/sign/CHANGELOG.md) | `ic-host-sign` (unpublished) |
+| [sign](releases/sign/CHANGELOG.md) | `ic-host-sign` |
 | [text](releases/text/CHANGELOG.md) | `ic-host-text` |
 | [testkit](releases/testkit/CHANGELOG.md) | `ic-testkit` |
 | [tools](releases/tools/CHANGELOG.md) | `ic-cargo-qualification` |
@@ -20,20 +20,21 @@ pending entries and historical checkpoints are not registry releases.
 Source identities, validation results and current limitations belong in the
 [current handoff](docs/status/current.md) and linked qualification records.
 
-### ▶️ Try it — Sign 0.1.0 (local development)
+### ▶️ Try it — Sign 0.1.0
 
-From the repository root, fetch dependencies once (network access), then inspect
-the helper's protocol entrypoint without accessing any identity or signing:
+Install the released helper (network access), then inspect its protocol entrypoint
+without accessing any identity or signing:
 
 ```sh
-cargo fetch --locked
-cargo run -p ic-host-sign --features provider --bin ic-sign --locked --offline -- --help
+cargo install ic-host-sign --version 0.1.0 --features provider --locked
+ic-sign --help
 ```
 
 Expected: help for the single-request offline helper. Actual requests use the
 [signer library and explicit native-keyring configuration](docs/sign-only-integration.md).
 The provider requires an already-unlocked/authorized OS credential and never
-launches an unlock prompt. Native macOS qualification remains outstanding.
+launches an unlock prompt. Actual provider qualification passes on Linux and
+native Intel/ARM macOS.
 
 ### ▶️ Try it — Cargo metadata 0.1.0
 

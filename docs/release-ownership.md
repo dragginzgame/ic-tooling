@@ -26,7 +26,7 @@ Frozen Wire work and absent packages receive no group. Root dependency aliases l
 alias rosters reflect those declarations without adding display-only dependencies.
 
 Pending headings describe unpublished development history or future candidates;
-all seven libraries now have dated release entries. Breaking
+admitted libraries have dated release entries. Breaking
 consumer migrations are explicit in the affected ledgers. Registry availability,
 version reconciliation and release admission remain required before publication.
 Existing development version increments were preserved by this organizational work.
@@ -38,13 +38,13 @@ their owners; detailed test results remain in the existing qualification records
 
 `make deps-list` reports ownership across both workspaces. No release/publication
 entrypoint is introduced by this change; future release tooling must require an
-explicit group selection. Seven library manifests permit only `crates-io`;
-the private qualification executable retains `publish = false`. All seven
+explicit group selection. Product library manifests permit only `crates-io`;
+the private qualification executable retains `publish = false`. The admitted
 libraries are published; publication permission in a manifest is not delivery.
 
 The new Sign package's Process 0.81.0 dependency, complete status admission,
 registry archive gate and real-provider native-host acceptance are qualified.
-Its first publication is in progress below.
+Its verified first-publication receipt is below.
 
 ## Independent library publication
 
@@ -92,7 +92,13 @@ packages against registry dependencies.
 Sign's extracted archive/default graph/installed provider gate passes at
 `target/library-release.6ZHdt40t`, including all three real Linux keyring cases.
 The publication preflight archive is byte-identical to that qualified archive.
-Sign publication remains in progress. All three actual provider jobs pass in
+Sign 0.1.0 is published from `4bfc9c484e5e92dbb84848398532b11bab095fdf`, tagged
+`sign-v0.1.0`, with fresh registry/archive SHA-256
+`12030a41c06a4c26ab0d61ef3dfc6559fde329c10c2bc69e565b27a6b226bff2`.
+Fresh download matches the final all-features publication preflight exactly.
+The final archive matches qualified source, tests, normalized manifest and the
+complete dependency lock; only VCS metadata advances for final notes and the
+CI budget correction. All three actual provider jobs pass in
 [native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44178285784)
 from `70008d33bc2f9d0822b79a2606d9facf5a9cefca`. Both macOS architectures prove
 exact update/status signing, missing/locked refusal, network denial and cleanup.
@@ -101,9 +107,13 @@ uses the native CLI to delete that legacy item. No operator credentials or ACLs
 are accessed. Linux and ARM macOS's separate library jobs also pass. Intel's
 separate library compilation exceeds its provisional four-minute limit; the
 eight-minute correction is delivered without waiting on broad hosted CI.
+Producer [Tooling #12](https://github.com/dragginzgame/ic-tooling/issues/12) is
+closed. Consumer implementation and installed Backup acceptance remain in
+[Canic #5](https://github.com/dragginzgame/canic/issues/5).
 
 The scoped release graph retains Protocol 0.3.3, Nix 0.31.3 and thiserror 2.0.18;
-the concurrent Protocol 0.3.5/Nix 0.31.4 edits remain preserved for restoration.
+the concurrent compatible lock updates, including Protocol 0.3.5/Nix 0.31.4,
+are restored after delivery with the released member versions and left uncommitted.
 Clap 4.6.8 and Zeroize 1.9.2 are needed by the new Sign selection. New first-party
 suppliers select published Platform 0.34.15/Types 0.21.2; the admitted new native
 suppliers are current. Optional thiserror 2.0.21 refresh is deferred to dependency

@@ -16,7 +16,10 @@ in [checkpoint history](../history.md), not a prior release of this group.
 - Add native provider jobs using pinned ICP 1.7.0 disposable identities. Linux
   records only socket/prompt-header metadata; macOS runs inside a network-denying
   sandbox. Retain selected evidence and sanitized setup failures, excluding all
-  temporary credential directories. Hosted execution remains unobserved locally.
+  temporary credential directories. Actual provider acceptance passes on Linux
+  and native Intel/ARM macOS. Raise the separate Intel library compilation step
+  to eight minutes after the provisional four-minute bound expires; retain the
+  job's failure-evidence reserve and asynchronous hosted verification.
 - Qualify extracted Sign archives, provider dependency isolation and the installed
   `ic-sign` command against disposable native credentials. Prepared manifest/helper
   paths select the candidate without changing product signing or key custody.

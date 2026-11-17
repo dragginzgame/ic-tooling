@@ -19,73 +19,56 @@ justifies a new snapshot-set/cache API without a defined partial-effect contract
 
 ## Latest delivery
 
-- Testkit 0.109.0 is published from `1fdd037` with verified registry readback.
-  The exclusive controller supports bounded forward clock steps, processes expiry,
-  and refuses further use after interrupted dispatch. Public error variants are
-  added; exhaustive matches need updating. See the [clock contract](../testkit-held-replies.md#bounded-manual-clock-progression)
-  and [release receipt](../release-ownership.md#testkit-01090-delivery).
-- The complete Linux archive gate passes with committed dependencies, including
-  all three installed fixture cases, five observed deletions and two installed
-  server cases. Hosted native CI runs asynchronously; no Canic adoption is claimed.
-- Concurrent Protocol/Clap/Nix/Zeroize lock edits are preserved in
-  `target/deploy-clock/concurrent-Cargo.lock` and restored with the released
-  Testkit version. They remain uncommitted. Private Tools 0.1.3 remains pending.
+Process 0.81.0, Build 0.87.4, Testkit 0.110.0 and Sign 0.1.0 are published with
+verified registry records and exact archive readback. See the
+[cohort receipt](../release-ownership.md#signing-cohort--process-0810-first) for
+source commits, tags, checksums and source-bound qualification.
+
+Process adds bounded finite pipe input; `Input`/`Policy` lose `Copy`, retaining
+`Clone`. Build keeps that boundary private. Testkit exposes the Process report
+identity and takes a minor. Its earlier bounded clock/expiry contract remains;
+see the [clock acceptance](../testkit-held-replies.md#bounded-manual-clock-progression).
+
+[Tooling #12](https://github.com/dragginzgame/ic-tooling/issues/12) is closed.
+Sign uses published Platform 0.34.15 to authenticate exact updates and independent
+original-ID status reads. It removes caller pipe-writer threads and detached
+signing workers while retaining original bytes and cancellation/cleanup custody.
+The selected profile requires an already-unlocked, OS-authorized credential and
+never prompts. Only public `canic-mainnet` metadata was inspected; no operator
+secret was accessed or used. See the [signing contract](../sign-only-integration.md).
+
+The final Linux archive/default graph/installed CLI gate passes, including twelve
+library cases and three disposable encrypted-keyring cases. All three actual
+provider jobs pass on Linux and Intel/ARM macOS, including locked refusal,
+network denial and owned cleanup. This qualifies the supplier, not Canic adoption.
+
+Concurrent compatible Cargo.lock updates are restored with the released package
+versions and remain uncommitted. Recovery copies and scoped publication evidence
+live in `target/deploy-sign/` and `.git/release-state/sign-0.1.0/`. Private Tools
+0.1.3 remains pending; its maintained workflow changes are delivered through Git.
 
 ## Blockers and next actions
 
-[IC Tooling #12 — Provide bounded external sign-only integration with exact expiry and existing identity custody](https://github.com/dragginzgame/ic-tooling/issues/12)
-has completed producer acceptance. The maintainer selected `canic-mainnet`; public metadata records
-OS-keyring custody and secp256k1. Process's bounded pipe-input prerequisite passes
-19 Linux tests, affected-caller Clippy and both macOS compilation checks. It is
-published in Process 0.81.0 (`Input`/`Policy` lose `Copy`).
-Sign now authenticates exact updates and independent original-ID status reads
-using published Platform 0.34.15. The noninteractive provider refuses locked or
-unauthorized credentials; unlocking stays with existing OS tools. Twelve library
-tests and three disposable ICP 1.7.0 Linux keyring cases cover exact bytes/sender,
-status binding, retained cancellation, missing/locked refusal and no prompt or
-external sockets. All three actual provider jobs pass on Linux and Intel/ARM
-macOS, including encrypted key custody, locked refusal, network denial and cleanup.
-Linux and ARM macOS's separate library jobs also pass. Intel's separate library
-compilation exceeds a provisional timeout; its budget correction runs asynchronously.
-See the [contract](../sign-only-integration.md).
+Producer acceptance has no outstanding blocker. Canic's thin Backup adapter and
+installed acceptance remain in [Canic #5](https://github.com/dragginzgame/canic/issues/5).
+[Tooling #11](https://github.com/dragginzgame/ic-tooling/issues/11) is closed;
+Canic owns its same-receiver adoption of Testkit's bounded clock progression.
 
-Deployment is authorized on `main`: Process 0.81.0, Build 0.87.4, Testkit 0.110.0
-and Sign 0.1.0. Build's Process boundary is private; Testkit exposes its report
-type and therefore takes a minor. Process, Build and Testkit are published with
-verified readback; Sign's final archive and all actual-provider gates pass and its
-initial upload is in progress. See the [cohort receipt](../release-ownership.md#signing-cohort--process-0810-first).
-The scoped graph retains Protocol 0.3.3 and Nix 0.31.3; the concurrent 0.3.5 /
-0.31.4 updates are preserved for restoration in `target/deploy-sign/` and bounded
-durable recovery state under `.git/release-state/sign-0.1.0/`. New Sign suppliers
-select current published versions. Optional unrelated refreshes stay deferred.
+Linux and ARM macOS's separate Sign library CI jobs pass. Intel's separate
+library compilation exceeded its provisional four-minute bound; it now has an
+eight-minute step in a thirty-minute job. Corrected hosted CI runs asynchronously;
+no whole-run pass is claimed. See [measured budgets](../qualification/ci-setup.md#job-deadlines--2026-11-17).
+The actual-provider Intel job passed independently.
 
-[IC Tooling #11 — Support bounded clock progression with held Testkit replies](https://github.com/dragginzgame/ic-tooling/issues/11)
-is closed and delivered in Testkit 0.109.0. Canic's same-receiver acceptance remains
-with Canic; adoption can now select the published supplier. Instance-wide
-serialization and teardown after uncertain clock dispatch remain caller-owned.
-
-The secret-scan fixture false positive and Linux archive name-collision refusal
-are fixed. Full-history scanning, candidate admission/rejection and the four-group
-Linux archive gate pass; see [failure causes and evidence](../qualification/ci-setup.md#reviewed-ci-failures--2026-11-17).
-The delivered cache/timeout/CI fixes and handoff cleanup at `92655b1` pass
-[hosted CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44073531569).
-The scanner failure-upload path, native test relocation and clock progression are
-delivered; hosted observation remains outstanding and no new CI run is awaited.
-
-On a delivery request, select affected groups under [release ownership](../release-ownership.md).
-New product work requires a demonstrated current caller requirement.
-
-Further consumer work requires current requirements and source capture. Canic's
+Further product work needs a demonstrated current caller requirement. Canic's
 rewrite owns its Platform adoption; old adapters correctly refuse changed owners.
 Scheduling targets the rewrite at `../ic-scheduling` and preserves its Testkit
-client/held-reply-fixture boundary. See the [workload decisions](../workloads.md#current-decisions-and-retained-evidence).
+client/held-reply-fixture boundary. See [current workload decisions](../workloads.md#current-decisions-and-retained-evidence).
 
 ## Delivery and evidence boundaries
 
-Foundation 0.80.3, Process 0.80.5 and Testkit 0.109.0 are published; exact commits,
-checksums, tool selections and acceptance live in the [release receipts](../release-ownership.md).
-Earlier publication and native-host evidence remain in that document, not here.
-
+Earlier publications and CI/cache/setup repairs remain in the owning
+[release receipts](../release-ownership.md) and [CI diagnostics](../qualification/ci-setup.md).
 Consumer archive/deployment acceptance is separate from supplier qualification.
 Async deletion is best-effort; cancellation during creation can leave remote
 effects. Custody assumes cooperative writers/groups and exclusive child reaping.

@@ -9,13 +9,12 @@ and [verified release receipt](docs/release-ownership.md#testkit-01090-delivery)
 Foundation remains 0.80.3 and Process 0.81.0 is now published; Testkit's encoder error still uses
 Protocol 0.3 under the [earlier adoption](docs/qualification/platform-adoption.md).
 
-Pending [Sign integration](docs/sign-only-integration.md) adds an external helper
+[Sign 0.1.0](docs/sign-only-integration.md) adds an external helper
 for existing ICP secp256k1 keyring identities, exact authenticated update/status
 bytes and retained cancellation custody. It is noninteractive: unlock/authorize
 the existing OS credential first. Linux disposable-provider acceptance passes;
 native Intel and ARM macOS provider acceptance also pass.
-Build 0.87.4 and Testkit 0.110.0 are published. Sign 0.1.0 remains a release
-candidate ready for its initial publication; see the
+Build 0.87.4, Testkit 0.110.0 and Sign 0.1.0 are published; see the
 [cohort receipt](docs/release-ownership.md#signing-cohort--process-0810-first).
 
 A ground-up replacement of IC Tooling, governed by [design revision 2](docs/DESIGN.md).
