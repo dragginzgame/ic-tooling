@@ -17,34 +17,35 @@ user-owned. Profiler is retired. The [workload register](../workloads.md) retain
 historical source identities and consumer boundaries; no current unfrozen caller
 justifies a new snapshot-set/cache API without a defined partial-effect contract.
 
-## Current maintenance batch
+## Current release
 
-- Archive runners reuse disposable Cargo compilation output while keeping fresh
-  candidates and evidence. Timestamp refresh prevents stale artifact acceptance.
-  Cold/warm gates and changed/backdated-source rejection/recovery pass; see the
-  [cache evidence and limits](../qualification/archive-cache.md). This qualifies
-  the runners, not new consumer adoption.
-- CI job/step deadlines reserve time for evidence uploads. Actionlint and 44
-  diagnostic checks pass, including timed-out setup capture and redaction. See
-  [budgets and evidence](../qualification/ci-setup.md#job-deadlines--2026-11-17).
-  Hosted deadline/upload behavior has not been deliberately induced.
-- The handoff cleanup moves the contract index into the design and retains
-  completed evidence at its owning documents.
-- Preserve concurrent Protocol/Clap/Nix `Cargo.lock` edits outside this delivery.
-  Their current recovery copy is `target/ci-timeout-review/pre-delivery-Cargo.lock`;
-  earlier release recovery evidence remains under `target/deploy-ranges/`.
+- Secret-scanner setup now uses bounded sanitized diagnostics, failure uploads
+  and artifact reporting. Actionlint and 57 focused checks pass, including the
+  actual pinned installer's controlled download failure. See [setup evidence](../qualification/ci-setup.md).
+- Process's inline macOS test and Testkit's fixture constructor now live in
+  test-only files through ordinary directory modules. Both macOS Process targets
+  pass all-target Clippy; Testkit's managed-server Clippy and four ordinary server
+  tests pass. This is not new native macOS or installed-simulator qualification.
+- Deployment selects Process 0.80.5 and Testkit 0.108.1 because their package
+  contents changed. Both archive gates pass with committed dependencies; see the
+  [release record](../release-ownership.md#process-0805-and-testkit-01081-delivery).
+- Concurrent Protocol/Clap/Nix/Zeroize lock edits are preserved in
+  `target/deploy-scanner/concurrent-Cargo.lock`. Restore them after publication,
+  retaining the two new member versions. Private Tools 0.1.3 remains pending.
 
 ## Blockers and next actions
 
 The secret-scan fixture false positive and Linux archive name-collision refusal
 are fixed. Full-history scanning, candidate admission/rejection and the four-group
 Linux archive gate pass; see [failure causes and evidence](../qualification/ci-setup.md#reviewed-ci-failures--2026-11-17).
-Hosted confirmation remains asynchronous; no new CI run is awaited.
+The delivered cache/timeout/CI fixes and handoff cleanup at `92655b1` pass
+[hosted CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44073531569).
+The new scanner failure-upload path and native test relocation await hosted
+observation after a future delivery; no new CI run is awaited.
 
-The requested delivery covers this maintenance batch on `main`, through Git only.
-Private tooling notes remain in [Tools 0.1.3](../../releases/tools/CHANGELOG.md);
-no product crate source or metadata changes require publication. Future product
-delivery follows [release ownership](../release-ownership.md).
+On a delivery request, select affected groups under [release ownership](../release-ownership.md).
+Current work removes reliance on ephemeral scanner logs and separates test-only
+code without changing runtime behavior or public contracts.
 
 Further consumer work requires current requirements and source capture. Canic's
 rewrite owns its Platform adoption; old adapters correctly refuse changed owners.

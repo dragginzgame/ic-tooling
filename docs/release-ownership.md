@@ -43,6 +43,26 @@ libraries are published; publication permission in a manifest is not delivery.
 
 ## Independent library publication
 
+### Process 0.80.5 and Testkit 0.108.1 delivery
+
+The maintainer authorized deployment on 2026-11-17 from this checkout's `main`.
+Moving inline tests and the private fixture constructor changes both package
+payloads, so their compatible patch releases are selected. Runtime behavior,
+public APIs and dependency requirements are unchanged. Scanner setup diagnostics
+ship through Git; the private Tools ledger stays pending.
+
+Release gates use the committed dependency selection. Concurrent Protocol,
+Clap/Nix and Zeroize updates are preserved under `target/deploy-scanner/` and
+excluded from publication; restore them with the two released member versions.
+The native Build/Process archive gate passes at `target/build-release.XWtmn8e5`;
+Testkit's complete archive/CLI/installed-simulator gate passes at
+`target/library-release.UJu3W7Jy`. Both macOS Process targets pass all-target
+Clippy for the relocated tests, without claiming native execution. Scanner setup
+has 57 passing failure/redaction/reporting checks and actionlint acceptance.
+Hosted native CI remains asynchronous; successful setup runs do not prove a
+hosted failure-artifact upload. Final publication admission verifies the versioned
+archives against these qualified source trees before upload.
+
 ### Foundation 0.80.3, Process 0.80.4 and Testkit 0.108.0 delivery
 
 The maintainer authorized deployment on 2026-11-17 from this checkout's `main`

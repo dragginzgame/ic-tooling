@@ -995,7 +995,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.80.4"
+version = "0.80.5"
 dependencies = [
  "errno",
  "libproc",
@@ -1045,7 +1045,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.108.0"
+version = "0.108.1"
 dependencies = [
  "clap",
  "ctrlc",

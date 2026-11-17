@@ -10,6 +10,10 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Retain bounded, sanitized secret-scanner installation failures through the
+  existing setup collector. Preserve setup status and deadline, upload only its
+  evidence directory, and report artifact links or upload failures separately.
+
 - Admit library archive candidates by workspace identity, allowing a separate
   registry dependency with the same package name. Resolve the secret-scan false
   positive with one historical fixture fingerprint; keep future findings scanned

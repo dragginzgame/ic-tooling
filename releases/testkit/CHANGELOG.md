@@ -3,6 +3,13 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.108.1] - 2026-11-17
+
+### 🧪 Testing
+
+- Keep the prepared-server fixture constructor in test-only source, preserving
+  its private visibility and admission behavior through ordinary module discovery.
+
 ## [0.108.0] - 2026-11-17
 
 ### ⚠️ Breaking

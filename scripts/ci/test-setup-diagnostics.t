@@ -128,22 +128,54 @@ SKIP: {
 }
 # Exercise the workflow's actual upload-report branch without a hosted upload.
 my $workflow = read_file('.github/workflows/build-release-candidate.yml');
-my ($report) = $workflow =~ /- name: Report setup evidence\n.*?        run: \|\n((?:          [^\n]*\n)+)/s;
-ok(defined $report, 'workflow upload-result handler selected');
-$report =~ s/^          //mg;
-open my $handler, '>', "$temp/report.sh" or die $!;
-print {$handler} $report; close $handler;
-for my $outcome (qw(failure success)) {
-    local $ENV{UPLOAD_OUTCOME} = $outcome;
-    local $ENV{EVIDENCE_URL} = $outcome eq 'success' ? 'https://example.invalid/artifact/1' : '';
-    local $ENV{GITHUB_STEP_SUMMARY} = "$temp/$outcome.summary";
-    my $pid = open my $output, '-|';
+SKIP: {
+    skip 'pinned scanner setup runs on Ubuntu', 8 unless $^O eq 'linux';
+    my ($setup) = $workflow =~ /- name: Prepare pinned secret scanner\n.*?        run: \|\n((?:          [^\n]*\n)+)/s;
+    ok(defined $setup, 'actual scanner setup command selected');
+    $setup =~ s/^          //mg;
+    open my $setup_file, '>', "$temp/scanner-setup.sh" or die $!;
+    print {$setup_file} $setup; close $setup_file;
+    make_path("$temp/bin");
+    open my $curl, '>', "$temp/bin/curl" or die $!;
+    print {$curl} "#!/bin/sh\necho 'scanner download fixture failed' >&2\necho 'Authorization: Bearer scanner-fixture-secret' >&2\nexit 22\n";
+    close $curl; chmod 0755, "$temp/bin/curl" or die $!;
+    local $ENV{PATH} = "$temp/bin:$ENV{PATH}";
+    local $ENV{CI_SETUP_ROOT} = "$temp/scanner";
+    local $ENV{TOKO_TOOLING_DOWNLOAD_CACHE} = "$temp/empty-cache";
+    local $ENV{GITHUB_ENV} = "$temp/scanner.env";
+    local $ENV{GITHUB_OUTPUT} = "$temp/scanner.outputs";
+    my $pid = open my $out, '-|';
     defined $pid or die $!;
-    if (!$pid) { exec 'bash', "$temp/report.sh"; die $!; }
-    local $/; my $result = <$output> // '';
-    close $output;
-    is($? >> 8, $outcome eq 'success' ? 0 : 1, "upload $outcome handler status");
-    if ($outcome eq 'failure') { like($result, qr/evidence missing or upload failed/, 'upload failure explicitly reported'); }
-    else { like(read_file($ENV{GITHUB_STEP_SUMMARY}), qr{https://example.invalid/artifact/1}, 'artifact link added to summary'); }
+    if (!$pid) { open STDERR, '>&', STDOUT or die $!; exec 'bash', '-e', "$temp/scanner-setup.sh"; die $!; }
+    local $/; my $printed = <$out> // ''; close $out;
+    is($? >> 8, 22, 'real pinned installer failure survives workflow wrapper');
+    ok(!-e "$temp/scanner.env", 'failed scanner setup does not publish an executable');
+    my ($evidence) = read_file("$temp/scanner.outputs") =~ /^evidence=(.+)$/m;
+    ok(defined $evidence && -d $evidence, 'scanner failure supplies upload evidence');
+    my $output = read_file("$evidence/scanner-output.txt");
+    like($output, qr/scanner download fixture failed/, 'underlying scanner setup error retained');
+    unlike($output . $printed, qr/scanner-fixture-secret/, 'scanner output is sanitized');
+    like(read_file("$evidence/scanner-status.txt"), qr/original_status=22/, 'scanner original status recorded');
+    is(scalar(glob "$evidence/*.gz"), undef, 'download payload excluded from evidence');
+}
+for my $name ('Report setup evidence', 'Report scanner setup evidence') {
+    my ($report) = $workflow =~ /- name: \Q$name\E\n.*?        run: \|\n((?:          [^\n]*\n)+)/s;
+    ok(defined $report, "$name handler selected");
+    $report =~ s/^          //mg;
+    open my $handler, '>', "$temp/report.sh" or die $!;
+    print {$handler} $report; close $handler;
+    for my $outcome (qw(failure success)) {
+        local $ENV{UPLOAD_OUTCOME} = $outcome;
+        local $ENV{EVIDENCE_URL} = $outcome eq 'success' ? 'https://example.invalid/artifact/1' : '';
+        local $ENV{GITHUB_STEP_SUMMARY} = "$temp/$outcome.summary";
+        my $pid = open my $output, '-|';
+        defined $pid or die $!;
+        if (!$pid) { exec 'bash', "$temp/report.sh"; die $!; }
+        local $/; my $result = <$output> // '';
+        close $output;
+        is($? >> 8, $outcome eq 'success' ? 0 : 1, "upload $outcome handler status");
+        if ($outcome eq 'failure') { like($result, qr/evidence missing or upload failed/, 'upload failure explicitly reported'); }
+        else { like(read_file($ENV{GITHUB_STEP_SUMMARY}), qr{https://example.invalid/artifact/1}, 'artifact link added to summary'); }
+    }
 }
 done_testing;

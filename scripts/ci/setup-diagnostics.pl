@@ -9,7 +9,7 @@ use File::Basename qw(basename);
 use Fcntl qw(O_RDONLY O_NOFOLLOW O_WRONLY O_CREAT O_EXCL S_ISREG);
 
 my $phase = shift // '';
-$phase =~ /\A(?:compiler|tools)\z/ && @ARGV or die "usage: setup-diagnostics.pl compiler|tools COMMAND [ARG ...]\n";
+$phase =~ /\A(?:compiler|tools|scanner)\z/ && @ARGV or die "usage: setup-diagnostics.pl compiler|tools|scanner COMMAND [ARG ...]\n";
 my $root = $ENV{CI_SETUP_ROOT} // (($ENV{RUNNER_TEMP} // die "runner temp required\n") . '/ic-tooling-setup');
 $root =~ m{\A/} && $root !~ /[\r\n]/ && length($root) <= 512 or die "bounded absolute setup root required\n";
 $ENV{CI_SETUP_ROOT} = $root;

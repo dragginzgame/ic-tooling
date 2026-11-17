@@ -1,12 +1,13 @@
-# CI scaffold setup diagnostics
+# CI setup diagnostics
 
-The `repository` job in `build-release-candidate.yml` wraps its compiler and common
-tool setup with `scripts/ci/setup-diagnostics.pl`. This removes dependence on an
+The `repository` and `secrets` jobs in `build-release-candidate.yml` wrap compiler,
+common-tool and secret-scanner setup with `scripts/ci/setup-diagnostics.pl`.
+This removes dependence on an
 ephemeral runner's console or a raw log path when setup fails before tests start.
-The collector is scoped to this job. Other repositories' concurrent fixes stay
+The collector is scoped to these jobs. Other repositories' concurrent fixes stay
 with their owners.
 
-The job selects a temporary tool store at `$RUNNER_TEMP/ic-tooling-setup/tools`.
+The repository job selects a temporary tool store at `$RUNNER_TEMP/ic-tooling-setup/tools`.
 The same selection is exported through `GITHUB_ENV` for subsequent cache, admission
 and formatting steps. Setup output is drained without writing a raw capture;
 only sanitized, complete lines enter a bounded tail. Known sensitive environment
@@ -15,6 +16,13 @@ credentials/parameters, private keys and long opaque strings are omitted.
 Oversized lines are dropped whole, and terminal controls are removed. Printed
 lines are prefixed so tool output cannot become a GitHub workflow command.
 No environment dump, config, source payload, binary or cache is uploaded.
+
+The secrets job uses `$RUNNER_TEMP/ic-tooling-security-setup/tools/scanner` for the
+pinned scanner installation. The same collector wraps a 90-second command deadline
+with ten seconds before forced kill, inside the two-minute step budget. Only
+successful installation exports the deterministic executable path. A setup failure
+uploads the collector's sanitized directory for seven days and reports its artifact
+URL or an explicit upload failure. Scanner findings are separate from setup errors.
 
 On failure, retain at most 64 KiB of command output plus at most ten sanitized
 attempt logs of the same bound (300 retained lines plus omission markers per log).
@@ -39,6 +47,13 @@ Run `perl scripts/ci/test-setup-diagnostics.t` and
 early failure with a hidden attempt log, bounded output, tested secret redaction,
 excluded symlink/config inputs, truncation, missing diagnostics, collection failure,
 successful setup, signal status and the workflow's upload-result reporting branch.
+The scanner case runs the actual workflow command and pinned installer with a
+failing local curl substitute: exit 22, the underlying diagnostic, redaction and
+the absence of a published executable are verified. Both jobs' upload-result
+handlers are exercised. All 57 checks pass; evidence is under
+`target/security-setup-review/diagnostics.log`.
+The repository job runs this focused fixture before formatting checks, so scanner
+setup failure and upload-reporting regressions are part of ordinary CI.
 These tests do not claim a hosted artifact upload or retrieval; that evidence
 requires an actual hosted setup failure. No live failure was deliberately induced.
 
@@ -63,8 +78,8 @@ not a performance claim or a statistical latency guarantee.
 
 | Job | Slowest observed successful job | Job budget | Sum of explicit step budgets |
 | --- | ---: | ---: | ---: |
-| Repository | 1m30s | 20m | 17m |
-| Secrets | 8s | 10m | 8m |
+| Repository | 1m30s | 20m | 18m |
+| Secrets | 8s | 13m | 11m |
 | Libraries, all three hosts | 10m41s | 45m | 42m |
 | Native, all three hosts | 2m25s | 20m | 15m |
 

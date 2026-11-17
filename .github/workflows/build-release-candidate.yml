@@ -45,6 +45,9 @@ jobs:
       - name: Admit snapshot and Cargo pins
         timeout-minutes: 1
         run: make check
+      - name: Check setup diagnostic failure paths
+        timeout-minutes: 1
+        run: perl scripts/ci/test-setup-diagnostics.t
       - name: Check formatting without changing source
         timeout-minutes: 1
         run: make fmt-check
@@ -75,7 +78,7 @@ jobs:
           fi
   secrets:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 13
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         timeout-minutes: 2
@@ -85,10 +88,14 @@ jobs:
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
         timeout-minutes: 1
       - name: Prepare pinned secret scanner
+        id: scanner
         timeout-minutes: 2
+        env:
+          CI_SETUP_ROOT: ${{ runner.temp }}/ic-tooling-security-setup
         run: |
-          scanner="$(bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh gitleaks --install-dir "$RUNNER_TEMP/ci-tools")"
-          echo "GITLEAKS_BIN=$scanner" >> "$GITHUB_ENV"
+          perl scripts/ci/setup-diagnostics.pl scanner timeout --kill-after=10s 90s \
+            bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh gitleaks --install-dir "$CI_SETUP_ROOT/tools/scanner"
+          echo "GITLEAKS_BIN=$CI_SETUP_ROOT/tools/scanner/gitleaks" >> "$GITHUB_ENV"
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
         timeout-minutes: 1
         with:
@@ -96,6 +103,29 @@ jobs:
       - name: Scan repository history once
         timeout-minutes: 2
         run: '"$GITLEAKS_BIN" git --redact=100 --no-banner --no-color --log-level error'
+      - name: Retain scanner setup diagnostics
+        id: scanner_evidence
+        timeout-minutes: 2
+        if: ${{ failure() && steps.scanner.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: setup-secrets-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.scanner.outputs.evidence }}
+          if-no-files-found: error
+          retention-days: 7
+      - name: Report scanner setup evidence
+        timeout-minutes: 1
+        if: ${{ always() && steps.scanner.outcome == 'failure' }}
+        env:
+          EVIDENCE_URL: ${{ steps.scanner_evidence.outputs.artifact-url }}
+          UPLOAD_OUTCOME: ${{ steps.scanner_evidence.outcome }}
+        run: |
+          if [[ "$UPLOAD_OUTCOME" == success && -n "$EVIDENCE_URL" ]]; then
+            printf 'Scanner setup diagnostics: %s\n' "$EVIDENCE_URL" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '::error::Scanner setup evidence missing or upload failed; inspect the sanitized setup excerpt.'
+            exit 1
+          fi
   libraries:
     needs: repository
     timeout-minutes: 45

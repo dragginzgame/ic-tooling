@@ -2,6 +2,13 @@
 
 Package: `ic-host-process`. Earlier unreleased headings retain development history.
 
+## [0.80.5] - 2026-11-17
+
+### 🧪 Testing
+
+- Separate macOS process-group regression tests from production source using
+  ordinary directory modules, preserving test behavior and the public API.
+
 ## [0.80.4] - 2026-11-17
 
 ### 🔧 Changed
