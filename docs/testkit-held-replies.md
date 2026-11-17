@@ -1,6 +1,10 @@
 # Testkit: first replacement contract
 
-Published Testkit 0.108.0 selects Protocol `>=0.3.2, <0.4.0`. This release
+Published Testkit 0.109.0 adds [bounded manual clock progression](#bounded-manual-clock-progression)
+through the exclusive controller. Its new `ControlError` variants require
+exhaustive callers to update their matches. See the [release receipt](release-ownership.md#testkit-01090-delivery).
+
+Earlier Testkit 0.108.0 selects Protocol `>=0.3.2, <0.4.0`. That release
 changes the public `CompileError::Encoding` payload to Protocol
 0.3's type identity; callers naming it must align their dependency. The HTTP
 encoder source and Types selection are unchanged. See the current

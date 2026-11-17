@@ -1,10 +1,11 @@
 # IC Tooling
 
-Latest delivery: Process 0.80.5 and Testkit 0.108.1 are published. Their tests and
-private fixtures use separate test files without changing runtime contracts.
-Secret-scanner setup now retains sanitized failure artifacts. See the
-[verified release receipt](docs/release-ownership.md#process-0805-and-testkit-01081-delivery).
-Foundation remains 0.80.3; Testkit callers naming its encoder error still select
+Latest delivery: Testkit 0.109.0 adds bounded clock progression while replies are
+held, preserving original HTTP expiry and refusing further control after an
+interrupted clock change. Callers matching `ControlError` exhaustively must handle
+its new variants. See the [clock contract](docs/testkit-held-replies.md#bounded-manual-clock-progression)
+and [verified release receipt](docs/release-ownership.md#testkit-01090-delivery).
+Foundation remains 0.80.3 and Process 0.80.5; Testkit's encoder error still uses
 Protocol 0.3 under the [earlier adoption](docs/qualification/platform-adoption.md).
 
 A ground-up replacement of IC Tooling, governed by [design revision 2](docs/DESIGN.md).

@@ -66,6 +66,20 @@ Unrelated dependency lock updates are saved under `target/deploy-clock/` and
 excluded from the release selection. Restore them with only Testkit's member
 version advanced. Canic owns its same-receiver adoption and application assertions.
 
+Published from `1fdd03705377c1a74211ec1f4ca9a15440adc0a0`. `main` and annotated
+`testkit-v0.109.0` were pushed atomically and remote identities verified.
+Clean-source Cargo publication preflight and upload passed with all features.
+Versioned archive sources match the qualified candidate exactly, the normalized
+manifest differs only in package version, and provenance identifies the clean
+release commit and package path.
+
+The non-yanked registry archive SHA-256 is
+`6405078e5332b34ab898d4c32c41f39b358655bb3d4aae508d3ff17f781cf66c`.
+Downloaded bytes match both approved preflight and upload archives. Evidence and
+recovery locks remain under `target/deploy-clock/`; unrelated lock updates are
+restored with Testkit 0.109.0 and remain uncommitted. Post-push review of the
+controller, uncertainty boundary and installed callers found no further defect.
+
 ### Process 0.80.5 and Testkit 0.108.1 delivery
 
 The maintainer authorized deployment on 2026-11-17 from this checkout's `main`.
