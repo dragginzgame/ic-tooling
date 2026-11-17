@@ -5,6 +5,13 @@ Packages: `ic-build`.
 This group starts with the replacement implementation. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.87.4] - 2026-11-17
+
+### 🔧 Changed
+
+- Use Process 0.81.0 after its finite-input addition. Build keeps Process types
+  private; its owned-artifact API and existing output/failure behavior are unchanged.
+
 ## [0.87.3] - 2026-11-16
 
 ### 🔧 Changed

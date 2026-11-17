@@ -37,6 +37,7 @@ elaborate the accepted design; current work and blockers stay in the handoff.
 | FS | [Preparation](directory-preparation.md), [publication](directory-publication.md), [locks](sidecar-locks.md), [custody](filesystem-custody.md) |
 | HTTP / Text | [Bounded bodies](http-body.md), [presentation](text-presentation.md) |
 | Process | [Execution](process-execution.md), [handoff/reaping](process-handoff.md) |
+| Sign integration | [External keyring signing](sign-only-integration.md), outside generic Process and the core byte/build/simulator graphs |
 | Testkit | [Held replies](testkit-held-replies.md), [managed server](testkit-server.md), [server command](simulator-ownership.md) |
 
 # Why the first plan produced a transplant

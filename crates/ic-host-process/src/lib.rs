@@ -10,7 +10,7 @@ mod handoff;
 mod macos;
 pub use handoff::{Completion, launch};
 
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::os::fd::AsFd;
 use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, ExitStatus, Stdio};
@@ -31,13 +31,26 @@ pub enum Ownership {
     Direct,
 }
 
-/// Standard input policy; piped input is not part of this slice.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Standard input policy; finite pipe input is owned until execution closes.
+#[derive(Clone, Eq, PartialEq)]
 pub enum Input {
     /// Read EOF from the null device.
     Null,
     /// Retain the caller's input, including its controlling terminal.
     Inherit,
+    /// Send these exact already-admitted bytes, then close stdin. No extra copy
+    /// or producer thread is created; a failure may leave a prefix delivered.
+    Bytes(Vec<u8>),
+}
+
+impl std::fmt::Debug for Input {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Null => f.write_str("Null"),
+            Self::Inherit => f.write_str("Inherit"),
+            Self::Bytes(bytes) => f.debug_struct("Bytes").field("len", &bytes.len()).finish(),
+        }
+    }
 }
 
 /// Standard error policy, distinct from captured standard output.
@@ -50,11 +63,11 @@ pub enum Stderr {
 }
 
 /// Complete communication and ownership policy for one execution.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Policy {
     /// Child or group termination authority.
     pub ownership: Ownership,
-    /// Null or inherited input.
+    /// Null, inherited or finite owned pipe input. Debug output omits input bytes.
     pub input: Input,
     /// Total stdout bytes admitted before delivery to the observer.
     pub stdout_bytes: usize,
@@ -170,9 +183,14 @@ impl Drop for Session {
     }
 }
 
-/// Execute and close one owned child, fairly draining its captured pipes.
+/// Execute and close one owned child, fairly servicing its pipes.
 ///
-/// Each loop reads at most one bounded chunk per stream. Budgets are checked
+/// Each loop writes at most one bounded stdin chunk and reads at most one bounded
+/// chunk per captured stream. Pipe input is nonblocking and closes at EOF; empty
+/// input closes immediately. Its owned buffer length is the exact input ceiling:
+/// callers admit the bytes before invoking this owner. Never put credentials in
+/// ordinary request input merely because this executor can carry bytes.
+/// Budgets are checked
 /// before observer delivery; a chunk crossing a limit is not delivered. The owner
 /// retains the leader unreaped until signalling finishes. Explicit close runs on
 /// success and failure; Drop is fallback for observer panic, with no cleanup
@@ -184,6 +202,9 @@ impl Drop for Session {
 /// `Direct` closes no descendants; a retained pipe can therefore hit the deadline.
 /// Observers must return promptly. Callers own sink flushing and byte retention.
 /// All errors are returned as evidence, not as a success-shaped partial buffer.
+/// A stdin error or child exit before the complete input is sent refuses execution.
+/// Cancellation/deadline/refusal can leave input partially delivered; closing the
+/// child does not undo its work or grant permission to retry.
 #[must_use]
 pub fn run(
     command: &mut Command,
@@ -192,9 +213,10 @@ pub fn run(
     mut observe: impl FnMut(Stream, &[u8]) -> io::Result<()>,
 ) -> Report {
     command
-        .stdin(match policy.input {
+        .stdin(match &policy.input {
             Input::Null => Stdio::null(),
             Input::Inherit => Stdio::inherit(),
+            Input::Bytes(_) => Stdio::piped(),
         })
         .stdout(Stdio::piped())
         .stderr(match policy.stderr {
@@ -248,6 +270,20 @@ fn communicate(
         .take()
         .ok_or_else(|| Failure::Io(io::Error::other("missing stdout")))?;
     let mut stderr = child.stderr.take();
+    let input = match policy.input {
+        Input::Bytes(bytes) => bytes,
+        Input::Null | Input::Inherit => Vec::new(),
+    };
+    let mut stdin = child.stdin.take();
+    if let Some(pipe) = &stdin {
+        nonblocking(pipe).map_err(Failure::Io)?;
+    }
+    if input.is_empty() {
+        // Empty pipe input still has a meaningful EOF, including for programs
+        // waiting for EOF before emitting any stdout/stderr.
+        stdin.take();
+    }
+    let mut written = 0_usize;
     nonblocking(&stdout).map_err(Failure::Io)?;
     if let Some(pipe) = &stderr {
         nonblocking(pipe).map_err(Failure::Io)?;
@@ -264,6 +300,25 @@ fn communicate(
             return Err(Failure::Deadline);
         }
         let mut progress = false;
+        if let Some(pipe) = &mut stdin {
+            let end = written.saturating_add(8192).min(input.len());
+            match pipe.write(&input[written..end]) {
+                Ok(0) => return Err(Failure::Io(io::ErrorKind::WriteZero.into())),
+                Ok(n) => {
+                    written += n;
+                    progress = true;
+                    if written == input.len() {
+                        stdin.take();
+                    }
+                }
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+                    ) => {}
+                Err(error) => return Err(Failure::Io(error)),
+            }
+        }
         let stderr_cap = match policy.stderr {
             Stderr::Capture(cap) => cap,
             Stderr::Inherit => 0,
@@ -314,6 +369,9 @@ fn communicate(
             Err(error) => return Err(Failure::Io(error.into())),
         };
         if exited && eof.iter().all(|value| *value) {
+            if written != input.len() {
+                return Err(Failure::Io(io::ErrorKind::BrokenPipe.into()));
+            }
             return Ok(());
         }
         if !progress {
@@ -322,5 +380,7 @@ fn communicate(
     }
 }
 
+#[cfg(test)]
+mod stdin_tests;
 #[cfg(test)]
 mod tests;

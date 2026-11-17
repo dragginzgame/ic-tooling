@@ -2,6 +2,23 @@
 
 Package: `ic-host-process`. Earlier unreleased headings retain development history.
 
+## [0.81.0] - 2026-11-17
+
+### ⚠️ Breaking
+
+- `Input` and `Policy` now own finite pipe input and no longer implement `Copy`;
+  callers needing another owned policy must clone explicitly. Input Debug output
+  reports its length without exposing the payload.
+
+### ➕ Added
+
+- Send `Input::Bytes` while fairly draining both output pipes, with EOF,
+  cancellation, deadlines, partial-input refusal and owned cleanup. This removes
+  the need for writer threads or request scratch files for the process prerequisite
+  of [IC Tooling #12 — Provide bounded external sign-only integration with exact expiry and existing identity custody](https://github.com/dragginzgame/ic-tooling/issues/12).
+  The external keyring signer has its own pending Sign group; standalone status
+  admission and native macOS acceptance remain outstanding there.
+
 ## [0.80.5] - 2026-11-17
 
 ### 🧪 Testing

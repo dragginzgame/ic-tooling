@@ -214,6 +214,91 @@ jobs:
             ${{ runner.temp }}/pocket-ic-setup-evidence/server.stderr
             ${{ runner.temp }}/pocket-ic-setup-evidence/server.txt
           if-no-files-found: warn
+  signer-provider:
+    needs: repository
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    env:
+      CI_SETUP_ROOT: ${{ github.workspace }}/target/sign-provider-setup
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        timeout-minutes: 2
+        with:
+          persist-credentials: false
+      - name: Prepare pinned compiler
+        id: compiler
+        timeout-minutes: 3
+        run: perl scripts/ci/setup-diagnostics.pl compiler rustup toolchain install 1.100.0 --profile minimal
+      - name: Prepare the pinned ICP identity producer and native tools
+        id: tools
+        timeout-minutes: 6
+        shell: bash
+        run: |
+          perl scripts/ci/setup-diagnostics.pl tools bash -c '
+            set -euo pipefail
+            if [[ "$RUNNER_OS" == Linux ]]; then
+              sudo apt-get update
+              sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y dbus-x11 gnome-keyring strace
+            else
+              test -x /usr/bin/sandbox-exec
+            fi
+            prepared=$(bash vendor/toko-tooling/scripts/dev/install-ic-tools.sh \
+              --tool icp --consumer "$GITHUB_WORKSPACE")
+            printf "SIGNER_TEST_ICP=%s/icp\n" "$prepared" >> "$GITHUB_ENV"
+            cargo fetch --locked
+          '
+      - name: Qualify the actual noninteractive credential provider
+        id: provider
+        timeout-minutes: 8
+        run: make test-sign-keyring
+      - name: Retain selected provider evidence
+        timeout-minutes: 2
+        if: ${{ always() && steps.provider.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: signer-provider-${{ matrix.os }}
+          retention-days: 7
+          path: |
+            target/sign-keyring.*/build.log
+            target/sign-keyring.*/test.log
+            target/sign-keyring.*/network.trace
+            target/sign-keyring.*/prompt-profile.log
+            target/sign-keyring.*/prompt-monitor.log
+            target/sign-keyring.*/source.sha256
+            target/sign-keyring.*/source-after.sha256
+            target/sign-keyring.*/source-head
+            target/sign-keyring.*/host.txt
+            target/sign-keyring.*/tool-versions.txt
+          if-no-files-found: error
+      - name: Retain sanitized provider setup failures
+        id: setup_evidence
+        timeout-minutes: 2
+        if: ${{ failure() && (steps.compiler.outcome == 'failure' || steps.tools.outcome == 'failure') }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: setup-signer-provider-${{ matrix.os }}
+          retention-days: 7
+          path: |
+            ${{ steps.compiler.outputs.evidence }}
+            ${{ steps.tools.outputs.evidence }}
+          if-no-files-found: error
+      - name: Report provider setup evidence
+        timeout-minutes: 1
+        if: ${{ always() && (steps.compiler.outcome == 'failure' || steps.tools.outcome == 'failure') }}
+        env:
+          EVIDENCE_URL: ${{ steps.setup_evidence.outputs.artifact-url }}
+          UPLOAD_OUTCOME: ${{ steps.setup_evidence.outcome }}
+        run: |
+          if [[ "$UPLOAD_OUTCOME" == success && -n "$EVIDENCE_URL" ]]; then
+            printf 'Provider setup diagnostics: %s\n' "$EVIDENCE_URL" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '::error::Provider setup evidence missing or upload failed; inspect the sanitized setup excerpt.'
+            exit 1
+          fi
   native:
     needs: repository
     timeout-minutes: 20
@@ -236,6 +321,9 @@ jobs:
           BUILD_RELEASE_ONLINE: 'true'
           BUILD_RELEASE_CONSUMER: none
         run: bash scripts/qualification/build-release-candidate.sh
+      - name: Check signer admission and cancellation on the native host
+        timeout-minutes: 4
+        run: make test-sign
       - name: Retain candidate archives and evidence
         timeout-minutes: 2
         if: always()

@@ -12,6 +12,8 @@ help:
 	  '  make test-testkit-catalog Reply catalog and generated module admission' \
 	  '  make test-process      Owned execution and affected Build failure checks' \
 	  '  make test-process-terminal Linux foreground PTY fixture' \
+	  '  make test-sign         Signer admission and cancellation tests (OpenSSL required)' \
+	  '  make test-sign-keyring Real disposable keyring qualification (SIGNER_TEST_ICP required)' \
 	  '  make test-canic-process Combined current Canic group/direct-child qualification (Linux)' \
 	  '  make test-testkit-module Installed module test (externally owned server)' \
 	  '  make test-testkit-control Installed controller/clock refusals (externally owned server)' \
@@ -19,7 +21,7 @@ help:
 	  '  make test-testkit-server-installed Prepared-archive lifecycle/gateway/held checks (explicit archive and gzip)' \
 	  '  make prepare-testkit-server-cli Build the product server CLI (cached dependencies)' \
 	  '  make test-pocketic-setup Failed-download diagnostics (TESTKIT_SERVER_CLI; no network)' \
-	  '  make test-library-release-candidate RELEASE_GROUPS="http text testkit" Selected archive readiness (prepared Testkit tools required)' \
+	  '  make test-library-release-candidate RELEASE_GROUPS="testkit sign" Archive readiness (prepared server/ICP tools required)' \
 	  '  make test-text         Terminal escaping and Unicode table contracts' \
 	  '  make test-cargo-metadata Renderer lint and document/command boundary tests' \
 	  '  make test-cargo-metadata-consumer Current Toko/Scheduling release transactions (prepared editor)' \
@@ -71,6 +73,14 @@ help:
 	  '  make tools-check      Prepared-tool admission'
 
 check: toko-tooling-check
+
+.PHONY: test-sign test-sign-keyring
+test-sign:
+	cargo clippy -p ic-host-sign --all-targets --all-features --locked --offline -- -D warnings
+	cargo test -p ic-host-sign --lib --locked --offline
+
+test-sign-keyring:
+	bash scripts/qualification/sign-keyring.sh
 
 .PHONY: test-cargo-metadata test-cargo-metadata-consumer
 test-cargo-metadata:

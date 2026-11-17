@@ -1,0 +1,61 @@
+[package]
+name = "ic-host-sign"
+version = "0.1.0"
+description = "Bounded offline IC signing through an existing OS-keyring identity"
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = ["crates-io"]
+
+[target.'cfg(any())'.dev-dependencies]
+toko-tooling.workspace = true
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+keyring.workspace = true
+
+[[bin]]
+name = "ic-sign"
+path = "src/bin/ic-sign/main.rs"
+required-features = ["provider"]
+
+[features]
+default = []
+provider = [
+    "dep:clap",
+    "dep:keyring",
+    "dep:secret-service",
+    "dep:security-framework",
+    "dep:zeroize",
+]
+
+[target.'cfg(target_os = "linux")'.dependencies]
+secret-service = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { workspace = true, optional = true }
+security-framework = { workspace = true, optional = true }
+
+[dependencies]
+clap = { workspace = true, optional = true }
+ic-host-artifacts.workspace = true
+ic-host-process.workspace = true
+ic-platform = { workspace = true, features = ["native-signed-secp256k1"] }
+ic-platform-types.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+thiserror.workspace = true
+zeroize = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt", "time", "macros"] }
+
+[[test]]
+name = "keyring"
+path = "tests/keyring.rs"
+required-features = ["provider"]
+
+[lints]
+workspace = true

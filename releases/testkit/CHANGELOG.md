@@ -3,6 +3,15 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.110.0] - 2026-11-17
+
+### ⚠️ Breaking
+
+- Adopt Process 0.81.0. The public `server::Stopped::process` report now has that
+  supplier's Rust type identity; consumers exchanging Process types must adopt
+  the same minor line. Simulator behavior and the default dependency boundary
+  are unchanged.
+
 ## [0.109.0] - 2026-11-17
 
 ### ⚠️ Breaking

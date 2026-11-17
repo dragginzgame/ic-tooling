@@ -3,11 +3,12 @@
 set -euo pipefail
 repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 CDPATH='' cd -- "$repo"
-[[ $# -gt 0 ]] || { echo 'Select release groups: http text testkit cargo-metadata' >&2; exit 2; }
+[[ $# -gt 0 ]] || { echo 'Select release groups: http text testkit cargo-metadata sign' >&2; exit 2; }
 packages=()
 selection=()
 features=()
 testkit=false
+sign=false
 seen=' '
 for group in "$@"; do
   [[ "$seen" != *" $group "* ]] || { echo "Repeated group: $group" >&2; exit 2; }
@@ -16,7 +17,8 @@ for group in "$@"; do
     http) package=ic-host-http ;;
     text) package=ic-host-text ;;
     cargo-metadata) package=ic-cargo-metadata ;;
-    testkit) package=ic-testkit; testkit=true; features=(--features 'ic-testkit/held-reply-fixtures,ic-testkit/cli') ;;
+    testkit) package=ic-testkit; testkit=true; features+=(--features 'ic-testkit/held-reply-fixtures,ic-testkit/cli') ;;
+    sign) package=ic-host-sign; sign=true; features+=(--features 'ic-host-sign/provider') ;;
     *) echo "Unsupported library release group: $group" >&2; exit 2 ;;
   esac
   jq -e --arg group "$group" --arg package "$package" \
@@ -24,6 +26,10 @@ for group in "$@"; do
   packages+=("$package")
   selection+=(-p "$package")
 done
+if [[ "$sign" == true ]]; then
+  : "${SIGNER_TEST_ICP:?select the absolute prepared ICP 1.7.0 executable}"
+  [[ "$SIGNER_TEST_ICP" == /* && -f "$SIGNER_TEST_ICP" && -x "$SIGNER_TEST_ICP" ]] || exit 2
+fi
 network=(--offline)
 case "${LIBRARY_RELEASE_ONLINE:-false}" in
   true) network=() ;;
@@ -51,7 +57,8 @@ mkdir -p "$candidate/crates" "$scratch/archives"
 inputs=(Cargo.toml Cargo.lock LICENSE.md ci/cargo-release-groups.json
   scripts/qualification/archive-compilation.sh
   scripts/qualification/library-release-candidate.sh scripts/qualification/testkit-installed.sh
-  scripts/qualification/test-pocketic-setup.sh scripts/qualification/test-testkit-server-cli.sh)
+  scripts/qualification/test-pocketic-setup.sh scripts/qualification/test-testkit-server-cli.sh
+  scripts/qualification/sign-keyring.sh)
 for package in "${packages[@]}"; do inputs+=("crates/$package"); done
 checkpoint() { find "${inputs[@]}" -type f -exec shasum -a 256 {} + | LC_ALL=C sort; }
 checkpoint > "$scratch/source.sha256"
@@ -80,6 +87,7 @@ for package in "${packages[@]}"; do
   mv "$candidate/crates/$package-$version" "$candidate/crates/$package"
   cmp LICENSE.md "$candidate/crates/$package/LICENSE.md"
   diff -r "crates/$package/src" "$candidate/crates/$package/src"
+  if [[ -d "crates/$package/tests" ]]; then diff -r "crates/$package/tests" "$candidate/crates/$package/tests"; fi
   tar -tzf "$archive" > "$scratch/$package-files.txt"
 done
 (CDPATH='' cd -- "$scratch/archives" && shasum -a 256 ./*.crate) > "$scratch/archives.sha256"
@@ -131,6 +139,13 @@ if [[ "$testkit" == true ]]; then
   RUSTDOCFLAGS='-D warnings' cargo doc --manifest-path "$candidate/Cargo.toml" -p ic-testkit \
     --no-default-features --no-deps --locked --offline > "$scratch/default-docs.log" 2>&1
 fi
+if [[ "$sign" == true ]]; then
+  cargo tree --manifest-path "$candidate/Cargo.toml" -p ic-host-sign --no-default-features \
+    -e normal,build --prefix none --locked --offline > "$scratch/sign-default-tree.txt"
+  if grep -Eq '^(clap|keyring|secret-service|security-framework|zbus) v' "$scratch/sign-default-tree.txt"; then
+    echo 'Credential provider dependencies entered the default Sign library graph' >&2; exit 1
+  fi
+fi
 cargo test --manifest-path "$candidate/Cargo.toml" --workspace "${features[@]}" \
   --locked --offline > "$scratch/tests.log" 2>&1
 RUSTDOCFLAGS='-D warnings' cargo doc --manifest-path "$candidate/Cargo.toml" --workspace \
@@ -154,6 +169,13 @@ if [[ "$testkit" == true ]]; then
     > "$scratch/managed-installed.log" 2>&1
   grep -Fq 'test result: ok. 2 passed; 0 failed' "$scratch/managed-installed.log"
   shasum -a 256 -c "$scratch/tools.sha256"
+fi
+if [[ "$sign" == true ]]; then
+  cargo install --path "$candidate/crates/ic-host-sign" --features provider --debug \
+    --bin ic-sign --locked --offline --root "$scratch/sign-cli-install" > "$scratch/sign-cli-install.log" 2>&1
+  "$scratch/sign-cli-install/bin/ic-sign" --version > "$scratch/sign-cli-version.txt"
+  SIGNER_TEST_MANIFEST="$candidate/Cargo.toml" SIGNER_TEST_HELPER="$scratch/sign-cli-install/bin/ic-sign" \
+    bash "$repo/scripts/qualification/sign-keyring.sh" > "$scratch/sign-provider.log" 2>&1
 fi
 checkpoint > "$scratch/source-after.sha256"
 cmp "$scratch/source.sha256" "$scratch/source-after.sha256"

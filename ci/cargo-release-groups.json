@@ -75,6 +75,14 @@
       "dependencies": []
     },
     {
+      "name": "sign",
+      "primary": "ic-host-sign",
+      "version": "package",
+      "members": ["ic-host-sign"],
+      "changelog": "releases/sign/CHANGELOG.md",
+      "dependencies": []
+    },
+    {
       "name": "process",
       "primary": "ic-host-process",
       "version": "package",

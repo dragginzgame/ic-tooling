@@ -10,6 +10,17 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Run focused Sign admission/cancellation checks on the existing three native CI
+  hosts. Keep disposable credential-session qualification explicitly selected;
+  compilation and library tests do not establish native keychain acceptance.
+- Add native provider jobs using pinned ICP 1.7.0 disposable identities. Linux
+  records only socket/prompt-header metadata; macOS runs inside a network-denying
+  sandbox. Retain selected evidence and sanitized setup failures, excluding all
+  temporary credential directories. Hosted execution remains unobserved locally.
+- Qualify extracted Sign archives, provider dependency isolation and the installed
+  `ic-sign` command against disposable native credentials. Prepared manifest/helper
+  paths select the candidate without changing product signing or key custody.
+
 - Include Testkit's installed bounded-clock/expiry regression in controller and
   archive qualification, retaining independent deletion evidence for all five
   instances. See the [Testkit 0.109.0 change](../testkit/CHANGELOG.md).

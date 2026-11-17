@@ -14,10 +14,11 @@ now has its own group as its requirements-driven implementation begins.
 | http | Complete response-body admission depends on Reqwest and has its own native consumer requirements. It stays outside Build and portable byte graphs. |
 | text | Pure escaping and table layout serve Query and DB independently of HTTP, process execution and filesystem authority. |
 | process | Native child/group execution and bounded communication serve Build and foreground tools without Cargo, IC or observation policy. |
+| sign | Existing native-keyring signing, protocol admission and cancellable external exchange serve Canic's Backup adapter. Platform/keyring dependencies stay outside generic Process, Build, portable bytes and Testkit. Initial development is unpublished and not yet archive-qualified. |
 | testkit | Shared PocketIC client identity, bounded generated fixtures and exclusive held-reply control serve test drivers independently of Build and product runtimes. |
 | tools | The external-lock executable has its own command contract. Its ledger also owns maintained repository qualification/setup workflows; these scripts are not executable library features or runtime dependencies. |
 
-All nine product packages belong to exactly one group. `qualification/owned-wasm-probe`
+All product packages belong to exactly one group. `qualification/owned-wasm-probe`
 is a private fixture in the independent qualification workspace, not a product group.
 The server CLI belongs to Testkit's package and group; the private prototype is removed.
 The Testkit group owns an actual admitted package, not a future simulator wrapper.
@@ -40,6 +41,10 @@ entrypoint is introduced by this change; future release tooling must require an
 explicit group selection. Seven library manifests permit only `crates-io`;
 the private qualification executable retains `publish = false`. All seven
 libraries are published; publication permission in a manifest is not delivery.
+
+The new Sign package is unpublished. Its first publication needs Process 0.81.0
+and the matching minimum requirement, complete status admission and native-host
+acceptance; current path dependencies are development inputs, not registry proof.
 
 ## Independent library publication
 

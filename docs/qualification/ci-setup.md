@@ -81,13 +81,28 @@ not a performance claim or a statistical latency guarantee.
 | Repository | 1m30s | 20m | 18m |
 | Secrets | 8s | 13m | 11m |
 | Libraries, all three hosts | 10m41s | 45m | 42m |
-| Native, all three hosts | 2m25s | 20m | 15m |
+| Native, all three hosts | 2m25s before Sign checks | 20m | 19m |
+| Sign provider, all three hosts | Not yet observed | 30m provisional | 24m |
 
 Library setup took up to 6m50s on Intel macOS; its step gets 15m. Library archive
 qualification took up to 4m23s; its step gets 12m. CLI lifetime checks get 4m
 against an observed 1m32s maximum. Native archive qualification gets 8m against
 1m49s. These budgets allow uncached preparation and host variation independently
 of the local archive cache. Revisit them when the selected workload changes.
+
+Pending Sign development adds focused native-host lint/admission/cancellation
+checks with a provisional four-minute step bound inside the existing twenty-minute
+job. The earlier 2m25s observation excludes that work; measure the new step after
+its first hosted run. These checks do not access native keychain credentials.
+
+The separate Sign provider matrix uses disposable ICP identities and the existing
+sanitized setup collector for compiler, native tools and pinned ICP preparation.
+Its initial budget is provisional: Linux's prepared runtime cases take about
+eleven seconds locally, but cold compilation/setup and native macOS have not yet
+been measured. The eight-minute provider step includes compilation. Retention is
+seven days and selects only logs, socket/prompt headers and source/tool identity;
+temporary credential stores, manifests, IPC bodies and whole target trees are
+excluded. This job does not wait on consumer adoption or other hosted jobs.
 
 Step deadlines leave the existing failure/always evidence steps reachable before
 the job deadline. Each upload gets 2m; setup reporting gets 1m. The sum of all

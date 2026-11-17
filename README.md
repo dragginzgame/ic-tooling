@@ -8,6 +8,14 @@ and [verified release receipt](docs/release-ownership.md#testkit-01090-delivery)
 Foundation remains 0.80.3 and Process 0.80.5; Testkit's encoder error still uses
 Protocol 0.3 under the [earlier adoption](docs/qualification/platform-adoption.md).
 
+Pending [Sign integration](docs/sign-only-integration.md) adds an external helper
+for existing ICP secp256k1 keyring identities, exact authenticated update/status
+bytes and retained cancellation custody. It is noninteractive: unlock/authorize
+the existing OS credential first. Linux disposable-provider acceptance passes;
+native macOS acceptance remains outstanding.
+The release candidate selects Process 0.81.0, Build 0.87.4, Testkit 0.110.0 and
+Sign 0.1.0. Publication remains separate from candidate Git delivery.
+
 A ground-up replacement of IC Tooling, governed by [design revision 2](docs/DESIGN.md).
 The first milestone is one real build-to-owned-artifact workflow with newly
 selected interfaces. Existing crates.io names may be reused with incremented
