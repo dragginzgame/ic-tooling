@@ -36,6 +36,17 @@ justifies a new snapshot-set/cache API without a defined partial-effect contract
 
 ## Blockers and next actions
 
+[IC Tooling #11 — Support bounded clock progression with held Testkit replies](https://github.com/dragginzgame/ic-tooling/issues/11)
+is implemented locally: the exclusive controller admits bounded forward clock
+steps, processes expiry, and refuses further use after interrupted dispatch.
+Eight fixture tests, Clippy/Rustdoc and three installed cases pass; all five
+instances are independently observed deleted. See the [clock contract and evidence](../testkit-held-replies.md#bounded-manual-clock-progression).
+Deployment now selects Testkit 0.109.0 for its public error variants; exhaustive
+matches need updating. The complete archive gate passes with committed dependencies;
+see the [release record](../release-ownership.md#testkit-01090-delivery).
+Concurrent lock edits are saved under `target/deploy-clock/` for restoration with
+the new member version. Canic's same-receiver acceptance remains with Canic.
+
 The secret-scan fixture false positive and Linux archive name-collision refusal
 are fixed. Full-history scanning, candidate admission/rejection and the four-group
 Linux archive gate pass; see [failure causes and evidence](../qualification/ci-setup.md#reviewed-ci-failures--2026-11-17).

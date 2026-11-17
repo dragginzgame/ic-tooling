@@ -13,6 +13,7 @@ fn cancellation_and_panic_do_not_restore_release_authority() {
         }),
         wasm: vec![],
         consumed: vec![false, false],
+        clock_uncertain: false,
     };
     let mut context = Context::from_waker(Waker::noop());
     {
@@ -172,8 +173,8 @@ fn installed_control_refuses_foreign_consumed_expired_and_automatic_releases() {
             assert_eq!(pic.await_call(call_b).await.unwrap(), b"different fixture");
             assert_eq!(pic.await_call(call_a).await.unwrap(), b"first");
 
-            // Deliberately expire a held barrier to qualify refusal, not as a supported
-            // caller progression policy. The failure must not release application bytes.
+            // Supported clock steps expire the original barrier without releasing
+            // application bytes or consuming a local release attempt.
             let expiring = pic.submit_call(a, sender, "hold", vec![]).await.unwrap();
             for _ in 0..20 {
                 if !first.pending(&pic).await.unwrap().is_empty() {
@@ -184,7 +185,14 @@ fn installed_control_refuses_foreign_consumed_expired_and_automatic_releases() {
             let stale = first.pending(&pic).await.unwrap();
             assert_eq!(stale.len(), 1);
             assert_eq!(stale[0].slot(), 1);
-            pic.advance_time(std::time::Duration::from_secs(61)).await;
+            first
+                .advance_time(&pic, std::time::Duration::from_secs(60))
+                .await
+                .unwrap();
+            first
+                .advance_time(&pic, std::time::Duration::from_secs(1))
+                .await
+                .unwrap();
             for _ in 0..20 {
                 pic.tick().await;
                 if pic.get_canister_http().await.is_empty() {

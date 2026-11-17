@@ -1,6 +1,6 @@
 [package]
 name = "ic-testkit"
-version = "0.108.1"
+version = "0.109.0"
 description = "Shared PocketIC types, held-reply fixtures and optional bounded server ownership"
 edition.workspace = true
 rust-version.workspace = true

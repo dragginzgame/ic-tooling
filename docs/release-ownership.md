@@ -43,6 +43,29 @@ libraries are published; publication permission in a manifest is not delivery.
 
 ## Independent library publication
 
+### Testkit 0.109.0 delivery
+
+The maintainer authorized deployment on 2026-11-17 from this checkout's `main`.
+[IC Tooling #11 — Support bounded clock progression with held Testkit replies](https://github.com/dragginzgame/ic-tooling/issues/11)
+adds `Fixture::advance_time` at the existing exclusive controller, preserving
+immutable replies, original HTTP expiry and consumed-before-dispatch release.
+Interrupted clock transitions refuse further control. The new public error
+variants require a minor release for exhaustive matches. Other public packages
+and dependency requirements are unchanged; private Tools notes remain pending.
+
+The complete Linux Testkit archive gate passes at `target/library-release.ZLBFiAoX`
+with committed dependencies: lint, default/optional graph isolation, unit/docs,
+CLI setup/lifetime, three installed fixture cases and two installed server cases.
+Independent inventory observes all five fixture instances deleted. The clock case
+qualifies release across 31 seconds and at original HTTP dispatch + 60 seconds,
+then refusal one nanosecond afterward without application bytes. All fixture
+source bytes are compared again at versioned publication admission. No new
+Canic execution or native macOS acceptance is claimed; hosted CI is asynchronous.
+
+Unrelated dependency lock updates are saved under `target/deploy-clock/` and
+excluded from the release selection. Restore them with only Testkit's member
+version advanced. Canic owns its same-receiver adoption and application assertions.
+
 ### Process 0.80.5 and Testkit 0.108.1 delivery
 
 The maintainer authorized deployment on 2026-11-17 from this checkout's `main`.

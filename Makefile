@@ -14,7 +14,7 @@ help:
 	  '  make test-process-terminal Linux foreground PTY fixture' \
 	  '  make test-canic-process Combined current Canic group/direct-child qualification (Linux)' \
 	  '  make test-testkit-module Installed module test (externally owned server)' \
-	  '  make test-testkit-control Installed controller refusals (externally owned server)' \
+	  '  make test-testkit-control Installed controller/clock refusals (externally owned server)' \
 	  '  make test-testkit-server Offline assets and bounded startup refusal checks' \
 	  '  make test-testkit-server-installed Prepared-archive lifecycle/gateway/held checks (explicit archive and gzip)' \
 	  '  make prepare-testkit-server-cli Build the product server CLI (cached dependencies)' \
@@ -303,6 +303,7 @@ test-testkit-module: toko-tooling-check
 test-testkit-control: toko-tooling-check
 	@test -n "$${IC_TESTKIT_POCKET_IC_URL:-}" || { echo 'IC_TESTKIT_POCKET_IC_URL must select an externally owned server' >&2; exit 1; }
 	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline held::control::tests::installed_control_refuses_foreign_consumed_expired_and_automatic_releases -- --ignored --exact
+	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline held::control::clock_tests::installed_clock_progression_preserves_live_replies_and_original_expiry -- --ignored --exact
 
 .PHONY: test-testkit-server test-testkit-server-installed
 test-testkit-server: toko-tooling-check

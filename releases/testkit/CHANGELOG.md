@@ -3,6 +3,21 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.109.0] - 2026-11-17
+
+### ⚠️ Breaking
+
+- Add clock-step, clock-overflow and uncertain-clock variants to `ControlError`;
+  callers matching the enum exhaustively must handle them.
+
+### ➕ Added
+
+- Advance the manual simulator clock through the exclusive held-reply controller
+  by at most 60 seconds per operation, followed by one expiry-processing round.
+  Preserve original tokens, reply bytes and HTTP deadlines; interrupted clock
+  transitions refuse further controller use. This supplies
+  [IC Tooling #11 — Support bounded clock progression with held Testkit replies](https://github.com/dragginzgame/ic-tooling/issues/11).
+
 ## [0.108.1] - 2026-11-17
 
 ### 🧪 Testing

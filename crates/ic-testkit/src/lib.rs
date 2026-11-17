@@ -2,7 +2,7 @@
 //!
 //! Callers own prepared servers, runtimes, instances and simulated progression.
 //! The held-reply slice admits catalogs and generates bounded Wasm modules.
-//! Exclusive controllers observe and release held requests without driving time.
+//! Exclusive controllers observe/release held requests and admit bounded clock steps.
 
 /// Original upstream client, builder, identifier and error types.
 pub use pocket_ic;

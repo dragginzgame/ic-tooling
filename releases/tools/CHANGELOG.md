@@ -10,6 +10,10 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Include Testkit's installed bounded-clock/expiry regression in controller and
+  archive qualification, retaining independent deletion evidence for all five
+  instances. See the [Testkit 0.109.0 change](../testkit/CHANGELOG.md).
+
 - Retain bounded, sanitized secret-scanner installation failures through the
   existing setup collector. Preserve setup status and deadline, upload only its
   evidence directory, and report artifact links or upload failures separately.
