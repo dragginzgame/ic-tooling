@@ -46,6 +46,52 @@ The new Sign package's Process 0.81.0 dependency, complete status admission,
 registry archive gate and real-provider native-host acceptance are qualified.
 Its verified first-publication receipt is below.
 
+## Development, CI and delivery entrypoints
+
+The installed Toko 0.45.0 snapshot supplies common setup, formatting and selection
+admission. Consumer-owned product checks remain in the Makefile and qualification
+runners. The current command boundaries are:
+
+| Trigger and entrypoint | Owner, selected inputs and guarantee |
+| --- | --- |
+| Explicit setup: `make install-tools` | Shared installers prepare the pinned common catalogs. Prepare Rust/system prerequisites first; setup is separate from read-only admission. |
+| Tool use: `make tools-check` | Shared offline checkers admit prepared tool bytes and native fingerprints without installation. |
+| Snapshot adoption/use: `make check`; `PATH="$PWD/.tools/host/bin:$PATH" perl vendor/toko-tooling/scripts/dev/tooling-lock.pl qualification` | Shared selection checker admits each workspace's pins and lock selection; root `make check` also admits installed snapshot bytes. This is not product or publication acceptance. |
+| Changed source: focused targets from `make help` | Product owners select the affected package, features, runtime and refusal guarantees; use its linked implementation contract. |
+| Changed tooling: `make check`, `make tools-check`, `make fmt-check`, workflow validation | Consumer wiring admits the selected snapshot, actual Make callers, formatting inputs and CI syntax. Reuse unchanged helper/action evidence; generic tooling regressions stay upstream. |
+| Push/PR: `build-release-candidate.yml` repository and secrets jobs | Consumer CI admits snapshot/formatting and setup failure handling, then scans history once with redacted output. |
+| Push/PR: that workflow's native, libraries and signer-provider jobs | Consumer CI qualifies product archives, installed simulator fixtures and disposable native keyring behavior on Linux and both macOS architectures. See [budgets and retained failure evidence](qualification/ci-setup.md). |
+| Selected release: `make test-build-release-candidate` or `make test-library-release-candidate RELEASE_GROUPS="…"` | Consumer runners admit captured source, extracted archives, selected dependency graphs, tests/docs and required prepared tools. Build's current runner checks all four core packages; library selection reaches leaf package/feature commands. |
+| Authorized publication: canonical `cargo publish`, source-bound tags and registry readback | Delivery admits clean final source, archive identity and destination, uploads in supplier order and compares fresh registry bytes. Reuse qualified unchanged product evidence; record changed provenance explicitly. |
+| Failed publication: inspect the selected `.git/release-state/` attempt and remote/registry state | Delivery resolves uncertain effects before retrying. Preserve original intent, status and archives; published versions/tags are immutable. |
+
+No local release/publication engine or shared release adapter is enabled. The
+existing manual delivery path uses the archive gates and canonical Cargo command;
+it does not provide automatic cross-stage proof reuse. The full four-package Build
+gate is the retained fallback cost for a core release. A future shared-adapter
+cutover must qualify selected dispatch, changed-input rejection and failed-phase
+recovery before replacing that gate. The grouped-projection/timing improvements
+in Toko 0.45.0 do not establish a measured deployment speed-up in this repository.
+Hosted CI remains asynchronous under maintainer direction.
+
+### Toko 0.45.0 adoption
+
+The maintainer authorized delivery of the developer-tooling adoption on
+2026-11-17. Both maintained workspaces select Toko 0.45.0, authenticated registry
+archive SHA-256 `3789a925c1165317eff84cc80436195b66c0478b0c2b441bc2f1a755caf6a23a`.
+The canonical exporter refreshes the existing 49-file selection; common executable
+and catalog bytes are unchanged. CI's cache action selects published source
+`53c0eba3b1b207e0cd9e747eece438e21b693261`, with identical action bytes to the
+previous pin. Snapshot admission, independent qualification pin admission,
+prepared-tool checks, formatting and actionlint pass.
+
+This delivery belongs to the private Tools group and changes no library or
+product CLI contract. Existing product versions remain published; a contributor
+snapshot refresh does not require their republication. Unrelated compatible lock
+updates are preserved separately from the delivered Toko selection and restored
+uncommitted. Recovery copies live under `.git/release-state/toko-0.45.0/`.
+The adoption's hosted CI runs asynchronously after the `main` push.
+
 ## Independent library publication
 
 ### Signing cohort — Process 0.81.0 first

@@ -95,8 +95,9 @@ dependency preparation. In [run 44178285784](https://github.com/dragginzgame/ic-
 Linux and ARM macOS pass; Intel Clippy takes 2m26s, then test compilation exceeds
 the provisional four-minute combined step. The step now gets eight minutes in a
 thirty-minute job, preserving the evidence reserve. The old bound is failed
-evidence, not a successful duration measurement. Its corrected hosted result
-remains asynchronous. These checks do not access native keychain credentials.
+evidence, not a successful duration measurement. The corrected Intel job passes
+in [run 44180582387](https://github.com/dragginzgame/ic-tooling/actions/runs/44180582387),
+as do the Linux and ARM macOS jobs. These checks do not access native keychain credentials.
 
 The separate Sign provider matrix uses disposable ICP identities and the existing
 sanitized setup collector for compiler, native tools and pinned ICP preparation.

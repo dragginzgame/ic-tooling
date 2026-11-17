@@ -23,7 +23,7 @@ selected interfaces. Existing crates.io names may be reused with incremented
 versions; retaining a name does not require retaining its old Rust API. The first
 package is `ic-build` 0.87.3. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
 0.80.2 for shared byte admission and held-directory publication. Toko Tooling is
-pinned to 0.44.11 in both workspaces.
+pinned to 0.45.0 in both workspaces.
 
 The [first release](docs/release-ownership.md#first-production-cutover-scope)
 contains Artifacts, FS, Process and Build. `make test-build-release-candidate`

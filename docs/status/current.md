@@ -49,16 +49,27 @@ live in `target/deploy-sign/` and `.git/release-state/sign-0.1.0/`. Private Tool
 
 ## Blockers and next actions
 
+Toko Tooling 0.45.0 adoption updates both workspaces, the authenticated
+snapshot and CI action revision. Snapshot/tool admission, formatting and actionlint
+pass; executable/catalog and cache-action bytes are unchanged. See the
+[actual flow boundaries](../release-ownership.md#development-ci-and-delivery-entrypoints).
+The adoption is delivered through Git without republishing unchanged product
+libraries. Concurrent compatible lock updates are preserved and left uncommitted.
+
 Producer acceptance has no outstanding blocker. Canic's thin Backup adapter and
 installed acceptance remain in [Canic #5](https://github.com/dragginzgame/canic/issues/5).
 [Tooling #11](https://github.com/dragginzgame/ic-tooling/issues/11) is closed;
 Canic owns its same-receiver adoption of Testkit's bounded clock progression.
 
-Linux and ARM macOS's separate Sign library CI jobs pass. Intel's separate
-library compilation exceeded its provisional four-minute bound; it now has an
-eight-minute step in a thirty-minute job. Corrected hosted CI runs asynchronously;
-no whole-run pass is claimed. See [measured budgets](../qualification/ci-setup.md#job-deadlines--2026-11-17).
-The actual-provider Intel job passed independently.
+All three native Sign library jobs now pass with the corrected eight-minute
+step in a thirty-minute job. Intel's earlier four-minute timeout remains failed
+evidence. See [measured budgets](../qualification/ci-setup.md#job-deadlines--2026-11-17).
+The actual-provider jobs also pass on all three hosts. Pre-adoption source
+[CI run 44180582387](https://github.com/dragginzgame/ic-tooling/actions/runs/44180582387)
+has ten passing jobs and one Intel library archive job still running at inspection.
+The tooling-adoption push starts its own asynchronous CI; no whole-run pass is claimed.
+Fresh crates.io records confirm all four cohort versions remain unyanked and
+match their receipt checksums. GitHub has no separate deployment records here.
 
 Further product work needs a demonstrated current caller requirement. Canic's
 rewrite owns its Platform adoption; old adapters correctly refuse changed owners.

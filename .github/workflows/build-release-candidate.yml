@@ -32,13 +32,13 @@ jobs:
         run: |
           printf 'CI_SETUP_ROOT=%s\nTOKO_TOOLING_STORE=%s\n' "$CI_SETUP_ROOT" "$TOKO_TOOLING_STORE" >> "$GITHUB_ENV"
           perl scripts/ci/setup-diagnostics.pl compiler timeout --kill-after=10s 150s rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
         timeout-minutes: 1
       - name: Prepare common tools
         id: tools
         timeout-minutes: 5
         run: perl scripts/ci/setup-diagnostics.pl tools timeout --kill-after=10s 270s make install-tools
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
         timeout-minutes: 1
         with:
           mode: save
@@ -85,7 +85,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
         timeout-minutes: 1
       - name: Prepare pinned secret scanner
         id: scanner
@@ -96,7 +96,7 @@ jobs:
           perl scripts/ci/setup-diagnostics.pl scanner timeout --kill-after=10s 90s \
             bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh gitleaks --install-dir "$CI_SETUP_ROOT/tools/scanner"
           echo "GITLEAKS_BIN=$CI_SETUP_ROOT/tools/scanner/gitleaks" >> "$GITHUB_ENV"
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
         timeout-minutes: 1
         with:
           mode: save
@@ -142,7 +142,7 @@ jobs:
       - name: Prepare pinned Rust components
         timeout-minutes: 3
         run: rustup toolchain install 1.100.0 --profile minimal --component clippy --component rustfmt
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
         timeout-minutes: 1
         with:
           extra-key: testkit-managed-server-pocketic-16.1.0
@@ -163,7 +163,7 @@ jobs:
           test -f "$archive" && test ! -L "$archive"
           echo "TESTKIT_SERVER_ARCHIVE=$archive" >> "$GITHUB_ENV"
           echo "TESTKIT_GZIP=/usr/bin/gzip" >> "$GITHUB_ENV"
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
         timeout-minutes: 1
         with:
           mode: save

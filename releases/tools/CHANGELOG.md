@@ -10,6 +10,11 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Select Toko Tooling 0.45.0 in the product and qualification workspaces, refresh
+  the authenticated installed snapshot and pin CI's download-cache action to its
+  published source. Preserve existing compatible lock updates and product
+  acceptance; common executable/catalog bytes are unchanged.
+
 - Run focused Sign admission/cancellation checks on the existing three native CI
   hosts. Keep disposable credential-session qualification explicitly selected;
   compilation and library tests do not establish native keychain acceptance.
