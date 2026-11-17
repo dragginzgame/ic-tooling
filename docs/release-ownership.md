@@ -91,7 +91,8 @@ packages against registry dependencies.
 
 Sign's extracted archive/default graph/installed provider gate passes at
 `target/library-release.6ZHdt40t`, including all three real Linux keyring cases.
-The publication preflight archive is byte-identical to that qualified archive.
+The source-`70008d3` preflight archive is byte-identical to that qualified archive;
+the final publication's VCS-only difference is admitted below.
 Sign 0.1.0 is published from `4bfc9c484e5e92dbb84848398532b11bab095fdf`, tagged
 `sign-v0.1.0`, with fresh registry/archive SHA-256
 `12030a41c06a4c26ab0d61ef3dfc6559fde329c10c2bc69e565b27a6b226bff2`.
