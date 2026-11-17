@@ -1,6 +1,6 @@
 # Sign changelog
 
-Package: `ic-host-sign`. Initial package; no registry release is claimed.
+Package: `ic-host-sign`.
 
 ## [0.1.0] - 2026-11-17
 
@@ -13,6 +13,8 @@ Package: `ic-host-sign`. Initial package; no registry release is claimed.
   credentials. Protocol/configuration/tool commitment, recipient/effective
   distinction, raw arguments, nonce presence, absolute expiry and completion
   deadline remain explicit. No submission, retries or identity migration.
+  Resolves the producer integration in
+  [Tooling #12](https://github.com/dragginzgame/ic-tooling/issues/12).
 - Retain cancellation and cleanup custody across signing-future drop, refuse
   another invocation before settlement, recover an already-completed original
   result, and join the worker when the signer itself is dropped.
@@ -27,14 +29,12 @@ Package: `ic-host-sign`. Initial package; no registry release is claimed.
   exact signed update/status content, missing/locked credentials and cancellation
   with an unresponsive private Secret Service. Socket metadata tracing observes
   only local Unix IPC; prompt-header monitoring proves no prompt request occurs.
-  No operator credential is accessed. Native macOS remains unqualified.
-
-### 🚧 Pending
-
-- [IC Tooling #12 — Provide bounded external sign-only integration with exact expiry and existing identity custody](https://github.com/dragginzgame/ic-tooling/issues/12)
-  stays open for native macOS provider acceptance. Published Platform 0.34.15
-  resolves the signed-status admission gap in
-  [Platform #29](https://github.com/dragginzgame/ic-platform/issues/29).
-- Process 0.81.0 is published and the extracted Linux Sign archive/installed
-  provider gate passes against registry dependencies. Complete native macOS
-  fixture acceptance remains required before this initial publication.
+  No operator credential is accessed.
+- Native Intel and ARM macOS qualification passes for exact update/status
+  signing, missing/locked refusal, inherited network denial and disposable
+  keychain cleanup. The helper is preauthorized before ICP populates its test
+  credential; no signing-time prompt or operator ACL change is introduced.
+- Extracted archive, isolated provider graph and installed CLI qualification pass
+  against published Process 0.81.0 and Platform 0.34.15. Canic's Backup adapter
+  and installed acceptance remain with
+  [Canic #5](https://github.com/dragginzgame/canic/issues/5).

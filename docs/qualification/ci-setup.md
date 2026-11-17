@@ -81,8 +81,8 @@ not a performance claim or a statistical latency guarantee.
 | Repository | 1m30s | 20m | 18m |
 | Secrets | 8s | 13m | 11m |
 | Libraries, all three hosts | 10m41s | 45m | 42m |
-| Native, all three hosts | 2m25s before Sign checks | 25m | 22m |
-| Sign provider, all three hosts | Not yet observed | 30m provisional | 24m |
+| Native, all three hosts | 2m25s before Sign checks | 30m | 26m |
+| Sign provider, all three hosts | All three pass in run 44178285784 | 30m | 24m |
 
 Library setup took up to 6m50s on Intel macOS; its step gets 15m. Library archive
 qualification took up to 4m23s; its step gets 12m. CLI lifetime checks get 4m
@@ -90,17 +90,20 @@ against an observed 1m32s maximum. Native archive qualification gets 8m against
 1m49s. These budgets allow uncached preparation and host variation independently
 of the local archive cache. Revisit them when the selected workload changes.
 
-Pending Sign development adds focused native-host lint/admission/cancellation
-checks with a provisional four-minute step bound and three-minute dependency
-preparation inside a twenty-five-minute
-job. The earlier 2m25s observation excludes that work; measure the new step after
-its first hosted run. These checks do not access native keychain credentials.
+Sign adds focused native-host lint/admission/cancellation checks and three-minute
+dependency preparation. In [run 44178285784](https://github.com/dragginzgame/ic-tooling/actions/runs/44178285784),
+Linux and ARM macOS pass; Intel Clippy takes 2m26s, then test compilation exceeds
+the provisional four-minute combined step. The step now gets eight minutes in a
+thirty-minute job, preserving the evidence reserve. The old bound is failed
+evidence, not a successful duration measurement. Its corrected hosted result
+remains asynchronous. These checks do not access native keychain credentials.
 
 The separate Sign provider matrix uses disposable ICP identities and the existing
 sanitized setup collector for compiler, native tools and pinned ICP preparation.
-Its initial budget is provisional: Linux's prepared runtime cases take about
-eleven seconds locally, but cold compilation/setup and native macOS have not yet
-been measured. The eight-minute provider step includes compilation. Retention is
+All three real-provider jobs pass in that run, including Intel's cold compilation
+inside the eight-minute provider step. Prepared runtime cases take about eleven
+seconds on local Linux, three seconds on ARM macOS and twenty-four seconds on
+Intel macOS; these are different hosts, not matched performance comparisons. Retention is
 seven days and selects only logs, socket/prompt headers and source/tool identity;
 temporary credential stores, manifests, IPC bodies and whole target trees are
 excluded. This job does not wait on consumer adoption or other hosted jobs.

@@ -34,26 +34,26 @@ justifies a new snapshot-set/cache API without a defined partial-effect contract
 ## Blockers and next actions
 
 [IC Tooling #12 — Provide bounded external sign-only integration with exact expiry and existing identity custody](https://github.com/dragginzgame/ic-tooling/issues/12)
-is in progress. The maintainer selected `canic-mainnet`; public metadata records
+has completed producer acceptance. The maintainer selected `canic-mainnet`; public metadata records
 OS-keyring custody and secp256k1. Process's bounded pipe-input prerequisite passes
 19 Linux tests, affected-caller Clippy and both macOS compilation checks. It is
-prepared for Process 0.81.0 (`Input`/`Policy` lose `Copy`).
+published in Process 0.81.0 (`Input`/`Policy` lose `Copy`).
 Sign now authenticates exact updates and independent original-ID status reads
 using published Platform 0.34.15. The noninteractive provider refuses locked or
 unauthorized credentials; unlocking stays with existing OS tools. Twelve library
 tests and three disposable ICP 1.7.0 Linux keyring cases cover exact bytes/sender,
 status binding, retained cancellation, missing/locked refusal and no prompt or
-external sockets. The first macOS provider attempt compiled/passed network denial
-but refused its unprepared credential ACL. The preauthorized fixture successfully
-signs updates/status and refuses a locked keychain; its legacy-item cleanup needed
-the native CLI. Tooling #12 stays open until the corrected native fixture passes.
+external sockets. All three actual provider jobs pass on Linux and Intel/ARM
+macOS, including encrypted key custody, locked refusal, network denial and cleanup.
+Linux and ARM macOS's separate library jobs also pass. Intel's separate library
+compilation exceeds a provisional timeout; its budget correction runs asynchronously.
 See the [contract](../sign-only-integration.md).
 
 Deployment is authorized on `main`: Process 0.81.0, Build 0.87.4, Testkit 0.110.0
 and Sign 0.1.0. Build's Process boundary is private; Testkit exposes its report
 type and therefore takes a minor. Process, Build and Testkit are published with
-verified readback; Sign's Linux archive gate passes and its upload awaits native
-acceptance. See the [cohort receipt](../release-ownership.md#signing-cohort--process-0810-first).
+verified readback; Sign's final archive and all actual-provider gates pass and its
+initial upload is in progress. See the [cohort receipt](../release-ownership.md#signing-cohort--process-0810-first).
 The scoped graph retains Protocol 0.3.3 and Nix 0.31.3; the concurrent 0.3.5 /
 0.31.4 updates are preserved for restoration in `target/deploy-sign/` and bounded
 durable recovery state under `.git/release-state/sign-0.1.0/`. New Sign suppliers

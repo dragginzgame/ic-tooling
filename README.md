@@ -1,6 +1,7 @@
 # IC Tooling
 
-Latest delivery: Testkit 0.109.0 adds bounded clock progression while replies are
+Latest delivery: Testkit 0.110.0 adopts Process 0.81's public report identity and
+retains bounded clock progression while replies are
 held, preserving original HTTP expiry and refusing further control after an
 interrupted clock change. Callers matching `ControlError` exhaustively must handle
 its new variants. See the [clock contract](docs/testkit-held-replies.md#bounded-manual-clock-progression)
@@ -12,9 +13,9 @@ Pending [Sign integration](docs/sign-only-integration.md) adds an external helpe
 for existing ICP secp256k1 keyring identities, exact authenticated update/status
 bytes and retained cancellation custody. It is noninteractive: unlock/authorize
 the existing OS credential first. Linux disposable-provider acceptance passes;
-native macOS acceptance remains outstanding.
+native Intel and ARM macOS provider acceptance also pass.
 Build 0.87.4 and Testkit 0.110.0 are published. Sign 0.1.0 remains a release
-candidate pending complete native provider acceptance; see the
+candidate ready for its initial publication; see the
 [cohort receipt](docs/release-ownership.md#signing-cohort--process-0810-first).
 
 A ground-up replacement of IC Tooling, governed by [design revision 2](docs/DESIGN.md).

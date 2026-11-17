@@ -14,7 +14,7 @@ now has its own group as its requirements-driven implementation begins.
 | http | Complete response-body admission depends on Reqwest and has its own native consumer requirements. It stays outside Build and portable byte graphs. |
 | text | Pure escaping and table layout serve Query and DB independently of HTTP, process execution and filesystem authority. |
 | process | Native child/group execution and bounded communication serve Build and foreground tools without Cargo, IC or observation policy. |
-| sign | Existing native-keyring signing, protocol admission and cancellable external exchange serve Canic's Backup adapter. Platform/keyring dependencies stay outside generic Process, Build, portable bytes and Testkit. Linux archive qualification passes; initial publication awaits complete native provider acceptance. |
+| sign | Existing native-keyring signing, protocol admission and cancellable external exchange serve Canic's Backup adapter. Platform/keyring dependencies stay outside generic Process, Build, portable bytes and Testkit. |
 | testkit | Shared PocketIC client identity, bounded generated fixtures and exclusive held-reply control serve test drivers independently of Build and product runtimes. |
 | tools | The external-lock executable has its own command contract. Its ledger also owns maintained repository qualification/setup workflows; these scripts are not executable library features or runtime dependencies. |
 
@@ -42,9 +42,9 @@ explicit group selection. Seven library manifests permit only `crates-io`;
 the private qualification executable retains `publish = false`. All seven
 libraries are published; publication permission in a manifest is not delivery.
 
-The new Sign package is unpublished. Its first publication needs Process 0.81.0
-and the matching minimum requirement, complete status admission and native-host
-acceptance; current path dependencies are development inputs, not registry proof.
+The new Sign package's Process 0.81.0 dependency, complete status admission,
+registry archive gate and real-provider native-host acceptance are qualified.
+Its first publication is in progress below.
 
 ## Independent library publication
 
@@ -90,14 +90,17 @@ published supplier source matches. Fresh publication preflights compile both
 packages against registry dependencies.
 
 Sign's extracted archive/default graph/installed provider gate passes at
-`target/library-release.DizteaZD`, including all three real Linux keyring cases.
-Sign publication remains in progress. The initial macOS fixture lacked helper
-authorization. Its private-keychain/narrow-ACL correction successfully signs exact
-updates and independent status, refuses a locked keychain and passes network denial
-in [native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44177241916).
-That job then fails deleting its legacy credential through keyring's SecItem API;
-the fixture now deletes its exact owned item through the native CLI. Complete
-native provider acceptance still requires that corrected fixture to pass.
+`target/library-release.6ZHdt40t`, including all three real Linux keyring cases.
+The publication preflight archive is byte-identical to that qualified archive.
+Sign publication remains in progress. All three actual provider jobs pass in
+[native CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44178285784)
+from `70008d33bc2f9d0822b79a2606d9facf5a9cefca`. Both macOS architectures prove
+exact update/status signing, missing/locked refusal, network denial and cleanup.
+The fixture preauthorizes only its own empty item before ICP populates it, and
+uses the native CLI to delete that legacy item. No operator credentials or ACLs
+are accessed. Linux and ARM macOS's separate library jobs also pass. Intel's
+separate library compilation exceeds its provisional four-minute limit; the
+eight-minute correction is delivered without waiting on broad hosted CI.
 
 The scoped release graph retains Protocol 0.3.3, Nix 0.31.3 and thiserror 2.0.18;
 the concurrent Protocol 0.3.5/Nix 0.31.4 edits remain preserved for restoration.

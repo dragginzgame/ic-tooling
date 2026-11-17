@@ -302,7 +302,7 @@ jobs:
           fi
   native:
     needs: repository
-    timeout-minutes: 25
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -329,7 +329,7 @@ jobs:
           CI_SETUP_ROOT: ${{ runner.temp }}/native-signer-setup
         run: perl scripts/ci/setup-diagnostics.pl tools cargo fetch --locked
       - name: Check signer admission and cancellation on the native host
-        timeout-minutes: 4
+        timeout-minutes: 8
         run: make test-sign
       - name: Retain candidate archives and evidence
         timeout-minutes: 2

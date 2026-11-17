@@ -1,8 +1,8 @@
 # External sign-only integration
 
 [Tooling #12](https://github.com/dragginzgame/ic-tooling/issues/12) owns the native
-integration for Canic's Backup adapter. Sign is a committed release candidate;
-the issue stays open for native macOS provider acceptance.
+integration for Canic's Backup adapter. Sign's archive and actual provider
+qualification pass on Linux and native Intel/ARM macOS; initial publication is ready.
 Consumer adoption belongs to [Canic #5](https://github.com/dragginzgame/canic/issues/5).
 
 ## Ownership and selected provider
@@ -45,7 +45,6 @@ supplies `Secp256k1Identity::from_pem`, `prepare_update(UpdateArgs, maximum)` an
 `native-signed-secp256k1`. Parent update admission uses `PreparedUpdate::from_bytes`
 and decoded exact content; Tooling implements no cryptography or CBOR codec.
 Independent status admission uses `PreparedRequestStatus::from_signed_bytes`.
-The new crate name has no sparse-index entry as of 2026-11-17.
 
 ## Client contract
 
@@ -128,7 +127,7 @@ Process adds `Input::Bytes(Vec<u8>)` to its existing executor, fairly writing fi
 nonblocking chunks while draining both outputs and closing stdin at exact EOF.
 Short delivery, cancellation, deadline and output limits preserve failure and
 cleanup evidence. Debug reports length only. `Input`/`Policy` lose `Copy` and
-retain `Clone`, requiring pending Process 0.81.0 before registry publication.
+retain `Clone`; published Process 0.81.0 supplies this boundary.
 
 ## Executed evidence and remaining acceptance
 
@@ -178,8 +177,8 @@ and passed network denial, but refused the credential rather than showing UI.
 The preauthorized fixture subsequently signs updates and independent status,
 refuses its locked keychain and passes network denial on native macOS. Its final
 credential deletion failed through keyring's SecItem search for the legacy item;
-the fixture now deletes that exact owned item through the native CLI. A complete
-passing native fixture remains required.
+the fixture now deletes that exact owned item through the native CLI. The
+corrected fixture passes on both native macOS architectures.
 
 The macOS fixture now requires `SIGNER_TEST_DISPOSABLE_KEYCHAIN=1` in an ephemeral
 account. It snapshots default/search preferences, creates a password-protected
@@ -195,14 +194,20 @@ qualify immediate refusal without an unlock prompt.
 
 Native provider jobs use Toko's pinned ICP installer. macOS runs inside inherited
 `sandbox-exec` network denial with a loopback-denial probe; Linux observes only
-Unix sockets and no prompt-header traffic. The macOS fixture correction still
-requires successful hosted execution; source wiring is not native acceptance.
+Unix sockets and no prompt-header traffic. All three actual provider jobs pass in
+[run 44178285784](https://github.com/dragginzgame/ic-tooling/actions/runs/44178285784)
+from `70008d33bc2f9d0822b79a2606d9facf5a9cefca`. Each macOS job passes all three
+cases, including final credential/store cleanup and source/tool drift checks.
+Linux and ARM macOS also pass the separate library admission/cancellation job.
+Intel's separate library job exceeds its four-minute compilation budget; its
+eight-minute correction runs asynchronously and is not claimed as a passing job.
 
-Finish native macOS provider acceptance before closing Tooling #12. The supported profile
+The producer acceptance for Tooling #12 is complete. The supported profile
 has no signing-time unlock UI to cancel; operators unlock/authorize it beforehand.
 Canic's installed
 Backup acceptance stays with Canic. Sign's extracted Linux archive and installed
-provider gate pass at `target/library-release.DizteaZD`. Process 0.81.0 is published and the matching dependency
+provider gate pass at `target/library-release.6ZHdt40t`, including the final native
+fixture source. Process 0.81.0 is published and the matching dependency
 minimum is selected. The Sign archive gate admits extracted source, isolated
 provider dependencies and an installed CLI through explicit prepared manifest/
 helper paths. Local path success alone is not registry readiness. Consumer cutover
