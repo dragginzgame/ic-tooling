@@ -54,7 +54,7 @@ tokio = { workspace = true, features = ["rt", "time", "macros"] }
 
 [[test]]
 name = "keyring"
-path = "tests/keyring.rs"
+path = "tests/keyring/main.rs"
 required-features = ["provider"]
 
 [lints]

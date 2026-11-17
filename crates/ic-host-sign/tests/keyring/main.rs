@@ -10,10 +10,16 @@ use ic_host_sign::protocol::{self, Configuration, Operation, Request};
 use ic_host_sign::{Error, Signer};
 use zeroize::Zeroizing;
 
+#[cfg(target_os = "macos")]
+mod mac_keychain;
+
 struct Disposable {
-    directory: tempfile::TempDir,
     entry: Credential,
+    #[cfg(target_os = "macos")]
+    keychain: mac_keychain::PrivateKeychain,
+    directory: tempfile::TempDir,
     config: Configuration,
+    helper: PathBuf,
 }
 
 struct Credential(keyring::Entry, bool);
@@ -39,6 +45,26 @@ impl Disposable {
             std::process::id(),
             protocol::now_ns().unwrap()
         );
+        let helper = directory.path().join("ic-sign");
+        let selected = std::env::var_os("SIGNER_TEST_HELPER").map_or_else(
+            || PathBuf::from(env!("CARGO_BIN_EXE_ic-sign")),
+            PathBuf::from,
+        );
+        assert!(selected.is_absolute());
+        fs::copy(&selected, &helper).unwrap();
+        #[cfg(target_os = "linux")]
+        assert!(
+            Command::new("strip")
+                .arg("--strip-debug")
+                .arg(&helper)
+                .status()
+                .unwrap()
+                .success()
+        );
+        fs::set_permissions(&helper, fs::Permissions::from_mode(0o700)).unwrap();
+        #[cfg(target_os = "macos")]
+        let keychain =
+            mac_keychain::PrivateKeychain::create(directory.path(), &cli, &helper, &name);
         let created = Command::new(cli)
             .env("ICP_HOME", directory.path())
             .args(["identity", "new", &name, "--storage", "keyring", "--json"])
@@ -78,6 +104,9 @@ impl Disposable {
             directory,
             entry,
             config,
+            helper,
+            #[cfg(target_os = "macos")]
+            keychain,
         }
     }
 
@@ -100,26 +129,9 @@ impl Disposable {
     }
 
     fn signer(&self) -> Signer {
-        let helper = self.directory.path().join("ic-sign");
-        let selected = std::env::var_os("SIGNER_TEST_HELPER").map_or_else(
-            || PathBuf::from(env!("CARGO_BIN_EXE_ic-sign")),
-            PathBuf::from,
-        );
-        assert!(selected.is_absolute());
-        fs::copy(&selected, &helper).unwrap();
-        #[cfg(target_os = "linux")]
-        assert!(
-            Command::new("strip")
-                .arg("--strip-debug")
-                .arg(&helper)
-                .status()
-                .unwrap()
-                .success()
-        );
-        fs::set_permissions(&helper, fs::Permissions::from_mode(0o700)).unwrap();
-        let tool = protocol::tool_hash(&helper).unwrap();
+        let tool = protocol::tool_hash(&self.helper).unwrap();
         println!("Disposable helper SHA-256: {tool:02x?}");
-        Signer::new(&helper, tool, self.config.clone()).unwrap()
+        Signer::new(&self.helper, tool, self.config.clone()).unwrap()
     }
 }
 
@@ -345,6 +357,40 @@ async fn native_locked_keyring_refuses_without_changing_identity() {
     fixture.config.admit().unwrap();
     assert_eq!(signed.sender().to_text(), fixture.config.sender);
     assert_eq!(signed.envelope_bytes(), original);
+}
+
+#[cfg(target_os = "macos")]
+#[tokio::test]
+#[ignore = "requires the qualification runner's disposable keychain account"]
+async fn native_locked_keychain_refuses_without_prompting() {
+    use std::time::Duration;
+    let mut fixture = Disposable::create();
+    let mut signer = fixture.signer();
+    let approved = signer.commitment();
+    let signed = signer.sign(fixture.request(), approved).await.unwrap();
+    let original = signed.envelope_bytes().to_vec();
+    fixture.entry.1 = false;
+    fixture.keychain.lock();
+    let refused = tokio::time::timeout(
+        Duration::from_secs(3),
+        signer.sign(fixture.request(), approved),
+    )
+    .await;
+    let result = match refused {
+        Ok(result) => result,
+        Err(_) => {
+            let _ = signer.settle().await;
+            panic!("locked keychain did not refuse without interaction");
+        }
+    };
+    let Err(Error::Execution { report }) = result else {
+        panic!("locked keychain unexpectedly signed")
+    };
+    assert!(report.failure.is_none() && report.cleanup.is_empty());
+    assert_eq!(report.status.unwrap().code(), Some(2));
+    assert_eq!(signer.state(), ic_host_sign::State::Ready);
+    assert_eq!(signed.envelope_bytes(), original);
+    assert_eq!(signed.sender().to_text(), fixture.config.sender);
 }
 
 #[cfg(target_os = "macos")]

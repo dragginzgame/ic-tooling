@@ -42,7 +42,7 @@ if [[ ${1:-} == --linux-session ]]; then
     for ((attempt=0; attempt<100; attempt++)); do
         if gdbus call --session --dest org.freedesktop.DBus \
             --object-path /org/freedesktop/DBus \
-            --method org.freedesktop.DBus.NameHasOwner org.freedesktop.secrets 2>/dev/null | rg -q true; then break; fi
+            --method org.freedesktop.DBus.NameHasOwner org.freedesktop.secrets 2>/dev/null | grep -q true; then break; fi
         sleep 0.05
     done
     # Profile mode retains message headers/timing only, never message bodies.
@@ -60,14 +60,14 @@ if [[ ${1:-} == --linux-session ]]; then
     kill "$monitor_pid"
     wait "$monitor_pid" || true
     monitor_pid=
-    if rg 'org.freedesktop.Secret.Prompt' "$evidence/prompt-profile.log"; then
+    if grep -Fq 'org.freedesktop.Secret.Prompt' "$evidence/prompt-profile.log"; then
         echo 'Noninteractive provider emitted an OS prompt request' >&2
         exit 1
     fi
     # Empty/missing tracing cannot establish an offline result.
-    rg -q 'execve\("[^\"]*/ic-sign"' "$evidence/network.trace"
-    rg -q 'connect\(.*AF_UNIX' "$evidence/network.trace"
-    if rg 'socket\(' "$evidence/network.trace" | rg -v 'AF_UNIX'; then
+    grep -Eq 'execve\("[^"]*/ic-sign"' "$evidence/network.trace"
+    grep -Eq 'connect\(.*AF_UNIX' "$evidence/network.trace"
+    if grep 'socket(' "$evidence/network.trace" | grep -v 'AF_UNIX'; then
         echo 'Unexpected nonlocal socket family during real-provider qualification' >&2
         exit 1
     fi
@@ -104,6 +104,10 @@ cargo test --manifest-path "$manifest" -p ic-host-sign --features provider --tes
 case $(uname -s) in
     Linux) dbus-run-session -- bash "$repo/scripts/qualification/sign-keyring.sh" --linux-session "$evidence" ;;
     Darwin)
+        [[ ${SIGNER_TEST_DISPOSABLE_KEYCHAIN:-} == 1 ]] || {
+            echo 'Native macOS qualification requires an explicitly disposable account (SIGNER_TEST_DISPOSABLE_KEYCHAIN=1).' >&2
+            exit 2
+        }
         SIGNER_TEST_NETWORK_SANDBOX=1 /usr/bin/sandbox-exec \
             -p '(version 1)(allow default)(deny network*)' \
             cargo test --manifest-path "$manifest" -p ic-host-sign --features provider --test keyring --locked --offline \

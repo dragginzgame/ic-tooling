@@ -43,12 +43,14 @@ using published Platform 0.34.15. The noninteractive provider refuses locked or
 unauthorized credentials; unlocking stays with existing OS tools. Twelve library
 tests and three disposable ICP 1.7.0 Linux keyring cases cover exact bytes/sender,
 status binding, retained cancellation, missing/locked refusal and no prompt or
-external sockets. Native macOS provider jobs are prepared but unobserved; #12
-remains open for that acceptance. See the [contract and evidence](../sign-only-integration.md).
+external sockets. The first macOS provider attempt compiled/passed network denial
+but refused its unprepared credential ACL; the disposable fixture now preauthorizes
+the helper. #12 stays open until native acceptance succeeds. See the [contract](../sign-only-integration.md).
 
 Deployment is authorized on `main`: Process 0.81.0, Build 0.87.4, Testkit 0.110.0
 and Sign 0.1.0. Build's Process boundary is private; Testkit exposes its report
-type and therefore takes a minor. Registry receipts follow qualification/upload.
+type and therefore takes a minor. Process is published with verified readback;
+remaining uploads are in progress. See the [cohort receipt](../release-ownership.md#signing-cohort--process-0810-first).
 The scoped graph retains Protocol 0.3.3 and Nix 0.31.3; the concurrent 0.3.5 /
 0.31.4 updates are preserved for restoration in `target/deploy-sign/` and bounded
 durable recovery state under `.git/release-state/sign-0.1.0/`. New Sign suppliers

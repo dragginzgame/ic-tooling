@@ -48,6 +48,48 @@ acceptance; current path dependencies are development inputs, not registry proof
 
 ## Independent library publication
 
+### Signing cohort — Process 0.81.0 first
+
+The maintainer authorized deployment on 2026-11-17 from `main`, selecting Process
+0.81.0, Build 0.87.4, Testkit 0.110.0 and initial Sign 0.1.0. Process's finite owned
+input breaks `Input`/`Policy` Copy. Build erases supplier types and takes a patch;
+Testkit exposes the Process report in `Stopped` and therefore takes a minor.
+
+Process 0.81.0 is published from `0908efd0a94e1284f8f79c81902c1ee75db9d497`, tagged
+`process-v0.81.0`, with registry/archive SHA-256
+`1b81431d49e906feee6812a4fa8539feea57803f9937b926472ae947fa9bf6c5`.
+Fresh registry download matches publication preflight exactly. Linux's full
+Build/Process archive gate passes at `target/build-release.FtEYRfxL`; the same
+native archive phase passes on both macOS hosts in
+[candidate CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44173667281).
+Those jobs subsequently fail in the separate Sign offline dependency step; this
+does not turn that failure into a passing overall job or invalidate Process's phase.
+
+Clean publication admission matches source, licence, normalized manifest and all
+resolved dependency records. The gate archive also has three unused patch records
+that Cargo omits from the publication lock; its hash is therefore different.
+The mismatched comparison and initial intent are retained, the corrected exact
+publication identity was recorded before upload, and no tag was rewritten.
+
+Build/Testkit/Sign publication is still in progress. The complete Linux Testkit
+archive/CLI/installed gate passes at `target/library-release.14Ds7w3H` against
+published Process 0.81.0. Sign's first macOS provider attempt compiles and passes
+the network-denial probe but refuses the credential. Its fixture lacked explicit
+helper authorization; the corrected fixture prepares a private disposable keychain
+and narrow application ACL before ICP populates the actual credential. Native
+provider success is not yet claimed.
+
+The scoped release graph retains Protocol 0.3.3, Nix 0.31.3 and thiserror 2.0.18;
+the concurrent Protocol 0.3.5/Nix 0.31.4 edits remain preserved for restoration.
+Clap 4.6.8 and Zeroize 1.9.2 are needed by the new Sign selection. New first-party
+suppliers select published Platform 0.34.15/Types 0.21.2; the admitted new native
+suppliers are current. Optional thiserror 2.0.21 refresh is deferred to dependency
+maintenance: the existing native PocketIC 16.1.0 graph requires exactly 2.0.18.
+This is a release disposition, not a permanent independent-core hold.
+
+Evidence and bounded recovery state live in `target/deploy-sign/` and
+`.git/release-state/sign-0.1.0/`. Other published groups are unchanged.
+
 ### Testkit 0.109.0 delivery
 
 The maintainer authorized deployment on 2026-11-17 from this checkout's `main`.

@@ -1,7 +1,7 @@
 # External sign-only integration
 
 [Tooling #12](https://github.com/dragginzgame/ic-tooling/issues/12) owns the native
-integration for Canic's Backup adapter. Implementation is local and unpublished;
+integration for Canic's Backup adapter. Sign is a committed release candidate;
 the issue stays open for native macOS provider acceptance.
 Consumer adoption belongs to [Canic #5](https://github.com/dragginzgame/canic/issues/5).
 
@@ -169,20 +169,37 @@ A stripped disposable helper excludes debug-symbol hashing from the IPC timeout
 measurement; production build outputs are untouched.
 
 Sign Clippy/Rustdoc and Process prerequisite logs live under `target/issue-12/`.
-Process's 19 Linux tests, directly affected Build/Testkit Clippy and both macOS
-compilation checks passed earlier. Sign's Apple Silicon cross-compilation is
-blocked by this Linux host's missing Apple C toolchain for transitive AWS-LC;
-no Sign macOS compile/runtime pass is claimed. Native provider CI jobs are prepared
-for Linux and both macOS architectures, using Toko's pinned ICP installer. The
-macOS runner executes the real-keychain update/status case inside an inherited
-`sandbox-exec` profile denying network access; a loopback-connect refusal checks
-that the sandbox is active. Credential UI is disabled in the actual helper.
-Hosted results remain unobserved; source wiring is not native execution proof.
+The complete Process/Build native archive phase passes on all three hosts in
+[candidate CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44173667281).
+The separate Sign lint step lacked prepared offline dependencies; preparation is
+now explicit. Linux provider collection also required an undeclared `rg`; the
+runner now uses standard grep. The initial macOS provider job compiled the helper
+and passed network denial, but refused the credential rather than showing UI.
+Successful native credential access is not yet claimed.
+
+The macOS fixture now requires `SIGNER_TEST_DISPOSABLE_KEYCHAIN=1` in an ephemeral
+account. It snapshots default/search preferences, creates a password-protected
+private keychain through the safe native API, and preauthorizes an empty test item
+for exactly ICP, the qualified helper and the fixture owner. ICP then populates
+the real secp256k1 key in place, without exporting it. This satisfies the provider's
+already-authorized precondition rather than weakening its no-UI behavior. Apple's
+[security tool contract](https://github.com/apple-oss-distributions/Security/blob/main/SecurityTool/macOS/security.1)
+documents the creating-app default and explicit trusted application selection.
+The fixture restores preferences and deletes only its private keychain on exit;
+it never changes operator keychain ACLs. It also locks that owned keychain to
+qualify immediate refusal without an unlock prompt.
+
+Native provider jobs use Toko's pinned ICP installer. macOS runs inside inherited
+`sandbox-exec` network denial with a loopback-denial probe; Linux observes only
+Unix sockets and no prompt-header traffic. The macOS fixture correction still
+requires successful hosted execution; source wiring is not native acceptance.
 
 Finish native macOS provider acceptance before closing #12. The supported profile
 has no signing-time unlock UI to cancel; operators unlock/authorize it beforehand.
 Canic's installed
 Backup acceptance stays with Canic. Sign has a separate group/ledger but is not
-archive-qualified. First publication needs released Process 0.81.0 with a matching
-dependency minimum; local path success is not registry readiness. No commit,
-push, publication or consumer cutover is claimed.
+archive-qualified yet. Process 0.81.0 is published and the matching dependency
+minimum is selected. The Sign archive gate admits extracted source, isolated
+provider dependencies and an installed CLI through explicit prepared manifest/
+helper paths. Local path success alone is not registry readiness. Consumer cutover
+remains separate from this deployment.

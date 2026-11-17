@@ -224,6 +224,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CI_SETUP_ROOT: ${{ github.workspace }}/target/sign-provider-setup
+      SIGNER_TEST_DISPOSABLE_KEYCHAIN: '1'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         timeout-minutes: 2
@@ -301,7 +302,7 @@ jobs:
           fi
   native:
     needs: repository
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -321,6 +322,12 @@ jobs:
           BUILD_RELEASE_ONLINE: 'true'
           BUILD_RELEASE_CONSUMER: none
         run: bash scripts/qualification/build-release-candidate.sh
+      - name: Prepare signer dependencies
+        id: signer_dependencies
+        timeout-minutes: 3
+        env:
+          CI_SETUP_ROOT: ${{ runner.temp }}/native-signer-setup
+        run: perl scripts/ci/setup-diagnostics.pl tools cargo fetch --locked
       - name: Check signer admission and cancellation on the native host
         timeout-minutes: 4
         run: make test-sign
@@ -330,6 +337,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: build-candidate-${{ matrix.os }}
+          retention-days: 7
           path: |
             target/build-release.*/archives/
             target/build-release.*/*.log
@@ -338,4 +346,5 @@ jobs:
             target/build-release.*/source-head
             target/build-release.*/source.patch
             target/build-release.*/complete.txt
+            ${{ steps.signer_dependencies.outputs.evidence }}
           if-no-files-found: error

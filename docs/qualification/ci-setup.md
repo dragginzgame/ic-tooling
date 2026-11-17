@@ -81,7 +81,7 @@ not a performance claim or a statistical latency guarantee.
 | Repository | 1m30s | 20m | 18m |
 | Secrets | 8s | 13m | 11m |
 | Libraries, all three hosts | 10m41s | 45m | 42m |
-| Native, all three hosts | 2m25s before Sign checks | 20m | 19m |
+| Native, all three hosts | 2m25s before Sign checks | 25m | 22m |
 | Sign provider, all three hosts | Not yet observed | 30m provisional | 24m |
 
 Library setup took up to 6m50s on Intel macOS; its step gets 15m. Library archive
@@ -91,7 +91,8 @@ against an observed 1m32s maximum. Native archive qualification gets 8m against
 of the local archive cache. Revisit them when the selected workload changes.
 
 Pending Sign development adds focused native-host lint/admission/cancellation
-checks with a provisional four-minute step bound inside the existing twenty-minute
+checks with a provisional four-minute step bound and three-minute dependency
+preparation inside a twenty-five-minute
 job. The earlier 2m25s observation excludes that work; measure the new step after
 its first hosted run. These checks do not access native keychain credentials.
 
