@@ -43,7 +43,7 @@ libraries are published; publication permission in a manifest is not delivery.
 
 ## Independent library publication
 
-### Foundation 0.80.3, Process 0.80.4 and Testkit 0.108.0 preparation
+### Foundation 0.80.3, Process 0.80.4 and Testkit 0.108.0 delivery
 
 The maintainer authorized deployment on 2026-11-17 from this checkout's `main`
 to `origin/main` and crates.io. Foundation's module layout changes affect its
@@ -68,8 +68,31 @@ Cargo selected non-yanked Protocol 0.3.3 during preparation. Its archive SHA-256
 is `4676f2fabfff6a9aab9d6cccdf2a5870059e88b21345bc1913818be621dc1f34`;
 the HTTP encoder is byte-identical to reviewed 0.3.2. The compatible minimum stays
 0.3.2. Concurrent lock selections are retained under `target/deploy-ranges/` for
-restoration after publication. Release and registry receipts follow below once
-delivery is independently verified.
+restoration after publication.
+
+Published from `78f1d2fbfbda6cac3b39f49dfe8aaa3c26472135`. `main` and annotated
+tags `foundation-v0.80.3`, `process-v0.80.4` and `testkit-v0.108.0` were pushed
+atomically and their remote identities verified. Clean-source Cargo publication
+preflight and upload passed with all features. All four non-yanked registry
+records and downloaded archives match the preflight/upload bytes:
+
+| Package | Archive SHA-256 |
+| --- | --- |
+| `ic-host-artifacts` 0.80.3 | `54cd6b9013ecab7db68af690e5c77157289ec007faec965e1d8b1ad1d5f6a43f` |
+| `ic-host-fs` 0.80.3 | `90a8189bf22f96b959a03c16c11db97c69032825be4dae8e5078249a17034d41` |
+| `ic-host-process` 0.80.4 | `a88492b7a656509c3664f4f4ea68d5cf5303c3ec1c22bc64d6f4c41ded6128a3` |
+| `ic-testkit` 0.108.0 | `6fa2e6157d27d15ba1bc93923adc3221e1c09f9f28ec2f8bdde09b04b528cf80` |
+
+Archive provenance identifies the exact clean release commit and package paths.
+Evidence is retained under `target/deploy-ranges/`. Post-push review of the
+published package boundaries and affected qualification callers found no new
+actionable defect. Hosted CI remains asynchronous; sibling delivery is separate.
+
+Toko installed the registry Testkit 0.108.0 CLI in release profile. Its reported
+version, offline Toko receipt admission and offline prepared-server check pass.
+Pre-existing Clap/Nix lock updates are restored as uncommitted working changes
+after delivery, with the released member versions preserved; they are not part
+of the release commit or its qualification claim.
 
 ### Process 0.80.3 and Cargo metadata 0.1.0 delivery
 

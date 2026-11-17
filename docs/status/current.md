@@ -1,4 +1,4 @@
-# Current implementation — 2026-11-16
+# Current implementation — 2026-11-17
 
 ## Authority and scope
 
@@ -17,19 +17,17 @@ local, and hosted CI runs asynchronously.
 
 ## Latest delivery
 
-Individual dependency review relaxed libproc to compatible 0.15 patches, WAT to
-compatible 1.x releases and test-only wasmparser to compatible 0.263 patches.
-PocketIC remains exact for its [qualified server pairing](../testkit-server.md#pocketic-client-requirement).
-Locked metadata passes with unchanged package identities and lockfile; no new
-runtime qualification is claimed. Process notes are pending at 0.80.4; Testkit's
-existing pending 0.108.0 entry includes its compatible requirement cleanup.
-
-Local follow-up adopts published Protocol 0.3.2 for Testkit's optional held
-fixtures and retains current Types 0.21.2. Public encoder-error type identity
-requires the pending Testkit 0.108.0 release; package versions are not yet bumped.
-Six unit tests, Testkit Clippy, graph checks and current Scheduling replacement
-driver admission pass. No installed rerun or publication is claimed; see the
-[current adoption record](../qualification/platform-adoption.md#local-protocol-032-adoption).
+Foundation 0.80.3, Process 0.80.4 and Testkit 0.108.0 are published from
+`78f1d2fbfbda6cac3b39f49dfe8aaa3c26472135`, with all three annotated release
+tags pushed on `main`. Registry checksums/downloads match verified upload bytes.
+The release ships directory modules, compatible libproc/WAT/wasmparser ranges,
+and Protocol 0.3's public encoder-error type identity. Protocol's compatible
+minimum is 0.3.2; release resolution selects 0.3.3. Types remains 0.21.2 and
+PocketIC retains its [qualified server pairing](../testkit-server.md#pocketic-client-requirement).
+Linux archive, installed Testkit/CLI and Scheduling driver checks pass. Native
+CI is asynchronous. CI diagnostics, CDPATH and documentation fixes are also
+delivered; the private Tools ledger remains pending. See the
+[release receipt](../release-ownership.md#foundation-0803-process-0804-and-testkit-01080-delivery).
 
 Process 0.80.3 and Cargo metadata 0.1.0 are published from
 `de86fe21dc746eda79e662008f0d670f20970ac7`, with annotated
@@ -54,12 +52,12 @@ subsequent documentation receipt are delivered directly on `main`.
 Toko 0.44.11 is installed through its verified 49-file exporter snapshot from
 `08d63df7661910554ef72980037f55edd914aba0`; both workspace markers/locks agree.
 
-Local module-layout cleanup moves six Rust files into their existing directories
+The delivered module-layout cleanup moves six Rust files into their existing directories
 as `mod.rs`, preserving source bytes and module paths. Canic qualification
 generators use the same layout and ordinary child discovery; historical consumer
 acceptance is not renewed. Focused Clippy/formatting checks and 28 module tests
-pass (two installed-server tests remain ignored); logs are under
-`target/module-layout-review/`.
+pass; logs are under `target/module-layout-review/`. The later release gate also
+passes the installed Testkit checks, as recorded in the release receipt.
 
 Qualification directory changes now ignore inherited `CDPATH`, removing the
 caller's obligation to unset it. All 108 relative runner-startup cases and the

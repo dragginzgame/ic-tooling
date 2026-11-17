@@ -1,5 +1,15 @@
 # Platform adoption — 2026-11-17
 
+## Testkit 0.108.0 delivery
+
+The Protocol 0.3 adoption below is published in Testkit 0.108.0. Release resolution
+selects non-yanked 0.3.3 within the reviewed `>=0.3.2, <0.4.0` range; its HTTP
+encoder is byte-identical to 0.3.2. Linux archive and fresh installed Testkit/CLI
+checks pass, alongside versioned Scheduling driver admission. See the
+[release receipt](../release-ownership.md#foundation-0803-process-0804-and-testkit-01080-delivery)
+for source, hashes and validation boundaries. The earlier local evidence below
+retains its original scope.
+
 ## Local Protocol 0.3.2 adoption
 
 The registry review on 2026-11-17 found non-yanked Protocol 0.3.2, Types 0.21.2,

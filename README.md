@@ -1,5 +1,10 @@
 # IC Tooling
 
+Latest delivery: Foundation 0.80.3, Process 0.80.4 and Testkit 0.108.0 are
+published. This includes module-layout cleanup, compatible library dependency
+ranges and Protocol 0.3 adoption. Testkit callers naming its encoder error must
+select Protocol 0.3. See the [verified release receipt](docs/release-ownership.md#foundation-0803-process-0804-and-testkit-01080-delivery).
+
 A ground-up replacement of IC Tooling, governed by [design revision 2](docs/DESIGN.md).
 The first milestone is one real build-to-owned-artifact workflow with newly
 selected interfaces. Existing crates.io names may be reused with incremented

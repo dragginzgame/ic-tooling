@@ -26,13 +26,13 @@ The command syntax below is a new supported contract, not a promise of legacy
 
 ## Installation and explicit preparation
 
-Use the existing reviewed Toko installer to select 0.107.4 from the
+Use the existing reviewed Toko installer to select 0.108.0 from the
 consumer checkout. Installation is an explicit setup step; ordinary execution
 adds `--check` to this selection to admit an already installed executable offline:
 
 ```sh
 TESTKIT_SERVER_CLI="$(bash vendor/toko-tooling/scripts/dev/install-rust-tools.sh \
-  --consumer "$PWD" --package ic-testkit --version 0.107.4 \
+  --consumer "$PWD" --package ic-testkit --version 0.108.0 \
   --bin ic-testkit-server --features cli --profile release)"
 export TESTKIT_SERVER_CLI
 ```

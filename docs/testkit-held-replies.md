@@ -1,12 +1,12 @@
 # Testkit: first replacement contract
 
-Local development now selects Protocol `>=0.3.2, <0.4.0`. The pending Testkit
-0.108.0 release changes the public `CompileError::Encoding` payload to Protocol
+Published Testkit 0.108.0 selects Protocol `>=0.3.2, <0.4.0`. This release
+changes the public `CompileError::Encoding` payload to Protocol
 0.3's type identity; callers naming it must align their dependency. The HTTP
 encoder source and Types selection are unchanged. See the current
 [adoption evidence](qualification/platform-adoption.md#local-protocol-032-adoption).
 
-Status: Testkit 0.107.4 is published with Protocol `>=0.2.7, <0.3.0`.
+Earlier Testkit 0.107.4 selected Protocol `>=0.2.7, <0.3.0`.
 The [compatibility correction](qualification/testkit-types-compatibility.md)
 permits Types `>=0.21.2, <0.22.0`. Scheduling has completed its Runtime migration;
 current pressure and held-upgrade checks pass through the product server command.
