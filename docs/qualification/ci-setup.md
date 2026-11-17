@@ -3,8 +3,8 @@
 The `repository` job in `build-release-candidate.yml` wraps its compiler and common
 tool setup with `scripts/ci/setup-diagnostics.pl`. This removes dependence on an
 ephemeral runner's console or a raw log path when setup fails before tests start.
-Only this job is changed; its compiler/tool commands and failure statuses remain
-the same. Other repositories' concurrent fixes stay with their owners.
+The collector is scoped to this job. Other repositories' concurrent fixes stay
+with their owners.
 
 The job selects a temporary tool store at `$RUNNER_TEMP/ic-tooling-setup/tools`.
 The same selection is exported through `GITHUB_ENV` for subsequent cache, admission
@@ -48,3 +48,71 @@ was `e6942466473d6e7f01f70d6e833a469aaa921ce26f155c34f656b86da01ed753`;
 the fixture was `c2addefc6391ce62128d9f00e05491c539b17913c475576b9bfce6973dd2b58f`.
 Tooling narrows phases/roots, adds file-open admission, bounds traversal and reads,
 and qualifies its own workflow. No installed Toko files or sibling work is modified.
+
+## Job deadlines — 2026-11-17
+
+Every job and step in the workflow has an explicit timeout. Budgets use completed
+hosted measurements from runs
+[43968510609](https://github.com/dragginzgame/ic-tooling/actions/runs/43968510609),
+[43974748932](https://github.com/dragginzgame/ic-tooling/actions/runs/43974748932) and
+[44062342797](https://github.com/dragginzgame/ic-tooling/actions/runs/44062342797).
+The first run passed all hosts; later failed jobs are excluded from successful
+duration maxima. API job/step timestamps are retained locally under
+`target/ci-timeout-review/`. This small sample informs generous failure bounds,
+not a performance claim or a statistical latency guarantee.
+
+| Job | Slowest observed successful job | Job budget | Sum of explicit step budgets |
+| --- | ---: | ---: | ---: |
+| Repository | 1m30s | 20m | 17m |
+| Secrets | 8s | 10m | 8m |
+| Libraries, all three hosts | 10m41s | 45m | 42m |
+| Native, all three hosts | 2m25s | 20m | 15m |
+
+Library setup took up to 6m50s on Intel macOS; its step gets 15m. Library archive
+qualification took up to 4m23s; its step gets 12m. CLI lifetime checks get 4m
+against an observed 1m32s maximum. Native archive qualification gets 8m against
+1m49s. These budgets allow uncached preparation and host variation independently
+of the local archive cache. Revisit them when the selected workload changes.
+
+Step deadlines leave the existing failure/always evidence steps reachable before
+the job deadline. Each upload gets 2m; setup reporting gets 1m. The sum of all
+explicit step limits is below the job limit, leaving additional time for runner
+and post-action overhead. The existing artifact selections and failure conditions
+remain. Hard job cancellation, runner loss, or an upload failure can still prevent
+retention; `always()` is not a guarantee after a job has exhausted its lifetime.
+See GitHub's [step and job timeout semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idtimeout-minutes).
+
+On the Ubuntu repository job, GNU `timeout` runs *inside* the existing sanitized
+collector: Rust setup gets 150s and tools 270s, each with 10s before forced kill.
+The outer step limits are 3m and 5m, leaving time to collect diagnostics and publish
+the evidence path. This avoids killing the collector first on an ordinary setup
+hang. Timeout status 124 (or forced-kill failure) remains authoritative; there is
+no retry or `continue-on-error`. The focused fixture exercises a real timed-out
+child, hidden attempt retention and redaction through that same command layering.
+Hosted deadline/upload behavior has not been deliberately induced.
+
+## Reviewed CI failures — 2026-11-17
+
+Run [44062342797](https://github.com/dragginzgame/ic-tooling/actions/runs/44062342797)
+failed two independent gates. Gitleaks 8.30.1 matched synthetic private-key markers
+in `scripts/ci/test-setup-diagnostics.t`, not a credential. `.gitleaksignore` admits
+only that original commit/path/rule/line fingerprint. The fixture now assembles
+its markers while retaining identical redaction inputs. Full-history and current
+fixture scans pass; a separate synthetic finding remains detectable. No scanner
+rule or source path is excluded. All 44 diagnostic checks still pass.
+
+The Linux library archive metadata contained both the extracted `ic-host-text`
+workspace member and Testkit's registry dependency of the same name. Admission
+incorrectly required a globally unique package name. It now selects by workspace
+membership and name, then still requires the exact extracted manifest path,
+non-registry source, publication policy and description. Dependencies continue to
+resolve from the registry. The captured failure metadata passes; registry-only,
+missing-member and wrong-path substitutions fail.
+
+The repaired four-group Linux gate (`http text testkit cargo-metadata`) passes in
+`target/library-release.LXtTNiqB`, including CLI and installed simulator checks.
+That local gate used the preserved working lock (Protocol 0.3.5 and Clap/Nix
+updates); those concurrent dependency edits are excluded from this tooling-only
+delivery. The admission regression also uses the original hosted metadata.
+Focused logs and redacted scanner reports remain under `target/ci-timeout-review/`.
+Hosted CI after the fix runs asynchronously; local evidence is not a hosted pass.

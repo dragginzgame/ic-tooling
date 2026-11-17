@@ -15,6 +15,9 @@ use strict;
 use warnings;
 use File::Path qw(make_path);
 my $root = $ENV{CI_SETUP_ROOT};
+# Assemble synthetic markers without making the fixture source resemble a key.
+my $key_begin = '-----BEGIN ' . 'PRIVATE KEY-----';
+my $key_end = '-----END ' . 'PRIVATE KEY-----';
 $| = 1;
 if ($ARGV[0] eq 'success') { print "prepared\n"; exit 0; }
 if ($ARGV[0] eq 'missing') { exit 19; }
@@ -28,7 +31,7 @@ make_path("$root/tools/.failed-attempt");
 open my $log, '>', "$root/tools/.failed-attempt/install.log" or die $!;
 print {$log} "download: certificate verification failed\n";
 print {$log} qq({"password":"hidden-password"}\n);
-print {$log} "-----BEGIN PRIVATE KEY-----\nprivate-key-body\n-----END PRIVATE KEY-----\n";
+print {$log} "$key_begin\nprivate-key-body\n$key_end\n";
 close $log;
 open my $outside, '>', "$root/outside.txt" or die $!;
 print {$outside} 'must-not-follow-link'; close $outside;
@@ -49,11 +52,12 @@ print "https://host/file#hidden-fragment\n";
 print "UNCLASSIFIED_SETTING=hidden-environment-value\n";
 print "Bearer hidden-bearer\n";
 print qq({"access_key": "hidden-access-key"}\n);
-print "-----BEGIN PRIVATE KEY-----", 'x' x 9000, "\noversized-private-body\n-----END PRIVATE KEY-----\n";
+print $key_begin, 'x' x 9000, "\noversized-private-body\n$key_end\n";
 print "$ENV{TEST_SECRET}\n";
-print "-----BEGIN PRIVATE KEY-----\nother-private-body\n-----END PRIVATE KEY-----\n";
+print "$key_begin\nother-private-body\n$key_end\n";
 print "::warning::untrusted workflow annotation\n";
 print STDERR "compiler: fixture link failure\n";
+if ($ARGV[0] eq 'timeout') { sleep 30; }
 exit 37;
 CHILD
 close $file;
@@ -71,7 +75,8 @@ sub run {
     defined $pid or die $!;
     if (!$pid) {
         open STDERR, '>&', STDOUT or die $!;
-        exec $^X, $script, 'compiler', $^X, $fixture, $mode;
+        my @deadline = $mode eq 'timeout' ? ('timeout', '--kill-after=1s', '0.2s') : ();
+        exec $^X, $script, 'compiler', @deadline, $^X, $fixture, $mode;
         die $!;
     }
     local $/; my $printed = <$out> // '';
@@ -112,6 +117,15 @@ is($status, 0, 'successful setup remains successful');
 ok(!-e "$temp/success.outputs", 'success has no failure artifact');
 ($status, $printed) = run('signal');
 is($status, 143, 'terminated child retains shell-style signal status');
+SKIP: {
+    skip 'GNU timeout wiring belongs to the Ubuntu repository job', 4 unless $^O eq 'linux';
+    ($status, $printed) = run('timeout');
+    is($status, 124, 'setup deadline remains a failing timeout status');
+    ($evidence) = read_file("$temp/timeout.outputs") =~ /^evidence=(.+)$/m;
+    like(read_file("$evidence/compiler-status.txt"), qr/original_status=124/, 'timeout status retained for upload');
+    like(read_file("$evidence/compiler-attempt-1.txt"), qr/certificate verification failed/, 'timeout retains hidden attempt evidence');
+    unlike(read_file("$evidence/compiler-output.txt") . $printed, qr/exact-environment-secret/, 'timeout evidence stays sanitized');
+}
 # Exercise the workflow's actual upload-report branch without a hosted upload.
 my $workflow = read_file('.github/workflows/build-release-candidate.yml');
 my ($report) = $workflow =~ /- name: Report setup evidence\n.*?        run: \|\n((?:          [^\n]*\n)+)/s;

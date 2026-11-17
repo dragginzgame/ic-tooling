@@ -14,32 +14,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Measured budgets and evidence reserve: docs/qualification/ci-setup.md.
   repository:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        timeout-minutes: 2
         with:
           persist-credentials: false
       - name: Prepare pinned Rust and repository components
         id: compiler
+        timeout-minutes: 3
         env:
           CI_SETUP_ROOT: ${{ runner.temp }}/ic-tooling-setup
           TOKO_TOOLING_STORE: ${{ runner.temp }}/ic-tooling-setup/tools
         run: |
           printf 'CI_SETUP_ROOT=%s\nTOKO_TOOLING_STORE=%s\n' "$CI_SETUP_ROOT" "$TOKO_TOOLING_STORE" >> "$GITHUB_ENV"
-          perl scripts/ci/setup-diagnostics.pl compiler rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy
+          perl scripts/ci/setup-diagnostics.pl compiler timeout --kill-after=10s 150s rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+        timeout-minutes: 1
       - name: Prepare common tools
         id: tools
-        run: perl scripts/ci/setup-diagnostics.pl tools make install-tools
+        timeout-minutes: 5
+        run: perl scripts/ci/setup-diagnostics.pl tools timeout --kill-after=10s 270s make install-tools
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+        timeout-minutes: 1
         with:
           mode: save
       - name: Admit snapshot and Cargo pins
+        timeout-minutes: 1
         run: make check
       - name: Check formatting without changing source
+        timeout-minutes: 1
         run: make fmt-check
       - name: Retain setup diagnostics
+        timeout-minutes: 2
         id: setup_evidence
         if: ${{ failure() && (steps.compiler.outcome == 'failure' || steps.tools.outcome == 'failure') }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -51,6 +61,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Report setup evidence
+        timeout-minutes: 1
         if: ${{ always() && (steps.compiler.outcome == 'failure' || steps.tools.outcome == 'failure') }}
         env:
           EVIDENCE_URL: ${{ steps.setup_evidence.outputs.artifact-url }}
@@ -64,23 +75,30 @@ jobs:
           fi
   secrets:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        timeout-minutes: 2
         with:
           fetch-depth: 0
           persist-credentials: false
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+        timeout-minutes: 1
       - name: Prepare pinned secret scanner
+        timeout-minutes: 2
         run: |
           scanner="$(bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh gitleaks --install-dir "$RUNNER_TEMP/ci-tools")"
           echo "GITLEAKS_BIN=$scanner" >> "$GITHUB_ENV"
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+        timeout-minutes: 1
         with:
           mode: save
       - name: Scan repository history once
+        timeout-minutes: 2
         run: '"$GITLEAKS_BIN" git --redact=100 --no-banner --no-color --log-level error'
   libraries:
     needs: repository
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -88,14 +106,18 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        timeout-minutes: 2
         with:
           persist-credentials: false
       - name: Prepare pinned Rust components
+        timeout-minutes: 3
         run: rustup toolchain install 1.100.0 --profile minimal --component clippy --component rustfmt
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+        timeout-minutes: 1
         with:
           extra-key: testkit-managed-server-pocketic-16.1.0
       - name: Prepare external simulator owner and server
+        timeout-minutes: 15
         shell: bash
         run: |
           cargo fetch --locked
@@ -112,18 +134,22 @@ jobs:
           echo "TESTKIT_SERVER_ARCHIVE=$archive" >> "$GITHUB_ENV"
           echo "TESTKIT_GZIP=/usr/bin/gzip" >> "$GITHUB_ENV"
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
+        timeout-minutes: 1
         with:
           mode: save
           extra-key: testkit-managed-server-pocketic-16.1.0
       - name: Qualify command lifetime and failure cleanup
+        timeout-minutes: 4
         id: simulator-qualification
         run: make test-testkit-server-cli
       - name: Qualify packaged HTTP, Text, Testkit and metadata editor
+        timeout-minutes: 12
         id: library-qualification
         env:
           LIBRARY_RELEASE_ONLINE: 'true'
         run: bash scripts/qualification/library-release-candidate.sh http text testkit cargo-metadata
       - name: Retain library archives and evidence
+        timeout-minutes: 2
         if: ${{ always() && (steps.library-qualification.outcome != 'skipped' || steps.simulator-qualification.outcome != 'skipped') }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -143,6 +169,7 @@ jobs:
             target/library-release.*/candidate/Cargo.lock
           if-no-files-found: error
       - name: Retain simulator setup diagnostics
+        timeout-minutes: 2
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -159,6 +186,7 @@ jobs:
           if-no-files-found: warn
   native:
     needs: repository
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -166,16 +194,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        timeout-minutes: 2
         with:
           persist-credentials: false
       - name: Prepare pinned Rust and Wasm target
+        timeout-minutes: 3
         run: rustup toolchain install 1.100.0 --profile minimal --component clippy --component rustfmt --target wasm32-unknown-unknown
       - name: Qualify the four packaged crates
+        timeout-minutes: 8
         env:
           BUILD_RELEASE_ONLINE: 'true'
           BUILD_RELEASE_CONSUMER: none
         run: bash scripts/qualification/build-release-candidate.sh
       - name: Retain candidate archives and evidence
+        timeout-minutes: 2
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

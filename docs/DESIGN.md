@@ -24,6 +24,21 @@ deferred until shared-target support in Stage 3.
 
 This is a standalone replacement design. It does not depend on access to the in-progress checkout and authorizes no deletion, repository publication or registry release. It establishes the rules for the next implementation.
 
+## Implementation contracts
+
+Read the affected owner's contract before changing its implementation. These
+elaborate the accepted design; current work and blockers stay in the handoff.
+
+| Owner | Contract |
+| --- | --- |
+| Build | [Owned builds](build-owned-artifact.md) |
+| Cargo metadata command | [Release candidate rendering](cargo-metadata.md) |
+| Artifacts | [Producer commitments](byte-commitments.md) |
+| FS | [Preparation](directory-preparation.md), [publication](directory-publication.md), [locks](sidecar-locks.md), [custody](filesystem-custody.md) |
+| HTTP / Text | [Bounded bodies](http-body.md), [presentation](text-presentation.md) |
+| Process | [Execution](process-execution.md), [handoff/reaping](process-handoff.md) |
+| Testkit | [Held replies](testkit-held-replies.md), [managed server](testkit-server.md), [server command](simulator-ownership.md) |
+
 # Why the first plan produced a transplant
 
 The previous plan combined “greenfield” with four preservation defaults: keep eight package identities, retain unresolved exports, keep current signatures and import proven primitives with their tests. Those defaults made whole-crate adoption the easiest compliant action. They also made downstream compilation the main evidence of progress.

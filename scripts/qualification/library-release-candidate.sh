@@ -49,6 +49,7 @@ trap 'printf "Library release candidate evidence: %s\n" "$scratch"' EXIT
 candidate="$scratch/candidate"
 mkdir -p "$candidate/crates" "$scratch/archives"
 inputs=(Cargo.toml Cargo.lock LICENSE.md ci/cargo-release-groups.json
+  scripts/qualification/archive-compilation.sh
   scripts/qualification/library-release-candidate.sh scripts/qualification/testkit-installed.sh
   scripts/qualification/test-pocketic-setup.sh scripts/qualification/test-testkit-server-cli.sh)
 for package in "${packages[@]}"; do inputs+=("crates/$package"); done
@@ -88,7 +89,8 @@ done
   printf ']\n'
 } > "$candidate/Cargo.toml"
 cp Cargo.lock "$candidate/Cargo.lock"
-export CARGO_TARGET_DIR="$scratch/compiled"
+source "$repo/scripts/qualification/archive-compilation.sh"
+prepare_archive_compilation "$repo" "$candidate" "$scratch" library
 cargo metadata --manifest-path "$candidate/Cargo.toml" --format-version 1 "${network[@]}" > "$scratch/candidate-metadata.json"
 # Extracted archives resolve Host dependencies from the registry rather than root
 # workspace paths. Fetch that graph explicitly before the offline feature checks.
@@ -96,8 +98,11 @@ if [[ "${LIBRARY_RELEASE_ONLINE:-false}" == true ]]; then
   cargo fetch --manifest-path "$candidate/Cargo.toml" --locked > "$scratch/candidate-fetch.log" 2>&1
 fi
 for package in "${packages[@]}"; do
+  # A selected archive and a transitive registry dependency may share a name.
+  # Admit the workspace member; preserve registry resolution for its dependencies.
   jq -e --arg package "$package" --arg root "$candidate" '
-    [.packages[] | select(.name == $package)] as $p |
+    .workspace_members as $members |
+    [.packages[] | select(.name == $package and (.id as $id | $members | index($id)))] as $p |
     ($p | length) == 1 and $p[0].source == null and
     $p[0].manifest_path == ($root + "/crates/" + $package + "/Cargo.toml") and
     $p[0].publish == ["crates-io"] and ($p[0].description | length > 0)

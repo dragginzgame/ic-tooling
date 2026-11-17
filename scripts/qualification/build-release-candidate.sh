@@ -51,7 +51,8 @@ cp "$repo/qualification/"{Cargo.toml,Cargo.lock} "$candidate/qualification/"
 cp -R "$repo/qualification/owned-wasm-probe" "$candidate/qualification/"
 cp "$repo/Cargo.lock" "$candidate/Cargo.lock"
 cp "$repo/LICENSE.md" "$candidate/LICENSE.md"
-export CARGO_TARGET_DIR="$scratch/compiled"
+source "$repo/scripts/qualification/archive-compilation.sh"
+prepare_archive_compilation "$repo" "$candidate" "$scratch" build
 cargo metadata --manifest-path "$candidate/Cargo.toml" --format-version 1 ${network[@]+"${network[@]}"} > "$scratch/candidate-metadata.json"
 if [[ "${BUILD_RELEASE_ONLINE:-false}" == true ]]; then
   cargo fetch --manifest-path "$candidate/qualification/Cargo.toml" --locked

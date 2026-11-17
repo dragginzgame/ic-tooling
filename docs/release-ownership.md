@@ -54,6 +54,13 @@ Existing compatible foundation/Process dependency minimums remain unchanged;
 Build and the other library contracts need no release. Private repository fixes
 ship with this commit; the private Tools ledger remains pending.
 
+The module-layout cleanup moved six Rust files into their existing directories
+as `mod.rs`, preserving source bytes and module paths. Canic qualification
+generators use the same layout and ordinary child discovery; this does not renew
+historical consumer acceptance. Focused Clippy/formatting checks and 28 module
+tests passed; evidence remains under `target/module-layout-review/`. Qualification
+path-resolution acceptance remains with the [source-capture checks](qualification/local-sources.md).
+
 The Build/Foundation/Process archive gate passes at `target/build-release.Q6xVhMK1/`.
 Testkit's archive gate at `target/library-release.Ss7XdgVq/` passes package/source,
 feature graphs, Clippy, unit/docs, CLI and all four installed fixture/server cases.
@@ -319,6 +326,11 @@ server, followed by independent observation of all three deleted instances.
 Logs, archives, checksums, source capture and the candidate lock remain under
 `target/library-release.*`; changed source refuses completion. No sibling migration
 or older consumer test run substitutes for this archive gate.
+
+Both archive runners retain fresh evidence while reusing disposable dependency
+compilation output. See the [cache contract, invalidation regression and local
+measurements](qualification/archive-cache.md); use
+`ARCHIVE_QUALIFICATION_CACHE=false` to request a fresh compilation directory.
 
 The existing GitHub workflow now has a separate `libraries` matrix for Linux,
 Apple Silicon macOS and Intel macOS, sharing the single repository secret scan.

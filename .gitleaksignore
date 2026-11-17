@@ -1,0 +1,3 @@
+# Synthetic redaction fixture: literal marker plus "private-key-body", not key material.
+# Scope only the original committed finding; future findings remain scanned.
+78f1d2fbfbda6cac3b39f49dfe8aaa3c26472135:scripts/ci/test-setup-diagnostics.t:private-key:31

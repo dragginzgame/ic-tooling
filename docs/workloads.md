@@ -111,6 +111,6 @@ contract; do not build a cache or infer global workload retirement. The maintain
 explicitly confirmed Profiler's retirement on 2026-11-16, resolving its observation
 owner and native-acceptance question without introducing an unused API.
 
-Native host evidence is recorded in the [handoff](status/current.md); consumer
+Native host evidence is recorded in the [release receipts](release-ownership.md); consumer
 archive and deployment acceptance remain separate. Shared build caching stays
 deferred until matched measurements demonstrate a workload.

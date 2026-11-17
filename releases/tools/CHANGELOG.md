@@ -10,6 +10,22 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Admit library archive candidates by workspace identity, allowing a separate
+  registry dependency with the same package name. Resolve the secret-scan false
+  positive with one historical fixture fingerprint; keep future findings scanned
+  and preserve private-key redaction coverage.
+
+- Bound CI jobs and individual setup/qualification steps using observed hosted
+  durations, leaving time for failure evidence uploads. Keep compiler/tool timeout
+  diagnostics inside the existing sanitized collector and preserve failure status.
+
+- Reuse disposable Cargo compilation directories across archive qualification
+  retries while keeping candidates, archives and evidence fresh. Refresh extracted
+  source timestamps to prevent stale artifact acceptance; retain an opt-out for
+  cold compilation and a changed/backdated-source rejection/recovery regression.
+  Record matched local cold/warm measurements in the
+  [cache contract](../../docs/qualification/archive-cache.md).
+
 - Refresh Scheduling's current Testkit/Runtime admission and the reviewed Protocol
   replacement checksum. Add `admit-replacement` to qualify local driver graphs
   without requiring a prepared simulator; preserve source and lock-drift refusal.
