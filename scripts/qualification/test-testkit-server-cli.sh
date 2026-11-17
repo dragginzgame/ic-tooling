@@ -3,7 +3,7 @@
 set -euo pipefail
 : "${TESTKIT_SERVER_CLI:?select an absolute prepared ic-testkit-server executable}"
 : "${TESTKIT_SERVER_DIRECTORY:?select the prepared Testkit server directory}"
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 scratch="$(mktemp -d "$repo/target/testkit-server-cli.XXXXXXXX")"
 export SIMULATOR_TEST_EVIDENCE="$scratch"
 trap 'printf "Testkit CLI evidence: %s\n" "$scratch"' EXIT

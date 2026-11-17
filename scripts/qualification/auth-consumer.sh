@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Focused package admission, not Auth's complete release/MSRV feature matrix.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${AUTH_SOURCE:-$repo/../ic-auth}"
 revision=e52a40be75dd9809d0528189d84b43fe96952ad9
 export PATH="$repo/.tools/host/bin:$PATH" CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
@@ -22,7 +22,7 @@ IC_CARGO_QUALIFICATION="$(jq -ser '
   if length == 1 then .[0] else error("expected one qualification executable") end
 ' "$scratch/tool.jsonl")"
 export IC_CARGO_QUALIFICATION TMPDIR="$scratch/runtime"
-cd "$scratch/source"
+CDPATH='' cd -- "$scratch/source"
 bash scripts/ci/test-package-consumer.sh
 CARGO_TARGET_DIR="$scratch/packages" cargo package -p ic-auth -p ic-auth-protocol-types -p ic-auth-wire \
   --locked --offline --allow-dirty --no-verify

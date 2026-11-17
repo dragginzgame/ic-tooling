@@ -106,10 +106,10 @@ index 948e72b..983d49a 100644
  base64.workspace = true
  canic.workspace = true
  canic-management-protocol.workspace = true
-diff --git a/crates/canic-host/src/store.rs b/crates/canic-host/src/store.rs
+diff --git a/crates/canic-host/src/store/mod.rs b/crates/canic-host/src/store/mod.rs
 index 3d7636a..7bec1fa 100644
---- a/crates/canic-host/src/store.rs
-+++ b/crates/canic-host/src/store.rs
+--- a/crates/canic-host/src/store/mod.rs
++++ b/crates/canic-host/src/store/mod.rs
 @@ -54,7 +54,34 @@ pub(crate) fn put(path: &Path, bytes: &[u8]) -> Result<()> {
  }
  
@@ -146,19 +146,18 @@ index 3d7636a..7bec1fa 100644
  }
  
  pub(crate) fn json<T: DeserializeOwned>(path: &Path) -> Result<T> {
-@@ -64,3 +91,7 @@ pub(crate) fn json<T: DeserializeOwned>(path: &Path) -> Result<T> {
+@@ -64,3 +91,6 @@ pub(crate) fn json<T: DeserializeOwned>(path: &Path) -> Result<T> {
  pub(crate) fn put_json(path: &Path, value: &impl Serialize) -> Result<()> {
      put(path, &serde_json::to_vec_pretty(value).map_err(supplier)?)
  }
 +
 +#[cfg(test)]
-+#[path = "store_read_tests.rs"]
 +mod read_tests;
-diff --git a/crates/canic-host/src/store_read_tests.rs b/crates/canic-host/src/store_read_tests.rs
+diff --git a/crates/canic-host/src/store/read_tests.rs b/crates/canic-host/src/store/read_tests.rs
 new file mode 100644
 index 0000000..87f9bca
 --- /dev/null
-+++ b/crates/canic-host/src/store_read_tests.rs
++++ b/crates/canic-host/src/store/read_tests.rs
 @@ -0,0 +1,41 @@
 +use super::read;
 +use crate::{Error, tests::directory};

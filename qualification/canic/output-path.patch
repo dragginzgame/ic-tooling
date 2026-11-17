@@ -1,5 +1,5 @@
---- a/crates/canic-host/src/app_build.rs
-+++ b/crates/canic-host/src/app_build.rs
+--- a/crates/canic-host/src/app_build/mod.rs
++++ b/crates/canic-host/src/app_build/mod.rs
 @@ -66,7 +66,7 @@
          // Compare physical destinations, including missing outputs. Keep the
          // original path for the artifact writer's independent safety checks.

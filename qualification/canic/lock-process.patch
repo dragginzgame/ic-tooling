@@ -14,8 +14,8 @@
 +ic-host-process-next.workspace = true
  ic-host-text.workspace = true
  ic-platform = { workspace = true, features = ["agent", "ic-protocol", "management-canister-types", "cycles-ledger-types", "icp-ledger-types", "icrc-ledger-types"] }
---- a/crates/canic-host/src/app_build.rs
-+++ b/crates/canic-host/src/app_build.rs
+--- a/crates/canic-host/src/app_build/mod.rs
++++ b/crates/canic-host/src/app_build/mod.rs
 @@ -1,5 +1,4 @@
  //! App recipes reuse the artifact builder; Cargo owns dependency resolution and locking.
  use crate::{Artifact, Error, Result, supplier};

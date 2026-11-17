@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Explicit library/tool archive readiness; no publication or sibling edits.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
-cd "$repo"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+CDPATH='' cd -- "$repo"
 [[ $# -gt 0 ]] || { echo 'Select release groups: http text testkit cargo-metadata' >&2; exit 2; }
 packages=()
 selection=()
@@ -81,7 +81,7 @@ for package in "${packages[@]}"; do
   diff -r "crates/$package/src" "$candidate/crates/$package/src"
   tar -tzf "$archive" > "$scratch/$package-files.txt"
 done
-(cd "$scratch/archives" && shasum -a 256 ./*.crate) > "$scratch/archives.sha256"
+(CDPATH='' cd -- "$scratch/archives" && shasum -a 256 ./*.crate) > "$scratch/archives.sha256"
 {
   printf '[workspace]\nresolver = "3"\nmembers = [\n'
   for package in "${packages[@]}"; do printf '  "crates/%s",\n' "$package"; done

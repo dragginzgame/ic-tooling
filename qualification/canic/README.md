@@ -1,5 +1,15 @@
 # Canic retained-record admission
 
+## Module layout maintenance — 2026-11-17
+
+Qualification runners place modules with fixture children in `foo/mod.rs`,
+including Store, app-build, signer capture and staging. Lock and retained-read
+fixtures use ordinary child-module discovery without path overrides. Store/app-build
+patch paths follow these export-only moves; migration logic and stale-context
+checks are unchanged. This layout cleanup does not renew the historical consumer
+acceptance below or make obsolete migration patches applicable to the rewritten
+consumer.
+
 ## Current source review — 2026-11-16
 
 The current Canic working tree has already adopted the published host foundation.

@@ -17,6 +17,20 @@ local, and hosted CI runs asynchronously.
 
 ## Latest delivery
 
+Individual dependency review relaxed libproc to compatible 0.15 patches, WAT to
+compatible 1.x releases and test-only wasmparser to compatible 0.263 patches.
+PocketIC remains exact for its [qualified server pairing](../testkit-server.md#pocketic-client-requirement).
+Locked metadata passes with unchanged package identities and lockfile; no new
+runtime qualification is claimed. Process notes are pending at 0.80.4; Testkit's
+existing pending 0.108.0 entry includes its compatible requirement cleanup.
+
+Local follow-up adopts published Protocol 0.3.2 for Testkit's optional held
+fixtures and retains current Types 0.21.2. Public encoder-error type identity
+requires the pending Testkit 0.108.0 release; package versions are not yet bumped.
+Six unit tests, Testkit Clippy, graph checks and current Scheduling replacement
+driver admission pass. No installed rerun or publication is claimed; see the
+[current adoption record](../qualification/platform-adoption.md#local-protocol-032-adoption).
+
 Process 0.80.3 and Cargo metadata 0.1.0 are published from
 `de86fe21dc746eda79e662008f0d670f20970ac7`, with annotated
 `process-v0.80.3` and `cargo-metadata-v0.1.0` tags pushed on `main`.
@@ -39,6 +53,18 @@ subsequent documentation receipt are delivered directly on `main`.
 
 Toko 0.44.11 is installed through its verified 49-file exporter snapshot from
 `08d63df7661910554ef72980037f55edd914aba0`; both workspace markers/locks agree.
+
+Local module-layout cleanup moves six Rust files into their existing directories
+as `mod.rs`, preserving source bytes and module paths. Canic qualification
+generators use the same layout and ordinary child discovery; historical consumer
+acceptance is not renewed. Focused Clippy/formatting checks and 28 module tests
+pass (two installed-server tests remain ignored); logs are under
+`target/module-layout-review/`.
+
+Qualification directory changes now ignore inherited `CDPATH`, removing the
+caller's obligation to unset it. All 108 relative runner-startup cases and the
+relative-source capture/drift checks pass; see the
+[source-capture checks](../qualification/local-sources.md).
 
 The CLI reuses the managed-server/Process/FS owners and removes the private runner.
 Scheduling and archive scripts require explicit prepared tools/directories;
@@ -102,6 +128,10 @@ command. Native CI is wired and remains asynchronous. The pre-existing Protocol
 claim new Testkit/Protocol qualification.
 
 ## Owners and remaining requirements
+
+Local CI maintenance adds [bounded setup diagnostics](../qualification/ci-setup.md)
+to the scaffold job. Offline failure/redaction/collection and upload-reporting
+fixtures qualify the wiring; hosted upload/retrieval is not yet observed.
 
 | Owner | Contract |
 | --- | --- |

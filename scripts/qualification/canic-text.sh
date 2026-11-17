@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Current Canic CLI display contracts only; no deployments or legacy source.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${CANIC_SOURCE:-$repo/../canic}"
 mkdir -p "$repo/target"
 scratch="$(mktemp -d "$repo/target/canic-text.XXXXXXXX")"
@@ -13,7 +13,7 @@ export GIT_CEILING_DIRECTORIES="$repo/target"
 git -C "$scratch/source" apply --check "$repo/qualification/canic/text.patch"
 git -C "$scratch/source" apply "$repo/qualification/canic/text.patch"
 export CARGO_TARGET_DIR="$repo/target/canic-consumer-build"
-cd "$scratch/source"
+CDPATH='' cd -- "$scratch/source"
 cargo metadata --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '
   . as $m | (.packages[] | select(.name == "canic-cli") | .id) as $cli |

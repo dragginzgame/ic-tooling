@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Compare completed Backup commitment producers without migrating unrelated custody.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 scope="${1:-all}"
 case "$scope" in all|assembly) ;; *) echo 'Expected all or assembly' >&2; exit 2 ;; esac
 assembly_tests=(

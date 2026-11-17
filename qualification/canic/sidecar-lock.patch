@@ -4,8 +4,8 @@
 +mod sidecar_lock;
  mod output_publication;
  mod app_build;
---- a/crates/canic-host/src/store.rs
-+++ b/crates/canic-host/src/store.rs
+--- a/crates/canic-host/src/store/mod.rs
++++ b/crates/canic-host/src/store/mod.rs
 @@ -3,6 +3,3 @@
  use serde::{Serialize, de::DeserializeOwned};
 -use std::{

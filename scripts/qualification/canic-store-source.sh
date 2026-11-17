@@ -3,7 +3,7 @@
 set -euo pipefail
 cli="$1"
 scratch="$2"
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 supplier="$scratch/supplier"
 mkdir -p "$supplier/crates" "$scratch/store-tools" "$scratch/store-workspace"
 cp "$repo/qualification/"{Cargo.toml,Cargo.lock} "$supplier/"

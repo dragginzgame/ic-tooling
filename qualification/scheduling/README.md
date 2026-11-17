@@ -4,24 +4,30 @@
 Its owner published Timers 0.46.0 and Jobs 0.39.0 with Runtime/guard 0.23.14 and
 Testkit 0.107.2 after complete installed checks on Linux/PocketIC 16.0.0. This
 supersedes the historical Runtime build blocker below. Current local Scheduling
-now selects registry Testkit 0.107.3 and Toko 0.44.11. This owner evidence is not a
+now selects registry Testkit 0.107.4, Runtime 0.23.15 and Toko 0.44.11. This owner evidence is not a
 rerun of Tooling's earlier PocketIC 16.1.0 comparisons.
 
 `make test-scheduling-consumer` snapshots `../ic-scheduling`, including tracked
 edits and non-ignored source. It verifies rewrite ancestry from
 `f382bacac5461ea965e5813b56f15bd4757bf596`, refuses capture drift and admits one
-registry Testkit 0.107.3 shared by the executor and Once drivers. No direct
+registry Testkit 0.107.4 shared by the executor and Once drivers. No direct
 PocketIC dependency or historical-source fallback is admitted. Installed modes
 require explicit `TESTKIT_SERVER_CLI` and `SCHEDULING_SERVER_DIRECTORY`; see the
 [product command](../../docs/simulator-ownership.md). Tools are hashed before/after.
 
 The local replacement adapter changes only the supplier manifest dependency,
-selecting this checkout's Testkit 0.107.4. It preserves the consumer's held-fixture calls,
+selecting this checkout's Testkit 0.108.0. It preserves the consumer's held-fixture calls,
 external endpoint boundary and private selectors. Stale patches must refuse;
 source/graph admission does not imply a fresh installed or archive pass.
 For the Protocol adoption, the replacement lock admission additionally permits
-only registry Protocol 0.2.7 with its reviewed archive checksum. The original
+only registry Protocol 0.3.3 with its reviewed archive checksum. The original
 captured lock remains intact; every other new external identity still refuses.
+
+`bash scripts/qualification/scheduling-consumer.sh admit-replacement` performs
+source/graph/lock admission and driver Clippy checks with the local replacement
+without starting a simulator. It passes for the current captured source in the
+[Protocol 0.3.2 adoption record](../../docs/qualification/platform-adoption.md#local-protocol-032-adoption).
+Installed acceptance below retains its original supplier and source identity.
 
 ## Current runner acceptance — 2026-11-16
 

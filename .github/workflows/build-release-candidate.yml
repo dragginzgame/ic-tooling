@@ -21,10 +21,17 @@ jobs:
         with:
           persist-credentials: false
       - name: Prepare pinned Rust and repository components
-        run: rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy
+        id: compiler
+        env:
+          CI_SETUP_ROOT: ${{ runner.temp }}/ic-tooling-setup
+          TOKO_TOOLING_STORE: ${{ runner.temp }}/ic-tooling-setup/tools
+        run: |
+          printf 'CI_SETUP_ROOT=%s\nTOKO_TOOLING_STORE=%s\n' "$CI_SETUP_ROOT" "$TOKO_TOOLING_STORE" >> "$GITHUB_ENV"
+          perl scripts/ci/setup-diagnostics.pl compiler rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
       - name: Prepare common tools
-        run: make install-tools
+        id: tools
+        run: perl scripts/ci/setup-diagnostics.pl tools make install-tools
       - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@08d63df7661910554ef72980037f55edd914aba0 # 0.44.11
         with:
           mode: save
@@ -32,6 +39,29 @@ jobs:
         run: make check
       - name: Check formatting without changing source
         run: make fmt-check
+      - name: Retain setup diagnostics
+        id: setup_evidence
+        if: ${{ failure() && (steps.compiler.outcome == 'failure' || steps.tools.outcome == 'failure') }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: setup-repository-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.compiler.outputs.evidence }}
+            ${{ steps.tools.outputs.evidence }}
+          if-no-files-found: error
+          retention-days: 7
+      - name: Report setup evidence
+        if: ${{ always() && (steps.compiler.outcome == 'failure' || steps.tools.outcome == 'failure') }}
+        env:
+          EVIDENCE_URL: ${{ steps.setup_evidence.outputs.artifact-url }}
+          UPLOAD_OUTCOME: ${{ steps.setup_evidence.outcome }}
+        run: |
+          if [[ "$UPLOAD_OUTCOME" == success && -n "$EVIDENCE_URL" ]]; then
+            printf 'Setup diagnostics: %s\n' "$EVIDENCE_URL" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '::error::Setup evidence missing or upload failed; inspect the sanitized setup excerpt.'
+            exit 1
+          fi
   secrets:
     runs-on: ubuntu-24.04
     steps:

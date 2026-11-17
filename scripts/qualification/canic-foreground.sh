@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Current read-only Canic export; harmless tool fixtures, never live ICP calls.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 [[ "$(uname -s)" == Linux ]] || { echo 'This PTY recipe requires Linux script; macOS remains a separate gate.' >&2; exit 1; }
 source_checkout="${CANIC_SOURCE:-$repo/../canic}"
 mkdir -p "$repo/target"
@@ -22,7 +22,7 @@ manifest="$scratch/source/Cargo.toml"
 cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-profile-client") | .id) as $client |
-  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.4" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
   any($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
   all($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name != "ic_host_process")
 ' "$scratch/metadata.json" >/dev/null

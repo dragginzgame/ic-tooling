@@ -3,6 +3,22 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.108.0] - 2026-11-17
+
+### ⚠️ Breaking
+
+- Adopt Protocol `>=0.3.2, <0.4.0` for held-reply fixtures. The public
+  `CompileError::Encoding` payload now uses Protocol 0.3's `EncodeError` identity;
+  consumers naming that type must also select Protocol 0.3. HTTP encoder bytes,
+  fixture limits, Types 0.21.2 and original PocketIC types are unchanged.
+  Default and managed-server use still exclude the optional Protocol dependency.
+
+### 🔧 Changed
+
+- Permit compatible WAT 1.x and wasmparser 0.263 patch updates from their reviewed
+  minimums. Keep the PocketIC client exact for the qualified, checksummed server
+  assets. This requirement cleanup leaves all three locked versions unchanged.
+
 ## [0.107.4] - 2026-11-16
 
 ### 🐛 Fixed

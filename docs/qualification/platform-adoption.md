@@ -1,4 +1,42 @@
-# Platform adoption — 2026-11-16
+# Platform adoption — 2026-11-17
+
+## Local Protocol 0.3.2 adoption
+
+The registry review on 2026-11-17 found non-yanked Protocol 0.3.2, Types 0.21.2,
+Platform 0.34.11 and Runtime 0.23.15. Testkit is the only direct Platform-family
+consumer in this repository: its optional held-reply feature now selects Protocol
+`>=0.3.2, <0.4.0`, still with only `http-request`, and retains current Types 0.21.2.
+The facade and Runtime are not product dependencies. The separate owned-Wasm-probe
+workspace has no Platform-family dependency. Historical consumer patch context is
+not an independent Tooling supplier selection; frozen comparisons remain excluded.
+
+Protocol 0.3.2's downloaded archive matches registry SHA-256
+`b2b1db444c839e816c1f2b6edec5ef8966a3f022a73a12819cc0db8477e5b560`
+and identifies source `80a5b488666629dd28152f6bcb6d489091d55994`. Its
+`src/http_request/` tree is byte-identical to the previously locked 0.2.8 archive.
+No encoder adaptation is needed. Nevertheless, Testkit exposes Protocol's
+`EncodeError` through `CompileError::Encoding`; its new Cargo type identity needs
+the pending Testkit 0.108.0 minor release. Consumers naming that payload type must
+select Protocol 0.3. Package versions and published releases have not advanced.
+
+Evidence under `target/platform-adoption-latest/` records six passing held-fixture
+unit tests, warning-denied Testkit Clippy, sole `http-request` feature admission,
+default-graph exclusion and independent-workspace metadata. The lock delta from
+the starting working tree contains only Protocol's version and checksum; earlier
+unrelated lock changes are preserved. The two installed tests remain ignored;
+unchanged encoder evidence does not constitute a fresh installed or native-host run.
+
+The Scheduling adapter now admits the captured consumer's registry Testkit 0.107.4
+and Runtime 0.23.15 context. Its local replacement admits only the reviewed new
+Protocol checksum while retaining refusal of unrelated external lock changes.
+`bash scripts/qualification/scheduling-consumer.sh admit-replacement` passes
+source capture, graph/lock admission and both driver Clippy checks without requiring
+a server. Capture `target/scheduling-new.lc7k0gVW/` has HEAD
+`df5d14a482973e427ea79cae022bd38971b39fa7` and source-tar SHA-256
+`90ece655056c467ba7653319368a1cf1471f34aec3beb09ac34982b882ac3fe2`.
+Sibling implementations are unchanged. This removes stale supplier admission and
+the need to start a simulator merely to qualify the replacement driver graph.
+The changes are local; publication and installed consumer delivery are separate.
 
 ## Protocol 0.2.7 deployment
 

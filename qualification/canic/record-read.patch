@@ -1,5 +1,5 @@
---- a/crates/canic-host/src/store.rs
-+++ b/crates/canic-host/src/store.rs
+--- a/crates/canic-host/src/store/mod.rs
++++ b/crates/canic-host/src/store/mod.rs
 @@ -54,7 +54,34 @@ pub(crate) fn put(path: &Path, bytes: &[u8]) -> Result<()> {
  }
  

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Qualify current local sibling inputs without modifying the sibling.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${BACKUP_SOURCE:-$repo/../ic-backup}"
 scope="${1:-custody}"
 case "$scope" in custody|http) ;; *) printf 'expected custody or http\n' >&2; exit 2;; esac
@@ -19,7 +19,7 @@ export TMPDIR="$scratch/runtime"
 export CARGO_TARGET_DIR="$repo/target/backup-consumer-build"
 export CARGO_NET_OFFLINE=true
 export RUSTUP_AUTO_INSTALL=0
-cd "$scratch/source"
+CDPATH='' cd -- "$scratch/source"
 cargo metadata --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '
   . as $metadata |

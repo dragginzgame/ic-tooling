@@ -16,8 +16,8 @@
  mod config;
  mod fleet;
  mod fleet_plan;
---- a/crates/canic-host/src/app_build.rs
-+++ b/crates/canic-host/src/app_build.rs
+--- a/crates/canic-host/src/app_build/mod.rs
++++ b/crates/canic-host/src/app_build/mod.rs
 @@ -4,5 +4,4 @@
  use std::{
      path::{Path, PathBuf},

@@ -43,6 +43,34 @@ libraries are published; publication permission in a manifest is not delivery.
 
 ## Independent library publication
 
+### Foundation 0.80.3, Process 0.80.4 and Testkit 0.108.0 preparation
+
+The maintainer authorized deployment on 2026-11-17 from this checkout's `main`
+to `origin/main` and crates.io. Foundation's module layout changes affect its
+package payloads, so both coordinated members advance. Process relaxes its
+libproc requirement; Testkit adopts Protocol 0.3 and compatible WAT/validator
+requirements, with a minor release for its exposed encoder-error type identity.
+Existing compatible foundation/Process dependency minimums remain unchanged;
+Build and the other library contracts need no release. Private repository fixes
+ship with this commit; the private Tools ledger remains pending.
+
+The Build/Foundation/Process archive gate passes at `target/build-release.Q6xVhMK1/`.
+Testkit's archive gate at `target/library-release.Ss7XdgVq/` passes package/source,
+feature graphs, Clippy, unit/docs, CLI and all four installed fixture/server cases.
+Its first CLI attempt was refused by sandbox loopback restrictions; remaining
+stages passed with local-port access against the same extracted source and tools.
+Versioned Scheduling replacement admission passes at
+`target/scheduling-new.6tFpSuVA/`. Version preparation changes package metadata,
+not qualified Rust implementation. Native CI remains asynchronous by maintainer
+direction; prior native evidence is not relabelled as a new pass.
+
+Cargo selected non-yanked Protocol 0.3.3 during preparation. Its archive SHA-256
+is `4676f2fabfff6a9aab9d6cccdf2a5870059e88b21345bc1913818be621dc1f34`;
+the HTTP encoder is byte-identical to reviewed 0.3.2. The compatible minimum stays
+0.3.2. Concurrent lock selections are retained under `target/deploy-ranges/` for
+restoration after publication. Release and registry receipts follow below once
+delivery is independently verified.
+
 ### Process 0.80.3 and Cargo metadata 0.1.0 delivery
 
 The maintainer authorized libproc adoption and deployment with Tooling #8's fix.

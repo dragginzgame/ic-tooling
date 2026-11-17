@@ -23,13 +23,19 @@ Like existing cleanup/reaping, this wait is not a hard wall-clock bound.
 Cooperative membership and exclusive reaping remain required; this grants no
 authority over borrowed PIDs or credential-changing descendants.
 
-Rustix has no group-membership query for macOS. The target-gated, exact libproc
-0.15.0 dependency supplies a safe native query; errno is cleared for its documented
+Rustix has no group-membership query for macOS. The target-gated libproc dependency
+supplies a safe native query; errno is cleared for its documented
 zero-result convention. These dependencies and libproc's binding generation are
 absent from Linux builds. Native macOS setup requires Xcode/Command Line Tools
 and libclang. No observation API, sampler or application policy is added.
 The native regression distinguishes an exited solitary leader from an exited
 leader with a live child, retaining existing cleanup failure-order tests.
+
+The requirement is now `0.15.0` (`>=0.15.0, <0.16.0`), allowing compatible patch
+updates. Registry review on 2026-11-17 confirms 0.15.0 is still the latest release;
+the lockfile and native implementation remain unchanged. The macOS-only boundary,
+errno handling and cleanup qualification constrain behavior, not one patch number.
+Actual dependency upgrades still need the focused native cleanup checks.
 
 Process 0.80.3 adopts libproc 0.15.0. The non-yanked upstream archive SHA-256 is
 `564c269d134dc8276288e18bf00b30e7fe2136ff8f0974f9bf65477cd5ad82fe`.

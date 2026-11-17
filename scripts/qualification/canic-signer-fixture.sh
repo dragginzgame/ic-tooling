@@ -7,8 +7,9 @@ prepare_signer_fixture() {
   printf '\n#[cfg(test)]\nmod signer_process_tests;\n' >> "$source/crates/canic-host/src/signed/mod.rs"
   [[ ! -e "$source/crates/canic-host/src/signed/process" && ! -L "$source/crates/canic-host/src/signed/process" ]] || return
   mkdir "$source/crates/canic-host/src/signed/process"
+  mv "$source/crates/canic-host/src/signed/process.rs" "$source/crates/canic-host/src/signed/process/mod.rs" || return
   cp "$repo/qualification/canic/signer-capture-tests.rs" "$source/crates/canic-host/src/signed/process/signer_capture_tests.rs"
-  printf '\n#[cfg(test)]\nmod signer_capture_tests;\n' >> "$source/crates/canic-host/src/signed/process.rs"
+  printf '\n#[cfg(test)]\nmod signer_capture_tests;\n' >> "$source/crates/canic-host/src/signed/process/mod.rs"
   for mode in bad-version valid invalid utf8 nonzero stdout-over stderr-over literal; do
     cp "$repo/qualification/canic/signer-tool.sh" "$evidence/$mode"
     chmod 700 "$evidence/$mode"

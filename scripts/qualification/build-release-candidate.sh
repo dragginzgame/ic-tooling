@@ -2,7 +2,7 @@
 # Package and qualify only the first release's dependency-complete build stack.
 # Does not publish, commit, mutate siblings, or claim native-host equivalence.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 mkdir -p "$repo/target"
 scratch="$(mktemp -d "$repo/target/build-release.XXXXXXXX")"
 trap 'printf "Build release candidate evidence: %s\n" "$scratch"' EXIT
@@ -36,7 +36,7 @@ for package in "${packages[@]}"; do
   mv "$candidate/crates/$package-$version" "$candidate/crates/$package"
   cmp "$repo/LICENSE.md" "$candidate/crates/$package/LICENSE.md"
 done
-(cd "$scratch/archives" && shasum -a 256 ./*.crate) > "$scratch/archives.sha256"
+(CDPATH='' cd -- "$scratch/archives" && shasum -a 256 ./*.crate) > "$scratch/archives.sha256"
 # Normalized archive manifests retain registry requirements, not source paths.
 # Overrides admit the as-yet unpublished suppliers only in this test workspace.
 {

@@ -2,6 +2,13 @@
 
 Package: `ic-host-process`. Earlier unreleased headings retain development history.
 
+## [0.80.4] - 2026-11-17
+
+### 🔧 Changed
+
+- Permit compatible libproc 0.15 patch updates instead of requiring exactly
+  0.15.0. The locked dependency, macOS-only graph and cleanup behavior are unchanged.
+
 ## [0.80.3] - 2026-11-16
 
 ### 🔧 Changed

@@ -4,7 +4,7 @@ set -euo pipefail
 : "${TESTKIT_SERVER_CLI:?select an absolute prepared ic-testkit-server executable}"
 [[ "$TESTKIT_SERVER_CLI" == /* && -x "$TESTKIT_SERVER_CLI" ]]
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/ic-setup-diagnostics.XXXXXXXX")"
-fixture="$(cd "$fixture" && pwd -P)"
+fixture="$(CDPATH='' cd -- "$fixture" && pwd -P)"
 trap 'status=$?; if [[ $status == 0 ]]; then rm -rf "$fixture"; else printf "Setup regression evidence: %q\n" "$fixture" >&2; fi' EXIT
 cat > "$fixture/curl" <<'CURL'
 #!/usr/bin/env bash

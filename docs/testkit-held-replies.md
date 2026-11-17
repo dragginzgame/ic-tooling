@@ -1,5 +1,11 @@
 # Testkit: first replacement contract
 
+Local development now selects Protocol `>=0.3.2, <0.4.0`. The pending Testkit
+0.108.0 release changes the public `CompileError::Encoding` payload to Protocol
+0.3's type identity; callers naming it must align their dependency. The HTTP
+encoder source and Types selection are unchanged. See the current
+[adoption evidence](qualification/platform-adoption.md#local-protocol-032-adoption).
+
 Status: Testkit 0.107.4 is published with Protocol `>=0.2.7, <0.3.0`.
 The [compatibility correction](qualification/testkit-types-compatibility.md)
 permits Types `>=0.21.2, <0.22.0`. Scheduling has completed its Runtime migration;
@@ -17,6 +23,20 @@ defines the acceptance contract. The active rewrite is now `../ic-scheduling`.
 Its source selection and focused baseline live in
 [Scheduling qualification](../qualification/scheduling/README.md). Earlier
 old-Scheduling snapshot experiments are historical and do not define this scope.
+
+## WAT and validator dependency requirements
+
+The 2026-11-17 individual pin review changes WAT to `1.263.0`
+(`>=1.263.0, <2`) and the test-only wasmparser to `0.263.0`
+(`>=0.263.0, <0.264`). Both locked versions remain the latest non-yanked releases.
+Only Wasm bytes cross between the compiler and validator; no shared Rust type or
+exact-version coupling requires matching pins. WAT's public error remains on the
+same compatible major line. Our generated template uses established Wasm syntax;
+the contract preserves reply bytes and module limits, not one compiler's exact
+module encoding. WAT does not promise SemVer stability for every evolving text
+format feature, so actual compiler upgrades still run module validation, opaque
+reply/export checks and installed held-reply checks when emitted behavior changes.
+PocketIC retains its separate [client/server constraint](testkit-server.md#pocketic-client-requirement).
 
 ## Platform 0.34 migration review
 

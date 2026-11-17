@@ -10,6 +10,23 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Refresh Scheduling's current Testkit/Runtime admission and the reviewed Protocol
+  replacement checksum. Add `admit-replacement` to qualify local driver graphs
+  without requiring a prepared simulator; preserve source and lock-drift refusal.
+
+- Ignore inherited `CDPATH` during qualification directory changes, preserving
+  repository and relative source selection without extra path output. Add focused
+  relative-invocation and source-capture regressions.
+
+- Keep Canic qualification child modules in directory modules, including signer,
+  staging and lock fixtures. Remove remaining lock/read-fixture path overrides;
+  migration patches retain their original source-content checks.
+
+- Retain bounded, sanitized compiler/common-tool setup failures from the CI
+  scaffold job, including selected hidden attempt logs. Preserve original setup
+  status, report missing/failed collection or upload separately, and link the
+  seven-day diagnostic artifact from the job summary.
+
 - Replace the legacy Testkit 0.106.0 qualification launcher and implicit sibling
   tool lookup with Testkit's product CLI, removing the temporary private runner.
   Scheduling and archive checks use explicit prepared paths; bounded setup

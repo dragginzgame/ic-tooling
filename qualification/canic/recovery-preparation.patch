@@ -1,5 +1,5 @@
---- a/crates/canic-host/src/store.rs
-+++ b/crates/canic-host/src/store.rs
+--- a/crates/canic-host/src/store/mod.rs
++++ b/crates/canic-host/src/store/mod.rs
 @@ -42,6 +42,10 @@
      crate::output_publication::publish_in(parent, name, bytes, ic_fs_next::Destination::CreateNew)
  }

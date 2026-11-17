@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Focused source-integrity fixture; does not touch any real sibling.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/ic-local-source.XXXXXXXX")"
 trap 'rm -rf "$fixture"' EXIT
 source_checkout="$fixture/input"
@@ -28,6 +28,23 @@ cmp "$source_checkout/new file" "$scratch/source/new file"
 [[ ! -e "$scratch/source/deleted" && ! -e "$scratch/source/ignored" && ! -e "$scratch/source/.git" ]]
 sha256sum --check "$scratch/source.sha256"
 printf 'Current edits, additions, deletions, modes, links and ignored-file exclusion pass.\n'
+# Relative source selection must use the caller's directory, even if CDPATH has
+# a same-named directory elsewhere or would print the selected directory.
+mkdir -p "$fixture/decoy/input"
+for search in . "$fixture/decoy:."; do
+  (
+    CDPATH='' cd -- "$fixture"
+    export CDPATH="$search"
+    source_checkout=input
+    scratch="$(mktemp -d "$fixture/relative.XXXXXXXX")"
+    mkdir "$scratch/source"
+    export_local_source
+    [[ "$source_checkout" == "$fixture/input" && "$CDPATH" == "$search" ]]
+    [[ "$(cat "$scratch/source-checkout")" == "$fixture/input" ]]
+    cmp "$fixture/input/tracked" "$scratch/source/tracked"
+  )
+done
+printf 'Relative source selection ignores CDPATH without changing its caller.\n'
 # Change a selected file between the two captures; no export may be admitted.
 scratch="$fixture/changing"
 mkdir -p "$scratch/source"

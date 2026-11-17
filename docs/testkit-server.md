@@ -8,6 +8,21 @@ Published Testkit 0.107.4 adds the optional `cli` feature and installable
 library contract for setup/check/run; CLI policy does not enter default,
 held-reply-only or managed-server-only dependency graphs.
 
+## PocketIC client requirement
+
+Keep the Cargo client at `=16.1.0`, the latest non-yanked release reviewed on
+2026-11-17. Testkit's managed-server assets select exact server 16.1.0 binaries
+and hashes. The reviewed client accepts server versions `>=16.0.0, <17`, but that
+check describes this client; it does not establish the server minimum of future
+client releases. Published Testkit consumers do not inherit this repository's
+lockfile, so widening the client range could change their client/server pairing.
+
+Revisit the pin when adopting another client with installed server/instance and
+held-reply qualification, or when upstream guarantees a compatible client range
+for the fixed server. This protocol constraint does not require exact pins for
+unrelated libraries. Downloaded server versions and checksums remain exact even
+if the Cargo client requirement is eventually widened.
+
 The optional `managed-server` capability supplies [Tooling #6](https://github.com/dragginzgame/ic-tooling/issues/6).
 Testkit owns PocketIC asset selection and the dependency between an instance and
 its server. Process owns spawning, fair bounded output, cancellation, group

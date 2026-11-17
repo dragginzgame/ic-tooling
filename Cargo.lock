@@ -164,7 +164,7 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex",
- "syn 2.0.119",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -592,7 +592,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e35d6e78f4cebb90e51d543db8fe41528851d6deeef6ef21ebd4bfdc1e784776"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -965,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.80.2"
+version = "0.80.3"
 dependencies = [
  "sha2 0.11.1",
  "thiserror 2.0.18",
@@ -974,7 +974,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.80.2"
+version = "0.80.3"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -995,7 +995,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.80.3"
+version = "0.80.4"
 dependencies = [
  "errno",
  "libproc",
@@ -1026,9 +1026,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-protocol"
-version = "0.2.8"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6c994e205363960ac400252160967bfdec2e9574e5086232d0ccef88ffa5d77"
+checksum = "4676f2fabfff6a9aab9d6cccdf2a5870059e88b21345bc1913818be621dc1f34"
 
 [[package]]
 name = "ic-platform-types"
@@ -1045,7 +1045,7 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.107.4"
+version = "0.108.0"
 dependencies = [
  "clap",
  "ctrlc",
@@ -1722,7 +1722,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1886,7 +1886,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1943,7 +1943,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2359,7 +2359,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2960,7 +2960,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

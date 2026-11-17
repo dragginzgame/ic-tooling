@@ -28,9 +28,10 @@ ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.80.2" }
 ic-host-fs = { path = "crates/ic-host-fs", version = "0.80.2" }
 ic-host-process = { path = "crates/ic-host-process", version = "0.80.3" }
 ic-host-text = { path = "crates/ic-host-text", version = "0.77.2" }
-ic-platform-protocol = { version = "0.2.7", default-features = false }
+ic-platform-protocol = { version = "0.3.2", default-features = false }
 ic-platform-types = { version = "0.21.2", default-features = false }
-libproc = "=0.15.0"
+libproc = "0.15.0"
+# Qualified client for the fixed server assets; see docs/testkit-server.md.
 pocket-ic = "=16.1.0"
 reqwest = { version = "0.13.5", default-features = false }
 rustix = { version = "1.1.6", features = ["fs"] }
@@ -45,8 +46,8 @@ toko-tooling = "=0.44.11"
 toml = "1.2.1"
 toml_edit = "0.25.19"
 unicode-width = "0.2.3"
-wasmparser = "=0.263.0"
-wat = "=1.263.0"
+wasmparser = "0.263.0"
+wat = "1.263.0"
 
 [workspace.lints.cargo]
 unused_dependencies = "deny"

@@ -3,7 +3,7 @@
 set -euo pipefail
 mode="${1:-retained}"
 case "$mode" in retained|replacement) ;; *) exit 2 ;; esac
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${CANIC_SOURCE:-$repo/../canic}"
 mkdir -p "$repo/target"
 scratch="$(mktemp -d "$repo/target/canic-viewer.XXXXXXXX")"
@@ -28,7 +28,7 @@ if [[ "$mode" == replacement ]]; then
   cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- verify-external-lock "$scratch/original.lock" "$scratch/source/Cargo.lock" 1048576
   jq -e --arg root "$repo" '. as $m |
     (.packages[] | select(.name == "canic-cli") | .id) as $cli |
-    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.4" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
     any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
     all($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name != "ic_host_process")
   ' "$scratch/metadata.json" >/dev/null

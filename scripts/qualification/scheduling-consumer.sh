@@ -4,8 +4,8 @@ set -euo pipefail
 mode="${1:-admit}"
 selection="${2:-held-replies}"
 case "$selection" in held-replies|held-pressure|lifecycle|executor|retention|jobs-lifecycle|jobs-settlement|uncertainty|jobs-boundaries|completion-refusal|aggregate|metrics-cost) ;; *) echo 'Unknown installed selection' >&2; exit 2 ;; esac
-case "$mode" in admit|held|replacement|comparison) ;; *) echo "Expected admit, held, replacement or comparison; historical modes are retired." >&2; exit 2 ;; esac
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+case "$mode" in admit|admit-replacement|held|replacement|comparison) ;; *) echo "Expected admit, admit-replacement, held, replacement or comparison; historical modes are retired." >&2; exit 2 ;; esac
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${SCHEDULING_SOURCE:-$repo/../ic-scheduling}"
 # The rewrite moved to the canonical path; never substitute the legacy workspace.
 git -C "$source_checkout" merge-base --is-ancestor f382bacac5461ea965e5813b56f15bd4757bf596 HEAD || {
@@ -18,7 +18,7 @@ trap 'printf "Scheduling rewrite export: %s\n" "$scratch"' EXIT
 mkdir "$scratch/source"
 source "$repo/scripts/qualification/local-source.sh"
 export_local_source
-if [[ "$mode" != admit ]]; then
+if [[ "$mode" != admit && "$mode" != admit-replacement ]]; then
   : "${TESTKIT_SERVER_CLI:?select an absolute prepared ic-testkit-server executable}"
   : "${SCHEDULING_SERVER_DIRECTORY:?select an absolute prepared Testkit server directory}"
   [[ "$TESTKIT_SERVER_CLI" == /* && -x "$TESTKIT_SERVER_CLI" ]]
@@ -38,7 +38,7 @@ export CARGO_TARGET_DIR="$repo/target/scheduling-new-consumer-build"
 manifest="$scratch/source/qualification/Cargo.toml"
 cargo metadata --manifest-path "$manifest" --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e '. as $m |
-  [.packages[] | select(.name == "ic-testkit" and .version == "0.107.3" and
+  [.packages[] | select(.name == "ic-testkit" and .version == "0.107.4" and
     .source == "registry+https://github.com/rust-lang/crates.io-index")] as $suppliers |
   $suppliers[0].id as $testkit |
   ($suppliers | length == 1) and
@@ -50,7 +50,7 @@ jq -e '. as $m |
     all($m.resolve.nodes[] | select(.id == $driver) | .deps[]; .name != "pocket_ic")) and
   any($m.resolve.nodes[] | select(.id == $testkit) | .features[]; . == "held-reply-fixtures")
 ' "$scratch/metadata.json" >/dev/null || {
-  echo 'Expected Scheduling rewrite executor/Once drivers with registry Testkit 0.107.3 and held-reply fixtures; source contract refused.' >&2
+  echo 'Expected Scheduling rewrite executor/Once drivers with registry Testkit 0.107.4 and held-reply fixtures; source contract refused.' >&2
   exit 1
 }
 run_installed() {
@@ -62,7 +62,7 @@ run_installed() {
   mkdir -p "$output"
   cargo tree --manifest-path "$manifest" -p "$driver" -e normal,build --prefix none --locked --offline > "$output/driver-tree.txt"
   if [[ "$selection" == executor && ( "$mode" == replacement || "$output" == "$scratch/replacement" ) ]]; then
-    rg -q '^ic-testkit v0.107.4 ' "$output/driver-tree.txt"
+    rg -q '^ic-testkit v0.108.0 ' "$output/driver-tree.txt"
     if rg -q '^(wat|ic-platform|ic-platform-protocol|ic-platform-types) v' "$output/driver-tree.txt"; then
       echo 'Executor unexpectedly selects optional fixture dependencies' >&2; exit 1
     fi
@@ -91,7 +91,7 @@ run_installed() {
 if [[ "$mode" == comparison ]]; then
   run_installed "$scratch/baseline"
 fi
-if [[ "$mode" == replacement || "$mode" == comparison ]]; then
+if [[ "$mode" == replacement || "$mode" == comparison || "$mode" == admit-replacement ]]; then
   cp "$scratch/metadata.json" "$scratch/released-metadata.json"
   cp "$scratch/source/qualification/Cargo.lock" "$scratch/released-Cargo.lock"
   sed "s|@IC_TOOLING_NEW@|$repo|g" "$repo/qualification/scheduling/replacement-testkit.patch" > "$scratch/replacement.patch"
@@ -100,33 +100,34 @@ if [[ "$mode" == replacement || "$mode" == comparison ]]; then
   cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
   jq -e --arg root "$repo" '. as $m |
     [.packages[] | select(.name == "ic-testkit")] as $suppliers |
-    ($suppliers | length == 1) and $suppliers[0].version == "0.107.4" and
+    ($suppliers | length == 1) and $suppliers[0].version == "0.108.0" and
     $suppliers[0].manifest_path == ($root + "/crates/ic-testkit/Cargo.toml") and
     all(["once-driver", "executor-driver"][]; . as $name |
       ($m.packages[] | select(.name == $name) | .id) as $driver |
       any($m.resolve.nodes[] | select(.id == $driver) | .deps[];
         .name == "ic_testkit" and .pkg == $suppliers[0].id))
   ' "$scratch/metadata.json" >/dev/null
-  # Tooling #9 admits exactly this reviewed supplier change, not arbitrary drift.
+  # Admit only the reviewed Protocol supplier change, not arbitrary lock drift.
   cp "$scratch/released-Cargo.lock" "$scratch/admitted-Cargo.lock"
   jq -e '[.packages[] | select(.name == "ic-platform-protocol")] |
-    length == 1 and .[0].version == "0.2.7" and
+    length == 1 and .[0].version == "0.3.3" and
     .[0].source == "registry+https://github.com/rust-lang/crates.io-index"' \
     "$scratch/metadata.json" >/dev/null
-  if ! jq -e 'any(.packages[]; .name == "ic-platform-protocol" and .version == "0.2.7")' \
+  if ! jq -e 'any(.packages[]; .name == "ic-platform-protocol" and .version == "0.3.3")' \
     "$scratch/released-metadata.json" >/dev/null; then
     cat >> "$scratch/admitted-Cargo.lock" <<'PROTOCOL'
 
 [[package]]
 name = "ic-platform-protocol"
-version = "0.2.7"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db4ea27c2705897b24b1c7c239db916abbb4c15eb97c1adcda896d0ca3891ff4"
+checksum = "4676f2fabfff6a9aab9d6cccdf2a5870059e88b21345bc1913818be621dc1f34"
 PROTOCOL
   fi
   cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- \
     verify-external-lock "$scratch/admitted-Cargo.lock" "$scratch/source/qualification/Cargo.lock" 1048576
   cargo clippy --manifest-path "$manifest" -p once-driver -p executor-driver --all-targets --locked --offline -- -D warnings
+  if [[ "$mode" == admit-replacement ]]; then exit 0; fi
 fi
 if [[ "$mode" != admit ]]; then
   if [[ "$mode" == comparison ]]; then

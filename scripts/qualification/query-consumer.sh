@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Current Query presentation only; no network reports or sibling edits.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${QUERY_SOURCE:-$repo/../ic-query}"
 mkdir -p "$repo/target"
 scratch="$(mktemp -d "$repo/target/query-consumer.XXXXXXXX")"
@@ -13,7 +13,7 @@ export GIT_CEILING_DIRECTORIES="$repo/target"
 git -C "$scratch/source" apply --check "$repo/qualification/query/text.patch"
 git -C "$scratch/source" apply "$repo/qualification/query/text.patch"
 export CARGO_TARGET_DIR="$repo/target/query-consumer-build"
-cd "$scratch/source"
+CDPATH='' cd -- "$scratch/source"
 cargo metadata --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '
   [.packages[] | select(.name == "ic-host-text")] as $text |

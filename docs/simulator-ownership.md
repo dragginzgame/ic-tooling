@@ -162,7 +162,7 @@ those unchanged sources. Default/managed-only/held-only graphs exclude CLI
 dependencies; the CLI graph excludes fixture WAT and Platform dependencies.
 Formatting, baseline admission, ShellCheck and actionlint pass.
 
-The current [Scheduling capture](../../qualification/scheduling/README.md#current-runner-acceptance--2026-11-16)
+The current [Scheduling capture](../qualification/scheduling/README.md#current-runner-acceptance--2026-11-16)
 passes real pressure/held-upgrade checks through the product command. This removes
 the private launcher package without moving the consumer's client or assertions.
 At that checkpoint, Toko installer `--describe` accepted the package/bin/features

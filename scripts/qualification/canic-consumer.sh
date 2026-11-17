@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Qualify current local sibling inputs without modifying the sibling.
 set -euo pipefail
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${CANIC_SOURCE:-$repo/../canic}"
 export PATH="$repo/.tools/host/bin:$PATH"
 mkdir -p "$repo/target"
@@ -10,13 +10,17 @@ trap 'printf "Canic qualification export: %s\n" "$scratch"' EXIT
 mkdir "$scratch/source"
 source "$repo/scripts/qualification/local-source.sh"
 export_local_source
+[[ ! -L "$scratch/source/crates/canic-host/src/store" ]]
+[[ ! -e "$scratch/source/crates/canic-host/src/store/mod.rs" && ! -L "$scratch/source/crates/canic-host/src/store/mod.rs" ]]
+mkdir -p "$scratch/source/crates/canic-host/src/store"
+mv "$scratch/source/crates/canic-host/src/store.rs" "$scratch/source/crates/canic-host/src/store/mod.rs"
 export GIT_CEILING_DIRECTORIES="$repo/target"
 git -C "$scratch/source" apply --check "$repo/qualification/canic/record-admission.patch"
 git -C "$scratch/source" apply "$repo/qualification/canic/record-admission.patch"
 export CARGO_TARGET_DIR="$repo/target/canic-consumer-build"
 export CARGO_NET_OFFLINE=true
 export RUSTUP_AUTO_INSTALL=0
-cd "$scratch/source"
+CDPATH='' cd -- "$scratch/source"
 cargo metadata --format-version 1 --locked --offline > "$scratch/metadata.json"
 jq -e --arg root "$repo" '
   . as $m |

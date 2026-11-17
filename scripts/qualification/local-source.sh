@@ -3,7 +3,7 @@
 # Copy current local inputs without writing to the sibling or exporting ignored tools.
 export_local_source() {
   local pass name head_before head_after
-  source_checkout="$(cd "$source_checkout" && pwd -P)" || return 1
+  source_checkout="$(CDPATH='' cd -- "$source_checkout" && pwd -P)" || return 1
   head_before="$(git -C "$source_checkout" rev-parse HEAD)" || return 1
   for pass in before after; do
     git -C "$source_checkout" ls-files --cached --others --exclude-standard --deduplicate -z > "$scratch/list-$pass.raw" || return 1

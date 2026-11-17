@@ -18,7 +18,7 @@ case "$mode" in
     ;;
   *) exit 2 ;;
 esac
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 supplier="${IC_TOOLING_CANDIDATE_ROOT:-$repo}"
 if [[ "$supplier" != "$repo" && "$mode" != metadata ]]; then
   echo 'Archive supplier selection is scoped to metadata/build qualification.' >&2; exit 2
@@ -34,36 +34,45 @@ export_local_source
 # observations even when a newly captured path package has different bytes.
 # Refresh only export timestamps so Cargo rechecks these captured source inputs.
 find "$scratch/source" -type f -exec touch {} +
+# Keep qualification children under ordinary directory modules in this export.
+# Migration patches still check the captured source contents before applying.
+if [[ "$parent_migration" == true || "$mode" == app ]]; then
+  [[ ! -L "$scratch/source/crates/canic-host/src/app_build" ]]
+  [[ ! -e "$scratch/source/crates/canic-host/src/app_build/mod.rs" && ! -L "$scratch/source/crates/canic-host/src/app_build/mod.rs" ]]
+  mkdir -p "$scratch/source/crates/canic-host/src/app_build"
+  mv "$scratch/source/crates/canic-host/src/app_build.rs" "$scratch/source/crates/canic-host/src/app_build/mod.rs"
+fi
 if [[ "$mode" == records || "$mode" == filesystem ]]; then
   [[ ! -L "$scratch/source/crates/canic-host/src/store" ]]
+  [[ ! -e "$scratch/source/crates/canic-host/src/store/mod.rs" && ! -L "$scratch/source/crates/canic-host/src/store/mod.rs" ]]
   [[ ! -e "$scratch/source/crates/canic-host/src/store/publication_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/store/publication_tests.rs" ]]
   mkdir -p "$scratch/source/crates/canic-host/src/store"
+  mv "$scratch/source/crates/canic-host/src/store.rs" "$scratch/source/crates/canic-host/src/store/mod.rs"
   cp "$repo/qualification/canic/record-publication-tests.rs" "$scratch/source/crates/canic-host/src/store/publication_tests.rs"
-  printf '\n#[cfg(test)]\nmod publication_tests;\n' >> "$scratch/source/crates/canic-host/src/store.rs"
+  printf '\n#[cfg(test)]\nmod publication_tests;\n' >> "$scratch/source/crates/canic-host/src/store/mod.rs"
 fi
 if [[ "$mode" == filesystem ]]; then
   [[ ! -e "$scratch/source/crates/canic-host/src/store/read_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/store/read_tests.rs" ]]
   cp "$repo/qualification/canic/record-read-tests.rs" "$scratch/source/crates/canic-host/src/store/read_tests.rs"
-  printf '\n#[cfg(test)]\nmod read_tests;\n' >> "$scratch/source/crates/canic-host/src/store.rs"
+  printf '\n#[cfg(test)]\nmod read_tests;\n' >> "$scratch/source/crates/canic-host/src/store/mod.rs"
 fi
 if [[ "$lock_migration" == true ]]; then
   [[ ! -e "$scratch/source/crates/canic-host/src/store/sidecar_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/store/sidecar_tests.rs" ]]
   cp "$repo/qualification/canic/sidecar-lock-tests.rs" "$scratch/source/crates/canic-host/src/store/sidecar_tests.rs"
-  printf '\n#[cfg(test)]\nmod sidecar_tests;\n' >> "$scratch/source/crates/canic-host/src/store.rs"
+  printf '\n#[cfg(test)]\nmod sidecar_tests;\n' >> "$scratch/source/crates/canic-host/src/store/mod.rs"
 fi
 if [[ "$parent_migration" == true ]]; then
-  [[ ! -e "$scratch/source/crates/canic-host/src/app_build" && ! -L "$scratch/source/crates/canic-host/src/app_build" ]]
-  mkdir "$scratch/source/crates/canic-host/src/app_build"
+  [[ ! -e "$scratch/source/crates/canic-host/src/app_build/path_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/app_build/path_tests.rs" ]]
   cp "$repo/qualification/canic/output-path-tests.rs" "$scratch/source/crates/canic-host/src/app_build/path_tests.rs"
-  rg -q '^/// A replaceable build output' "$scratch/source/crates/canic-host/src/app_build.rs"
-  awk '/^\/\/\/ A replaceable build output/ { print "#[cfg(test)]\nmod path_tests;\n" } { print }' "$scratch/source/crates/canic-host/src/app_build.rs" > "$scratch/app_build.rs"
-  mv "$scratch/app_build.rs" "$scratch/source/crates/canic-host/src/app_build.rs"
+  rg -q '^/// A replaceable build output' "$scratch/source/crates/canic-host/src/app_build/mod.rs"
+  awk '/^\/\/\/ A replaceable build output/ { print "#[cfg(test)]\nmod path_tests;\n" } { print }' "$scratch/source/crates/canic-host/src/app_build/mod.rs" > "$scratch/app_build.rs"
+  mv "$scratch/app_build.rs" "$scratch/source/crates/canic-host/src/app_build/mod.rs"
   [[ ! -e "$scratch/source/crates/canic-host/src/artifact/inspection_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/artifact/inspection_tests.rs" ]]
   cp "$repo/qualification/canic/artifact-inspection-tests.rs" "$scratch/source/crates/canic-host/src/artifact/inspection_tests.rs"
   printf '\n#[cfg(test)]\nmod inspection_tests;\n' >> "$scratch/source/crates/canic-host/src/artifact/mod.rs"
   [[ ! -e "$scratch/source/crates/canic-host/src/store/parent_tests.rs" && ! -L "$scratch/source/crates/canic-host/src/store/parent_tests.rs" ]]
   cp "$repo/qualification/canic/parent-preparation-tests.rs" "$scratch/source/crates/canic-host/src/store/parent_tests.rs"
-  printf '\n#[cfg(test)]\nmod parent_tests;\n' >> "$scratch/source/crates/canic-host/src/store.rs"
+  printf '\n#[cfg(test)]\nmod parent_tests;\n' >> "$scratch/source/crates/canic-host/src/store/mod.rs"
 fi
 if [[ "$runtime_migration" == true ]]; then
   [[ ! -e "$scratch/source/crates/canic-cli/src/fleet/publication_tests.rs" && ! -L "$scratch/source/crates/canic-cli/src/fleet/publication_tests.rs" ]]
@@ -189,8 +198,8 @@ if [[ "$mode" == custody || "$mode" == config || "$mode" == records || "$mode" =
     git -C "$scratch/source" apply "$repo/qualification/canic/parent-preparation.patch"
     [[ ! -e "$scratch/source/crates/canic-host/src/staging_directory.rs" && ! -L "$scratch/source/crates/canic-host/src/staging_directory.rs" ]]
     [[ ! -e "$scratch/source/crates/canic-host/src/staging_directory" && ! -L "$scratch/source/crates/canic-host/src/staging_directory" ]]
-    cp "$repo/qualification/canic/staging-directory.rs" "$scratch/source/crates/canic-host/src/staging_directory.rs"
     mkdir "$scratch/source/crates/canic-host/src/staging_directory"
+    cp "$repo/qualification/canic/staging-directory.rs" "$scratch/source/crates/canic-host/src/staging_directory/mod.rs"
     cp "$repo/qualification/canic/staging-directory-tests.rs" "$scratch/source/crates/canic-host/src/staging_directory/tests.rs"
     git -C "$scratch/source" apply --check "$repo/qualification/canic/staging-directory.patch"
     git -C "$scratch/source" apply "$repo/qualification/canic/staging-directory.patch"
@@ -212,7 +221,7 @@ if [[ "$mode" == custody || "$mode" == config || "$mode" == records || "$mode" =
     git -C "$scratch/source" apply --check --exclude=Cargo.toml --exclude=crates/canic-host/Cargo.toml "$repo/qualification/canic/signer-process.patch"
     git -C "$scratch/source" apply --exclude=Cargo.toml --exclude=crates/canic-host/Cargo.toml "$repo/qualification/canic/signer-process.patch"
     cp "$repo/qualification/canic/lock-process-tests.rs" "$scratch/source/crates/canic-host/src/app_build/lock_process_tests.rs"
-    printf '\n#[cfg(test)]\nmod lock_process_tests;\n' >> "$scratch/source/crates/canic-host/src/app_build.rs"
+    printf '\n#[cfg(test)]\nmod lock_process_tests;\n' >> "$scratch/source/crates/canic-host/src/app_build/mod.rs"
     git -C "$scratch/source" apply --check "$repo/qualification/canic/metadata-process.patch"
     git -C "$scratch/source" apply "$repo/qualification/canic/metadata-process.patch"
     git -C "$scratch/source" apply --check "$repo/qualification/canic/store-source-process.patch"
@@ -255,7 +264,7 @@ if [[ "$mode" == custody || "$mode" == config || "$mode" == records || "$mode" =
     CARGO_TARGET_DIR="$repo/target/canic-consumer-build" cargo check --manifest-path "$scratch/source/Cargo.toml" -p canic-host --lib --locked --offline
     jq -e --arg root "$repo" '. as $m |
       (.packages[] | select(.name == "canic-host") | .id) as $host |
-      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and .source == null and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.4" and .source == null and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
       any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
       all($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name != "ic_host_process")
     ' "$scratch/publication-metadata.json" >/dev/null
@@ -317,7 +326,7 @@ if [[ "$mode" == app ]]; then
   [[ ! -L "$scratch/source/crates/canic-host/src/app_build" ]]
   mkdir -p "$scratch/source/crates/canic-host/src/app_build"
   cp "$repo/qualification/canic/lock-process-tests.rs" "$scratch/source/crates/canic-host/src/app_build/lock_process_tests.rs"
-  printf '\n#[cfg(test)]\nmod lock_process_tests;\n' >> "$scratch/source/crates/canic-host/src/app_build.rs"
+  printf '\n#[cfg(test)]\nmod lock_process_tests;\n' >> "$scratch/source/crates/canic-host/src/app_build/mod.rs"
   if [[ "$foreground" == true ]]; then
     git -C "$scratch/source" apply --check "$repo/qualification/canic/metadata-process.patch"
     git -C "$scratch/source" apply "$repo/qualification/canic/metadata-process.patch"
@@ -346,7 +355,7 @@ jq -e --arg root "$supplier" '. as $m |
   (.packages[] | select(.name == "canic-host") | .id) as $host |
   (.packages[] | select(.name == "ic-build" and .version == "0.87.3" and
     .manifest_path == ($root + "/crates/ic-build/Cargo.toml")) | .id) as $build |
-  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and
+  (.packages[] | select(.name == "ic-host-process" and .version == "0.80.4" and
     .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
   any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_build" and .pkg == $build) and
   any($m.resolve.nodes[] | select(.id == $build) | .deps[]; .name == "ic_host_process" and .pkg == $process)
@@ -354,7 +363,7 @@ jq -e --arg root "$supplier" '. as $m |
 if [[ "$mode" == app ]]; then
   if [[ "$foreground" == true ]]; then
     jq -e --arg root "$repo" '[.packages[] | select(.name == "ic-host-process")] |
-      length == 1 and .[0].version == "0.80.3" and .[0].source == null and
+      length == 1 and .[0].version == "0.80.4" and .[0].source == null and
       .[0].manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")
     ' "$scratch/metadata.json" >/dev/null
     jq -e '. as $m | all($m.workspace_members[]; . as $member |
@@ -365,14 +374,14 @@ if [[ "$mode" == app ]]; then
     ' "$scratch/metadata.json" >/dev/null
     jq -e --arg root "$repo" '. as $m |
       (.packages[] | select(.name == "canic-profile-client") | .id) as $client |
-      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+      (.packages[] | select(.name == "ic-host-process" and .version == "0.80.4" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
       any($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
       all($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name != "ic_host_process")
     ' "$scratch/metadata.json" >/dev/null
   fi
   jq -e '. as $m |
     (.packages[] | select(.name == "canic-host") | .id) as $host |
-    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3") | .id) as $process |
+    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.4") | .id) as $process |
     any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_host_process_next" and .pkg == $process)
   ' "$scratch/metadata.json" >/dev/null
   jq -e --arg root "$repo" '. as $m |
@@ -391,7 +400,7 @@ if [[ "$runtime_migration" == true ]]; then
     (.packages[] | select(.name == "canic-cli") | .id) as $cli |
     (.packages[] | select(.name == "ic-host-fs" and .version == "0.80.1" and .source == null and .manifest_path == ($root + "/crates/ic-host-fs/Cargo.toml")) | .id) as $fs |
     (.packages[] | select(.name == "ic-host-artifacts" and .version == "0.80.1" and .source == null and .manifest_path == ($root + "/crates/ic-host-artifacts/Cargo.toml")) | .id) as $bytes |
-    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.3" and .source == null and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
+    (.packages[] | select(.name == "ic-host-process" and .version == "0.80.4" and .source == null and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
     any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_fs_next" and .pkg == $fs) and
     any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_bytes_next" and .pkg == $bytes) and
     any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
@@ -433,7 +442,7 @@ if [[ "$mode" == app ]]; then
   fi
   # Newly migrated display callers must work in the same Build + Text graph.
   (
-    cd "$scratch/source"
+    CDPATH='' cd -- "$scratch/source"
     export CARGO_TARGET_DIR="$repo/target/canic-consumer-build"
     cargo test -p canic-cli --bin canic --locked --offline -- --list > "$scratch/display-tests.txt"
     for scope in fleet::terminal::tests:: placements::tests:: status::tests:: subnet_comparison::tests:: artifacts::tests::; do

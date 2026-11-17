@@ -39,3 +39,10 @@ Run `bash scripts/qualification/test-local-source.sh` for the capture fixture:
 modified binary bytes, new files, deleted tracked files, executable mode, symlinks,
 ignored-file exclusion, the recorded snapshot digest and refusal of a file changed
 between captures. All capture-fixture checks passed.
+
+Directory changes ignore inherited `CDPATH`: relative source paths resolve from
+the caller's working directory, and captured paths contain no `cd` output. The
+capture fixture checks both printed-path contamination and a competing search
+directory. Run `bash scripts/qualification/test-cdpath.sh` for relative runner
+startup checks with empty, current-directory and shadow-directory search paths;
+it stops after actual repository resolution, before qualification side effects.

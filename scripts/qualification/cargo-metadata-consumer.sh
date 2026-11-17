@@ -4,7 +4,7 @@ set -euo pipefail
 : "${CARGO_RELEASE_METADATA_EDITOR:?select an absolute prepared ic-cargo-metadata executable}"
 [[ "$CARGO_RELEASE_METADATA_EDITOR" == /* && -x "$CARGO_RELEASE_METADATA_EDITOR" ]]
 [[ "$("$CARGO_RELEASE_METADATA_EDITOR" --version)" == 'ic-cargo-metadata 0.1.0' ]]
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 mkdir -p "$repo/target"
 scratch="$(mktemp -d "$repo/target/cargo-metadata-consumer.XXXXXXXX")"
 trap 'printf "Metadata consumer evidence: %s\n" "$scratch"' EXIT
@@ -35,6 +35,6 @@ export GIT_CEILING_DIRECTORIES="$repo/target"
 consumer="$scratch/ic-scheduling/source"
 git -C "$consumer" apply --check "$repo/qualification/cargo-metadata/scheduling-editor.patch"
 git -C "$consumer" apply "$repo/qualification/cargo-metadata/scheduling-editor.patch"
-(cd "$consumer" && node qualification/release-check.mjs) > "$scratch/scheduling.log" 2>&1
+(CDPATH='' cd -- "$consumer" && node qualification/release-check.mjs) > "$scratch/scheduling.log" 2>&1
 shasum -a 256 -c "$scratch/editor.sha256"
 printf 'Current Toko coordinated/multi-lock transactions and Scheduling release checks pass.\n'

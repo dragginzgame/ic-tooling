@@ -1,5 +1,5 @@
---- a/crates/canic-host/src/store.rs
-+++ b/crates/canic-host/src/store.rs
+--- a/crates/canic-host/src/store/mod.rs
++++ b/crates/canic-host/src/store/mod.rs
 @@ -1,3 +1,3 @@
  use crate::{Error, Result, supplier};
 -use ic_host_fs::durable::{self, PublicationMode, WriteOptions};

@@ -5,6 +5,13 @@ Packages: `ic-host-artifacts`, `ic-host-fs`.
 This group starts with the replacement implementation. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.80.3] - 2026-11-17
+
+### 🧹 Cleanup
+
+- Use directory modules for code with child tests, following the installed Toko
+  layout rule. Public module paths, source bytes and filesystem behavior are unchanged.
+
 ## [0.80.2] - 2026-11-16
 
 ### ➕ Added

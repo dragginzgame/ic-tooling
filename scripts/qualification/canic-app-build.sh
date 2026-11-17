@@ -42,7 +42,7 @@ jq -e '.error == "supplier" and (.message | contains("lock initialization oracle
 [[ "$(wc -l < "$CANIC_LOCK_CALLS")" == 1 && ! -e "$scratch/probe/Cargo.lock" ]]
 [[ "$(cat "$scratch/app/a.wasm")" == 'keep a' && "$(cat "$scratch/app/z.wasm")" == 'keep z' ]]
 # Recipes are relative to the config, not to the invoking directory.
-(cd "$scratch/runtime" && "$cli" --json app build --config "$config") > "$scratch/app.json"
+(CDPATH='' cd -- "$scratch/runtime" && "$cli" --json app build --config "$config") > "$scratch/app.json"
 [[ -s "$scratch/probe/Cargo.lock" ]]
 sha256sum "$scratch/probe/Cargo.lock" > "$scratch/initialized-lock.sha256"
 hash="$(sha256sum "$scratch/app/a.wasm" | cut -d ' ' -f1)"
