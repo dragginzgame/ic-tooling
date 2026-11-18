@@ -29,7 +29,14 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Latest delivery
 
-Process 0.81.0, Build 0.87.4, Testkit 0.110.0 and Sign 0.1.0 are published with
+The Toko 0.45.8 hygiene cohort is published: Foundation 0.80.4 (both members),
+Process 0.81.1, Build 0.87.5, HTTP 0.80.1, Text 0.77.3, Metadata 0.1.1,
+Testkit 0.110.1 and Sign 0.1.1. All eight group tags are pushed; registry records
+and exact archive readback match publication preflights. Linux archive, installed
+simulator and disposable keyring gates pass. See the
+[hygiene receipt](../release-ownership.md#hygiene-cohort--2026-11-18).
+
+The preceding Process 0.81.0, Build 0.87.4, Testkit 0.110.0 and Sign 0.1.0 cohort has
 verified registry records and exact archive readback. See the
 [cohort receipt](../release-ownership.md#signing-cohort--process-0810-first) for
 source commits, tags, checksums and source-bound qualification.
@@ -47,15 +54,11 @@ The selected profile requires an already-unlocked, OS-authorized credential and
 never prompts. Only public `canic-mainnet` metadata was inspected; no operator
 secret was accessed or used. See the [signing contract](../sign-only-integration.md).
 
-The final Linux archive/default graph/installed CLI gate passes, including twelve
-library cases and three disposable encrypted-keyring cases. All three actual
-provider jobs pass on Linux and Intel/ARM macOS, including locked refusal,
-network denial and owned cleanup. This qualifies the supplier, not Canic adoption.
-
-Concurrent compatible Cargo.lock updates are restored with the released package
-versions and remain uncommitted. Recovery copies and scoped publication evidence
-live in `target/deploy-sign/` and `.git/release-state/sign-0.1.0/`. Private Tools
-0.1.3 remains pending; its maintained workflow changes are delivered through Git.
+Unrelated compatible Cargo.lock updates remain uncommitted with the released
+local package versions. Recovery and delivery locks are retained under
+`.git/release-state/hygiene-2026-11-18/`. Earlier signing evidence remains in the
+cohort receipt and `.git/release-state/sign-0.1.0/`. Private Tools 0.1.3 remains
+pending; its maintained workflow changes are delivered through Git.
 
 ## Blockers and next actions
 
@@ -70,30 +73,20 @@ pass; see the [audit report](../reports/audits/2026/11/18/code-hygiene-and-tt-ad
 The optional setup module remains unselected pending
 [Toko Tooling #396](https://github.com/dragginzgame/toko-tooling/issues/396) and
 [Toko Tooling #397](https://github.com/dragginzgame/toko-tooling/issues/397);
-the existing bounded collector preserves both guarantees. The maintainer has
-authorized deployment. Packaged source changes select patch releases:
-Foundation 0.80.4, Process 0.81.1, Build 0.87.5, HTTP 0.80.1, Text 0.77.3,
-Metadata 0.1.1, Testkit 0.110.1 and Sign 0.1.1. Compiler-policy edits are included;
-unrelated compatible lock updates are retained in
-`.git/release-state/hygiene-2026-11-18/` for restoration after publication.
-The Linux core archive gate passes, including the foreground PTY fixture;
-consumer requalification is not selected for this mechanical source batch.
-Registry publication and remote verification remain the active delivery steps.
+the existing bounded collector preserves both guarantees. Compiler-policy edits
+and the corrected combined Testkit/Sign archive feature selection are delivered.
+Consumer requalification is not selected for this mechanical source batch;
+production consumer adoption stays with its owner.
 
 Producer acceptance has no outstanding blocker. Canic's thin Backup adapter and
 installed acceptance remain in [Canic #5](https://github.com/dragginzgame/canic/issues/5).
 [Tooling #11](https://github.com/dragginzgame/ic-tooling/issues/11) is closed;
 Canic owns its same-receiver adoption of Testkit's bounded clock progression.
 
-All three native Sign library jobs now pass with the corrected eight-minute
-step in a thirty-minute job. Intel's earlier four-minute timeout remains failed
-evidence. See [measured budgets](../qualification/ci-setup.md#job-deadlines--2026-11-17).
-The actual-provider jobs also pass on all three hosts. Pre-adoption source
-[CI run 44180582387](https://github.com/dragginzgame/ic-tooling/actions/runs/44180582387)
-has ten passing jobs and one Intel library archive job still running at inspection.
-The tooling-adoption push starts its own asynchronous CI; no whole-run pass is claimed.
-Fresh crates.io records confirm all four cohort versions remain unyanked and
-match their receipt checksums. GitHub has no separate deployment records here.
+Earlier native-host acceptance and Intel's failed provisional timeout remain in
+the [measured-budget record](../qualification/ci-setup.md#job-deadlines--2026-11-17).
+This delivery's hosted CI runs asynchronously; no fresh macOS or whole-run pass
+is claimed. GitHub has no separate application deployment target here.
 
 Further product work needs a demonstrated current caller requirement. Canic's
 rewrite owns its Platform adoption; old adapters correctly refuse changed owners.

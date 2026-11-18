@@ -95,14 +95,60 @@ Clap migration remains private Tools maintenance at 0.1.3.
 
 The delivery lock excludes pre-existing unrelated compatible updates. That exact
 dependency graph passes all-feature workspace Clippy and 110 tests, with the
-nine explicitly selected native/installed cases still ignored in that selection.
+nine opt-in native/installed cases ignored in that selection and run separately
+by the archive gates below.
 The final Linux core archive gate passes at `target/build-release.MYGN6NGd`,
 including real Wasm/foreground-terminal checks, Clippy and Rustdoc. Current
 sibling qualification is not selected, matching the preceding supplier release
 boundary. No fresh consumer or macOS runtime result is claimed. Body-preserving
 AST comparison and prior native receipts support the unchanged runtime paths;
 hosted CI remains asynchronous and is not a publication gate added by this batch.
-Selected leaf archive gates and exact registry readback complete delivery below.
+HTTP/Text's archive gate passes at `target/library-release.JhYnepvv`.
+The first combined Metadata/Testkit/Sign attempt, `target/library-release.N6AZ9zvI`,
+passes installed held-reply/clock checks but then rejects Sign's feature flag in
+a Testkit-only Cargo command. That is failed evidence, not a passing gate.
+The runner now selects `cli,held-reply-fixtures` for that command alone; both
+installed managed-server tests pass in the focused regression. The corrected
+complete combined gate passes at `target/library-release.1P6VFR8C`, including
+default/feature graph isolation, installed CLI lifetime/failure cleanup, three
+held-reply/clock fixtures with all five instances deleted, two managed-server
+cases and three encrypted real-keyring cases with no prompts or external sockets.
+Its capture records `0b7bc8d` plus the exact runner patch committed as `bbb43fe`;
+product package payloads are identical across those commits.
+
+All nine versions are published and unyanked. The five tags
+`foundation-v0.80.4`, `process-v0.81.1`, `build-v0.87.5`, `http-v0.80.1` and
+`text-v0.77.3` point to
+[`0b7bc8d4533cbf3b17012c277a7d3108fac534f7`](https://github.com/dragginzgame/ic-tooling/commit/0b7bc8d4533cbf3b17012c277a7d3108fac534f7).
+The three tags `cargo-metadata-v0.1.1`, `testkit-v0.110.1` and `sign-v0.1.1`
+point to the runner correction at
+[`bbb43fe7bd19844c8b9a432ccc3904d80c56c77e`](https://github.com/dragginzgame/ic-tooling/commit/bbb43fe7bd19844c8b9a432ccc3904d80c56c77e).
+Both commits are delivered to `origin/main`.
+
+| Package | Registry/archive SHA-256 |
+| --- | --- |
+| `ic-host-artifacts` 0.80.4 | `25b9f9af060b2bf848d187c05f2d693f43071fbc83f7fa11f7851bf5aeabf14a` |
+| `ic-host-fs` 0.80.4 | `1c71abeb51cc1eeddd16f2d1921681b3c10c7c3ebec650acb3415536acb312db` |
+| `ic-host-process` 0.81.1 | `7550c8620d49b27325f8892de9988bc1b958f8d1e1de8e4cd35e5de547d985a8` |
+| `ic-build` 0.87.5 | `b38e892aebd7f55f8a56e3e0c7b1859a741c7705d20464235c42bb3c491936c4` |
+| `ic-host-http` 0.80.1 | `2254da4d06cb421c2c91f4146d25bb7a9279a856c5404d52d341d7ded896147d` |
+| `ic-host-text` 0.77.3 | `766a420ee726425e3a1ae3266ce371f54108f3cad41d2997721f06f41561a2ab` |
+| `ic-cargo-metadata` 0.1.1 | `93af1e9fa2f41a5ab668ed1d8721a24e841420337ff26bf2f7a18dc3ac04ef24` |
+| `ic-testkit` 0.110.1 | `052af01be87faebce4477a8dcad538601bb2cec70cd8eee13dad4412cc389963` |
+| `ic-host-sign` 0.1.1 | `396736fe9e830b17bbaffe385b88b2f0d1de8ea366c5693f00d4d05972e594ee` |
+
+Each clean publication dry run matches its qualified source, licence and
+normalized manifest. Dependency records agree after admitting only the published
+cohort's same-version local-to-registry source/checksum projection; unused
+qualification patch records are not resolved dependencies. Publication archives
+carry their clean tagged VCS identity. Fresh registry downloads are byte-identical
+to the preflight archives; fresh index records match these checksums. Separate
+intents, upload statuses and failed evidence are retained before each upload.
+Unrelated compatible lock updates are restored with only local release identities
+advanced; locked metadata and snapshot admission pass after restoration.
+Post-push review found no further actionable drift in the delivered scope.
+[Source-push CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44391538171)
+started asynchronously; it is not recorded as a whole-run pass.
 Recovery and scoped lock copies live under
 `.git/release-state/hygiene-2026-11-18/`; logs and archives are under
 `target/deploy-hygiene/` and the named archive-gate attempts.

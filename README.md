@@ -1,12 +1,17 @@
 # IC Tooling
 
-Latest delivery: Testkit 0.110.0 adopts Process 0.81's public report identity and
+Latest delivery: the Toko Tooling 0.45.8 hygiene cohort publishes nine patch
+crates with unchanged public APIs and runtime behavior. The
+[release receipt](docs/release-ownership.md#hygiene-cohort--2026-11-18) records
+versions, tags, exact registry checksums and focused archive acceptance.
+
+The preceding feature delivery, Testkit 0.110.0, adopts Process 0.81's public report identity and
 retains bounded clock progression while replies are
 held, preserving original HTTP expiry and refusing further control after an
 interrupted clock change. Callers matching `ControlError` exhaustively must handle
 its new variants. See the [clock contract](docs/testkit-held-replies.md#bounded-manual-clock-progression)
 and [verified release receipt](docs/release-ownership.md#testkit-01090-delivery).
-Foundation remains 0.80.3 and Process 0.81.0 is now published; Testkit's encoder error still uses
+That cohort delivered Foundation 0.80.3 and Process 0.81.0; Testkit's encoder error still uses
 Protocol 0.3 under the [earlier adoption](docs/qualification/platform-adoption.md).
 
 [Sign 0.1.0](docs/sign-only-integration.md) adds an external helper
