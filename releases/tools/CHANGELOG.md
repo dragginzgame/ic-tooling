@@ -18,6 +18,9 @@ in [checkpoint history](../history.md), not a prior release of this group.
 - Parse the private external-lock qualification command with Clap, preserving
   its script-facing usage, refusal statuses and non-UTF-8 filesystem paths.
 
+- Keep installed Testkit checks scoped to Testkit features when the archive gate
+  also selects Sign, so Cargo does not reject the other package's feature flag.
+
 - Select Toko Tooling 0.45.0 in the product and qualification workspaces, refresh
   the authenticated installed snapshot and pin CI's download-cache action to its
   published source. Preserve existing compatible lock updates and product

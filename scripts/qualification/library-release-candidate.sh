@@ -164,7 +164,7 @@ if [[ "$testkit" == true ]]; then
     "$TESTKIT_SERVER_DIRECTORY" "$scratch/server" --ttl 300 -- \
     bash "$repo/scripts/qualification/testkit-installed.sh" "$candidate/Cargo.toml" "$scratch" \
     > "$scratch/installed.log" 2>&1
-  cargo test --manifest-path "$candidate/Cargo.toml" -p ic-testkit "${features[@]}" \
+  cargo test --manifest-path "$candidate/Cargo.toml" -p ic-testkit --features cli,held-reply-fixtures \
     --lib --locked --offline server::tests::installed_ -- --ignored --color never \
     > "$scratch/managed-installed.log" 2>&1
   grep -Fq 'test result: ok. 2 passed; 0 failed' "$scratch/managed-installed.log"
