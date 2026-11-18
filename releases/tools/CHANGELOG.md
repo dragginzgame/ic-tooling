@@ -10,6 +10,12 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Adopt Toko Tooling 0.45.11 in both workspaces, the authenticated snapshot and
+  CI cache action. Use its fixed shared setup diagnostics, removing the local
+  sanitizer and command-capture copy while retaining bounded artifact selection,
+  original failure status and upload reporting. This completes adoption after
+  [Toko Tooling #398](https://github.com/dragginzgame/toko-tooling/issues/398).
+
 - Adopt Toko Tooling 0.45.8 in both workspaces, the authenticated snapshot and
   CI cache action. Ordinary developer Cargo commands may retrieve locked
   dependencies; `CARGO_NET_OFFLINE=true` opts into offline execution. Prepared

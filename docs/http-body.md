@@ -7,6 +7,11 @@ status/encoding admission, TLS, timeout, no-retry policy and certificate decodin
 The replacement `ic-host-http` 0.80.0 owns only `body(Response, usize) -> Vec<u8>`
 as an async fallible operation. It does not re-export the client or offer TLS
 features. Consumers select Reqwest directly and retain its upstream type identity.
+This is a native adapter: its selected Reqwest `Response::chunk` operation is
+absent from Reqwest's Wasm implementation. The target condition follows that API
+boundary, not an assumption that all shared HTTP logic needs a host guard.
+Reqwest's optional browser stream API is a different feature/platform contract;
+there is no current browser or IC HTTP caller admitted by this workload.
 The incompatible version increment is from the observed 0.79.0 supplier.
 Version 0.80.0 is published; [release receipts](release-ownership.md#independent-library-publication)
 record registry provenance and native package acceptance separately from consumer migration.

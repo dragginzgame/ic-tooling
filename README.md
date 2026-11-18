@@ -1,6 +1,10 @@
 # IC Tooling
 
-Latest delivery: the Toko Tooling 0.45.8 hygiene cohort publishes nine patch
+Latest tooling delivery adopts Toko Tooling 0.45.11 and its shared setup
+diagnostics, preserving bounded evidence and original setup failures. See the
+[delivery record](docs/release-ownership.md#toko-04511-delivery--2026-11-19).
+
+The latest crate delivery, the Toko Tooling 0.45.8 hygiene cohort, publishes nine patch
 crates with unchanged public APIs and runtime behavior. The
 [release receipt](docs/release-ownership.md#hygiene-cohort--2026-11-18) records
 versions, tags, exact registry checksums and focused archive acceptance.
@@ -28,7 +32,7 @@ selected interfaces. Existing crates.io names may be reused with incremented
 versions; retaining a name does not require retaining its old Rust API. The first
 package is `ic-build` 0.87.3. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
 0.80.2 for shared byte admission and held-directory publication. Toko Tooling is
-pinned to 0.45.8 in both workspaces.
+pinned to 0.45.11 in both workspaces.
 
 The [first release](docs/release-ownership.md#first-production-cutover-scope)
 contains Artifacts, FS, Process and Build. `make test-build-release-candidate`

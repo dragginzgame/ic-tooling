@@ -1,7 +1,7 @@
 # IC Tooling code hygiene overlay
 
-Use the shared [code-hygiene method](https://github.com/dragginzgame/toko-tooling/blob/12af9e64f4a0ba03c8c94d3eee00987080ade98a/audits/code-hygiene.md)
-and its [common evidence contract](https://github.com/dragginzgame/toko-tooling/blob/12af9e64f4a0ba03c8c94d3eee00987080ade98a/audits/README.md).
+Use the shared [code-hygiene method](https://github.com/dragginzgame/toko-tooling/blob/88b7cd83f292d5165f4585a861cd8c89b74397b3/audits/code-hygiene.md)
+and its [common evidence contract](https://github.com/dragginzgame/toko-tooling/blob/88b7cd83f292d5165f4585a861cd8c89b74397b3/audits/README.md).
 The installed snapshot and selected package identify the applicable baseline;
 record a fixed method revision in each report when the selection changes.
 
@@ -18,6 +18,9 @@ Trace byte admission, held filesystem custody, bounded process observation,
 complete Cargo/HTTP/Sign input admission, original PocketIC type identity and
 uncertain-effect recovery through their owners. Keep output policy and decoding
 with callers. Testkit's generated WAT is data, not a Rust endpoint tree.
+Admit target conditions against concrete API or implementation differences;
+review the HTTP contract, native process cleanup and credential-backend owners
+before changing their target support.
 
 Select checks from `make help` and each affected contract. Workspace Clippy,
 tests and Rustdoc cover portable/native library changes; independent fixtures

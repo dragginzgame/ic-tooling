@@ -29,9 +29,16 @@ if ($ARGV[0] eq 'collector') {
 }
 make_path("$root/tools/.failed-attempt");
 open my $log, '>', "$root/tools/.failed-attempt/install.log" or die $!;
-print {$log} "download: certificate verification failed\n";
-print {$log} qq({"password":"hidden-password"}\n);
-print {$log} "$key_begin\nprivate-key-body\n$key_end\n";
+if ($ARGV[0] eq 'read-limit') {
+    my $tail = 'unterminated-fixture-tail';
+    my $padding = 1024 * 1024 - length($tail);
+    print {$log} 'filler' . "\n" for 1..int($padding / 7);
+    print {$log} 'x' x ($padding % 7), $tail;
+} else {
+    print {$log} "download: certificate verification failed\n";
+    print {$log} qq({"password":"hidden-password"}\n);
+    print {$log} "$key_begin\nprivate-key-body\n$key_end\n";
+}
 close $log;
 open my $outside, '>', "$root/outside.txt" or die $!;
 print {$outside} 'must-not-follow-link'; close $outside;
@@ -51,6 +58,7 @@ print "https://user:pass\@host/file?key=hidden-url\n";
 print "https://host/file#hidden-fragment\n";
 print "UNCLASSIFIED_SETTING=hidden-environment-value\n";
 print "Bearer hidden-bearer\n";
+print qq({"payload":"hidden-payload"}\n);
 print qq({"access_key": "hidden-access-key"}\n);
 print $key_begin, 'x' x 9000, "\noversized-private-body\n$key_end\n";
 print "$ENV{TEST_SECRET}\n";
@@ -68,7 +76,7 @@ sub read_file {
     local $/; return <$f> // '';
 }
 sub run {
-    my ($mode) = @_;
+    my ($mode, $directory) = @_;
     local $ENV{CI_SETUP_ROOT} = "$temp/$mode";
     local $ENV{GITHUB_OUTPUT} = "$temp/$mode.outputs";
     local $ENV{TEST_SECRET} = 'exact-environment-secret';
@@ -77,8 +85,10 @@ sub run {
     defined $pid or die $!;
     if (!$pid) {
         open STDERR, '>&', STDOUT or die $!;
+        chdir $directory or die $! if defined $directory;
         my @deadline = $mode eq 'timeout' ? ('timeout', '--kill-after=1s', '0.2s') : ();
-        exec $^X, $script, 'compiler', @deadline, $^X, $fixture, $mode;
+        my @command = $mode eq 'exec-missing' ? ("$temp/no-such-tool") : ($^X, $fixture, $mode);
+        exec $^X, $script, 'compiler', @deadline, @command;
         die $!;
     }
     local $/; my $printed = <$out> // '';
@@ -99,12 +109,14 @@ my $retained = join '', map { read_file($_) } @files;
 like($retained, qr/certificate verification failed/, 'hidden attempt diagnostic survives');
 like($printed, qr/certificate verification failed/, 'hidden failure is surfaced before upload');
 like($retained, qr/attempt-1=install.log source_path_sha256=[0-9a-f]{64}/, 'attempt identity retained without disclosing arbitrary paths');
-like($retained, qr/earlier output, oversized lines or bytes beyond the read limit omitted/, 'truncation explicit');
+like($retained, qr/earlier output or oversized lines omitted/, 'truncation explicit');
 like($retained, qr/oversized attempt log omitted/, 'giant attempt log explicitly omitted');
-for my $secret (qw(hidden-password known-auth hidden-url hidden-fragment hidden-environment-value hidden-bearer hidden-access-key exact-environment-secret unlabelled-access-value private-key-body other-private-body oversized-private-body must-not-follow-link must-not-follow-directory must-not-select-config)) {
+for my $secret (qw(hidden-password known-auth hidden-url hidden-fragment hidden-environment-value hidden-bearer hidden-payload hidden-access-key exact-environment-secret unlabelled-access-value private-key-body other-private-body oversized-private-body must-not-follow-link must-not-follow-directory must-not-select-config)) {
     unlike($retained . $printed, qr/\Q$secret\E/, "sensitive/unselected bytes excluded: $secret");
 }
 cmp_ok(length($retained), '<', 70000, 'retention bound holds for setup and attempt logs');
+cmp_ok(length(read_file("$evidence/compiler-output.txt")), '<', 32768, 'shared command excerpt stays below 32 KiB');
+cmp_ok(length(read_file("$evidence/compiler-attempt-1.txt")), '<', 32768, 'shared file excerpt stays below 32 KiB');
 ($status, $printed) = run('missing');
 is($status, 19, 'missing attempt logs do not erase failure');
 ($evidence) = read_file("$temp/missing.outputs") =~ /^evidence=(.+)$/m;
@@ -128,6 +140,19 @@ SKIP: {
     like(read_file("$evidence/compiler-attempt-1.txt"), qr/certificate verification failed/, 'timeout retains hidden attempt evidence');
     unlike(read_file("$evidence/compiler-output.txt") . $printed, qr/exact-environment-secret/, 'timeout evidence stays sanitized');
 }
+($status, $printed) = run('outside', $temp);
+is($status, 37, 'shared module is found outside the repository working directory');
+like($printed, qr/compiler: fixture link failure/, 'outside invocation retains the command diagnostic');
+($status, $printed) = run('read-limit');
+is($status, 37, 'admitted file ceiling preserves original setup status');
+is(-s "$temp/read-limit/tools/.failed-attempt/install.log", 1024 * 1024, 'fixture reaches the admitted file-read ceiling');
+($evidence) = read_file("$temp/read-limit.outputs") =~ /^evidence=(.+)$/m;
+like(read_file("$evidence/compiler-attempt-1.txt"), qr/input truncated at byte limit/, 'shared file helper receives the caller read ceiling');
+unlike(read_file("$evidence/compiler-attempt-1.txt"), qr/unterminated-fixture-tail/, 'unfinished line at the read ceiling is omitted');
+($status, $printed) = run('exec-missing');
+is($status, 127, 'missing executable retains the shared command-launch refusal');
+($evidence) = read_file("$temp/exec-missing.outputs") =~ /^evidence=(.+)$/m;
+like(read_file("$evidence/compiler-status.txt"), qr/original_status=127/, 'command-launch refusal has upload evidence');
 # Exercise the workflow's actual upload-report branch without a hosted upload.
 my $workflow = read_file('.github/workflows/build-release-candidate.yml');
 SKIP: {

@@ -2,6 +2,9 @@
 # Early CI setup: no installed tools, raw log upload, or environment dump required.
 use strict;
 use warnings;
+use FindBin qw($Bin);
+use lib "$Bin/../../vendor/toko-tooling/scripts/ci";
+use SetupDiagnostics qw(run_setup excerpt);
 use File::Path qw(make_path);
 use File::Temp qw(tempdir);
 use Digest::SHA qw(sha256_hex);
@@ -14,76 +17,11 @@ my $root = $ENV{CI_SETUP_ROOT} // (($ENV{RUNNER_TEMP} // die "runner temp requir
 $root =~ m{\A/} && $root !~ /[\r\n]/ && length($root) <= 512 or die "bounded absolute setup root required\n";
 $ENV{CI_SETUP_ROOT} = $root;
 $ENV{TOKO_TOOLING_STORE} = "$root/tools";
-my @secrets = grep { length($_) >= 4 } map { $ENV{$_} }
-    grep { /(?:TOKEN|SECRET|PASSWORD|CREDENTIAL|PRIVATE_KEY|API_KEY|ACCESS_KEY)/i } keys %ENV;
 
-# Only complete bounded lines enter the retained tail. Discard oversized lines
-# rather than clipping off a credential's label and exposing its remaining value.
-sub excerpt {
-    my ($input, $maximum) = @_;
-    my $read_bytes = 0;
-    my ($pending, $discard, $private, $omitted, $bytes) = ('', 0, 0, 0, 0);
-    my @lines;
-    my $keep = sub {
-        my ($line) = @_;
-        $line =~ s/\e\[[0-?]*[ -\/]*[\@-~]//g;
-        $line =~ s/[^\x09\x20-\x7e]/?/g;
-        if ($line =~ /-----BEGIN .*PRIVATE KEY-----/) { $private = 1; }
-        my $redact = $private || $line =~ /(?:authorization|cookie|password|passwd|secret|token|credential|private[_ -]?key|api[_ -]?key|access[_ -]?key|payload)\s*["']?\s*[=:]/i
-            || $line =~ /^\s*[A-Za-z_][A-Za-z0-9_]*=/
-            || $line =~ /\bBearer\s+\S+/i
-            || $line =~ m{https?://[^\s/]+\@|https?://\S*[?#]}i
-            || $line =~ /(?:gh[pousr]_|github_pat_|AKIA)[A-Za-z0-9_]+/
-            || $line =~ /[A-Za-z0-9+\/=]{80,}/;
-        for my $secret (@secrets) { $redact ||= index($line, $secret) >= 0; }
-        $private = 0 if $line =~ /-----END .*PRIVATE KEY-----/;
-        $line = '[sensitive line omitted]' if $redact;
-        push @lines, "$line\n";
-        $bytes += length($lines[-1]);
-        while ($bytes > 65408 || @lines > 300) { $bytes -= length(shift @lines); $omitted = 1; }
-    };
-    while (1) {
-        if (defined($maximum) && $read_bytes >= $maximum) { $omitted = 1; last; }
-        my $size = defined($maximum) && $maximum - $read_bytes < 4096 ? $maximum - $read_bytes : 4096;
-        my $read = sysread($input, my $chunk, $size);
-        defined $read or die "cannot read selected diagnostic\n";
-        last if !$read;
-        $read_bytes += $read;
-        for my $part (split /(?<=\n)/, $chunk) {
-            $pending .= $part unless $discard;
-            $private = 1 if $pending =~ /-----BEGIN .*PRIVATE KEY-----/;
-            if (length($pending) > 8192) { $pending = ''; $discard = 1; $omitted = 1; }
-            if ($part =~ /\n\z/) {
-                $pending =~ s/\r?\n\z//;
-                $keep->($pending) unless $discard;
-                ($pending, $discard) = ('', 0);
-            }
-        }
-    }
-    $keep->($pending) if length($pending) && !$discard;
-    return ($omitted ? "[earlier output, oversized lines or bytes beyond the read limit omitted]\n" : '')
-        . (@lines ? join('', @lines) : "[no usable diagnostic output]\n");
-}
-
-my $pid = open my $output, '-|';
-defined $pid or die "cannot launch setup\n";
-if (!$pid) {
-    open STDERR, '>&', STDOUT or die "cannot redirect setup stderr\n";
-    exec { $ARGV[0] } @ARGV or do { print STDERR "cannot execute setup command\n"; exit 127; };
-}
-my $log = eval { excerpt($output) };
-my $read_failed = $@;
-close $output;
-my $wait = $?;
-my $status = $wait & 127 ? 128 + ($wait & 127) : $wait >> 8;
-$status ||= 1 if $read_failed;
-if (!$status) { print "$phase setup passed\n"; exit 0; }
-$log //= "[setup output collection failed]\n";
-print STDERR "$phase setup failed; original status=$status; showing sanitized tail\n";
-# Printed text is already sanitized, and prefixed to prevent workflow commands.
-print STDERR "  $_\n" for split /\n/, substr($log, -3072);
-
-my $collected = eval {
+sub collect {
+    my ($status, $log) = @_;
+    print STDERR "$phase setup failed; original status=$status; showing sanitized tail\n";
+    print STDERR "  $_\n" for split /\n/, substr($log, -3072);
     -l $root and die "setup root is a symlink\n";
     make_path($root, {mode => 0700}) unless -d $root;
     my $evidence = tempdir("evidence-$phase.XXXXXX", DIR => $root);
@@ -150,7 +88,8 @@ my $collected = eval {
         close $file or die "cannot publish evidence location\n";
     }
     print STDERR "Sanitized evidence: $evidence/$phase-*.txt (upload follows)\n";
-    1;
-};
-print STDERR "Diagnostic collection failed; original setup status remains $status. Evidence may be missing or partial.\n" unless $collected;
+}
+
+my $status = run_setup(\&collect, @ARGV);
+print "$phase setup passed\n" unless $status;
 exit $status;

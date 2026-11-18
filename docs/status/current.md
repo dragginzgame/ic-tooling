@@ -1,4 +1,4 @@
-# Current implementation — 2026-11-18
+# Current implementation — 2026-11-19
 
 ## Decisions and scope
 
@@ -29,7 +29,14 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Latest delivery
 
-The Toko 0.45.8 hygiene cohort is published: Foundation 0.80.4 (both members),
+Toko 0.45.11 and shared setup diagnostics are delivered through the private Tools
+maintenance path. The 50-file snapshot, both workspace selections and six CI action
+references agree. Package comparison confirms only the disabled development-tool
+selector changed in public archives; crate versions and runtime contracts stay
+at the published cohort below. See the
+[tooling delivery record](../release-ownership.md#toko-04511-delivery--2026-11-19).
+
+The latest published crate cohort uses Toko 0.45.8: Foundation 0.80.4 (both members),
 Process 0.81.1, Build 0.87.5, HTTP 0.80.1, Text 0.77.3, Metadata 0.1.1,
 Testkit 0.110.1 and Sign 0.1.1. All eight group tags are pushed; registry records
 and exact archive readback match publication preflights. Linux archive, installed
@@ -62,21 +69,26 @@ pending; its maintained workflow changes are delivered through Git.
 
 ## Blockers and next actions
 
-Toko Tooling 0.45.8 adoption updates both workspaces, the authenticated
-snapshot and CI action revision. The full hygiene pass groups Rust imports,
-moves test declarations before implementation and labels dependency roles.
-The private qualification CLI uses Clap with its existing command contract.
-Ordinary Makefile Cargo commands keep `--locked`; `CARGO_NET_OFFLINE=true`
-selects offline execution. Prepared qualification retains its offline contracts.
-Workspace tests, warning-denied Clippy/docs, setup fixtures and tooling admission
-pass; see the [audit report](../reports/audits/2026/11/18/code-hygiene-and-tt-adoption/01/report.md).
-The optional setup module remains unselected pending
+Toko Tooling 0.45.11 adoption updates both workspaces, the authenticated
+50-file snapshot and all six CI cache-action references. It selects the shared
+setup diagnostics module; the previous sanitizer/command-capture copy is removed.
+Consumer artifact policy, read ceilings, failure status and upload reporting are
+preserved. The focused fixture passes 69 checks, including both shared call sites.
+All target conditions were reviewed against concrete native API differences;
+portable logic remains unconditional.
+The existing Rust import/test layout, Clap boundary, dependency roles and offline
+opt-in remain intact. Fresh workspace tests, warning-denied Clippy, setup fixtures
+and tooling admission pass; see the
+[target-rule audit](../reports/audits/2026/11/19/toko-adoption-and-code-hygiene/01/report.md).
 [Toko Tooling #396](https://github.com/dragginzgame/toko-tooling/issues/396) and
-[Toko Tooling #397](https://github.com/dragginzgame/toko-tooling/issues/397);
-the existing bounded collector preserves both guarantees. Compiler-policy edits
-and the corrected combined Testkit/Sign archive feature selection are delivered.
-Consumer requalification is not selected for this mechanical source batch;
-production consumer adoption stays with its owner.
+[Toko Tooling #397](https://github.com/dragginzgame/toko-tooling/issues/397) are fixed.
+[Toko Tooling #398](https://github.com/dragginzgame/toko-tooling/issues/398) is also
+fixed; shared-helper adoption now passes the bare Bearer/payload cases. See the
+[setup contract](../qualification/ci-setup.md) for the completed migration evidence.
+This batch is private tooling maintenance; product versions and prior release
+evidence are unchanged. Unrelated compatible lock updates are retained separately
+under `.git/release-state/toko-0.45.11/` and remain uncommitted. Consumer
+implementation and qualification remain with their owners.
 
 Producer acceptance has no outstanding blocker. Canic's thin Backup adapter and
 installed acceptance remain in [Canic #5](https://github.com/dragginzgame/canic/issues/5).

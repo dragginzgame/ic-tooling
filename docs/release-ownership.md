@@ -48,7 +48,7 @@ Its verified first-publication receipt is below.
 
 ## Development, CI and delivery entrypoints
 
-The selected Toko 0.45.8 snapshot supplies common setup, formatting and selection
+The selected Toko 0.45.11 snapshot supplies common setup, formatting and selection
 admission. Consumer-owned product checks remain in the Makefile and qualification
 runners. The current command boundaries are:
 
@@ -79,9 +79,44 @@ The local 2026-11-18 hygiene/adoption batch is recorded in the
 Ordinary Makefile Cargo commands keep their lock constraint and may retrieve
 locked dependencies; set `CARGO_NET_OFFLINE=true` for explicit offline execution.
 Prepared archive and source-bound qualification retain their offline contracts.
-The audit handoff left product versions unchanged. The following authorized
-delivery selects patches because the packaged sources and development-tool
-requirements differ from their published archives.
+That audit handoff left product versions unchanged. The 2026-11-18 authorized
+delivery selected patches because the packaged sources and development-tool
+requirements differed from their published archives.
+
+### Toko 0.45.11 delivery — 2026-11-19
+
+Both maintained workspaces select published Toko 0.45.11, source
+`8f88a2e0e223298e0e7d2dda866a69dc32552643`, archive SHA-256
+`bf733054c231d91c9260a18f4d160aea4a03b1c7d22940333c3c82f4ac0e4348`.
+The canonical exporter retains the 49 existing files and selects the fixed shared
+setup module as a fiftieth file. Existing executable, baseline, tool-catalog and
+CI cache-action bytes are unchanged from the pending 0.45.10 selection. The six
+CI action references select the published 0.45.11 source. All other locked records,
+including pre-existing compatible updates, are preserved byte-for-byte.
+The [0.45.10 hygiene report](reports/audits/2026/11/19/toko-adoption-and-code-hygiene/01/report.md)
+retains the target-guard review and its original findings. The remaining
+[Toko Tooling #398](https://github.com/dragginzgame/toko-tooling/issues/398) gap is
+now fixed, and the local sanitizer/command-capture copy is replaced by the shared
+helper. The 69-check [consumer qualification](qualification/ci-setup.md) covers
+redactions, command status, failure custody and both shared-helper call sites.
+The maintainer authorized deployment from the normal checkout on `main` to
+`origin/main`. This increment uses the private Tools maintenance path. Comparison
+against all nine verified published archives admits identical file inventories,
+source, tests, licences and original member manifests. Normalized manifests and
+complete packaged locks differ only in the disabled `cfg(any())` development-tool
+selector; VCS provenance advances independently. No public normal/build dependency,
+runtime contract or product version changes. Under the pinned publication-impact
+rule this requires Git delivery, with no version bump, release tag or crates.io
+upload. Tools 0.1.3's maintenance note remains pending for its next actual release.
+
+The scoped delivery lock changes only Toko from the committed baseline. All
+pre-existing compatible lock updates are preserved separately and restored after
+the commit. Package comparison evidence is under `target/deploy-toko-0.45.11/`;
+source, push and recovery records are under `.git/release-state/toko-0.45.11/`.
+The 69-case diagnostic result is reused for unchanged helper/wrapper/fixture and
+workflow bytes; snapshot/selection admission is checked with the scoped lock.
+No product archive gates or native-provider suites are repeated for this private
+maintenance. Hosted CI starts asynchronously after the `main` push.
 
 ### Hygiene cohort — 2026-11-18
 

@@ -4,17 +4,21 @@ The `repository` and `secrets` jobs in `build-release-candidate.yml` wrap compil
 common-tool and secret-scanner setup with `scripts/ci/setup-diagnostics.pl`.
 This removes dependence on an
 ephemeral runner's console or a raw log path when setup fails before tests start.
-Toko Tooling 0.45.8 fixes the three redaction cases from
-[Toko Tooling #393](https://github.com/dragginzgame/toko-tooling/issues/393).
-Its optional setup module remains unselected for two independent guarantees:
-unlabelled values from `ACCESS_KEY` environment variables must be redacted
-([Toko Tooling #396](https://github.com/dragginzgame/toko-tooling/issues/396)),
-and already-admitted installer logs need a hard input-read ceiling
-([Toko Tooling #397](https://github.com/dragginzgame/toko-tooling/issues/397)).
-The existing collector supplies both; the authenticated snapshot update itself
-is complete. Reconsider migration when the shared helper preserves both guarantees.
-The collector is scoped to these jobs. Other repositories' concurrent fixes stay
-with their owners.
+Toko Tooling 0.45.11 supplies the selected `SetupDiagnostics.pm` module for command
+capture, exit/signal status, redaction and bounded excerpts. It includes the
+original redaction corrections from
+[Toko Tooling #393](https://github.com/dragginzgame/toko-tooling/issues/393),
+the `ACCESS_KEY` environment selector from
+[Toko Tooling #396](https://github.com/dragginzgame/toko-tooling/issues/396),
+and the hard admitted-file read ceiling from
+[Toko Tooling #397](https://github.com/dragginzgame/toko-tooling/issues/397).
+Bare Bearer credentials and JSON payload fields are now also omitted by the
+[Toko Tooling #398](https://github.com/dragginzgame/toko-tooling/issues/398) fix.
+The authenticated snapshot selects the module explicitly. The local wrapper
+imports it relative to its own script location and owns only this consumer's
+phase/root admission, attempt selection, artifact metadata and upload-path
+publication. Its duplicate sanitizer and command-capture implementation are
+removed. Other repositories' concurrent fixes stay with their owners.
 
 The repository job selects a temporary tool store at `$RUNNER_TEMP/ic-tooling-setup/tools`.
 The same selection is exported through `GITHUB_ENV` for subsequent cache, admission
@@ -33,15 +37,16 @@ successful installation exports the deterministic executable path. A setup failu
 uploads the collector's sanitized directory for seven days and reports its artifact
 URL or an explicit upload failure. Scanner findings are separate from setup errors.
 
-On failure, retain at most 64 KiB of command output plus at most ten sanitized
-attempt logs of the same bound (300 retained lines plus omission markers per log).
+On failure, retain less than 32 KiB of command output plus at most ten sanitized
+attempt logs of the same bound (at most 99 retained data lines plus an omission
+notice per excerpt, with displayed lines limited to 500 characters).
 Attempt selection visits at most 256
 entries/four directory levels in the job's tool store, including hidden attempts;
 it selects only `install.log`, `download.log` and `stderr.log`. Build/home/payload
 trees are not evidence, symlinks are not followed, and each selected file has a
 1 MiB read ceiling. Larger files are explicitly omitted. Filenames in the artifact
 are fixed; source path hashes identify attempts without exposing arbitrary paths.
-The artifact remains below 750 KiB. Missing output, selection caps and collector
+The artifact remains below 400 KiB. Missing output, selection caps and collector
 failures are reported explicitly. Child exit and signal status remain authoritative.
 
 Only a completed collection supplies an upload path. The failure-only artifact
@@ -59,21 +64,26 @@ successful setup, signal status and the workflow's upload-result reporting branc
 The scanner case runs the actual workflow command and pinned installer with a
 failing local curl substitute: exit 22, the underlying diagnostic, redaction and
 the absence of a published executable are verified. Both jobs' upload-result
-handlers are exercised. All 58 checks pass on 2026-11-18, including an unlabelled
-synthetic access-key environment value; evidence is under
-`target/hygiene-adoption/setup-diagnostics.log`. Earlier scanner-setup evidence
+handlers are exercised. The current fixture includes unlabelled synthetic
+access-key environment values, bare Bearer credentials and JSON payload fields.
+Shared-helper adoption adds invocation outside the repository working directory,
+command-launch refusal, the tighter per-excerpt bounds and the admitted-file read
+ceiling with an unfinished final line. The 69-check execution is retained under
+`target/toko-adoption-0.45.11/setup-diagnostics.log`; earlier scanner-setup evidence
 remains under `target/security-setup-review/diagnostics.log`.
 The repository job runs this focused fixture before formatting checks, so scanner
 setup failure and upload-reporting regressions are part of ordinary CI.
 These tests do not claim a hosted artifact upload or retrieval; that evidence
 requires an actual hosted setup failure. No live failure was deliberately induced.
 
-The local wrapper/fixture adapt the first-party DB implementation inspected during
-this task, after selecting this consumer-owned boundary. Its captured script SHA-256
+The original local wrapper/fixture adapted the first-party DB implementation
+after selecting this consumer-owned boundary. Its captured script SHA-256
 was `e6942466473d6e7f01f70d6e833a469aaa921ce26f155c34f656b86da01ed753`;
 the fixture was `c2addefc6391ce62128d9f00e05491c539b17913c475576b9bfce6973dd2b58f`.
-Tooling narrows phases/roots, adds file-open admission, bounds traversal and reads,
-and qualifies its own workflow. No installed Toko files or sibling work is modified.
+Tooling retains its phase/root and file-open admission, bounded traversal and
+artifact policy, and qualifies its own workflow. Toko owns the shared capture and
+excerpt implementation; the canonical exporter owns its installed bytes. No
+sibling implementation is modified.
 
 ## Job deadlines — 2026-11-17
 
