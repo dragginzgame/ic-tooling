@@ -1,12 +1,17 @@
 //! Descriptor-relative admission; no application formats or implicit hierarchy creation.
+#[cfg(test)]
+mod tests;
+
 mod preparation;
 pub use preparation::PrepareFailure;
-use std::ffi::{OsStr, OsString};
-use std::fs::{File, Metadata};
-use std::io;
-use std::os::unix::{ffi::OsStrExt, fs::MetadataExt};
-use std::path::Path;
-use std::sync::Arc;
+use std::{
+    ffi::{OsStr, OsString},
+    fs::{File, Metadata},
+    io,
+    os::unix::{ffi::OsStrExt, fs::MetadataExt},
+    path::Path,
+    sync::Arc,
+};
 
 use rustix::fs::{self, AtFlags, FileType, Mode, OFlags};
 use thiserror::Error;
@@ -72,6 +77,7 @@ impl FileId {
             inode: metadata.ino(),
         }
     }
+
     /// Observe identity through a held file.
     /// # Errors
     /// Preserves the original metadata I/O cause.
@@ -131,12 +137,14 @@ impl Directory {
             .map(|fd| Self::admit(File::from(fd), forbidden))
             .transpose()
     }
+
     fn admit(file: File, forbidden: u32) -> Result<Self, Error> {
         permissions(&file.metadata()?, forbidden)?;
         Ok(Self {
             file: Arc::new(file),
         })
     }
+
     /// Open one existing child directory, without creation or symlink traversal.
     /// # Errors
     /// Refuses names, types, permissions and original I/O. Missing is `None`.
@@ -152,6 +160,7 @@ impl Directory {
             .map(|fd| Self::admit(File::from(fd), forbidden))
             .transpose()
     }
+
     /// Create one new child, sync its parent and admit it. Existing entries refuse.
     /// On later failure the created child is retained, never implicitly removed.
     /// # Errors
@@ -171,6 +180,7 @@ impl Directory {
         self.sync()?;
         self.open_directory(child, forbidden)?.ok_or(Error::Changed)
     }
+
     /// Admit an existing regular file under explicit access and permission policy.
     /// # Errors
     /// Refuses links, special files, permission/alias violations and original I/O.
@@ -192,6 +202,7 @@ impl Directory {
         };
         admit_file(File::from(fd), policy).map(Some)
     }
+
     /// Create a retained recovery file, never replace it. No automatic deletion.
     /// The caller owns ordered writes, sync and recovery of partial effects. This
     /// writable handle is deliberately separate from publication staging.
@@ -207,6 +218,7 @@ impl Directory {
             permissions,
         )?))
     }
+
     /// Remove one entry only after comparing it with the caller's held regular file.
     /// The parent is not synchronized; call [`Self::sync`] when durability is required.
     /// Callers exclude concurrent namespace mutation: comparison and unlink are
@@ -218,6 +230,7 @@ impl Directory {
         fs::unlinkat(&*self.file, child, AtFlags::empty())?;
         Ok(())
     }
+
     pub(crate) fn check_file(&self, child: &OsStr, expected: &File) -> Result<(), Error> {
         let named = self
             .open_file(
@@ -234,6 +247,7 @@ impl Directory {
         }
         Ok(())
     }
+
     /// Enumerate a complete bounded set; metadata checks do not follow symlinks.
     /// # Errors
     /// Refuses the whole scan on overflow, allocation, enumeration or metadata error.
@@ -262,12 +276,14 @@ impl Directory {
         }
         Ok(entries)
     }
+
     /// Observe the held directory identity without reopening a mutable path.
     /// # Errors
     /// Preserves original descriptor metadata failure.
     pub fn identity(&self) -> io::Result<FileId> {
         FileId::from_file(&self.file)
     }
+
     /// Sync this held directory; success is the platform filesystem's guarantee.
     /// # Errors
     /// Preserves the original synchronization cause.
@@ -288,6 +304,7 @@ pub(crate) fn name(value: &OsStr) -> Result<(), Error> {
         Ok(())
     }
 }
+
 pub(crate) fn valid_mode(mode: u32) -> Result<Mode, Error> {
     if mode & !0o777 != 0 {
         Err(Error::Permissions {
@@ -299,6 +316,7 @@ pub(crate) fn valid_mode(mode: u32) -> Result<Mode, Error> {
         Ok(Mode::from_bits_truncate(mode as _))
     }
 }
+
 pub(crate) fn admit_file(file: File, policy: FilePolicy) -> Result<File, Error> {
     let metadata = file.metadata()?;
     if !metadata.is_file() {
@@ -310,9 +328,11 @@ pub(crate) fn admit_file(file: File, policy: FilePolicy) -> Result<File, Error> 
     }
     Ok(file)
 }
+
 fn directory_flags() -> OFlags {
     OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC
 }
+
 fn permissions(metadata: &Metadata, forbidden: u32) -> Result<(), Error> {
     let mode = metadata.mode() & 0o7777;
     if mode & forbidden != 0 {
@@ -321,6 +341,7 @@ fn permissions(metadata: &Metadata, forbidden: u32) -> Result<(), Error> {
         Ok(())
     }
 }
+
 fn optional<T>(result: Result<T, rustix::io::Errno>) -> Result<Option<T>, Error> {
     match result {
         Ok(value) => Ok(Some(value)),
@@ -328,6 +349,3 @@ fn optional<T>(result: Result<T, rustix::io::Errno>) -> Result<Option<T>, Error>
         Err(error) => Err(error.into()),
     }
 }
-
-#[cfg(test)]
-mod tests;

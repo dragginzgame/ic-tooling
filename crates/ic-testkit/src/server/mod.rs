@@ -3,17 +3,24 @@
 //! Enable `managed-server` explicitly. Callers own the Tokio runtime, application
 //! fixtures, simulated progress and gateway policy. Process owns native execution.
 //! Deletion completion means an upstream attempt, not observed remote cleanup.
+#[cfg(test)]
+mod tests;
+
 mod assets;
 pub use assets::{Asset, PreparedServer, host_asset, prepare};
 
-use std::io;
-use std::net::{SocketAddr, TcpStream};
-use std::os::unix::fs::PermissionsExt;
-use std::process::Command;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::thread::JoinHandle;
-use std::time::{Duration, Instant};
+use std::{
+    io,
+    net::{SocketAddr, TcpStream},
+    os::unix::fs::PermissionsExt,
+    process::Command,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+    },
+    thread::JoinHandle,
+    time::{Duration, Instant},
+};
 
 use ic_host_process::{Input, Ownership, Policy, Report, Stderr, Stream};
 use pocket_ic::{PocketIcBuilder, nonblocking::PocketIc};
@@ -125,6 +132,7 @@ impl Running {
     fn finished(&self) -> bool {
         self.task.as_ref().is_none_or(JoinHandle::is_finished)
     }
+
     fn finish(&mut self) -> Result<Stopped, Error> {
         self.cancelled.store(true, Ordering::Relaxed);
         let mut stopped = self
@@ -347,6 +355,7 @@ impl Instance {
         // Public instances always contain a client until consuming close begins.
         self.client.as_ref().expect("live instance")
     }
+
     /// Borrow the client mutably, including for original localhost gateway methods.
     /// Do not replace/move the client out through this borrow or independently
     /// attach clients whose lifetime exceeds the owner.
@@ -388,6 +397,7 @@ fn policy(elapsed: Duration, stdout_bytes: usize, stderr_bytes: usize) -> Policy
         elapsed,
     }
 }
+
 fn capture(command: &mut Command, policy: Policy, cancelled: &AtomicBool) -> Stopped {
     let mut output = Output::default();
     let process = ic_host_process::run(command, policy, cancelled, |stream, bytes| {
@@ -405,6 +415,3 @@ fn capture(command: &mut Command, policy: Policy, cancelled: &AtomicBool) -> Sto
         abandoned: 0,
     }
 }
-
-#[cfg(test)]
-mod tests;

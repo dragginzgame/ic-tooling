@@ -54,6 +54,7 @@ print "Bearer hidden-bearer\n";
 print qq({"access_key": "hidden-access-key"}\n);
 print $key_begin, 'x' x 9000, "\noversized-private-body\n$key_end\n";
 print "$ENV{TEST_SECRET}\n";
+print "$ENV{TEST_ACCESS_KEY}\n";
 print "$key_begin\nother-private-body\n$key_end\n";
 print "::warning::untrusted workflow annotation\n";
 print STDERR "compiler: fixture link failure\n";
@@ -71,6 +72,7 @@ sub run {
     local $ENV{CI_SETUP_ROOT} = "$temp/$mode";
     local $ENV{GITHUB_OUTPUT} = "$temp/$mode.outputs";
     local $ENV{TEST_SECRET} = 'exact-environment-secret';
+    local $ENV{TEST_ACCESS_KEY} = 'unlabelled-access-value';
     my $pid = open my $out, '-|';
     defined $pid or die $!;
     if (!$pid) {
@@ -99,7 +101,7 @@ like($printed, qr/certificate verification failed/, 'hidden failure is surfaced 
 like($retained, qr/attempt-1=install.log source_path_sha256=[0-9a-f]{64}/, 'attempt identity retained without disclosing arbitrary paths');
 like($retained, qr/earlier output, oversized lines or bytes beyond the read limit omitted/, 'truncation explicit');
 like($retained, qr/oversized attempt log omitted/, 'giant attempt log explicitly omitted');
-for my $secret (qw(hidden-password known-auth hidden-url hidden-fragment hidden-environment-value hidden-bearer hidden-access-key exact-environment-secret private-key-body other-private-body oversized-private-body must-not-follow-link must-not-follow-directory must-not-select-config)) {
+for my $secret (qw(hidden-password known-auth hidden-url hidden-fragment hidden-environment-value hidden-bearer hidden-access-key exact-environment-secret unlabelled-access-value private-key-body other-private-body oversized-private-body must-not-follow-link must-not-follow-directory must-not-select-config)) {
     unlike($retained . $printed, qr/\Q$secret\E/, "sensitive/unselected bytes excluded: $secret");
 }
 cmp_ok(length($retained), '<', 70000, 'retention bound holds for setup and attempt logs');

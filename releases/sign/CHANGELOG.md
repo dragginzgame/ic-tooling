@@ -2,6 +2,13 @@
 
 Package: `ic-host-sign`.
 
+## [0.1.1] - 2026-11-18
+
+### 🔧 Changed
+
+- Refresh the package development tooling selection to Toko Tooling 0.45.8.
+  Public APIs, persisted bytes and runtime behavior remain unchanged.
+
 ## [0.1.0] - 2026-11-17
 
 ### ➕ Added

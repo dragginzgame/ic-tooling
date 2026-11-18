@@ -1,17 +1,28 @@
 //! Exclusive release authority and explicitly bounded manual clock progression.
 
-use std::collections::TryReserveError;
-use std::future::Future;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::Duration;
+#[cfg(test)]
+mod clock_tests;
+#[cfg(test)]
+mod tests;
+
+use std::{
+    collections::TryReserveError,
+    future::Future,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
+    time::Duration,
+};
 
 use ic_platform_types::Principal;
-use pocket_ic::Time;
-use pocket_ic::common::rest::{
-    CanisterHttpReply, CanisterHttpRequest, CanisterHttpResponse, MockCanisterHttpResponse,
+use pocket_ic::{
+    Time,
+    common::rest::{
+        CanisterHttpReply, CanisterHttpRequest, CanisterHttpResponse, MockCanisterHttpResponse,
+    },
+    nonblocking::PocketIc,
 };
-use pocket_ic::nonblocking::PocketIc;
 
 use super::{Catalog, CompileError};
 
@@ -316,8 +327,3 @@ async fn manual(pic: &PocketIc) -> Result<(), ControlError> {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod clock_tests;
-#[cfg(test)]
-mod tests;

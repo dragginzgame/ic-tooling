@@ -1,9 +1,11 @@
-use std::ffi::OsStr;
-use std::fs;
-use std::io::{self, Read, Seek, SeekFrom};
-use std::os::unix::fs::{MetadataExt, PermissionsExt, symlink};
-use std::sync::{Arc, Barrier};
-use std::thread;
+use std::{
+    ffi::OsStr,
+    fs,
+    io::{self, Read, Seek, SeekFrom},
+    os::unix::fs::{MetadataExt, PermissionsExt, symlink},
+    sync::{Arc, Barrier},
+    thread,
+};
 
 use super::{Attempt, Commit, Destination, Phase, Policy, Retention, Sealed};
 use crate::{Access, Directory, Error, FileId, FilePolicy};
@@ -16,6 +18,7 @@ fn policy(destination: Destination) -> Policy {
         retention: Retention::Discard,
     }
 }
+
 fn sealed(root: &Directory, staging: &str, destination: Destination, bytes: &[u8]) -> Sealed {
     root.stage(
         OsStr::new(staging),
@@ -50,6 +53,7 @@ fn parent_rename_preserves_custody_and_replace_does_not_follow_final_symlink() {
     assert_eq!(fs::read(foreign).unwrap(), b"original");
     assert!(!path.join("final").exists());
 }
+
 #[test]
 fn concurrent_create_only_has_exactly_one_winner_and_preserves_loser_ownership() {
     let scratch = tempfile::tempdir().unwrap();
@@ -87,6 +91,7 @@ fn concurrent_create_only_has_exactly_one_winner_and_preserves_loser_ownership()
     );
     assert_eq!(fs::read_dir(scratch.path()).unwrap().count(), 1);
 }
+
 #[test]
 fn foreign_stage_is_neither_published_nor_removed() {
     let scratch = tempfile::tempdir().unwrap();
@@ -105,6 +110,7 @@ fn foreign_stage_is_neither_published_nor_removed() {
     assert_eq!(fs::read(scratch.path().join("stage")).unwrap(), b"foreign");
     assert!(!scratch.path().join("final").exists());
 }
+
 #[test]
 fn partial_write_short_and_growth_never_gain_seal_authority() {
     struct Broken(bool);
@@ -154,6 +160,7 @@ fn partial_write_short_and_growth_never_gain_seal_authority() {
     }
     assert!(!scratch.path().join("final").exists());
 }
+
 #[test]
 fn sync_failures_report_before_and_after_visibility_without_retry() {
     let scratch = tempfile::tempdir().unwrap();

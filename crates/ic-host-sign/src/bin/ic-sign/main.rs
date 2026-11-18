@@ -1,7 +1,9 @@
 //! Single-request offline signer. Private key material never leaves this process.
 
-use std::io::{self, Write};
-use std::process::ExitCode;
+use std::{
+    io::{self, Write},
+    process::ExitCode,
+};
 
 use clap::Parser;
 use ic_host_sign::protocol::{self, Operation, Response, WireRequest};

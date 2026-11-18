@@ -1,8 +1,9 @@
 use crate::{Access, Directory, Error, FilePolicy, Lock};
-use std::ffi::OsStr;
-use std::fs;
-use std::io;
-use std::os::unix::fs::{PermissionsExt, symlink};
+use std::{
+    ffi::OsStr,
+    fs, io,
+    os::unix::fs::{PermissionsExt, symlink},
+};
 
 #[test]
 fn admission_refuses_links_permissions_aliases_and_limits() {
@@ -40,6 +41,7 @@ fn admission_refuses_links_permissions_aliases_and_limits() {
     ));
     assert_eq!(root.entries(3).unwrap().len(), 3);
 }
+
 #[test]
 fn locks_contend_and_explicit_release_ends_clone_authority() {
     let scratch = tempfile::tempdir().unwrap();

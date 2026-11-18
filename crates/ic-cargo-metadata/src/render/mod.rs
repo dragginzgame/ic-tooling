@@ -1,4 +1,7 @@
 //! TOML spans own syntax; only admitted string literals are replaced.
+#[cfg(test)]
+mod tests;
+
 use crate::{Error, Result};
 use serde::Deserialize;
 use std::{
@@ -55,6 +58,7 @@ fn edit(value: &Value, previous: &str, next: &str) -> Result<Edit> {
         Value::from(next).to_string(),
     ))
 }
+
 fn apply(input: &str, mut edits: Vec<Edit>) -> Result<String> {
     edits.sort_by_key(|(span, _)| std::cmp::Reverse(span.start));
     let mut output = input.to_owned();
@@ -69,6 +73,7 @@ fn apply(input: &str, mut edits: Vec<Edit>) -> Result<String> {
     Document::parse(output.as_str())?;
     Ok(output)
 }
+
 pub(crate) fn manifest(input: &str, previous: &str, next: &str, plan: &Plan) -> Result<String> {
     versions(previous, next)?;
     let doc = Document::parse(input)?;
@@ -212,6 +217,3 @@ pub(crate) fn lock(input: &str, previous: &str, next: &str, selected: &[String])
     }
     apply(input, edits)
 }
-
-#[cfg(test)]
-mod tests;

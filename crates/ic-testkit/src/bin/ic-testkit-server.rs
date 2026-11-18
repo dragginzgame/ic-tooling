@@ -1,12 +1,14 @@
 //! Explicit simulator setup, offline admission and command-scoped lifetime.
-use std::ffi::OsString;
-use std::fs::{self, DirBuilder, File};
-use std::io::{self, Write};
-use std::os::unix::fs::DirBuilderExt;
-use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::{
+    ffi::OsString,
+    fs::{self, DirBuilder, File},
+    io::{self, Write},
+    os::unix::fs::DirBuilderExt,
+    path::{Path, PathBuf},
+    process::{Command, ExitCode},
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
 
 use clap::{Parser, Subcommand};
 use ic_host_process::{Failure, Input, Ownership, Policy, Report, Stderr, Stream};

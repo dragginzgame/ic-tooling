@@ -4,6 +4,15 @@ The `repository` and `secrets` jobs in `build-release-candidate.yml` wrap compil
 common-tool and secret-scanner setup with `scripts/ci/setup-diagnostics.pl`.
 This removes dependence on an
 ephemeral runner's console or a raw log path when setup fails before tests start.
+Toko Tooling 0.45.8 fixes the three redaction cases from
+[Toko Tooling #393](https://github.com/dragginzgame/toko-tooling/issues/393).
+Its optional setup module remains unselected for two independent guarantees:
+unlabelled values from `ACCESS_KEY` environment variables must be redacted
+([Toko Tooling #396](https://github.com/dragginzgame/toko-tooling/issues/396)),
+and already-admitted installer logs need a hard input-read ceiling
+([Toko Tooling #397](https://github.com/dragginzgame/toko-tooling/issues/397)).
+The existing collector supplies both; the authenticated snapshot update itself
+is complete. Reconsider migration when the shared helper preserves both guarantees.
 The collector is scoped to these jobs. Other repositories' concurrent fixes stay
 with their owners.
 
@@ -50,8 +59,10 @@ successful setup, signal status and the workflow's upload-result reporting branc
 The scanner case runs the actual workflow command and pinned installer with a
 failing local curl substitute: exit 22, the underlying diagnostic, redaction and
 the absence of a published executable are verified. Both jobs' upload-result
-handlers are exercised. All 57 checks pass; evidence is under
-`target/security-setup-review/diagnostics.log`.
+handlers are exercised. All 58 checks pass on 2026-11-18, including an unlabelled
+synthetic access-key environment value; evidence is under
+`target/hygiene-adoption/setup-diagnostics.log`. Earlier scanner-setup evidence
+remains under `target/security-setup-review/diagnostics.log`.
 The repository job runs this focused fixture before formatting checks, so scanner
 setup failure and upload-reporting regressions are part of ordinary CI.
 These tests do not claim a hosted artifact upload or retrieval; that evidence

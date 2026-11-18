@@ -2,6 +2,13 @@
 
 Package: `ic-host-process`. Earlier unreleased headings retain development history.
 
+## [0.81.1] - 2026-11-18
+
+### 🔧 Changed
+
+- Refresh the package development tooling selection to Toko Tooling 0.45.8.
+  Public APIs, persisted bytes and runtime behavior remain unchanged.
+
 ## [0.81.0] - 2026-11-17
 
 ### ⚠️ Breaking

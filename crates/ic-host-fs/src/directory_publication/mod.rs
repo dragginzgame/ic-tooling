@@ -1,6 +1,11 @@
+#[cfg(test)]
+mod tests;
+
 use crate::{Directory, Error, FileId, directory::name};
-use std::ffi::{OsStr, OsString};
-use std::io;
+use std::{
+    ffi::{OsStr, OsString},
+    io,
+};
 
 /// Namespace publication evidence, not a statement about tree contents.
 #[derive(Debug)]
@@ -108,6 +113,3 @@ fn rename_new(parent: &Directory, staging: &OsStr, destination: &OsStr) -> Resul
         Err(io::Error::from(io::ErrorKind::Unsupported).into())
     }
 }
-
-#[cfg(test)]
-mod tests;

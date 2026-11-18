@@ -1,8 +1,10 @@
 use super::*;
 use crate::{Ownership, Session};
-use std::os::unix::process::CommandExt;
-use std::process::Command;
-use std::time::{Duration, Instant};
+use std::{
+    os::unix::process::CommandExt,
+    process::Command,
+    time::{Duration, Instant},
+};
 
 #[test]
 fn exited_leader_is_distinguished_from_live_group_members() {

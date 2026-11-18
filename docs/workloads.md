@@ -3,13 +3,16 @@
 This register selects behavior, not old exports. Historical source evidence is
 in commit `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3` under
 `docs/design/consumer-evidence.txt` and `inventory.tsv`. The reviewed production
-baseline is `a00369fc29fa837c6deb022cceb7e09aa447292c` in `../ic-tooling`.
+baseline is commit `a00369fc29fa837c6deb022cceb7e09aa447292c` in this
+repository's history. This checkout is the replacement implementation, not a
+legacy reference tree.
 These are historical observations, not fresh consumer execution or an exhaustive
 current fleet audit. Use each active consumer’s current local working tree for qualification;
 [source snapshots](qualification/local-sources.md) preserve edits without modifying
-the sibling. Historical commits do not establish current compatibility. Auth is on hold; Storage,
-Observability and Wire are frozen by maintainer direction. Their obligations stay
-recorded, but no migration or design expansion is active for those repositories.
+the sibling. Historical commits do not establish current compatibility.
+Tooling-owned Auth, Storage, Observability and Wire migration lanes are on hold.
+Their obligations stay recorded; these holds do not freeze their owning
+repositories or override maintainer-authorized work there.
 
 | Consumer/workflow | Required outcomes and refusals | Proposed destination | Status / gate |
 | --- | --- | --- | --- |
@@ -20,8 +23,8 @@ recorded, but no migration or design expansion is active for those repositories.
 | DB simulation/snapshots | Explicit server/instance lifetime, caller identity, stable-memory oracle, partial snapshot effects | Simulator session | [Current DB rollback](../qualification/db/README.md) passes with direct upstream async client, explicit endpoint and observed deletion/server survival; [Jobs controller recovery](../qualification/scheduling/README.md) also passes; managed server is published; multi-canister snapshot sets require a demonstrated current caller |
 | Platform / Query | Supported simulator/Wire behavior and upstream type identity | Simulator / narrow Wire adapter if needed | [Platform raw_rand and Agent](../qualification/platform/README.md) use direct upstream PocketIC; remaining Platform drivers are open. [Current Query Text](../qualification/query/README.md) and [DB console Text](../qualification/db/README.md#current-console-text) pass without expanding the API |
 | Profiler observations | Retired by maintainer confirmation on 2026-11-16 | No replacement admitted | Removes this consumer's Stage 5 observation/native-acceptance obligation; historical evidence is retained |
-| Current native-tool execution | Bounded capture/deadlines with owned-group cleanup, plus direct-child foreground terminal communication | Process 0.80.2 shared with Build; caller keeps signing/decoding/retry policy | [Current caller review](process-execution.md); combined current Canic Build/lock/signer/metadata/Store-source/foreground qualification passes |
-| Canic exact external signing | Existing secp256k1 keyring sender, exact update/status authorization, no secret export/network/submission, retained cancellation custody | Sign integrates Platform envelopes with Process execution; credentials must already be unlocked/authorized; Backup/Canic keep approval, spending, submission and recovery | [Tooling #12 contract](sign-only-integration.md): Linux real-keyring update/status, cancellation and locked refusal pass with no prompts; native macOS acceptance remains open |
+| Current native-tool execution | Bounded capture/deadlines with owned-group cleanup, plus direct-child foreground terminal communication | Process 0.81.0 shared with Build; caller keeps signing/decoding/retry policy | [Current caller review](process-execution.md); earlier captured Canic Build/lock/signer/metadata/Store-source/foreground qualification is historical consumer evidence |
+| Canic exact external signing | Existing secp256k1 keyring sender, exact update/status authorization, no secret export/network/submission, retained cancellation custody | Sign integrates Platform envelopes with Process execution; credentials must already be unlocked/authorized; Backup/Canic keep approval, spending, submission and recovery | [Tooling #12 contract](sign-only-integration.md) is qualified and published: disposable real-provider update/status, cancellation and noninteractive locked refusal pass on Linux and Intel/ARM macOS; [Canic #5](https://github.com/dragginzgame/canic/issues/5) owns consumer cutover |
 | Desktop viewer opener | Return while the opener may still run; literal URL argument, original spawn refusal, eventual reaping without forced teardown | Process `launch` keeps worker custody independently of caller completion observation | Current Canic 0.214.0 replacement and loopback viewer pass; Linux reaping after observer drop is observed; native macOS remains open |
 | HTTP / Text / Wire leaves | Bounded complete body, escaping/Unicode/table output, encode-call-decode once and committed mutation after decode refusal | Individually admitted adapters | HTTP, escaping, bordered tables and Canic plain tables admitted; other Text and Wire workloads remain open |
 | Product release | Exact candidate archives, source/tool/host evidence, stage failures and partial publication recovery | Selected Toko runner plus product recipes | Stage 6; no new generic release engine |

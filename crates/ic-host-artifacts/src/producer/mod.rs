@@ -1,4 +1,7 @@
 //! Complete producer hashing without retaining payload bytes or owning a sink.
+#[cfg(test)]
+mod tests;
+
 use std::io::{self, Write};
 
 use sha2::{Digest, Sha256};
@@ -79,6 +82,3 @@ impl Write for Producer {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests;

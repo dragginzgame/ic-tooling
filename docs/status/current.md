@@ -1,4 +1,4 @@
-# Current implementation — 2026-11-17
+# Current implementation — 2026-11-18
 
 ## Decisions and scope
 
@@ -12,10 +12,20 @@ asynchronously. Qualify sibling consumers through [read-only current-source
 snapshots](../qualification/local-sources.md), including working edits; refuse
 capture drift and stale adapters. Consumer implementation stays with its owner.
 
-Auth is on hold; Storage, Observability and Wire are frozen. Backup adoption is
+Tooling-owned Auth, Storage, Observability and Wire migration lanes remain on
+hold; this does not freeze their owning repositories. Backup adoption is
 user-owned. Profiler is retired. The [workload register](../workloads.md) retains
 historical source identities and consumer boundaries; no current unfrozen caller
 justifies a new snapshot-set/cache API without a defined partial-effect contract.
+
+The read-only predecessor is commit `a00369fc29fa837c6deb022cceb7e09aa447292c`
+in this repository's history, not the current checkout. Historical inventory and
+consumer observations are at `cd9f453ee66565a4feeea10e034f3dd5cb9d61e3` under
+`docs/design/consumer-evidence.txt` and `inventory.tsv`. Stage 1's owned-build
+checkpoint passed; Stage 2's byte/filesystem slices have qualified Backup uses,
+without claiming complete restore adoption. Stage 3's old Scheduling experiments
+are historical; the rewrite's own current qualification determines its obligations.
+See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Latest delivery
 
@@ -49,12 +59,26 @@ live in `target/deploy-sign/` and `.git/release-state/sign-0.1.0/`. Private Tool
 
 ## Blockers and next actions
 
-Toko Tooling 0.45.0 adoption updates both workspaces, the authenticated
-snapshot and CI action revision. Snapshot/tool admission, formatting and actionlint
-pass; executable/catalog and cache-action bytes are unchanged. See the
-[actual flow boundaries](../release-ownership.md#development-ci-and-delivery-entrypoints).
-The adoption is delivered through Git without republishing unchanged product
-libraries. Concurrent compatible lock updates are preserved and left uncommitted.
+Toko Tooling 0.45.8 adoption updates both workspaces, the authenticated
+snapshot and CI action revision. The full hygiene pass groups Rust imports,
+moves test declarations before implementation and labels dependency roles.
+The private qualification CLI uses Clap with its existing command contract.
+Ordinary Makefile Cargo commands keep `--locked`; `CARGO_NET_OFFLINE=true`
+selects offline execution. Prepared qualification retains its offline contracts.
+Workspace tests, warning-denied Clippy/docs, setup fixtures and tooling admission
+pass; see the [audit report](../reports/audits/2026/11/18/code-hygiene-and-tt-adoption/01/report.md).
+The optional setup module remains unselected pending
+[Toko Tooling #396](https://github.com/dragginzgame/toko-tooling/issues/396) and
+[Toko Tooling #397](https://github.com/dragginzgame/toko-tooling/issues/397);
+the existing bounded collector preserves both guarantees. The maintainer has
+authorized deployment. Packaged source changes select patch releases:
+Foundation 0.80.4, Process 0.81.1, Build 0.87.5, HTTP 0.80.1, Text 0.77.3,
+Metadata 0.1.1, Testkit 0.110.1 and Sign 0.1.1. Compiler-policy edits are included;
+unrelated compatible lock updates are retained in
+`.git/release-state/hygiene-2026-11-18/` for restoration after publication.
+The Linux core archive gate passes, including the foreground PTY fixture;
+consumer requalification is not selected for this mechanical source batch.
+Registry publication and remote verification remain the active delivery steps.
 
 Producer acceptance has no outstanding blocker. Canic's thin Backup adapter and
 installed acceptance remain in [Canic #5](https://github.com/dragginzgame/canic/issues/5).

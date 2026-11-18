@@ -1,10 +1,12 @@
 //! Version-one sign-only exchange. Request data is never a credential channel.
 
-use std::fs::File;
-use std::io::{self, Read, Write};
-use std::os::unix::fs::MetadataExt;
-use std::path::Path;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{
+    fs::File,
+    io::{self, Read, Write},
+    os::unix::fs::MetadataExt,
+    path::Path,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use ic_host_artifacts::Length;
 use ic_platform_types::Principal;
@@ -20,7 +22,7 @@ pub const FRAME_BYTES: usize = 32 * 1024 * 1024;
 pub const ENVELOPE_BYTES: usize = 4 * 1024 * 1024;
 /// Inclusive public manifest ceiling (1 MiB).
 pub const MANIFEST_BYTES: usize = 1024 * 1024;
-/// Maximum signing-completion interval, including unlock and admission.
+/// Maximum signing-completion interval, including noninteractive admission.
 pub const SIGNING_INTERVAL: Duration = Duration::from_secs(300);
 
 /// Public, explicitly selected existing ICP identity and local credential backend.
@@ -213,21 +215,25 @@ impl Signed {
     pub fn envelope_bytes(&self) -> &[u8] {
         &self.envelope
     }
+
     /// Update identity, or the original update identity selected by a status read.
     #[must_use]
     pub const fn request_id(&self) -> &[u8; 32] {
         &self.request_id
     }
+
     /// Original sender.
     #[must_use]
     pub const fn sender(&self) -> Principal {
         self.sender
     }
+
     /// Original effective routing target.
     #[must_use]
     pub const fn effective_canister(&self) -> Principal {
         self.effective
     }
+
     /// Original exact signed expiry.
     #[must_use]
     pub const fn expiry(&self) -> u64 {
@@ -287,6 +293,7 @@ pub(crate) fn encode(value: &impl Serialize) -> Result<Vec<u8>, Error> {
                 .ok_or_else(|| io::Error::other("frame limit"))?;
             Ok(bytes.len())
         }
+
         fn flush(&mut self) -> io::Result<()> {
             Ok(())
         }

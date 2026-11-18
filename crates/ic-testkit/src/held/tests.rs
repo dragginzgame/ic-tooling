@@ -216,10 +216,13 @@ fn generated_module_preserves_opaque_data_and_escapes_export_names() {
 #[test]
 #[ignore = "requires an explicitly owned IC_TESTKIT_POCKET_IC_URL server"]
 fn installed_modules_keep_replies_bound_to_slots_and_reject_failures() {
-    use pocket_ic::PocketIcBuilder;
-    use pocket_ic::common::rest::{
-        CanisterHttpMethod, CanisterHttpPricingVersion, CanisterHttpReject,
-        CanisterHttpReplication, CanisterHttpReply, CanisterHttpResponse, MockCanisterHttpResponse,
+    use pocket_ic::{
+        PocketIcBuilder,
+        common::rest::{
+            CanisterHttpMethod, CanisterHttpPricingVersion, CanisterHttpReject,
+            CanisterHttpReplication, CanisterHttpReply, CanisterHttpResponse,
+            MockCanisterHttpResponse,
+        },
     };
 
     let endpoint = std::env::var("IC_TESTKIT_POCKET_IC_URL")

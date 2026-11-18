@@ -1,6 +1,7 @@
-use std::fs;
-use std::os::unix::fs::PermissionsExt;
-use std::os::unix::fs::symlink;
+use std::{
+    fs,
+    os::unix::fs::{PermissionsExt, symlink},
+};
 
 use super::Target;
 

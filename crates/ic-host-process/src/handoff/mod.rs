@@ -1,8 +1,13 @@
 //! A worker retains child custody independently of completion observation.
-use std::io;
-use std::os::unix::process::CommandExt;
-use std::process::{Child, Command, ExitStatus, Stdio};
-use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
+#[cfg(test)]
+mod tests;
+
+use std::{
+    io,
+    os::unix::process::CommandExt,
+    process::{Child, Command, ExitStatus, Stdio},
+    sync::mpsc::{self, Receiver, Sender, TryRecvError},
+};
 
 /// Completion observation without termination authority.
 ///
@@ -110,6 +115,3 @@ fn work<C>(
     };
     let _ = done.send(result);
 }
-
-#[cfg(test)]
-mod tests;

@@ -1,9 +1,14 @@
 //! Private target custody and descriptor-relative capture admission.
 
-use std::fs::File;
-use std::io;
-use std::os::unix::fs::PermissionsExt;
-use std::path::{Component, Path, PathBuf};
+#[cfg(test)]
+mod tests;
+
+use std::{
+    fs::File,
+    io,
+    os::unix::fs::PermissionsExt,
+    path::{Component, Path, PathBuf},
+};
 
 use ic_host_fs::{Access, Directory, FilePolicy};
 use tempfile::TempDir;
@@ -99,6 +104,3 @@ fn io_error(error: ic_host_fs::Error) -> io::Error {
         error => io::Error::other(error),
     }
 }
-
-#[cfg(test)]
-mod tests;

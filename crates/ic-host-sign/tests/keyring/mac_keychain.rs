@@ -2,8 +2,10 @@
 //! Preauthorize an empty test item, then let ICP populate its actual key in place.
 //! No operator keychain, private-key export or password argv is used.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use security_framework::os::macos::keychain::CreateOptions;
 

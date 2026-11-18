@@ -1,7 +1,8 @@
 //! One advisory lock owner; recovery-file content remains caller-owned.
-use std::ffi::OsStr;
-use std::fs::File;
-use std::io;
+#[cfg(test)]
+mod tests;
+
+use std::{ffi::OsStr, fs::File, io};
 
 use crate::{
     Directory, Error, FilePolicy,
@@ -70,12 +71,14 @@ impl Lock {
         flock(&file, FlockOperation::NonBlockingLockExclusive)?;
         Ok(Self { file, active: true })
     }
+
     /// Original file for identity checks. A cloned descriptor does not become a
     /// separate lock owner: releasing this owner explicitly unlocks its description.
     #[must_use]
     pub fn file(&self) -> &File {
         &self.file
     }
+
     /// End the advisory lock, preserving the file and reporting unlock failure.
     /// # Errors
     /// Returns the original native unlock refusal.
@@ -92,6 +95,3 @@ impl Drop for Lock {
         }
     }
 }
-
-#[cfg(test)]
-mod tests;

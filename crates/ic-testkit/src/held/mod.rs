@@ -3,6 +3,9 @@
 //! Repeated method names represent distinct lifetime slots in input order. Every
 //! slot is an update by construction; query methods are not part of this API.
 
+#[cfg(test)]
+mod tests;
+
 use std::collections::TryReserveError;
 
 mod module;
@@ -161,6 +164,3 @@ fn charge(used: usize, added: usize, limit: usize, budget: Budget) -> Result<usi
         .filter(|total| *total <= limit)
         .ok_or(Error::Limit { budget, limit })
 }
-
-#[cfg(test)]
-mod tests;

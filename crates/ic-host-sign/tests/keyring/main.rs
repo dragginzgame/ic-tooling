@@ -1,13 +1,13 @@
 //! Explicit real-provider qualification. Requires a prepared ICP CLI and native
 //! credential session. Creates/deletes only a uniquely named disposable identity.
 
-use std::fs;
-use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
-use std::process::Command;
+use std::{fs, os::unix::fs::PermissionsExt, path::PathBuf, process::Command};
 
-use ic_host_sign::protocol::{self, Configuration, Operation, Request};
-use ic_host_sign::{Error, Signer};
+use ic_host_sign::{
+    Error, Signer,
+    protocol::{self, Configuration, Operation, Request},
+};
+
 use zeroize::Zeroizing;
 
 #[cfg(target_os = "macos")]

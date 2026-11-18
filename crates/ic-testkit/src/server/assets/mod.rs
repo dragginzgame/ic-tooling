@@ -1,10 +1,15 @@
-use std::fs::File;
-use std::io::{self, Seek};
-use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::sync::atomic::AtomicBool;
-use std::time::Duration;
+#[cfg(test)]
+mod tests;
+
+use std::{
+    fs::File,
+    io::{self, Seek},
+    os::unix::fs::PermissionsExt,
+    path::{Path, PathBuf},
+    process::Command,
+    sync::atomic::AtomicBool,
+    time::Duration,
+};
 
 use ic_host_artifacts::{Identity, Length};
 use ic_host_fs::{Access, Commit, Destination, Directory, FileId, FilePolicy, Policy, Retention};
@@ -219,6 +224,7 @@ fn next_stage() -> usize {
     static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
+
 fn hex(identity: Identity) -> String {
     use std::fmt::Write;
     let mut text = String::with_capacity(64);
@@ -227,6 +233,3 @@ fn hex(identity: Identity) -> String {
     }
     text
 }
-
-#[cfg(test)]
-mod tests;

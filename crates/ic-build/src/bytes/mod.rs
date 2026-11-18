@@ -1,7 +1,12 @@
 //! Build cancellation adapter around the shared byte-admission owner.
 
-use std::io::{self, Read};
-use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(test)]
+mod tests;
+
+use std::{
+    io::{self, Read},
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use ic_host_artifacts::{Error, Length};
 
@@ -46,6 +51,3 @@ pub(crate) fn capture(
         Error::Allocation => Failure::Allocation,
     })
 }
-
-#[cfg(test)]
-mod tests;

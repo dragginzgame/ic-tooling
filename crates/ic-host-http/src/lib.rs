@@ -4,6 +4,9 @@
 //! outside this budget. No request, retry, runtime or detached task is created.
 #![cfg(not(target_family = "wasm"))]
 
+#[cfg(test)]
+mod tests;
+
 use std::collections::TryReserveError;
 
 use reqwest::Response;
@@ -70,6 +73,3 @@ pub async fn body(mut response: Response, limit: usize) -> Result<Vec<u8>, Error
     }
     Ok(bytes)
 }
-
-#[cfg(test)]
-mod tests;

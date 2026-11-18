@@ -1,8 +1,10 @@
 use crate::{Directory, DirectoryPublishError, Error};
-use std::ffi::OsStr;
-use std::fs;
-use std::io::{self, Write};
-use std::os::unix::fs::symlink;
+use std::{
+    ffi::OsStr,
+    fs,
+    io::{self, Write},
+    os::unix::fs::symlink,
+};
 
 fn tree(parent: &Directory, name: &str, bytes: &[u8]) -> Directory {
     let directory = parent.create_directory(OsStr::new(name), 0o700, 0).unwrap();

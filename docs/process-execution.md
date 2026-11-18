@@ -1,15 +1,17 @@
-# Native execution: next owner admission
+# Native execution
 
-Pending Process 0.81.0 adds finite owned pipe input for
+Published Process 0.81.0 adds finite owned pipe input for
 [IC Tooling #12 — Provide bounded external sign-only integration with exact expiry and existing identity custody](https://github.com/dragginzgame/ic-tooling/issues/12).
 `Input::Bytes` uses the same nonblocking executor and cleanup owner, removing the
 need for a caller-owned writer thread or request scratch file. `Input`/`Policy`
 are explicitly cloneable and no longer `Copy`; Debug omits input contents.
 The [Sign contract and focused evidence](sign-only-integration.md) separate this
-process prerequisite from authenticated update signing and its remaining
-standalone-status/native-provider acceptance.
+process prerequisite from authenticated update/status signing. Sign 0.1.0 and
+its disposable real-provider acceptance are delivered on Linux and both macOS
+architectures; see the [cohort receipt](release-ownership.md#signing-cohort--process-0810-first).
+Consumer adoption remains with its owner.
 
-Status: `ic-host-process` 0.80.2 was published on 2026-11-16 and starts the [handoff design](process-handoff.md).
+The earlier `ic-host-process` 0.80.2 release on 2026-11-16 starts the [handoff design](process-handoff.md).
 The first-release native checks also require Darwin group-cleanup admission
 described below; earlier evidence predates that correction. The following 0.80.1 evidence covers adoption
 by Build, with current Canic artifact/metadata, foreground-client and signer

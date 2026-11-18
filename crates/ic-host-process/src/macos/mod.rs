@@ -1,4 +1,7 @@
 //! Resolve Darwin's zombie-only group EPERM without ignoring live members.
+#[cfg(test)]
+mod tests;
+
 use std::process::Child;
 
 use libproc::processes::{ProcFilter, pids_by_type};
@@ -28,6 +31,3 @@ pub(super) fn exited_group(child: &Child) -> bool {
     pids_by_type(ProcFilter::ByProgramGroup { pgrpid: child.id() })
         .is_ok_and(|members| members.iter().all(|pid| *pid == child.id()))
 }
-
-#[cfg(test)]
-mod tests;

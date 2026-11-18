@@ -7,7 +7,7 @@ include vendor/toko-tooling/make/cargo-dependencies.mk
 .PHONY: help check test-owned-build lint-owned-build doc-owned-build
 help:
 	@printf '%s\n' \
-	  'Development (offline; prepare tools and wasm32-unknown-unknown first):' \
+	  'Development (prepare tools and wasm32-unknown-unknown first; CARGO_NET_OFFLINE=true opts out of retrieval):' \
 	  '  make check             Admit Cargo tooling selection and installed snapshot' \
 	  '  make test-testkit-catalog Reply catalog and generated module admission' \
 	  '  make test-process      Owned execution and affected Build failure checks' \
@@ -76,16 +76,16 @@ check: toko-tooling-check
 
 .PHONY: test-sign test-sign-keyring
 test-sign:
-	cargo clippy -p ic-host-sign --all-targets --all-features --locked --offline -- -D warnings
-	cargo test -p ic-host-sign --lib --locked --offline
+	cargo clippy -p ic-host-sign --all-targets --all-features --locked -- -D warnings
+	cargo test -p ic-host-sign --lib --locked
 
 test-sign-keyring:
 	bash scripts/qualification/sign-keyring.sh
 
 .PHONY: test-cargo-metadata test-cargo-metadata-consumer
 test-cargo-metadata:
-	cargo clippy -p ic-cargo-metadata --all-targets --locked --offline -- -D warnings
-	cargo test -p ic-cargo-metadata --locked --offline
+	cargo clippy -p ic-cargo-metadata --all-targets --locked -- -D warnings
+	cargo test -p ic-cargo-metadata --locked
 
 test-cargo-metadata-consumer:
 	bash scripts/qualification/cargo-metadata-consumer.sh
@@ -96,7 +96,7 @@ test-pocketic-setup:
 
 .PHONY: prepare-testkit-server-cli test-testkit-server-cli
 prepare-testkit-server-cli:
-	cargo build -p ic-testkit --features cli --bin ic-testkit-server --locked --offline
+	cargo build -p ic-testkit --features cli --bin ic-testkit-server --locked
 
 test-testkit-server-cli:
 	bash scripts/qualification/test-testkit-server-cli.sh
@@ -132,13 +132,13 @@ test-canic-lock: toko-tooling-check
 
 # Focused on the first workflow; not a complete product or release gate.
 test-owned-build: toko-tooling-check
-	cargo test -p ic-build --lib --locked --offline
+	cargo test -p ic-build --lib --locked
 
 lint-owned-build: toko-tooling-check
-	cargo clippy -p ic-build --all-targets --locked --offline -- -D warnings
+	cargo clippy -p ic-build --all-targets --locked -- -D warnings
 
 doc-owned-build: toko-tooling-check
-	RUSTDOCFLAGS='-D warnings' cargo doc -p ic-build --no-deps --locked --offline
+	RUSTDOCFLAGS='-D warnings' cargo doc -p ic-build --no-deps --locked
 
 .PHONY: test-custody test-backup-custody
 .PHONY: test-backup-commitments
@@ -150,7 +150,7 @@ test-backup-assembly: toko-tooling-check
 	bash scripts/qualification/backup-commitments.sh assembly
 
 test-custody: toko-tooling-check
-	cargo test -p ic-host-artifacts -p ic-host-fs --lib --locked --offline
+	cargo test -p ic-host-artifacts -p ic-host-fs --lib --locked
 
 test-backup-custody: toko-tooling-check
 	bash scripts/qualification/backup-consumer.sh
@@ -169,14 +169,14 @@ test-canic-consumer: toko-tooling-check
 
 .PHONY: test-http-body test-backup-http
 test-http-body: toko-tooling-check
-	cargo test -p ic-host-http --lib --locked --offline
+	cargo test -p ic-host-http --lib --locked
 
 test-backup-http: toko-tooling-check
 	bash scripts/qualification/backup-consumer.sh http
 
 .PHONY: test-text test-query-text
 test-text: toko-tooling-check
-	cargo test -p ic-host-text --lib --locked --offline
+	cargo test -p ic-host-text --lib --locked
 
 test-query-text: toko-tooling-check
 	bash scripts/qualification/query-consumer.sh
@@ -295,30 +295,30 @@ test-canic-foreground: toko-tooling-check
 	bash scripts/qualification/canic-foreground.sh
 
 test-process: toko-tooling-check
-	cargo test -p ic-host-process -p ic-build --lib --locked --offline
+	cargo test -p ic-host-process -p ic-build --lib --locked
 
 test-process-terminal: toko-tooling-check
 	@test "$$(uname -s)" = Linux || { echo 'This PTY recipe uses Linux script; native macOS qualification remains separate.' >&2; exit 1; }
-	printf 'fixture-answer\n' | script -q -e -c 'cargo test -p ic-host-process --lib --locked --offline tests::foreground_terminal_input_survives_direct_child_ownership -- --ignored --exact' /dev/null
+	printf 'fixture-answer\n' | script -q -e -c 'cargo test -p ic-host-process --lib --locked tests::foreground_terminal_input_survives_direct_child_ownership -- --ignored --exact' /dev/null
 
 test-testkit-catalog: toko-tooling-check
-	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline
+	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked
 
 .PHONY: test-testkit-module
 test-testkit-module: toko-tooling-check
 	@test -n "$${IC_TESTKIT_POCKET_IC_URL:-}" || { echo 'IC_TESTKIT_POCKET_IC_URL must select an externally owned server' >&2; exit 1; }
-	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline held::tests::installed_modules_keep_replies_bound_to_slots_and_reject_failures -- --ignored --exact
+	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked held::tests::installed_modules_keep_replies_bound_to_slots_and_reject_failures -- --ignored --exact
 
 .PHONY: test-testkit-control
 test-testkit-control: toko-tooling-check
 	@test -n "$${IC_TESTKIT_POCKET_IC_URL:-}" || { echo 'IC_TESTKIT_POCKET_IC_URL must select an externally owned server' >&2; exit 1; }
-	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline held::control::tests::installed_control_refuses_foreign_consumed_expired_and_automatic_releases -- --ignored --exact
-	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked --offline held::control::clock_tests::installed_clock_progression_preserves_live_replies_and_original_expiry -- --ignored --exact
+	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked held::control::tests::installed_control_refuses_foreign_consumed_expired_and_automatic_releases -- --ignored --exact
+	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked held::control::clock_tests::installed_clock_progression_preserves_live_replies_and_original_expiry -- --ignored --exact
 
 .PHONY: test-testkit-server test-testkit-server-installed
 test-testkit-server: toko-tooling-check
-	cargo test -p ic-testkit --features managed-server --lib --locked --offline server::tests
+	cargo test -p ic-testkit --features managed-server --lib --locked server::tests
 
 test-testkit-server-installed: toko-tooling-check
 	@test -n "$${TESTKIT_SERVER_ARCHIVE:-}" -a -n "$${TESTKIT_GZIP:-}" || { echo 'Select TESTKIT_SERVER_ARCHIVE and absolute TESTKIT_GZIP explicitly' >&2; exit 1; }
-	cargo test -p ic-testkit --features managed-server,held-reply-fixtures --lib --locked --offline server::tests::installed_ -- --ignored
+	cargo test -p ic-testkit --features managed-server,held-reply-fixtures --lib --locked server::tests::installed_ -- --ignored

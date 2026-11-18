@@ -1,8 +1,13 @@
 //! Cargo's streaming/diagnostic adapter over the shared owned execution core.
 
-use std::io::{self, Write};
-use std::process::{Command, ExitStatus};
-use std::sync::atomic::AtomicBool;
+#[cfg(test)]
+mod tests;
+
+use std::{
+    io::{self, Write},
+    process::{Command, ExitStatus},
+    sync::atomic::AtomicBool,
+};
 
 use ic_host_process::{Input, Ownership, Policy, Stderr, Stream};
 
@@ -72,6 +77,3 @@ pub(crate) fn run(
         diagnostics,
     }
 }
-
-#[cfg(test)]
-mod tests;

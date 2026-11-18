@@ -1,8 +1,9 @@
 use crate::{Directory, Error, FileId, FilePolicy, Lock};
-use std::ffi::OsStr;
-use std::fs;
-use std::io;
-use std::os::unix::fs::{PermissionsExt, symlink};
+use std::{
+    ffi::OsStr,
+    fs, io,
+    os::unix::fs::{PermissionsExt, symlink},
+};
 
 const POLICY: FilePolicy = FilePolicy {
     forbidden: 0,

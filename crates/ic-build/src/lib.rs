@@ -4,6 +4,9 @@
 //! sandbox for hostile build scripts. The caller owns source/tool stability and
 //! the scratch parent. See `build` for the cleanup and cancellation contract.
 
+#[cfg(test)]
+mod tests;
+
 mod bytes;
 mod custody;
 mod operation;
@@ -11,6 +14,3 @@ mod process;
 mod protocol;
 
 pub use operation::{Artifact, BuildFailure, BuildRequest, Failure, Limits, build};
-
-#[cfg(test)]
-mod tests;

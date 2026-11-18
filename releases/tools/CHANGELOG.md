@@ -10,6 +10,14 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Adopt Toko Tooling 0.45.8 in both workspaces, the authenticated snapshot and
+  CI cache action. Ordinary developer Cargo commands may retrieve locked
+  dependencies; `CARGO_NET_OFFLINE=true` opts into offline execution. Prepared
+  archive qualification keeps its explicit offline contract.
+
+- Parse the private external-lock qualification command with Clap, preserving
+  its script-facing usage, refusal statuses and non-UTF-8 filesystem paths.
+
 - Select Toko Tooling 0.45.0 in the product and qualification workspaces, refresh
   the authenticated installed snapshot and pin CI's download-cache action to its
   published source. Preserve existing compatible lock updates and product
@@ -187,7 +195,7 @@ remains tied to its recorded inputs.
 - Platform and DB targets select prepared local Scheduling CLI tools by default,
   retaining explicit overrides and offline asset checks.
 
-### 🧪 Testing
+### 🎯 Qualification
 
 - Add a focused Scheduling rewrite held-reply selection using retained Testkit:
   pressure/reverse release and held-upgrade refusal/settlement pass. The outer

@@ -31,14 +31,14 @@ jobs:
           TOKO_TOOLING_STORE: ${{ runner.temp }}/ic-tooling-setup/tools
         run: |
           printf 'CI_SETUP_ROOT=%s\nTOKO_TOOLING_STORE=%s\n' "$CI_SETUP_ROOT" "$TOKO_TOOLING_STORE" >> "$GITHUB_ENV"
-          perl scripts/ci/setup-diagnostics.pl compiler timeout --kill-after=10s 150s rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
+          perl scripts/ci/setup-diagnostics.pl compiler timeout --kill-after=10s 150s rustup toolchain install "$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*$/\1/p' rust-toolchain.toml)" --profile minimal --component rustfmt --component clippy
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@12af9e64f4a0ba03c8c94d3eee00987080ade98a # 0.45.8
         timeout-minutes: 1
       - name: Prepare common tools
         id: tools
         timeout-minutes: 5
         run: perl scripts/ci/setup-diagnostics.pl tools timeout --kill-after=10s 270s make install-tools
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@12af9e64f4a0ba03c8c94d3eee00987080ade98a # 0.45.8
         timeout-minutes: 1
         with:
           mode: save
@@ -85,7 +85,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@12af9e64f4a0ba03c8c94d3eee00987080ade98a # 0.45.8
         timeout-minutes: 1
       - name: Prepare pinned secret scanner
         id: scanner
@@ -96,7 +96,7 @@ jobs:
           perl scripts/ci/setup-diagnostics.pl scanner timeout --kill-after=10s 90s \
             bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh gitleaks --install-dir "$CI_SETUP_ROOT/tools/scanner"
           echo "GITLEAKS_BIN=$CI_SETUP_ROOT/tools/scanner/gitleaks" >> "$GITHUB_ENV"
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@12af9e64f4a0ba03c8c94d3eee00987080ade98a # 0.45.8
         timeout-minutes: 1
         with:
           mode: save
@@ -141,8 +141,8 @@ jobs:
           persist-credentials: false
       - name: Prepare pinned Rust components
         timeout-minutes: 3
-        run: rustup toolchain install 1.100.0 --profile minimal --component clippy --component rustfmt
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
+        run: rustup toolchain install "$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*$/\1/p' rust-toolchain.toml)" --profile minimal --component clippy --component rustfmt
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@12af9e64f4a0ba03c8c94d3eee00987080ade98a # 0.45.8
         timeout-minutes: 1
         with:
           extra-key: testkit-managed-server-pocketic-16.1.0
@@ -163,7 +163,7 @@ jobs:
           test -f "$archive" && test ! -L "$archive"
           echo "TESTKIT_SERVER_ARCHIVE=$archive" >> "$GITHUB_ENV"
           echo "TESTKIT_GZIP=/usr/bin/gzip" >> "$GITHUB_ENV"
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@53c0eba3b1b207e0cd9e747eece438e21b693261 # 0.45.0
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@12af9e64f4a0ba03c8c94d3eee00987080ade98a # 0.45.8
         timeout-minutes: 1
         with:
           mode: save
@@ -233,7 +233,7 @@ jobs:
       - name: Prepare pinned compiler
         id: compiler
         timeout-minutes: 3
-        run: perl scripts/ci/setup-diagnostics.pl compiler rustup toolchain install 1.100.0 --profile minimal
+        run: perl scripts/ci/setup-diagnostics.pl compiler rustup toolchain install "$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*$/\1/p' rust-toolchain.toml)" --profile minimal
       - name: Prepare the pinned ICP identity producer and native tools
         id: tools
         timeout-minutes: 6
@@ -315,7 +315,7 @@ jobs:
           persist-credentials: false
       - name: Prepare pinned Rust and Wasm target
         timeout-minutes: 3
-        run: rustup toolchain install 1.100.0 --profile minimal --component clippy --component rustfmt --target wasm32-unknown-unknown
+        run: rustup toolchain install "$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*$/\1/p' rust-toolchain.toml)" --profile minimal --component clippy --component rustfmt --target wasm32-unknown-unknown
       - name: Qualify the four packaged crates
         timeout-minutes: 8
         env:

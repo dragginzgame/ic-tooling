@@ -1,19 +1,30 @@
 //! One cancellable, bounded signer invocation with retained cleanup custody.
 
-use std::future::poll_fn;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::task::{Poll, Waker};
-use std::thread::JoinHandle;
+#[cfg(test)]
+mod tests;
+
+use std::{
+    future::poll_fn,
+    path::{Path, PathBuf},
+    process::Command,
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    task::{Poll, Waker},
+    thread::JoinHandle,
+};
 
 use ic_host_process::{Input, Ownership, Policy, Stderr, Stream};
-use ic_platform::ingress::{Content, decode_envelope};
-use ic_platform::native::{PreparedRequestStatus, PreparedUpdate};
+use ic_platform::{
+    ingress::{Content, decode_envelope},
+    native::{PreparedRequestStatus, PreparedUpdate},
+};
 
-use crate::Error;
-use crate::protocol::{self, Configuration, Operation, Request, Response, Signed, WireRequest};
+use crate::{
+    Error,
+    protocol::{self, Configuration, Operation, Request, Response, Signed, WireRequest},
+};
 
 /// Observable local custody state; it never implies a signing retry is authorized.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -375,6 +386,3 @@ fn admit(request: &Request, envelope: Vec<u8>) -> Result<Signed, Error> {
         }
     }
 }
-
-#[cfg(test)]
-mod tests;

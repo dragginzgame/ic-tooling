@@ -3,6 +3,13 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.110.1] - 2026-11-18
+
+### 🔧 Changed
+
+- Refresh the package development tooling selection to Toko Tooling 0.45.8.
+  Public APIs, persisted bytes and runtime behavior remain unchanged.
+
 ## [0.110.0] - 2026-11-17
 
 ### ⚠️ Breaking

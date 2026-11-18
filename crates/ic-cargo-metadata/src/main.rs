@@ -5,7 +5,12 @@ mod render;
 use clap::{Parser, Subcommand};
 use ic_host_artifacts::Length;
 use ic_host_fs::{Access, Directory, FilePolicy};
-use std::{io::Write, num::NonZeroU64, path::Path, path::PathBuf, process::ExitCode};
+use std::{
+    io::Write,
+    num::NonZeroU64,
+    path::{Path, PathBuf},
+    process::ExitCode,
+};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {

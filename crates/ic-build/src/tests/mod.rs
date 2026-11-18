@@ -1,9 +1,4 @@
-use std::env;
-use std::fs;
-use std::io;
-use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
-use std::time::Duration;
+use std::{env, fs, io, path::PathBuf, sync::atomic::AtomicBool, time::Duration};
 
 use crate::{BuildRequest, Failure, Limits, build};
 

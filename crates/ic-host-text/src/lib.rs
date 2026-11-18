@@ -1,4 +1,7 @@
 //! Pure terminal-safe text and table layouts; callers own budgets and output.
+#[cfg(test)]
+mod tests;
+
 use std::borrow::Cow;
 use unicode_width::UnicodeWidthChar;
 
@@ -138,6 +141,3 @@ pub fn plain_table<const N: usize>(
     lines.insert(1, rule.trim_end().to_owned());
     lines.join("\n")
 }
-
-#[cfg(test)]
-mod tests;

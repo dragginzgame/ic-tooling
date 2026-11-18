@@ -5,20 +5,28 @@
 //! borrowed PIDs never confer signal authority. Background launches retain reaping
 //! custody independently of completion observers. No sampling or tool setup is owned.
 
+#[cfg(test)]
+mod stdin_tests;
+#[cfg(test)]
+mod tests;
+
 mod handoff;
 #[cfg(target_os = "macos")]
 mod macos;
 pub use handoff::{Completion, launch};
 
-use std::io::{self, Read, Write};
-use std::os::fd::AsFd;
-use std::os::unix::process::CommandExt;
-use std::process::{Child, Command, ExitStatus, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
+use std::{
+    io::{self, Read, Write},
+    os::{fd::AsFd, unix::process::CommandExt},
+    process::{Child, Command, ExitStatus, Stdio},
+    sync::atomic::{AtomicBool, Ordering},
+    time::{Duration, Instant},
+};
 
-use rustix::fs::{OFlags, fcntl_getfl, fcntl_setfl};
-use rustix::process::{Pid, Signal, WaitId, WaitIdOptions, getpgrp, kill_process_group, waitid};
+use rustix::{
+    fs::{OFlags, fcntl_getfl, fcntl_setfl},
+    process::{Pid, Signal, WaitId, WaitIdOptions, getpgrp, kill_process_group, waitid},
+};
 
 /// Signal authority chosen before spawning; no authority over arbitrary PIDs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -379,8 +387,3 @@ fn communicate(
         }
     }
 }
-
-#[cfg(test)]
-mod stdin_tests;
-#[cfg(test)]
-mod tests;

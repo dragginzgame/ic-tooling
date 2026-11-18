@@ -28,6 +28,7 @@ pub(crate) fn check_path(path: &Path) -> Result<()> {
     }
     Ok(())
 }
+
 pub(crate) fn dependencies(
     source: &Path,
     input: &str,

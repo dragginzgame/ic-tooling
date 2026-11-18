@@ -1,7 +1,9 @@
-use std::io::{self, Write};
-use std::process::Command;
-use std::sync::atomic::AtomicBool;
-use std::time::Duration;
+use std::{
+    io::{self, Write},
+    process::Command,
+    sync::atomic::AtomicBool,
+    time::Duration,
+};
 
 use super::run;
 use crate::{Failure, tests::limits};
@@ -91,6 +93,7 @@ fn stdout_stderr_bounds_and_sink_refusal_are_not_success() {
         fn write(&mut self, _: &[u8]) -> io::Result<usize> {
             Err(io::ErrorKind::BrokenPipe.into())
         }
+
         fn flush(&mut self) -> io::Result<()> {
             Ok(())
         }
@@ -116,6 +119,7 @@ fn cancellation_after_child_readiness_terminates_owned_execution() {
             self.0.store(true, std::sync::atomic::Ordering::Relaxed);
             Ok(bytes.len())
         }
+
         fn flush(&mut self) -> io::Result<()> {
             Ok(())
         }

@@ -1,11 +1,20 @@
 use super::*;
-use std::fs;
+use std::{ffi::OsString, fs};
+
+fn run(arguments: &[OsString]) -> Result<(), Refusal> {
+    let parsed = Arguments::try_parse_from(
+        std::iter::once(OsString::from("ic-cargo-qualification")).chain(arguments.iter().cloned()),
+    )
+    .map_err(|_| Refusal::Usage)?;
+    super::run(&parsed)
+}
 
 fn registry(name: &str, version: &str, checksum: &str) -> String {
     format!(
         "[[package]]\nname='{name}'\nversion='{version}'\nsource='registry+example'\nchecksum='{checksum}'\n"
     )
 }
+
 #[test]
 fn exact_external_subset_preserves_source_and_optional_checksum_identity() {
     let a = registry("one", "1.0.0", &"a".repeat(64));
@@ -33,6 +42,7 @@ fn exact_external_subset_preserves_source_and_optional_checksum_identity() {
         ));
     }
 }
+
 #[test]
 fn malformed_and_duplicate_rows_refuse_in_either_role() {
     let valid = registry("one", "1.0.0", &"a".repeat(64));
@@ -52,6 +62,7 @@ fn malformed_and_duplicate_rows_refuse_in_either_role() {
     let error = verify(b"package=[]", b"token='SECRET").unwrap_err();
     assert!(!format!("{error:?}").contains("SECRET"));
 }
+
 #[test]
 fn file_admission_bounds_and_refusals_never_change_inputs() {
     use std::os::unix::fs::symlink;

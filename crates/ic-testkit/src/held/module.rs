@@ -1,7 +1,6 @@
 //! Single-purpose update fixtures; the HTTP response opens a fixed reply callback.
 
-use std::collections::BTreeMap;
-use std::fmt::Write as _;
+use std::{collections::BTreeMap, fmt::Write as _};
 
 use ic_platform_protocol::http_request::{EncodeError, encode_http_get_args};
 use ic_platform_types::Principal;

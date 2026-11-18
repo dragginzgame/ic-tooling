@@ -48,7 +48,7 @@ Its verified first-publication receipt is below.
 
 ## Development, CI and delivery entrypoints
 
-The installed Toko 0.45.0 snapshot supplies common setup, formatting and selection
+The selected Toko 0.45.8 snapshot supplies common setup, formatting and selection
 admission. Consumer-owned product checks remain in the Makefile and qualification
 runners. The current command boundaries are:
 
@@ -73,6 +73,39 @@ cutover must qualify selected dispatch, changed-input rejection and failed-phase
 recovery before replacing that gate. The grouped-projection/timing improvements
 in Toko 0.45.0 do not establish a measured deployment speed-up in this repository.
 Hosted CI remains asynchronous under maintainer direction.
+
+The local 2026-11-18 hygiene/adoption batch is recorded in the
+[audit report](reports/audits/2026/11/18/code-hygiene-and-tt-adoption/01/report.md).
+Ordinary Makefile Cargo commands keep their lock constraint and may retrieve
+locked dependencies; set `CARGO_NET_OFFLINE=true` for explicit offline execution.
+Prepared archive and source-bound qualification retain their offline contracts.
+The audit handoff left product versions unchanged. The following authorized
+delivery selects patches because the packaged sources and development-tool
+requirements differ from their published archives.
+
+### Hygiene cohort — 2026-11-18
+
+The maintainer authorized deployment on `main` after the complete hygiene pass.
+Fresh registry downloads verify the nine predecessor archives. Their packaged
+sources differ; the fixed policy's publication-impact rule therefore selects
+Foundation 0.80.4 (both members), Process 0.81.1, Build 0.87.5, HTTP 0.80.1,
+Text 0.77.3, Cargo Metadata 0.1.1, Testkit 0.110.1 and Sign 0.1.1.
+No public API or runtime behavior changes; the private qualification command's
+Clap migration remains private Tools maintenance at 0.1.3.
+
+The delivery lock excludes pre-existing unrelated compatible updates. That exact
+dependency graph passes all-feature workspace Clippy and 110 tests, with the
+nine explicitly selected native/installed cases still ignored in that selection.
+The final Linux core archive gate passes at `target/build-release.MYGN6NGd`,
+including real Wasm/foreground-terminal checks, Clippy and Rustdoc. Current
+sibling qualification is not selected, matching the preceding supplier release
+boundary. No fresh consumer or macOS runtime result is claimed. Body-preserving
+AST comparison and prior native receipts support the unchanged runtime paths;
+hosted CI remains asynchronous and is not a publication gate added by this batch.
+Selected leaf archive gates and exact registry readback complete delivery below.
+Recovery and scoped lock copies live under
+`.git/release-state/hygiene-2026-11-18/`; logs and archives are under
+`target/deploy-hygiene/` and the named archive-gate attempts.
 
 ### Toko 0.45.0 adoption
 

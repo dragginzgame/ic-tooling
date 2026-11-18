@@ -1,5 +1,7 @@
-use std::io::{self, Read};
-use std::sync::atomic::AtomicBool;
+use std::{
+    io::{self, Read},
+    sync::atomic::AtomicBool,
+};
 
 use super::capture;
 use crate::Failure;

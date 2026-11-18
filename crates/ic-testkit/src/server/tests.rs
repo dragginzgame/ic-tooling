@@ -1,6 +1,8 @@
 use super::*;
-use std::fs;
-use std::os::unix::fs::{PermissionsExt, symlink};
+use std::{
+    fs,
+    os::unix::fs::{PermissionsExt, symlink},
+};
 
 fn private_directory() -> tempfile::TempDir {
     tempfile::Builder::new()
@@ -17,6 +19,7 @@ fn limits() -> Limits {
         stderr_bytes: 256,
     }
 }
+
 fn executable(source: &str) -> (tempfile::TempDir, PreparedServer) {
     let directory = private_directory();
     let path = directory.path().join("pocket-ic");
@@ -25,6 +28,7 @@ fn executable(source: &str) -> (tempfile::TempDir, PreparedServer) {
     let prepared = PreparedServer::fixture(directory.path());
     (directory, prepared)
 }
+
 fn startup_failure(prepared: PreparedServer) -> (String, Stopped) {
     match Server::start(prepared, limits()) {
         Err(Error::Startup { reason, evidence }) => (reason, *evidence),

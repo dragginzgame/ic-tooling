@@ -22,21 +22,21 @@ repository = "https://github.com/dragginzgame/ic-tooling"
 authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
 
 [workspace.dependencies]
+
+# Production
 clap = { version = "4.6.7", features = ["derive"] }
 ctrlc = { version = "3.5.2", features = ["termination"] }
 errno = "0.3.15"
-ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.80.2" }
-ic-host-fs = { path = "crates/ic-host-fs", version = "0.80.2" }
-ic-host-process = { path = "crates/ic-host-process", version = "0.81.0" }
-ic-host-text = { path = "crates/ic-host-text", version = "0.77.2" }
+ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.80.4" }
+ic-host-fs = { path = "crates/ic-host-fs", version = "0.80.4" }
+ic-host-process = { path = "crates/ic-host-process", version = "0.81.1" }
+ic-host-text = { path = "crates/ic-host-text", version = "0.77.3" }
 ic-platform = { version = "0.34.15", default-features = false }
 ic-platform-protocol = { version = "0.3.2", default-features = false }
 ic-platform-types = { version = "0.21.2", default-features = false }
-keyring = { version = "4.2.0", default-features = false, features = ["v1"] }
 libproc = "0.15.0"
 # Qualified client for the fixed server assets; see docs/testkit-server.md.
 pocket-ic = "=16.1.0"
-reqwest = { version = "0.13.5", default-features = false }
 rustix = { version = "1.1.6", features = ["fs"] }
 secret-service = { version = "5.2.0", default-features = false, features = ["rt-async-io-crypto-rust"] }
 security-framework = "3.7.0"
@@ -44,16 +44,22 @@ semver = "1.0.28"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 sha2 = "0.11.1"
-tempfile = "3.27.0"
 thiserror = "2.0.18"
-tokio = { version = "1.54.1", default-features = false }
-toko-tooling = "=0.45.0"
 toml = "1.2.1"
 toml_edit = "0.25.19"
 unicode-width = "0.2.3"
-wasmparser = "0.263.0"
 wat = "1.263.0"
 zeroize = "1.9.2"
+
+# Production and tests
+keyring = { version = "4.2.0", default-features = false, features = ["v1"] }
+reqwest = { version = "0.13.5", default-features = false }
+tempfile = "3.27.0"
+tokio = { version = "1.54.1", default-features = false }
+
+# Tests and tooling
+toko-tooling = "=0.45.8"
+wasmparser = "0.263.0"
 
 [workspace.lints.cargo]
 unused_dependencies = "deny"

@@ -1,14 +1,18 @@
 //! Publication states have no publicly writable handles and never retry publication.
-use std::ffi::{OsStr, OsString};
-use std::fs::File;
-use std::io::{self, Read};
+#[cfg(test)]
+mod tests;
+
+use std::{
+    ffi::{OsStr, OsString},
+    fs::File,
+    io::{self, Read},
+};
 
 use ic_host_artifacts::{Identity, Length};
 use rustix::fs::{AtFlags, linkat, renameat};
 use thiserror::Error;
 
-use crate::directory::name;
-use crate::{Access, Directory, Error, FileId, FilePolicy};
+use crate::{Access, Directory, Error, FileId, FilePolicy, directory::name};
 
 /// Destination effect selected before staging.
 #[derive(Clone, Copy, Debug)]
@@ -243,6 +247,7 @@ impl Stage {
             Err(error) => Err(self.0.failed(error.into())),
         }
     }
+
     /// Explicitly discard our original stage, even when retention was selected.
     /// # Errors
     /// Refuses observed replacement and preserves original cleanup I/O failures.
@@ -257,6 +262,7 @@ impl Written {
     pub fn seal(self) -> Result<Sealed, AttemptFailure> {
         self.seal_with(File::sync_all)
     }
+
     fn seal_with(
         self,
         sync: impl FnOnce(&File) -> io::Result<()>,
@@ -273,6 +279,7 @@ impl Written {
             Err(error) => Err(self.attempt.failed(error)),
         }
     }
+
     /// Explicitly discard a complete but unpublished stage.
     /// # Errors
     /// Reports original identity or cleanup refusal.
@@ -287,6 +294,7 @@ impl Sealed {
     pub fn commit(self) -> Commit {
         self.commit_with(Directory::sync, Attempt::remove)
     }
+
     fn commit_with(
         mut self,
         sync: impl FnOnce(&Directory) -> io::Result<()>,
@@ -355,6 +363,7 @@ impl Sealed {
             },
         }
     }
+
     /// Explicitly discard the original sealed stage without touching the destination.
     /// # Errors
     /// Reports identity or cleanup refusal. No publication is attempted.
@@ -366,15 +375,18 @@ impl Attempt {
     fn check(&self) -> Result<(), Error> {
         self.directory.check_file(&self.staging, &self.file)
     }
+
     fn remove(&self) -> Result<(), Error> {
         self.directory.remove_file(&self.staging, &self.file)
     }
+
     fn abort(mut self) -> Result<(), Error> {
         self.active = false;
         self.remove()?;
         self.directory.sync()?;
         Ok(())
     }
+
     fn failed(mut self, cause: Error) -> AttemptFailure {
         self.active = false;
         let cleanup = if matches!(self.policy.retention, Retention::Discard) {
@@ -403,6 +415,3 @@ impl Drop for Attempt {
         }
     }
 }
-
-#[cfg(test)]
-mod tests;

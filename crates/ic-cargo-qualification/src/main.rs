@@ -1,8 +1,40 @@
 //! Narrow, read-only Cargo qualification operations outside the ordinary Build graph.
+#[cfg(test)]
+mod tests;
+
+use clap::{Parser, Subcommand, error::ErrorKind};
 use ic_host_artifacts::Length;
 use ic_host_fs::{Access, Directory, FilePolicy};
-use std::{collections::BTreeMap, ffi::OsString, io, path::Path, process::ExitCode};
+use std::{
+    collections::BTreeMap,
+    io,
+    path::{Path, PathBuf},
+    process::ExitCode,
+};
 use thiserror::Error;
+
+#[derive(Parser)]
+#[command(
+    name = "ic-cargo-qualification",
+    disable_help_subcommand = true,
+    override_help = Refusal::Usage.to_string()
+)]
+struct Arguments {
+    #[command(subcommand)]
+    operation: Operation,
+}
+
+#[derive(Subcommand)]
+enum Operation {
+    #[command(disable_help_flag = true)]
+    VerifyExternalLock {
+        #[arg(allow_hyphen_values = true)]
+        original: PathBuf,
+        #[arg(allow_hyphen_values = true)]
+        candidate: PathBuf,
+        maximum: u64,
+    },
+}
 
 #[derive(Debug, Error)]
 enum Refusal {
@@ -73,12 +105,14 @@ fn rows<'a>(lock: &'a toml::Value, role: &'static str) -> Result<Rows<'a>, Refus
     }
     Ok(rows)
 }
+
 fn parse(bytes: &[u8], role: &'static str) -> Result<toml::Value, Refusal> {
     let bad = |reason| Refusal::Lock { role, reason };
     let text = std::str::from_utf8(bytes).map_err(|_| bad("invalid UTF-8"))?;
     // Lock source URLs may contain credentials; do not echo parser source text.
     toml::from_str(text).map_err(|_| bad("invalid TOML"))
 }
+
 fn verify(original: &[u8], candidate: &[u8]) -> Result<(), Refusal> {
     let original = parse(original, "original")?;
     let candidate = parse(candidate, "candidate")?;
@@ -92,6 +126,7 @@ fn verify(original: &[u8], candidate: &[u8]) -> Result<(), Refusal> {
     }
     Ok(())
 }
+
 fn read(path: &Path, maximum: u64) -> Result<Vec<u8>, Refusal> {
     let parent = path
         .parent()
@@ -112,27 +147,33 @@ fn read(path: &Path, maximum: u64) -> Result<Vec<u8>, Refusal> {
         .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?;
     Ok(ic_host_artifacts::read(file, Length::AtMost(maximum))?.0)
 }
-fn run(arguments: &[OsString]) -> Result<(), Refusal> {
-    let [command, original, candidate, maximum] = arguments else {
-        return Err(Refusal::Usage);
-    };
-    if command != "verify-external-lock" {
-        return Err(Refusal::Usage);
-    }
-    let maximum = maximum
-        .to_str()
-        .and_then(|value| value.parse::<u64>().ok())
-        .ok_or(Refusal::Usage)?;
-    let original = read(Path::new(original), maximum)?;
-    let candidate = read(Path::new(candidate), maximum)?;
+
+fn run(arguments: &Arguments) -> Result<(), Refusal> {
+    let Operation::VerifyExternalLock {
+        original,
+        candidate,
+        maximum,
+    } = &arguments.operation;
+    let original = read(original, *maximum)?;
+    let candidate = read(candidate, *maximum)?;
     verify(&original, &candidate)
 }
+
 fn main() -> ExitCode {
-    let arguments: Vec<_> = std::env::args_os().skip(1).collect();
-    if arguments == [OsString::from("--help")] {
-        println!("{}", Refusal::Usage);
-        return ExitCode::SUCCESS;
-    }
+    let arguments = match Arguments::try_parse() {
+        Ok(arguments) => arguments,
+        Err(error) if error.kind() == ErrorKind::DisplayHelp => {
+            return if error.print().is_ok() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::FAILURE
+            };
+        }
+        Err(_) => {
+            eprintln!("{}", Refusal::Usage);
+            return ExitCode::from(2);
+        }
+    };
     match run(&arguments) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
@@ -145,5 +186,3 @@ fn main() -> ExitCode {
         }
     }
 }
-#[cfg(test)]
-mod tests;

@@ -1,7 +1,9 @@
+#[cfg(test)]
+mod tests;
+
 use super::{Directory, Error, name, valid_mode};
 use rustix::fs;
-use std::ffi::OsStr;
-use std::io;
+use std::{ffi::OsStr, io};
 
 /// Directory preparation stopped; any created prefix remains for reconciliation.
 #[derive(Debug, thiserror::Error)]
@@ -85,6 +87,3 @@ impl Directory {
         Ok(parent)
     }
 }
-
-#[cfg(test)]
-mod tests;

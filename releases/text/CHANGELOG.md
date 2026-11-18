@@ -5,6 +5,13 @@ Packages: `ic-host-text`.
 This group starts with the replacement implementation. Earlier shared development
 evidence is in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.77.3] - 2026-11-18
+
+### 🔧 Changed
+
+- Refresh the package development tooling selection to Toko Tooling 0.45.8.
+  Public APIs, persisted bytes and runtime behavior remain unchanged.
+
 ## [0.77.2] - 2026-11-16
 
 First replacement release after the unpublished GitHub checkpoint

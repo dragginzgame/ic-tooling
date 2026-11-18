@@ -1,11 +1,16 @@
 //! Admission and ordering for the build-to-owned-artifact operation.
 
-use std::ffi::OsString;
-use std::io::{self, Write};
-use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+#[cfg(test)]
+mod tests;
+
+use std::{
+    ffi::OsString,
+    io::{self, Write},
+    path::{Path, PathBuf},
+    process::{Command, ExitStatus},
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
 
 use thiserror::Error;
 
@@ -421,6 +426,3 @@ fn validate(request: &BuildRequest) -> Result<(), Failure> {
     }
     Ok(())
 }
-
-#[cfg(test)]
-mod tests;

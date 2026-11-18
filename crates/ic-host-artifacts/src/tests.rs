@@ -30,6 +30,7 @@ fn exact_and_ceiling_reads_have_known_identity_and_no_partial_success() {
         Err(Error::Limit { limit: 3 })
     ));
 }
+
 #[test]
 fn original_io_and_partial_writer_effects_are_preserved() {
     struct Broken;

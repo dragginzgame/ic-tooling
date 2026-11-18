@@ -1,13 +1,17 @@
-use std::fs;
-use std::os::unix::fs::PermissionsExt;
-use std::time::{Duration, Instant};
+use std::{
+    fs,
+    os::unix::fs::PermissionsExt,
+    time::{Duration, Instant},
+};
 
 use ic_platform::native::{Secp256k1Identity, UpdateArgs};
 use ic_platform_types::Principal;
 
 use super::{Signer, State, admit};
-use crate::Error;
-use crate::protocol::{self, Configuration, Operation, Request};
+use crate::{
+    Error,
+    protocol::{self, Configuration, Operation, Request},
+};
 
 fn scratch() -> tempfile::TempDir {
     let target = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target");
@@ -133,12 +137,15 @@ async fn signer_drop_joins_original_worker() {
 
 #[tokio::test]
 async fn completed_signed_bytes_survive_observer_drop_without_resigning() {
-    use std::future::Future;
-    use std::sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
+    use std::{
+        future::Future,
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
+        task::{Context, Wake, Waker},
     };
-    use std::task::{Context, Wake, Waker};
+
     struct Notified(AtomicBool);
     impl Wake for Notified {
         fn wake(self: Arc<Self>) {

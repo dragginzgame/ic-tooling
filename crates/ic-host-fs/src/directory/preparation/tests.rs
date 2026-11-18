@@ -1,10 +1,11 @@
 use crate::{Directory, Error};
-use std::ffi::OsStr;
-use std::fs;
-use std::io;
-use std::os::unix::{
-    ffi::OsStrExt,
-    fs::{PermissionsExt, symlink},
+use std::{
+    ffi::OsStr,
+    fs, io,
+    os::unix::{
+        ffi::OsStrExt,
+        fs::{PermissionsExt, symlink},
+    },
 };
 
 #[test]

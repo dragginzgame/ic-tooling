@@ -1,5 +1,8 @@
 //! Bounded Cargo record decoding and exact candidate selection, with no execution.
 
+#[cfg(test)]
+mod tests;
+
 use std::path::PathBuf;
 
 use serde_json::Value;
@@ -154,6 +157,3 @@ fn strings<'a>(value: &'a Value, key: &str) -> Result<Vec<&'a str>, Failure> {
         })
         .collect()
 }
-
-#[cfg(test)]
-mod tests;

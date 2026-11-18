@@ -1,9 +1,11 @@
 use super::*;
-use std::cell::Cell;
 #[cfg(target_os = "linux")]
 use std::fs;
-use std::os::unix::process::ExitStatusExt;
-use std::time::{Duration, Instant};
+use std::{
+    cell::Cell,
+    os::unix::process::ExitStatusExt,
+    time::{Duration, Instant},
+};
 
 #[test]
 fn setup_and_spawn_failures_keep_original_errors_without_child_effects() {

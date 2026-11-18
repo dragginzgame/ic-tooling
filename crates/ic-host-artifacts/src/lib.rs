@@ -1,5 +1,8 @@
 //! Bounded byte admission and exact content identity, independent of native hosts.
 
+#[cfg(test)]
+mod tests;
+
 use std::io::{self, Read, Write};
 
 use sha2::{Digest, Sha256};
@@ -118,6 +121,3 @@ fn pump(
         bytes += count as u64;
     }
 }
-
-#[cfg(test)]
-mod tests;
