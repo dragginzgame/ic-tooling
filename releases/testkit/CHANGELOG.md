@@ -3,6 +3,13 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.110.2] - 2026-11-19
+
+### 📚 Documentation
+
+- Keep the managed-server lifecycle example in Rustdoc so Cargo compiles the
+  same source readers copy. The ownership guide links to that checked example.
+
 ## [0.110.1] - 2026-11-18
 
 ### 🔧 Changed

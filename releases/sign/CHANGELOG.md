@@ -2,6 +2,14 @@
 
 Package: `ic-host-sign`.
 
+## [0.1.2] - 2026-11-19
+
+### 🧪 Testing
+
+- Distinguish exact envelope-binding refusals from configuration failures, so
+  unrelated errors cannot satisfy the negative admission checks. Signing and
+  credential custody behavior remain unchanged.
+
 ## [0.1.1] - 2026-11-18
 
 ### 🔧 Changed

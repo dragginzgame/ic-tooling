@@ -80,11 +80,21 @@ fn directory_creation_is_explicit_and_policy_refusal_precedes_effects() {
         Err(Error::Permissions { .. })
     ));
     assert!(!scratch.path().join("child").exists());
-    root.create_directory(OsStr::new("child"), 0o700, 0o077)
+    let child = root
+        .create_directory(OsStr::new("child"), 0o700, 0o077)
         .unwrap();
-    assert!(
-        root.create_directory(OsStr::new("child"), 0o700, 0o077)
-            .is_err()
+    let original = child.identity().unwrap();
+    assert!(matches!(
+        root.create_directory(OsStr::new("child"), 0o700, 0o077),
+        Err(Error::Io(error)) if error.kind() == io::ErrorKind::AlreadyExists
+    ));
+    assert_eq!(
+        root.open_directory(OsStr::new("child"), 0o077)
+            .unwrap()
+            .unwrap()
+            .identity()
+            .unwrap(),
+        original
     );
 }
 

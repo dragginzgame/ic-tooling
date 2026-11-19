@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-process"
-version = "0.81.1"
+version = "0.81.2"
 description = "Owned native process execution with bounded communication and reaping"
 edition.workspace = true
 rust-version.workspace = true
@@ -9,12 +9,12 @@ repository.workspace = true
 authors.workspace = true
 publish = ["crates-io"]
 
-[target.'cfg(any())'.dev-dependencies]
-toko-tooling.workspace = true
-
 [target.'cfg(target_os = "macos")'.dependencies]
 errno.workspace = true
 libproc.workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
 
 [dependencies]
 rustix = { workspace = true, features = ["process"] }
@@ -22,6 +22,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

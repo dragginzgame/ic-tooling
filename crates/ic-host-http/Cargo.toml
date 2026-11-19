@@ -9,15 +9,18 @@ repository.workspace = true
 authors.workspace = true
 publish = ["crates-io"]
 
-[target.'cfg(any())'.dev-dependencies]
-toko-tooling.workspace = true
-
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 reqwest.workspace = true
 thiserror.workspace = true
 
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
+
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 tokio = { workspace = true, features = ["rt", "net", "time"] }
+
+[dev-dependencies]
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

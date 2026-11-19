@@ -10,11 +10,15 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Adopt Toko Tooling 0.45.13 in both workspaces, the authenticated snapshot and
+  CI cache action. Use ordinary tooling dev-dependencies where supported and
+  declare their intentional dependency-scan exemptions without dummy imports.
+
 - Adopt Toko Tooling 0.45.11 in both workspaces, the authenticated snapshot and
   CI cache action. Use its fixed shared setup diagnostics, removing the local
   sanitizer and command-capture copy while retaining bounded artifact selection,
   original failure status and upload reporting. This completes adoption after
-  [Toko Tooling #398](https://github.com/dragginzgame/toko-tooling/issues/398).
+  [Toko Tooling #398 — Preserve bare Bearer and payload redactions in setup excerpts](https://github.com/dragginzgame/toko-tooling/issues/398).
 
 - Adopt Toko Tooling 0.45.8 in both workspaces, the authenticated snapshot and
   CI cache action. Ordinary developer Cargo commands may retrieve locked
@@ -203,6 +207,12 @@ remains tied to its recorded inputs.
   edits and refuse capture drift or stale patches. They never modify the sibling.
 - Platform and DB targets select prepared local Scheduling CLI tools by default,
   retaining explicit overrides and offline asset checks.
+
+### 🧪 Testing
+
+- Check distinguishing refusal causes and preserved filesystem state in the
+  build, publication, signing and Cargo-admission tests. Unrelated errors can no
+  longer satisfy those negative assertions.
 
 ### 🎯 Qualification
 

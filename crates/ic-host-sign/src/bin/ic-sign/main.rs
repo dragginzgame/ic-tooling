@@ -1,5 +1,7 @@
 //! Single-request offline signer. Private key material never leaves this process.
 
+mod identity;
+
 use std::{
     io::{self, Write},
     process::ExitCode,
@@ -9,7 +11,6 @@ use clap::Parser;
 use ic_host_sign::protocol::{self, Operation, Response, WireRequest};
 use ic_platform::native::{Secp256k1Identity, UpdateArgs};
 use ic_platform_types::Principal;
-mod identity;
 
 #[derive(Parser)]
 #[command(

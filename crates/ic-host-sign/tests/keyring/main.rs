@@ -1,6 +1,9 @@
 //! Explicit real-provider qualification. Requires a prepared ICP CLI and native
 //! credential session. Creates/deletes only a uniquely named disposable identity.
 
+#[cfg(target_os = "macos")]
+mod mac_keychain;
+
 use std::{fs, os::unix::fs::PermissionsExt, path::PathBuf, process::Command};
 
 use ic_host_sign::{
@@ -9,9 +12,6 @@ use ic_host_sign::{
 };
 
 use zeroize::Zeroizing;
-
-#[cfg(target_os = "macos")]
-mod mac_keychain;
 
 struct Disposable {
     #[cfg(target_os = "linux")]

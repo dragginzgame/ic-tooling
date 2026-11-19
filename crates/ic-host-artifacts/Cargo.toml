@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-artifacts"
-version = "0.80.4"
+version = "0.80.5"
 description = "Bounded byte admission and complete artifact commitments"
 edition.workspace = true
 rust-version.workspace = true
@@ -9,12 +9,15 @@ repository.workspace = true
 authors.workspace = true
 publish = ["crates-io"]
 
-[target.'cfg(any())'.dev-dependencies]
-toko-tooling.workspace = true
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
 
 [dependencies]
 sha2.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

@@ -2,6 +2,14 @@
 
 Package: `ic-host-process`. Earlier unreleased headings retain development history.
 
+## [0.81.2] - 2026-11-19
+
+### 🔧 Changed
+
+- Use the ordinary Toko Tooling 0.45.13 development dependency with its
+  intentional dependency-scan exemption. Public execution and cleanup contracts
+  remain unchanged.
+
 ## [0.81.1] - 2026-11-18
 
 ### 🔧 Changed

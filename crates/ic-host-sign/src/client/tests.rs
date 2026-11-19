@@ -345,7 +345,7 @@ fn remote_or_fallback_bus_is_never_admitted() {
         "unix:path=/tmp/bus;tcp:host=x,port=1",
     ] {
         config.local_bus = Some(address.into());
-        assert!(config.admit().is_err());
+        assert!(matches!(config.admit(), Err(Error::Configuration)));
     }
 }
 
@@ -392,15 +392,24 @@ fn platform_authenticated_update_preserves_exact_binding_and_refuses_mutations()
     assert_eq!(admitted.expiry(), original.expires_ns);
     let mut wrong = original.clone();
     wrong.expires_ns += 1;
-    assert!(admit(&wrong, envelope.clone()).is_err());
+    assert!(matches!(
+        admit(&wrong, envelope.clone()),
+        Err(Error::Output)
+    ));
     let mut wrong = original.clone();
     let mut other_sender = [1; 29];
     other_sender[28] = 2;
     wrong.sender = Principal::from_slice(&other_sender).to_text();
-    assert!(admit(&wrong, envelope.clone()).is_err());
+    assert!(matches!(
+        admit(&wrong, envelope.clone()),
+        Err(Error::Output)
+    ));
     let mut wrong = original.clone();
     wrong.envelope_bytes = envelope.len() - 1;
-    assert!(admit(&wrong, envelope.clone()).is_err());
+    assert!(matches!(
+        admit(&wrong, envelope.clone()),
+        Err(Error::Output)
+    ));
     for operation in [
         Operation::Update {
             recipient: original.effective.clone(),
@@ -429,12 +438,15 @@ fn platform_authenticated_update_preserves_exact_binding_and_refuses_mutations()
     ] {
         let mut wrong = original.clone();
         wrong.operation = operation;
-        assert!(admit(&wrong, envelope.clone()).is_err());
+        assert!(matches!(
+            admit(&wrong, envelope.clone()),
+            Err(Error::Output)
+        ));
     }
     let mut corrupt = envelope.clone();
     let last = corrupt.len() - 1;
     corrupt[last] ^= 1;
-    assert!(admit(&original, corrupt).is_err());
+    assert!(matches!(admit(&original, corrupt), Err(Error::Output)));
     assert_eq!(
         admit(&original, envelope).unwrap().request_id(),
         admitted.request_id()
@@ -464,26 +476,38 @@ fn independent_status_authentication_preserves_original_id_and_refuses_mismatche
     assert_eq!(admitted.envelope_bytes(), envelope);
     let mut wrong = original.clone();
     wrong.expires_ns += 1;
-    assert!(admit(&wrong, envelope.clone()).is_err());
+    assert!(matches!(
+        admit(&wrong, envelope.clone()),
+        Err(Error::Output)
+    ));
     let mut wrong = original.clone();
     wrong.envelope_bytes -= 1;
-    assert!(admit(&wrong, envelope.clone()).is_err());
+    assert!(matches!(
+        admit(&wrong, envelope.clone()),
+        Err(Error::Output)
+    ));
     let mut wrong = original.clone();
     wrong.operation = Operation::Status {
         request_id: [72; 32],
     };
-    assert!(admit(&wrong, envelope.clone()).is_err());
+    assert!(matches!(
+        admit(&wrong, envelope.clone()),
+        Err(Error::Output)
+    ));
     let other = disposable_identity();
     let mut wrong = original.clone();
     wrong.sender = other.principal().to_text();
-    assert!(admit(&wrong, envelope.clone()).is_err());
+    assert!(matches!(
+        admit(&wrong, envelope.clone()),
+        Err(Error::Output)
+    ));
     let mut corrupt = envelope.clone();
     let last = corrupt.len() - 1;
     corrupt[last] ^= 1;
-    assert!(admit(&original, corrupt).is_err());
+    assert!(matches!(admit(&original, corrupt), Err(Error::Output)));
     let mut trailing = envelope;
     trailing.push(0);
-    assert!(admit(&original, trailing).is_err());
+    assert!(matches!(admit(&original, trailing), Err(Error::Output)));
     let update = identity
         .prepare_update(
             UpdateArgs {
@@ -500,5 +524,5 @@ fn independent_status_authentication_preserves_original_id_and_refuses_mismatche
         .envelope_bytes()
         .to_vec();
     original.envelope_bytes = 4096;
-    assert!(admit(&original, update).is_err());
+    assert!(matches!(admit(&original, update), Err(Error::Output)));
 }

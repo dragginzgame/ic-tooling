@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-sign"
-version = "0.1.1"
+version = "0.1.2"
 description = "Bounded offline IC signing through an existing OS-keyring identity"
 edition.workspace = true
 rust-version.workspace = true
@@ -9,11 +9,11 @@ repository.workspace = true
 authors.workspace = true
 publish = ["crates-io"]
 
-[target.'cfg(any())'.dev-dependencies]
-toko-tooling.workspace = true
-
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 keyring.workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
 
 [[bin]]
 name = "ic-sign"
@@ -51,6 +51,7 @@ zeroize = { workspace = true, optional = true }
 [dev-dependencies]
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt", "time", "macros"] }
+toko-tooling.workspace = true
 
 [[test]]
 name = "keyring"

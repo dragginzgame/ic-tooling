@@ -43,15 +43,10 @@ and exact archive readback match publication preflights. Linux archive, installe
 simulator and disposable keyring gates pass. See the
 [hygiene receipt](../release-ownership.md#hygiene-cohort--2026-11-18).
 
-The preceding Process 0.81.0, Build 0.87.4, Testkit 0.110.0 and Sign 0.1.0 cohort has
-verified registry records and exact archive readback. See the
-[cohort receipt](../release-ownership.md#signing-cohort--process-0810-first) for
-source commits, tags, checksums and source-bound qualification.
-
-Process adds bounded finite pipe input; `Input`/`Policy` lose `Copy`, retaining
-`Clone`. Build keeps that boundary private. Testkit exposes the Process report
-identity and takes a minor. Its earlier bounded clock/expiry contract remains;
-see the [clock acceptance](../testkit-held-replies.md#bounded-manual-clock-progression).
+Process 0.81 owns finite pipe input; `Input`/`Policy` are `Clone`, not `Copy`.
+Testkit 0.110 shares its report type identity. See the
+[feature receipt](../release-ownership.md#signing-cohort--process-0810-first) and
+[bounded clock contract](../testkit-held-replies.md#bounded-manual-clock-progression).
 
 [Tooling #12](https://github.com/dragginzgame/ic-tooling/issues/12) is closed.
 Sign uses published Platform 0.34.15 to authenticate exact updates and independent
@@ -69,25 +64,23 @@ pending; its maintained workflow changes are delivered through Git.
 
 ## Blockers and next actions
 
-Toko Tooling 0.45.11 adoption updates both workspaces, the authenticated
-50-file snapshot and all six CI cache-action references. It selects the shared
-setup diagnostics module; the previous sanitizer/command-capture copy is removed.
-Consumer artifact policy, read ceilings, failure status and upload reporting are
-preserved. The focused fixture passes 69 checks, including both shared call sites.
-All target conditions were reviewed against concrete native API differences;
-portable logic remains unconditional.
-The existing Rust import/test layout, Clap boundary, dependency roles and offline
-opt-in remain intact. Fresh workspace tests, warning-denied Clippy, setup fixtures
-and tooling admission pass; see the
-[target-rule audit](../reports/audits/2026/11/19/toko-adoption-and-code-hygiene/01/report.md).
-[Toko Tooling #396](https://github.com/dragginzgame/toko-tooling/issues/396) and
-[Toko Tooling #397](https://github.com/dragginzgame/toko-tooling/issues/397) are fixed.
-[Toko Tooling #398](https://github.com/dragginzgame/toko-tooling/issues/398) is also
-fixed; shared-helper adoption now passes the bare Bearer/payload cases. See the
-[setup contract](../qualification/ci-setup.md) for the completed migration evidence.
-This batch is private tooling maintenance; product versions and prior release
-evidence are unchanged. Unrelated compatible lock updates are retained separately
-under `.git/release-state/toko-0.45.11/` and remain uncommitted. Consumer
+Toko 0.45.13 adoption updates both workspace selections, the authenticated
+50-file snapshot and all six CI action references. Its rules/hygiene pass puts
+child modules before imports, strengthens distinguishing refusals and preserved
+state checks, and compiles the canonical server usage example through Rustdoc.
+Pending ordinary tooling dev-dependencies are preserved; all-target/all-feature
+Clippy needs no marker exceptions. Intentional dependency-scan exemptions are
+declared. Shared diagnostics still pass 69 checks with unchanged helper bytes.
+Fresh workspace tests, Clippy, Rustdoc, portable Wasm, dependency-use and tooling
+checks pass; see the
+[current audit](../reports/audits/2026/11/19/toko-0.45.13-rules-and-hygiene/01/report.md).
+All non-Toko lock selections and existing member-manifest values are preserved.
+The maintainer authorized deployment: Foundation 0.80.5, Process 0.81.2,
+Sign 0.1.2 and Testkit 0.110.2 are selected patches. Other product groups have
+private test/tooling changes only and keep their versions. The scoped delivery
+graph and Linux core archive gate pass; remaining registry-backed leaf archive
+qualification and publication are active. Unrelated external lock updates are
+retained under `.git/release-state/toko-0.45.13/` for restoration. Consumer
 implementation and qualification remain with their owners.
 
 Producer acceptance has no outstanding blocker. Canic's thin Backup adapter and

@@ -9,11 +9,14 @@ repository.workspace = true
 authors.workspace = true
 publish = ["crates-io"]
 
-[target.'cfg(any())'.dev-dependencies]
-toko-tooling.workspace = true
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
 
 [dependencies]
 unicode-width.workspace = true
+
+[dev-dependencies]
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

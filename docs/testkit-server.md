@@ -113,37 +113,11 @@ cargo run -p ic-testkit --features managed-server --example prepare_server -- \
 ```
 
 The caller chooses limits and owns the runtime. Startup and stop are synchronous;
-do them outside latency-sensitive runtime workers. For example:
-
-```rust
-use ic_testkit::{pocket_ic::PocketIcBuilder, server::{Deletion, Limits, PreparedServer, Server}};
-use std::{path::Path, time::Duration};
-
-fn run(prepared: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let mut server = Server::start(PreparedServer::check(prepared)?, Limits {
-        startup: Duration::from_secs(30),
-        lifetime: Duration::from_secs(180),
-        stdout_bytes: 1_048_576,
-        stderr_bytes: 1_048_576,
-    })?;
-    let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
-    runtime.block_on(async {
-        let timeout = Duration::from_secs(30);
-        let instance = server.instance(
-            PocketIcBuilder::new().with_application_subnet(), timeout,
-        ).await?;
-        // Application fixtures use instance.client(); gateways use client_mut().
-        assert_eq!(instance.close(timeout).await, Deletion::Attempted);
-        Ok::<_, ic_testkit::server::Error>(())
-    })?;
-    let stopped = server.stop()?;
-    // Assess stopped.process, stopped.output and stopped.abandoned in caller policy.
-    // Intentional stop normally reports Failure::Cancelled, not successful exit.
-    assert_eq!(stopped.abandoned, 0);
-    assert!(stopped.process.status.is_some() && stopped.process.cleanup.is_empty());
-    Ok(())
-}
-```
+do them outside latency-sensitive runtime workers. The complete
+[`Server` lifecycle example](../crates/ic-testkit/src/server/mod.rs) lives with
+its API documentation and is compiled by
+`cargo test -p ic-testkit --features managed-server --doc`. The guide links to
+that checked source instead of maintaining another copy.
 
 `Deletion::Attempted` is insufficient for a consumer claiming observed deletion.
 The installed test independently reads the original server's instance inventory

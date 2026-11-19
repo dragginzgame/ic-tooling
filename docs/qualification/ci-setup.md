@@ -4,7 +4,7 @@ The `repository` and `secrets` jobs in `build-release-candidate.yml` wrap compil
 common-tool and secret-scanner setup with `scripts/ci/setup-diagnostics.pl`.
 This removes dependence on an
 ephemeral runner's console or a raw log path when setup fails before tests start.
-Toko Tooling 0.45.11 supplies the selected `SetupDiagnostics.pm` module for command
+Toko Tooling 0.45.13 supplies the selected `SetupDiagnostics.pm` module for command
 capture, exit/signal status, redaction and bounded excerpts. It includes the
 original redaction corrections from
 [Toko Tooling #393](https://github.com/dragginzgame/toko-tooling/issues/393),
@@ -68,9 +68,11 @@ handlers are exercised. The current fixture includes unlabelled synthetic
 access-key environment values, bare Bearer credentials and JSON payload fields.
 Shared-helper adoption adds invocation outside the repository working directory,
 command-launch refusal, the tighter per-excerpt bounds and the admitted-file read
-ceiling with an unfinished final line. The 69-check execution is retained under
-`target/toko-adoption-0.45.11/setup-diagnostics.log`; earlier scanner-setup evidence
-remains under `target/security-setup-review/diagnostics.log`.
+ceiling with an unfinished final line. The helper is byte-identical to the
+qualified 0.45.11 implementation. The fresh 69-check execution is retained under
+`target/toko-rules-refresh-2026-11-19/setup-diagnostics.log`; migration evidence
+remains under `target/toko-adoption-0.45.11/` and earlier scanner-setup evidence
+under `target/security-setup-review/diagnostics.log`.
 The repository job runs this focused fixture before formatting checks, so scanner
 setup failure and upload-reporting regressions are part of ordinary CI.
 These tests do not claim a hosted artifact upload or retrieval; that evidence

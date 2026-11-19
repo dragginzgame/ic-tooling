@@ -46,20 +46,48 @@ fn exact_external_subset_preserves_source_and_optional_checksum_identity() {
 #[test]
 fn malformed_and_duplicate_rows_refuse_in_either_role() {
     let valid = registry("one", "1.0.0", &"a".repeat(64));
-    for invalid in [
-        "".to_owned(),
-        "package=[false]".into(),
-        "package=[{source=7}]".into(),
-        format!("{valid}{valid}"),
-        valid.replace(&"a".repeat(64), &"A".repeat(64)),
-        valid.replace("checksum=", "other="),
-        "[[package]]\nsource='git+secret'\nversion='1'".into(),
+    for (invalid, expected) in [
+        ("".to_owned(), "missing package array"),
+        ("package=[false]".into(), "package must be a table"),
+        ("package=[{source=7}]".into(), "source must be a string"),
+        (format!("{valid}{valid}"), "duplicate external identity"),
+        (
+            valid.replace(&"a".repeat(64), &"A".repeat(64)),
+            "registry checksum must be lowercase SHA-256",
+        ),
+        (
+            valid.replace("checksum=", "other="),
+            "registry checksum must be lowercase SHA-256",
+        ),
+        (
+            "[[package]]\nsource='git+secret'\nversion='1'".into(),
+            "missing package name",
+        ),
     ] {
-        assert!(verify(valid.as_bytes(), invalid.as_bytes()).is_err());
-        assert!(verify(invalid.as_bytes(), valid.as_bytes()).is_err());
+        assert!(matches!(
+            verify(valid.as_bytes(), invalid.as_bytes()),
+            Err(Refusal::Lock { role: "candidate", reason }) if reason == expected
+        ));
+        assert!(matches!(
+            verify(invalid.as_bytes(), valid.as_bytes()),
+            Err(Refusal::Lock { role: "original", reason }) if reason == expected
+        ));
     }
-    assert!(verify(b"package=[]", &[255]).is_err());
+    assert!(matches!(
+        verify(b"package=[]", &[255]),
+        Err(Refusal::Lock {
+            role: "candidate",
+            reason: "invalid UTF-8"
+        })
+    ));
     let error = verify(b"package=[]", b"token='SECRET").unwrap_err();
+    assert!(matches!(
+        error,
+        Refusal::Lock {
+            role: "candidate",
+            reason: "invalid TOML"
+        }
+    ));
     assert!(!format!("{error:?}").contains("SECRET"));
 }
 
@@ -86,7 +114,11 @@ fn file_admission_bounds_and_refusals_never_change_inputs() {
     assert!(matches!(run(&args), Err(Refusal::File(_))));
     assert_eq!(fs::read(&original).unwrap(), b"package=[]");
     fs::remove_file(&candidate).unwrap();
-    assert!(run(&args).is_err());
+    assert!(
+        matches!(run(&args), Err(Refusal::Io(error)) if error.kind() == io::ErrorKind::NotFound)
+    );
+    assert_eq!(fs::read(&original).unwrap(), b"package=[]");
+    assert!(!candidate.exists());
     assert!(matches!(run(&args[..3]), Err(Refusal::Usage)));
     args[3] = "invalid".into();
     assert!(matches!(run(&args), Err(Refusal::Usage)));

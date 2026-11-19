@@ -4,8 +4,9 @@
 //! Callers own approval, spending, durable custody, submission and recovery.
 
 mod client;
-pub use client::{Signer, State};
 pub mod protocol;
+
+pub use client::{Signer, State};
 
 /// Local admission/execution failure. No provider stderr or key data is exposed.
 #[derive(Debug, thiserror::Error)]

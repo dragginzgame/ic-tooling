@@ -48,7 +48,7 @@ Its verified first-publication receipt is below.
 
 ## Development, CI and delivery entrypoints
 
-The selected Toko 0.45.11 snapshot supplies common setup, formatting and selection
+The selected Toko 0.45.13 snapshot supplies common setup, formatting and selection
 admission. Consumer-owned product checks remain in the Makefile and qualification
 runners. The current command boundaries are:
 
@@ -82,6 +82,44 @@ Prepared archive and source-bound qualification retain their offline contracts.
 That audit handoff left product versions unchanged. The 2026-11-18 authorized
 delivery selected patches because the packaged sources and development-tool
 requirements differed from their published archives.
+
+### Toko 0.45.13 rules/hygiene cohort — 2026-11-19
+
+Both workspaces select Toko 0.45.13, published source
+`aa962a23937b9daea4b15521b7af7e5c15eac54f`, archive SHA-256
+`8e5ed346b3e29656bd1521a24ec326e40236bd1ba9101e807684cfd77d8dcbe9`.
+The canonical exporter retains the 50-file selection; only baseline bytes change.
+CI's six cache-action references advance to that source with identical action
+bytes, and shared diagnostics remain byte-identical to the qualified 0.45.11 helper.
+
+The pending ordinary tooling dev-dependencies are retained and pass the all-target,
+all-feature compiler/lint gate without marker exceptions. Each member declares the
+intentional cargo-machete exemption. Existing member-manifest values and all
+non-Toko lock selections are preserved. Module ordering, typed negative assertions
+and the canonical compiled server example are qualified in the
+[rules/hygiene report](reports/audits/2026/11/19/toko-0.45.13-rules-and-hygiene/01/report.md).
+The maintainer authorized deployment from `main` to `origin/main`. Public source
+layout/example changes select Foundation 0.80.5 (both members), Process 0.81.2,
+Sign 0.1.2 and Testkit 0.110.2. APIs and runtime function bodies are unchanged;
+compatible patches deliver their new packaged source and documentation.
+Build and Cargo Metadata have private test/tooling changes only; HTTP and Text
+have tooling-only metadata changes. Their runtime source matches the verified
+published archives, so those groups and private Tools receive Git delivery only.
+The supplier-minimum updates in the workspace qualify its selected graph; they
+are not a new publication of an unchanged consumer contract.
+
+Pre-existing external lock updates are retained under
+`.git/release-state/toko-0.45.13/` and excluded from the delivery graph. That scoped
+graph passes all-feature workspace Clippy and tests, including the compiled
+server example. The final Linux core archive gate passes at
+`target/build-release.kNWOlSyD`, including native terminal and real-Wasm checks,
+Clippy and Rustdoc. Current sibling qualification is not selected for this
+body-preserving supplier batch, matching the preceding release boundary.
+Original native-host receipts retain their identities; no fresh macOS result is
+claimed. Remaining leaf archive qualification and registry readback complete
+delivery separately. Logs, comparisons and preflights live under
+`target/deploy-toko-0.45.13/`; source/push/upload custody lives under the recovery
+directory above. Hosted CI runs asynchronously.
 
 ### Toko 0.45.11 delivery — 2026-11-19
 

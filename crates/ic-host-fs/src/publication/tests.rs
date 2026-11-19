@@ -146,16 +146,30 @@ fn partial_write_short_and_growth_never_gain_seal_authority() {
     ));
     assert_eq!(fs::read(scratch.path().join("stage")).unwrap(), b"x");
     for (name, bytes) in [("short", b"".as_slice()), ("growing", b"xx".as_slice())] {
-        assert!(
-            root.stage(
+        let error = root
+            .stage(
                 OsStr::new(name),
                 OsStr::new("final"),
-                policy(Destination::CreateNew)
+                policy(Destination::CreateNew),
             )
             .unwrap()
             .write_from(bytes, Length::Exactly(1))
-            .is_err()
-        );
+            .unwrap_err();
+        assert!(matches!(
+            (name, error.cause),
+            (
+                "short",
+                Error::Bytes(ic_host_artifacts::Error::Short {
+                    expected: 1,
+                    actual: 0
+                })
+            ) | (
+                "growing",
+                Error::Bytes(ic_host_artifacts::Error::Limit { limit: 1 })
+            )
+        ));
+        assert!(error.cleanup.is_none());
+        assert!(error.recovery.is_none());
         assert!(!scratch.path().join(name).exists());
     }
     assert!(!scratch.path().join("final").exists());

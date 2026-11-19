@@ -6,17 +6,20 @@ rust-version.workspace = true
 license-file.workspace = true
 publish = false
 
-[target.'cfg(any())'.dev-dependencies]
-toko-tooling.workspace = true
-
 [package.metadata.toko-tooling.loc]
 category = "tests"
+
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
 
 [lib]
 crate-type = ["cdylib"]
 
 [features]
 refuse = []
+
+[dev-dependencies]
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

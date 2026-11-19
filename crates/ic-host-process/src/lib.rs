@@ -13,6 +13,7 @@ mod tests;
 mod handoff;
 #[cfg(target_os = "macos")]
 mod macos;
+
 pub use handoff::{Completion, launch};
 
 use std::{

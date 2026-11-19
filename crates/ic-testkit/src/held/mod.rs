@@ -6,12 +6,13 @@
 #[cfg(test)]
 mod tests;
 
+mod control;
+mod module;
+
 use std::collections::TryReserveError;
 
-mod module;
-pub use module::CompileError;
-mod control;
 pub use control::{ControlError, Fixture, Request};
+pub use module::CompileError;
 
 /// A borrowed update method and the exact bytes its eventual callback returns.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

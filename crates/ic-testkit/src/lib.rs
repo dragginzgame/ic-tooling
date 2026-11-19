@@ -4,11 +4,11 @@
 //! The held-reply slice admits catalogs and generates bounded Wasm modules.
 //! Exclusive controllers observe/release held requests and admit bounded clock steps.
 
-/// Original upstream client, builder, identifier and error types.
-pub use pocket_ic;
-
 #[cfg(feature = "managed-server")]
 pub mod server;
 
 #[cfg(feature = "held-reply-fixtures")]
 pub mod held;
+
+/// Original upstream client, builder, identifier and error types.
+pub use pocket_ic;

@@ -9,8 +9,8 @@ repository.workspace = true
 authors.workspace = true
 publish = ["crates-io"]
 
-[target.'cfg(any())'.dev-dependencies]
-toko-tooling.workspace = true
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
 
 [dependencies]
 ic-host-artifacts.workspace = true
@@ -19,6 +19,9 @@ ic-host-process.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+toko-tooling.workspace = true
 
 [lints]
 workspace = true

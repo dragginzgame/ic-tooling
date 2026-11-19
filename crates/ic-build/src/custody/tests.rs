@@ -31,22 +31,30 @@ fn capture_uses_no_follow_components_and_close_removes_private_scratch() {
     )
     .unwrap();
     symlink(parent.path(), target.path().join("linked-directory")).unwrap();
-    assert!(
-        target
-            .open_artifact(&target.path().join("link.wasm"))
-            .is_err()
-    );
-    assert!(
-        target
-            .open_artifact(&target.path().join("linked-directory/foreign"))
-            .is_err()
-    );
-    assert!(
-        target
-            .open_artifact(&parent.path().join("foreign"))
-            .is_err()
-    );
-    assert!(target.open_artifact(&target.path().join("nested")).is_err());
+    for relative in ["link.wasm", "linked-directory/foreign"] {
+        let error = target
+            .open_artifact(&target.path().join(relative))
+            .unwrap_err();
+        assert!(matches!(
+            error
+                .get_ref()
+                .and_then(|cause| cause.downcast_ref::<ic_host_fs::Error>()),
+            Some(ic_host_fs::Error::Refused(_))
+        ));
+    }
+    let error = target
+        .open_artifact(&parent.path().join("foreign"))
+        .unwrap_err();
+    assert_eq!(error.kind(), std::io::ErrorKind::InvalidInput);
+    let error = target
+        .open_artifact(&target.path().join("nested"))
+        .unwrap_err();
+    assert!(matches!(
+        error
+            .get_ref()
+            .and_then(|cause| cause.downcast_ref::<ic_host_fs::Error>()),
+        Some(ic_host_fs::Error::Kind)
+    ));
     let path = target.path().to_owned();
     target.close().unwrap();
     assert!(!path.exists());

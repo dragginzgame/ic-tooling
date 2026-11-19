@@ -1,6 +1,6 @@
 [package]
 name = "ic-testkit"
-version = "0.110.1"
+version = "0.110.2"
 description = "Shared PocketIC types, held-reply fixtures and optional bounded server ownership"
 edition.workspace = true
 rust-version.workspace = true
@@ -9,8 +9,8 @@ repository.workspace = true
 authors.workspace = true
 publish = ["crates-io"]
 
-[target.'cfg(any())'.dev-dependencies]
-toko-tooling.workspace = true
+[package.metadata.cargo-machete]
+ignored = ["toko-tooling"]
 
 [[bin]]
 name = "ic-testkit-server"
@@ -52,6 +52,7 @@ wat = { workspace = true, optional = true }
 [dev-dependencies]
 reqwest = { workspace = true, features = ["json"] }
 tokio = { workspace = true, features = ["rt", "net", "time"] }
+toko-tooling.workspace = true
 wasmparser.workspace = true
 
 [[example]]

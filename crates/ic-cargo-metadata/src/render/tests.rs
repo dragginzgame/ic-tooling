@@ -68,8 +68,14 @@ fn lock_preserves_registry_bytes_and_qualified_references() {
             Err(Error::Selection(_))
         ));
     }
-    assert!(lock(input, "1.2.3", "1.2.4", &["missing".into()]).is_err());
-    assert!(lock(input, "1.2.3", "1.2.4", &["owned".into(), "owned".into()]).is_err());
+    assert!(matches!(
+        lock(input, "1.2.3", "1.2.4", &["missing".into()]),
+        Err(Error::Selection("missing selected local package"))
+    ));
+    assert!(matches!(
+        lock(input, "1.2.3", "1.2.4", &["owned".into(), "owned".into()]),
+        Err(Error::Selection("invalid or duplicate package selection"))
+    ));
 }
 
 #[test]
@@ -94,6 +100,9 @@ fn no_op_manifest_and_bare_lock_edges_preserve_every_other_byte() {
         lockfile.replace("'1.0.0'", "\"2.0.0\"")
     );
     for version in ["01.0.0", "1.0", "1.0.0-alpha", "1.0.0+build"] {
-        assert!(versions(version, "2.0.0").is_err());
+        assert!(matches!(
+            versions(version, "2.0.0"),
+            Err(Error::Selection("expected stable semantic version"))
+        ));
     }
 }

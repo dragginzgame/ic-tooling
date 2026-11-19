@@ -5,6 +5,19 @@ Packages: `ic-host-artifacts`, `ic-host-fs`.
 This group starts with the replacement implementation. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.80.5] - 2026-11-19
+
+### 🔧 Changed
+
+- Adopt the ordinary Toko Tooling 0.45.13 development dependency and its
+  intentional dependency-scan exemption. Public APIs and runtime behavior remain
+  unchanged.
+
+### 🧪 Testing
+
+- Qualify exact short/oversized stage-write refusals, successful cleanup and
+  preserved directory identity after occupied-name refusal.
+
 ## [0.80.4] - 2026-11-18
 
 ### 🔧 Changed
