@@ -8,7 +8,7 @@ rust-version = "1.100.0"
 license-file = "../LICENSE.md"
 
 [workspace.dependencies]
-toko-tooling = "=0.45.13"
+toko-tooling = "=0.45.16"
 
 [workspace.lints.cargo]
 unused_dependencies = "deny"

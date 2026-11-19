@@ -86,6 +86,7 @@ impl PrivateKeychain {
             prepared.status.success(),
             "could not prepare the disposable item's narrow application ACL"
         );
+        super::create_identity(directory, icp, name);
         owner
     }
 
@@ -139,4 +140,47 @@ impl Drop for PrivateKeychain {
             );
         }
     }
+}
+
+#[tokio::test]
+#[ignore = "requires the qualification runner's disposable keychain account"]
+async fn native_locked_keychain_refuses_without_prompting() {
+    use std::time::Duration;
+    let fixture = super::Disposable::create();
+    let mut signer = fixture.signer();
+    let approved = signer.commitment();
+    let signed = signer.sign(fixture.request(), approved).await.unwrap();
+    let original = signed.envelope_bytes().to_vec();
+    fixture.credential.lock();
+    let refused = tokio::time::timeout(
+        Duration::from_secs(3),
+        signer.sign(fixture.request(), approved),
+    )
+    .await;
+    let result = match refused {
+        Ok(result) => result,
+        Err(_) => {
+            let _ = signer.settle().await;
+            panic!("locked keychain did not refuse without interaction");
+        }
+    };
+    let Err(ic_host_sign::Error::Execution { report }) = result else {
+        panic!("locked keychain unexpectedly signed")
+    };
+    assert!(report.failure.is_none() && report.cleanup.is_empty());
+    assert_eq!(report.status.unwrap().code(), Some(2));
+    assert_eq!(signer.state(), ic_host_sign::State::Ready);
+    assert_eq!(signed.envelope_bytes(), original);
+    assert_eq!(signed.sender().to_text(), fixture.config.sender);
+}
+
+#[test]
+#[ignore = "requires the qualification runner's inherited network-denying sandbox"]
+fn native_network_sandbox_denies_outbound() {
+    assert_eq!(
+        std::env::var("SIGNER_TEST_NETWORK_SANDBOX").as_deref(),
+        Ok("1")
+    );
+    let failure = std::net::TcpStream::connect((std::net::Ipv4Addr::LOCALHOST, 9)).unwrap_err();
+    assert_eq!(failure.kind(), std::io::ErrorKind::PermissionDenied);
 }

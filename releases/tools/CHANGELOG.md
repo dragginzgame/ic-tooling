@@ -10,6 +10,9 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Refresh both workspaces, the installed snapshot and CI cache action to Toko
+  Tooling 0.45.16. Group native signer qualification by credential backend.
+
 - Adopt Toko Tooling 0.45.13 in both workspaces, the authenticated snapshot and
   CI cache action. Use ordinary tooling dev-dependencies where supported and
   declare their intentional dependency-scan exemptions without dummy imports.

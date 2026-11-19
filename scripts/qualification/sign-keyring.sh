@@ -12,6 +12,14 @@ manifest=${SIGNER_TEST_MANIFEST:-$repo/Cargo.toml}
 if [[ ${1:-} == --linux-session ]]; then
     evidence=$2
     [[ "$evidence" == "$repo"/target/sign-keyring.* && -d "$evidence" && ! -L "$evidence" ]] || exit 2
+    locked_test=linux::native_locked_keyring_refuses_without_changing_identity
+    case $3 in
+        unlocked) selection=(--skip "$locked_test") ;;
+        locked) selection=(--exact "$locked_test") ;;
+        *) exit 2 ;;
+    esac
+    evidence="$evidence/$3"
+    mkdir "$evidence"
     export XDG_DATA_HOME="$evidence/private-data"
     export XDG_CONFIG_HOME="$evidence/private-config"
     unset GNOME_KEYRING_CONTROL
@@ -56,7 +64,13 @@ if [[ ${1:-} == --linux-session ]]; then
      timeout --kill-after=5s 60s strace -f -e trace=socket,connect,execve -o "$evidence/network.trace" \
          bash -c 'ulimit -S -f unlimited; exec "$@"' sign-fixture \
          cargo test --manifest-path "$manifest" -p ic-host-sign --features provider --test keyring --locked --offline \
-         -- --ignored --test-threads=1 --show-output) > "$evidence/test.log" 2>&1
+         -- --ignored --test-threads=1 --show-output "${selection[@]}") > "$evidence/test.log" 2>&1
+    if [[ $3 == locked ]]; then
+        grep -Fxq "test $locked_test ... ok" "$evidence/test.log"
+    else
+        grep -Fxq 'test native_icp_keyring_update ... ok' "$evidence/test.log"
+        grep -Fxq 'test linux::native_keyring_cancellation_retains_custody ... ok' "$evidence/test.log"
+    fi
     kill "$monitor_pid"
     wait "$monitor_pid" || true
     monitor_pid=
@@ -76,7 +90,7 @@ if [[ ${1:-} == --linux-session ]]; then
         defined($count) && $count == 16 && $header eq "GnomeKeyring\n\r\0\n"
             or die "disposable keyring did not retain the encrypted binary format\n";' \
         "$XDG_DATA_HOME/keyrings/login.keyring"
-    echo 'Encrypted ICP 1.7.0 keyring update/status, cancellation and locked refusal passed; no prompts or external sockets.'
+    echo "Encrypted ICP 1.7.0 keyring tests passed in the $3 session; no prompts or external sockets."
     exit
 fi
 
@@ -102,7 +116,12 @@ git rev-parse HEAD > "$evidence/source-head"
 cargo test --manifest-path "$manifest" -p ic-host-sign --features provider --test keyring --no-run --locked --offline \
     > "$evidence/build.log" 2>&1
 case $(uname -s) in
-    Linux) dbus-run-session -- bash "$repo/scripts/qualification/sign-keyring.sh" --linux-session "$evidence" ;;
+    Linux)
+        # Locking affects the whole collection. Destroy it before starting the other cases.
+        for state in locked unlocked; do
+            dbus-run-session -- bash "$repo/scripts/qualification/sign-keyring.sh" --linux-session "$evidence" "$state"
+        done
+        ;;
     Darwin)
         [[ ${SIGNER_TEST_DISPOSABLE_KEYCHAIN:-} == 1 ]] || {
             echo 'Native macOS qualification requires an explicitly disposable account (SIGNER_TEST_DISPOSABLE_KEYCHAIN=1).' >&2

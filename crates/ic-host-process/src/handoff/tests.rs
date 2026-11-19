@@ -1,6 +1,4 @@
 use super::*;
-#[cfg(target_os = "linux")]
-use std::fs;
 use std::{
     cell::Cell,
     os::unix::process::ExitStatusExt,
@@ -138,6 +136,8 @@ fn worker_disconnect_is_uncertain_completion_not_success() {
 #[cfg(target_os = "linux")]
 #[test]
 fn dropped_observer_leaves_child_running_and_worker_reaps_it() {
+    use std::fs;
+
     fn identity(pid: u32) -> Option<String> {
         match fs::read_to_string(format!("/proc/{pid}/stat")) {
             Ok(stat) => Some(

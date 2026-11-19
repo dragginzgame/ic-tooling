@@ -58,7 +58,7 @@ tempfile = "3.27.0"
 tokio = { version = "1.54.1", default-features = false }
 
 # Tests and tooling
-toko-tooling = "=0.45.13"
+toko-tooling = "=0.45.16"
 wasmparser = "0.263.0"
 
 [workspace.lints.cargo]

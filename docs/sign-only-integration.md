@@ -141,7 +141,9 @@ Shell fixtures prove
 lifecycle/refusal, not native keyring behavior.
 
 `make test-sign-keyring` requires absolute `SIGNER_TEST_ICP` selecting prepared ICP
-1.7.0. Linux uses a private D-Bus session and temporary Secret Service. ICP creates
+1.7.0. Linux runs the locked-collection case in its own private D-Bus session
+and temporary Secret Service. Signing and cancellation share a second disposable
+session so test order cannot make them request an unlock. ICP creates
 disposable keyring identities under isolated `ICP_HOME` paths. A test-only password
 unlocks the temporary encrypted collection over stdin; its binary storage header
 is checked before cleanup. Authenticated sender

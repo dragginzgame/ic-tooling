@@ -1,10 +1,22 @@
 //! Explicit real-provider qualification. Requires a prepared ICP CLI and native
 //! credential session. Creates/deletes only a uniquely named disposable identity.
 
+#[cfg(target_os = "linux")]
+mod linux;
 #[cfg(target_os = "macos")]
 mod mac_keychain;
 
-use std::{fs, os::unix::fs::PermissionsExt, path::PathBuf, process::Command};
+#[cfg(target_os = "linux")]
+use linux::Credential;
+#[cfg(target_os = "macos")]
+use mac_keychain::PrivateKeychain as Credential;
+
+use std::{
+    fs,
+    os::unix::fs::PermissionsExt,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use ic_host_sign::{
     Error, Signer,
@@ -14,24 +26,10 @@ use ic_host_sign::{
 use zeroize::Zeroizing;
 
 struct Disposable {
-    #[cfg(target_os = "linux")]
-    entry: Credential,
-    #[cfg(target_os = "macos")]
-    keychain: mac_keychain::PrivateKeychain,
+    credential: Credential,
     directory: tempfile::TempDir,
     config: Configuration,
     helper: PathBuf,
-}
-
-#[cfg(target_os = "linux")]
-struct Credential(keyring::Entry, bool);
-#[cfg(target_os = "linux")]
-impl Drop for Credential {
-    fn drop(&mut self) {
-        if self.1 {
-            let _ = self.0.delete_credential();
-        }
-    }
 }
 
 impl Disposable {
@@ -65,29 +63,7 @@ impl Disposable {
                 .success()
         );
         fs::set_permissions(&helper, fs::Permissions::from_mode(0o700)).unwrap();
-        #[cfg(target_os = "macos")]
-        let keychain =
-            mac_keychain::PrivateKeychain::create(directory.path(), &cli, &helper, &name);
-        let created = Command::new(cli)
-            .env("ICP_HOME", directory.path())
-            .args(["identity", "new", &name, "--storage", "keyring", "--json"])
-            .current_dir(directory.path())
-            .output()
-            .unwrap();
-        let status = created.status;
-        // `identity new` prints a disposable recovery seed. Never emit or retain
-        // it as evidence, including on failure. No private operator data is read.
-        drop(Zeroizing::new(created.stdout));
-        drop(Zeroizing::new(created.stderr));
-        assert!(
-            status.success(),
-            "disposable ICP keyring identity creation failed"
-        );
-        #[cfg(target_os = "linux")]
-        let entry = Credential(
-            keyring::Entry::new("icp-cli", &name).expect("native credential session unavailable"),
-            true,
-        );
+        let credential = Credential::create(directory.path(), &cli, &helper, &name);
         let manifest = directory.path().join("identity/identity_list.json");
         let metadata: serde_json::Value =
             serde_json::from_slice(&fs::read(&manifest).unwrap()).unwrap();
@@ -106,12 +82,9 @@ impl Disposable {
         };
         Self {
             directory,
-            #[cfg(target_os = "linux")]
-            entry,
+            credential,
             config,
             helper,
-            #[cfg(target_os = "macos")]
-            keychain,
         }
     }
 
@@ -140,14 +113,26 @@ impl Disposable {
     }
 
     fn delete_credential(&self) {
-        #[cfg(target_os = "linux")]
-        self.entry
-            .0
-            .delete_credential()
-            .expect("disposable credential deletion failed");
-        #[cfg(target_os = "macos")]
-        self.keychain.delete_credential(&self.config.identity);
+        self.credential.delete_credential(&self.config.identity);
     }
+}
+
+fn create_identity(directory: &Path, cli: &Path, name: &str) {
+    let created = Command::new(cli)
+        .env("ICP_HOME", directory)
+        .args(["identity", "new", name, "--storage", "keyring", "--json"])
+        .current_dir(directory)
+        .output()
+        .unwrap();
+    let status = created.status;
+    // `identity new` prints a disposable recovery seed. Never emit or retain
+    // it as evidence, including on failure. No private operator data is read.
+    drop(Zeroizing::new(created.stdout));
+    drop(Zeroizing::new(created.stderr));
+    assert!(
+        status.success(),
+        "disposable ICP keyring identity creation failed"
+    );
 }
 
 #[tokio::test]
@@ -203,210 +188,4 @@ async fn native_icp_keyring_update() {
         !fixture.directory.path().join("identity/keys").exists(),
         "unexpected plaintext key export"
     );
-}
-
-#[cfg(target_os = "linux")]
-#[tokio::test]
-#[ignore = "requires the qualification runner's owned disposable Secret Service"]
-async fn native_keyring_cancellation_retains_custody() {
-    use std::time::Duration;
-    assert_eq!(
-        std::env::var("SIGNER_TEST_PRIVATE_SESSION").as_deref(),
-        Ok("1")
-    );
-    let daemon = std::env::var("SIGNER_TEST_KEYRING_PID").expect("owned test daemon PID");
-    assert!(daemon.bytes().all(|c| c.is_ascii_digit()));
-    let fixture = Disposable::create();
-    let mut signer = fixture.signer();
-    let mut request = fixture.request();
-    request.deadline_ns = protocol::now_ns().unwrap() + 20_000_000_000;
-    let approved = signer.commitment();
-    // Freeze only the daemon launched by this disposable-session runner. The
-    // actual helper blocks in local native credential IPC, without fake keys or
-    // fake signer output. The runner owns this backend, not the signer library.
-    assert!(
-        Command::new("kill")
-            .args(["-STOP", &daemon])
-            .status()
-            .unwrap()
-            .success()
-    );
-    struct Resume(String);
-    impl Drop for Resume {
-        fn drop(&mut self) {
-            let _ = Command::new("kill").args(["-CONT", &self.0]).status();
-        }
-    }
-    let resume = Resume(daemon);
-    let timed = tokio::time::timeout(
-        Duration::from_secs(3),
-        signer.sign(request.clone(), approved),
-    )
-    .await;
-    assert!(
-        timed.is_err(),
-        "credential IPC unexpectedly completed while its daemon was stopped"
-    );
-    assert!(matches!(
-        signer.sign(request, approved).await,
-        Err(Error::Busy)
-    ));
-    let settled = tokio::time::timeout(Duration::from_secs(3), signer.settle())
-        .await
-        .unwrap();
-    let Err(Error::Execution { report }) = settled else {
-        panic!("lost native cancellation evidence")
-    };
-    assert!(matches!(
-        report.failure,
-        Some(ic_host_process::Failure::Cancelled)
-    ));
-    assert!(report.cleanup.is_empty());
-    assert!(report.status.is_some(), "helper was not reaped");
-    assert_eq!(signer.state(), ic_host_sign::State::Ready);
-    drop(resume);
-    fixture.delete_credential();
-}
-
-#[cfg(target_os = "linux")]
-#[tokio::test]
-#[ignore = "requires the qualification runner's private headless Secret Service"]
-async fn native_locked_keyring_refuses_without_changing_identity() {
-    use std::time::Duration;
-    assert_eq!(
-        std::env::var("SIGNER_TEST_PRIVATE_SESSION").as_deref(),
-        Ok("1")
-    );
-    let mut fixture = Disposable::create();
-    let mut signer = fixture.signer();
-    let approved = signer.commitment();
-    let signed = signer.sign(fixture.request(), approved).await.unwrap();
-    let original = signed.envelope_bytes().to_vec();
-    // After locking, only the runner-owned store teardown has cleanup custody.
-    // A convenience credential destructor must not itself request an unlock UI.
-    fixture.entry.1 = false;
-    let locked = Command::new("gdbus")
-        .args([
-            "call",
-            "--session",
-            "--dest",
-            "org.freedesktop.secrets",
-            "--object-path",
-            "/org/freedesktop/secrets",
-            "--method",
-            "org.freedesktop.Secret.Service.Lock",
-            "['/org/freedesktop/secrets/collection/login']",
-        ])
-        .output()
-        .unwrap();
-    assert!(
-        locked.status.success(),
-        "could not lock the private collection"
-    );
-    let check = Command::new("gdbus")
-        .args([
-            "call",
-            "--session",
-            "--dest",
-            "org.freedesktop.secrets",
-            "--object-path",
-            "/org/freedesktop/secrets/collection/login",
-            "--method",
-            "org.freedesktop.DBus.Properties.Get",
-            "org.freedesktop.Secret.Collection",
-            "Locked",
-        ])
-        .output()
-        .unwrap();
-    assert!(check.status.success() && String::from_utf8(check.stdout).unwrap().contains("true"));
-    let attempt = tokio::time::timeout(
-        Duration::from_secs(3),
-        signer.sign(fixture.request(), approved),
-    )
-    .await;
-    let result = match attempt {
-        Ok(result) => result,
-        Err(_) => {
-            let _ = signer.settle().await;
-            panic!("noninteractive provider did not promptly refuse the locked credential");
-        }
-    };
-    let Err(Error::Execution { report }) = result else {
-        panic!("locked keyring unexpectedly signed")
-    };
-    assert!(report.failure.is_none(), "provider did not refuse normally");
-    assert_eq!(report.status.unwrap().code(), Some(2));
-    assert!(report.cleanup.is_empty());
-    assert_eq!(signer.state(), ic_host_sign::State::Ready);
-    let matches = Command::new("gdbus")
-        .args([
-            "call",
-            "--session",
-            "--dest",
-            "org.freedesktop.secrets",
-            "--object-path",
-            "/org/freedesktop/secrets",
-            "--method",
-            "org.freedesktop.Secret.Service.SearchItems",
-            &format!(
-                "{{'service': 'icp-cli', 'username': '{}'}}",
-                fixture.config.identity
-            ),
-        ])
-        .output()
-        .unwrap();
-    assert!(matches.status.success());
-    assert!(
-        String::from_utf8(matches.stdout)
-            .unwrap()
-            .contains("/org/freedesktop/secrets/collection/login/")
-    );
-    fixture.config.admit().unwrap();
-    assert_eq!(signed.sender().to_text(), fixture.config.sender);
-    assert_eq!(signed.envelope_bytes(), original);
-}
-
-#[cfg(target_os = "macos")]
-#[tokio::test]
-#[ignore = "requires the qualification runner's disposable keychain account"]
-async fn native_locked_keychain_refuses_without_prompting() {
-    use std::time::Duration;
-    let fixture = Disposable::create();
-    let mut signer = fixture.signer();
-    let approved = signer.commitment();
-    let signed = signer.sign(fixture.request(), approved).await.unwrap();
-    let original = signed.envelope_bytes().to_vec();
-    fixture.keychain.lock();
-    let refused = tokio::time::timeout(
-        Duration::from_secs(3),
-        signer.sign(fixture.request(), approved),
-    )
-    .await;
-    let result = match refused {
-        Ok(result) => result,
-        Err(_) => {
-            let _ = signer.settle().await;
-            panic!("locked keychain did not refuse without interaction");
-        }
-    };
-    let Err(Error::Execution { report }) = result else {
-        panic!("locked keychain unexpectedly signed")
-    };
-    assert!(report.failure.is_none() && report.cleanup.is_empty());
-    assert_eq!(report.status.unwrap().code(), Some(2));
-    assert_eq!(signer.state(), ic_host_sign::State::Ready);
-    assert_eq!(signed.envelope_bytes(), original);
-    assert_eq!(signed.sender().to_text(), fixture.config.sender);
-}
-
-#[cfg(target_os = "macos")]
-#[test]
-#[ignore = "requires the qualification runner's inherited network-denying sandbox"]
-fn native_network_sandbox_denies_outbound() {
-    assert_eq!(
-        std::env::var("SIGNER_TEST_NETWORK_SANDBOX").as_deref(),
-        Ok("1")
-    );
-    let failure = std::net::TcpStream::connect((std::net::Ipv4Addr::LOCALHOST, 9)).unwrap_err();
-    assert_eq!(failure.kind(), std::io::ErrorKind::PermissionDenied);
 }

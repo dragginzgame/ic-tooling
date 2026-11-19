@@ -29,6 +29,14 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Latest delivery
 
+Both workspaces, the 50-file snapshot and six CI action references select Toko
+0.45.16. Compared with the published cohort, this updates developer tooling,
+test code and qualification. Product runtime code and dependencies are unchanged,
+so this delivery goes through Git only. Linux passed the process-reaping test
+and all three native signer cases with the delivery lock. Locked refusal now
+runs in its own disposable session, independent of signing and cancellation
+(`target/sign-keyring.o6bw22P1/`). Native macOS qualification runs in CI.
+
 The Toko 0.45.13 rules/hygiene cohort is published: Foundation 0.80.5 (both
 members), Process 0.81.2, Sign 0.1.2 and Testkit 0.110.2. All four group tags are
 pushed and registry readback matches exact preflight bytes. Linux archive,
@@ -60,22 +68,6 @@ cohort receipt and `.git/release-state/sign-0.1.0/`. Private Tools 0.1.3 remains
 pending; its maintained workflow changes are delivered through Git.
 
 ## Blockers and next actions
-
-Toko 0.45.13 adoption updates both workspace selections, the authenticated
-50-file snapshot and all six CI action references. Its rules/hygiene pass puts
-child modules before imports, strengthens distinguishing refusals and preserved
-state checks, and compiles the canonical server usage example through Rustdoc.
-Pending ordinary tooling dev-dependencies are preserved; all-target/all-feature
-Clippy needs no marker exceptions. Intentional dependency-scan exemptions are
-declared. Shared diagnostics still pass 69 checks with unchanged helper bytes.
-Fresh workspace tests, Clippy, Rustdoc, portable Wasm, dependency-use and tooling
-checks pass; see the
-[current audit](../reports/audits/2026/11/19/toko-0.45.13-rules-and-hygiene/01/report.md).
-All non-Toko lock selections and existing member-manifest values are preserved.
-Delivery is complete. Other product groups have private test/tooling changes
-only and keep their versions. Unrelated external lock updates are restored and
-retained under `.git/release-state/toko-0.45.13/`. Consumer implementation and
-qualification remain with their owners.
 
 Producer acceptance has no outstanding blocker. Canic's thin Backup adapter and
 installed acceptance remain in [Canic #5](https://github.com/dragginzgame/canic/issues/5).
