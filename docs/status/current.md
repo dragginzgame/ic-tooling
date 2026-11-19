@@ -29,19 +29,16 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Latest delivery
 
-Toko 0.45.11 and shared setup diagnostics are delivered through the private Tools
-maintenance path. The 50-file snapshot, both workspace selections and six CI action
-references agree. Package comparison confirms only the disabled development-tool
-selector changed in public archives; crate versions and runtime contracts stay
-at the published cohort below. See the
-[tooling delivery record](../release-ownership.md#toko-04511-delivery--2026-11-19).
-
-The latest published crate cohort uses Toko 0.45.8: Foundation 0.80.4 (both members),
-Process 0.81.1, Build 0.87.5, HTTP 0.80.1, Text 0.77.3, Metadata 0.1.1,
-Testkit 0.110.1 and Sign 0.1.1. All eight group tags are pushed; registry records
-and exact archive readback match publication preflights. Linux archive, installed
-simulator and disposable keyring gates pass. See the
-[hygiene receipt](../release-ownership.md#hygiene-cohort--2026-11-18).
+The Toko 0.45.13 rules/hygiene cohort is published: Foundation 0.80.5 (both
+members), Process 0.81.2, Sign 0.1.2 and Testkit 0.110.2. All four group tags are
+pushed and registry readback matches exact preflight bytes. Linux archive,
+installed simulator and disposable provider gates pass. See the
+[cohort receipt](../release-ownership.md#toko-04513-ruleshygiene-cohort--2026-11-19).
+Build 0.87.5, HTTP 0.80.1, Text 0.77.3 and Metadata 0.1.1 keep their published
+versions; their private test/tooling maintenance is delivered through Git.
+Earlier [shared-diagnostic](../release-ownership.md#toko-04511-delivery--2026-11-19)
+and [hygiene](../release-ownership.md#hygiene-cohort--2026-11-18) receipts retain
+their original source/host evidence.
 
 Process 0.81 owns finite pipe input; `Input`/`Policy` are `Clone`, not `Copy`.
 Testkit 0.110 shares its report type identity. See the
@@ -58,7 +55,7 @@ secret was accessed or used. See the [signing contract](../sign-only-integration
 
 Unrelated compatible Cargo.lock updates remain uncommitted with the released
 local package versions. Recovery and delivery locks are retained under
-`.git/release-state/hygiene-2026-11-18/`. Earlier signing evidence remains in the
+`.git/release-state/toko-0.45.13/`. Earlier signing evidence remains in the
 cohort receipt and `.git/release-state/sign-0.1.0/`. Private Tools 0.1.3 remains
 pending; its maintained workflow changes are delivered through Git.
 
@@ -75,13 +72,10 @@ Fresh workspace tests, Clippy, Rustdoc, portable Wasm, dependency-use and toolin
 checks pass; see the
 [current audit](../reports/audits/2026/11/19/toko-0.45.13-rules-and-hygiene/01/report.md).
 All non-Toko lock selections and existing member-manifest values are preserved.
-The maintainer authorized deployment: Foundation 0.80.5, Process 0.81.2,
-Sign 0.1.2 and Testkit 0.110.2 are selected patches. Other product groups have
-private test/tooling changes only and keep their versions. The scoped delivery
-graph and Linux core archive gate pass; remaining registry-backed leaf archive
-qualification and publication are active. Unrelated external lock updates are
-retained under `.git/release-state/toko-0.45.13/` for restoration. Consumer
-implementation and qualification remain with their owners.
+Delivery is complete. Other product groups have private test/tooling changes
+only and keep their versions. Unrelated external lock updates are restored and
+retained under `.git/release-state/toko-0.45.13/`. Consumer implementation and
+qualification remain with their owners.
 
 Producer acceptance has no outstanding blocker. Canic's thin Backup adapter and
 installed acceptance remain in [Canic #5](https://github.com/dragginzgame/canic/issues/5).

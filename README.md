@@ -1,13 +1,15 @@
 # IC Tooling
 
-Latest tooling delivery adopts Toko Tooling 0.45.11 and its shared setup
-diagnostics, preserving bounded evidence and original setup failures. See the
-[delivery record](docs/release-ownership.md#toko-04511-delivery--2026-11-19).
+Latest delivery adopts Toko Tooling 0.45.13 and publishes Foundation 0.80.5
+(Artifacts/FS), Process 0.81.2, Sign 0.1.2 and Testkit 0.110.2. Public APIs and
+runtime behavior are unchanged; the hygiene pass strengthens refusal assertions
+and compiles the canonical server example. See the
+[cohort receipt](docs/release-ownership.md#toko-04513-ruleshygiene-cohort--2026-11-19).
 
-The latest crate delivery, the Toko Tooling 0.45.8 hygiene cohort, publishes nine patch
-crates with unchanged public APIs and runtime behavior. The
-[release receipt](docs/release-ownership.md#hygiene-cohort--2026-11-18) records
-versions, tags, exact registry checksums and focused archive acceptance.
+Build 0.87.5, HTTP 0.80.1, Text 0.77.3 and Cargo Metadata 0.1.1 retain their
+[published versions](docs/release-ownership.md#hygiene-cohort--2026-11-18).
+Their production source is unchanged; test/tooling maintenance is delivered
+through Git.
 
 The preceding feature delivery, Testkit 0.110.0, adopts Process 0.81's public report identity and
 retains bounded clock progression while replies are

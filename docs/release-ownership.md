@@ -92,7 +92,7 @@ The canonical exporter retains the 50-file selection; only baseline bytes change
 CI's six cache-action references advance to that source with identical action
 bytes, and shared diagnostics remain byte-identical to the qualified 0.45.11 helper.
 
-The pending ordinary tooling dev-dependencies are retained and pass the all-target,
+The ordinary tooling dev-dependencies pass the all-target,
 all-feature compiler/lint gate without marker exceptions. Each member declares the
 intentional cargo-machete exemption. Existing member-manifest values and all
 non-Toko lock selections are preserved. Module ordering, typed negative assertions
@@ -116,8 +116,38 @@ server example. The final Linux core archive gate passes at
 Clippy and Rustdoc. Current sibling qualification is not selected for this
 body-preserving supplier batch, matching the preceding release boundary.
 Original native-host receipts retain their identities; no fresh macOS result is
-claimed. Remaining leaf archive qualification and registry readback complete
-delivery separately. Logs, comparisons and preflights live under
+claimed. The complete Testkit/Sign archive gate passes at
+`target/library-release.bP16In3g`: default/feature isolation, compiled example,
+installed CLI lifetime/failure cleanup, three held-reply/clock checks with all
+five instances deleted, two managed-server cases and three encrypted real-provider
+cases with no OS prompts or external sockets.
+
+All five selected versions are published and unyanked from
+[`bcb47fe96413ac617be4fd0114fbfc5ab94b0d55`](https://github.com/dragginzgame/ic-tooling/commit/bcb47fe96413ac617be4fd0114fbfc5ab94b0d55).
+The four pushed tags `foundation-v0.80.5`, `process-v0.81.2`, `sign-v0.1.2` and
+`testkit-v0.110.2` name that source. Build, Metadata, HTTP, Text and private Tools
+have no version/tag/publication in this cohort.
+
+| Package | Registry/archive SHA-256 |
+| --- | --- |
+| `ic-host-artifacts` 0.80.5 | `814abdb7bbdfc539465ae8c2eafdfe07e53b3b4a4a53a96c360f96662dd0aee7` |
+| `ic-host-fs` 0.80.5 | `8ead8b959e065345dff20ce129f79af0877b8123a893517a5eec4e3738b93e9f` |
+| `ic-host-process` 0.81.2 | `14eb81da7376ef220b5c3c1ba231f5e129de622bea47b977bd734357c2571102` |
+| `ic-host-sign` 0.1.2 | `bb94f9580f6e05c91b46293966845e3142713aa09c8453068363fdecda651446` |
+| `ic-testkit` 0.110.2 | `a099c0ffe0b615664ad66484e4796e09a574a91153635c93dfa8fc37cec60f31` |
+
+Clean publication dry runs match their qualified source, licences and normalized
+manifests. Complete resolved dependency tuples agree after admitting the selected
+cohort's same-version local-to-registry source/checksum projection; unused patch
+records are not resolved dependencies. Each final archive carries its clean
+tagged VCS identity. Fresh registry downloads are byte-identical to the recorded
+preflights, and fresh index records match these checksums. Original upload intents
+and statuses are retained. External lock updates are restored with only the five
+local release identities advanced; locked metadata and snapshot admission pass.
+Post-push review found no additional actionable drift in the delivered scope.
+[Source-push CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44496986641)
+started asynchronously; no whole-run pass is claimed.
+Logs, comparisons and preflights live under
 `target/deploy-toko-0.45.13/`; source/push/upload custody lives under the recovery
 directory above. Hosted CI runs asynchronously.
 
