@@ -90,6 +90,7 @@ fn read(path: &Path, maximum: u64) -> Result<String> {
             },
         )?
         .ok_or(Error::Selection("input absent"))?;
+
     Ok(String::from_utf8(
         ic_host_artifacts::read(file, Length::AtMost(maximum))?.0,
     )?)
@@ -101,9 +102,11 @@ fn run(arguments: &Arguments) -> Result<String> {
     | Operation::Lock { selection, .. }) = &arguments.operation;
     render::versions(&selection.previous, &selection.next)?;
     let input = read(&selection.source, arguments.max_input_bytes.get())?;
+
     match &arguments.operation {
         Operation::GroupManifest { context, .. } => {
             let plan = serde_json::from_str(&read(context, arguments.max_input_bytes.get())?)?;
+
             render::manifest(&input, &selection.previous, &selection.next, &plan)
         }
         Operation::Manifest { context, .. } => {
@@ -117,6 +120,7 @@ fn run(arguments: &Arguments) -> Result<String> {
             } else {
                 Vec::new()
             };
+
             render::manifest(
                 &input,
                 &selection.previous,
@@ -135,6 +139,7 @@ fn run(arguments: &Arguments) -> Result<String> {
 
 fn main() -> ExitCode {
     let arguments = Arguments::parse();
+
     match run(&arguments)
         .and_then(|output| Ok(std::io::stdout().lock().write_all(output.as_bytes())?))
     {
@@ -144,6 +149,7 @@ fn main() -> ExitCode {
                 "ic-cargo-metadata: {}",
                 ic_host_text::escape(&error.to_string()).replace(':', "\\x3a")
             );
+
             ExitCode::FAILURE
         }
     }

@@ -14,7 +14,7 @@ help:
 	  '  make test-process-terminal Linux foreground PTY fixture' \
 	  '  make test-sign         Signer admission and cancellation tests (OpenSSL required)' \
 	  '  make test-sign-keyring Real disposable keyring qualification (SIGNER_TEST_ICP required)' \
-	  '  make test-canic-process Combined current Canic group/direct-child qualification (Linux)' \
+	  '  make test-canic-process Current Canic process capture, viewer and build checks' \
 	  '  make test-testkit-module Installed module test (externally owned server)' \
 	  '  make test-testkit-control Installed controller/clock refusals (externally owned server)' \
 	  '  make test-testkit-server Offline assets and bounded startup refusal checks' \
@@ -26,7 +26,7 @@ help:
 	  '  make test-cargo-metadata Renderer lint and document/command boundary tests' \
 	  '  make test-cargo-metadata-consumer Current Toko/Scheduling release transactions (prepared editor)' \
 	  '  make test-canic-build-metadata Current Canic metadata admission/refusal' \
-	  '  make test-canic-app-build Combined Canic Build/Text app and display contracts' \
+	  '  make test-canic-app-build Current Canic TOML recipes, lock setup and artifact outputs' \
 	  '  make test-canic-build  Current Canic owned Wasm build and publication refusal' \
 	  '  make test-canic-publication Canic artifact inspection and real CLI publication' \
 	  '  make test-canic-config-publication Qualify Canic config writers' \

@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-http"
-version = "0.80.1"
+version = "0.80.2"
 description = "Complete bounded response bodies with caller-owned Reqwest policy"
 edition.workspace = true
 rust-version.workspace = true

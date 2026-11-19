@@ -134,6 +134,7 @@ impl Fixture {
         let mut consumed = Vec::new();
         consumed.try_reserve_exact(catalog.len())?;
         consumed.resize(catalog.len(), false);
+
         Ok(Self {
             binding: Arc::new(Binding {
                 server: pic.get_server_url().to_string(),
@@ -183,6 +184,7 @@ impl Fixture {
         let step = clock_step(duration)?;
         let now = pic.get_time().await.as_nanos_since_unix_epoch();
         let target = clock_target(now, step)?;
+
         self.progress(async {
             pic.set_time(Time::from_nanos_since_unix_epoch(target))
                 .await;
@@ -191,6 +193,7 @@ impl Fixture {
             if !(target..=target + 1).contains(&observed.as_nanos_since_unix_epoch()) {
                 return Err(ControlError::ClockUncertain);
             }
+
             Ok(observed)
         })
         .await
@@ -211,6 +214,7 @@ impl Fixture {
             let Some(slot) = self.slot(&request) else {
                 continue;
             };
+
             if !tokens.iter().any(|token: &Request| token.slot == slot) {
                 tokens.push(Request {
                     binding: Arc::clone(&self.binding),
@@ -219,6 +223,7 @@ impl Fixture {
                 });
             }
         }
+
         Ok(tokens)
     }
 
@@ -259,6 +264,7 @@ impl Fixture {
         };
         self.dispatch(token.slot, pic.mock_canister_http_response(response))
             .await;
+
         Ok(())
     }
 
@@ -271,6 +277,7 @@ impl Fixture {
         if self.clock_uncertain {
             return Err(ControlError::ClockUncertain);
         }
+
         manual(pic).await
     }
 
@@ -283,6 +290,7 @@ impl Fixture {
         {
             return None;
         }
+
         Some(slot)
     }
 
@@ -300,6 +308,7 @@ impl Fixture {
         self.clock_uncertain = true;
         let observed = operation.await?;
         self.clock_uncertain = false;
+
         Ok(observed)
     }
 }
@@ -308,6 +317,7 @@ fn clock_step(duration: Duration) -> Result<u64, ControlError> {
     if duration.is_zero() || duration > Fixture::MAX_CLOCK_STEP {
         return Err(ControlError::ClockStep);
     }
+
     // The explicit 60-second bound fits u64 nanoseconds.
     Ok(duration.as_nanos() as u64)
 }

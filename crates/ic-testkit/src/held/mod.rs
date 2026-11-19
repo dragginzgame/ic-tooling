@@ -118,6 +118,7 @@ impl Catalog {
                 limits.reply_bytes,
                 Budget::Replies,
             )?;
+
             // Generated Wasm uses nonnegative i32 offsets and explicit name lengths.
             // Metadata/encoding overhead must be admitted again by the generator.
             if bytes > i32::MAX as usize || reply.method.len() > i32::MAX as usize {
@@ -135,6 +136,7 @@ impl Catalog {
             bytes.extend_from_slice(reply.bytes);
             slots.push(Slot { method, bytes });
         }
+
         Ok(Self { slots })
     }
 

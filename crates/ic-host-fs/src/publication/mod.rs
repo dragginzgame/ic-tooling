@@ -174,6 +174,7 @@ impl Directory {
             return Err(Error::Changed);
         }
         self.check_file(staging, &file)?;
+
         Ok(Written {
             attempt: Attempt {
                 directory: self.clone(),
@@ -226,6 +227,7 @@ impl Directory {
         if let Err(error) = self.sync() {
             return Err(attempt.failed(error.into()));
         }
+
         Ok(Stage(attempt))
     }
 }
@@ -271,6 +273,7 @@ impl Written {
             .attempt
             .check()
             .and_then(|()| sync(&self.attempt.file).map_err(Error::Io));
+
         match result {
             Ok(()) => Ok(Sealed {
                 attempt: self.attempt,
@@ -347,6 +350,7 @@ impl Sealed {
             Ok(())
         };
         let synchronized = sync(&self.attempt.directory);
+
         match (cleanup, synchronized) {
             (Ok(()), Ok(())) => Commit::Committed(receipt),
             (Err(cause), result) => Commit::PublishedUnconfirmed {
@@ -384,6 +388,7 @@ impl Attempt {
         self.active = false;
         self.remove()?;
         self.directory.sync()?;
+
         Ok(())
     }
 
@@ -401,6 +406,7 @@ impl Attempt {
         } else {
             None
         };
+
         AttemptFailure {
             cause,
             cleanup,

@@ -14,6 +14,7 @@ fn completed_segments_match_fixed_sha256_vectors() {
     let abc = hash_with(Length::Exactly(3), |writer| {
         writer.write_all(b"a")?;
         writer.flush()?;
+
         writer.write_all(b"bc")
     })
     .unwrap();
@@ -35,6 +36,7 @@ fn swallowed_overflow_cannot_return_a_prefix_commitment() {
         assert!(writer.write(b"c").is_err());
         assert!(writer.write(b"").is_err());
         assert!(writer.flush().is_err());
+
         Ok::<_, io::Error>(())
     });
     assert!(matches!(
@@ -56,6 +58,7 @@ fn original_producer_failure_wins_without_certifying_accepted_bytes() {
     let result = hash_with(Length::AtMost(1), |writer| {
         writer.write_all(b"a")?;
         assert!(writer.write(b"b").is_err());
+
         Err(io::Error::from_raw_os_error(13))
     });
     let Err(ProduceError::Producer(error)) = result else {

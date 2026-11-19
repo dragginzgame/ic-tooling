@@ -42,9 +42,11 @@ impl Target {
             Err(cause) => {
                 let path = scratch.path().to_owned();
                 let cleanup = scratch.close().err().map(|error| (path, error));
+
                 return Err(CreationFailure { cause, cleanup });
             }
         };
+
         Ok(Self { directory, scratch })
     }
 
@@ -86,6 +88,7 @@ impl Target {
                 .map_err(io_error)?
                 .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?;
         }
+
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "empty artifact path",
@@ -94,6 +97,7 @@ impl Target {
 
     pub(crate) fn close(self) -> Result<(), (PathBuf, io::Error)> {
         let path = self.scratch.path().to_owned();
+
         self.scratch.close().map_err(|error| (path, error))
     }
 }

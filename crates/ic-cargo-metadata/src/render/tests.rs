@@ -99,6 +99,7 @@ fn no_op_manifest_and_bare_lock_edges_preserve_every_other_byte() {
         lock(lockfile, "1.0.0", "2.0.0", &["one".into(), "two".into()]).unwrap(),
         lockfile.replace("'1.0.0'", "\"2.0.0\"")
     );
+
     for version in ["01.0.0", "1.0", "1.0.0-alpha", "1.0.0+build"] {
         assert!(matches!(
             versions(version, "2.0.0"),

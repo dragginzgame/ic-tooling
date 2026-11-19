@@ -42,14 +42,17 @@ pub(crate) fn run(
         |stream, bytes| match stream {
             Stream::Stdout => {
                 stdout_chunk(bytes);
+
                 Ok(())
             }
             Stream::Stderr => {
                 diagnostics.try_reserve(bytes.len()).map_err(|error| {
                     allocation_failed = true;
+
                     io::Error::other(error)
                 })?;
                 diagnostics.extend_from_slice(bytes);
+
                 sink.write_all(bytes)
             }
         },
@@ -70,6 +73,7 @@ pub(crate) fn run(
     });
     // Flushing belongs to the caller's diagnostic sink, not the execution owner.
     let failure = failure.or_else(|| sink.flush().err().map(Failure::Sink));
+
     Report {
         status: report.status,
         failure,

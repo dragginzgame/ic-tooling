@@ -678,7 +678,33 @@ external-lock identity admission. Three Text contract tests and product Clippy
 pass; existing bordered-table/escaping tests remain unchanged. No performance or
 production migration claim is made.
 
+## Current build and metadata
+
+The build targets capture the current Canic working tree and qualify its own
+CLI against local Artifacts, FS and Process. Canic resolves the package with
+Cargo `pkgid`, reads `metadata`, then invokes `build`.
+
+`make test-canic-build-metadata` puts a fixture Cargo executable on the child
+PATH. A valid selection compiles real Wasm. Each refusal verifies the exact
+command trace, the structured CLI error, the retained output and private-target
+cleanup. The 17 cases cover empty and multiline identities, nonzero exit,
+oversized stdout and stderr, invalid encoding and JSON, missing layout and
+package fields, and escaping endpoint, schema and lifecycle paths.
+
+Canic 0.235.0 passed on Linux at HEAD `774f1ce11673eb27ad07cf3b030fc2695c9baf2b`,
+source archive SHA-256 `7d0b0ca7c6fdc68a6befe0b1c532f4665edb4cd9f21e4cbc498de8b5020495e3`.
+Per-case command traces and structured errors are in `target/canic-build.btXJEAR0/`.
+
+The standalone artifact target verifies the content-addressed destination, alias
+replacement, retained foreign bytes and compilation/publication refusal.
+
+The following migration results used an injected ic-build adapter. Its workspace
+member/cdylib selection, explicit IC_OWNED tool variables and wrapper refusals
+were specific to that experiment.
+
 ## Current owned build
+
+*Historical migration experiment.*
 
 `make test-canic-build` applies `owned-build.patch` independently to a current
 local Canic snapshot. Canic keeps recipe/lockfile setup, manifest and package

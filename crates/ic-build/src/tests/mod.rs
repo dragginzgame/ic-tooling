@@ -29,6 +29,7 @@ fn request(scratch: PathBuf) -> BuildRequest {
         env::var_os("IC_BUILD_TEST_RUSTC").map_or_else(|| toolchain.join("rustc"), PathBuf::from);
     let manifest = root.join("qualification/owned-wasm-probe/Cargo.toml");
     let package_id = format!("path+file://{}#0.0.0", manifest.parent().unwrap().display());
+
     BuildRequest {
         manifest,
         package: "owned-wasm-probe".into(),

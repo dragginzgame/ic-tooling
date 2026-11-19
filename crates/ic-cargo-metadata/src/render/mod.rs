@@ -36,6 +36,7 @@ pub(crate) fn versions(previous: &str, next: &str) -> Result<()> {
     for input in [previous, next] {
         let version = semver::Version::parse(input)
             .map_err(|_| Error::Selection("expected stable semantic version"))?;
+
         if !version.pre.is_empty() || !version.build.is_empty() {
             return Err(Error::Selection("expected stable semantic version"));
         }
@@ -43,6 +44,7 @@ pub(crate) fn versions(previous: &str, next: &str) -> Result<()> {
     if previous == next {
         return Err(Error::Selection("version selection changes nothing"));
     }
+
     // Ordering remains Toko's policy; this renderer can also render recovery inputs.
     Ok(())
 }
@@ -51,6 +53,7 @@ fn edit(value: &Value, previous: &str, next: &str) -> Result<Edit> {
     if value.as_str() != Some(previous) {
         return Err(Error::Selection("stale selected literal"));
     }
+
     Ok((
         value
             .span()
@@ -71,6 +74,7 @@ fn apply(input: &str, mut edits: Vec<Edit>) -> Result<String> {
         output.replace_range(span, &replacement);
     }
     Document::parse(output.as_str())?;
+
     Ok(output)
 }
 
@@ -111,6 +115,7 @@ pub(crate) fn manifest(input: &str, previous: &str, next: &str, plan: &Plan) -> 
             .ok_or(Error::Selection("missing selected dependency requirement"))?;
         edits.push(edit(value, &dependency.previous, &dependency.next)?);
     }
+
     apply(input, edits)
 }
 
@@ -164,6 +169,7 @@ pub(crate) fn lock(input: &str, previous: &str, next: &str, selected: &[String])
             return Err(Error::Selection("duplicate lock identity"));
         }
         *counts.entry(name).or_default() += 1;
+
         if source.is_none() && names.contains(name) {
             if !local.insert(name) {
                 return Err(Error::Selection("ambiguous local package"));
@@ -179,6 +185,7 @@ pub(crate) fn lock(input: &str, previous: &str, next: &str, selected: &[String])
             let dependencies = dependencies
                 .as_array()
                 .ok_or(Error::Selection("invalid dependency array"))?;
+
             for dependency in dependencies {
                 let reference = dependency
                     .as_str()
@@ -190,6 +197,7 @@ pub(crate) fn lock(input: &str, previous: &str, next: &str, selected: &[String])
                 if words.len() == 1 && counts[words[0]] != 1 {
                     return Err(Error::Selection("ambiguous bare dependency reference"));
                 }
+
                 if words.len() == 2 && words[1] == previous {
                     if identities.iter().any(|(name, version, source)| {
                         *name == words[0] && *version == next && source.is_some()
@@ -215,5 +223,6 @@ pub(crate) fn lock(input: &str, previous: &str, next: &str, selected: &[String])
             }
         }
     }
+
     apply(input, edits)
 }

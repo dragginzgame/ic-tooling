@@ -79,6 +79,7 @@ impl Configuration {
         {
             return Err(Error::Configuration);
         }
+
         Ok(())
     }
 }
@@ -147,6 +148,7 @@ impl Request {
         } = &self.operation
         {
             principal(recipient)?;
+
             if method.is_empty()
                 || method.len() > 1024
                 || method.chars().any(char::is_control)
@@ -168,6 +170,7 @@ impl Request {
         if self.expires_ns <= now || Duration::from_nanos(remaining) > SIGNING_INTERVAL {
             return Err(Error::Request);
         }
+
         Ok(Duration::from_nanos(remaining))
     }
 }
@@ -246,6 +249,7 @@ impl Signed {
 /// Refuses an unencodable/oversized public configuration.
 pub fn commitment(config: &Configuration, tool: [u8; 32]) -> Result<[u8; 32], Error> {
     let bytes = encode(&(PROTOCOL, config, tool))?;
+
     Ok(ic_host_artifacts::copy(
         bytes.as_slice(),
         io::sink(),
@@ -291,6 +295,7 @@ pub(crate) fn encode(value: &impl Serialize) -> Result<Vec<u8>, Error> {
                 .checked_add(bytes.len())
                 .filter(|n| *n <= FRAME_BYTES)
                 .ok_or_else(|| io::Error::other("frame limit"))?;
+
             Ok(bytes.len())
         }
 
@@ -305,6 +310,7 @@ pub(crate) fn encode(value: &impl Serialize) -> Result<Vec<u8>, Error> {
         .try_reserve_exact(count.0)
         .map_err(|_| Error::Request)?;
     serde_json::to_writer(&mut bytes, value).map_err(|_| Error::Request)?;
+
     Ok(bytes)
 }
 
@@ -339,6 +345,7 @@ pub fn tool_hash(path: &Path) -> Result<[u8; 32], Error> {
     {
         return Err(Error::Configuration);
     }
+
     Ok(identity.sha256)
 }
 
@@ -365,6 +372,7 @@ pub(crate) fn read_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, Error
     {
         return Err(Error::Configuration);
     }
+
     Ok(bytes)
 }
 
@@ -373,6 +381,7 @@ pub(crate) fn principal(text: &str) -> Result<Principal, Error> {
     if value.to_text() != text {
         return Err(Error::Request);
     }
+
     Ok(value)
 }
 

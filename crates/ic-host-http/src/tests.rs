@@ -38,9 +38,11 @@ fn read(reply: &'static [u8], limit: usize) -> Result<Vec<u8>, Error> {
                 .send()
                 .await
                 .unwrap();
+
             body(response, limit).await
         });
     server.join().unwrap();
+
     result
 }
 
@@ -90,6 +92,7 @@ fn excess_and_truncation_never_return_a_prefix() {
             declared: None
         })
     ));
+
     for reply in [
         b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nab".as_slice(),
         b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nab\r\n".as_slice(),

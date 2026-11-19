@@ -73,6 +73,7 @@ impl Directory {
                 destination: destination.to_owned(),
             };
             self.check_directory(staging, receipt.directory)?;
+
             Ok(receipt)
         };
         let receipt = prepare().map_err(DirectoryPublishError::NotPublished)?;
@@ -80,6 +81,7 @@ impl Directory {
         self.check_directory(staging, receipt.directory)
             .and_then(|()| rename_new(self, staging, destination))
             .map_err(DirectoryPublishError::NotPublished)?;
+
         match sync(self) {
             Ok(()) => Ok(receipt),
             Err(cause) => Err(DirectoryPublishError::PublishedUnconfirmed { receipt, cause }),
@@ -91,6 +93,7 @@ impl Directory {
         if named.identity()? != expected {
             return Err(Error::Changed);
         }
+
         Ok(())
     }
 }
@@ -105,11 +108,14 @@ fn rename_new(parent: &Directory, staging: &OsStr, destination: &OsStr) -> Resul
             destination,
             rustix::fs::RenameFlags::NOREPLACE,
         )?;
+
         Ok(())
     }
+
     #[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple")))]
     {
         let _ = (parent, staging, destination);
+
         Err(io::Error::from(io::ErrorKind::Unsupported).into())
     }
 }

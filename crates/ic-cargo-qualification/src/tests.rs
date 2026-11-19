@@ -6,6 +6,7 @@ fn run(arguments: &[OsString]) -> Result<(), Refusal> {
         std::iter::once(OsString::from("ic-cargo-qualification")).chain(arguments.iter().cloned()),
     )
     .map_err(|_| Refusal::Usage)?;
+
     super::run(&parsed)
 }
 
@@ -29,6 +30,7 @@ fn exact_external_subset_preserves_source_and_optional_checksum_identity() {
         .is_ok()
     );
     assert!(verify(original.as_bytes(), b"package=[]").is_ok());
+
     for changed in [
         a.replace("one", "other"),
         a.replace("1.0.0", "1.0.1"),

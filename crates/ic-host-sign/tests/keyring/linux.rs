@@ -12,6 +12,7 @@ pub(super) struct Credential {
 impl Credential {
     pub(super) fn create(directory: &Path, cli: &Path, _helper: &Path, name: &str) -> Self {
         create_identity(directory, cli, name);
+
         Self {
             entry: keyring::Entry::new("icp-cli", name)
                 .expect("native credential session unavailable"),

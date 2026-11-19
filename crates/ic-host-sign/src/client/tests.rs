@@ -16,6 +16,7 @@ use crate::{
 fn scratch() -> tempfile::TempDir {
     let target = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target");
     fs::create_dir_all(&target).unwrap();
+
     tempfile::tempdir_in(target).unwrap()
 }
 
@@ -32,6 +33,7 @@ fn disposable_identity() -> Secp256k1Identity {
         .unwrap();
     assert!(generated.status.success());
     let pem = String::from_utf8(generated.stdout).unwrap();
+
     Secp256k1Identity::from_pem(&pem, 16384).unwrap()
 }
 
@@ -41,6 +43,7 @@ fn configuration(directory: &std::path::Path, sender: Principal) -> Configuratio
         "disposable": {"kind": "keyring", "algorithm": "secp256k1", "principal": sender.to_text()}
     }})).unwrap()).unwrap();
     fs::set_permissions(&manifest, fs::Permissions::from_mode(0o600)).unwrap();
+
     Configuration {
         identity: "disposable".into(),
         manifest: manifest.to_str().unwrap().into(),
@@ -55,6 +58,7 @@ fn configuration(directory: &std::path::Path, sender: Principal) -> Configuratio
 
 fn request(config: &Configuration) -> Request {
     let now = protocol::now_ns().unwrap();
+
     Request {
         sender: config.sender.clone(),
         effective: "rrkah-fqaaa-aaaaa-aaaaq-cai".into(),
@@ -82,6 +86,7 @@ fn fixture(script: &str) -> (tempfile::TempDir, Signer, Request) {
     let request = request(&config);
     let hash = protocol::tool_hash(&executable).unwrap();
     let signer = Signer::new(&executable, hash, config).unwrap();
+
     (directory, signer, request)
 }
 
@@ -339,6 +344,7 @@ fn remote_or_fallback_bus_is_never_admitted() {
     let mut bytes = [1; 29];
     bytes[28] = 2;
     let mut config = configuration(directory.path(), Principal::from_slice(&bytes));
+
     for address in [
         "tcp:host=127.0.0.1,port=12345",
         "autolaunch:",

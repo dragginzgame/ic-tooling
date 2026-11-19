@@ -26,6 +26,7 @@ fn simultaneous_streams_have_independent_exact_budgets_and_natural_status() {
         &AtomicBool::new(false),
         |stream, bytes| {
             counts[usize::from(stream == Stream::Stderr)] += bytes.len();
+
             Ok(())
         },
     );
@@ -53,6 +54,7 @@ fn overflow_and_observer_failure_keep_original_status_and_partial_evidence() {
         let mut retained = vec![];
         let report = run(&mut command, limits, &AtomicBool::new(false), |_, bytes| {
             retained.extend_from_slice(bytes);
+
             Ok(())
         });
         assert!(matches!(report.failure, Some(Failure::Limit(value)) if value == stream));
@@ -87,6 +89,7 @@ fn overflow_and_observer_failure_keep_original_status_and_partial_evidence() {
                 assert!(started.elapsed() < Duration::from_secs(5));
                 std::thread::sleep(Duration::from_millis(1));
             }
+
             Err(io::ErrorKind::BrokenPipe.into())
         },
     );
@@ -111,6 +114,7 @@ fn direct_child_joins_parent_group_and_inherited_stderr_is_not_captured() {
         |stream, bytes| {
             assert_eq!(stream, Stream::Stdout);
             output.extend_from_slice(bytes);
+
             Ok(())
         },
     );
@@ -136,6 +140,7 @@ fn readiness_cancellation_and_retained_pipe_deadline_close_only_owned_execution(
         let report = run(&mut command, policy(ownership), &cancelled, |_, bytes| {
             assert_eq!(bytes, b"ready");
             cancelled.store(true, Ordering::Relaxed);
+
             Ok(())
         });
         assert!(matches!(report.failure, Some(Failure::Cancelled)));
@@ -200,6 +205,7 @@ fn foreground_terminal_input_survives_direct_child_ownership() {
         |stream, bytes| {
             assert_eq!(stream, Stream::Stdout);
             output.extend_from_slice(bytes);
+
             Ok(())
         },
     );
@@ -239,10 +245,12 @@ fn cleanup_failures_preserve_order_status_and_end_local_signal_authority() {
             |_| Err(io::Error::from_raw_os_error(1)),
             |_| {
                 direct_called.set(true);
+
                 Err(io::Error::from_raw_os_error(5))
             },
             |child| {
                 let status = child.wait()?; // Always reap the fixture for real.
+
                 if fail_reap {
                     Err(io::Error::from_raw_os_error(10))
                 } else {
@@ -308,8 +316,10 @@ fn group_descendant_stops_but_direct_descendant_can_finish_after_close() {
     fn identity(pid: u32) -> Option<(String, char)> {
         let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
         let fields: Vec<_> = stat.rsplit_once(") ")?.1.split_whitespace().collect();
+
         Some((fields.get(19)?.to_string(), fields.first()?.chars().next()?))
     }
+
     for ownership in [Ownership::Group, Ownership::Direct] {
         let dir = tempfile::tempdir().unwrap();
         let release = dir.path().join("release");
@@ -333,12 +343,14 @@ fn group_descendant_stops_but_direct_descendant_can_finish_after_close() {
                 descendant = Some((pid, start));
                 cancelled.store(true, Ordering::Relaxed);
             }
+
             Ok(())
         });
         assert!(matches!(report.failure, Some(Failure::Cancelled)));
         assert!(report.cleanup.is_empty(), "{report:?}");
         let (pid, start) = descendant.unwrap();
         let deadline = Instant::now();
+
         if ownership == Ownership::Group {
             while let Some((current, state)) = identity(pid) {
                 if current != start || matches!(state, 'Z' | 'X') {

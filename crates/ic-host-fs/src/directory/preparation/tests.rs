@@ -118,6 +118,7 @@ fn sync_failures_retain_prefix_and_original_cause() {
                 &mut |directory| {
                     let current = calls;
                     calls += 1;
+
                     if current == fail_at {
                         Err(io::Error::from_raw_os_error(5))
                     } else {

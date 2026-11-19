@@ -8,6 +8,7 @@ fn terminal_controls_and_bidi_are_visible_without_changing_printable_evidence() 
         escape("\x1b[31m\n\r\t\0\u{85}"),
         "\\u{1b}[31m\\n\\r\\t\\u{0}\\u{85}"
     );
+
     for c in [
         '\u{61c}', '\u{200e}', '\u{200f}', '\u{2028}', '\u{2029}', '\u{202a}', '\u{202b}',
         '\u{202c}', '\u{202d}', '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',

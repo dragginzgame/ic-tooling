@@ -12,6 +12,7 @@ fn help_and_usage_keep_the_existing_output_and_status() {
     assert!(help.status.success());
     assert_eq!(help.stdout, usage.as_bytes());
     assert!(help.stderr.is_empty());
+
     for arguments in [
         vec![],
         vec!["unknown"],
@@ -42,6 +43,7 @@ fn non_utf8_paths_and_zero_limits_keep_read_only_admission() {
     let bytes = b"package=[]";
     fs::write(&original, bytes).unwrap();
     fs::write(&candidate, bytes).unwrap();
+
     for (limit, expected) in [("10", 0), ("0", 1)] {
         let result = command()
             .arg("verify-external-lock")

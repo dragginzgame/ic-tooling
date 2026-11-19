@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-fs"
-version = "0.80.5"
+version = "0.80.6"
 description = "Held filesystem custody and explicit durable publication"
 edition.workspace = true
 rust-version.workspace = true

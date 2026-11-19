@@ -89,6 +89,7 @@ impl Signer {
             return Err(Error::Configuration);
         }
         let commitment = protocol::commitment(&config, expected_tool)?;
+
         Ok(Self {
             executable: executable.to_owned(),
             tool: expected_tool,
@@ -119,6 +120,7 @@ impl Signer {
             .completion
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
+
         if completion.result.is_some() {
             State::AwaitingSettlement
         } else if active.shared.cancelled.load(Ordering::Relaxed) {
@@ -182,8 +184,10 @@ impl Signer {
                         .lock()
                         .unwrap_or_else(std::sync::PoisonError::into_inner);
                     state.result = Some(result);
+
                     state.waker.take()
                 };
+
                 if let Some(waker) = waker {
                     waker.wake();
                 }
@@ -200,6 +204,7 @@ impl Signer {
         };
         let result = self.settle().await;
         cancel.armed = false;
+
         result
     }
 
@@ -216,10 +221,12 @@ impl Signer {
                 .completion
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
+
             if let Some(result) = state.result.take() {
                 Poll::Ready(result)
             } else {
                 state.waker = Some(context.waker().clone());
+
                 Poll::Pending
             }
         })
@@ -229,10 +236,12 @@ impl Signer {
         // here retains thread custody through its final return, not process I/O.
         if active.worker.join().is_err() {
             self.uncertain = true;
+
             return Err(Error::Uncertain);
         }
         self.uncertain = matches!(&result, Err(Error::Uncertain))
             || matches!(&result, Err(Error::Execution { report }) if !report.cleanup.is_empty());
+
         result
     }
 }
@@ -291,6 +300,7 @@ fn execute(executable: &Path, wire: &WireRequest, cancelled: &AtomicBool) -> Res
             if stream == Stream::Stdout {
                 output.extend_from_slice(bytes);
             }
+
             Ok(())
         },
     );
@@ -317,12 +327,14 @@ fn execute(executable: &Path, wire: &WireRequest, cancelled: &AtomicBool) -> Res
     if protocol::now_ns()? >= wire.request.deadline_ns {
         return Err(Error::Deadline);
     }
+
     Ok(signed)
 }
 
 fn admit(request: &Request, envelope: Vec<u8>) -> Result<Signed, Error> {
     let effective = protocol::principal(&request.effective)?;
     let expected_sender = protocol::principal(&request.sender)?;
+
     match &request.operation {
         Operation::Update {
             recipient,
@@ -356,6 +368,7 @@ fn admit(request: &Request, envelope: Vec<u8>) -> Result<Signed, Error> {
             {
                 return Err(Error::Output);
             }
+
             Ok(Signed {
                 envelope,
                 request_id: *prepared.request_id(),
@@ -376,6 +389,7 @@ fn admit(request: &Request, envelope: Vec<u8>) -> Result<Signed, Error> {
             if prepared.expiry() != request.expires_ns {
                 return Err(Error::Output);
             }
+
             Ok(Signed {
                 envelope,
                 request_id: *request_id,

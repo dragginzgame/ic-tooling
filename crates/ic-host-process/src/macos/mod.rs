@@ -28,6 +28,7 @@ pub(super) fn exited_group(child: &Child) -> bool {
     // libproc's zero-result convention consults errno. Do not let the original
     // kill EPERM masquerade as an enumeration failure after a successful query.
     errno::set_errno(errno::Errno(0));
+
     pids_by_type(ProcFilter::ByProgramGroup { pgrpid: child.id() })
         .is_ok_and(|members| members.iter().all(|pid| *pid == child.id()))
 }

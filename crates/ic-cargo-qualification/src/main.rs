@@ -99,16 +99,19 @@ fn rows<'a>(lock: &'a toml::Value, role: &'static str) -> Result<Rows<'a>, Refus
         {
             return Err(bad("registry checksum must be lowercase SHA-256"));
         }
+
         if rows.insert((name, version, source), checksum).is_some() {
             return Err(bad("duplicate external identity"));
         }
     }
+
     Ok(rows)
 }
 
 fn parse(bytes: &[u8], role: &'static str) -> Result<toml::Value, Refusal> {
     let bad = |reason| Refusal::Lock { role, reason };
     let text = std::str::from_utf8(bytes).map_err(|_| bad("invalid UTF-8"))?;
+
     // Lock source URLs may contain credentials; do not echo parser source text.
     toml::from_str(text).map_err(|_| bad("invalid TOML"))
 }
@@ -124,6 +127,7 @@ fn verify(original: &[u8], candidate: &[u8]) -> Result<(), Refusal> {
     {
         return Err(Refusal::Changed);
     }
+
     Ok(())
 }
 
@@ -145,6 +149,7 @@ fn read(path: &Path, maximum: u64) -> Result<Vec<u8>, Refusal> {
             },
         )?
         .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?;
+
     Ok(ic_host_artifacts::read(file, Length::AtMost(maximum))?.0)
 }
 
@@ -156,6 +161,7 @@ fn run(arguments: &Arguments) -> Result<(), Refusal> {
     } = &arguments.operation;
     let original = read(original, *maximum)?;
     let candidate = read(candidate, *maximum)?;
+
     verify(&original, &candidate)
 }
 
@@ -171,13 +177,16 @@ fn main() -> ExitCode {
         }
         Err(_) => {
             eprintln!("{}", Refusal::Usage);
+
             return ExitCode::from(2);
         }
     };
+
     match run(&arguments) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("{error}");
+
             if matches!(error, Refusal::Usage) {
                 ExitCode::from(2)
             } else {

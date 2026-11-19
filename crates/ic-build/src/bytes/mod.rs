@@ -25,6 +25,7 @@ impl<R: Read> Read for Reader<'_, R> {
         if self.cancelled.load(Ordering::Relaxed) {
             return Err(io::Error::other(Cancelled));
         }
+
         self.inner.read(output)
     }
 }

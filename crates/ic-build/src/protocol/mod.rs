@@ -45,20 +45,24 @@ impl<'a> Decoder<'a> {
         if self.refusal.is_some() {
             return;
         }
+
         for &byte in bytes {
             if byte == b'\n' {
                 if let Err(error) = self.record() {
                     self.refusal = Some(error);
+
                     return;
                 }
                 self.pending.clear();
             } else {
                 if self.pending.len() == self.record_limit {
                     self.refusal = Some(Failure::RecordLimit);
+
                     return;
                 }
                 if self.pending.try_reserve(1).is_err() {
                     self.refusal = Some(Failure::Allocation);
+
                     return;
                 }
                 self.pending.push(byte);
@@ -92,6 +96,7 @@ impl<'a> Decoder<'a> {
                     .get("fresh")
                     .and_then(Value::as_bool)
                     .ok_or(Failure::Protocol("missing fresh flag"))?;
+
                 if package == self.package
                     && name == self.target
                     && kinds.contains(&"cdylib")
@@ -100,8 +105,10 @@ impl<'a> Decoder<'a> {
                     if fresh {
                         return Err(Failure::Protocol("fresh artifact in private target"));
                     }
+
                     for filename in filenames {
                         let path = PathBuf::from(filename);
+
                         if path
                             .extension()
                             .is_some_and(|extension| extension == "wasm")
@@ -120,6 +127,7 @@ impl<'a> Decoder<'a> {
             }
             _ => {}
         }
+
         Ok(())
     }
 
@@ -133,6 +141,7 @@ impl<'a> Decoder<'a> {
         if !self.finished {
             return Err(Failure::Protocol("missing build completion"));
         }
+
         self.candidate.ok_or(Failure::Protocol("no exact artifact"))
     }
 }
@@ -149,6 +158,7 @@ fn strings<'a>(value: &'a Value, key: &str) -> Result<Vec<&'a str>, Failure> {
         .get(key)
         .and_then(Value::as_array)
         .ok_or(Failure::Protocol("missing or invalid array field"))?;
+
     array
         .iter()
         .map(|item| {

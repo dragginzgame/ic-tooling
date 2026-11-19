@@ -81,8 +81,10 @@ pub fn read(mut reader: impl Read, length: Length) -> Result<(Vec<u8>, Identity)
             .try_reserve(chunk.len())
             .map_err(|_| Error::Allocation)?;
         bytes.extend_from_slice(chunk);
+
         Ok(())
     })?;
+
     Ok((bytes, identity))
 }
 
@@ -95,6 +97,7 @@ fn pump(
     let mut buffer = [0_u8; 8192];
     let mut bytes = 0;
     let mut digest = Sha256::new();
+
     loop {
         let room = limit - bytes;
         let take = room.saturating_add(1).min(buffer.len() as u64) as usize;
@@ -109,6 +112,7 @@ fn pump(
                     actual: bytes,
                 });
             }
+
             return Ok(Identity {
                 bytes,
                 sha256: digest.finalize().into(),

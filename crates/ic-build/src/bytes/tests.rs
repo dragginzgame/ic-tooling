@@ -49,8 +49,10 @@ fn interrupted_read_is_retried_without_losing_bytes() {
         fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
             if !self.0 {
                 self.0 = true;
+
                 return Err(io::ErrorKind::Interrupted.into());
             }
+
             b"".as_slice().read(buffer)
         }
     }

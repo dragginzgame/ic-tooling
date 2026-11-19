@@ -196,9 +196,11 @@ pub fn build(
             failure.scratch = Some(path);
             failure.cleanup.push(cause);
         }
+
         failure
     })?;
     let result = execute(request, &target, cancelled, diagnostics);
+
     complete(result, target.close())
 }
 
@@ -219,6 +221,7 @@ fn complete(
             };
             failure.cleanup.push(error);
             failure.scratch = Some(path);
+
             Err(failure)
         }
     }
@@ -293,6 +296,7 @@ fn execute(
         .open_artifact(&path)
         .map_err(Failure::Io)
         .and_then(|file| bytes::capture(file, request.limits.artifact_bytes, cancelled));
+
     captured
         .map(|(bytes, digest)| Artifact { bytes, digest })
         .map_err(|primary| BuildFailure {
@@ -340,6 +344,7 @@ fn invocation(request: &BuildRequest, target: &Path) -> Command {
     for feature in &request.features {
         command.arg("--features").arg(feature);
     }
+
     command
 }
 
@@ -424,5 +429,6 @@ fn validate(request: &BuildRequest) -> Result<(), Failure> {
     {
         return Err(Failure::InvalidRequest("required limits must be positive"));
     }
+
     Ok(())
 }

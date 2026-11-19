@@ -162,12 +162,15 @@ fn concurrent_creation_locks_one_inode_without_replacement() {
             .map(|_| {
                 let parent = &parent;
                 let barrier = &barrier;
+
                 scope.spawn(move || {
                     barrier.wait();
+
                     parent.lock(OsStr::new("lock"), 0o600, POLICY)
                 })
             })
             .collect();
+
         handles
             .into_iter()
             .map(|handle| handle.join().unwrap())

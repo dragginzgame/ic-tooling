@@ -52,6 +52,7 @@ impl Directory {
         };
         let file = File::from(descriptor);
         let file = admit_file(file, policy)?;
+
         Lock::acquire(file).map_err(Error::Io)
     }
 }
@@ -69,6 +70,7 @@ impl Lock {
     /// Returns the original lock failure (including WouldBlock for contention).
     pub fn acquire(file: File) -> io::Result<Self> {
         flock(&file, FlockOperation::NonBlockingLockExclusive)?;
+
         Ok(Self { file, active: true })
     }
 
@@ -85,6 +87,7 @@ impl Lock {
     pub fn release(mut self) -> io::Result<()> {
         let result = flock(&self.file, FlockOperation::Unlock).map_err(io::Error::from);
         self.active = false;
+
         result
     }
 }

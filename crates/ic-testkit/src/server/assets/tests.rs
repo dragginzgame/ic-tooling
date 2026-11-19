@@ -8,6 +8,7 @@ impl PreparedServer {
                 .unwrap();
         // Test-local selection only; no public API admits arbitrary executables.
         let digest = Box::leak(hex(identity).into_boxed_str());
+
         Self::check_for(
             path,
             Asset {

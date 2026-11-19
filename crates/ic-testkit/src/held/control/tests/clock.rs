@@ -255,6 +255,7 @@ fn installed_clock_progression_preserves_live_replies_and_original_expiry() {
                         .unwrap();
                     assert_eq!(at.as_nanos_since_unix_epoch(), deadline);
                     assert_eq!(pic.get_canister_http().await, inventory);
+
                     if slot == 2 {
                         fixture
                             .advance_time(&pic, Duration::from_nanos(1))

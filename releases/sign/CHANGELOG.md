@@ -2,6 +2,12 @@
 
 Package: `ic-host-sign`.
 
+## [0.1.3] - 2026-11-19
+
+### 🔧 Changed
+
+- Adopt Toko Tooling 0.45.21 and its Rust source layout in the packaged crate.
+
 ## [0.1.2] - 2026-11-19
 
 ### 🧪 Testing

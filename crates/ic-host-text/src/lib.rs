@@ -29,6 +29,7 @@ pub fn escape(value: &str) -> Cow<'_, str> {
             output.push(c);
         }
     }
+
     Cow::Owned(output)
 }
 
@@ -73,11 +74,13 @@ pub fn bordered_table(headers: &[impl AsRef<str>], rows: &[Vec<impl AsRef<str>>]
             output.extend(std::iter::repeat_n(' ', columns - width(cell)));
             output.push_str(" |");
         }
+
         if index == 0 || index + 1 == cells.len() {
             output.push('\n');
             output.push_str(&border);
         }
     }
+
     output
 }
 
@@ -130,6 +133,7 @@ pub fn plain_table<const N: usize>(
                 line.extend(std::iter::repeat_n(' ', padding));
             }
             line.push_str(&row[column]);
+
             if alignments[column] == Alignment::Left {
                 line.extend(std::iter::repeat_n(' ', padding));
             }
@@ -139,5 +143,6 @@ pub fn plain_table<const N: usize>(
     }
     let rule = widths.map(|columns| "-".repeat(columns)).join("  ");
     lines.insert(1, rule.trim_end().to_owned());
+
     lines.join("\n")
 }

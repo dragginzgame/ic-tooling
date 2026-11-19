@@ -166,6 +166,7 @@ impl Session {
         if self.ownership == Ownership::Group {
             if let Err(error) = group(&child) {
                 errors.push(error);
+
                 if let Err(error) = direct(&mut child) {
                     errors.push(error);
                 }
@@ -177,9 +178,11 @@ impl Session {
             Ok(status) => Some(status),
             Err(error) => {
                 errors.push(error);
+
                 None
             }
         };
+
         (status, errors)
     }
 }
@@ -250,6 +253,7 @@ pub fn run(
     };
     let failure = communicate(&mut session, policy, cancelled, &mut observe).err();
     let (status, cleanup) = session.close();
+
     Report {
         status,
         failure,
@@ -259,6 +263,7 @@ pub fn run(
 
 fn nonblocking(fd: &impl AsFd) -> io::Result<()> {
     fcntl_setfl(fd, fcntl_getfl(fd)? | OFlags::NONBLOCK)?;
+
     Ok(())
 }
 
@@ -299,6 +304,7 @@ fn communicate(
     let mut eof = [false, stderr.is_none()];
     let mut count = [0_usize; 2];
     let mut buffer = [0_u8; 8192];
+
     loop {
         if cancelled.load(Ordering::Relaxed) {
             return Err(Failure::Cancelled);
@@ -309,11 +315,13 @@ fn communicate(
         let mut progress = false;
         if let Some(pipe) = &mut stdin {
             let end = written.saturating_add(8192).min(input.len());
+
             match pipe.write(&input[written..end]) {
                 Ok(0) => return Err(Failure::Io(io::ErrorKind::WriteZero.into())),
                 Ok(n) => {
                     written += n;
                     progress = true;
+
                     if written == input.len() {
                         stdin.take();
                     }
@@ -348,6 +356,7 @@ fn communicate(
                 continue;
             }
             let Some(pipe) = pipe else { continue };
+
             match pipe.read(&mut buffer) {
                 Ok(0) => eof[index] = true,
                 Ok(n) => {
@@ -379,8 +388,10 @@ fn communicate(
             if written != input.len() {
                 return Err(Failure::Io(io::ErrorKind::BrokenPipe.into()));
             }
+
             return Ok(());
         }
+
         if !progress {
             std::thread::sleep(Duration::from_millis(2));
         }

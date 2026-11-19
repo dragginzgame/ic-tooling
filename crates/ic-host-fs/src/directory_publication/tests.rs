@@ -11,6 +11,7 @@ fn tree(parent: &Directory, name: &str, bytes: &[u8]) -> Directory {
     let mut file = directory.create_file(OsStr::new("member"), 0o600).unwrap();
     file.write_all(bytes).unwrap();
     file.sync_all().unwrap();
+
     directory
 }
 
@@ -98,6 +99,7 @@ fn substitution_after_root_sync_refuses_without_removing_either_tree() {
                 scratch.path().join("retained"),
             )?;
             tree(&parent, "stage", b"foreign");
+
             Ok(())
         },
     );
@@ -131,6 +133,7 @@ fn sync_failures_distinguish_staging_from_visible_publication() {
             &mut |held| {
                 let current = calls;
                 calls += 1;
+
                 if current == fail_at {
                     Err(io::Error::from_raw_os_error(5))
                 } else {
@@ -177,8 +180,10 @@ fn competing_publishers_have_one_winner_and_retain_loser() {
             .map(|(name, stage)| {
                 let parent = &parent;
                 let barrier = &barrier;
+
                 scope.spawn(move || {
                     barrier.wait();
+
                     (
                         name,
                         parent.publish_directory(OsStr::new(name), &stage, OsStr::new("final")),
@@ -186,6 +191,7 @@ fn competing_publishers_have_one_winner_and_retain_loser() {
                 })
             })
             .collect();
+
         attempts
             .into_iter()
             .map(|attempt| attempt.join().unwrap())
@@ -195,6 +201,7 @@ fn competing_publishers_have_one_winner_and_retain_loser() {
         results.iter().filter(|(_, result)| result.is_ok()).count(),
         1
     );
+
     for (name, result) in results {
         if result.is_ok() {
             assert!(!scratch.path().join(name).exists());

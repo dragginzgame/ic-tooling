@@ -134,6 +134,7 @@ impl Directory {
     /// Refuses unsafe types/permissions and original I/O errors. Missing is `None`.
     pub fn open(path: &Path, forbidden: u32) -> Result<Option<Self>, Error> {
         let descriptor = optional(fs::open(path, directory_flags(), Mode::empty()))?;
+
         descriptor
             .map(|fd| Self::admit(File::from(fd), forbidden))
             .transpose()
@@ -141,6 +142,7 @@ impl Directory {
 
     fn admit(file: File, forbidden: u32) -> Result<Self, Error> {
         permissions(&file.metadata()?, forbidden)?;
+
         Ok(Self {
             file: Arc::new(file),
         })
@@ -157,6 +159,7 @@ impl Directory {
             directory_flags(),
             Mode::empty(),
         ))?;
+
         descriptor
             .map(|fd| Self::admit(File::from(fd), forbidden))
             .transpose()
@@ -179,6 +182,7 @@ impl Directory {
         }
         fs::mkdirat(&*self.file, child, permissions)?;
         self.sync()?;
+
         self.open_directory(child, forbidden)?.ok_or(Error::Changed)
     }
 
@@ -201,6 +205,7 @@ impl Directory {
         let Some(fd) = optional(fs::openat(&*self.file, child, flags, Mode::empty()))? else {
             return Ok(None);
         };
+
         admit_file(File::from(fd), policy).map(Some)
     }
 
@@ -212,6 +217,7 @@ impl Directory {
     pub fn create_file(&self, child: &OsStr, mode: u32) -> Result<File, Error> {
         name(child)?;
         let permissions = valid_mode(mode)?;
+
         Ok(File::from(fs::openat(
             &*self.file,
             child,
@@ -229,6 +235,7 @@ impl Directory {
     pub fn remove_file(&self, child: &OsStr, expected: &File) -> Result<(), Error> {
         self.check_file(child, expected)?;
         fs::unlinkat(&*self.file, child, AtFlags::empty())?;
+
         Ok(())
     }
 
@@ -246,6 +253,7 @@ impl Directory {
         if FileId::from_file(&named)? != FileId::from_file(expected)? {
             return Err(Error::Changed);
         }
+
         Ok(())
     }
 
@@ -275,6 +283,7 @@ impl Directory {
                 .map_err(|_| Error::Io(io::Error::other("directory allocation refused")))?;
             entries.push(Entry { name, kind });
         }
+
         Ok(entries)
     }
 
@@ -295,6 +304,7 @@ impl Directory {
 
 pub(crate) fn name(value: &OsStr) -> Result<(), Error> {
     let bytes = value.as_bytes();
+
     if bytes.is_empty()
         || matches!(bytes, b"." | b"..")
         || bytes.contains(&b'/')
@@ -327,6 +337,7 @@ pub(crate) fn admit_file(file: File, policy: FilePolicy) -> Result<File, Error> 
     if policy.single_link && metadata.nlink() != 1 {
         return Err(Error::Aliased);
     }
+
     Ok(file)
 }
 
@@ -336,6 +347,7 @@ fn directory_flags() -> OFlags {
 
 fn permissions(metadata: &Metadata, forbidden: u32) -> Result<(), Error> {
     let mode = metadata.mode() & 0o7777;
+
     if mode & forbidden != 0 {
         Err(Error::Permissions { mode, forbidden })
     } else {

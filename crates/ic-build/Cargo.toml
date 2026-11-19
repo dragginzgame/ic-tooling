@@ -1,6 +1,6 @@
 [package]
 name = "ic-build"
-version = "0.87.5"
+version = "0.87.6"
 description = "Bounded Cargo execution and owned WebAssembly build artifacts"
 edition.workspace = true
 rust-version.workspace = true

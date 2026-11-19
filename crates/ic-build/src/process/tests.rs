@@ -117,6 +117,7 @@ fn cancellation_after_child_readiness_terminates_owned_execution() {
     impl Write for CancelOnReady<'_> {
         fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
             self.0.store(true, std::sync::atomic::Ordering::Relaxed);
+
             Ok(bytes.len())
         }
 

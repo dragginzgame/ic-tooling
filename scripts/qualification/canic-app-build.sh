@@ -4,22 +4,27 @@ set -euo pipefail
 [[ $# == 2 ]] || exit 2
 cli="$1"
 scratch="$2"
-config="$scratch/canic.json"
-"$cli" --json app init fixture --fleet mainnet --network ic --config "$config" > "$scratch/init.json"
-jq '.apps.fixture.canisters = {
-  a: {wasm:"app/a.wasm", build:{manifest:"probe/Cargo.toml", package:"owned-wasm-probe"}},
-  z: {wasm:"app/a.wasm", build:{manifest:"probe/Cargo.toml", package:"owned-wasm-probe"}}
-}' "$config" > "$scratch/duplicate.json"
+config="$scratch/canic.toml"
+cat > "$config" <<'TOML'
+[apps.fixture.canisters.a]
+wasm = "app/a.wasm"
+build = { manifest = "probe/Cargo.toml", package = "owned-wasm-probe" }
+
+[apps.fixture.canisters.z]
+wasm = "app/z.wasm"
+build = { manifest = "probe/Cargo.toml", package = "owned-wasm-probe" }
+TOML
+sed 's@app/z.wasm@app/a.wasm@' "$config" > "$scratch/duplicate.toml"
 mv "$scratch/probe/Cargo.lock" "$scratch/probe.original.lock"
 mkdir "$scratch/app"
 printf 'keep a' > "$scratch/app/a.wasm"
 printf 'keep z' > "$scratch/app/z.wasm"
 # Duplicate destinations are rejected before lock initialization or build effects.
-if "$cli" --json app build --config "$scratch/duplicate.json" > "$scratch/duplicate.stdout" 2> "$scratch/duplicate.stderr"; then
+if "$cli" --json app build --config "$scratch/duplicate.toml" > "$scratch/duplicate.stdout" 2> "$scratch/duplicate.stderr"; then
   echo 'Expected duplicate destination refusal' >&2; exit 1
 fi
+jq -e '.error == "invalid" and (.message | contains("distinct"))' "$scratch/duplicate.stderr" >/dev/null
 [[ ! -e "$scratch/probe/Cargo.lock" && "$(cat "$scratch/app/a.wasm")" == 'keep a' ]]
-jq '.apps.fixture.canisters.z.wasm = "app/z.wasm"' "$scratch/duplicate.json" > "$config"
 # A failed lock initializer must stop before compilation/publication, without retry.
 mkdir "$scratch/lock-failure-tools"
 cat > "$scratch/lock-failure-tools/cargo" <<'TOOL'
@@ -59,10 +64,10 @@ PATH="$scratch/lock-failure-tools:$PATH" "$cli" app build --config "$config" > "
 rg -Fq 'Nothing deployed.' "$scratch/app-human.txt"
 sha256sum --check "$scratch/initialized-lock.sha256"
 # Serial app builds are not a transaction: a later failure retains the first output.
-jq '.apps.fixture.canisters.z.build.package = "missing-package"' "$config" > "$scratch/partial.json"
+sed '/\[apps.fixture.canisters.z\]/,$s/package = "owned-wasm-probe"/package = "missing-package"/' "$config" > "$scratch/partial.toml"
 printf 'replace a' > "$scratch/app/a.wasm"
 printf 'retain z' > "$scratch/app/z.wasm"
-if "$cli" --json app build --config "$scratch/partial.json" > "$scratch/partial.stdout" 2> "$scratch/partial.stderr"; then
+if "$cli" --json app build --config "$scratch/partial.toml" > "$scratch/partial.stdout" 2> "$scratch/partial.stderr"; then
   echo 'Expected second recipe selection refusal' >&2; exit 1
 fi
 [[ "$(sha256sum "$scratch/app/a.wasm" | cut -d ' ' -f1)" == "$hash" ]]

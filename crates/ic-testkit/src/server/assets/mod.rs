@@ -87,6 +87,7 @@ impl PreparedServer {
             return Err(Error::Asset("executable checksum"));
         }
         file.rewind()?;
+
         Ok(Self {
             path: canonical.join(BINARY),
             directory,
@@ -109,6 +110,7 @@ impl PreparedServer {
         {
             return Err(Error::Asset("prepared identity changed"));
         }
+
         Ok(())
     }
 }
@@ -127,6 +129,7 @@ fn binary(directory: &Directory) -> Result<File, Error> {
     if file.metadata()?.permissions().mode() & 0o111 == 0 {
         return Err(Error::Asset("not executable"));
     }
+
     Ok(file)
 }
 
@@ -214,6 +217,7 @@ pub fn prepare(archive: &Path, directory: &Path, gzip: &Path) -> Result<Prepared
             Length::Exactly(identity.bytes),
         )?
         .seal()?;
+
     match sealed.commit() {
         Commit::Committed(_) => PreparedServer::check(directory),
         other => Err(Error::Publication(Box::new(other))),
@@ -222,6 +226,7 @@ pub fn prepare(archive: &Path, directory: &Path, gzip: &Path) -> Result<Prepared
 
 fn next_stage() -> usize {
     static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
     NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
 
@@ -231,5 +236,6 @@ fn hex(identity: Identity) -> String {
     for byte in identity.sha256 {
         let _ = write!(text, "{byte:02x}");
     }
+
     text
 }

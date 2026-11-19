@@ -24,6 +24,7 @@ fn paths(arguments: &[&str]) -> Vec<PathBuf> {
         output.status.success(),
         "cannot snapshot public keychain preferences"
     );
+
     String::from_utf8(output.stdout)
         .unwrap()
         .lines()
@@ -35,6 +36,7 @@ fn paths(arguments: &[&str]) -> Vec<PathBuf> {
                 .unwrap();
             let path = PathBuf::from(value);
             assert!(path.is_absolute());
+
             path
         })
         .collect()
@@ -87,6 +89,7 @@ impl PrivateKeychain {
             "could not prepare the disposable item's narrow application ACL"
         );
         super::create_identity(directory, icp, name);
+
         owner
     }
 
@@ -131,6 +134,7 @@ impl Drop for PrivateKeychain {
             .arg("delete-keychain")
             .arg(&self.path)
             .output();
+
         if !std::thread::panicking() {
             assert!(
                 restored.is_ok_and(|s| s.status.success())

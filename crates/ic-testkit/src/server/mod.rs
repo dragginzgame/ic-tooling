@@ -143,6 +143,7 @@ impl Running {
             .join()
             .map_err(|_| Error::WorkerPanic)?;
         stopped.abandoned = self.abandoned.load(Ordering::Relaxed);
+
         Ok(stopped)
     }
 }
@@ -267,6 +268,7 @@ impl Server {
                 )? {
                     let (bytes, _) =
                         ic_host_artifacts::read(file, ic_host_artifacts::Length::AtMost(6))?;
+
                     if !bytes.is_empty() {
                         let port: u16 = std::str::from_utf8(&bytes)
                             .ok()
@@ -275,6 +277,7 @@ impl Server {
                             .ok_or(Error::Asset("malformed server port"))?;
                         let address = SocketAddr::from(([127, 0, 0, 1], port));
                         let remaining = limits.startup.saturating_sub(started.elapsed());
+
                         if !remaining.is_zero()
                             && TcpStream::connect_timeout(
                                 &address,
@@ -289,11 +292,13 @@ impl Server {
                 }
                 std::thread::sleep(Duration::from_millis(2));
             }
+
             Err(Error::Io(io::Error::new(
                 io::ErrorKind::TimedOut,
                 "startup deadline",
             )))
         })();
+
         match ready {
             Ok(port) => Ok(Self {
                 running: Some(Arc::new(running)),
@@ -352,6 +357,7 @@ impl Server {
             .await
             .map_err(|_| Error::CreationTimeout)?,
         );
+
         Ok(instance)
     }
 
@@ -365,10 +371,12 @@ impl Server {
             return Err(Error::LiveInstances);
         }
         let running = self.running.take().ok_or(Error::Stopped)?;
+
         match Arc::try_unwrap(running) {
             Ok(mut owner) => owner.finish(),
             Err(owner) => {
                 self.running = Some(owner);
+
                 Err(Error::LiveInstances)
             }
         }
@@ -416,8 +424,10 @@ impl Instance {
     /// Upstream transport/runtime panic behavior remains unchanged.
     pub async fn close(mut self, timeout: Duration) -> Deletion {
         let client = self.client.take().expect("live instance");
+
         if tokio::time::timeout(timeout, client.drop()).await.is_ok() {
             self.attempted = true;
+
             Deletion::Attempted
         } else {
             Deletion::TimedOut
@@ -451,8 +461,10 @@ fn capture(command: &mut Command, policy: Policy, cancelled: &AtomicBool) -> Sto
         };
         target.try_reserve(bytes.len()).map_err(io::Error::other)?;
         target.extend_from_slice(bytes);
+
         Ok(())
     });
+
     Stopped {
         process,
         output,

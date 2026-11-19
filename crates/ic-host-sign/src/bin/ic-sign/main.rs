@@ -24,9 +24,11 @@ fn main() -> ExitCode {
     // diagnostic interface. Parent-side execution evidence remains authoritative.
     std::panic::set_hook(Box::new(|_| eprintln!("signer internal failure")));
     let _ = Args::parse();
+
     match sign() {
         Ok(bytes) => {
             let mut output = io::stdout().lock();
+
             match output.write_all(&bytes).and_then(|()| output.flush()) {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(_) => ExitCode::from(3),
@@ -34,6 +36,7 @@ fn main() -> ExitCode {
         }
         Err(()) => {
             eprintln!("signer request refused");
+
             ExitCode::from(2)
         }
     }
@@ -105,6 +108,7 @@ fn sign() -> Result<Vec<u8>, ()> {
     if protocol::now_ns().map_err(|_| ())? >= wire.request.deadline_ns {
         return Err(());
     }
+
     protocol::encode_response(&Response {
         protocol: protocol::PROTOCOL.to_owned(),
         commitment: wire.commitment,

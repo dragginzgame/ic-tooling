@@ -51,6 +51,7 @@ pub fn hash_with<E>(
             actual: writer.bytes,
         }));
     }
+
     Ok(Identity {
         bytes: writer.bytes,
         sha256: writer.digest.finalize().into(),
@@ -68,10 +69,12 @@ impl Write for Producer {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
         if self.refused || bytes.len() as u64 > self.limit - self.bytes {
             self.refused = true;
+
             return Err(io::Error::other("byte producer limit exceeded"));
         }
         self.digest.update(bytes);
         self.bytes += bytes.len() as u64;
+
         Ok(bytes.len())
     }
 
@@ -79,6 +82,7 @@ impl Write for Producer {
         if self.refused {
             return Err(io::Error::other("byte producer limit exceeded"));
         }
+
         Ok(())
     }
 }

@@ -80,6 +80,7 @@ impl Disposable {
                 None
             },
         };
+
         Self {
             directory,
             credential,
@@ -90,6 +91,7 @@ impl Disposable {
 
     fn request(&self) -> Request {
         let now = protocol::now_ns().unwrap();
+
         Request {
             sender: self.config.sender.clone(),
             effective: "rrkah-fqaaa-aaaaa-aaaaq-cai".into(),
@@ -109,6 +111,7 @@ impl Disposable {
     fn signer(&self) -> Signer {
         let tool = protocol::tool_hash(&self.helper).unwrap();
         println!("Disposable helper SHA-256: {tool:02x?}");
+
         Signer::new(&self.helper, tool, self.config.clone()).unwrap()
     }
 

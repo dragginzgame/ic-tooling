@@ -197,6 +197,7 @@ fn installed_control_refuses_foreign_consumed_expired_and_automatic_releases() {
                 .unwrap();
             for _ in 0..20 {
                 pic.tick().await;
+
                 if pic.get_canister_http().await.is_empty() {
                     break;
                 }

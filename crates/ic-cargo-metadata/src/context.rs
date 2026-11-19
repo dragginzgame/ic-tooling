@@ -26,6 +26,7 @@ pub(crate) fn check_path(path: &Path) -> Result<()> {
     {
         return Err(Error::Selection("path contains NUL/CR/LF"));
     }
+
     Ok(())
 }
 
@@ -54,6 +55,7 @@ pub(crate) fn dependencies(
     for member in &context.members {
         let path = Path::new(&member.manifest_path);
         check_path(path)?;
+
         if !path.is_absolute() || members.insert(&member.name, path.canonicalize()?).is_some() {
             return Err(Error::Selection("invalid or duplicate member identity"));
         }
@@ -109,5 +111,6 @@ pub(crate) fn dependencies(
             });
         }
     }
+
     Ok(result)
 }

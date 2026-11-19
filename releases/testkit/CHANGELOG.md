@@ -3,6 +3,12 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.110.3] - 2026-11-19
+
+### 🔧 Changed
+
+- Adopt Toko Tooling 0.45.21 and its Rust source layout in the packaged crate.
+
 ## [0.110.2] - 2026-11-19
 
 ### 📚 Documentation

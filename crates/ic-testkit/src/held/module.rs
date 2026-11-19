@@ -147,6 +147,7 @@ impl Catalog {
                 limit: module_bytes,
             });
         }
+
         Ok(wasm)
     }
 }
@@ -171,12 +172,14 @@ impl Layout {
         hex(source, bytes);
         source.push_str("\")\n");
         self.end = end;
+
         Ok(start)
     }
 }
 
 fn hex(out: &mut String, bytes: &[u8]) {
     const DIGITS: &[u8; 16] = b"0123456789abcdef";
+
     for &byte in bytes {
         out.push('\\');
         out.push(char::from(DIGITS[usize::from(byte >> 4)]));

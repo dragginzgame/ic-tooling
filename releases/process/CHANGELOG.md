@@ -2,6 +2,12 @@
 
 Package: `ic-host-process`. Earlier unreleased headings retain development history.
 
+## [0.81.3] - 2026-11-19
+
+### 🔧 Changed
+
+- Adopt Toko Tooling 0.45.21 and its Rust source layout in the packaged crate.
+
 ## [0.81.2] - 2026-11-19
 
 ### 🔧 Changed

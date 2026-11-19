@@ -26,6 +26,7 @@ fn executable(source: &str) -> (tempfile::TempDir, PreparedServer) {
     fs::write(&path, format!("#!/bin/sh\n{source}\n")).unwrap();
     fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
     let prepared = PreparedServer::fixture(directory.path());
+
     (directory, prepared)
 }
 
@@ -117,6 +118,7 @@ fn startup_exit_deadline_and_output_limits_keep_original_cleanup_evidence() {
     ));
     assert!(result.process.status.is_some());
     assert!(result.process.cleanup.is_empty());
+
     for (command, stream) in [
         ("head -c 4096 /dev/zero", Stream::Stdout),
         ("head -c 4096 /dev/zero >&2", Stream::Stderr),

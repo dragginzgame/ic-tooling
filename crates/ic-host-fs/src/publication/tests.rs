@@ -65,8 +65,10 @@ fn concurrent_create_only_has_exactly_one_winner_and_preserves_loser_ownership()
         .into_iter()
         .map(|stage| {
             let barrier = barrier.clone();
+
             thread::spawn(move || {
                 barrier.wait();
+
                 match stage.commit() {
                     Commit::Committed(_) => true,
                     Commit::NotPublished {
@@ -75,6 +77,7 @@ fn concurrent_create_only_has_exactly_one_winner_and_preserves_loser_ownership()
                     } => {
                         assert_eq!(error.kind(), io::ErrorKind::AlreadyExists);
                         stage.abort().unwrap();
+
                         false
                     }
                     outcome => panic!("unexpected {outcome:?}"),
@@ -121,6 +124,7 @@ fn partial_write_short_and_growth_never_gain_seal_authority() {
             } else {
                 self.0 = true;
                 out[0] = b'x';
+
                 Ok(1)
             }
         }
@@ -219,6 +223,7 @@ fn failed_writer_preserves_primary_and_foreign_cleanup_refusals() {
         fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
             fs::rename(self.parent.join("stage"), self.parent.join("original"))?;
             fs::write(self.parent.join("stage"), b"foreign")?;
+
             Err(io::Error::from_raw_os_error(5))
         }
     }
@@ -274,6 +279,7 @@ fn retained(root: &Directory) -> std::fs::File {
         .seal()
         .unwrap();
     drop(sealed);
+
     root.open_file(
         OsStr::new("stage"),
         Access::Read,
@@ -341,6 +347,7 @@ fn retained_admission_refuses_incomplete_or_mismatched_bytes_without_effects() {
     let root = Directory::open(scratch.path(), 0).unwrap().unwrap();
     let original = retained(&root);
     let id = FileId::from_file(&original).unwrap();
+
     for bytes in [b"dat".as_slice(), b"data!", b"evil"] {
         fs::write(scratch.path().join("stage"), bytes).unwrap();
         let error = root

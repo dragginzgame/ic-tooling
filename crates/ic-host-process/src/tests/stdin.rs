@@ -30,6 +30,7 @@ fn large_input_and_both_output_pipes_progress_without_a_writer_thread() {
                 Stream::Stdout => stdout.extend_from_slice(bytes),
                 Stream::Stderr => stderr.extend_from_slice(bytes),
             }
+
             Ok(())
         },
     );
@@ -52,6 +53,7 @@ fn empty_input_closes_before_eof_dependent_output_and_debug_omits_payload() {
         &AtomicBool::new(false),
         |_, bytes| {
             stdout.extend_from_slice(bytes);
+
             Ok(())
         },
     );
@@ -98,6 +100,7 @@ fn blocked_input_obeys_cancellation_deadline_and_owned_cleanup() {
             if cancel {
                 cancelled.store(true, Ordering::Relaxed);
             }
+
             Ok(())
         });
         if cancel {
@@ -126,6 +129,7 @@ fn output_limit_still_refuses_while_stdin_is_incomplete() {
     let mut retained = Vec::new();
     let report = run(&mut command, policy, &AtomicBool::new(false), |_, bytes| {
         retained.extend_from_slice(bytes);
+
         Ok(())
     });
     assert!(

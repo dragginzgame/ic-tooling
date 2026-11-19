@@ -32,6 +32,7 @@ impl Completion {
                 Err(TryRecvError::Disconnected) => Some(Err(disconnected())),
             };
         }
+
         self.observed.as_ref()
     }
 
@@ -85,6 +86,7 @@ fn launch_with(
         work(|| command.spawn(), Child::wait, &startup_tx, &done_tx);
     }))?;
     startup_rx.recv().map_err(|_| disconnected())??;
+
     Ok(Completion {
         receiver: done_rx,
         observed: None,
@@ -102,6 +104,7 @@ fn work<C>(
         Ok(child) => child,
         Err(error) => {
             let _ = startup.send(Err(error));
+
             return;
         }
     };

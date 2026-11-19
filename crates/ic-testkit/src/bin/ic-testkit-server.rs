@@ -55,6 +55,7 @@ fn main() -> ExitCode {
     let result = ctrlc::set_handler(|| CANCELLED.store(true, Ordering::Relaxed))
         .map_err(Into::into)
         .and_then(|()| execute(cli.operation));
+
     match result {
         Ok(code) => ExitCode::from(code),
         Err(error) => {
@@ -62,6 +63,7 @@ fn main() -> ExitCode {
                 "ic-testkit-server failed: {}",
                 display(error.to_string().as_bytes())
             );
+
             ExitCode::FAILURE
         }
     }
@@ -117,6 +119,7 @@ fn execute(operation: Operation) -> Result<u8> {
                     "preparation evidence failed: {}",
                     display(error.to_string().as_bytes())
                 );
+
                 if prepared.is_ok() {
                     return Err(error.into());
                 }
@@ -132,17 +135,20 @@ fn execute(operation: Operation) -> Result<u8> {
                     "decompression stderr: {}",
                     display_prefix(&stopped.output.stderr)
                 );
+
                 return Ok(status(&stopped.process));
             }
             if CANCELLED.load(Ordering::Relaxed) {
                 return Err("setup cancelled; inspect retained preparation evidence".into());
             }
             println!("{}", prepared?.path().display());
+
             Ok(0)
         }
         Operation::Check { directory } => {
             absolute(&directory)?;
             println!("{}", PreparedServer::check(&directory)?.path().display());
+
             Ok(0)
         }
         Operation::Run {
@@ -176,6 +182,7 @@ fn execute(operation: Operation) -> Result<u8> {
                         retain_server(&evidence, stopped)?;
                         eprintln!("startup stderr: {}", display_prefix(&stopped.output.stderr));
                     }
+
                     return Err(error.into());
                 }
             };
@@ -183,6 +190,7 @@ fn execute(operation: Operation) -> Result<u8> {
             if CANCELLED.load(Ordering::Relaxed) {
                 let stopped = server.stop()?;
                 retain_server(&evidence, &stopped)?;
+
                 return Err("startup cancelled; child command was not started".into());
             }
             fs::write(evidence.join("endpoint.txt"), server.endpoint())?;
@@ -195,6 +203,7 @@ fn execute(operation: Operation) -> Result<u8> {
             let shutdown = (|| -> Result<bool> {
                 let stopped = server.stop()?;
                 retain_server(&evidence, &stopped)?;
+
                 Ok(stopped.process.cleanup.is_empty()
                     && stopped.process.status.is_some()
                     && matches!(stopped.process.failure, Some(Failure::Cancelled))
@@ -204,6 +213,7 @@ fn execute(operation: Operation) -> Result<u8> {
                 Ok(clean) => clean,
                 Err(error) => {
                     eprintln!("shutdown failed: {}", display(error.to_string().as_bytes()));
+
                     false
                 }
             };
@@ -213,6 +223,7 @@ fn execute(operation: Operation) -> Result<u8> {
                     "server did not report clean intentional shutdown; see retained evidence"
                 );
             }
+
             Ok(if code != 0 { code } else { u8::from(!clean) })
         }
     }
@@ -221,6 +232,7 @@ fn execute(operation: Operation) -> Result<u8> {
 fn retain_server(evidence: &Path, stopped: &Stopped) -> io::Result<()> {
     fs::write(evidence.join("server.stdout"), &stopped.output.stdout)?;
     fs::write(evidence.join("server.stderr"), &stopped.output.stderr)?;
+
     fs::write(evidence.join("server.txt"), format!("{stopped:?}\n"))
 }
 
@@ -234,6 +246,7 @@ fn absolute(path: &Path) -> Result<()> {
     {
         return Err("select absolute paths without CR/LF".into());
     }
+
     Ok(())
 }
 
@@ -245,6 +258,7 @@ fn new_evidence(path: &Path) -> Result<()> {
         "PocketIC evidence: {}",
         display(path.as_os_str().as_encoded_bytes())
     );
+
     Ok(())
 }
 
@@ -283,6 +297,7 @@ fn capture(
                         io::stdout().write_all(bytes)?;
                         io::stdout().flush()?;
                     }
+
                     Ok(())
                 }
                 Stream::Stderr => {
@@ -293,6 +308,7 @@ fn capture(
                         io::stderr().write_all(bytes)?;
                         io::stderr().flush()?;
                     }
+
                     Ok(())
                 }
             }
@@ -319,6 +335,7 @@ fn capture(
             display(&diagnostic)
         );
     }
+
     Ok(report)
 }
 
@@ -328,6 +345,7 @@ fn status(report: &Report) -> u8 {
         .and_then(|s| s.code())
         .and_then(|c| u8::try_from(c).ok())
         .unwrap_or(1);
+
     if code != 0 {
         code
     } else {

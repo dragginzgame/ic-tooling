@@ -13,6 +13,7 @@ fn setup_and_spawn_failures_keep_original_errors_without_child_effects() {
     command.args(["-c", "touch \"$1\"", "fixture"]).arg(&marker);
     let error = launch_with(command, |job| {
         drop(job);
+
         Err(io::Error::from_raw_os_error(12))
     })
     .err()
@@ -53,10 +54,12 @@ fn interrupted_wait_retries_only_wait_and_preserves_terminal_error() {
     work(
         || {
             spawns.set(spawns.get() + 1);
+
             Ok(())
         },
         |_| {
             waits.set(waits.get() + 1);
+
             if waits.get() == 1 {
                 Err(io::ErrorKind::Interrupted.into())
             } else {
@@ -97,10 +100,12 @@ fn lost_receivers_do_not_skip_reaping_or_repeat_spawn() {
     work(
         || {
             spawns.set(spawns.get() + 1);
+
             Ok(())
         },
         |_| {
             waits.set(waits.get() + 1);
+
             Ok(ExitStatus::from_raw(0))
         },
         &startup,
@@ -126,6 +131,7 @@ fn worker_disconnect_is_uncertain_completion_not_success() {
     );
     let error = launch_with(Command::new("/bin/false"), |job| {
         drop(job);
+
         Ok(())
     })
     .err()

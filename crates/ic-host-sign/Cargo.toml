@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-sign"
-version = "0.1.2"
+version = "0.1.3"
 description = "Bounded offline IC signing through an existing OS-keyring identity"
 edition.workspace = true
 rust-version.workspace = true
@@ -43,7 +43,7 @@ ic-host-artifacts.workspace = true
 ic-host-process.workspace = true
 ic-platform = { workspace = true, features = ["native-signed-secp256k1"] }
 ic-platform-types.workspace = true
-serde = { workspace = true, features = ["derive"] }
+serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 zeroize = { workspace = true, optional = true }

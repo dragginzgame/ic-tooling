@@ -220,13 +220,12 @@ records the shared implementation and its independent acceptance evidence.
 The frozen `make test-auth-consumer` recipe reproduces historical [Auth's pinned package admission](qualification/auth/README.md)
 and checks exact archives on native and Wasm targets.
 
-`make test-canic-build` qualifies current Canic’s owned build and destination
-publication/refusal path using a real Wasm probe. `make test-canic-app-build`
-combines Build and Text for app recipe preflight, lock setup, serial partial
-failure and display tests, plus Process 0.80.2 for lock initialization and signer
-version/principal capture. Signer fixtures make no live calls and use no keys.
-`make test-canic-build-metadata` checks workspace/target selection, prepared-tool
-admission and compiler-wrapper refusal before compilation or output replacement.
+`make test-canic-build` runs current Canic’s artifact builder against a real
+Wasm probe. It checks content-addressed output, replacement and preservation
+on failure. `make test-canic-app-build` qualifies TOML recipes, lock setup and
+serial partial failure. `make test-canic-build-metadata` verifies the current
+CLI’s Cargo command order, bounded metadata capture, schema and source-layout
+refusals. See the [consumer checks](qualification/canic/README.md#current-build-and-metadata).
 
 `make test-canic-consumer` runs [Canic’s local record admission](qualification/canic/README.md)
 and selected original retained-plan and signed-recovery tests.

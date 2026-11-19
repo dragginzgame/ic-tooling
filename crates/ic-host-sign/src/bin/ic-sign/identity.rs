@@ -16,6 +16,7 @@ pub(super) fn read(name: &str) -> Result<Zeroizing<Vec<u8>>, ()> {
     if !found.locked.is_empty() || found.unlocked.len() != 1 {
         return Err(());
     }
+
     found.unlocked[0]
         .get_secret()
         .map(Zeroizing::new)
@@ -29,5 +30,6 @@ pub(super) fn read(name: &str) -> Result<Zeroizing<Vec<u8>>, ()> {
     // fail; the helper never launches an OS authentication dialog.
     let _no_ui = SecKeychain::disable_user_interaction().map_err(|_| ())?;
     let entry = keyring::Entry::new("icp-cli", name).map_err(|_| ())?;
+
     entry.get_secret().map(Zeroizing::new).map_err(|_| ())
 }

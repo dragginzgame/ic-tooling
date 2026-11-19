@@ -5,6 +5,12 @@ Packages: `ic-build`.
 This group starts with the replacement implementation. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.87.6] - 2026-11-19
+
+### 🔧 Changed
+
+- Adopt Toko Tooling 0.45.21 and its Rust source layout in the packaged crate.
+
 ## [0.87.5] - 2026-11-18
 
 ### 🔧 Changed

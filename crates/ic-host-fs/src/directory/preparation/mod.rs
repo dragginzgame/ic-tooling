@@ -48,6 +48,7 @@ impl Directory {
             if mode & forbidden != 0 {
                 return Err(Error::Permissions { mode, forbidden });
             }
+
             Ok(permissions)
         };
         let permissions = policy().map_err(|source| PrepareFailure {
@@ -77,6 +78,7 @@ impl Directory {
                 // objects even when our own mkdir observed its existing entry.
                 sync(&created)?;
                 sync(&parent)?;
+
                 Ok(created)
             };
             parent = step().map_err(|source| PrepareFailure {
@@ -84,6 +86,7 @@ impl Directory {
                 source,
             })?;
         }
+
         Ok(parent)
     }
 }

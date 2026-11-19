@@ -71,5 +71,6 @@ pub async fn body(mut response: Response, limit: usize) -> Result<Vec<u8>, Error
         }
         bytes.extend_from_slice(&chunk);
     }
+
     Ok(bytes)
 }

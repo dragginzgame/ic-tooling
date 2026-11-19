@@ -29,7 +29,7 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Latest delivery
 
-The repository selects Toko 0.45.18 in both workspaces and CI. The
+The repository selects [Toko 0.45.21](../reports/audits/2026/11/19/toko-0.45.21-code-hygiene/01/report.md) in both workspaces and CI. The
 [HTTP adapter](../http-body.md) has the only Rust Wasm target guard. The
 unguarded compile reproduced the missing Reqwest method. Artifacts, Text and
 the qualification probe build for wasm32; Testkit's generated WAT export test
@@ -80,6 +80,10 @@ cohort receipt and `.git/release-state/sign-0.1.0/`. Private Tools 0.1.3 remains
 pending; its maintained workflow changes are delivered through Git.
 
 ## Blockers and next actions
+
+The [Canic build and metadata targets](../../qualification/canic/README.md#current-build-and-metadata)
+now exercise the captured CLI directly. Real Wasm publication and 17 pre-build
+refusals passed against local Artifacts, FS and Process.
 
 Canic owns its Store tests and filesystem publication code. The
 [Foundation runner](../../qualification/canic/README.md#current-foundation-qualification)

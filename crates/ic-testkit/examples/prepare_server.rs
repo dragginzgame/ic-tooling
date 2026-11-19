@@ -6,6 +6,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.len() == 1 && args[0] == "--asset" {
         let asset = ic_testkit::server::host_asset()?;
         println!("{}\nsha256:{}", asset.url, asset.archive_sha256);
+
         return Ok(());
     }
     if args.len() != 3 {
@@ -19,5 +20,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &PathBuf::from(&args[2]),
     )?;
     println!("{}", prepared.path().display());
+
     Ok(())
 }
