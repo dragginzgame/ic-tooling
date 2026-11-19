@@ -10,6 +10,8 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Use the shared compiler installer for the four CI job selections. [Tooling #15](https://github.com/dragginzgame/ic-tooling/issues/15).
+
 - Exercise current Canic build and metadata commands directly and retain the
   command sequence, error and destination-preservation evidence for each refusal.
 

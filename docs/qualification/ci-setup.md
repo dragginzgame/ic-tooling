@@ -1,5 +1,11 @@
 # CI setup diagnostics
 
+All four compiler steps call the snapshotted Toko Rust installer. Repository and
+library jobs use the complete selection from `rust-toolchain.toml`. The signer
+uses the workspace Rust version with the minimal profile. The native archive
+job uses that version with Clippy, rustfmt and `wasm32-unknown-unknown`. These
+steps use the jq and yq supplied by the Ubuntu and macOS runner images.
+
 The `repository` and `secrets` jobs in `build-release-candidate.yml` wrap compiler,
 common-tool and secret-scanner setup with `scripts/ci/setup-diagnostics.pl`.
 This removes dependence on an
