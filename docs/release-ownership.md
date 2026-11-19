@@ -83,6 +83,24 @@ That audit handoff left product versions unchanged. The 2026-11-18 authorized
 delivery selected patches because the packaged sources and development-tool
 requirements differed from their published archives.
 
+### Toko 0.45.22 Foundation and Text releases
+
+Foundation 0.80.7 and Text 0.77.5 shipped from [d2bb760](https://github.com/dragginzgame/ic-tooling/commit/d2bb7601d5aba24c0c5afc82bb725abba68dc879).
+Both annotated group tags resolve to that commit on GitHub. The other groups
+received the Toko development-tool selection through Git.
+
+Linux archive qualification passed the method inventory, core build and foreground
+terminal tests, and the Text rounding tests and doctest. A fresh registry consumer
+reproduced the 17-method Store 0.1.0 inventory and verified byte-size promotion.
+Each registry download matched the clean-source Cargo preflight archive.
+Local evidence is under `target/deploy-04522/`.
+
+| Published archive | Verified registry SHA-256 |
+| --- | --- |
+| `ic-host-artifacts-0.80.7` | `72ce4d058e0c7d95236311ac00bf274feefff7820dcbf70ad9528559db6ca491` |
+| `ic-host-fs-0.80.7` | `cbb8bec15385be7577cae7630b6852744c1150993ef56931ec38c763ff1fc90f` |
+| `ic-host-text-0.77.5` | `948047dbda816d2ed6dc22a5aef1a0bd4b356b1f007c87b2f48ed92c0904575f` |
+
 ### Toko 0.45.21 hygiene releases
 
 All nine public crates shipped from [297c304](https://github.com/dragginzgame/ic-tooling/commit/297c304250c869b03f3de5faec957c1330fec37c).
