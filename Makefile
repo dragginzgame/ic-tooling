@@ -28,15 +28,15 @@ help:
 	  '  make test-canic-build-metadata Current Canic metadata admission/refusal' \
 	  '  make test-canic-app-build Combined Canic Build/Text app and display contracts' \
 	  '  make test-canic-build  Current Canic owned Wasm build and publication refusal' \
-	  '  make test-canic-publication Current Canic held-parent artifact publication' \
-	  '  make test-canic-config-publication Compare current Canic config writers' \
-	  '  make test-canic-record-publication Compare retained-record and recovery writers' \
-	  '  make test-canic-starter-publication Compare starter directory publication' \
-	  '  make test-canic-directory-publication Compare starter/fleet directory publication' \
-	  '  make test-canic-filesystem Compare retained reads and publication together' \
-	  '  make test-canic-sidecar-lock Compare Store/config locks and filesystem callers' \
-	  '  make test-canic-parent-preparation Compare held preparation, staging and recovery' \
-	  '  make test-canic-runtime Compose Host custody with real CLI build and viewer checks' \
+	  '  make test-canic-publication Canic artifact inspection and real CLI publication' \
+	  '  make test-canic-config-publication Qualify Canic config writers' \
+	  '  make test-canic-record-publication Qualify retained-record and recovery writers' \
+	  '  make test-canic-starter-publication Qualify starter directory publication' \
+	  '  make test-canic-directory-publication Qualify starter/fleet directory publication' \
+	  '  make test-canic-filesystem Qualify retained reads and publication together' \
+	  '  make test-canic-sidecar-lock Qualify Store/config locks and filesystem callers' \
+	  '  make test-canic-parent-preparation Qualify held preparation, staging and recovery' \
+	  '  make test-canic-runtime Qualify Host Foundation callers, CLI publication and viewer tests' \
 	  '  make test-canic-foreground Harmless foreground client/PTY migration checks' \
 	  '  make test-canic-text   Current Canic CLI presentation qualification' \
 	  '  make test-query-text   Current Query presentation and output qualification' \
@@ -313,7 +313,7 @@ test-testkit-module: toko-tooling-check
 test-testkit-control: toko-tooling-check
 	@test -n "$${IC_TESTKIT_POCKET_IC_URL:-}" || { echo 'IC_TESTKIT_POCKET_IC_URL must select an externally owned server' >&2; exit 1; }
 	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked held::control::tests::installed_control_refuses_foreign_consumed_expired_and_automatic_releases -- --ignored --exact
-	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked held::control::clock_tests::installed_clock_progression_preserves_live_replies_and_original_expiry -- --ignored --exact
+	cargo test -p ic-testkit --features held-reply-fixtures --lib --locked held::control::tests::clock::installed_clock_progression_preserves_live_replies_and_original_expiry -- --ignored --exact
 
 .PHONY: test-testkit-server test-testkit-server-installed
 test-testkit-server: toko-tooling-check

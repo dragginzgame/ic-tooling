@@ -6,8 +6,6 @@
 //! custody independently of completion observers. No sampling or tool setup is owned.
 
 #[cfg(test)]
-mod stdin_tests;
-#[cfg(test)]
 mod tests;
 
 mod handoff;

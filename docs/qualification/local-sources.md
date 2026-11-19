@@ -27,7 +27,7 @@ implementation remains owned by the sibling. Never extend Tooling merely to recr
 an obsolete consumer mechanism. Current consumer contracts must justify new APIs.
 
 Changing a runner to current-source selection does not qualify all current source.
-Canic's six selected host tests passed against its current snapshot. Scheduling's
+Canic’s [Foundation runner](../../qualification/canic/README.md#current-foundation-qualification) uses the captured consumer’s own tests and verifies direct edges to the selected supplier manifests. Scheduling's
 rewrite target admits its Testkit graph and host-driver compilation without old
 migration patches; installed replacement acceptance remains open. Backup’s refreshed
 patch preserves current metadata/transfer additions and passes

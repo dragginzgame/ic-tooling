@@ -10,6 +10,16 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Check current Canic Host and CLI test names against Cargo’s listings before
+  executing the selected cases. [#14 — Update Canic qualification selectors when adopting the grouped test modules](https://github.com/dragginzgame/ic-tooling/issues/14).
+
+- Qualify Canic’s own record and filesystem tests against the selected local
+  Foundation crates. Retire the filesystem migration patches and copied fixtures.
+
+- Update both installed-clock test selectors after grouping the held-clock and
+  Process stdin tests under their parents' existing test modules.
+  [#13 — Consolidate sibling unit-test guards in Host Process and Testkit](https://github.com/dragginzgame/ic-tooling/issues/13).
+
 - Refresh both workspaces, the installed snapshot and CI cache action to Toko
   Tooling 0.45.16. Group native signer qualification by credential backend.
 

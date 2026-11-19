@@ -1,5 +1,32 @@
 # Canic retained-record admission
 
+## Current Foundation qualification
+
+Run `make test-canic-consumer` for retained records, `make test-canic-filesystem`
+for filesystem callers, or `make test-canic-runtime` to include locks, parent
+preparation and the CLI report/viewer tests. Each run captures the current Canic
+working tree and uses its own source, manifests and tests. Cargo command-line
+overrides select FS and Artifacts from this checkout or from an explicit
+`IC_TOOLING_CANDIDATE_ROOT`. Metadata must show both normal, unconditional
+edges from Canic Host to the selected local manifests. Every named test must
+report a pass. The capture, lock, graph, supplier hashes and test output remain
+under `target/canic-consumer.*/`.
+
+On Linux the runtime selection passed 54 Host and three CLI tests, published a
+Wasm artifact with its verified digest and permissions, and refused a symlinked
+parent without creating the destination. Canic HEAD was
+`dd44ddcf2ffcc3f8ba693237ea176c3ad14eff18` including local edits, with source
+archive SHA-256 `c88a401210dd1354ac387773be06ec0ddafef48005e9972723a8c49dc28fc6bd`.
+See `target/canic-consumer.JlzUNrQn/`. The records selection passed 19 cases and
+the retained-read entrypoint passed 15 on the same source. The filesystem
+selection passed 39 against the extracted FS and Artifacts 0.80.5 manifests
+in `target/build-release.kNWOlSyD/candidate/` (`target/canic-consumer.JmCCLKyF/`).
+A missing exact name alongside a passing case was rejected.
+
+The dated migration results below describe their original source captures.
+Canic owns Store, filesystem publication and the corresponding regression tests.
+The separate Build migration experiment requires an actual Build consumer.
+
 ## Module layout maintenance — 2026-11-17
 
 Qualification runners place modules with fixture children in `foo/mod.rs`,
@@ -566,9 +593,8 @@ bytes in `target/canic-build.0uvmI8co` (`target/canic-publication-run.log`).
 `make test-canic-consumer` snapshots the current `CANIC_SOURCE` working tree
 (default `../canic`), including local edits and non-ignored additions, without
 modifying it. [Source selection](../../docs/qualification/local-sources.md) records
-the capture and refusal contract. The [migration patch](record-admission.patch)
-contains the private caller change, tests and dependency delta; it must apply to
-the current source. Exports remain under `target/`.
+the capture and refusal contract. The [historical migration patch](https://github.com/dragginzgame/ic-tooling/blob/c41ea2ed9624d3d9a702e46b6f798f87b0452031/qualification/canic/record-admission.patch)
+contained the private caller change, tests and dependency delta for that comparison. Exports remain under `target/`.
 
 ## Selected contract and ownership
 
@@ -627,19 +653,20 @@ Wire remain frozen and are not migration targets for this slice.
 
 ## Current CLI Text
 
-`make test-canic-text` snapshots the current local Canic working tree and applies
-`text.patch` independently of the record-admission recipe. The initial run selected Text 0.77.0,
-migrates escapes and plain tables, and removes the repeated two-space/header-rule
-options from the callers. Canic retains its own report selection, configuration,
-colours, topology, shell quoting, status meanings and raw JSON. No Canic
-implementation is admitted into product crates. The patch does not migrate other
-Host/Build dependencies or import old Canic source.
+`make test-canic-text` captures Canic’s current tree and selects the local Text
+crate through Cargo. The runner verifies the CLI’s direct dependency edge, lists
+the CLI tests and runs the selected names with exact matching. Five display
+suites and three configuration cases cover human output and retained JSON.
 
-The focused runner checks the CLI's actual Text dependency edge and requires
-nonempty named test selections: eight status tests, eight fleet terminal tests and
-three local declaration/output cases. These cover unknown/uncertain effects,
-retained evidence, terminal controls, roles, partial inventories and raw JSON.
-They do not deploy canisters, start a browser or contact a live IC network.
+On Linux, Canic 0.232.0 at `548700eb6b9402aae6c1bdbf8a103c518bfa9c3e`
+passed 40 CLI tests with local Text 0.77.3 and 54 Host tests with local
+Foundation 0.80.5. All 11 grouped names in
+[Tooling #14](https://github.com/dragginzgame/ic-tooling/issues/14) appeared in
+Cargo’s listings and passed. An old CLI selector paired with a valid one was
+refused before execution. Listings and results are in
+`target/canic-text.uqd73yLf/` and `target/canic-consumer.YIViC9dS/`.
+
+The earlier Text migration compared patched source. Its original evidence follows.
 
 Linux evidence on 2026-11-15: local HEAD
 `e3e7be86301c377db8b064d2ef914f5cde936265` plus edits, source tar SHA-256

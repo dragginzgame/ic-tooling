@@ -29,6 +29,13 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Latest delivery
 
+Process stdin and Testkit clock cases now share their parent test modules. The
+installed clock selector runs exactly one case. Current Canic qualification
+uses its own tests and lists each target before running exact selections.
+All 11 renamed selectors passed on Canic 0.232.0. These changes ship through
+Git because they affect test organization and qualification. See the
+[Canic evidence](../../qualification/canic/README.md#current-cli-text).
+
 Both workspaces, the 50-file snapshot and six CI action references select Toko
 0.45.16. Compared with the published cohort, this updates developer tooling,
 test code and qualification. Product runtime code and dependencies are unchanged,
@@ -68,6 +75,12 @@ cohort receipt and `.git/release-state/sign-0.1.0/`. Private Tools 0.1.3 remains
 pending; its maintained workflow changes are delivered through Git.
 
 ## Blockers and next actions
+
+Canic owns its Store tests and filesystem publication code. The
+[Foundation runner](../../qualification/canic/README.md#current-foundation-qualification)
+now verifies local FS/Artifacts dependency edges and exact test outcomes.
+The Linux runtime selection passed 54 Host and three CLI tests plus actual Wasm
+publication and link refusal. The archive selection passed 39 Host cases.
 
 Producer acceptance has no outstanding blocker. Canic's thin Backup adapter and
 installed acceptance remain in [Canic #5](https://github.com/dragginzgame/canic/issues/5).

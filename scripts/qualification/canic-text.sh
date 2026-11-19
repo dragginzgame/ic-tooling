@@ -9,27 +9,27 @@ trap 'printf "Canic Text export: %s\n" "$scratch"' EXIT
 mkdir "$scratch/source"
 source "$repo/scripts/qualification/local-source.sh"
 export_local_source
-export GIT_CEILING_DIRECTORIES="$repo/target"
-git -C "$scratch/source" apply --check "$repo/qualification/canic/text.patch"
-git -C "$scratch/source" apply "$repo/qualification/canic/text.patch"
 export CARGO_TARGET_DIR="$repo/target/canic-consumer-build"
 CDPATH='' cd -- "$scratch/source"
-cargo metadata --format-version 1 --locked --offline > "$scratch/metadata.json"
-jq -e --arg root "$repo" '
-  . as $m | (.packages[] | select(.name == "canic-cli") | .id) as $cli |
-  (.packages[] | select(.name == "ic-host-text" and .version == "0.77.2" and
-    .manifest_path == ($root + "/crates/ic-host-text/Cargo.toml")) | .id) as $text |
-  any($m.resolve.nodes[] | select(.id == $cli) | .deps[]; .name == "ic_host_text" and .pkg == $text)
+find . -type f -exec touch {} +
+[[ -f Cargo.lock && ! -L Cargo.lock ]]
+cp Cargo.lock "$scratch/consumer.lock"
+path=$(jq -Rn --arg path "$repo/crates/ic-host-text" '$path')
+patches=(--config "patch.crates-io.ic-host-text.path=$path")
+cargo metadata "${patches[@]}" --format-version 1 > "$scratch/metadata.json"
+jq -e --arg manifest "$repo/crates/ic-host-text/Cargo.toml" '
+  . as $m | any(.packages[]; .name == "canic-cli" and
+    (.id as $cli | ($m.workspace_members | index($cli)) != null and
+      any($m.resolve.nodes[] | select(.id == $cli) | .deps[];
+        any(.dep_kinds[]; .kind == null and .target == null) and
+        (.pkg as $id | any($m.packages[]; .id == $id and .name == "ic-host-text" and
+          .source == null and .manifest_path == $manifest)))))
 ' "$scratch/metadata.json" >/dev/null
-cargo test -p canic-cli --bin canic --locked --offline -- --list > "$scratch/tests.txt"
-for scope in status::tests:: fleet::terminal::tests:: placements::tests:: subnet_comparison::tests:: artifacts::tests::; do
-  rg -q "^$scope.*: test$" "$scratch/tests.txt"
-  cargo test -p canic-cli --bin canic --locked --offline "$scope"
-done
-for subject in \
-  config_tests::canister_declarations_retain_roles_and_parents_without_effect_authority \
-  config_tests::existing_canister_declaration_lists_exact_id_without_deployment_authority \
-  config_tests::declaration_messages_escape_paths_while_json_retains_original_paths; do
-  rg -Fxq "$subject: test" "$scratch/tests.txt"
-  cargo test -p canic-cli --bin canic --locked --offline "$subject" -- --exact
-done
+cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --quiet --locked -- \
+  verify-external-lock "$scratch/consumer.lock" Cargo.lock 1048576
+source "$repo/scripts/qualification/canic-cases.sh"
+run_cases canic-cli --bin=canic status::tests:: fleet::terminal::tests:: placements::tests:: \
+  subnet_comparison::tests:: artifacts::tests:: \
+  tests::config::canister_declarations_retain_roles_and_parents_without_effect_authority \
+  tests::config::existing_canister_declaration_lists_exact_id_without_deployment_authority \
+  tests::config::declaration_messages_escape_paths_while_json_retains_original_paths

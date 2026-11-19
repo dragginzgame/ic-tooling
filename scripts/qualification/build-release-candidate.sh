@@ -83,7 +83,9 @@ esac
 grep -q 'test result: ok\. 1 passed; 0 failed' "$scratch/terminal.log"
 RUSTDOCFLAGS='-D warnings' cargo doc --manifest-path "$candidate/Cargo.toml" --workspace --no-deps --locked --offline > "$scratch/docs.log" 2>&1
 if [[ "${BUILD_RELEASE_CONSUMER:-current}" == current ]]; then
-  IC_TOOLING_CANDIDATE_ROOT="$candidate" bash "$repo/scripts/qualification/canic-build.sh" metadata > "$scratch/consumer.log" 2>&1
+  # Canic Host consumes Foundation directly. Build itself is exercised above.
+  CARGO_NET_OFFLINE=true IC_TOOLING_CANDIDATE_ROOT="$candidate" \
+    bash "$repo/scripts/qualification/canic-consumer.sh" filesystem > "$scratch/consumer.log" 2>&1
 else
   printf 'Current sibling consumer qualification not selected on this host.\n' > "$scratch/consumer.log"
 fi

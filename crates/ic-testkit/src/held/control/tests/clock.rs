@@ -1,5 +1,4 @@
-use super::*;
-use crate::held::{Limits, Reply};
+use crate::held::{Limits, Reply, control::*};
 use std::task::{Context, Poll, Waker};
 
 #[test]

@@ -1,4 +1,4 @@
-use super::*;
+use crate::*;
 
 fn piped(input: Vec<u8>) -> Policy {
     Policy {

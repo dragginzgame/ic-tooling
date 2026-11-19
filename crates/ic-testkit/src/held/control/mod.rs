@@ -1,8 +1,6 @@
 //! Exclusive release authority and explicitly bounded manual clock progression.
 
 #[cfg(test)]
-mod clock_tests;
-#[cfg(test)]
 mod tests;
 
 use std::{

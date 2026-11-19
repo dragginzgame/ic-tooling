@@ -9,7 +9,7 @@ curl --fail --silent --show-error "$endpoint/instances" | jq -e 'length == 0' >/
 for test in \
   held::tests::installed_modules_keep_replies_bound_to_slots_and_reject_failures \
   held::control::tests::installed_control_refuses_foreign_consumed_expired_and_automatic_releases \
-  held::control::clock_tests::installed_clock_progression_preserves_live_replies_and_original_expiry; do
+  held::control::tests::clock::installed_clock_progression_preserves_live_replies_and_original_expiry; do
   log="$scratch/${test##*::}.log"
   cargo test --manifest-path "$manifest" -p ic-testkit --features held-reply-fixtures \
     --lib --locked --offline "$test" -- --ignored --exact --color never > "$log" 2>&1

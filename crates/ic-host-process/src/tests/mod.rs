@@ -1,3 +1,5 @@
+mod stdin;
+
 use super::*;
 
 fn policy(ownership: Ownership) -> Policy {
