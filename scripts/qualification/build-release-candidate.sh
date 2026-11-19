@@ -64,8 +64,8 @@ jq -e --arg root "$candidate" --argjson names '["ic-host-artifacts","ic-host-fs"
     $p[0].manifest_path == ($root + "/crates/" + $name + "/Cargo.toml") and
     $p[0].publish == ["crates-io"] and ($p[0].description | length > 0))
 ' "$scratch/candidate-metadata.json" >/dev/null
-cargo clippy --manifest-path "$candidate/Cargo.toml" --workspace --all-targets --locked --offline -- -D warnings > "$scratch/clippy.log" 2>&1
-cargo test --manifest-path "$candidate/Cargo.toml" --workspace --lib --locked --offline > "$scratch/tests.log" 2>&1
+cargo clippy --manifest-path "$candidate/Cargo.toml" --workspace --features ic-host-artifacts/canister-methods --all-targets --locked --offline -- -D warnings > "$scratch/clippy.log" 2>&1
+cargo test --manifest-path "$candidate/Cargo.toml" --workspace --features ic-host-artifacts/canister-methods --lib --locked --offline > "$scratch/tests.log" 2>&1
 # BSD script injects EOF for piped input; macOS uses a prompt-driven native PTY.
 export BUILD_RELEASE_MANIFEST="$candidate/Cargo.toml"
 export CARGO_TERM_COLOR=never
@@ -81,7 +81,7 @@ case "$(uname -s)" in
   *) echo 'Native candidate qualification supports Linux and macOS.' >&2; exit 1 ;;
 esac
 grep -q 'test result: ok\. 1 passed; 0 failed' "$scratch/terminal.log"
-RUSTDOCFLAGS='-D warnings' cargo doc --manifest-path "$candidate/Cargo.toml" --workspace --no-deps --locked --offline > "$scratch/docs.log" 2>&1
+RUSTDOCFLAGS='-D warnings' cargo doc --manifest-path "$candidate/Cargo.toml" --workspace --features ic-host-artifacts/canister-methods --no-deps --locked --offline > "$scratch/docs.log" 2>&1
 if [[ "${BUILD_RELEASE_CONSUMER:-current}" == current ]]; then
   # Canic Host consumes Foundation directly. Build itself is exercised above.
   CARGO_NET_OFFLINE=true IC_TOOLING_CANDIDATE_ROOT="$candidate" \

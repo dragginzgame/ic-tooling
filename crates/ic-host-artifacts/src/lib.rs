@@ -3,6 +3,9 @@
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "canister-methods")]
+pub mod methods;
+
 mod producer;
 
 use std::io::{self, Read, Write};

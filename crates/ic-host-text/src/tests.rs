@@ -59,3 +59,19 @@ fn plain_tables_align_numbers_after_escaping_and_trim_only_current_lines() {
         ""
     );
 }
+
+#[test]
+fn byte_size_rounds_at_half_and_promotes_at_the_rounded_boundary() {
+    for (bytes, expected) in [
+        (0, "0 B"),
+        (1023, "1023 B"),
+        (1024, "1 KiB"),
+        (1152, "1.13 KiB"),
+        (1536, "1.5 KiB"),
+        (1_048_570, "1023.99 KiB"),
+        (1_048_571, "1 MiB"),
+        (u64::MAX, "16 EiB"),
+    ] {
+        assert_eq!(super::byte_size(bytes), expected, "{bytes} bytes");
+    }
+}

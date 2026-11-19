@@ -146,3 +146,33 @@ pub fn plain_table<const N: usize>(
 
     lines.join("\n")
 }
+
+/// Render a byte count in binary units, rounded half up to two decimal places.
+/// Whole values omit the fractional part, and rounding across a unit boundary
+/// promotes the result to the next unit.
+///
+/// ```
+/// assert_eq!(ic_host_text::byte_size(527_286), "514.93 KiB");
+/// assert_eq!(ic_host_text::byte_size(1_048_575), "1 MiB");
+/// ```
+#[must_use]
+pub fn byte_size(bytes: u64) -> String {
+    const UNITS: [&str; 7] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
+    let mut scale = 1;
+    let mut unit = 0;
+    let mut hundredths = u128::from(bytes) * 100;
+    while hundredths >= 102_400 {
+        scale *= 1024;
+        unit += 1;
+        hundredths = (u128::from(bytes) * 100 + scale / 2) / scale;
+    }
+    let whole = hundredths / 100;
+    let fraction = hundredths % 100;
+    let suffix = UNITS[unit];
+
+    match fraction {
+        0 => format!("{whole} {suffix}"),
+        n if n % 10 == 0 => format!("{whole}.{} {suffix}", n / 10),
+        n => format!("{whole}.{n:02} {suffix}"),
+    }
+}

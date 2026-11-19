@@ -1452,16 +1452,18 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.80.6"
+version = "0.80.7"
 dependencies = [
  "sha2 0.11.1",
  "thiserror 2.0.18",
  "toko-tooling",
+ "wasmparser",
+ "wat",
 ]
 
 [[package]]
 name = "ic-host-fs"
-version = "0.80.6"
+version = "0.80.7"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -1515,7 +1517,7 @@ dependencies = [
 
 [[package]]
 name = "ic-host-text"
-version = "0.77.4"
+version = "0.77.5"
 dependencies = [
  "toko-tooling",
  "unicode-width",
@@ -3338,9 +3340,9 @@ dependencies = [
 
 [[package]]
 name = "toko-tooling"
-version = "0.45.21"
+version = "0.45.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af1ba8e16aaf1dae0951f08a228a4f00b928d09ff68997bd94ccc397ace5e4be"
+checksum = "4c4177a70760ea774fc0e14938593658b7b87facb3ee3f8848f65a402f778c7b"
 
 [[package]]
 name = "toml"

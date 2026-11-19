@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-artifacts"
-version = "0.80.6"
+version = "0.80.7"
 description = "Bounded byte admission and complete artifact commitments"
 edition.workspace = true
 rust-version.workspace = true
@@ -12,12 +12,17 @@ publish = ["crates-io"]
 [package.metadata.cargo-machete]
 ignored = ["toko-tooling"]
 
+[features]
+canister-methods = ["dep:wasmparser"]
+
 [dependencies]
 sha2.workspace = true
 thiserror.workspace = true
+wasmparser = { workspace = true, optional = true }
 
 [dev-dependencies]
 toko-tooling.workspace = true
+wat.workspace = true
 
 [lints]
 workspace = true

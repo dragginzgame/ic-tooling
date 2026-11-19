@@ -5,6 +5,13 @@ Packages: `ic-host-text`.
 This group starts with the replacement implementation. Earlier shared development
 evidence is in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.77.5] - 2026-11-19
+
+### ➕ Added
+
+- Provide binary byte-size formatting for Canic build reports, with two decimal
+  places and promotion when rounding crosses a unit boundary.
+
 ## [0.77.4] - 2026-11-19
 
 ### 🔧 Changed

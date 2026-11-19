@@ -31,7 +31,7 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 All nine public crates shipped from `297c304` with eight release tags. See the
 [verified publication receipts](../release-ownership.md#toko-04521-hygiene-releases).
-The repository selects [Toko 0.45.21](../reports/audits/2026/11/19/toko-0.45.21-code-hygiene/01/report.md) in both workspaces and CI. The
+The repository selects [Toko 0.45.22](../reports/audits/2026/11/19/toko-0.45.22-code-hygiene/01/report.md) in both workspaces and CI. The
 [HTTP adapter](../http-body.md) has the only Rust Wasm target guard. The
 unguarded compile reproduced the missing Reqwest method. Artifacts, Text and
 the qualification probe build for wasm32; Testkit's generated WAT export test
@@ -82,6 +82,9 @@ cohort receipt and `.git/release-state/sign-0.1.0/`. Private Tools 0.1.3 remains
 pending; its maintained workflow changes are delivered through Git.
 
 ## Blockers and next actions
+
+Foundation 0.80.7 is pending locally. The [method inventory](../byte-commitments.md#canister-method-inventory)
+lets a host compare its endpoint declarations with a final Wasm artifact.
 
 The [Canic build and metadata targets](../../qualification/canic/README.md#current-build-and-metadata)
 now exercise the captured CLI directly. Real Wasm publication and 17 pre-build

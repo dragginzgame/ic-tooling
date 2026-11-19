@@ -45,3 +45,29 @@ subsequent refusals, plus the original producer I/O cause after accepted bytes.
 Consumer evidence belongs in [Backup qualification](../qualification/backup/README.md),
 not in the product's portable tests. Neither this API nor a matching digest proves
 producer side effects were rolled back. Publication remains a separate operation.
+
+## Canister method inventory
+
+A host comparing endpoint declarations with its final artifact enables the
+`canister-methods` feature of `ic-host-artifacts`. Pass the final raw Wasm
+reader and a `Length` to `methods::inventory`. The result pairs the artifact
+identity with a sorted map from the exact UTF-8 method name to its execution
+kind. Comparing that map with independently collected declarations detects a
+missing name, an extra name or a changed kind. The consumer owns its declarations,
+protocol schemas and compatibility policy.
+
+Build selects raw `.wasm` cdylibs. Inventory uses the existing bounded byte
+reader and validates the entire core module before inspecting its exports.
+A gzip stream or component is refused at the header. Public function names
+lose exactly one prefix and space. Their remaining bytes, including case and
+whitespace, identify the method. Entry points require the Wasm signature
+`() -> ()`; two kinds for one name are ambiguous. Lifecycle functions and
+non-function exports contribute no methods. See the
+[IC canister interface](https://docs.internetcomputer.org/references/ic-interface-spec/canister-interface/).
+
+For [Tooling #16](https://github.com/dragginzgame/ic-tooling/issues/16), a
+separate host consumer inspected the retained Store 0.1.0 release artifact
+from supplier commit `541d911410dae0f38eefc371693024bf2068c55b` (501,823 bytes,
+SHA-256 `e8a74f2155d91da7964525984c0d4e83d53d037f11190a71ce0c664b5933a3ad`).
+Its four queries and thirteen updates matched an independent enumeration with
+Node’s WebAssembly module export API. Neither reader instantiated the module.

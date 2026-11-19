@@ -5,6 +5,13 @@ Packages: `ic-host-artifacts`, `ic-host-fs`.
 This group starts with the replacement implementation. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.80.7] - 2026-11-19
+
+### ➕ Added
+
+- Inventory public IC method names and execution kinds from bounded Wasm bytes
+  with the optional `ic-host-artifacts/canister-methods` feature. [Tooling #16](https://github.com/dragginzgame/ic-tooling/issues/16).
+
 ## [0.80.6] - 2026-11-19
 
 ### 🔧 Changed

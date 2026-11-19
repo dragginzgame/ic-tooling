@@ -37,3 +37,10 @@ ensure the column count agrees. Lines omit trailing whitespace, matching current
 output. Escaping and scalar width retain the same owner as bordered tables.
 Only the Text package implements layout; all Canic-specific code stays in its
 read-only sibling snapshot plus the qualification migration patch.
+
+Canic app builds need compact Wasm sizes in human output. Text formats byte counts
+in IEC units with exact half-up rounding to two decimal places, trimming trailing
+zeroes and promoting across unit boundaries. The replacement operation takes a
+byte count directly. The historical generic scale and decimal APIs are outside
+this workflow. Canic retains exact bytes and the artifact digest in structured
+output. The formatter's examples cover a Toko artifact and unit promotion.
