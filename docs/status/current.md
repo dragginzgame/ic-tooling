@@ -29,6 +29,12 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Latest delivery
 
+The repository selects Toko 0.45.18 in both workspaces and CI. The
+[HTTP adapter](../http-body.md) has the only Rust Wasm target guard. The
+unguarded compile reproduced the missing Reqwest method. Artifacts, Text and
+the qualification probe build for wasm32; Testkit's generated WAT export test
+passes. The repository has no Rust canister endpoint handlers or templates.
+
 Process stdin and Testkit clock cases now share their parent test modules. The
 installed clock selector runs exactly one case. Current Canic qualification
 uses its own tests and lists each target before running exact selections.
@@ -36,8 +42,7 @@ All 11 renamed selectors passed on Canic 0.232.0. These changes ship through
 Git because they affect test organization and qualification. See the
 [Canic evidence](../../qualification/canic/README.md#current-cli-text).
 
-Both workspaces, the 50-file snapshot and six CI action references select Toko
-0.45.16. Compared with the published cohort, this updates developer tooling,
+The preceding tooling delivery selected Toko 0.45.16. Compared with the published cohort, this updates developer tooling,
 test code and qualification. Product runtime code and dependencies are unchanged,
 so this delivery goes through Git only. Linux passed the process-reaping test
 and all three native signer cases with the delivery lock. Locked refusal now

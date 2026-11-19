@@ -10,6 +10,9 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Adopt Toko Tooling 0.45.18 in both workspaces, the installed snapshot and CI.
+  Verify the native HTTP boundary and the portable wasm32 builds.
+
 - Check current Canic Host and CLI test names against Cargo’s listings before
   executing the selected cases. [#14 — Update Canic qualification selectors when adopting the grouped test modules](https://github.com/dragginzgame/ic-tooling/issues/14).
 

@@ -10,6 +10,10 @@ features. Consumers select Reqwest directly and retain its upstream type identit
 This is a native adapter: its selected Reqwest `Response::chunk` operation is
 absent from Reqwest's Wasm implementation. The target condition follows that API
 boundary, not an assumption that all shared HTTP logic needs a host guard.
+During Toko 0.45.18 adoption, compiling the same body for
+`wasm32-unknown-unknown` with the guard removed and its dependencies enabled
+failed at `response.chunk()` with E0599 (Reqwest 0.13.5). The guarded build and
+both native body tests passed. See `target/toko-04518/http-unguarded/check.log`.
 Reqwest's optional browser stream API is a different feature/platform contract;
 there is no current browser or IC HTTP caller admitted by this workload.
 The incompatible version increment is from the observed 0.79.0 supplier.

@@ -4,7 +4,7 @@ The `repository` and `secrets` jobs in `build-release-candidate.yml` wrap compil
 common-tool and secret-scanner setup with `scripts/ci/setup-diagnostics.pl`.
 This removes dependence on an
 ephemeral runner's console or a raw log path when setup fails before tests start.
-Toko Tooling 0.45.16 supplies the selected `SetupDiagnostics.pm` module for command
+Toko Tooling 0.45.18 supplies the selected `SetupDiagnostics.pm` module for command
 capture, exit/signal status, redaction and bounded excerpts. It includes the
 original redaction corrections from
 [Toko Tooling #393](https://github.com/dragginzgame/toko-tooling/issues/393),
