@@ -83,6 +83,34 @@ That audit handoff left product versions unchanged. The 2026-11-18 authorized
 delivery selected patches because the packaged sources and development-tool
 requirements differed from their published archives.
 
+### Toko 0.45.21 hygiene releases
+
+All nine public crates shipped from [297c304](https://github.com/dragginzgame/ic-tooling/commit/297c304250c869b03f3de5faec957c1330fec37c).
+The release updates packaged Rust layout and the Toko development dependency.
+Eight annotated group tags identify the release source. The Canic qualification
+runner changes ship through Git. Private Tools remains at 0.1.3.
+
+Linux archive qualification passed for the four core crates, Text and HTTP,
+then Cargo Metadata, Testkit and Sign against their published suppliers.
+Installed PocketIC tests and disposable locked/unlocked keyring checks passed.
+The delivery lock passed 110 workspace tests and one doctest. Each published
+archive matches the clean-source Cargo preflight byte for byte. The three archive
+gate directories and readbacks are indexed under `target/deploy-04521/`.
+[Hosted release CI](https://github.com/dragginzgame/ic-tooling/actions/runs/44576208750)
+runs asynchronously.
+
+| Published archive | Verified registry SHA-256 |
+| --- | --- |
+| `ic-host-artifacts-0.80.6` | `85a2dde3da173216b499a8e272e226207577ef0ee0344e172e3d40b248af8030` |
+| `ic-host-fs-0.80.6` | `ee05d23138ab61cb33014fb7d46983f21887e5eec0f9ce9bcf4c712a3643704b` |
+| `ic-host-process-0.81.3` | `1b9e94a55e898dc6d6df8b156dd183eb299f136e8f848f139fbfd6151f0e02ed` |
+| `ic-host-text-0.77.4` | `cec976fd35c86caa0bef16c93e9a28df5856a90df08d1ff0f86a0af08f3764cb` |
+| `ic-host-http-0.80.2` | `053ccca4c99994e2cfa7d6849ac31bf5fe690b075a02beb1e6af3e57a383a7ba` |
+| `ic-build-0.87.6` | `852396d507ad6c9c1afe944b2ee0956b85a0219348290ba38a9cc60f387ececc` |
+| `ic-cargo-metadata-0.1.2` | `7d0852415b366c827ef7fa681df95dbbbdebd997d1468f76433f686329e84b82` |
+| `ic-testkit-0.110.3` | `0b04e07e411ea98842fedb02173150d51869c9c4a6c105dede249369322d7b2c` |
+| `ic-host-sign-0.1.3` | `153354139396a93dd725259dd4fc3adfb752cdf6919aa7d6e4f35bfcbabacb01` |
+
 ### Toko 0.45.13 rules/hygiene cohort — 2026-11-19
 
 Both workspaces select Toko 0.45.13, published source

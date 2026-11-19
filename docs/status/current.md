@@ -29,6 +29,8 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Latest delivery
 
+All nine public crates shipped from `297c304` with eight release tags. See the
+[verified publication receipts](../release-ownership.md#toko-04521-hygiene-releases).
 The repository selects [Toko 0.45.21](../reports/audits/2026/11/19/toko-0.45.21-code-hygiene/01/report.md) in both workspaces and CI. The
 [HTTP adapter](../http-body.md) has the only Rust Wasm target guard. The
 unguarded compile reproduced the missing Reqwest method. Artifacts, Text and
