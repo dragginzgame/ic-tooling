@@ -83,6 +83,30 @@ That audit handoff left product versions unchanged. The 2026-11-18 authorized
 delivery selected patches because the packaged sources and development-tool
 requirements differed from their published archives.
 
+### Toko 0.46.0 release
+
+All nine public crates shipped from [5a154e3](https://github.com/dragginzgame/ic-tooling/commit/5a154e3777dc88da47d7cb214140c4c8d403ddff).
+Eight annotated release-group tags identify this source. Build 0.87.7 keeps
+Cargo’s lock constraint and honors the caller’s network mode. The packages
+adopt Toko 0.46.0 and its Rust type documentation rules.
+
+Workspace tests and Linux archive qualification passed with the delivery lock.
+The installed simulator and disposable Linux keyring checks passed against
+the published suppliers. Clean-source preflight archives match fresh registry
+downloads byte for byte. Local evidence is under `target/deploy-046/`.
+
+| Published archive | Verified registry SHA-256 |
+| --- | --- |
+| `ic-cargo-metadata-0.1.3` | `87dbdad5f251e952ed8581bac58f46eadbbc7859e20c008ab1b89f308a225536` |
+| `ic-host-artifacts-0.80.8` | `4d8b55a21c287f361bdca10151f5404f5f658024b037284d83f8a7a7e3181041` |
+| `ic-host-fs-0.80.8` | `4108c38f5cddb31fb982987a35522608f406a3e2d70d929667a69a391c52c80f` |
+| `ic-build-0.87.7` | `7f5b7591e8a5814c48777eb290f71950dbd0eec8e46287f07aeadde9eb529e9c` |
+| `ic-host-http-0.80.3` | `783b689bef6a85e345c2d092b0048f29805a737ab51de309d9471224401e14da` |
+| `ic-host-text-0.77.6` | `66f7f31f73e23372ac5fb4ee8f429e0e082fe654bea86edbebd6315d20900042` |
+| `ic-testkit-0.110.4` | `5617b2cbdc7adf055c6c7f4bdcbca8ad0ef5b367b65996acda10cad7fb79bb13` |
+| `ic-host-sign-0.1.4` | `9bf1bb1e02da56e62d354a4bdd9eef8463f2dd39ffc25f478adcbadda4ab5e42` |
+| `ic-host-process-0.81.4` | `11ea739ab482b78e71f7f044c8ea29e5225c3b2e751375cf20591de0489bb980` |
+
 ### Toko 0.45.23 qualification delivery
 
 Both workspaces and the six CI cache actions select Toko 0.45.23. The verified

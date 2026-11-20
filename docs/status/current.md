@@ -29,6 +29,9 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Latest delivery
 
+All nine public crates shipped with Toko 0.46.0, including Build 0.87.7. See the
+[verified release receipts](../release-ownership.md#toko-0460-release).
+
 Foundation 0.80.7 and Text 0.77.5 are published. See the
 [release receipts](../release-ownership.md#toko-04522-foundation-and-text-releases).
 The preceding nine-crate release shipped from `297c304`. See the
