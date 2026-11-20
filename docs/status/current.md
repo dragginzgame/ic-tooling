@@ -1,4 +1,4 @@
-# Current implementation — 2026-11-19
+# Current implementation — 2026-11-20
 
 ## Decisions and scope
 
@@ -33,7 +33,7 @@ Foundation 0.80.7 and Text 0.77.5 are published. See the
 [release receipts](../release-ownership.md#toko-04522-foundation-and-text-releases).
 The preceding nine-crate release shipped from `297c304`. See the
 [verified publication receipts](../release-ownership.md#toko-04521-hygiene-releases).
-The repository selects [Toko 0.45.22](../reports/audits/2026/11/19/toko-0.45.22-code-hygiene/01/report.md) in both workspaces and CI. The
+The repository selects Toko 0.45.23 in both workspaces and CI. The
 [HTTP adapter](../http-body.md) has the only Rust Wasm target guard. The
 unguarded compile reproduced the missing Reqwest method. Artifacts, Text and
 the qualification probe build for wasm32; Testkit's generated WAT export test
@@ -84,6 +84,11 @@ cohort receipt and `.git/release-state/sign-0.1.0/`. Private Tools 0.1.3 remains
 pending; its maintained workflow changes are delivered through Git.
 
 ## Blockers and next actions
+
+Qualification inherits Cargo’s network settings. Linux archive runs
+verified both the default and caller-selected offline mode. The release-group
+catalog declares the Text alias and passes the shared dependency-pin and
+Cargo inheritance check. See [release ownership](../release-ownership.md).
 
 The [Canic build and metadata targets](../../qualification/canic/README.md#current-build-and-metadata)
 now exercise the captured CLI directly. Real Wasm publication and 17 pre-build

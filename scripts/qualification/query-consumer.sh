@@ -14,14 +14,14 @@ git -C "$scratch/source" apply --check "$repo/qualification/query/text.patch"
 git -C "$scratch/source" apply "$repo/qualification/query/text.patch"
 export CARGO_TARGET_DIR="$repo/target/query-consumer-build"
 CDPATH='' cd -- "$scratch/source"
-cargo metadata --format-version 1 --locked --offline > "$scratch/metadata.json"
+cargo metadata --format-version 1 --locked > "$scratch/metadata.json"
 jq -e --arg root "$repo" '
   [.packages[] | select(.name == "ic-host-text")] as $text |
   ($text | length == 1) and $text[0].version == "0.77.2" and
   $text[0].manifest_path == ($root + "/crates/ic-host-text/Cargo.toml")
 ' "$scratch/metadata.json" >/dev/null
-cargo test -p ic-query-cli --bin icq --locked --offline -- --list > "$scratch/tests.txt"
+cargo test -p ic-query-cli --bin icq --locked -- --list > "$scratch/tests.txt"
 for scope in presentation topology; do
   rg -q "^$scope::tests::.*: test$" "$scratch/tests.txt"
-  cargo test -p ic-query-cli --bin icq --locked --offline "$scope::tests::"
+  cargo test -p ic-query-cli --bin icq --locked "$scope::tests::"
 done

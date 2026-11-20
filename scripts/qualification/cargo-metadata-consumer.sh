@@ -25,7 +25,7 @@ for owner in toko-tooling ic-scheduling; do
 done
 scratch="$run_root"
 shasum -a 256 "$CARGO_RELEASE_METADATA_EDITOR" > "$scratch/editor.sha256"
-export CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
+export RUSTUP_AUTO_INSTALL=0
 export TMPDIR="$scratch/runtime"
 mkdir "$TMPDIR"
 shared="$scratch/toko-tooling/source/scripts/ci"

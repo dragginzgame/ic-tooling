@@ -19,6 +19,6 @@ prepare_signer_fixture() {
 test_signer_fixture() {
   local source="$1" evidence="$2" scope
   for scope in signer_process_tests:: signer_capture_tests::; do
-    CANIC_SIGNER_EVIDENCE="$evidence" cargo test --manifest-path "$source/Cargo.toml" -p canic-host --lib --locked --offline "$scope" || return
+    CANIC_SIGNER_EVIDENCE="$evidence" cargo test --manifest-path "$source/Cargo.toml" -p canic-host --lib --locked "$scope" || return
   done
 }

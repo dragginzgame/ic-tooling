@@ -52,7 +52,7 @@
         "ic-host-text"
       ],
       "changelog": "releases/text/CHANGELOG.md",
-      "dependencies": []
+      "dependencies": ["ic-host-text"]
     },
     {
       "name": "tools",

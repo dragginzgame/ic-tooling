@@ -17,10 +17,9 @@ git -C "$scratch/source" apply --check "$repo/qualification/backup/migration.pat
 git -C "$scratch/source" apply "$repo/qualification/backup/migration.patch"
 export TMPDIR="$scratch/runtime"
 export CARGO_TARGET_DIR="$repo/target/backup-consumer-build"
-export CARGO_NET_OFFLINE=true
 export RUSTUP_AUTO_INSTALL=0
 CDPATH='' cd -- "$scratch/source"
-cargo metadata --format-version 1 --locked --offline > "$scratch/metadata.json"
+cargo metadata --format-version 1 --locked > "$scratch/metadata.json"
 jq -e --arg root "$repo" '
   . as $metadata |
   [.packages[] | select(.name == "ic-host-fs")] as $fs |
@@ -34,7 +33,7 @@ jq -e --arg root "$repo" '
         (.pkg as $supplier | any($metadata.packages[]; .id == $supplier and
           .name == "ic-host-artifacts" and .version == "0.80.1"))))))
 ' "$scratch/metadata.json" >/dev/null
-cargo test -p ic-backup --lib --locked --offline -- --list > "$scratch/tests.txt"
+cargo test -p ic-backup --lib --locked -- --list > "$scratch/tests.txt"
 if [[ "$scope" == http ]]; then
   jq -e --arg root "$repo" '
     [.packages[] | select(.name == "ic-host-http")] as $http |
@@ -57,11 +56,11 @@ if [[ "$scope" == http ]]; then
     https_sends_tls_and_refuses_a_plaintext_peer_without_http_fallback; do
     contract="store::capture::advance::tests::http_tests::$name"
     rg -Fxq "$contract: test" "$scratch/tests.txt"
-    cargo test -p ic-backup --lib "$contract" --locked --offline -- --exact
+    cargo test -p ic-backup --lib "$contract" --locked -- --exact
   done
   exit 0
 fi
-cargo test -p ic-backup --lib store::tests --locked --offline
+cargo test -p ic-backup --lib store::tests --locked
 # Metadata fixtures require local loopback; no live IC endpoint is used.
 # Each of these exercises the migrated held-file update or closing admission path.
 for contract in \
@@ -77,5 +76,5 @@ for contract in \
   store::capture::advance::tests::http_tests::metadata_tests::schedule_tests::binding_authenticates_once_and_cold_replay_preserves_bytes_and_spending \
   store::capture::advance::tests::http_tests::metadata_tests::schedule_tests::binding_refuses_conflicting_schedule_and_uncertain_frames_preserve_custody; do
   rg -Fxq "$contract: test" "$scratch/tests.txt"
-  cargo test -p ic-backup --lib "$contract" --locked --offline -- --exact
+  cargo test -p ic-backup --lib "$contract" --locked -- --exact
 done

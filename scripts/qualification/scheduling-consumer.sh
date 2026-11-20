@@ -33,10 +33,10 @@ if [[ "$mode" != admit && "$mode" != admit-replacement ]]; then
   "$server" --version > "$scratch/server-version.txt"
   sha256sum "$server" "$TESTKIT_SERVER_CLI" > "$scratch/server.sha256"
 fi
-export CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
+export RUSTUP_AUTO_INSTALL=0
 export CARGO_TARGET_DIR="$repo/target/scheduling-new-consumer-build"
 manifest="$scratch/source/qualification/Cargo.toml"
-cargo metadata --manifest-path "$manifest" --format-version 1 --locked --offline > "$scratch/metadata.json"
+cargo metadata --manifest-path "$manifest" --format-version 1 --locked > "$scratch/metadata.json"
 jq -e '. as $m |
   [.packages[] | select(.name == "ic-testkit" and .version == "0.107.4" and
     .source == "registry+https://github.com/rust-lang/crates.io-index")] as $suppliers |
@@ -60,7 +60,7 @@ run_installed() {
     driver=executor-driver probe=executor-probe wasm=executor_probe.wasm
   fi
   mkdir -p "$output"
-  cargo tree --manifest-path "$manifest" -p "$driver" -e normal,build --prefix none --locked --offline > "$output/driver-tree.txt"
+  cargo tree --manifest-path "$manifest" -p "$driver" -e normal,build --prefix none --locked > "$output/driver-tree.txt"
   if [[ "$selection" == executor && ( "$mode" == replacement || "$output" == "$scratch/replacement" ) ]]; then
     rg -q '^ic-testkit v0.108.0 ' "$output/driver-tree.txt"
     if rg -q '^(wat|ic-platform|ic-platform-protocol|ic-platform-types) v' "$output/driver-tree.txt"; then
@@ -69,16 +69,16 @@ run_installed() {
   fi
   local wasm_path="$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/$wasm"
   if [[ "$selection" == metrics-cost ]]; then
-    cargo build --manifest-path "$manifest" -p metrics-probe --no-default-features --release --target wasm32-unknown-unknown --locked --offline
+    cargo build --manifest-path "$manifest" -p metrics-probe --no-default-features --release --target wasm32-unknown-unknown --locked
     cp "$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/metrics_probe.wasm" "$output/metrics-off.wasm"
-    cargo build --manifest-path "$manifest" -p metrics-probe --no-default-features --features metrics --release --target wasm32-unknown-unknown --locked --offline
+    cargo build --manifest-path "$manifest" -p metrics-probe --no-default-features --features metrics --release --target wasm32-unknown-unknown --locked
     cp "$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/metrics_probe.wasm" "$output/metrics-on.wasm"
     wasm_path="$output/metrics-off.wasm"
     sha256sum "$output/metrics-off.wasm" "$output/metrics-on.wasm" > "$output/metrics-wasm.sha256"
   else
-    cargo build --manifest-path "$manifest" -p "$probe" --release --target wasm32-unknown-unknown --locked --offline
+    cargo build --manifest-path "$manifest" -p "$probe" --release --target wasm32-unknown-unknown --locked
   fi
-  cargo build --manifest-path "$manifest" -p "$driver" --locked --offline
+  cargo build --manifest-path "$manifest" -p "$driver" --locked
   env -u IC_TESTKIT_POCKET_IC_URL "$TESTKIT_SERVER_CLI" run \
     "$SCHEDULING_SERVER_DIRECTORY" "$output/server" --ttl 300 -- \
     bash "$repo/scripts/qualification/scheduling-held.sh" "$output" "$CARGO_TARGET_DIR/debug/$driver" \
@@ -97,7 +97,7 @@ if [[ "$mode" == replacement || "$mode" == comparison || "$mode" == admit-replac
   sed "s|@IC_TOOLING_NEW@|$repo|g" "$repo/qualification/scheduling/replacement-testkit.patch" > "$scratch/replacement.patch"
   git -C "$scratch/source" apply --check "$scratch/replacement.patch"
   git -C "$scratch/source" apply "$scratch/replacement.patch"
-  cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
+  cargo metadata --manifest-path "$manifest" --format-version 1 > "$scratch/metadata.json"
   jq -e --arg root "$repo" '. as $m |
     [.packages[] | select(.name == "ic-testkit")] as $suppliers |
     ($suppliers | length == 1) and $suppliers[0].version == "0.108.0" and
@@ -124,9 +124,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4676f2fabfff6a9aab9d6cccdf2a5870059e88b21345bc1913818be621dc1f34"
 PROTOCOL
   fi
-  cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- \
+  cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked -- \
     verify-external-lock "$scratch/admitted-Cargo.lock" "$scratch/source/qualification/Cargo.lock" 1048576
-  cargo clippy --manifest-path "$manifest" -p once-driver -p executor-driver --all-targets --locked --offline -- -D warnings
+  cargo clippy --manifest-path "$manifest" -p once-driver -p executor-driver --all-targets --locked -- -D warnings
   if [[ "$mode" == admit-replacement ]]; then exit 0; fi
 fi
 if [[ "$mode" != admit ]]; then
@@ -138,5 +138,5 @@ if [[ "$mode" != admit ]]; then
   exit 0
 fi
 # Check the current published API callers without running the aggregate roster.
-cargo check --manifest-path "$manifest" -p once-driver -p executor-driver --all-targets --locked --offline
+cargo check --manifest-path "$manifest" -p once-driver -p executor-driver --all-targets --locked
 printf 'Scheduling rewrite drivers admitted with published Testkit types and held-reply fixtures; no local-supplier or installed-runtime acceptance claimed.\n'

@@ -10,12 +10,14 @@ in [checkpoint history](../history.md), not a prior release of this group.
 
 ### 🔧 Changed
 
+- Honor caller-selected Cargo network mode across archive and consumer qualification, including CI. Declare the Text release group’s workspace alias. [#17](https://github.com/dragginzgame/ic-tooling/issues/17) and [#18](https://github.com/dragginzgame/ic-tooling/issues/18).
+
 - Use the shared compiler installer for the four CI job selections. [Tooling #15](https://github.com/dragginzgame/ic-tooling/issues/15).
 
 - Exercise current Canic build and metadata commands directly and retain the
   command sequence, error and destination-preservation evidence for each refusal.
 
-- Adopt Toko Tooling 0.45.22 in both workspaces, the installed snapshot and CI.
+- Adopt Toko Tooling 0.45.23 in both workspaces, the installed snapshot and CI.
   Audit inherited and package-local lint settings across both workspaces.
   Apply the Rust return-spacing and Clippy rules and verify the native HTTP boundary.
 

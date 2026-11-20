@@ -17,15 +17,15 @@ git -C "$scratch/source" apply --check "$scratch/migration.patch"
 git -C "$scratch/source" apply "$scratch/migration.patch"
 source "$repo/scripts/qualification/canic-foreground-fixture.sh"
 prepare_foreground_fixture "$scratch/source" "$scratch/evidence"
-export CARGO_TARGET_DIR="$repo/target/canic-consumer-build" CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
+export CARGO_TARGET_DIR="$repo/target/canic-consumer-build" RUSTUP_AUTO_INSTALL=0
 manifest="$scratch/source/Cargo.toml"
-cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
+cargo metadata --manifest-path "$manifest" --format-version 1 > "$scratch/metadata.json"
 jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-profile-client") | .id) as $client |
   (.packages[] | select(.name == "ic-host-process" and .version == "0.80.4" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
   any($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name == "ic_host_process_next" and .pkg == $process) and
   all($m.resolve.nodes[] | select(.id == $client) | .deps[]; .name != "ic_host_process")
 ' "$scratch/metadata.json" >/dev/null
-cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- verify-external-lock "$scratch/original.lock" "$scratch/source/Cargo.lock" 1048576
+cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked -- verify-external-lock "$scratch/original.lock" "$scratch/source/Cargo.lock" 1048576
 test_foreground_fixture "$scratch/source" "$scratch/evidence"
 printf 'Foreground consumer arguments, exact/over limits, reply refusal, no retry and terminal interaction passed.\n'

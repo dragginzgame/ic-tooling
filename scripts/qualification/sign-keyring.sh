@@ -11,6 +11,7 @@ manifest=${SIGNER_TEST_MANIFEST:-$repo/Cargo.toml}
 
 if [[ ${1:-} == --linux-session ]]; then
     evidence=$2
+    test_binary=$4
     [[ "$evidence" == "$repo"/target/sign-keyring.* && -d "$evidence" && ! -L "$evidence" ]] || exit 2
     locked_test=linux::native_locked_keyring_refuses_without_changing_identity
     case $3 in
@@ -63,8 +64,7 @@ if [[ ${1:-} == --linux-session ]]; then
     (ulimit -S -f 8192
      timeout --kill-after=5s 60s strace -f -e trace=socket,connect,execve -o "$evidence/network.trace" \
          bash -c 'ulimit -S -f unlimited; exec "$@"' sign-fixture \
-         cargo test --manifest-path "$manifest" -p ic-host-sign --features provider --test keyring --locked --offline \
-         -- --ignored --test-threads=1 --show-output "${selection[@]}") > "$evidence/test.log" 2>&1
+         "$test_binary" --ignored --test-threads=1 --show-output "${selection[@]}") > "$evidence/test.log" 2>&1
     if [[ $3 == locked ]]; then
         grep -Fxq "test $locked_test ... ok" "$evidence/test.log"
     else
@@ -113,13 +113,17 @@ checkpoint() {
 }
 checkpoint | LC_ALL=C sort > "$evidence/source.sha256"
 git rev-parse HEAD > "$evidence/source-head"
-cargo test --manifest-path "$manifest" -p ic-host-sign --features provider --test keyring --no-run --locked --offline \
-    > "$evidence/build.log" 2>&1
+# Compile before tracing or denying sockets so Cargo can follow caller policy.
+cargo test --manifest-path "$manifest" -p ic-host-sign --features provider --test keyring --no-run --locked \
+    --message-format=json-render-diagnostics > "$evidence/build.jsonl" 2> "$evidence/build.log"
+test_binary=$(jq -ser '[.[] | select(.reason == "compiler-artifact" and .target.name == "keyring"
+    and .target.kind == ["test"] and .profile.test) | .executable] | select(length == 1) | .[0]' "$evidence/build.jsonl")
+[[ "$test_binary" == /* && -x "$test_binary" ]]
 case $(uname -s) in
     Linux)
         # Locking affects the whole collection. Destroy it before starting the other cases.
         for state in locked unlocked; do
-            dbus-run-session -- bash "$repo/scripts/qualification/sign-keyring.sh" --linux-session "$evidence" "$state"
+            dbus-run-session -- bash "$repo/scripts/qualification/sign-keyring.sh" --linux-session "$evidence" "$state" "$test_binary"
         done
         ;;
     Darwin)
@@ -129,8 +133,7 @@ case $(uname -s) in
         }
         SIGNER_TEST_NETWORK_SANDBOX=1 /usr/bin/sandbox-exec \
             -p '(version 1)(allow default)(deny network*)' \
-            cargo test --manifest-path "$manifest" -p ic-host-sign --features provider --test keyring --locked --offline \
-            -- --ignored --test-threads=1 --show-output > "$evidence/test.log" 2>&1
+            "$test_binary" --ignored --test-threads=1 --show-output > "$evidence/test.log" 2>&1
         echo 'Native keychain update/status passed with inherited network denial.'
         ;;
     *) echo 'Only Linux and macOS credential backends are supported' >&2; exit 2 ;;

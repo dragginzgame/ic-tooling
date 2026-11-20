@@ -1,0 +1,10 @@
+[
+  {
+    "file": "Cargo.toml",
+    "rule": "cargo-exact",
+    "subject": "pocket-ic",
+    "value": "=16.1.0",
+    "reason": "Testkit qualifies this client against fixed PocketIC 16.1.0 server assets.",
+    "evidence": "docs/testkit-server.md#pocketic-client-requirement"
+  }
+]

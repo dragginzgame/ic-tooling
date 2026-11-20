@@ -30,12 +30,6 @@ if [[ "$sign" == true ]]; then
   : "${SIGNER_TEST_ICP:?select the absolute prepared ICP 1.7.0 executable}"
   [[ "$SIGNER_TEST_ICP" == /* && -f "$SIGNER_TEST_ICP" && -x "$SIGNER_TEST_ICP" ]] || exit 2
 fi
-network=(--offline)
-case "${LIBRARY_RELEASE_ONLINE:-false}" in
-  true) network=() ;;
-  false) ;;
-  *) echo 'LIBRARY_RELEASE_ONLINE must be true or false' >&2; exit 2 ;;
-esac
 if [[ "$testkit" == true ]]; then
   : "${TESTKIT_SERVER_CLI:?select an absolute prepared ic-testkit-server executable}"
   : "${TESTKIT_SERVER_DIRECTORY:?select an absolute prepared Testkit server directory}"
@@ -69,17 +63,16 @@ printf '%s\n' "$@" > "$scratch/groups.txt"
 if [[ "$testkit" == true ]]; then
   shasum -a 256 "$TESTKIT_SERVER_CLI" "$server" "$TESTKIT_SERVER_ARCHIVE" "$TESTKIT_GZIP" > "$scratch/tools.sha256"
 fi
-if [[ "${LIBRARY_RELEASE_ONLINE:-false}" == true ]]; then cargo fetch --locked > "$scratch/fetch.log" 2>&1; fi
 # Lint before packaging or expensive runtime checks. The extracted src trees are
 # compared below, so this evidence qualifies the exact archived implementation.
-cargo clippy "${selection[@]}" --all-targets "${features[@]}" --locked --offline -- -D warnings > "$scratch/clippy.log" 2>&1
+cargo clippy "${selection[@]}" --all-targets "${features[@]}" --locked -- -D warnings > "$scratch/clippy.log" 2>&1
 if [[ "$testkit" == true ]]; then
-  cargo clippy -p ic-testkit --all-targets --no-default-features --locked --offline -- -D warnings > "$scratch/default-clippy.log" 2>&1
+  cargo clippy -p ic-testkit --all-targets --no-default-features --locked -- -D warnings > "$scratch/default-clippy.log" 2>&1
 fi
-cargo metadata --format-version 1 --no-deps --locked --offline > "$scratch/source-metadata.json"
+cargo metadata --format-version 1 --no-deps --locked > "$scratch/source-metadata.json"
 for package in "${packages[@]}"; do
   version="$(jq -er --arg package "$package" '.packages[] | select(.name == $package) | .version' "$scratch/source-metadata.json")"
-  cargo package -p "$package" --locked --allow-dirty "${network[@]}" --no-verify \
+  cargo package -p "$package" --locked --allow-dirty --no-verify \
     --target-dir "$scratch/packaging" > "$scratch/$package-package.log" 2>&1
   archive="$scratch/packaging/package/$package-$version.crate"
   cp "$archive" "$scratch/archives/"
@@ -99,12 +92,7 @@ done
 cp Cargo.lock "$candidate/Cargo.lock"
 source "$repo/scripts/qualification/archive-compilation.sh"
 prepare_archive_compilation "$repo" "$candidate" "$scratch" library
-cargo metadata --manifest-path "$candidate/Cargo.toml" --format-version 1 "${network[@]}" > "$scratch/candidate-metadata.json"
-# Extracted archives resolve Host dependencies from the registry rather than root
-# workspace paths. Fetch that graph explicitly before the offline feature checks.
-if [[ "${LIBRARY_RELEASE_ONLINE:-false}" == true ]]; then
-  cargo fetch --manifest-path "$candidate/Cargo.toml" --locked > "$scratch/candidate-fetch.log" 2>&1
-fi
+cargo metadata --manifest-path "$candidate/Cargo.toml" --format-version 1 > "$scratch/candidate-metadata.json"
 for package in "${packages[@]}"; do
   # A selected archive and a transitive registry dependency may share a name.
   # Admit the workspace member; preserve registry resolution for its dependencies.
@@ -118,41 +106,41 @@ for package in "${packages[@]}"; do
 done
 if [[ "$testkit" == true ]]; then
   cargo tree --manifest-path "$candidate/Cargo.toml" -p ic-testkit --no-default-features \
-    -e normal,build --prefix none --locked --offline > "$scratch/default-tree.txt"
+    -e normal,build --prefix none --locked > "$scratch/default-tree.txt"
   if grep -Eq '^(clap|ctrlc|ic-host-text|wat|ic-platform|ic-platform-protocol|ic-platform-types) v' "$scratch/default-tree.txt"; then
     echo 'CLI/fixture dependencies entered the default Testkit graph' >&2; exit 1
   fi
   for feature in managed-server held-reply-fixtures; do
     cargo tree --manifest-path "$candidate/Cargo.toml" -p ic-testkit --features "$feature" \
-      -e normal,build --prefix none --locked --offline > "$scratch/$feature-tree.txt"
+      -e normal,build --prefix none --locked > "$scratch/$feature-tree.txt"
     if grep -Eq '^(clap|ctrlc|ic-host-text) v' "$scratch/$feature-tree.txt"; then
       echo "CLI dependencies entered the $feature graph" >&2; exit 1
     fi
   done
   cargo tree --manifest-path "$candidate/Cargo.toml" -p ic-testkit --features cli \
-    -e normal,build --prefix none --locked --offline > "$scratch/cli-tree.txt"
+    -e normal,build --prefix none --locked > "$scratch/cli-tree.txt"
   if grep -Eq '^(wat|ic-platform|ic-platform-protocol|ic-platform-types) v' "$scratch/cli-tree.txt"; then
     echo 'Fixture dependencies entered the CLI graph' >&2; exit 1
   fi
   cargo test --manifest-path "$candidate/Cargo.toml" -p ic-testkit --no-default-features \
-    --locked --offline > "$scratch/default-tests.log" 2>&1
+    --locked > "$scratch/default-tests.log" 2>&1
   RUSTDOCFLAGS='-D warnings' cargo doc --manifest-path "$candidate/Cargo.toml" -p ic-testkit \
-    --no-default-features --no-deps --locked --offline > "$scratch/default-docs.log" 2>&1
+    --no-default-features --no-deps --locked > "$scratch/default-docs.log" 2>&1
 fi
 if [[ "$sign" == true ]]; then
   cargo tree --manifest-path "$candidate/Cargo.toml" -p ic-host-sign --no-default-features \
-    -e normal,build --prefix none --locked --offline > "$scratch/sign-default-tree.txt"
+    -e normal,build --prefix none --locked > "$scratch/sign-default-tree.txt"
   if grep -Eq '^(clap|keyring|secret-service|security-framework|zbus) v' "$scratch/sign-default-tree.txt"; then
     echo 'Credential provider dependencies entered the default Sign library graph' >&2; exit 1
   fi
 fi
 cargo test --manifest-path "$candidate/Cargo.toml" --workspace "${features[@]}" \
-  --locked --offline > "$scratch/tests.log" 2>&1
+  --locked > "$scratch/tests.log" 2>&1
 RUSTDOCFLAGS='-D warnings' cargo doc --manifest-path "$candidate/Cargo.toml" --workspace \
-  "${features[@]}" --no-deps --locked --offline > "$scratch/docs.log" 2>&1
+  "${features[@]}" --no-deps --locked > "$scratch/docs.log" 2>&1
 if [[ "$testkit" == true ]]; then
   cargo install --path "$candidate/crates/ic-testkit" --features cli --debug \
-    --bin ic-testkit-server --locked --offline --root "$scratch/cli-install" \
+    --bin ic-testkit-server --locked --root "$scratch/cli-install" \
     > "$scratch/cli-install.log" 2>&1
   candidate_cli="$scratch/cli-install/bin/ic-testkit-server"
   "$candidate_cli" --version > "$scratch/cli-version.txt"
@@ -165,14 +153,14 @@ if [[ "$testkit" == true ]]; then
     bash "$repo/scripts/qualification/testkit-installed.sh" "$candidate/Cargo.toml" "$scratch" \
     > "$scratch/installed.log" 2>&1
   cargo test --manifest-path "$candidate/Cargo.toml" -p ic-testkit --features cli,held-reply-fixtures \
-    --lib --locked --offline server::tests::installed_ -- --ignored --color never \
+    --lib --locked server::tests::installed_ -- --ignored --color never \
     > "$scratch/managed-installed.log" 2>&1
   grep -Fq 'test result: ok. 2 passed; 0 failed' "$scratch/managed-installed.log"
   shasum -a 256 -c "$scratch/tools.sha256"
 fi
 if [[ "$sign" == true ]]; then
   cargo install --path "$candidate/crates/ic-host-sign" --features provider --debug \
-    --bin ic-sign --locked --offline --root "$scratch/sign-cli-install" > "$scratch/sign-cli-install.log" 2>&1
+    --bin ic-sign --locked --root "$scratch/sign-cli-install" > "$scratch/sign-cli-install.log" 2>&1
   "$scratch/sign-cli-install/bin/ic-sign" --version > "$scratch/sign-cli-version.txt"
   SIGNER_TEST_MANIFEST="$candidate/Cargo.toml" SIGNER_TEST_HELPER="$scratch/sign-cli-install/bin/ic-sign" \
     bash "$repo/scripts/qualification/sign-keyring.sh" > "$scratch/sign-provider.log" 2>&1

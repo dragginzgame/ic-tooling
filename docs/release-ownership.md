@@ -48,7 +48,7 @@ Its verified first-publication receipt is below.
 
 ## Development, CI and delivery entrypoints
 
-The selected Toko 0.45.22 snapshot supplies common setup, formatting and selection
+The selected Toko 0.45.23 snapshot supplies common setup, formatting and selection
 admission. Consumer-owned product checks remain in the Makefile and qualification
 runners. The current command boundaries are:
 
@@ -78,10 +78,20 @@ The local 2026-11-18 hygiene/adoption batch is recorded in the
 [audit report](reports/audits/2026/11/18/code-hygiene-and-tt-adoption/01/report.md).
 Ordinary Makefile Cargo commands keep their lock constraint and may retrieve
 locked dependencies; set `CARGO_NET_OFFLINE=true` for explicit offline execution.
-Prepared archive and source-bound qualification retain their offline contracts.
+Archive runners and sibling qualification scripts inherit Cargo network policy from the caller.
 That audit handoff left product versions unchanged. The 2026-11-18 authorized
 delivery selected patches because the packaged sources and development-tool
 requirements differed from their published archives.
+
+### Toko 0.45.23 qualification delivery
+
+Both workspaces and the six CI cache actions select Toko 0.45.23. The verified
+52-file snapshot changes the shared policy document. Git delivers the Cargo
+network policy and Text release-group catalog fixes for issues #17 and #18.
+The product source and public dependency requirements retain their published
+versions. Linux core and Text archive qualification, disposable signer tests,
+dependency-pin checks and the 13-manifest lint audit passed with the delivery
+lock. Evidence is under `target/toko-04523/`.
 
 ### Toko 0.45.22 Foundation and Text releases
 
@@ -750,7 +760,7 @@ only these groups; either an individual group or a subset is supported. Testkit
 requires absolute `TESTKIT_SERVER_CLI`, `TESTKIT_SERVER_DIRECTORY`,
 `TESTKIT_SERVER_ARCHIVE` and `TESTKIT_GZIP` paths. The runner admits prepared assets
 offline, never downloads tools implicitly, and records hashes before and after use.
-Set `LIBRARY_RELEASE_ONLINE=true` only when preparing uncached dependencies.
+Cargo follows the caller’s environment and configuration when resolving these dependencies.
 
 The gate runs warning-denied Clippy before packaging, compares packaged source
 and licence bytes, then tests the extracted archives and builds warning-denied
@@ -944,8 +954,7 @@ the follow-up selects both repository-required Rust components in explicit setup
 
 The native matrix checks Ubuntu 24.04, macOS 15 Apple
 Silicon and macOS 15 Intel. It prepares Rust 1.100.0, Clippy and the Wasm target;
-`BUILD_RELEASE_ONLINE=true` permits dependency preparation before locked offline
-tests. `BUILD_RELEASE_CONSUMER=none` explicitly excludes the unavailable sibling
+Cargo prepares the locked probe dependencies using the caller’s network policy. `BUILD_RELEASE_CONSUMER=none` explicitly excludes the unavailable sibling
 on hosted runners; the Linux current-consumer evidence is separate. It uploads
 archives, source identity, logs and completion evidence even after failure.
 The first hosted run exposed four Linux-sized mode assumptions in FS creation;

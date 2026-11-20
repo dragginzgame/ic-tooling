@@ -44,7 +44,7 @@ for kind in build library; do
     prepare_archive_compilation "$repo" "$candidate" "$scratch" "$kind"
     status=0
     cargo test --manifest-path "$candidate/Cargo.toml" -p "$package" --lib \
-      "${features[@]}" --locked --offline --message-format=json "$test" \
+      "${features[@]}" --locked --message-format=json "$test" \
       -- --exact --color never > "$scratch/$kind-$phase.log" 2> "$scratch/$kind-$phase.stderr" || status=$?
     if [[ "$phase" == changed ]]; then
       [[ $status == 101 ]]

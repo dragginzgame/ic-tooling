@@ -4,7 +4,7 @@ set -euo pipefail
 repo="$(CDPATH='' cd -- "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 source_checkout="${AUTH_SOURCE:-$repo/../ic-auth}"
 revision=e52a40be75dd9809d0528189d84b43fe96952ad9
-export PATH="$repo/.tools/host/bin:$PATH" CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
+export PATH="$repo/.tools/host/bin:$PATH" RUSTUP_AUTO_INSTALL=0
 mkdir -p "$repo/target"
 scratch="$(mktemp -d "$repo/target/auth-consumer.XXXXXXXX")"
 trap 'printf "Auth qualification export: %s\n" "$scratch"' EXIT
@@ -14,7 +14,7 @@ export GIT_CEILING_DIRECTORIES="$repo/target"
 git -C "$scratch/source" apply --check "$repo/qualification/auth/package-check.patch"
 git -C "$scratch/source" apply "$repo/qualification/auth/package-check.patch"
 git -C "$scratch/source" init -q
-cargo build --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline \
+cargo build --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked \
   --message-format=json > "$scratch/tool.jsonl"
 IC_CARGO_QUALIFICATION="$(jq -ser '
   [.[] | select(.reason == "compiler-artifact" and .target.name == "ic-cargo-qualification") |
@@ -25,7 +25,7 @@ export IC_CARGO_QUALIFICATION TMPDIR="$scratch/runtime"
 CDPATH='' cd -- "$scratch/source"
 bash scripts/ci/test-package-consumer.sh
 CARGO_TARGET_DIR="$scratch/packages" cargo package -p ic-auth -p ic-auth-protocol-types -p ic-auth-wire \
-  --locked --offline --allow-dirty --no-verify
+  --locked --allow-dirty --no-verify
 for name in ic-auth-0.41.1 ic-auth-protocol-types-0.40.1 ic-auth-wire-0.40.1; do
   tar -xzf "$scratch/packages/package/$name.crate" -C "$scratch/consumer"
 done
@@ -67,7 +67,7 @@ archive_inputs() {
   find "$consumer/ic-auth-0.41.1" "$consumer/ic-auth-protocol-types-0.40.1" "$consumer/ic-auth-wire-0.40.1" -type f -print0
 }
 archive_inputs | hash_inputs > "$scratch/archives-before"
-cargo metadata --manifest-path "$consumer/Cargo.toml" --all-features --offline --format-version 1 > "$consumer/metadata.json"
+cargo metadata --manifest-path "$consumer/Cargo.toml" --all-features --format-version 1 > "$consumer/metadata.json"
 bash scripts/ci/check-package-consumer.sh "$PWD/Cargo.lock" "$consumer" 0.41.1 0.40.1
 archive_inputs | hash_inputs > "$scratch/archives-resolved"
 cmp "$scratch/archives-before" "$scratch/archives-resolved"
@@ -80,8 +80,8 @@ snapshot() {
   inputs | hash_inputs
 }
 snapshot > "$scratch/before.sha256"
-cargo check --manifest-path "$consumer/Cargo.toml" --all-features --locked --offline
-cargo check --manifest-path "$consumer/Cargo.toml" --all-features --target wasm32-unknown-unknown --locked --offline
+cargo check --manifest-path "$consumer/Cargo.toml" --all-features --locked
+cargo check --manifest-path "$consumer/Cargo.toml" --all-features --target wasm32-unknown-unknown --locked
 snapshot > "$scratch/after.sha256"
 cmp "$scratch/before.sha256" "$scratch/after.sha256"
 printf 'Exact Auth archives passed native/Wasm all-feature admission without input changes\n'

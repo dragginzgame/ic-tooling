@@ -18,14 +18,14 @@ mkdir "$scratch/source"
 source "$repo/scripts/qualification/local-source.sh"
 export_local_source
 manifest="$scratch/source/Cargo.toml"
-export CARGO_TARGET_DIR="$repo/target/backup-consumer-build" CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
+export CARGO_TARGET_DIR="$repo/target/backup-consumer-build" RUSTUP_AUTO_INSTALL=0
 cp "$scratch/source/Cargo.lock" "$scratch/original.lock"
 run_checks() {
   if [[ "$scope" == all ]]; then
-    cargo test --manifest-path "$manifest" -p ic-backup --lib --locked --offline store::restore::tests || return
+    cargo test --manifest-path "$manifest" -p ic-backup --lib --locked store::restore::tests || return
   fi
   for selection in "${assembly_tests[@]}"; do
-    cargo test --manifest-path "$manifest" -p ic-backup --lib --locked --offline \
+    cargo test --manifest-path "$manifest" -p ic-backup --lib --locked \
       "store::capture::ledger::recording::runtime::tests::$selection" -- --exact || return
   done
 }
@@ -46,14 +46,14 @@ if [[ "$scope" == assembly ]]; then
 fi
 git -C "$scratch/source" apply --check "${patch_options[@]}" "$scratch/migration.patch"
 git -C "$scratch/source" apply "${patch_options[@]}" "$scratch/migration.patch"
-cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
+cargo metadata --manifest-path "$manifest" --format-version 1 > "$scratch/metadata.json"
 jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "ic-backup") | .id) as $consumer |
   (.packages[] | select(.name == "ic-host-artifacts" and .version == "0.80.1" and .source == null and .manifest_path == ($root + "/crates/ic-host-artifacts/Cargo.toml")) | .id) as $bytes |
   any($m.resolve.nodes[] | select(.id == $consumer) | .deps[]; .name == "ic_byte_admission" and .pkg == $bytes)
 ' "$scratch/metadata.json" >/dev/null
-cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- verify-external-lock "$scratch/original.lock" "$scratch/source/Cargo.lock" 1048576
-cargo clippy --manifest-path "$manifest" -p ic-backup --all-targets --locked --offline -- -D warnings
+cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked -- verify-external-lock "$scratch/original.lock" "$scratch/source/Cargo.lock" 1048576
+cargo clippy --manifest-path "$manifest" -p ic-backup --all-targets --locked -- -D warnings
 run_checks > "$scratch/replacement.log" 2>&1
 for branch in baseline replacement; do
   if rg -q '^test result: ok\. 0 passed' "$scratch/$branch.log"; then

@@ -12,7 +12,7 @@ for test in \
   held::control::tests::clock::installed_clock_progression_preserves_live_replies_and_original_expiry; do
   log="$scratch/${test##*::}.log"
   cargo test --manifest-path "$manifest" -p ic-testkit --features held-reply-fixtures \
-    --lib --locked --offline "$test" -- --ignored --exact --color never > "$log" 2>&1
+    --lib --locked "$test" -- --ignored --exact --color never > "$log" 2>&1
   grep -Fq 'test result: ok. 1 passed; 0 failed' "$log"
 done
 curl --fail --silent --show-error "$endpoint/instances" > "$scratch/instances-after.json"

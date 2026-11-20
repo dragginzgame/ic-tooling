@@ -32,13 +32,13 @@ jobs:
         run: |
           printf 'CI_SETUP_ROOT=%s\nTOKO_TOOLING_STORE=%s\n' "$CI_SETUP_ROOT" "$TOKO_TOOLING_STORE" >> "$GITHUB_ENV"
           perl scripts/ci/setup-diagnostics.pl compiler timeout --kill-after=10s 150s bash vendor/toko-tooling/scripts/dev/prepare-rust-toolchain.sh --toolchain-file rust-toolchain.toml
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@3012643f1345ea2e67f31822fda09d4724391b58 # 0.45.22
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@6009b5584039807c1748a9262946edf8f8dcac11 # 0.45.23
         timeout-minutes: 1
       - name: Prepare common tools
         id: tools
         timeout-minutes: 5
         run: perl scripts/ci/setup-diagnostics.pl tools timeout --kill-after=10s 270s make install-tools
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@3012643f1345ea2e67f31822fda09d4724391b58 # 0.45.22
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@6009b5584039807c1748a9262946edf8f8dcac11 # 0.45.23
         timeout-minutes: 1
         with:
           mode: save
@@ -85,7 +85,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@3012643f1345ea2e67f31822fda09d4724391b58 # 0.45.22
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@6009b5584039807c1748a9262946edf8f8dcac11 # 0.45.23
         timeout-minutes: 1
       - name: Prepare pinned secret scanner
         id: scanner
@@ -96,7 +96,7 @@ jobs:
           perl scripts/ci/setup-diagnostics.pl scanner timeout --kill-after=10s 90s \
             bash vendor/toko-tooling/scripts/ci/install-ci-tool.sh gitleaks --install-dir "$CI_SETUP_ROOT/tools/scanner"
           echo "GITLEAKS_BIN=$CI_SETUP_ROOT/tools/scanner/gitleaks" >> "$GITHUB_ENV"
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@3012643f1345ea2e67f31822fda09d4724391b58 # 0.45.22
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@6009b5584039807c1748a9262946edf8f8dcac11 # 0.45.23
         timeout-minutes: 1
         with:
           mode: save
@@ -142,7 +142,7 @@ jobs:
       - name: Prepare pinned Rust components
         timeout-minutes: 3
         run: bash vendor/toko-tooling/scripts/dev/prepare-rust-toolchain.sh --toolchain-file rust-toolchain.toml
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@3012643f1345ea2e67f31822fda09d4724391b58 # 0.45.22
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@6009b5584039807c1748a9262946edf8f8dcac11 # 0.45.23
         timeout-minutes: 1
         with:
           extra-key: testkit-managed-server-pocketic-16.1.0
@@ -151,7 +151,7 @@ jobs:
         shell: bash
         run: |
           cargo fetch --locked
-          cargo clippy -p ic-testkit --features cli --bin ic-testkit-server --locked --offline -- -D warnings
+          cargo clippy -p ic-testkit --features cli --bin ic-testkit-server --locked -- -D warnings
           make prepare-testkit-server-cli
           export TESTKIT_SERVER_CLI="$GITHUB_WORKSPACE/target/debug/ic-testkit-server"
           make test-pocketic-setup
@@ -163,7 +163,7 @@ jobs:
           test -f "$archive" && test ! -L "$archive"
           echo "TESTKIT_SERVER_ARCHIVE=$archive" >> "$GITHUB_ENV"
           echo "TESTKIT_GZIP=/usr/bin/gzip" >> "$GITHUB_ENV"
-      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@3012643f1345ea2e67f31822fda09d4724391b58 # 0.45.22
+      - uses: dragginzgame/toko-tooling/.github/actions/cache-tool-downloads@6009b5584039807c1748a9262946edf8f8dcac11 # 0.45.23
         timeout-minutes: 1
         with:
           mode: save
@@ -175,8 +175,6 @@ jobs:
       - name: Qualify packaged HTTP, Text, Testkit and metadata editor
         timeout-minutes: 12
         id: library-qualification
-        env:
-          LIBRARY_RELEASE_ONLINE: 'true'
         run: bash scripts/qualification/library-release-candidate.sh http text testkit cargo-metadata
       - name: Retain library archives and evidence
         timeout-minutes: 2
@@ -319,7 +317,6 @@ jobs:
       - name: Qualify the four packaged crates
         timeout-minutes: 8
         env:
-          BUILD_RELEASE_ONLINE: 'true'
           BUILD_RELEASE_CONSUMER: none
         run: bash scripts/qualification/build-release-candidate.sh
       - name: Prepare signer dependencies

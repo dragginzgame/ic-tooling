@@ -16,15 +16,15 @@ git -C "$scratch/source" apply --check "$scratch/migration.patch"
 git -C "$scratch/source" apply "$scratch/migration.patch"
 source "$repo/scripts/qualification/canic-signer-fixture.sh"
 prepare_signer_fixture "$scratch/source" "$scratch/evidence"
-export CARGO_TARGET_DIR="$repo/target/canic-consumer-build" CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
+export CARGO_TARGET_DIR="$repo/target/canic-consumer-build" RUSTUP_AUTO_INSTALL=0
 manifest="$scratch/source/Cargo.toml"
-cargo metadata --manifest-path "$manifest" --format-version 1 --offline > "$scratch/metadata.json"
+cargo metadata --manifest-path "$manifest" --format-version 1 > "$scratch/metadata.json"
 jq -e --arg root "$repo" '. as $m |
   (.packages[] | select(.name == "canic-host") | .id) as $host |
   (.packages[] | select(.name == "ic-host-process" and .version == "0.80.4" and .manifest_path == ($root + "/crates/ic-host-process/Cargo.toml")) | .id) as $process |
   any($m.resolve.nodes[] | select(.id == $host) | .deps[]; .name == "ic_host_process_next" and .pkg == $process)
 ' "$scratch/metadata.json" >/dev/null
-cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked --offline -- verify-external-lock "$scratch/original.lock" "$scratch/source/Cargo.lock" 1048576
-cargo clippy --manifest-path "$manifest" -p canic-host --all-targets --locked --offline -- -D warnings
+cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked -- verify-external-lock "$scratch/original.lock" "$scratch/source/Cargo.lock" 1048576
+cargo clippy --manifest-path "$manifest" -p canic-host --all-targets --locked -- -D warnings
 test_signer_fixture "$scratch/source" "$scratch/evidence"
 printf 'Signer version/principal admission, bounded group capture and no-retry fixtures passed.\n'
