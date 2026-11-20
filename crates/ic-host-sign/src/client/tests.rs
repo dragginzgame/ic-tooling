@@ -1,6 +1,11 @@
 use std::{
     fs,
     os::unix::fs::PermissionsExt,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    task::Wake,
     time::{Duration, Instant},
 };
 
@@ -140,23 +145,26 @@ async fn signer_drop_joins_original_worker() {
     assert!(original.completion.lock().unwrap().result.is_some());
 }
 
+///
+/// Notified
+/// Records whether the signing future's waker was called.
+///
+
+struct Notified(AtomicBool);
+
+impl Wake for Notified {
+    fn wake(self: Arc<Self>) {
+        self.0.store(true, Ordering::Release);
+    }
+}
+
 #[tokio::test]
 async fn completed_signed_bytes_survive_observer_drop_without_resigning() {
     use std::{
         future::Future,
-        sync::{
-            Arc,
-            atomic::{AtomicBool, Ordering},
-        },
-        task::{Context, Wake, Waker},
+        task::{Context, Waker},
     };
 
-    struct Notified(AtomicBool);
-    impl Wake for Notified {
-        fn wake(self: Arc<Self>) {
-            self.0.store(true, Ordering::Release);
-        }
-    }
     let (directory, initial, _) =
         fixture("cat >/dev/null\nprintf x >> \"$0.count\"\ncat \"$0.response\"");
     let identity = disposable_identity();

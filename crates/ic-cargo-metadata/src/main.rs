@@ -12,6 +12,11 @@ use std::{
     process::ExitCode,
 };
 
+///
+/// Error
+/// Reports command input, parsing and rendering failures.
+///
+
 #[derive(Debug, thiserror::Error)]
 enum Error {
     #[error("{0}")]
@@ -33,6 +38,11 @@ enum Error {
 }
 type Result<T> = std::result::Result<T, Error>;
 
+///
+/// Arguments
+/// Selects the metadata operation and its input byte ceiling.
+///
+
 #[derive(Parser)]
 #[command(version, about = "Render bounded Cargo release candidates to stdout")]
 struct Arguments {
@@ -42,12 +52,24 @@ struct Arguments {
     #[command(subcommand)]
     operation: Operation,
 }
+
+///
+/// Selection
+/// Identifies the input file and the previous and next versions.
+///
+
 #[derive(clap::Args)]
 struct Selection {
     source: PathBuf,
     previous: String,
     next: String,
 }
+
+///
+/// Operation
+/// Selects the Cargo release document to render.
+///
+
 #[derive(Subcommand)]
 enum Operation {
     /// Render the exact manifest fields selected by Toko's group plan.

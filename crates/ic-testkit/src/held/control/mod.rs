@@ -26,7 +26,11 @@ use super::{Catalog, CompileError};
 
 static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
 
+///
+/// ControlError
 /// Local admission failure, distinct from an upstream panic or cancelled dispatch.
+///
+
 #[derive(Debug, thiserror::Error)]
 pub enum ControlError {
     /// The supplied client selects a different server or instance.
@@ -64,6 +68,11 @@ pub enum ControlError {
     Allocation(#[from] TryReserveError),
 }
 
+///
+/// Binding
+/// Ties held-reply operations to one server, instance and method prefix.
+///
+
 #[derive(Debug)]
 struct Binding {
     server: String,
@@ -71,10 +80,14 @@ struct Binding {
     prefix: String,
 }
 
+///
+/// Request
 /// Opaque observation of one pending request. Only its catalog slot is public.
 ///
 /// A token grants no independent release authority; its originating controller
 /// must verify it again against the simulator before dispatch.
+///
+
 #[derive(Debug)]
 pub struct Request {
     binding: Arc<Binding>,
@@ -90,6 +103,8 @@ impl Request {
     }
 }
 
+///
+/// Fixture
 /// A generated module and its exclusive, non-cloneable release authority.
 ///
 /// The caller installs these bytes once into the bound target and owns funding,
@@ -98,6 +113,8 @@ impl Request {
 /// clients/controllers; exclude automatic progress and raw clock changes. Use
 /// [`Self::advance_time`] for clock transitions while replies are held.
 /// Dropping this value performs no remote cleanup.
+///
+
 #[derive(Debug)]
 pub struct Fixture {
     binding: Arc<Binding>,

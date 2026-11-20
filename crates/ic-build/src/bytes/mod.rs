@@ -12,14 +12,25 @@ use ic_host_artifacts::{Error, Length};
 
 use crate::Failure;
 
+///
+/// Cancelled
+/// Marks a byte read interrupted by build cancellation.
+///
+
 #[derive(Debug, thiserror::Error)]
 #[error("build capture cancelled")]
 struct Cancelled;
+
+///
+/// Reader
+/// Checks the build cancellation flag before each read.
+///
 
 struct Reader<'a, R> {
     inner: R,
     cancelled: &'a AtomicBool,
 }
+
 impl<R: Read> Read for Reader<'_, R> {
     fn read(&mut self, output: &mut [u8]) -> io::Result<usize> {
         if self.cancelled.load(Ordering::Relaxed) {

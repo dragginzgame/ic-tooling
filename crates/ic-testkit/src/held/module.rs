@@ -7,7 +7,11 @@ use ic_platform_types::Principal;
 
 use super::Catalog;
 
+///
+/// CompileError
 /// Refusal while generating an admitted catalog's module.
+///
+
 #[derive(Debug, thiserror::Error)]
 pub enum CompileError {
     /// The generated artifact exceeds the selected byte cap.
@@ -151,6 +155,11 @@ impl Catalog {
         Ok(wasm)
     }
 }
+
+///
+/// Layout
+/// Assigns bounded offsets to data segments in the generated Wasm module.
+///
 
 struct Layout {
     end: usize,

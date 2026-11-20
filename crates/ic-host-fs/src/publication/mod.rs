@@ -14,7 +14,11 @@ use thiserror::Error;
 
 use crate::{Access, Directory, Error, FileId, FilePolicy, directory::name};
 
+///
+/// Destination
 /// Destination effect selected before staging.
+///
+
 #[derive(Clone, Copy, Debug)]
 pub enum Destination {
     /// Atomically refuse an occupied destination.
@@ -22,7 +26,12 @@ pub enum Destination {
     /// Replace its final entry without following a symlink.
     Replace,
 }
+
+///
+/// Retention
 /// What happens to an owned staging entry when work is abandoned or fails.
+///
+
 #[derive(Clone, Copy, Debug)]
 pub enum Retention {
     /// Remove only the still-original stage; Drop is fallback.
@@ -30,7 +39,12 @@ pub enum Retention {
     /// Leave partial work for application-owned recovery.
     Retain,
 }
+
+///
+/// Policy
 /// Explicit publication authority and failure retention.
+///
+
 #[derive(Clone, Copy, Debug)]
 pub struct Policy {
     /// Create-only or replace destination effect.
@@ -40,7 +54,12 @@ pub struct Policy {
     /// Failure/abandonment retention policy.
     pub retention: Retention,
 }
+
+///
+/// Receipt
 /// Successful visibility/content evidence; later mutations are not fenced.
+///
+
 #[derive(Debug)]
 pub struct Receipt {
     /// Held parent identity at publication.
@@ -50,7 +69,12 @@ pub struct Receipt {
     /// Exact admitted content identity.
     pub content: Identity,
 }
+
+///
+/// Phase
 /// Phase whose completion is unconfirmed after visibility.
+///
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum Phase {
     /// Stage link removal refused after create-only publication.
@@ -58,7 +82,12 @@ pub enum Phase {
     /// Parent synchronization refused after publication.
     DirectorySync,
 }
+
+///
+/// AttemptFailure
 /// Write/seal failure preserves its original cause and any explicit cleanup refusal.
+///
+
 #[derive(Debug, Error)]
 #[error("{cause}")]
 pub struct AttemptFailure {
@@ -70,8 +99,13 @@ pub struct AttemptFailure {
     /// Name requiring reconciliation, not proof it still names our file.
     pub recovery: Option<OsString>,
 }
+
+///
+/// Commit
 /// Publication outcome. NotPublished retains the sealed attempt for explicit abort
 /// or a caller-directed retry; PublishedUnconfirmed never offers retry authority.
+///
+
 #[derive(Debug)]
 pub enum Commit {
     /// Publication and required parent sync completed.
@@ -96,6 +130,11 @@ pub enum Commit {
     },
 }
 
+///
+/// Attempt
+/// Retains the directory, names and policy for a publication attempt.
+///
+
 #[derive(Debug)]
 struct Attempt {
     directory: Directory,
@@ -105,18 +144,33 @@ struct Attempt {
     policy: Policy,
     active: bool,
 }
+
+///
+/// Stage
 /// Newly created writable attempt. Writing consumes it, including on failure.
+///
+
 #[derive(Debug)]
 #[must_use = "finish or explicitly abort the publication attempt"]
 pub struct Stage(Attempt);
+
+///
+/// Written
 /// Complete admitted bytes, not yet synced or publishable.
+///
+
 #[derive(Debug)]
 #[must_use = "finish or explicitly abort the publication attempt"]
 pub struct Written {
     attempt: Attempt,
     content: Identity,
 }
+
+///
+/// Sealed
 /// Synced complete bytes, with only commit or abort authority.
+///
+
 #[derive(Debug)]
 #[must_use = "finish or explicitly abort the publication attempt"]
 pub struct Sealed {
@@ -231,6 +285,7 @@ impl Directory {
         Ok(Stage(attempt))
     }
 }
+
 impl Stage {
     /// Admit exactly one complete stream. Failure consumes the attempt and handles
     /// its selected retention; a partial write cannot later be sealed.
@@ -257,6 +312,7 @@ impl Stage {
         self.0.abort()
     }
 }
+
 impl Written {
     /// Sync admitted bytes before granting publication authority.
     /// # Errors
@@ -290,6 +346,7 @@ impl Written {
         self.attempt.abort()
     }
 }
+
 impl Sealed {
     /// Publish once with the originally selected authority, then sync the parent.
     /// All failures are represented in the returned phase-specific outcome.
@@ -375,6 +432,7 @@ impl Sealed {
         self.attempt.abort()
     }
 }
+
 impl Attempt {
     fn check(&self) -> Result<(), Error> {
         self.directory.check_file(&self.staging, &self.file)
@@ -414,6 +472,7 @@ impl Attempt {
         }
     }
 }
+
 impl Drop for Attempt {
     fn drop(&mut self) {
         if self.active && matches!(self.policy.retention, Retention::Discard) {

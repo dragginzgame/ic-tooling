@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-process"
-version = "0.81.3"
+version = "0.81.4"
 description = "Owned native process execution with bounded communication and reaping"
 edition.workspace = true
 rust-version.workspace = true

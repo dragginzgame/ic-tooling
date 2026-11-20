@@ -26,7 +26,11 @@ use crate::{
     protocol::{self, Configuration, Operation, Request, Response, Signed, WireRequest},
 };
 
+///
+/// State
 /// Observable local custody state; it never implies a signing retry is authorized.
+///
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum State {
     /// No worker is owned; an explicit invocation can be admitted.
@@ -41,19 +45,38 @@ pub enum State {
     Uncertain,
 }
 
+///
+/// Completion
+/// Retains the worker result and its waiting observer.
+///
+
 struct Completion {
     result: Option<Result<Signed, Error>>,
     waker: Option<Waker>,
 }
+
+///
+/// Job
+/// Shares cancellation and completion state with the signing worker.
+///
+
 struct Job {
     cancelled: AtomicBool,
     completion: Mutex<Completion>,
 }
+
+///
+/// Active
+/// Holds the worker handle until the signing job is settled.
+///
+
 struct Active {
     shared: Arc<Job>,
     worker: JoinHandle<()>,
 }
 
+///
+/// Signer
 /// Selected offline keyring signer. Not cloneable or reconstructible over live work.
 ///
 /// Its approved binary and public configuration are committed by SHA-256. Treat
@@ -63,6 +86,8 @@ struct Active {
 /// and cleanup. Another invocation refuses until settlement. Dropping this owner
 /// cancels and joins its worker, which may block in the existing native cleanup
 /// contract; no detached signing worker or background reaper is introduced.
+///
+
 pub struct Signer {
     executable: PathBuf,
     tool: [u8; 32],
@@ -255,10 +280,16 @@ impl Drop for Signer {
     }
 }
 
+///
+/// CancelOnDrop
+/// Requests cancellation when the signing future is dropped.
+///
+
 struct CancelOnDrop {
     shared: Arc<Job>,
     armed: bool,
 }
+
 impl Drop for CancelOnDrop {
     fn drop(&mut self) {
         if self.armed {

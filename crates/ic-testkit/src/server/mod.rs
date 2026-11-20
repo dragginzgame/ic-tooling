@@ -26,7 +26,11 @@ use std::{
 use ic_host_process::{Input, Ownership, Policy, Report, Stderr, Stream};
 use pocket_ic::{PocketIcBuilder, nonblocking::PocketIc};
 
+///
+/// Error
 /// Failure before an admitted asset/server or an explicit lifecycle refusal.
+///
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Original native IO failure.
@@ -78,7 +82,11 @@ pub enum Error {
     WorkerPanic,
 }
 
+///
+/// Output
 /// Retained bytes; Debug deliberately reports lengths rather than terminal data.
+///
+
 #[derive(Default)]
 pub struct Output {
     /// Raw bounded stdout, not safe to print without escaping.
@@ -86,6 +94,7 @@ pub struct Output {
     /// Raw bounded stderr, not safe to print without escaping.
     pub stderr: Vec<u8>,
 }
+
 impl std::fmt::Debug for Output {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Output")
@@ -95,8 +104,12 @@ impl std::fmt::Debug for Output {
     }
 }
 
+///
+/// Stopped
 /// Joined execution evidence. Explicit stop normally records `Failure::Cancelled`;
 /// do not discard unexpected failure, original status or cleanup errors.
+///
+
 #[derive(Debug)]
 pub struct Stopped {
     /// Original execution, signalling and reaping evidence.
@@ -108,7 +121,11 @@ pub struct Stopped {
     pub abandoned: usize,
 }
 
+///
+/// Limits
 /// Explicit process and startup limits; there are no implicit lifetime defaults.
+///
+
 #[derive(Clone, Copy, Debug)]
 pub struct Limits {
     /// Readiness deadline, including waiting for the owned port file/listener.
@@ -121,6 +138,11 @@ pub struct Limits {
     pub stderr_bytes: usize,
 }
 
+///
+/// Running
+/// Keeps the process task, cancellation state and prepared server alive.
+///
+
 struct Running {
     task: Option<JoinHandle<Stopped>>,
     cancelled: Arc<AtomicBool>,
@@ -129,6 +151,7 @@ struct Running {
     _scratch: tempfile::TempDir,
     _prepared: PreparedServer,
 }
+
 impl Running {
     fn finished(&self) -> bool {
         self.task.as_ref().is_none_or(JoinHandle::is_finished)
@@ -147,6 +170,7 @@ impl Running {
         Ok(stopped)
     }
 }
+
 impl Drop for Running {
     fn drop(&mut self) {
         if self.task.is_some() {
@@ -155,6 +179,8 @@ impl Drop for Running {
     }
 }
 
+///
+/// Server
 /// One explicit server owner. Live instances retain its process dependency.
 /// Dropping the last owner cancels/joins as fallback; prefer explicit stop evidence.
 ///
@@ -200,10 +226,13 @@ impl Drop for Running {
 ///     Ok(())
 /// }
 /// ```
+///
+
 pub struct Server {
     running: Option<Arc<Running>>,
     endpoint: String,
 }
+
 impl Server {
     /// Reverify prepared bytes and start one loopback server without network setup.
     /// This synchronous operation must not run on a latency-sensitive async worker.
@@ -383,13 +412,22 @@ impl Server {
     }
 }
 
+///
+/// Instance
 /// One original upstream instance retaining its server's lifetime.
+///
+
 pub struct Instance {
     client: Option<PocketIc>,
     running: Arc<Running>,
     attempted: bool,
 }
+
+///
+/// Deletion
 /// Deletion attempt evidence, never an independent observation of remote deletion.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Deletion {
     /// Upstream deletion future completed; upstream may log rather than return errors.
@@ -397,6 +435,7 @@ pub enum Deletion {
     /// Deadline expired; deletion effects remain uncertain.
     TimedOut,
 }
+
 impl Instance {
     /// Borrow the unchanged PocketIC client.
     /// # Panics
@@ -434,6 +473,7 @@ impl Instance {
         }
     }
 }
+
 impl Drop for Instance {
     fn drop(&mut self) {
         if !self.attempted {

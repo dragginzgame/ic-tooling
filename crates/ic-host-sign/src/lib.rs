@@ -8,7 +8,11 @@ pub mod protocol;
 
 pub use client::{Signer, State};
 
+///
+/// Error
 /// Local admission/execution failure. No provider stderr or key data is exposed.
+///
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// The supplied tool, identity profile or original approval differs.

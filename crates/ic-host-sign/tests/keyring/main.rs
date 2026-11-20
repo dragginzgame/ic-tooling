@@ -25,6 +25,11 @@ use ic_host_sign::{
 
 use zeroize::Zeroizing;
 
+///
+/// Disposable
+/// Holds the temporary signer configuration, executable and test credential.
+///
+
 struct Disposable {
     credential: Credential,
     directory: tempfile::TempDir,

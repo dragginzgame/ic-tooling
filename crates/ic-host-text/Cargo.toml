@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-text"
-version = "0.77.5"
+version = "0.77.6"
 description = "Terminal-safe escaping, text tables and compact byte sizes"
 edition.workspace = true
 rust-version.workspace = true

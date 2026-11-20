@@ -1,7 +1,7 @@
 # IC Tooling code hygiene overlay
 
-Use the shared [code-hygiene method](https://github.com/dragginzgame/toko-tooling/blob/6009b5584039807c1748a9262946edf8f8dcac11/audits/code-hygiene.md)
-and its [common evidence contract](https://github.com/dragginzgame/toko-tooling/blob/6009b5584039807c1748a9262946edf8f8dcac11/audits/README.md).
+Use the shared [code-hygiene method](https://github.com/dragginzgame/toko-tooling/blob/b95958a0710fd9aea5952d2654f67710dc5b1c6d/audits/code-hygiene.md)
+and its [common evidence contract](https://github.com/dragginzgame/toko-tooling/blob/b95958a0710fd9aea5952d2654f67710dc5b1c6d/audits/README.md).
 The installed snapshot and selected package identify the applicable baseline;
 record a fixed method revision in each report when the selection changes.
 

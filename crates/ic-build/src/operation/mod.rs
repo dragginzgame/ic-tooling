@@ -16,7 +16,11 @@ use thiserror::Error;
 
 use crate::{bytes, custody::Target, process, protocol::Decoder};
 
+///
+/// Limits
 /// Explicit communication and capture ceilings. No hidden unlimited mode exists.
+///
+
 #[derive(Debug, Clone)]
 pub struct Limits {
     /// Maximum total Cargo stdout bytes before termination.
@@ -33,7 +37,11 @@ pub struct Limits {
     pub elapsed: Duration,
 }
 
-/// One explicit offline Wasm library build. All paths must be absolute.
+///
+/// BuildRequest
+/// One locked Wasm library build. All paths must be absolute.
+///
+
 #[derive(Debug)]
 pub struct BuildRequest {
     /// Selected Cargo manifest; source stability is caller-owned.
@@ -58,12 +66,17 @@ pub struct BuildRequest {
     pub default_features: bool,
     /// Entire child environment, after clearing inherited values. RUSTC and
     /// CARGO_TARGET_DIR are operation-owned; wrapper overrides are refused.
+    /// Supply CARGO_NET_OFFLINE here to select Cargo network mode explicitly.
     pub environment: Vec<(OsString, OsString)>,
     /// Communication, decoding and artifact bounds.
     pub limits: Limits,
 }
 
+///
+/// Artifact
 /// Completed artifact bytes independent of the mutable Cargo output directory.
+///
+
 #[derive(Debug)]
 pub struct Artifact {
     bytes: Vec<u8>,
@@ -84,7 +97,11 @@ impl Artifact {
     }
 }
 
+///
+/// Failure
 /// Primary refusal of an operation; original I/O and JSON causes remain typed.
+///
+
 #[derive(Debug, Error)]
 pub enum Failure {
     /// Request rejected before effects.
@@ -134,7 +151,11 @@ pub enum Failure {
     Cleanup,
 }
 
+///
+/// BuildFailure
 /// A failed build retains primary, protocol, status and cleanup evidence together.
+///
+
 #[derive(Debug, Error)]
 #[error("{primary}")]
 pub struct BuildFailure {
@@ -190,6 +211,7 @@ pub fn build(
     if cancelled.load(Ordering::Relaxed) {
         return Err(BuildFailure::new(Failure::Cancelled));
     }
+
     let target = Target::create(&request.scratch_parent).map_err(|error| {
         let mut failure = BuildFailure::new(Failure::Io(error.cause));
         if let Some((path, cause)) = error.cleanup {
@@ -199,6 +221,7 @@ pub fn build(
 
         failure
     })?;
+
     let result = execute(request, &target, cancelled, diagnostics);
 
     complete(result, target.close())
@@ -319,7 +342,6 @@ fn invocation(request: &BuildRequest, target: &Path) -> Command {
         .args([
             "build",
             "--locked",
-            "--offline",
             "--message-format=json,json-render-diagnostics",
             "--color=never",
             "--manifest-path",

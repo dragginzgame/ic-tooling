@@ -9,11 +9,15 @@ use std::{
     sync::mpsc::{self, Receiver, Sender, TryRecvError},
 };
 
+///
+/// Completion
 /// Completion observation without termination authority.
 ///
 /// Dropping this value does not stop the child or its reaper. The worker lives
 /// only within this host process; host/session exit can still affect the child.
 /// No readiness, successful-start or retry permission is implied.
+///
+
 pub struct Completion {
     receiver: Receiver<io::Result<ExitStatus>>,
     observed: Option<io::Result<ExitStatus>>,

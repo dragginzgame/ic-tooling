@@ -9,6 +9,11 @@ use std::{
 
 use security_framework::os::macos::keychain::CreateOptions;
 
+///
+/// PrivateKeychain
+/// Owns the disposable macOS keychain and restores the prior search list.
+///
+
 pub(super) struct PrivateKeychain {
     path: PathBuf,
     previous: PathBuf,

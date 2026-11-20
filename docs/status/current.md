@@ -1,4 +1,4 @@
-# Current implementation — 2026-11-20
+# Current implementation — 2026-11-21
 
 ## Decisions and scope
 
@@ -33,7 +33,9 @@ Foundation 0.80.7 and Text 0.77.5 are published. See the
 [release receipts](../release-ownership.md#toko-04522-foundation-and-text-releases).
 The preceding nine-crate release shipped from `297c304`. See the
 [verified publication receipts](../release-ownership.md#toko-04521-hygiene-releases).
-The repository selects Toko 0.45.23 in both workspaces and CI. The
+Both workspaces and CI select
+[Toko 0.46.0](../reports/audits/2026/11/21/toko-0.46.0-hygiene-and-ci/01/report.md).
+The revised Intel archive timeout awaits hosted verification. The
 [HTTP adapter](../http-body.md) has the only Rust Wasm target guard. The
 unguarded compile reproduced the missing Reqwest method. Artifacts, Text and
 the qualification probe build for wasm32; Testkit's generated WAT export test

@@ -17,7 +17,11 @@ use std::{
 use rustix::fs::{self, AtFlags, FileType, Mode, OFlags};
 use thiserror::Error;
 
+///
+/// Error
 /// Original native cause or explicit filesystem admission refusal.
+///
+
 #[derive(Debug, Error)]
 pub enum Error {
     /// Native I/O cause, preserved without string conversion.
@@ -53,6 +57,7 @@ pub enum Error {
     #[error(transparent)]
     Bytes(#[from] ic_host_artifacts::Error),
 }
+
 impl From<rustix::io::Errno> for Error {
     fn from(error: rustix::io::Errno) -> Self {
         if matches!(error, rustix::io::Errno::LOOP | rustix::io::Errno::NOTDIR) {
@@ -63,12 +68,17 @@ impl From<rustix::io::Errno> for Error {
     }
 }
 
+///
+/// FileId
 /// Native object identity; keep its original descriptor alive when comparing it.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct FileId {
     device: u64,
     inode: u64,
 }
+
 impl FileId {
     /// Project identity from an already admitted metadata observation.
     #[must_use]
@@ -87,7 +97,11 @@ impl FileId {
     }
 }
 
+///
+/// Access
 /// Existing-file authority; update never creates or truncates a file.
+///
+
 #[derive(Clone, Copy, Debug)]
 pub enum Access {
     /// Read-only access.
@@ -95,7 +109,12 @@ pub enum Access {
     /// Read/write access for an explicitly retained recovery protocol.
     Update,
 }
+
+///
+/// FilePolicy
 /// Admission policy for existing regular files.
+///
+
 #[derive(Clone, Copy, Debug)]
 pub struct FilePolicy {
     /// Forbidden Unix permission bits.
@@ -103,7 +122,12 @@ pub struct FilePolicy {
     /// Require exactly one hard link.
     pub single_link: bool,
 }
+
+///
+/// Kind
 /// Observed entry kind; links are never interpreted as their targets.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Kind {
     /// Regular file.
@@ -113,7 +137,12 @@ pub enum Kind {
     /// Link or other native entry.
     Other,
 }
+
+///
+/// Entry
 /// One observed directory entry, not a held file admission.
+///
+
 #[derive(Debug)]
 pub struct Entry {
     /// Single-component native filename.
@@ -121,7 +150,12 @@ pub struct Entry {
     /// No-follow observed kind.
     pub kind: Kind,
 }
+
+///
+/// Directory
 /// Held directory identity. Clones share custody without reopening its pathname.
+///
+
 #[derive(Clone, Debug)]
 pub struct Directory {
     pub(crate) file: Arc<File>,

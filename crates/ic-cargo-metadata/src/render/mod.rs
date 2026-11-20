@@ -10,12 +10,23 @@ use std::{
 };
 use toml_edit::{Document, Item, Value};
 
+///
+/// Plan
+/// Describes the version owner and dependency edits for a group manifest.
+///
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Plan {
     pub version: Version,
     pub dependencies: Vec<Dependency>,
 }
+
+///
+/// Version
+/// Selects which manifest version field to edit.
+///
+
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum Version {
@@ -23,6 +34,12 @@ pub(crate) enum Version {
     Package,
     Unchanged,
 }
+
+///
+/// Dependency
+/// Identifies a dependency alias and its expected version transition.
+///
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Dependency {

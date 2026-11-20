@@ -5,6 +5,12 @@ Packages: `ic-host-text`.
 This group starts with the replacement implementation. Earlier shared development
 evidence is in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.77.6] - 2026-11-21
+
+### 🔧 Changed
+
+- Adopt Toko Tooling 0.46.0 and document the roles of packaged Rust types.
+
 ## [0.77.5] - 2026-11-19
 
 ### ➕ Added

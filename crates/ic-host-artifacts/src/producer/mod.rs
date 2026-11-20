@@ -8,7 +8,11 @@ use sha2::{Digest, Sha256};
 
 use crate::{Error, Identity, Length};
 
+///
+/// ProduceError
 /// A producer failed, or its completed byte stream failed admission.
+///
+
 #[derive(Debug, thiserror::Error)]
 pub enum ProduceError<E> {
     /// Original producer cause; no complete identity is available.
@@ -57,6 +61,11 @@ pub fn hash_with<E>(
         sha256: writer.digest.finalize().into(),
     })
 }
+
+///
+/// Producer
+/// Accumulates a bounded digest and remembers the first admission refusal.
+///
 
 struct Producer {
     digest: Sha256,

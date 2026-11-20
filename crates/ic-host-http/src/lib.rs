@@ -12,8 +12,12 @@ use std::collections::TryReserveError;
 use reqwest::Response;
 use thiserror::Error;
 
+///
+/// Error
 /// Refused body admission; no partial bytes or resumable response are returned.
 /// Display is redacted. Original transport sources may contain sensitive URLs.
+///
+
 #[derive(Debug, Error)]
 pub enum Error {
     /// An available declared length or observed chunk exceeds the caller's ceiling.

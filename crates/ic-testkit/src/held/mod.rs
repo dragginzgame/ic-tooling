@@ -14,7 +14,11 @@ use std::collections::TryReserveError;
 pub use control::{ControlError, Fixture, Request};
 pub use module::CompileError;
 
+///
+/// Reply
 /// A borrowed update method and the exact bytes its eventual callback returns.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Reply<'a> {
     /// Nonempty UTF-8 method name without control characters.
@@ -23,7 +27,11 @@ pub struct Reply<'a> {
     pub bytes: &'a [u8],
 }
 
+///
+/// Limits
 /// Caller-selected aggregate admission budgets; repeated names count per slot.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Limits {
     /// Maximum number of lifetime reply slots.
@@ -34,7 +42,11 @@ pub struct Limits {
     pub reply_bytes: usize,
 }
 
+///
+/// Budget
 /// The budget exhausted during complete catalog admission.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Budget {
     /// Number of reply slots.
@@ -45,7 +57,11 @@ pub enum Budget {
     Replies,
 }
 
+///
+/// Error
 /// Complete-catalog refusal; no partially owned catalog escapes.
+///
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// A name is empty or contains a Unicode control character.
@@ -73,16 +89,25 @@ pub enum Error {
     Allocation(#[from] TryReserveError),
 }
 
+///
+/// Slot
+/// Stores a held method name with its exact reply bytes.
+///
+
 #[derive(Debug)]
 struct Slot {
     method: String,
     bytes: Vec<u8>,
 }
 
+///
+/// Catalog
 /// An owned immutable catalog, preserving duplicate names, order and exact bytes.
 ///
 /// No generated module, server or installation is created. Input budgets bound
 /// retained payload/name lengths, not allocator overhead or compiler memory.
+///
+
 #[derive(Debug)]
 pub struct Catalog {
     slots: Vec<Slot>,

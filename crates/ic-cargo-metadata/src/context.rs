@@ -4,12 +4,23 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::{collections::HashMap, path::Path};
 
+///
+/// Context
+/// Deserializes the workspace manifest and its declared members.
+///
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Context {
     manifest: Value,
     members: Vec<Member>,
 }
+
+///
+/// Member
+/// Identifies a workspace member and its manifest path.
+///
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Member {

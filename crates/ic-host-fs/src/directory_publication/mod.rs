@@ -7,7 +7,11 @@ use std::{
     io,
 };
 
+///
+/// DirectoryPublication
 /// Namespace publication evidence, not a statement about tree contents.
+///
+
 #[derive(Debug)]
 pub struct DirectoryPublication {
     /// Held parent identity.
@@ -18,7 +22,11 @@ pub struct DirectoryPublication {
     pub destination: OsString,
 }
 
+///
+/// DirectoryPublishError
 /// Publication failure distinguished by whether this attempt renamed the tree.
+///
+
 #[derive(Debug, thiserror::Error)]
 pub enum DirectoryPublishError {
     /// This attempt did not publish; no staging or foreign entry was removed.

@@ -9,6 +9,11 @@ use serde_json::Value;
 
 use crate::Failure;
 
+///
+/// Decoder
+/// Consumes bounded Cargo JSON records and selects the requested artifact.
+///
+
 pub(crate) struct Decoder<'a> {
     package: &'a str,
     target: &'a str,

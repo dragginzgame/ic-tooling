@@ -8,7 +8,7 @@ See [filesystem custody](filesystem-custody.md) for the extraction and qualifica
 
 This is the Stage 1 elaboration of [design revision 2](DESIGN.md). It admits one
 ordinary developer build: one selected package's cdylib library for
-`wasm32-unknown-unknown`, using Cargo offline and locked, an explicit compiler,
+`wasm32-unknown-unknown`, using Cargo with `--locked`, an explicit compiler,
 profile, features, cleared/repopulated environment and cancellation/deadline.
 Scheduling's manual execute/decode/check/select/capture sequence motivates this
 boundary; its full installed simulator flow is not migrated in this slice.
@@ -21,6 +21,8 @@ The request names an absolute manifest, package selector, exact Cargo package ID
 library target name, Cargo and rustc executable paths, scratch parent, explicit
 environment entries, profile/features and all limits. Source/tool selection is
 caller authority; this is not a release-proof or hostile-build sandbox.
+Cargo uses its configured network mode. A caller selecting offline mode through
+the environment passes `CARGO_NET_OFFLINE` in `BuildRequest::environment`.
 Reject unsupported/invalid inputs before spawning. Cargo config/build scripts are
 trusted executable build inputs. The caller must prevent concurrent source/tool
 mutation; qualified release source/tool custody remains later work.

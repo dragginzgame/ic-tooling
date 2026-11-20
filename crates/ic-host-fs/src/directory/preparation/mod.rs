@@ -5,7 +5,11 @@ use super::{Directory, Error, name, valid_mode};
 use rustix::fs;
 use std::{ffi::OsStr, io};
 
+///
+/// PrepareFailure
 /// Directory preparation stopped; any created prefix remains for reconciliation.
+///
+
 #[derive(Debug, thiserror::Error)]
 #[error("directory preparation refused at component {component:?}: {source}")]
 pub struct PrepareFailure {

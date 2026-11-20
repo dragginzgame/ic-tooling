@@ -1,6 +1,6 @@
 //! Build one Wasm library into owned bytes with complete process and Cargo evidence.
 //!
-//! This is an ordinary, offline developer-build operation, not a release proof or
+//! This is an ordinary, locked developer-build operation, not a release proof or
 //! sandbox for hostile build scripts. The caller owns source/tool stability and
 //! the scratch parent. See `build` for the cleanup and cancellation contract.
 

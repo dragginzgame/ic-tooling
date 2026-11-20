@@ -17,6 +17,11 @@ use ic_testkit::server::{self, Limits, PreparedServer, Server, Stopped};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 static CANCELLED: AtomicBool = AtomicBool::new(false);
 
+///
+/// Cli
+/// Selects a managed PocketIC server command.
+///
+
 #[derive(Parser)]
 #[command(
     name = "ic-testkit-server",
@@ -27,6 +32,11 @@ struct Cli {
     #[command(subcommand)]
     operation: Operation,
 }
+
+///
+/// Operation
+/// Specifies the requested server operation and its inputs.
+///
 
 #[derive(Subcommand)]
 enum Operation {

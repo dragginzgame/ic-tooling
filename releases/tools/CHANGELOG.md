@@ -17,7 +17,10 @@ in [checkpoint history](../history.md), not a prior release of this group.
 - Exercise current Canic build and metadata commands directly and retain the
   command sequence, error and destination-preservation evidence for each refusal.
 
-- Adopt Toko Tooling 0.45.23 in both workspaces, the installed snapshot and CI.
+- Extend the Intel macOS library archive step to 20 minutes after the previous
+  12-minute timeout. Preserve the evidence-upload reserve.
+
+- Adopt Toko Tooling 0.46.0 in both workspaces, the installed snapshot and CI.
   Audit inherited and package-local lint settings across both workspaces.
   Apply the Rust return-spacing and Clippy rules and verify the native HTTP boundary.
 

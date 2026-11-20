@@ -114,21 +114,28 @@ fn foreign_stage_is_neither_published_nor_removed() {
     assert!(!scratch.path().join("final").exists());
 }
 
-#[test]
-fn partial_write_short_and_growth_never_gain_seal_authority() {
-    struct Broken(bool);
-    impl Read for Broken {
-        fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
-            if self.0 {
-                Err(io::Error::from_raw_os_error(5))
-            } else {
-                self.0 = true;
-                out[0] = b'x';
+///
+/// Broken
+/// Supplies a partial read followed by an I/O error.
+///
 
-                Ok(1)
-            }
+struct Broken(bool);
+
+impl Read for Broken {
+    fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
+        if self.0 {
+            Err(io::Error::from_raw_os_error(5))
+        } else {
+            self.0 = true;
+            out[0] = b'x';
+
+            Ok(1)
         }
     }
+}
+
+#[test]
+fn partial_write_short_and_growth_never_gain_seal_authority() {
     let scratch = tempfile::tempdir().unwrap();
     let root = Directory::open(scratch.path(), 0).unwrap().unwrap();
     let attempt = root
@@ -214,19 +221,26 @@ fn sync_failures_report_before_and_after_visibility_without_retry() {
     assert!(!scratch.path().join("stage").exists());
 }
 
+///
+/// ReplacingReader
+/// Replaces the staged directory entry while publication is reading.
+///
+
+struct ReplacingReader {
+    parent: std::path::PathBuf,
+}
+
+impl Read for ReplacingReader {
+    fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+        fs::rename(self.parent.join("stage"), self.parent.join("original"))?;
+        fs::write(self.parent.join("stage"), b"foreign")?;
+
+        Err(io::Error::from_raw_os_error(5))
+    }
+}
+
 #[test]
 fn failed_writer_preserves_primary_and_foreign_cleanup_refusals() {
-    struct ReplacingReader {
-        parent: std::path::PathBuf,
-    }
-    impl Read for ReplacingReader {
-        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
-            fs::rename(self.parent.join("stage"), self.parent.join("original"))?;
-            fs::write(self.parent.join("stage"), b"foreign")?;
-
-            Err(io::Error::from_raw_os_error(5))
-        }
-    }
     let scratch = tempfile::tempdir().unwrap();
     let root = Directory::open(scratch.path(), 0).unwrap().unwrap();
     let stage = root

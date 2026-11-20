@@ -20,7 +20,11 @@ const ARCHIVE_LIMIT: u64 = 64 * 1024 * 1024;
 const BINARY_LIMIT: usize = 256 * 1024 * 1024;
 const BINARY: &str = "pocket-ic";
 
+///
+/// Asset
 /// Authenticated selection for one supported native host, always PocketIC 16.1.0.
+///
+
 #[derive(Clone, Copy, Debug)]
 pub struct Asset {
     /// Official explicit-download location; library use never fetches it.
@@ -55,8 +59,12 @@ pub fn host_asset() -> Result<Asset, Error> {
     }
 }
 
+///
+/// PreparedServer
 /// Admitted offline executable and held filesystem identities. Keep its directory
 /// and contents unchanged during use; this is not a fence against hostile writers.
+///
+
 #[derive(Debug)]
 pub struct PreparedServer {
     path: PathBuf,
@@ -64,6 +72,7 @@ pub struct PreparedServer {
     file: File,
     asset: Asset,
 }
+
 impl PreparedServer {
     /// Verify an existing prepared directory without downloading or executing.
     /// # Errors

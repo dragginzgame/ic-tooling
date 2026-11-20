@@ -24,14 +24,21 @@ fn exact_known_digest_and_ceiling() {
     ));
 }
 
+///
+/// Refusal
+/// Returns the original I/O error during capture.
+///
+
+struct Refusal;
+
+impl Read for Refusal {
+    fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+        Err(io::Error::from_raw_os_error(13))
+    }
+}
+
 #[test]
 fn cancellation_and_original_io_cause_survive() {
-    struct Refusal;
-    impl Read for Refusal {
-        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
-            Err(io::Error::from_raw_os_error(13))
-        }
-    }
     let Err(Failure::Io(error)) = capture(Refusal, 10, &AtomicBool::new(false)) else {
         panic!("lost original I/O cause");
     };
@@ -42,20 +49,27 @@ fn cancellation_and_original_io_cause_survive() {
     ));
 }
 
+///
+/// Interrupted
+/// Interrupts the first read to exercise the retry path.
+///
+
+struct Interrupted(bool);
+
+impl Read for Interrupted {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        if !self.0 {
+            self.0 = true;
+
+            return Err(io::ErrorKind::Interrupted.into());
+        }
+
+        b"".as_slice().read(buffer)
+    }
+}
+
 #[test]
 fn interrupted_read_is_retried_without_losing_bytes() {
-    struct Interrupted(bool);
-    impl Read for Interrupted {
-        fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
-            if !self.0 {
-                self.0 = true;
-
-                return Err(io::ErrorKind::Interrupted.into());
-            }
-
-            b"".as_slice().read(buffer)
-        }
-    }
     assert!(
         capture(Interrupted(false), 1, &AtomicBool::new(false))
             .unwrap()

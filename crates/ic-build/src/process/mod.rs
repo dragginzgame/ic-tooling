@@ -13,6 +13,11 @@ use ic_host_process::{Input, Ownership, Policy, Stderr, Stream};
 
 use crate::{Failure, Limits};
 
+///
+/// Report
+/// Records child status, protocol observations, diagnostics and cleanup outcomes.
+///
+
 pub(crate) struct Report {
     pub(crate) status: Option<ExitStatus>,
     pub(crate) failure: Option<Failure>,

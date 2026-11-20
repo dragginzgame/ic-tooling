@@ -60,6 +60,23 @@ fn inherited_pipe_deadline_and_cancellation_end_group() {
     assert!(report.cleanup.is_empty());
 }
 
+///
+/// Broken
+/// Refuses diagnostic writes with a broken pipe.
+///
+
+struct Broken;
+
+impl Write for Broken {
+    fn write(&mut self, _: &[u8]) -> io::Result<usize> {
+        Err(io::ErrorKind::BrokenPipe.into())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 #[test]
 fn stdout_stderr_bounds_and_sink_refusal_are_not_success() {
     for stderr in [false, true] {
@@ -88,16 +105,6 @@ fn stdout_stderr_bounds_and_sink_refusal_are_not_success() {
         ));
         assert!(report.cleanup.is_empty());
     }
-    struct Broken;
-    impl Write for Broken {
-        fn write(&mut self, _: &[u8]) -> io::Result<usize> {
-            Err(io::ErrorKind::BrokenPipe.into())
-        }
-
-        fn flush(&mut self) -> io::Result<()> {
-            Ok(())
-        }
-    }
     let mut command = Command::new("/bin/sh");
     command.args(["-c", "printf evidence >&2"]);
     let report = run(
@@ -111,20 +118,26 @@ fn stdout_stderr_bounds_and_sink_refusal_are_not_success() {
     assert_eq!(report.diagnostics, b"evidence");
 }
 
+///
+/// CancelOnReady
+/// Requests cancellation when the child emits its readiness diagnostic.
+///
+
+struct CancelOnReady<'a>(&'a AtomicBool);
+impl Write for CancelOnReady<'_> {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.0.store(true, std::sync::atomic::Ordering::Relaxed);
+
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 #[test]
 fn cancellation_after_child_readiness_terminates_owned_execution() {
-    struct CancelOnReady<'a>(&'a AtomicBool);
-    impl Write for CancelOnReady<'_> {
-        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-            self.0.store(true, std::sync::atomic::Ordering::Relaxed);
-
-            Ok(bytes.len())
-        }
-
-        fn flush(&mut self) -> io::Result<()> {
-            Ok(())
-        }
-    }
     let cancelled = AtomicBool::new(false);
     let mut command = Command::new("/bin/sh");
     command.args(["-c", "printf ready >&2; sleep 30"]);

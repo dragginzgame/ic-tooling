@@ -4,6 +4,11 @@ use ic_host_sign::{Error, protocol};
 
 use super::{Disposable, create_identity};
 
+///
+/// Credential
+/// Owns the disposable Secret Service entry used by the signer tests.
+///
+
 pub(super) struct Credential {
     entry: keyring::Entry,
     delete_on_drop: bool,
@@ -35,6 +40,19 @@ impl Drop for Credential {
     }
 }
 
+///
+/// Resume
+/// Resumes the fixture daemon when its stop guard is dropped.
+///
+
+struct Resume(String);
+
+impl Drop for Resume {
+    fn drop(&mut self) {
+        let _ = Command::new("kill").args(["-CONT", &self.0]).status();
+    }
+}
+
 #[tokio::test]
 #[ignore = "requires the qualification runner's owned disposable Secret Service"]
 async fn native_keyring_cancellation_retains_custody() {
@@ -60,12 +78,6 @@ async fn native_keyring_cancellation_retains_custody() {
             .unwrap()
             .success()
     );
-    struct Resume(String);
-    impl Drop for Resume {
-        fn drop(&mut self) {
-            let _ = Command::new("kill").args(["-CONT", &self.0]).status();
-        }
-    }
     let resume = Resume(daemon);
     let timed = tokio::time::timeout(
         Duration::from_secs(3),

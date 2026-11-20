@@ -31,14 +31,21 @@ fn exact_and_ceiling_reads_have_known_identity_and_no_partial_success() {
     ));
 }
 
+///
+/// Broken
+/// Injects a read failure into bounded artifact admission.
+///
+
+struct Broken;
+
+impl Read for Broken {
+    fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+        Err(io::Error::from_raw_os_error(13))
+    }
+}
+
 #[test]
 fn original_io_and_partial_writer_effects_are_preserved() {
-    struct Broken;
-    impl Read for Broken {
-        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
-            Err(io::Error::from_raw_os_error(13))
-        }
-    }
     let Err(Error::Io(error)) = copy(Broken, io::sink(), Length::AtMost(10)) else {
         panic!("lost cause");
     };

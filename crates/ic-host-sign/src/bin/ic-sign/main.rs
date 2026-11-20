@@ -12,6 +12,11 @@ use ic_host_sign::protocol::{self, Operation, Response, WireRequest};
 use ic_platform::native::{Secp256k1Identity, UpdateArgs};
 use ic_platform_types::Principal;
 
+///
+/// Args
+/// Parses the signer's command-line options.
+///
+
 #[derive(Parser)]
 #[command(
     version,

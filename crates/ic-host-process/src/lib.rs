@@ -27,7 +27,11 @@ use rustix::{
     process::{Pid, Signal, WaitId, WaitIdOptions, getpgrp, kill_process_group, waitid},
 };
 
+///
+/// Ownership
 /// Signal authority chosen before spawning; no authority over arbitrary PIDs.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Ownership {
     /// Create and clean up a new cooperative process group, retaining its leader
@@ -38,7 +42,11 @@ pub enum Ownership {
     Direct,
 }
 
+///
+/// Input
 /// Standard input policy; finite pipe input is owned until execution closes.
+///
+
 #[derive(Clone, Eq, PartialEq)]
 pub enum Input {
     /// Read EOF from the null device.
@@ -60,7 +68,11 @@ impl std::fmt::Debug for Input {
     }
 }
 
+///
+/// Stderr
 /// Standard error policy, distinct from captured standard output.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Stderr {
     /// Deliver at most this many bytes to the observer; overflow terminates.
@@ -69,7 +81,11 @@ pub enum Stderr {
     Inherit,
 }
 
+///
+/// Policy
 /// Complete communication and ownership policy for one execution.
+///
+
 #[derive(Clone, Debug)]
 pub struct Policy {
     /// Child or group termination authority.
@@ -85,7 +101,11 @@ pub struct Policy {
     pub elapsed: Duration,
 }
 
+///
+/// Stream
 /// A captured pipe; output limits and observer failures identify their stream.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Stream {
     /// Standard output.
@@ -94,7 +114,11 @@ pub enum Stream {
     Stderr,
 }
 
+///
+/// Failure
 /// Primary spawn or communication failure, separate from status and cleanup.
+///
+
 #[derive(Debug, thiserror::Error)]
 pub enum Failure {
     /// Original spawn, pipe or wait observation error.
@@ -120,8 +144,12 @@ pub enum Failure {
     },
 }
 
+///
+/// Report
 /// Evidence from execution and explicit close. Nonzero exit is retained as status,
 /// not converted to success or hidden inside a communication failure.
+///
+
 #[derive(Debug)]
 pub struct Report {
     /// Reaped child status, if available (including termination by cleanup).
@@ -131,6 +159,11 @@ pub struct Report {
     /// Signalling/reaping errors, including failed group cleanup with fallback.
     pub cleanup: Vec<io::Error>,
 }
+
+///
+/// Session
+/// Owns the child and its process cleanup policy.
+///
 
 struct Session {
     child: Option<Child>,

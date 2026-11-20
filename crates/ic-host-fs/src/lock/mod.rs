@@ -57,13 +57,18 @@ impl Directory {
     }
 }
 
+///
+/// Lock
 /// Nonblocking exclusive advisory lock; explicit release reports refusal.
+///
+
 #[derive(Debug)]
 #[must_use = "retain lock ownership or explicitly release it"]
 pub struct Lock {
     file: File,
     active: bool,
 }
+
 impl Lock {
     /// Lock the held file; does not create or replace its name.
     /// # Errors
@@ -91,6 +96,7 @@ impl Lock {
         result
     }
 }
+
 impl Drop for Lock {
     fn drop(&mut self) {
         if self.active {

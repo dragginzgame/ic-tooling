@@ -1,5 +1,11 @@
 # Cargo metadata changelog
 
+## [0.1.3] - 2026-11-21
+
+### 🔧 Changed
+
+- Adopt Toko Tooling 0.46.0 and document the roles of packaged Rust types.
+
 ## [0.1.2] - 2026-11-19
 
 ### 🔧 Changed

@@ -13,6 +13,11 @@ use std::{
 };
 use thiserror::Error;
 
+///
+/// Arguments
+/// Selects a qualification command from the command line.
+///
+
 #[derive(Parser)]
 #[command(
     name = "ic-cargo-qualification",
@@ -23,6 +28,11 @@ struct Arguments {
     #[command(subcommand)]
     operation: Operation,
 }
+
+///
+/// Operation
+/// Identifies the lockfiles and byte limit for verification.
+///
 
 #[derive(Subcommand)]
 enum Operation {
@@ -35,6 +45,11 @@ enum Operation {
         maximum: u64,
     },
 }
+
+///
+/// Refusal
+/// Reports a rejected qualification command or lockfile comparison.
+///
 
 #[derive(Debug, Error)]
 enum Refusal {

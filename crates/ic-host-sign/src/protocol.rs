@@ -25,7 +25,11 @@ pub const MANIFEST_BYTES: usize = 1024 * 1024;
 /// Maximum signing-completion interval, including noninteractive admission.
 pub const SIGNING_INTERVAL: Duration = Duration::from_secs(300);
 
+///
+/// Configuration
 /// Public, explicitly selected existing ICP identity and local credential backend.
+///
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Configuration {
@@ -84,7 +88,11 @@ impl Configuration {
     }
 }
 
+///
+/// Operation
 /// The two supported exact operations. There is no submit or poll operation.
+///
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Operation {
@@ -106,7 +114,11 @@ pub enum Operation {
     },
 }
 
+///
+/// Request
 /// One already-approved signing request. No private key/password fields exist.
+///
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Request {
@@ -175,7 +187,11 @@ impl Request {
     }
 }
 
+///
+/// WireRequest
 /// Complete public request frame. Commitment is checked before credentials access.
+///
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct WireRequest {
@@ -191,7 +207,11 @@ pub struct WireRequest {
     pub request: Request,
 }
 
+///
+/// Response
 /// Complete provider success frame. No diagnostics or private material exist.
+///
+
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Response {
@@ -203,7 +223,11 @@ pub struct Response {
     pub envelope: Vec<u8>,
 }
 
+///
+/// Signed
 /// Exact retained signed bytes and public request binding. This has no dispatcher.
+///
+
 pub struct Signed {
     pub(crate) envelope: Vec<u8>,
     pub(crate) request_id: [u8; 32],
@@ -286,23 +310,30 @@ pub fn encode_response(response: &Response) -> Result<Vec<u8>, Error> {
     encode(response)
 }
 
-pub(crate) fn encode(value: &impl Serialize) -> Result<Vec<u8>, Error> {
-    struct Counter(usize);
-    impl Write for Counter {
-        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-            self.0 = self
-                .0
-                .checked_add(bytes.len())
-                .filter(|n| *n <= FRAME_BYTES)
-                .ok_or_else(|| io::Error::other("frame limit"))?;
+///
+/// Counter
+/// Counts serialized frame bytes against the protocol ceiling.
+///
 
-            Ok(bytes.len())
-        }
+struct Counter(usize);
 
-        fn flush(&mut self) -> io::Result<()> {
-            Ok(())
-        }
+impl Write for Counter {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.0 = self
+            .0
+            .checked_add(bytes.len())
+            .filter(|n| *n <= FRAME_BYTES)
+            .ok_or_else(|| io::Error::other("frame limit"))?;
+
+        Ok(bytes.len())
     }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+pub(crate) fn encode(value: &impl Serialize) -> Result<Vec<u8>, Error> {
     let mut count = Counter(0);
     serde_json::to_writer(&mut count, value).map_err(|_| Error::Request)?;
     let mut bytes = Vec::new();

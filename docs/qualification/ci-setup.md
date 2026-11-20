@@ -10,7 +10,7 @@ The `repository` and `secrets` jobs in `build-release-candidate.yml` wrap compil
 common-tool and secret-scanner setup with `scripts/ci/setup-diagnostics.pl`.
 This removes dependence on an
 ephemeral runner's console or a raw log path when setup fails before tests start.
-Toko Tooling 0.45.23 supplies the selected `SetupDiagnostics.pm` module for command
+Toko Tooling 0.46.0 supplies the selected `SetupDiagnostics.pm` module for command
 capture, exit/signal status, redaction and bounded excerpts. It includes the
 original redaction corrections from
 [Toko Tooling #393](https://github.com/dragginzgame/toko-tooling/issues/393),
@@ -109,12 +109,18 @@ not a performance claim or a statistical latency guarantee.
 | --- | ---: | ---: | ---: |
 | Repository | 1m30s | 20m | 18m |
 | Secrets | 8s | 13m | 11m |
-| Libraries, all three hosts | 10m41s | 45m | 42m |
+| Libraries, Linux and ARM macOS | 10m41s (original matrix maximum) | 45m | 42m |
+| Libraries, Intel macOS | Archive step exhausted 12m | 53m | 50m |
 | Native, all three hosts | 2m25s before Sign checks | 30m | 26m |
 | Sign provider, all three hosts | All three pass in run 44178285784 | 30m | 24m |
 
 Library setup took up to 6m50s on Intel macOS; its step gets 15m. Library archive
-qualification took up to 4m23s; its step gets 12m. CLI lifetime checks get 4m
+qualification originally took up to 4m23s. Linux and ARM macOS retain 12m.
+The [Intel job log](https://github.com/dragginzgame/ic-tooling/actions/runs/44749271521/job/136333461398)
+records a 12-minute step timeout after packaged tests and CLI lifecycle checks
+passed. Intel now gets 20 minutes for archive qualification, with the same
+three-minute job reserve beyond the sum of its step budgets. The new Intel
+budget awaits its first hosted run. CLI lifetime checks get 4m
 against an observed 1m32s maximum. Native archive qualification gets 8m against
 1m49s. These budgets allow uncached preparation and host variation independently
 of the local archive cache. Revisit them when the selected workload changes.

@@ -30,6 +30,14 @@ fn request(scratch: PathBuf) -> BuildRequest {
     let manifest = root.join("qualification/owned-wasm-probe/Cargo.toml");
     let package_id = format!("path+file://{}#0.0.0", manifest.parent().unwrap().display());
 
+    let mut environment = vec![
+        ("HOME".into(), home.into_os_string()),
+        ("PATH".into(), env::var_os("PATH").unwrap()),
+    ];
+    if let Some(mode) = env::var_os("CARGO_NET_OFFLINE") {
+        environment.push(("CARGO_NET_OFFLINE".into(), mode));
+    }
+
     BuildRequest {
         manifest,
         package: "owned-wasm-probe".into(),
@@ -41,10 +49,7 @@ fn request(scratch: PathBuf) -> BuildRequest {
         profile: "dev".into(),
         features: Vec::new(),
         default_features: false,
-        environment: vec![
-            ("HOME".into(), home.into_os_string()),
-            ("PATH".into(), env::var_os("PATH").unwrap()),
-        ],
+        environment,
         limits: limits(),
     }
 }
@@ -70,6 +75,34 @@ fn real_wasm_capture_survives_another_build_and_removes_scratch() {
     assert_eq!(first.bytes(), original);
     assert_eq!(&second.bytes()[..4], b"\0asm");
     assert_eq!(fs::read_dir(scratch.path()).unwrap().count(), 0);
+}
+
+#[test]
+fn cargo_child_uses_the_requested_network_mode_and_keeps_the_lock() {
+    let scratch = tempfile::tempdir().unwrap();
+    let mut request = request(scratch.path().to_owned());
+    request.cargo =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/tests/cargo-network-mode.sh");
+    for mode in [None, Some("true"), Some("false")] {
+        request
+            .environment
+            .retain(|(key, _)| key != "CARGO_NET_OFFLINE");
+        if let Some(value) = mode {
+            request
+                .environment
+                .push(("CARGO_NET_OFFLINE".into(), value.into()));
+        }
+        let failure = build(&request, &AtomicBool::new(false), &mut io::sink()).unwrap_err();
+        assert_eq!(failure.status.unwrap().code(), Some(7));
+        let observed = std::str::from_utf8(&failure.diagnostics).unwrap();
+        let mut lines = observed.lines();
+        assert_eq!(lines.next(), Some(mode.unwrap_or("unset")));
+        let args: Vec<_> = lines.collect();
+        assert!(args.contains(&"--locked"));
+        assert!(!args.contains(&"--offline"));
+        assert!(!args.contains(&"--frozen"));
+        assert!(!args.iter().any(|arg| arg.starts_with("net.offline")));
+    }
 }
 
 #[test]

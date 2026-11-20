@@ -15,7 +15,11 @@ use thiserror::Error;
 
 pub use producer::{ProduceError, hash_with};
 
+///
+/// Length
 /// Explicit complete-stream admission policy; one extra byte may be observed.
+///
+
 #[derive(Clone, Copy, Debug)]
 pub enum Length {
     /// Admit EOF at or below this ceiling.
@@ -24,7 +28,11 @@ pub enum Length {
     Exactly(u64),
 }
 
+///
+/// Identity
 /// Identity of successfully admitted original bytes, not origin authentication.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Identity {
     /// Complete admitted length.
@@ -33,7 +41,11 @@ pub struct Identity {
     pub sha256: [u8; 32],
 }
 
+///
+/// Error
 /// Admission refusal; arbitrary writers may already have partial effects.
+///
+
 #[derive(Debug, Error)]
 pub enum Error {
     /// Original reader or writer cause.

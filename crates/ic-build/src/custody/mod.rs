@@ -13,10 +13,20 @@ use std::{
 use ic_host_fs::{Access, Directory, FilePolicy};
 use tempfile::TempDir;
 
+///
+/// Target
+/// Holds the private build directory until artifact capture and cleanup finish.
+///
+
 pub(crate) struct Target {
     directory: Directory,
     scratch: TempDir,
 }
+
+///
+/// CreationFailure
+/// Retains the creation error and any failure to clean up the private directory.
+///
 
 #[derive(Debug)]
 pub(crate) struct CreationFailure {

@@ -10,7 +10,11 @@ use wasmparser::{ExternalKind, Parser, Payload, Validator};
 
 use crate::{Identity, Length, read};
 
+///
+/// Kind
 /// Execution kind encoded by an IC method export.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Kind {
     /// A replicated update.
@@ -21,7 +25,11 @@ pub enum Kind {
     CompositeQuery,
 }
 
+///
+/// Error
 /// Refusal to produce a complete inventory.
+///
+
 #[derive(Debug, Error)]
 pub enum Error {
     /// Reading or bounding the original artifact failed.
@@ -58,6 +66,7 @@ pub fn inventory(
         return Err(Error::Format);
     }
     let types = Validator::new().validate_all(&bytes)?;
+
     let mut methods = BTreeMap::new();
     for payload in Parser::new(0).parse_all(&bytes) {
         let Payload::ExportSection(exports) = payload? else {
@@ -68,6 +77,7 @@ pub fn inventory(
             if export.kind != ExternalKind::Func {
                 continue;
             }
+
             let Some((prefix, name)) = export.name.split_once(' ') else {
                 continue;
             };
@@ -77,6 +87,7 @@ pub fn inventory(
                 "canister_composite_query" => Kind::CompositeQuery,
                 _ => continue,
             };
+
             let signature = types[types.as_ref().core_function_at(export.index)].unwrap_func();
             if !signature.params().is_empty() || !signature.results().is_empty() {
                 return Err(Error::Signature(name.to_owned()));

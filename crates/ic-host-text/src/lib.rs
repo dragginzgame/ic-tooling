@@ -88,7 +88,11 @@ fn width(value: &str) -> usize {
     value.chars().map(|c| c.width().unwrap_or(0)).sum()
 }
 
+///
+/// Alignment
 /// Padding direction for a plain table column.
+///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Alignment {
     /// Pad after the cell.
