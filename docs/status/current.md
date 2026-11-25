@@ -45,8 +45,13 @@ through the Keyring backend. Native-run evidence is in
 
 ## Latest delivery
 
-All nine public crates shipped with Toko 0.46.0, including Build 0.87.7. See the
-[verified release receipts](../release-ownership.md#toko-0460-release).
+All nine public crates shipped with Toko 0.46.4. Linux archive qualification
+passed, including installed Testkit and disposable Secret Service 6.0.0 signer
+checks. Registry bytes and all eight GitHub release tags were verified. See the
+[verified release receipts](../release-ownership.md#toko-0464-release).
+
+The earlier Toko 0.46.0 cohort included Build 0.87.7. See its
+[release receipts](../release-ownership.md#toko-0460-release).
 
 Foundation 0.80.7 and Text 0.77.5 are published. See the
 [release receipts](../release-ownership.md#toko-04522-foundation-and-text-releases).

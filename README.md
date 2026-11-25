@@ -1,8 +1,8 @@
 # IC Tooling
 
 The development and qualification workspaces select Toko Tooling 0.46.4.
-The latest published cohort used 0.46.0. See the
-[release receipts](docs/release-ownership.md#toko-0460-release).
+The latest published cohort uses 0.46.4. See the
+[release receipts](docs/release-ownership.md#toko-0464-release).
 
 The preceding feature delivery, Testkit 0.110.0, adopts Process 0.81's public report identity and
 retains bounded clock progression while replies are

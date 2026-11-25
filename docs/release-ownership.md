@@ -83,6 +83,34 @@ That audit handoff left product versions unchanged. The 2026-11-18 authorized
 delivery selected patches because the packaged sources and development-tool
 requirements differed from their published archives.
 
+### Toko 0.46.4 release
+
+All nine public crates shipped from
+[496ca76](https://github.com/dragginzgame/ic-tooling/commit/496ca76220cf8e5a2938ec00d413e614b90fed21).
+Eight annotated group tags resolve to that commit on GitHub. Sign 0.1.5
+selects Platform 0.35.1 and Secret Service 6.0.0 on Linux. Testkit 0.110.5
+selects Protocol 0.3.10 and Types 0.21.5 for its held-reply fixtures.
+
+The release lock passed workspace Clippy and tests, Scheduling replacement
+driver admission, and all Linux archive gates. The archive gates covered the
+core PTY, installed PocketIC fixtures and disposable Linux keyring sessions.
+All five PocketIC fixture instances were deleted. Fresh registry downloads
+matched the clean-source archives byte for byte and the crates.io index
+checksums. Local evidence is in `target/deploy-0464-final/`. Hosted native
+validation runs asynchronously.
+
+| Published archive | Verified registry SHA-256 |
+| --- | --- |
+| `ic-host-artifacts-0.80.9` | `6e4663171264c16016311a52ef2e4da62b653f409c162f45cc1e6812e07601b8` |
+| `ic-host-fs-0.80.9` | `e4f8d75874d7320ab50edd12a371e772205403d672865c97976e1307f1d86215` |
+| `ic-host-process-0.81.5` | `fd610ee00fe545a9af9fa8b14fc9085ac0cfbe720f82e13046bb31e9f49a37b8` |
+| `ic-build-0.87.8` | `8a57ed48d7af7d5136401797b53998308c893e9c1869ac069b535b5c38d20057` |
+| `ic-host-http-0.80.4` | `da55127d9c4719f82297600109befb0cadf7d493eed20c46764ae0ba8ccbfa11` |
+| `ic-host-text-0.77.7` | `388290635dda1e6ba8cecc93d8fb9eaa7f08cc4051fecaeb50413adbf6ba0606` |
+| `ic-cargo-metadata-0.1.4` | `af3c1b88254ce0475b30e68de0c922822932512ae6063b69627d7fa0019f6d3b` |
+| `ic-host-sign-0.1.5` | `99824d4117ad3b90916280c509e17009b1bc2eb3eb93e94f01d1a0361ed5a38d` |
+| `ic-testkit-0.110.5` | `f72c4ef2bc7cb1244d20e10d64416b8d8da4c5afda5018c476ae8253a75aadc6` |
+
 ### Toko 0.46.0 release
 
 All nine public crates shipped from [5a154e3](https://github.com/dragginzgame/ic-tooling/commit/5a154e3777dc88da47d7cb214140c4c8d403ddff).
