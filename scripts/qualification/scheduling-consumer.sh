@@ -38,7 +38,7 @@ export CARGO_TARGET_DIR="$repo/target/scheduling-new-consumer-build"
 manifest="$scratch/source/qualification/Cargo.toml"
 cargo metadata --manifest-path "$manifest" --format-version 1 --locked > "$scratch/metadata.json"
 jq -e '. as $m |
-  [.packages[] | select(.name == "ic-testkit" and .version == "0.107.4" and
+  [.packages[] | select(.name == "ic-testkit" and .version == "0.110.4" and
     .source == "registry+https://github.com/rust-lang/crates.io-index")] as $suppliers |
   $suppliers[0].id as $testkit |
   ($suppliers | length == 1) and
@@ -50,7 +50,7 @@ jq -e '. as $m |
     all($m.resolve.nodes[] | select(.id == $driver) | .deps[]; .name != "pocket_ic")) and
   any($m.resolve.nodes[] | select(.id == $testkit) | .features[]; . == "held-reply-fixtures")
 ' "$scratch/metadata.json" >/dev/null || {
-  echo 'Expected Scheduling rewrite executor/Once drivers with registry Testkit 0.107.4 and held-reply fixtures; source contract refused.' >&2
+  echo 'Expected Scheduling rewrite executor/Once drivers with registry Testkit 0.110.4 and held-reply fixtures; source contract refused.' >&2
   exit 1
 }
 run_installed() {
@@ -62,7 +62,7 @@ run_installed() {
   mkdir -p "$output"
   cargo tree --manifest-path "$manifest" -p "$driver" -e normal,build --prefix none --locked > "$output/driver-tree.txt"
   if [[ "$selection" == executor && ( "$mode" == replacement || "$output" == "$scratch/replacement" ) ]]; then
-    rg -q '^ic-testkit v0.108.0 ' "$output/driver-tree.txt"
+    rg -q '^ic-testkit v0.110.5 ' "$output/driver-tree.txt"
     if rg -q '^(wat|ic-platform|ic-platform-protocol|ic-platform-types) v' "$output/driver-tree.txt"; then
       echo 'Executor unexpectedly selects optional fixture dependencies' >&2; exit 1
     fi
@@ -92,7 +92,6 @@ if [[ "$mode" == comparison ]]; then
   run_installed "$scratch/baseline"
 fi
 if [[ "$mode" == replacement || "$mode" == comparison || "$mode" == admit-replacement ]]; then
-  cp "$scratch/metadata.json" "$scratch/released-metadata.json"
   cp "$scratch/source/qualification/Cargo.lock" "$scratch/released-Cargo.lock"
   sed "s|@IC_TOOLING_NEW@|$repo|g" "$repo/qualification/scheduling/replacement-testkit.patch" > "$scratch/replacement.patch"
   git -C "$scratch/source" apply --check "$scratch/replacement.patch"
@@ -100,32 +99,22 @@ if [[ "$mode" == replacement || "$mode" == comparison || "$mode" == admit-replac
   cargo metadata --manifest-path "$manifest" --format-version 1 > "$scratch/metadata.json"
   jq -e --arg root "$repo" '. as $m |
     [.packages[] | select(.name == "ic-testkit")] as $suppliers |
-    ($suppliers | length == 1) and $suppliers[0].version == "0.108.0" and
+    ($suppliers | length == 1) and $suppliers[0].version == "0.110.5" and
     $suppliers[0].manifest_path == ($root + "/crates/ic-testkit/Cargo.toml") and
+    any($m.resolve.nodes[] | select(.id == $suppliers[0].id) | .features[];
+      . == "held-reply-fixtures") and
+    all(["ic-platform-protocol", "ic-platform-types"][]; . as $name |
+      [$m.packages[] | select(.name == $name)] as $platform |
+      ($platform | length == 1) and
+      $platform[0].source == "registry+https://github.com/rust-lang/crates.io-index") and
     all(["once-driver", "executor-driver"][]; . as $name |
       ($m.packages[] | select(.name == $name) | .id) as $driver |
       any($m.resolve.nodes[] | select(.id == $driver) | .deps[];
         .name == "ic_testkit" and .pkg == $suppliers[0].id))
   ' "$scratch/metadata.json" >/dev/null
-  # Admit only the reviewed Protocol supplier change, not arbitrary lock drift.
-  cp "$scratch/released-Cargo.lock" "$scratch/admitted-Cargo.lock"
-  jq -e '[.packages[] | select(.name == "ic-platform-protocol")] |
-    length == 1 and .[0].version == "0.3.3" and
-    .[0].source == "registry+https://github.com/rust-lang/crates.io-index"' \
-    "$scratch/metadata.json" >/dev/null
-  if ! jq -e 'any(.packages[]; .name == "ic-platform-protocol" and .version == "0.3.3")' \
-    "$scratch/released-metadata.json" >/dev/null; then
-    cat >> "$scratch/admitted-Cargo.lock" <<'PROTOCOL'
-
-[[package]]
-name = "ic-platform-protocol"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4676f2fabfff6a9aab9d6cccdf2a5870059e88b21345bc1913818be621dc1f34"
-PROTOCOL
-  fi
+  # The current consumer lock already admits the Platform suppliers.
   cargo run --manifest-path "$repo/Cargo.toml" -p ic-cargo-qualification --locked -- \
-    verify-external-lock "$scratch/admitted-Cargo.lock" "$scratch/source/qualification/Cargo.lock" 1048576
+    verify-external-lock "$scratch/released-Cargo.lock" "$scratch/source/qualification/Cargo.lock" 1048576
   cargo clippy --manifest-path "$manifest" -p once-driver -p executor-driver --all-targets --locked -- -D warnings
   if [[ "$mode" == admit-replacement ]]; then exit 0; fi
 fi

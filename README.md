@@ -1,15 +1,8 @@
 # IC Tooling
 
-Latest delivery adopts Toko Tooling 0.45.13 and publishes Foundation 0.80.5
-(Artifacts/FS), Process 0.81.2, Sign 0.1.2 and Testkit 0.110.2. Public APIs and
-runtime behavior are unchanged; the hygiene pass strengthens refusal assertions
-and compiles the canonical server example. See the
-[cohort receipt](docs/release-ownership.md#toko-04513-ruleshygiene-cohort--2026-11-19).
-
-Build 0.87.5, HTTP 0.80.1, Text 0.77.3 and Cargo Metadata 0.1.1 retain their
-[published versions](docs/release-ownership.md#hygiene-cohort--2026-11-18).
-Their production source is unchanged; test/tooling maintenance is delivered
-through Git.
+The development and qualification workspaces select Toko Tooling 0.46.4.
+The latest published cohort used 0.46.0. See the
+[release receipts](docs/release-ownership.md#toko-0460-release).
 
 The preceding feature delivery, Testkit 0.110.0, adopts Process 0.81's public report identity and
 retains bounded clock progression while replies are
@@ -33,8 +26,7 @@ The first milestone is one real build-to-owned-artifact workflow with newly
 selected interfaces. Existing crates.io names may be reused with incremented
 versions; retaining a name does not require retaining its old Rust API. The first
 package is `ic-build` 0.87.3. Stage 2 adds `ic-host-artifacts` and `ic-host-fs`
-0.80.2 for shared byte admission and held-directory publication. Toko Tooling is
-pinned to 0.45.13 in both workspaces.
+0.80.2 for shared byte admission and held-directory publication.
 
 The [first release](docs/release-ownership.md#first-production-cutover-scope)
 contains Artifacts, FS, Process and Build. `make test-build-release-candidate`

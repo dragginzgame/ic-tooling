@@ -11,58 +11,45 @@ in [checkpoint history](../history.md), not a prior release of this group.
 ### 🔧 Changed
 
 - Honor caller-selected Cargo network mode across archive and consumer qualification, including CI. Declare the Text release group’s workspace alias. [#17](https://github.com/dragginzgame/ic-tooling/issues/17) and [#18](https://github.com/dragginzgame/ic-tooling/issues/18).
-
 - Use the shared compiler installer for the four CI job selections. [Tooling #15](https://github.com/dragginzgame/ic-tooling/issues/15).
-
 - Exercise current Canic build and metadata commands directly and retain the
   command sequence, error and destination-preservation evidence for each refusal.
-
 - Extend the Intel macOS library archive step to 20 minutes after the previous
   12-minute timeout. Preserve the evidence-upload reserve.
-
-- Adopt Toko Tooling 0.46.0 in both workspaces, the installed snapshot and CI.
+- Adopt Toko Tooling 0.46.4 in both workspaces, the installed snapshot and CI.
   Audit inherited and package-local lint settings across both workspaces.
   Apply the Rust return-spacing and Clippy rules and verify the native HTTP boundary.
-
+- Admit the current Scheduling drivers against local Testkit using the captured
+  consumer lock directly.
 - Check current Canic Host and CLI test names against Cargo’s listings before
   executing the selected cases. [#14 — Update Canic qualification selectors when adopting the grouped test modules](https://github.com/dragginzgame/ic-tooling/issues/14).
-
 - Qualify Canic’s own record and filesystem tests against the selected local
   Foundation crates. Retire the filesystem migration patches and copied fixtures.
-
 - Update both installed-clock test selectors after grouping the held-clock and
   Process stdin tests under their parents' existing test modules.
   [#13 — Consolidate sibling unit-test guards in Host Process and Testkit](https://github.com/dragginzgame/ic-tooling/issues/13).
-
 - Refresh both workspaces, the installed snapshot and CI cache action to Toko
   Tooling 0.45.16. Group native signer qualification by credential backend.
-
 - Adopt Toko Tooling 0.45.13 in both workspaces, the authenticated snapshot and
   CI cache action. Use ordinary tooling dev-dependencies where supported and
   declare their intentional dependency-scan exemptions without dummy imports.
-
 - Adopt Toko Tooling 0.45.11 in both workspaces, the authenticated snapshot and
   CI cache action. Use its fixed shared setup diagnostics, removing the local
   sanitizer and command-capture copy while retaining bounded artifact selection,
   original failure status and upload reporting. This completes adoption after
   [Toko Tooling #398 — Preserve bare Bearer and payload redactions in setup excerpts](https://github.com/dragginzgame/toko-tooling/issues/398).
-
 - Adopt Toko Tooling 0.45.8 in both workspaces, the authenticated snapshot and
   CI cache action. Ordinary developer Cargo commands may retrieve locked
   dependencies; `CARGO_NET_OFFLINE=true` opts into offline execution. Prepared
   archive qualification keeps its explicit offline contract.
-
 - Parse the private external-lock qualification command with Clap, preserving
   its script-facing usage, refusal statuses and non-UTF-8 filesystem paths.
-
 - Keep installed Testkit checks scoped to Testkit features when the archive gate
   also selects Sign, so Cargo does not reject the other package's feature flag.
-
 - Select Toko Tooling 0.45.0 in the product and qualification workspaces, refresh
   the authenticated installed snapshot and pin CI's download-cache action to its
   published source. Preserve existing compatible lock updates and product
   acceptance; common executable/catalog bytes are unchanged.
-
 - Run focused Sign admission/cancellation checks on the existing three native CI
   hosts. Keep disposable credential-session qualification explicitly selected;
   compilation and library tests do not establish native keychain acceptance.
@@ -76,48 +63,38 @@ in [checkpoint history](../history.md), not a prior release of this group.
 - Qualify extracted Sign archives, provider dependency isolation and the installed
   `ic-sign` command against disposable native credentials. Prepared manifest/helper
   paths select the candidate without changing product signing or key custody.
-
 - Include Testkit's installed bounded-clock/expiry regression in controller and
   archive qualification, retaining independent deletion evidence for all five
   instances. See the [Testkit 0.109.0 change](../testkit/CHANGELOG.md).
-
 - Retain bounded, sanitized secret-scanner installation failures through the
   existing setup collector. Preserve setup status and deadline, upload only its
   evidence directory, and report artifact links or upload failures separately.
-
 - Admit library archive candidates by workspace identity, allowing a separate
   registry dependency with the same package name. Resolve the secret-scan false
   positive with one historical fixture fingerprint; keep future findings scanned
   and preserve private-key redaction coverage.
-
 - Bound CI jobs and individual setup/qualification steps using observed hosted
   durations, leaving time for failure evidence uploads. Keep compiler/tool timeout
   diagnostics inside the existing sanitized collector and preserve failure status.
-
 - Reuse disposable Cargo compilation directories across archive qualification
   retries while keeping candidates, archives and evidence fresh. Refresh extracted
   source timestamps to prevent stale artifact acceptance; retain an opt-out for
   cold compilation and a changed/backdated-source rejection/recovery regression.
   Record matched local cold/warm measurements in the
   [cache contract](../../docs/qualification/archive-cache.md).
-
 - Refresh Scheduling's current Testkit/Runtime admission and the reviewed Protocol
   replacement checksum. Add `admit-replacement` to qualify local driver graphs
   without requiring a prepared simulator; preserve source and lock-drift refusal.
-
 - Ignore inherited `CDPATH` during qualification directory changes, preserving
   repository and relative source selection without extra path output. Add focused
   relative-invocation and source-capture regressions.
-
 - Keep Canic qualification child modules in directory modules, including signer,
   staging and lock fixtures. Remove remaining lock/read-fixture path overrides;
   migration patches retain their original source-content checks.
-
 - Retain bounded, sanitized compiler/common-tool setup failures from the CI
   scaffold job, including selected hidden attempt logs. Preserve original setup
   status, report missing/failed collection or upload separately, and link the
   seven-day diagnostic artifact from the job summary.
-
 - Replace the legacy Testkit 0.106.0 qualification launcher and implicit sibling
   tool lookup with Testkit's product CLI, removing the temporary private runner.
   Scheduling and archive checks use explicit prepared paths; bounded setup
@@ -127,61 +104,49 @@ in [checkpoint history](../history.md), not a prior release of this group.
   [Tooling #10](https://github.com/dragginzgame/ic-tooling/issues/10) supplies the
   command interface; archive qualification installs and tests its actual package.
   Reconcile completed Scheduling/Canic adoption with the workload register.
-
 - Retire the obsolete Platform raw_rand/Agent qualification adapters and their
   Make targets after current-source capture confirms their owner scripts were
   removed. Preserve dated evidence without restoring old Platform APIs. Refresh
   Scheduling's manifest-only adapter for Runtime 0.23.13 / Types 0.21.2; its
   remaining probe migration is tracked in Scheduling #2.
-
 - Adopt Toko Tooling 0.44.11 across both workspaces and all reviewed cache-action
   references. Supplier adoption includes qualification and native callers by
   default; explicitly frozen comparisons retain their recorded inputs. Keep
   compatible `thiserror` requirements and the existing single qualification
   package tier; installed executable bytes are unchanged.
-
 - Qualify Testkit's optional managed-server feature from its Cargo archive,
   including prepared assets, gateway/held-reply behavior and failure cleanup.
   Hosted setup reuses its verified gzip archive with an explicit gzip executable;
   setup diagnostics and library evidence have seven-day artifact retention.
-
 - Admit current Scheduling's registry Testkit 0.107.1 selection. Remove the obsolete
   fixture API migration from its local-supplier adapter; comparisons now change only
   the dependency while preserving consumer assertions and current-source capture.
-
 - Report bounded, escaped PocketIC setup diagnostics and exact retained evidence
   paths through the qualification bootstrap. Preserve original failure status and
   offline artifact admission; retain setup evidence even before archive tests start.
   [Tooling #3 — Surface PocketIC setup download stderr](https://github.com/dragginzgame/ic-tooling/issues/3).
-
 - Remove the pre-rewrite Scheduling runner, its four exclusive migration patches
   and two session helpers. Retain historical source identities and results without
   runnable instructions; current rewrite qualification keeps its own dispatch.
   [Tooling #4 — Remove the executable pre-rewrite Scheduling qualification runner](https://github.com/dragginzgame/ic-tooling/issues/4).
-
 - Adopt Toko Tooling 0.44.6 in both workspaces through its verified exporter and
   align the hosted cache-action references with that release. Executable snapshot
   files are unchanged; hosted CI policy now explicitly covers registry publication.
-
 - Add explicit HTTP/Text/Testkit archive readiness, preserving packaged-source
   identity and Testkit feature isolation. Reuse the prepared external simulator
   owner for installed checks and add the selected libraries to native CI.
-
 - Retire the obsolete Canic report-allocation migration from the current handoff.
   Record its existing published-FS adoption from a read-only current-source
   capture and preserve the old report patch's refusal of changed source.
-
 - Adopt Toko Tooling 0.44.5 in both workspaces through its verified exporter;
   align the hosted download-cache action with the release's source commit.
   The retained 49-file snapshot and cache-action implementation are unchanged.
-
 - Run snapshot/pin admission and non-mutating formatting before the native CI
   matrix, including on tooling-only and documentation-only pull requests.
   Prepare all repository-required Rust components and common tools explicitly
   through the shared installer and pinned download cache; retain
   one history secret scan outside the matrix.
   [Tooling #1 — Complete hosted CI wiring for adopted Toko Tooling checks](https://github.com/dragginzgame/ic-tooling/issues/1).
-
 - Add a four-crate archive readiness command and native Linux/macOS CI. Keep
   production publication separate; qualify extracted dependency candidates and
   current Canic metadata/build refusals without sibling edits.

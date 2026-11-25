@@ -2,6 +2,14 @@
 
 Package: `ic-host-sign`.
 
+## [0.1.5] - 2026-11-25
+
+### 🔧 Changed
+
+- Use Platform 0.35.1 for native signing and exact update and status admission.
+- Use Secret Service 6.0.0 for Linux keyring access.
+- Select Toko Tooling 0.46.4 for package development and validation.
+
 ## [0.1.4] - 2026-11-21
 
 ### 🔧 Changed

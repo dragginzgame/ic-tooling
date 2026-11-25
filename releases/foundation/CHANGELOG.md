@@ -5,6 +5,12 @@ Packages: `ic-host-artifacts`, `ic-host-fs`.
 This group starts with the replacement implementation. Earlier shared development evidence is
 in [checkpoint history](../history.md), not a prior release of this group.
 
+## [0.80.9] - 2026-11-25
+
+### 🔧 Changed
+
+- Select Toko Tooling 0.46.4 for package development and validation.
+
 ## [0.80.8] - 2026-11-21
 
 ### 🔧 Changed

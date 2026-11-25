@@ -3,6 +3,13 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.110.5] - 2026-11-25
+
+### 🔧 Changed
+
+- Require Protocol 0.3.10 and Types 0.21.5 for the optional held-reply fixtures.
+- Select Toko Tooling 0.46.4 for package development and validation.
+
 ## [0.110.4] - 2026-11-21
 
 ### 🔧 Changed

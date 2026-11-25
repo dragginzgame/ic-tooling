@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-artifacts"
-version = "0.80.8"
+version = "0.80.9"
 description = "Bounded byte admission and complete artifact commitments"
 edition.workspace = true
 rust-version.workspace = true

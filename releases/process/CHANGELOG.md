@@ -2,6 +2,12 @@
 
 Package: `ic-host-process`. Earlier unreleased headings retain development history.
 
+## [0.81.5] - 2026-11-25
+
+### 🔧 Changed
+
+- Select Toko Tooling 0.46.4 for package development and validation.
+
 ## [0.81.4] - 2026-11-21
 
 ### 🔧 Changed

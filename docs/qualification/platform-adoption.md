@@ -1,4 +1,28 @@
-# Platform adoption — 2026-11-17
+# Platform adoption
+
+## Platform 0.35.1 adoption
+
+On 2026-11-25 the live crates.io index confirmed non-yanked Platform 0.35.1,
+Protocol 0.3.10 and Types 0.21.5. Their archive checksums match the locked
+selections. Sign retains Platform's native secp256k1 update and status signing
+boundary. Testkit's held fixtures select only Protocol's `http-request` feature
+and one Types identity. Default Testkit excludes these dependencies and WAT.
+The independent owned-Wasm-probe workspace has no Platform dependency. The
+existing product APIs and fixtures needed no changes.
+
+Both workspaces passed locked metadata. On Linux, all-target/all-feature Clippy
+passed for Sign and Testkit. Sign passed 12 library tests and Testkit passed eight
+library tests with held fixtures enabled. Three installed Testkit cases were
+ignored by that selection. Evidence is in `target/platform-0351.v7BzF14o/`.
+
+The Scheduling replacement uses the current consumer lock directly and switches
+only its Testkit dependency. The captured lock already includes Protocol 0.3.10,
+Types 0.21.5 and Runtime 0.23.27. Source, replacement graph, external lock and
+both host-driver Clippy checks passed against HEAD
+`b4f31db4ec957be0e8d8cd8ed130f627561e01c3`, with source tar SHA-256
+`66286db76d179488a3bb7e97c6dc1d528de1047d7187da4e4d8f5602b8966cf2`.
+The capture is in `target/scheduling-new.4vflCifB/`. The Once installed selector
+patch refused the capture, so the result covers host drivers only.
 
 ## Testkit 0.108.0 delivery
 

@@ -48,7 +48,7 @@ Its verified first-publication receipt is below.
 
 ## Development, CI and delivery entrypoints
 
-The selected Toko 0.46.0 snapshot supplies common setup, formatting and selection
+The selected Toko 0.46.4 snapshot supplies common setup, formatting and selection
 admission. Consumer-owned product checks remain in the Makefile and qualification
 runners. The current command boundaries are:
 

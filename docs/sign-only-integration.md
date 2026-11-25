@@ -30,8 +30,8 @@ gains only the independently qualified finite-input increment.
 
 Pinned ICP CLI 1.7.0 source `eda771516212045748dc14933c10148c118dbc2c` selects
 `keyring::Entry::new("icp-cli", identity_name)` and PEM secp256k1 material. Its
-unpublished `icp-app` loader is not copied. Linux uses maintained Secret Service
-5.2.0 to search those existing service/username attributes, refuse locked or
+unpublished `icp-app` loader is not copied. Linux uses Secret Service
+6.0.0 to search those existing service/username attributes, refuse locked or
 ambiguous matches, and read one unlocked item without invoking unlock or prompt
 methods. macOS uses keyring 4.2.0 with Security Framework 3.7.0's safe process-local
 UI-disable guard. No alternate backend, plaintext export or key migration exists.

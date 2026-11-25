@@ -1,5 +1,11 @@
 # Cargo metadata changelog
 
+## [0.1.4] - 2026-11-25
+
+### 🔧 Changed
+
+- Select Toko Tooling 0.46.4 for package development and validation.
+
 ## [0.1.3] - 2026-11-21
 
 ### 🔧 Changed

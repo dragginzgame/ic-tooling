@@ -1,4 +1,4 @@
-# Current implementation — 2026-11-21
+# Current implementation — 2026-11-25
 
 ## Decisions and scope
 
@@ -27,6 +27,22 @@ without claiming complete restore adoption. Stage 3's old Scheduling experiments
 are historical; the rewrite's own current qualification determines its obligations.
 See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
+## Current dependency adoption
+
+Both workspaces, the installed snapshot and CI select Toko Tooling 0.46.4.
+`make check` passes. The [Platform adoption](../qualification/platform-adoption.md#platform-0351-adoption)
+qualifies Sign with Platform 0.35.1 and the Testkit held fixtures with Protocol
+0.3.10 and Types 0.21.5. The Scheduling replacement verifies the existing
+consumer lock directly, removing the previous Protocol exception. Its host
+drivers pass Clippy. Installed Once qualification remains blocked by the stale
+selector patch.
+
+The Linux Sign provider now selects Secret Service 6.0.0. Clippy and disposable
+keyring signing, cancellation and locked refusal passed against the selected
+lock. The Linux keyring test dependency still selects Secret Service 5.2.0
+through the Keyring backend. Native-run evidence is in
+`target/ss.9zsVPp/target/sign-keyring.YAvAcGGk/`.
+
 ## Latest delivery
 
 All nine public crates shipped with Toko 0.46.0, including Build 0.87.7. See the
@@ -36,7 +52,7 @@ Foundation 0.80.7 and Text 0.77.5 are published. See the
 [release receipts](../release-ownership.md#toko-04522-foundation-and-text-releases).
 The preceding nine-crate release shipped from `297c304`. See the
 [verified publication receipts](../release-ownership.md#toko-04521-hygiene-releases).
-Both workspaces and CI select
+The previous hygiene and CI review used
 [Toko 0.46.0](../reports/audits/2026/11/21/toko-0.46.0-hygiene-and-ci/01/report.md).
 The revised Intel archive timeout awaits hosted verification. The
 [HTTP adapter](../http-body.md) has the only Rust Wasm target guard. The
@@ -75,7 +91,7 @@ Testkit 0.110 shares its report type identity. See the
 [bounded clock contract](../testkit-held-replies.md#bounded-manual-clock-progression).
 
 [Tooling #12](https://github.com/dragginzgame/ic-tooling/issues/12) is closed.
-Sign uses published Platform 0.34.15 to authenticate exact updates and independent
+Sign first shipped with Platform 0.34.15 to authenticate exact updates and independent
 original-ID status reads. It removes caller pipe-writer threads and detached
 signing workers while retaining original bytes and cancellation/cleanup custody.
 The selected profile requires an already-unlocked, OS-authorized credential and

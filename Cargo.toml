@@ -27,18 +27,18 @@ authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
 clap = { version = "4.6.7", features = ["derive"] }
 ctrlc = { version = "3.5.2", features = ["termination"] }
 errno = "0.3.15"
-ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.80.8" }
-ic-host-fs = { path = "crates/ic-host-fs", version = "0.80.8" }
-ic-host-process = { path = "crates/ic-host-process", version = "0.81.4" }
-ic-host-text = { path = "crates/ic-host-text", version = "0.77.6" }
-ic-platform = { version = "0.34.15", default-features = false }
-ic-platform-protocol = { version = "0.3.2", default-features = false }
-ic-platform-types = { version = "0.21.2", default-features = false }
+ic-host-artifacts = { path = "crates/ic-host-artifacts", version = "0.80.9" }
+ic-host-fs = { path = "crates/ic-host-fs", version = "0.80.9" }
+ic-host-process = { path = "crates/ic-host-process", version = "0.81.5" }
+ic-host-text = { path = "crates/ic-host-text", version = "0.77.7" }
+ic-platform = { version = "0.35.1", default-features = false }
+ic-platform-protocol = { version = "0.3.10", default-features = false }
+ic-platform-types = { version = "0.21.5", default-features = false }
 libproc = "0.15.0"
 # Qualified client for the fixed server assets; see docs/testkit-server.md.
 pocket-ic = "=16.1.0"
 rustix = { version = "1.1.6", features = ["fs"] }
-secret-service = { version = "5.2.0", default-features = false, features = ["rt-async-io-crypto-rust"] }
+secret-service = { version = "6.0.0", default-features = false, features = ["crypto-rust", "rt-default"] }
 security-framework = "3.7.0"
 semver = "1.0.28"
 serde = { version = "1.0.229", features = ["derive"] }
@@ -59,7 +59,7 @@ tokio = { version = "1.54.1", default-features = false }
 wasmparser = "0.263.0"
 
 # Tests and tooling
-toko-tooling = "=0.46.0"
+toko-tooling = "=0.46.4"
 
 [workspace.lints.cargo]
 unused_dependencies = "deny"

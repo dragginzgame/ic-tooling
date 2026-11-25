@@ -1,6 +1,6 @@
 [package]
 name = "ic-cargo-metadata"
-version = "0.1.3"
+version = "0.1.4"
 description = "Bounded, format-preserving Cargo release metadata renderer"
 edition.workspace = true
 rust-version.workspace = true
