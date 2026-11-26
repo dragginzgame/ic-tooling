@@ -84,6 +84,25 @@ That audit handoff left product versions unchanged. The 2026-11-18 authorized
 delivery selected patches because the packaged sources and development-tool
 requirements differed from their published archives.
 
+### Toko 0.46.8 release
+
+[6239de7](https://github.com/dragginzgame/ic-tooling/commit/6239de7bd2e3ad688dc1715ecaa0498deea1ab57)
+shipped Sign 0.1.6 and Testkit 0.110.6. Both use Types 0.21.6, and Testkit
+uses Protocol 0.3.11 for held replies. The shared Toko Tooling 0.46.8 update
+ships through GitHub for the other groups.
+
+Both annotated tags resolve to the release commit on GitHub. Linux archive
+qualification passed for both crates, including the installed PocketIC and
+disposable Linux keyring checks. The current Scheduling host drivers passed
+against local Testkit 0.110.6. Fresh crates.io downloads matched the
+clean-source archives and registry index checksums. Evidence is in
+`target/deploy-0468/`. Hosted native validation runs asynchronously.
+
+| Published archive | Verified registry SHA-256 |
+| --- | --- |
+| `ic-host-sign-0.1.6` | `c67989e9298d6f2daf83723938e945fc41d5638604ef6ae0b01ee9a6c931ac46` |
+| `ic-testkit-0.110.6` | `28d177dc996b7c6291506e41e3a648e1e517e445e8d9ec693a4968a97a3786c8` |
+
 ### Toko 0.46.4 release
 
 All nine public crates shipped from

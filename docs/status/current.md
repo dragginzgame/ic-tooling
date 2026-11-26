@@ -45,7 +45,12 @@ through the Keyring backend. Native-run evidence is in
 
 ## Latest delivery
 
-All nine public crates shipped with Toko 0.46.4. Linux archive qualification
+Sign 0.1.6 and Testkit 0.110.6 shipped with Toko 0.46.8. Linux archive
+qualification passed, including installed PocketIC and disposable keyring
+checks. Both tags and registry archives were verified. See the
+[release receipts](../release-ownership.md#toko-0468-release).
+
+The previous cohort shipped all nine public crates with Toko 0.46.4. Linux archive qualification
 passed, including installed Testkit and disposable Secret Service 6.0.0 signer
 checks. Registry bytes and all eight GitHub release tags were verified. See the
 [verified release receipts](../release-ownership.md#toko-0464-release).
