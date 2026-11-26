@@ -3,20 +3,20 @@
 `make test-scheduling-consumer` snapshots `../ic-scheduling`, including tracked
 edits and non-ignored source. It verifies rewrite ancestry from
 `f382bacac5461ea965e5813b56f15bd4757bf596`, refuses capture drift and admits one
-registry Testkit 0.110.4 shared by the executor and Once drivers. No direct
+registry Testkit 0.110.5 shared by the executor and Once drivers. No direct
 PocketIC dependency or historical-source fallback is admitted. Installed modes
 require explicit `TESTKIT_SERVER_CLI` and `SCHEDULING_SERVER_DIRECTORY`; see the
 [product command](../../docs/simulator-ownership.md). Tools are hashed before/after.
 
 The local replacement adapter switches only the Testkit dependency to this
-checkout's 0.110.5. Both drivers keep their client and held-reply-fixture boundary.
-The captured lock already selects Protocol 0.3.10, Types 0.21.5 and Runtime
+checkout's 0.110.6. Both drivers keep their client and held-reply-fixture boundary.
+The captured lock already selects Protocol 0.3.11, Types 0.21.6 and Runtime
 0.23.27. The replacement must preserve existing external identities, including
 the original source and checksum. The old Protocol lock exception is removed.
 
 `bash scripts/qualification/scheduling-consumer.sh admit-replacement` passed
 source, graph and lock admission and Clippy for both drivers. See the
-[current Platform adoption record](../../docs/qualification/platform-adoption.md#platform-0351-adoption).
+[current Platform adoption record](../../docs/qualification/platform-adoption.md#protocol-0311-and-types-0216-adoption).
 The installed Once selector patch no longer applies to the current capture.
 The installed runner refuses that patch before execution.
 

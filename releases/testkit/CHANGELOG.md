@@ -3,6 +3,12 @@
 Package: `ic-testkit`. Consumer adoption remains separate from publication;
 each qualification record identifies its actual supplier and source capture.
 
+## [0.110.6] - 2026-11-26
+
+### 🔧 Changed
+
+- Select Protocol 0.3.11 and Types 0.21.6 for held-reply fixtures.
+
 ## [0.110.5] - 2026-11-25
 
 ### 🔧 Changed

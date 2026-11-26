@@ -1,4 +1,4 @@
-# Current implementation — 2026-11-25
+# Current implementation — 2026-11-26
 
 ## Decisions and scope
 
@@ -29,13 +29,13 @@ See the [workload dispositions](../workloads.md#legacy-capability-disposition).
 
 ## Current dependency adoption
 
-Both workspaces, the installed snapshot and CI select Toko Tooling 0.46.4.
-`make check` passes. The [Platform adoption](../qualification/platform-adoption.md#platform-0351-adoption)
-qualifies Sign with Platform 0.35.1 and the Testkit held fixtures with Protocol
-0.3.10 and Types 0.21.5. The Scheduling replacement verifies the existing
-consumer lock directly, removing the previous Protocol exception. Its host
-drivers pass Clippy. Installed Once qualification remains blocked by the stale
-selector patch.
+Both workspaces, the installed snapshot and CI select Toko Tooling 0.46.8.
+`make check`, formatting and both package-list selections pass. The
+[Platform adoption](../qualification/platform-adoption.md#protocol-0311-and-types-0216-adoption)
+qualifies Protocol 0.3.11 and Types 0.21.6 with Sign, held-reply fixtures and
+the Scheduling replacement drivers. The replacement verifies the captured
+consumer lock directly. The stale selector patch still blocks installed Once
+qualification.
 
 The Linux Sign provider now selects Secret Service 6.0.0. Clippy and disposable
 keyring signing, cancellation and locked refusal passed against the selected

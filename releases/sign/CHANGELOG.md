@@ -2,6 +2,12 @@
 
 Package: `ic-host-sign`.
 
+## [0.1.6] - 2026-11-26
+
+### 🔧 Changed
+
+- Select Types 0.21.6 for signing principal handling.
+
 ## [0.1.5] - 2026-11-25
 
 ### 🔧 Changed

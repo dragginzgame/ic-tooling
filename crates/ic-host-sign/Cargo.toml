@@ -1,6 +1,6 @@
 [package]
 name = "ic-host-sign"
-version = "0.1.5"
+version = "0.1.6"
 description = "Bounded offline IC signing through an existing OS-keyring identity"
 edition.workspace = true
 rust-version.workspace = true

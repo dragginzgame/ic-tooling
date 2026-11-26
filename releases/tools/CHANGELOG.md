@@ -16,8 +16,10 @@ in [checkpoint history](../history.md), not a prior release of this group.
   command sequence, error and destination-preservation evidence for each refusal.
 - Extend the Intel macOS library archive step to 20 minutes after the previous
   12-minute timeout. Preserve the evidence-upload reserve.
-- Adopt Toko Tooling 0.46.4 in both workspaces, the installed snapshot and CI.
-  Audit inherited and package-local lint settings across both workspaces.
+- Adopt Toko Tooling 0.46.8 in both workspaces, the installed snapshot and CI.
+  List product package versions by default and include qualification packages
+  when explicitly selected.
+- Audit inherited and package-local lint settings across both workspaces.
   Apply the Rust return-spacing and Clippy rules and verify the native HTTP boundary.
 - Admit the current Scheduling drivers against local Testkit using the captured
   consumer lock directly.

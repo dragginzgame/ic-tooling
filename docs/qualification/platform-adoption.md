@@ -1,5 +1,29 @@
 # Platform adoption
 
+## Protocol 0.3.11 and Types 0.21.6 adoption
+
+On 2026-11-26, the live crates.io index confirmed Protocol 0.3.11, Types 0.21.6
+and Platform 0.35.1 as the latest non-yanked releases. The two updated
+archives match their registry checksums. Sign and Testkit resolve a single
+Types identity. Testkit still selects only Protocol's `http-request` feature
+for held fixtures. The default Testkit graph excludes Platform and WAT. The
+independent qualification workspace has no Platform dependency.
+
+Both workspaces passed locked metadata. Sign and Testkit passed all-target,
+all-feature Clippy and 20 library tests on Linux. The three installed PocketIC
+fixture checks passed and confirmed deletion of all five instances. Disposable
+keyring signing, cancellation and locked refusal also passed. Logs are in
+`target/adopt-toko-0468-platform/`.
+
+The Scheduling replacement passed source, graph and external-lock admission
+and both host-driver Clippy checks on captured HEAD
+`6d7042bb98f76fdcf2856aacf0f1d12c6ace61a3`, with source-tar SHA-256
+`0b445f6411468b7e510aecc3e92498520c5652d73fdb66fe503bf739bcd83ec3`.
+The capture is in `target/scheduling-new.bAS4ZTLQ/`. Its lock already selects
+the adopted Protocol and Types releases, so the replacement can verify the
+captured lock directly. The stale installed Once selector patch refused this
+capture.
+
 ## Platform 0.35.1 adoption
 
 On 2026-11-25 the live crates.io index confirmed non-yanked Platform 0.35.1,

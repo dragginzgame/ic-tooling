@@ -68,7 +68,8 @@ help:
 	  '  make lint-owned-build  Stage 1 library/tests with warnings denied' \
 	  '  make doc-owned-build   Stage 1 public documentation with warnings denied' \
 	  '  make fmt / fmt-check   Shared Rust/manifest formatting' \
-	  '  make deps-list         Local package/dependency selections' \
+	  '  make deps-list         Product package versions and release groups' \
+	  '  make deps-list DEPENDENCY_MANIFEST=qualification/Cargo.toml  Include qualification packages' \
 	  '  make install-tools    Explicit common tool preparation' \
 	  '  make tools-check      Prepared-tool admission'
 

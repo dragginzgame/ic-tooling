@@ -36,8 +36,9 @@ Earlier Stage 1–2 notes are retained verbatim in
 retroactively assigned to individual groups. Later pending notes now live with
 their owners; detailed test results remain in the existing qualification records.
 
-`make deps-list` reports ownership across both workspaces. No release/publication
-entrypoint is introduced by this change; future release tooling must require an
+`make deps-list` reports product ownership. Add
+`DEPENDENCY_MANIFEST=qualification/Cargo.toml` to include qualification packages.
+No release/publication entrypoint is introduced by this change; future release tooling must require an
 explicit group selection. Product library manifests permit only `crates-io`;
 the private qualification executable retains `publish = false`. The admitted
 libraries are published; publication permission in a manifest is not delivery.
@@ -48,7 +49,7 @@ Its verified first-publication receipt is below.
 
 ## Development, CI and delivery entrypoints
 
-The selected Toko 0.46.4 snapshot supplies common setup, formatting and selection
+The selected Toko 0.46.8 snapshot supplies common setup, formatting and selection
 admission. Consumer-owned product checks remain in the Makefile and qualification
 runners. The current command boundaries are:
 

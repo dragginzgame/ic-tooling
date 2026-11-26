@@ -2,8 +2,8 @@
 +++ b/qualification/Cargo.toml
 @@ -21,5 +21,5 @@
  ic-platform-runtime = { version = "0.23.21", default-features = false, features = ["call-ic0", "system-raw"] }
- ic-platform-types = { version = "0.21.2", default-features = false }
+ ic-platform-types = { version = "0.21.6", default-features = false }
 -ic-testkit = { version = "0.110.0", default-features = false }
-+ic-testkit = { path = "@IC_TOOLING_NEW@/crates/ic-testkit", version = "=0.110.5", default-features = false }
++ic-testkit = { path = "@IC_TOOLING_NEW@/crates/ic-testkit", version = "=0.110.6", default-features = false }
  ic-timers = { path = "../crates/ic-timers" }
  tokio = { version = "1.54.1", default-features = false, features = ["rt"] }

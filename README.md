@@ -1,6 +1,6 @@
 # IC Tooling
 
-The development and qualification workspaces select Toko Tooling 0.46.4.
+The development and qualification workspaces select Toko Tooling 0.46.8.
 The latest published cohort uses 0.46.4. See the
 [release receipts](docs/release-ownership.md#toko-0464-release).
 
@@ -193,7 +193,8 @@ probe with both Testkit suppliers, retaining exact Wasm bytes and observations.
 
 The [release ownership map](docs/release-ownership.md) declares foundation, build,
 HTTP, Process, Text, tools, Cargo metadata and Testkit groups. [Changelogs](CHANGELOG.md) live under `releases/`;
-`make deps-list` reports each package’s group and version.
+`make deps-list` reports product package groups and versions. Add
+`DEPENDENCY_MANIFEST=qualification/Cargo.toml` to include qualification packages.
 
 Read [AGENTS.md](AGENTS.md), [TOKO-TOOLING.md](TOKO-TOOLING.md), and
 [the current handoff](docs/status/current.md) before implementation.
